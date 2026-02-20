@@ -1109,49 +1109,61 @@ export async function registerRoutes(
           const categoriesTags = p.categories_tags || [];
           const novaGroup = p.nova_group || null;
 
-          let smpRating = 0;
-          let smpScore = 0;
-          let hasCape = false;
+          const upfResult = (ingredientsText || novaGroup)
+            ? analyzeProductUPF(
+                ingredientsText,
+                additiveDb,
+                50,
+                { productName: p.product_name, categoriesTags, novaGroup: novaGroup ? Number(novaGroup) : null },
+              )
+            : null;
 
-          if (ingredientsText || novaGroup) {
-            const upfResult = analyzeProductUPF(
-              ingredientsText,
-              additiveDb,
-              50,
-              { productName: p.product_name, categoriesTags, novaGroup: novaGroup ? Number(novaGroup) : null },
-            );
-            smpRating = upfResult.smpRating;
-            smpScore = upfResult.smpScore;
-            hasCape = upfResult.hasCape;
-          } else {
-            smpRating = 3;
-            smpScore = 55;
-          }
-
-          const isDrink = categoriesTags.some((c: string) =>
-            c.includes('beverages') || c.includes('drinks') || c.includes('waters') || c.includes('juices') || c.includes('sodas') || c.includes('teas') || c.includes('coffees')
-          );
-          const isBabyFood = categoriesTags.some((c: string) =>
-            c.includes('baby') || c.includes('infant')
-          );
-          const isReadyMeal = categoriesTags.some((c: string) =>
-            c.includes('meals') || c.includes('ready') || c.includes('prepared') || c.includes('frozen')
-          );
+          const smpRating = upfResult?.smpRating ?? 3;
+          const smpScore = upfResult?.smpScore ?? 55;
 
           return {
             barcode: p.code || null,
-            name: p.product_name,
+            product_name: p.product_name,
             brand: p.brands || null,
-            imageUrl: p.image_front_url || p.image_front_small_url || p.image_url || null,
-            nutrition,
-            nutriscoreGrade: p.nutriscore_grade || null,
-            novaGroup: novaGroup ? Number(novaGroup) : null,
-            smpRating,
-            smpScore,
-            hasCape,
-            isDrink,
-            isBabyFood,
-            isReadyMeal,
+            image_url: p.image_front_url || p.image_front_small_url || p.image_url || null,
+            ingredients_text: ingredientsText || null,
+            nutriments: nutrition,
+            nutriscore_grade: p.nutriscore_grade || null,
+            nova_group: novaGroup ? Number(novaGroup) : null,
+            categories_tags: categoriesTags,
+            isUK: ukProducts.some((up: any) => (up.code || up.product_name) === (p.code || p.product_name)),
+            nutriments_raw: p.nutriments || null,
+            analysis: ingredientsText ? {
+              ingredients: ingredientsText.split(',').map((ing: string) => {
+                const trimmed = ing.trim();
+                const isENumber = /e\s?\d{3}/i.test(trimmed);
+                return {
+                  name: trimmed,
+                  percent: null,
+                  isUPF: isENumber || /modified|hydrogenated|emulsifier|stabiliser|flavouring|sweetener/i.test(trimmed),
+                  isENumber,
+                };
+              }),
+              novaGroup: novaGroup ? Number(novaGroup) : 4,
+              healthScore: Math.max(0, 100 - (smpScore > 50 ? 100 - smpScore : smpScore)),
+              isUltraProcessed: novaGroup === 4 || smpRating <= 2,
+              warnings: [],
+              upfCount: upfResult?.upfIngredientCount || 0,
+              totalIngredients: ingredientsText.split(',').length,
+            } : null,
+            upfAnalysis: upfResult ? {
+              upfScore: upfResult.upfScore,
+              smpRating: upfResult.smpRating,
+              hasCape: upfResult.hasCape,
+              smpScore: upfResult.smpScore,
+              additiveMatches: upfResult.additiveMatches || [],
+              processingIndicators: upfResult.processingIndicators || [],
+              ingredientCount: upfResult.ingredientCount || 0,
+              upfIngredientCount: upfResult.upfIngredientCount || 0,
+              riskBreakdown: upfResult.riskBreakdown || { additiveRisk: 0, processingRisk: 0, ingredientComplexityRisk: 0 },
+              smpPenalties: upfResult.smpPenalties,
+              smpBonuses: upfResult.smpBonuses,
+            } : null,
             quantity: p.quantity || null,
             servingSize: p.serving_size || null,
             categories: p.categories || null,

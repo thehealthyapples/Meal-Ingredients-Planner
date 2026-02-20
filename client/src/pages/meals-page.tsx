@@ -836,10 +836,11 @@ interface WebSearchRecipe {
 
 interface ProductSearchResult {
   barcode: string | null;
-  name: string;
+  product_name: string;
   brand: string | null;
-  imageUrl: string | null;
-  nutrition: {
+  image_url: string | null;
+  ingredients_text: string | null;
+  nutriments: {
     calories: string | null;
     protein: string | null;
     carbs: string | null;
@@ -847,14 +848,23 @@ interface ProductSearchResult {
     sugar: string | null;
     salt: string | null;
   };
-  nutriscoreGrade: string | null;
-  novaGroup: number | null;
-  smpRating: number;
-  smpScore: number;
-  hasCape: boolean;
-  isDrink: boolean;
-  isBabyFood: boolean;
-  isReadyMeal: boolean;
+  nutriscore_grade: string | null;
+  nova_group: number | null;
+  categories_tags: string[];
+  isUK?: boolean;
+  nutriments_raw: Record<string, any> | null;
+  analysis: any | null;
+  upfAnalysis: {
+    upfScore: number;
+    smpRating: number;
+    hasCape: boolean;
+    smpScore: number;
+    additiveMatches: any[];
+    processingIndicators: string[];
+    ingredientCount: number;
+    upfIngredientCount: number;
+    riskBreakdown: any;
+  } | null;
   quantity: string | null;
   servingSize: string | null;
   categories: string | null;
@@ -1214,22 +1224,26 @@ export default function MealsPage() {
   };
 
   const handleSaveProduct = async (product: ProductSearchResult) => {
-    const productKey = product.barcode || product.name;
+    const productKey = product.barcode || product.product_name;
     setProductSavingIds(prev => new Set(prev).add(productKey));
     try {
       const categoryId = productCategoryMap[productKey] ?? null;
+      const cats = product.categories_tags || [];
+      const isDrink = cats.some((c: string) => c.includes('beverages') || c.includes('drinks') || c.includes('waters') || c.includes('juices') || c.includes('sodas') || c.includes('teas') || c.includes('coffees'));
+      const isBabyFood = cats.some((c: string) => c.includes('baby') || c.includes('infant'));
+      const isReadyMeal = cats.some((c: string) => c.includes('meals') || c.includes('ready') || c.includes('prepared') || c.includes('frozen'));
       const res = await apiRequest('POST', api.meals.saveProduct.path, {
         barcode: product.barcode,
-        name: product.name,
+        name: product.product_name,
         brand: product.brand,
-        imageUrl: product.imageUrl,
-        nutrition: product.nutrition,
-        nutriscoreGrade: product.nutriscoreGrade,
-        novaGroup: product.novaGroup,
-        smpRating: product.smpRating,
-        isDrink: product.isDrink,
-        isBabyFood: product.isBabyFood,
-        isReadyMeal: product.isReadyMeal,
+        imageUrl: product.image_url,
+        nutrition: product.nutriments,
+        nutriscoreGrade: product.nutriscore_grade,
+        novaGroup: product.nova_group,
+        smpRating: product.upfAnalysis?.smpRating ?? 3,
+        isDrink,
+        isBabyFood,
+        isReadyMeal,
         quantity: product.quantity,
         categoryId,
       });
@@ -1237,7 +1251,7 @@ export default function MealsPage() {
       setProductSavedIds(prev => new Set(prev).add(productKey));
       setProductSavedMealMap(prev => new Map(prev).set(productKey, savedMeal.id));
       queryClient.invalidateQueries({ queryKey: ['/api/meals'] });
-      toast({ title: "Product saved", description: `${product.name} added to your meals.` });
+      toast({ title: "Product saved", description: `${product.product_name} added to your meals.` });
     } catch {
       toast({ title: "Save failed", description: "Could not save product. Please try again.", variant: "destructive" });
     } finally {
@@ -2100,9 +2114,14 @@ export default function MealsPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 <AnimatePresence mode="popLayout">
                   {productResults.map((product) => {
-                    const productKey = product.barcode || product.name;
+                    const productKey = product.barcode || product.product_name;
                     const isSaving = productSavingIds.has(productKey);
                     const isSaved = productSavedIds.has(productKey);
+                    const cats = product.categories_tags || [];
+                    const isDrink = cats.some((c: string) => c.includes('beverages') || c.includes('drinks'));
+                    const isReadyMeal = cats.some((c: string) => c.includes('meals') || c.includes('ready') || c.includes('prepared'));
+                    const smpRating = product.upfAnalysis?.smpRating ?? 3;
+                    const hasCape = product.upfAnalysis?.hasCape ?? false;
                     return (
                       <motion.div
                         key={productKey}
@@ -2112,11 +2131,11 @@ export default function MealsPage() {
                         layout
                       >
                         <Card className="overflow-hidden h-full flex flex-col" data-testid={`card-product-${productKey}`}>
-                          {product.imageUrl && (
+                          {product.image_url && (
                             <div className="w-full aspect-[4/3] overflow-hidden bg-muted flex items-center justify-center">
                               <img
-                                src={product.imageUrl}
-                                alt={product.name}
+                                src={product.image_url}
+                                alt={product.product_name}
                                 className="w-full h-full object-contain p-2"
                                 loading="lazy"
                                 data-testid={`img-product-${productKey}`}
@@ -2126,7 +2145,7 @@ export default function MealsPage() {
                           <CardContent className="p-4 flex-1 flex flex-col justify-between gap-3">
                             <div>
                               <h3 className="font-semibold text-base leading-tight" data-testid={`text-product-name-${productKey}`}>
-                                {product.name}
+                                {product.product_name}
                               </h3>
                               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                 {product.brand && (
@@ -2134,32 +2153,32 @@ export default function MealsPage() {
                                     {product.brand}
                                   </Badge>
                                 )}
-                                {product.nutriscoreGrade && (
-                                  <Badge className={`text-xs font-bold uppercase ${NUTRISCORE_COLORS[product.nutriscoreGrade.toLowerCase()] || 'bg-muted'}`} data-testid={`badge-nutriscore-${productKey}`}>
-                                    Nutri-Score {product.nutriscoreGrade.toUpperCase()}
+                                {product.nutriscore_grade && (
+                                  <Badge className={`text-xs font-bold uppercase ${NUTRISCORE_COLORS[product.nutriscore_grade.toLowerCase()] || 'bg-muted'}`} data-testid={`badge-nutriscore-${productKey}`}>
+                                    Nutri-Score {product.nutriscore_grade.toUpperCase()}
                                   </Badge>
                                 )}
-                                {product.novaGroup && (
+                                {product.nova_group && (
                                   <Badge variant="outline" className="text-xs" data-testid={`badge-nova-${productKey}`}>
-                                    NOVA {product.novaGroup}
+                                    NOVA {product.nova_group}
                                   </Badge>
                                 )}
-                                {product.isDrink && (
+                                {isDrink && (
                                   <Badge variant="outline" className="text-xs"><Coffee className="h-3 w-3 mr-1" />Drink</Badge>
                                 )}
-                                {product.isReadyMeal && (
+                                {isReadyMeal && (
                                   <Badge variant="outline" className="text-xs"><UtensilsCrossed className="h-3 w-3 mr-1" />Ready Meal</Badge>
                                 )}
                               </div>
                               <div className="mt-2" data-testid={`rating-product-${productKey}`}>
-                                <AppleRating rating={product.smpRating} hasCape={product.hasCape} size="small" />
+                                <AppleRating rating={smpRating} hasCape={hasCape} size="small" />
                               </div>
-                              {product.nutrition.calories && (
+                              {product.nutriments?.calories && (
                                 <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2" data-testid={`nutrition-product-${productKey}`}>
-                                  <span className="flex items-center gap-1"><Flame className="h-3 w-3 text-orange-500" />{Math.round(Number(product.nutrition.calories))} kcal</span>
-                                  {product.nutrition.protein && <span className="flex items-center gap-1"><Beef className="h-3 w-3 text-red-500" />{Number(product.nutrition.protein).toFixed(1)}g</span>}
-                                  {product.nutrition.carbs && <span className="flex items-center gap-1"><Wheat className="h-3 w-3 text-amber-600" />{Number(product.nutrition.carbs).toFixed(1)}g</span>}
-                                  {product.nutrition.fat && <span className="flex items-center gap-1"><Droplets className="h-3 w-3 text-blue-500" />{Number(product.nutrition.fat).toFixed(1)}g</span>}
+                                  <span className="flex items-center gap-1"><Flame className="h-3 w-3 text-orange-500" />{Math.round(Number(product.nutriments.calories))} kcal</span>
+                                  {product.nutriments.protein && <span className="flex items-center gap-1"><Beef className="h-3 w-3 text-red-500" />{Number(product.nutriments.protein).toFixed(1)}g</span>}
+                                  {product.nutriments.carbs && <span className="flex items-center gap-1"><Wheat className="h-3 w-3 text-amber-600" />{Number(product.nutriments.carbs).toFixed(1)}g</span>}
+                                  {product.nutriments.fat && <span className="flex items-center gap-1"><Droplets className="h-3 w-3 text-blue-500" />{Number(product.nutriments.fat).toFixed(1)}g</span>}
                                 </div>
                               )}
                             </div>
