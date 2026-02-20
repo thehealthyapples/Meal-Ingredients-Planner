@@ -1822,7 +1822,7 @@ export async function registerRoutes(
         }
       }
 
-      const healthScore = calculateHealthScore(savedNutrition);
+      const healthScore = savedNutrition ? calculateHealthScore(savedNutrition) : 0;
 
       res.json({
         nutrition: savedNutrition,
