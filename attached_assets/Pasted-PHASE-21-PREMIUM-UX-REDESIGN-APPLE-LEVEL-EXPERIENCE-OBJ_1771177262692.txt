@@ -1,0 +1,335 @@
+PHASE 21 — PREMIUM UX REDESIGN (APPLE-LEVEL EXPERIENCE)
+
+OBJECTIVE:
+
+Transform SMP into a premium, clean, intelligent, calm, high-trust experience.
+
+The interface must feel:
+
+• Calm
+• Intelligent
+• Spacious
+• Fast
+• Beautiful
+• Expensive
+
+Design inspiration:
+
+Apple Health
+Tesla App
+Monzo Banking App
+MyFitnessPal (modern version)
+WHOOP
+
+---
+
+GLOBAL DESIGN PRINCIPLES
+
+1. Reduce visual noise by 50%
+2. Increase whitespace by 30–40%
+3. Use large readable typography
+4. Show fewer things, but more intelligently
+5. Reveal detail only when needed
+6. Everything must feel intentional
+
+---
+
+GLOBAL LAYOUT STRUCTURE
+
+Top Navigation Bar (fixed)
+
+Left:
+SMP logo
+
+Center:
+Page title
+
+Right:
+Profile image
+Basket icon with count
+
+---
+
+PRIMARY NAVIGATION (BOTTOM OR LEFT SIDEBAR)
+
+Main sections:
+
+Dashboard
+My Meals
+Planner
+Analyse Basket
+Products
+Profile
+
+Icons must be simple outline icons.
+
+---
+
+COLOUR SYSTEM
+
+Background:
+#F8F9F7 (very light warm grey)
+
+Primary text:
+#1A1A1A
+
+Secondary text:
+#6B6B6B
+
+Accent colour:
+#4CAF50 (natural green)
+
+Premium accent:
+#D4AF37 (subtle gold)
+
+Card background:
+#FFFFFF
+
+Border:
+#ECECEC
+
+---
+
+TYPOGRAPHY
+
+Font:
+Inter or SF Pro Display
+
+Sizes:
+
+Page title:
+28px
+Weight 600
+
+Section title:
+20px
+Weight 600
+
+Card title:
+16px
+Weight 600
+
+Body text:
+14px
+Weight 400
+
+Small text:
+12px
+
+---
+
+CARD DESIGN SYSTEM
+
+All content displayed in cards.
+
+Card style:
+
+border-radius: 12px
+padding: 16px
+background: white
+border: 1px solid #ECECEC
+
+Hover effect:
+
+box-shadow: 0px 4px 12px rgba(0,0,0,0.06)
+
+---
+
+MY MEALS PAGE (PREMIUM DESIGN)
+
+Grid layout:
+
+Desktop: 4 columns
+Tablet: 2 columns
+Mobile: 1 column
+
+Meal card shows:
+
+Top left overlay:
+Meal name
+
+Top right badge:
+READY MEAL or RECIPE
+
+Main:
+Large high quality image
+
+Bottom overlay (on hover only):
+
+Add to Planner
+Add to Basket
+View Details
+
+Hover animation:
+
+smooth fade-in
+
+---
+
+PLANNER PAGE (PREMIUM DESIGN)
+
+Planner shows:
+
+Horizontal scroll weeks
+
+Week selector:
+
+Week 1   Week 2   Week 3   Week 4   Week 5   Week 6
+
+Each day displayed as large card:
+
+Monday
+
+Breakfast card
+Lunch card
+Dinner card
+
+Each meal card shows:
+
+Image
+Meal name
+SMP rating
+
+Add meal button if empty.
+
+---
+
+ANALYSE BASKET PAGE (PREMIUM DESIGN)
+
+Full width layout.
+
+Top section:
+
+Total price large display:
+
+£84.32
+
+Below:
+
+Store selector:
+
+Tesco  Aldi  Lidl  Waitrose  M&S
+
+Basket table:
+
+Columns:
+
+Ingredient
+Product selected
+Store
+Price
+SMP Rating
+Analyse button
+
+SMP rating displayed as apples:
+
+🍏🍏🍏🍏🍏
+
+Click opens analysis modal.
+
+---
+
+PRODUCT ANALYSIS MODAL
+
+Shows:
+
+Product image large
+
+Product name
+
+SMP Rating large:
+
+🍏🍏🍏🍏
+
+UPF classification
+
+Additives detected
+
+Health explanation:
+
+"Chosen because low additives and minimally processed."
+
+Button:
+
+Select Product
+
+---
+
+DASHBOARD PAGE (PREMIUM EXPERIENCE)
+
+Shows:
+
+Greeting:
+
+Good evening, James
+
+Below:
+
+Cards:
+
+This week’s health score
+Basket cost estimate
+Next planned meal
+Quick actions:
+
+Add meal
+View planner
+Analyse basket
+
+---
+
+ANIMATIONS
+
+Use subtle animations:
+
+Hover fade
+Card lift
+Smooth transitions
+
+Duration:
+150ms–250ms
+
+Never instant.
+
+---
+
+PROFILE PAGE
+
+Large profile image
+
+Settings sections:
+
+Diet preferences
+Budget level
+Store preferences
+UPF strictness
+
+---
+
+EMPTY STATES
+
+Never show blank screens.
+
+Show friendly message:
+
+"No meals yet — add your first meal"
+
+With button.
+
+---
+
+IMAGE QUALITY
+
+All meals must have high quality images.
+
+Minimum size:
+
+600x400
+
+---
+
+RESULT
+
+App feels calm, premium, intelligent, modern, and trustworthy.
+
+Users perceive it as premium product worth £10–£20/month.

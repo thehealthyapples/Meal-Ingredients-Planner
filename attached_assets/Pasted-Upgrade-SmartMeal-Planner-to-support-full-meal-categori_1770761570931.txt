@@ -1,0 +1,183 @@
+Upgrade SmartMeal Planner to support full meal categories integrated across the entire system.
+
+Use existing stack:
+Node.js, Express, SQLite, HTML, CSS, vanilla JavaScript.
+
+Do not break existing functionality.
+
+---
+
+## PART 1 — Create meal_categories table
+
+Create new table:
+
+meal_categories:
+
+* id INTEGER PRIMARY KEY
+* name TEXT UNIQUE
+
+Insert default categories:
+
+Breakfast
+Lunch
+Dinner
+Snack
+Smoothie
+Dessert
+Drink
+Immune Boost
+Supplement
+
+---
+
+## PART 2 — Update meals table
+
+Add column:
+
+category_id INTEGER
+
+Foreign key to meal_categories.id
+
+---
+
+## PART 3 — Update meal creation form
+
+When creating or importing a meal, add dropdown:
+
+Category:
+
+Breakfast
+Lunch
+Dinner
+Snack
+Smoothie
+Dessert
+Drink
+
+Save selected category_id to meals table.
+
+---
+
+## PART 4 — Display category on meal cards
+
+Show category label on each meal card.
+
+Example:
+
+🥗 Tuna Pasta
+Category: Lunch
+
+---
+
+## PART 5 — Add category filtering
+
+On meals page, add filter dropdown:
+
+All
+Breakfast
+Lunch
+Dinner
+Snack
+Smoothie
+
+When selected, show only meals in that category.
+
+---
+
+## PART 6 — Weekly planner integration
+
+Weekly planner should group meals by category.
+
+Example display:
+
+Monday:
+Breakfast: Smoothie Bowl
+Lunch: Chickpea Salad
+Dinner: Stir Fry
+
+---
+
+## PART 7 — Automatic planner improvements
+
+When generating weekly meal plan, select meals in balanced proportions:
+
+Example:
+
+7 Breakfast meals
+7 Lunch meals
+7 Dinner meals
+3 Snacks
+
+---
+
+## PART 8 — Search improvements
+
+Allow filtering search results by category.
+
+Example:
+
+Search: tuna
+
+Filters:
+☑ Lunch
+☑ Dinner
+
+---
+
+## PART 9 — Snacks and smoothies support
+
+Ensure Snack and Smoothie categories work fully with:
+
+shopping list
+nutrition calculation
+meal planner
+
+---
+
+## PART 10 — UI improvements
+
+Show category icons:
+
+Breakfast: 🍳
+Lunch: 🥗
+Dinner: 🍽️
+Snack: 🍎
+Smoothie: 🥤
+Dessert: 🍰
+
+---
+
+## PART 11 — Database relationships
+
+Ensure relationships:
+
+meals.category_id → meal_categories.id
+
+---
+
+## PART 12 — Files to update
+
+/db/database.js
+/routes/meals.js
+/views/meals.html
+/views/meal-details.html
+/views/meal-planner.html
+
+---
+
+## PART 13 — Backwards compatibility
+
+Existing meals without category should default to:
+
+Dinner
+
+---
+
+## PART 14 — Explanation
+
+Explain:
+
+How categories are stored
+How filtering works
+How planner uses categories
+How to add new categories later

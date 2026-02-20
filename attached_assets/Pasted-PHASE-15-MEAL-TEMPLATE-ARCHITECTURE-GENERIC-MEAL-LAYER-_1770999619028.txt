@@ -1,0 +1,265 @@
+PHASE 15 — MEAL TEMPLATE ARCHITECTURE (GENERIC MEAL LAYER)
+
+OBJECTIVE:
+
+Introduce a new MealTemplate layer that represents generic meals (e.g., "Lasagne", "Chicken Curry", "Tomato Soup") independent of how they are fulfilled (scratch recipe or ready meal product).
+
+This allows the planner and shopping list to resolve meals dynamically based on user preferences such as budget, UPF strictness, organic preference, and store selection.
+
+This fixes current issues with inaccurate shopping lists and enables ready meal support.
+
+---
+
+DATABASE CHANGES
+
+Create new table:
+
+MealTemplates
+
+Fields:
+
+id (primary key)
+name (string) — example: "Lasagne"
+category (string) — breakfast, lunch, dinner, snack
+description (string)
+imageUrl (string)
+defaultCalories (number, optional)
+defaultProtein (number, optional)
+defaultCarbs (number, optional)
+defaultFat (number, optional)
+createdAt
+updatedAt
+
+---
+
+UPDATE EXISTING TABLES
+
+Update Meals table:
+
+Add field:
+
+mealTemplateId (foreign key → MealTemplates.id)
+
+Add field:
+
+mealSourceType
+
+Values:
+
+SCRATCH
+READY_MEAL
+HYBRID
+
+SCRATCH = recipe-based meal
+READY_MEAL = product-based meal
+HYBRID = combination
+
+---
+
+CREATE NEW TABLE FOR PRODUCT-BASED MEALS
+
+MealTemplateProducts
+
+Fields:
+
+id
+mealTemplateId
+productId
+store
+qualityTier (budget, standard, premium, organic, grass_finished)
+estimatedPrice
+upfScore
+
+---
+
+PLANNER UPDATE
+
+Currently planner stores specific meals.
+
+Change planner to store MealTemplate instead.
+
+Planner table update:
+
+Add:
+
+mealTemplateId
+
+Planner now stores:
+
+Monday Dinner → Lasagne (MealTemplate)
+
+NOT specific recipe or product.
+
+---
+
+MEAL RESOLUTION ENGINE
+
+Create new service:
+
+mealResolutionService.ts
+
+Function:
+
+resolveMealTemplate(mealTemplateId, userPreferences)
+
+Logic:
+
+1. Get all implementations of MealTemplate:
+
+Scratch recipes
+Ready meal products
+
+2. Filter based on user preferences:
+
+budgetLevel
+qualityPreference
+upfStrictness
+preferredStores
+dietTypes
+
+3. Score each implementation based on:
+
+UPF score
+price
+quality level
+user goals
+
+4. Return best match.
+
+---
+
+SHOPPING LIST UPDATE
+
+Shopping list generation must now resolve templates first.
+
+Process:
+
+For each planner entry:
+
+resolveMealTemplate()
+
+IF resolved type = SCRATCH
+
+→ add ingredients
+
+IF resolved type = READY_MEAL
+
+→ add product directly
+
+IF resolved type = HYBRID
+
+→ add both
+
+This ensures accurate shopping list and pricing.
+
+---
+
+MY MEALS PAGE UPDATE
+
+Group meals under templates.
+
+Example:
+
+Lasagne
+
+BBC Good Food Lasagne (SCRATCH)
+Tesco Lasagne (READY_MEAL)
+Waitrose Organic Lasagne (READY_MEAL)
+
+---
+
+ADD TEMPLATE CREATION LOGIC
+
+When importing recipe:
+
+Check if MealTemplate exists with similar name.
+
+If exists:
+
+link recipe to template
+
+If not:
+
+create new template
+
+---
+
+PRODUCT PAGE UPDATE
+
+Add button:
+
+"Create Meal Template from Product"
+
+Example:
+
+Product: Heinz Tomato Soup
+
+Creates:
+
+MealTemplate: Tomato Soup
+
+MealTemplateProducts entry linking product.
+
+---
+
+PLANNER UI UPDATE
+
+Planner should display template name and image.
+
+When clicking meal:
+
+Show implementation options:
+
+Cook from scratch
+Budget ready meal
+Premium ready meal
+Organic ready meal
+
+Allow user override.
+
+---
+
+SHOPPING LIST RESULT
+
+Shopping list now reflects real implementation.
+
+Example:
+
+Instead of:
+
+Milk
+Flour
+Butter
+
+User sees:
+
+Tesco Beef Lasagne × 1
+
+if ready meal selected.
+
+---
+
+BACKWARD COMPATIBILITY
+
+Existing meals should automatically generate MealTemplate entries.
+
+Migration script:
+
+For each existing meal:
+
+Create MealTemplate if not exists
+Link meal.mealTemplateId
+
+---
+
+RESULT
+
+Planner becomes flexible and intelligent.
+
+Shopping list becomes accurate.
+
+Ready meal support becomes native.
+
+UPF optimization becomes possible.
+
+This is the foundation for smart food decision making.

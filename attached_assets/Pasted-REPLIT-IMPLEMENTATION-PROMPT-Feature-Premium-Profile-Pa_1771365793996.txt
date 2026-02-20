@@ -1,0 +1,353 @@
+REPLIT IMPLEMENTATION PROMPT
+Feature: Premium Profile Page — The Healthy Apples
+OBJECTIVE
+
+Create a world-class Profile page that acts as the user's:
+
+• Health control center
+• Household configuration hub
+• Nutrition control panel
+• Account settings page
+
+This must feel clean, intelligent, premium, and motivating.
+
+PAGE ROUTE
+/profile
+
+DESIGN PRINCIPLES
+
+Must feel:
+
+• Calm
+• Premium
+• Minimal
+• Intelligent
+• Personal
+• Motivating
+
+Use:
+
+White backgrounds
+Soft shadows
+Rounded corners (16px)
+Subtle gradients
+Generous spacing
+
+PAGE LAYOUT STRUCTURE
+PROFILE PAGE
+
+[ Profile Header Card ]
+
+[ Health Snapshot Card ]
+
+[ Household Card ]
+
+[ Nutrition & Calories Card ]
+
+[ Goals & Preferences Card ]
+
+[ Feature Toggles Card ]
+
+[ Account Settings Card ]
+
+SECTION 1 — PROFILE HEADER CARD
+
+Large premium card at top.
+
+Height:
+
+140px
+
+
+Layout:
+
+[ Profile Photo ]   Name
+                    Email
+                    Edit Photo button
+
+
+Right side:
+
+THA Apple Score Average
+
+🍎🍎🍎🍎🍎
+"Elite food selector"
+
+REPLIT PROMPT — COMPONENT
+
+Create:
+
+/components/profile/ProfileHeader.tsx
+
+
+Features:
+
+• Profile image upload
+• Display name
+• Display email
+• Display THA rating average
+
+SECTION 2 — HEALTH SNAPSHOT CARD
+
+Displays key metrics visually.
+
+Layout:
+
+Health Snapshot
+
+BMI           Daily Calories      Activity Level
+22.4          2,140 kcal         Moderate
+Healthy       Target aligned     Optimal
+
+
+Use colored indicators:
+
+Green = optimal
+Amber = acceptable
+Red = needs attention
+
+COMPONENT
+/components/profile/HealthSnapshot.tsx
+
+SECTION 3 — HOUSEHOLD CONFIGURATION CARD
+
+This controls food calculations globally.
+
+Layout:
+
+Household
+
+Adults      [-] 2 [+]
+
+Children    [-] 1 [+]
+
+Babies      [-] 0 [+]
+
+
+Add icons:
+
+👨 Adults
+🧒 Children
+👶 Babies
+
+COMPONENT
+/components/profile/HouseholdSettings.tsx
+
+
+Updates:
+
+user.adultsCount
+user.childrenCount
+user.babiesCount
+
+SECTION 4 — NUTRITION & CALORIES CARD
+
+Layout:
+
+Nutrition Targets
+
+Daily Calories
+
+( ) Auto calculate (recommended)
+( ) Set manually
+
+If manual:
+[ 2200 kcal ]
+
+
+Also show:
+
+Calculated from:
+Weight
+Height
+Activity level
+Goal
+
+COMPONENT
+/components/profile/CalorieSettings.tsx
+
+SECTION 5 — GOALS & DIET PREFERENCES CARD
+
+Layout:
+
+Goal
+
+Lose weight
+Maintain weight
+Build muscle
+Improve health
+
+
+Diet type
+
+Balanced
+UPF Free
+Vegetarian
+Vegan
+Keto
+
+
+Activity level
+
+Low
+Moderate
+High
+
+COMPONENT
+/components/profile/GoalsPreferences.tsx
+
+SECTION 6 — FEATURE TOGGLES CARD
+
+This controls optional premium features.
+
+Layout:
+
+Features
+
+[ON] Apple Health Score tracking
+
+[ON] Apple trend tracking
+
+[ON] Healthy streak tracking
+
+[ON] Sound effects
+
+COMPONENT
+/components/profile/FeatureToggles.tsx
+
+
+Updates:
+
+user.showHealthFeatures
+user.showAppleTrend
+user.showStreaks
+user.soundEnabled
+
+SECTION 7 — ACCOUNT SETTINGS CARD
+
+Layout:
+
+Account
+
+Email
+
+Change password
+
+Delete account
+
+COMPONENT
+/components/profile/AccountSettings.tsx
+
+MASTER PAGE COMPONENT
+
+Create:
+
+/pages/ProfilePage.tsx
+
+
+Layout:
+
+<ProfileHeader />
+
+<HealthSnapshot />
+
+<HouseholdSettings />
+
+<CalorieSettings />
+
+<GoalsPreferences />
+
+<FeatureToggles />
+
+<AccountSettings />
+
+ADD PREMIUM VISUAL STYLE
+
+Create global class:
+
+.card-premium
+
+
+CSS:
+
+background: white;
+border-radius: 16px;
+padding: 20px;
+box-shadow:
+0 4px 12px rgba(0,0,0,0.04),
+0 1px 3px rgba(0,0,0,0.08);
+
+ADD PROFILE BUTTON TO HEADER
+
+Header right side:
+
+Profile avatar circle
+
+
+Click → /profile
+
+ADD PROFILE API ENDPOINTS
+
+Create:
+
+GET /api/profile
+
+PUT /api/profile
+
+POST /api/profile/photo
+
+ADD BMI AUTO CALCULATION
+
+On update:
+
+BMI = weight / (height/100)^2
+
+
+Save automatically.
+
+ADD CALORIE AUTO CALCULATION
+
+If auto enabled:
+
+Use:
+
+Mifflin St Jeor Formula
+
+
+Update:
+
+user.dailyCalories
+
+ADD THA RATING SUMMARY
+
+Calculate:
+
+averageAppleRating
+
+
+From user's purchased foods.
+
+Display in ProfileHeader.
+
+MOBILE DESIGN
+
+Cards stack vertically.
+
+Profile image centered.
+
+Spacing increased.
+
+FINAL USER EXPERIENCE
+
+User opens Profile →
+
+Sees:
+
+• Their health status
+• Household configuration
+• Calorie targets
+• Goals
+• Feature toggles
+• Account settings
+
+All in one premium interface.

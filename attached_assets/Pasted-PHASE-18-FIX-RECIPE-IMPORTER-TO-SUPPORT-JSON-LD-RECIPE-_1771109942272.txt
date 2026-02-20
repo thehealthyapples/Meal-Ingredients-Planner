@@ -1,0 +1,126 @@
+PHASE 18 — FIX RECIPE IMPORTER TO SUPPORT JSON-LD RECIPE SCHEMA
+
+OBJECTIVE:
+
+Fix recipe importing so SMP correctly imports recipes from modern websites like:
+
+JoyFoodSunshine
+BBC Good Food
+AllRecipes
+Serious Eats
+NYT Cooking
+
+These sites store recipes in JSON-LD structured data, not visible HTML.
+
+CURRENT PROBLEM:
+
+Importer only parses visible HTML.
+
+Modern sites use:
+
+<script type="application/ld+json">
+{
+ "@type": "Recipe",
+ "name": "...",
+ "recipeIngredient": [...],
+ "recipeInstructions": [...]
+}
+</script>
+
+RESULT:
+
+Importer fails.
+
+SOLUTION:
+
+Update importer to extract JSON-LD recipe schema.
+
+IMPLEMENTATION:
+
+Step 1 — extract JSON-LD blocks
+
+const scripts = document.querySelectorAll('script[type="application/ld+json"]');
+
+Step 2 — parse JSON
+
+let recipeSchema = null;
+
+scripts.forEach(script => {
+try {
+const data = JSON.parse(script.textContent);
+
+```
+if (data["@type"] === "Recipe") {
+  recipeSchema = data;
+}
+
+if (Array.isArray(data)) {
+  data.forEach(item => {
+    if (item["@type"] === "Recipe") {
+      recipeSchema = item;
+    }
+  });
+}
+```
+
+} catch {}
+});
+
+Step 3 — extract fields
+
+const recipe = {
+name: recipeSchema.name,
+ingredients: recipeSchema.recipeIngredient,
+instructions: extractInstructions(recipeSchema.recipeInstructions),
+image: recipeSchema.image?.[0] || recipeSchema.image,
+servings: recipeSchema.recipeYield,
+prepTime: recipeSchema.prepTime,
+cookTime: recipeSchema.cookTime,
+totalTime: recipeSchema.totalTime,
+nutrition: recipeSchema.nutrition
+};
+
+Step 4 — normalize instructions
+
+function extractInstructions(instructions) {
+
+if (Array.isArray(instructions)) {
+
+```
+return instructions.map(step => {
+
+  if (typeof step === "string") return step;
+
+  if (step.text) return step.text;
+
+  if (step.name) return step.name;
+
+  return "";
+
+}).filter(Boolean);
+```
+
+}
+
+return [];
+}
+
+Step 5 — fallback system
+
+If JSON-LD not found:
+
+use legacy HTML parser.
+
+PRIORITY ORDER:
+
+1 JSON-LD recipe schema
+2 Microdata schema
+3 HTML fallback
+
+Step 6 — save to database
+
+Save as normal meal in Meals table.
+
+RESULT:
+
+Importer works with 95% of recipe websites.

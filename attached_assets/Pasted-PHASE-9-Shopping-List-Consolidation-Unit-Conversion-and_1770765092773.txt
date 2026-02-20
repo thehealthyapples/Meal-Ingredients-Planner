@@ -1,0 +1,327 @@
+PHASE 9: Shopping List Consolidation, Unit Conversion, and Intelligent Meal Planner Upgrade
+
+OBJECTIVE:
+Fix the shopping list so ingredients are consolidated correctly regardless of source recipe or unit. Add metric/imperial conversion toggle. Upgrade the smart weekly planner to pull recipes from BBC Good Food and MealDB, while allowing calorie and diet targeting.
+
+---
+
+PART 1: FIX SHOPPING LIST CONSOLIDATION
+
+CURRENT PROBLEM:
+Ingredients are duplicated instead of summed.
+
+Example (WRONG):
+
+* 10 eggs
+* 1 egg
+* 4 eggs
+
+Example (CORRECT):
+
+* 15 eggs
+
+REQUIREMENTS:
+
+1. Ingredient normalization
+   Create a normalization function:
+
+normalizeIngredient(name):
+
+* convert to lowercase
+* trim whitespace
+* remove plural forms (eggs → egg)
+* remove descriptors (large egg → egg)
+* return standardized name
+
+Example mapping:
+"eggs" → "egg"
+"large eggs" → "egg"
+"Egg" → "egg"
+
+---
+
+2. Unit normalization system
+
+Create standard base units:
+
+WEIGHT base unit: grams
+VOLUME base unit: milliliters
+COUNT base unit: unit
+
+Conversion table examples:
+
+Weight:
+kg → 1000 g
+g → 1 g
+mg → 0.001 g
+lb → 453.592 g
+oz → 28.3495 g
+
+Volume:
+l → 1000 ml
+ml → 1 ml
+cup → 240 ml
+tbsp → 15 ml
+tsp → 5 ml
+
+Count:
+egg → unit
+clove → unit
+piece → unit
+
+---
+
+3. Consolidation logic
+
+When adding ingredients:
+
+STEP 1:
+Normalize ingredient name
+
+STEP 2:
+Convert quantity to base unit
+
+STEP 3:
+Check if ingredient exists in shopping list
+
+IF exists:
+add quantities together
+
+ELSE:
+create new entry
+
+Example internal storage:
+
+{
+"egg": {
+quantity: 15,
+unit: "unit"
+},
+"milk": {
+quantity: 1200,
+unit: "ml"
+}
+}
+
+---
+
+PART 2: METRIC / IMPERIAL TOGGLE
+
+Add user setting:
+
+Settings Page:
+Measurement Preference:
+
+* Metric
+* Imperial
+
+Store in user profile:
+user.measurementPreference
+
+---
+
+Conversion when displaying:
+
+Metric display examples:
+1200 ml milk → 1.2 L milk
+1000 g chicken → 1 kg chicken
+
+Imperial display examples:
+1200 ml milk → 5 cups milk
+1000 g chicken → 2.2 lb chicken
+
+DO NOT change stored values — only convert for display.
+
+---
+
+PART 3: IMPROVED SMART MEAL PLANNER
+
+Add new planner inputs:
+
+User can specify:
+
+OPTION A:
+Diet type:
+
+* Keto
+* Vegan
+* Vegetarian
+* Gluten Free
+* None
+
+OPTION B:
+Daily calories per person:
+example: 1800 calories
+
+OPTION C:
+Number of people:
+example: 2 people
+
+OPTION D:
+Days to plan:
+example: 7 days
+
+---
+
+PART 4: RECIPE DATA SOURCES
+
+Integrate:
+
+1. MealDB API
+   [https://www.themealdb.com/api.php](https://www.themealdb.com/api.php)
+
+Use:
+
+* search.php
+* filter.php
+* lookup.php
+
+2. BBC Good Food scraping service
+
+Create backend scraper service:
+
+bbcScraper.js
+
+Scrape:
+
+* recipe name
+* ingredients
+* instructions
+* image
+* servings
+
+Use safe scraping practices.
+
+Cache results in database.
+
+---
+
+PART 5: CALORIE-TARGETED MEAL PLAN GENERATION
+
+Goal:
+Match user's calorie target per day.
+
+Example:
+User target: 1800 calories
+
+Planner should select meals where:
+
+Breakfast: 400-600 calories
+Lunch: 500-700 calories
+Dinner: 600-800 calories
+
+Total near target.
+
+Allow ±10% tolerance.
+
+---
+
+PART 6: DIET FILTERING
+
+Each recipe must have diet flags:
+
+recipe.diets = {
+vegan: true/false
+vegetarian: true/false
+glutenFree: true/false
+keto: true/false
+}
+
+Planner must only select recipes matching user diet.
+
+---
+
+PART 7: SHOPPING LIST INTEGRATION
+
+When meal plan is generated:
+
+Automatically create consolidated shopping list.
+
+Example:
+
+Meal plan includes:
+Meal 1: 4 eggs
+Meal 2: 3 eggs
+Meal 3: 8 eggs
+
+Shopping list shows:
+15 eggs
+
+NOT separate entries.
+
+---
+
+PART 8: DATABASE CHANGES
+
+ShoppingList table:
+
+{
+id
+userId
+ingredientName
+normalizedName
+quantityBaseUnit
+baseUnit
+}
+
+User table:
+
+{
+measurementPreference: "metric" | "imperial"
+}
+
+Recipe table add:
+
+{
+calories
+protein
+carbs
+fat
+dietFlags
+}
+
+---
+
+PART 9: UI CHANGES
+
+Shopping List Page:
+
+Add toggle switch:
+Metric | Imperial
+
+List updates instantly.
+
+Meal Planner Page:
+
+Add inputs:
+
+* daily calories
+* diet type
+* people count
+* generate plan button
+
+---
+
+SUCCESS CRITERIA:
+
+Shopping list correctly consolidates ingredients
+Unit conversions work perfectly
+Metric/Imperial toggle works
+Meal planner hits calorie targets
+Meal planner respects diet filters
+Recipes load from MealDB and BBC Good Food
+Shopping list generated automatically from planner
+
+---
+
+PRIORITY ORDER:
+
+1. Fix ingredient consolidation
+2. Add unit conversion system
+3. Add metric/imperial toggle
+4. Improve meal planner calorie logic
+5. Integrate MealDB
+6. Add BBC Good Food scraper
+7. Connect planner to shopping list
+
+Implement using clean, modular, production-ready code.

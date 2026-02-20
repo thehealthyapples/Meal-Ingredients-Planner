@@ -1,0 +1,233 @@
+PHASE 15.2 — SHOPPING LIST CLEANUP, NORMALISATION, FILTERS, STORE SELECTION, AND LAYOUT BEHAVIOUR
+
+OBJECTIVE:
+Fix creeping junk strings in shopping list, normalise ingredient names, add SMP rating links, expand store coverage and selection, rename best column to Shop, allow store assignment per item, clean adjectives/plurals, and stabilise layout behaviour.
+
+---
+
+## PART 1 — FORBID ALPHANUMERIC GARBAGE IN INGREDIENT NAMES
+
+1. Reject or clean any ingredient name that is pure alphanumeric without spaces or that looks like a code (e.g., ABC123, 1A2B).
+2. When adding or importing, run a validation step:
+
+* If normalized_name matches regex /^[A-Za-z0-9]+$/ AND has no letters-only words, treat as invalid.
+* Try to clean; if impossible, flag for manual review instead of storing as-is.
+
+Add to ingredient cleaning service.
+
+---
+
+## PART 2 — REMOVE FRACTIONS, SLASHES, AND FOLLOWING NUMBERS
+
+1. For strings like "1/2", "/2", "3/4", etc., or any pattern of "/" followed directly by digits:
+
+* Strip these tokens entirely from ingredient name.
+* Do not leave trailing punctuation.
+* After stripping, re-run normaliser to extract noun.
+
+2. Example conversions:
+
+* "1/2 onion" → "onion"
+* "/2 onion" → "onion"
+* "1/2" or "/2" alone → ignored or flagged as invalid
+
+Implement inside ingredientCleaner or parser before storing.
+
+---
+
+## PART 3 — SMP RATING COLUMN AND LINKS
+
+1. Add a new column next to each price in the shopping list table:
+
+Column: SMP Rating
+
+2. Display the rating (e.g., apples or numeric) fetched from product intelligence.
+
+3. Each SMP Rating should be clickable:
+
+* Link opens the product’s health/macro/additive detail page or modal.
+* Provide access to macro ingredients and additives info for that product.
+
+4. Ensure the hyperlink or tooltip clearly identifies the product.
+
+---
+
+## PART 4 — EXPAND STORE COVERAGE TO MORRISONS, ALDI, LIDL
+
+1. Add Morrisons, Aldi, Lidl as new stores from which to pull prices.
+
+2. Allow shopping summary to pull prices from those stores alongside existing ones.
+
+3. Because Morrisons publicly promotes competitive pricing, this is in line with multi-store view; ensure store info is clear. ([morrisons.com][1])
+
+4. Implement data sources or stubs for each new store with:
+
+* store name
+* product search or matching service
+* product price retrieval
+* data caching
+
+5. UI:
+
+* Shopping summary should show each store and totals.
+
+---
+
+## PART 5 — STORE SELECTION FOR PRICES AND SHOP COLUMN
+
+1. Rename current Best column to “Shop”.
+
+2. Add store selection control on shopping summary:
+
+* Checkbox list or multi-select to choose which stores’ prices are shown.
+* Default: all supported stores.
+
+3. Per-ingredient rows:
+
+* Add dropdown or selector to choose store for that item.
+* Store selection overrides the global default for that row.
+
+4. The Shop column should display:
+
+* Selected store for that item
+* Option to change store per item
+
+5. Totals:
+
+* Recalculate based on selected store per item.
+* Show separate totals per store and a combined summary if multiple stores selected.
+
+---
+
+## PART 6 — CLEAN ADJECTIVES AND PLURALS IN INGREDIENT NAMES
+
+1. Remove adjectives that follow the noun in ingredient names:
+
+Examples:
+
+* "bananas mashed" → "banana"
+* "banana mashed" → "banana"
+* "eggs separated" → "egg"
+
+2. Extend normalisation logic to:
+
+* Extract primary noun only
+* Convert plural nouns to singular base form
+* Remove adjectives that are not necessary for identification unless they denote essential variant (e.g., “organic” or “red” when product-specific)
+
+3. Ensure grouping of plural and singular forms into the same normalized entry.
+
+* Confirm earlier requirement is enforced: group plural nouns together (egg/eggs, potato/potatoes).
+* If duplicates remain, merge rows.
+
+---
+
+## PART 7 — AVOID DUPLICATE OR CONFUSING ENTRIES
+
+1. Ensure duplicate products appear only once unless legitimately different (variant, brand, size).
+
+2. In product or search results:
+
+* Deduplicate using brand + product name + size/variant key.
+
+3. For shopping list:
+
+* If two entries map to the same normalized product, merge their quantities and update price and store accordingly.
+
+---
+
+## PART 8 — LAYOUT AND PANEL BEHAVIOUR
+
+1. When “Select Meals” or any selection panel is closed:
+
+* Shopping list should expand to use available real estate.
+* Only main top navigation tabs remain visible.
+* The collapsed panel should hide completely (or shrink to minimal icon) to maximize width of shopping list.
+
+2. Ensure any temporary collapse/slide behaviour is smooth and consistent.
+
+* Use transitions for sliding panel.
+* After collapse, the shopping list container width should be set to 100% of the remaining viewport.
+
+3. Maintain persistency:
+
+* If meals/items remain in basket, the collapsed panel state should persist until user explicitly reopens or clears basket.
+
+---
+
+## PART 9 — VALIDATION AND ERROR HANDLING
+
+1. If cleaning fails for any ingredient (e.g., cannot extract noun reliably):
+
+* Move entry to manual review list.
+* Do not present invalid entry in final shopping list until corrected.
+
+2. Display an alert or icon next to entries that need manual correction.
+
+---
+
+## PART 10 — UPGRADE TOOLS & DEPENDENCIES
+
+1. Update ingredient cleaner, normaliser, and categoriser modules.
+
+2. Update UI components for:
+
+* SMP Rating column
+* Store selector per row
+* Layout collapse logic
+
+3. Ensure any new fields are added to database schema or cached models correctly.
+
+---
+
+## PART 11 — TEST CASES
+
+Test 1: Alphanumeric garbage
+
+* Input: "ABC123" or "X1Y2Z"
+* Result: flagged or removed, not stored as ingredient.
+
+Test 2: Slash fractions
+
+* Input: "1/2 carrot", "/2 carrot", "carrot /2"
+* Result: "carrot"; stored cleanly.
+
+Test 3: Adjective removal
+
+* Input: "bananas mashed"
+* Result: "banana"; singular, grouped.
+
+Test 4: SMP Rating link
+
+* Click rating link opens product detail page with macros/additives.
+
+Test 5: Multi-store totals
+
+* Select Aldi + Morrisons + existing stores
+* Totals show correct values per store.
+
+Test 6: Shop column override
+
+* Set one item to Lidl, another to Morrisons; totals update accordingly.
+
+Test 7: Collapsed layout
+
+* Close Select Meals panel; shopping list expands fully; top tabs remain.
+
+---
+
+## PART 12 — EXPLANATION FROM REPLIT
+
+After implementation, explain:
+
+* How ingredient cleaning filters and normalisation work
+* How adjectives and plurals are removed or grouped
+* How SMP Rating links are integrated
+* How multiple stores are supported and selected
+* How totals and Shop column recalculations function
+* How layout collapse and expand behave
+* How invalid entries are flagged and handled
+
+END PHASE 15.2
+
+[1]: https://www.morrisons.com/#:~:text=Our%20weekly%20essentials%20are%20price,Cuts%20on%20100s%20of%20essentials "Morrisons - Groceries, Offers, Recipes & More"

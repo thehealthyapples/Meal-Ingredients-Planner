@@ -1,0 +1,375 @@
+PHASE 13 — MEAL EXPLAINABILITY, PRODUCT DEDUPLICATION, ADDITIVE FILTERING, AND SHOPPING LIST STATE SYSTEM
+
+OBJECTIVE:
+Enhance the planner and shopping system with AI explainability, clean product logic, additive filtering, and synchronized basket state across all pages.
+
+This phase improves trust, usability, and app intelligence.
+
+---
+
+SECTION 1 — AI EXPLAINABILITY ENGINE
+"Explain Why This Meal Was Chosen"
+
+GOAL:
+Each suggested meal must include a clear AI-style explanation based on the user's preferences.
+
+EXPLANATION FACTORS:
+
+Use UserPreferences data:
+
+• dietTypes
+• healthGoals
+• budgetLevel
+• preferredStores
+• upfSensitivity
+• calorieTarget
+• excludedIngredients
+
+Also use meal data:
+
+• UPF score
+• ingredient quality
+• calorie range
+• protein level
+• cost estimate
+
+---
+
+IMPLEMENTATION:
+
+Create:
+
+recommendationExplanationService.ts
+
+Function:
+
+generateMealExplanation(meal, userPreferences)
+
+Returns structured explanation:
+
+{
+title: "Why this meal was chosen",
+reasons: [
+"Matches your UPF-Free preference",
+"Supports your goal to eat healthier",
+"Fits within your budget level",
+"Uses ingredients available at your preferred stores",
+"Avoids your excluded ingredients"
+],
+scoreBreakdown: {
+healthScore: 92,
+upfScore: 95,
+budgetScore: 88,
+preferenceMatch: 94
+}
+}
+
+---
+
+UI DISPLAY:
+
+On meal cards show:
+
+"Why this meal?" button
+
+On click open expandable panel showing explanation.
+
+---
+
+SECTION 2 — PRODUCT DEDUPLICATION SYSTEM
+
+GOAL:
+Never show duplicate products in shopping list or search results.
+
+RULES:
+
+Products are duplicates if:
+
+Same:
+• name
+• brand
+• size
+
+BUT allow if different variant:
+
+Allowed separate:
+
+Heinz Ketchup
+Heinz Reduced Salt Ketchup
+Heinz Organic Ketchup
+
+---
+
+IMPLEMENTATION:
+
+Create:
+
+productDeduplicationService.ts
+
+Function:
+
+deduplicateProducts(products)
+
+Logic:
+
+Unique key:
+
+brand + name + size + variant
+
+Remove duplicates before rendering.
+
+Apply to:
+
+• shopping list
+• search results
+• basket
+• recommendations
+
+---
+
+SECTION 3 — ADDITIVE FILTER SYSTEM (Acidity Regulator)
+
+GOAL:
+Allow filtering foods containing acidity regulators.
+
+---
+
+DATABASE UPDATE:
+
+Add to Products table:
+
+containsAcidityRegulator: boolean
+
+and optional:
+
+acidityRegulators: string[]
+
+Example:
+
+["citric acid", "sodium citrate"]
+
+---
+
+FILTER UI:
+
+Food Properties Filters add:
+
+[ ] Contains acidity regulator
+[ ] Exclude acidity regulator
+
+---
+
+FILTER ENGINE UPDATE:
+
+Update:
+
+productFilterService.ts
+
+Apply condition:
+
+if user excludes acidity regulators:
+
+filter product.containsAcidityRegulator === false
+
+---
+
+SECTION 4 — SHOPPING LIST PAGE LAYOUT IMPROVEMENTS
+
+GOAL:
+Maximize shopping list visibility after meal selection.
+
+---
+
+CURRENT BEHAVIOR:
+
+Select Meals panel takes too much space.
+
+---
+
+NEW BEHAVIOR:
+
+When meals added to basket:
+
+Select Meals panel:
+
+• slides left
+• collapses into compact sidebar
+• shows only icons and meal count
+
+Shopping List expands to full width.
+
+---
+
+IMPLEMENTATION:
+
+Create state:
+
+isMealPanelCollapsed
+
+Trigger collapse when:
+
+basket.meals.length > 0
+
+---
+
+UI ANIMATION:
+
+Use smooth transition:
+
+300ms ease animation
+
+---
+
+SECTION 5 — GLOBAL BASKET STATE SYNCHRONIZATION
+
+GOAL:
+Ensure basket contents are visible and synchronized across ALL pages.
+
+Pages affected:
+
+• Select Meals
+• My Meals
+• Planner
+• Shopping List
+
+---
+
+RULES:
+
+If meal added to basket:
+
+Show:
+
+• checkmark icon
+• quantity indicator
+• "In Basket" label
+
+Example:
+
+Chicken Stir Fry ✓ x2
+
+---
+
+IMPLEMENTATION:
+
+Create global state:
+
+basketStore.ts
+
+Structure:
+
+basket:
+
+{
+meals: [
+{
+mealId,
+quantity
+}
+],
+products: []
+}
+
+---
+
+HELPER FUNCTIONS:
+
+addMealToBasket(mealId)
+
+removeMealFromBasket(mealId)
+
+updateMealQuantity(mealId, quantity)
+
+isMealInBasket(mealId)
+
+getMealQuantity(mealId)
+
+---
+
+All pages must read from basketStore.
+
+---
+
+SECTION 6 — BASKET PERSISTENCE
+
+GOAL:
+Basket must persist until manually cleared.
+
+Store in database:
+
+Basket table:
+
+basketId
+userId
+meals
+products
+createdAt
+
+---
+
+Load basket on login.
+
+---
+
+SECTION 7 — SHOPPING LIST PRODUCT CONSOLIDATION
+
+GOAL:
+Combine identical ingredients across multiple meals.
+
+Example:
+
+Meal 1: 1 onion
+Meal 2: 2 onions
+
+Shopping list shows:
+
+3 onions
+
+---
+
+Create:
+
+shoppingListAggregationService.ts
+
+---
+
+SECTION 8 — VISUAL INDICATORS
+
+Meal cards show:
+
+If in basket:
+
+✓ In Basket
+Quantity badge
+
+Disable duplicate add button.
+
+---
+
+SECTION 9 — RESULT
+
+After completion:
+
+• AI explains every meal recommendation
+• No duplicate products shown
+• Acidity regulators can be filtered
+• Shopping list expands intelligently
+• Basket state synced globally
+• Basket persists across sessions
+• Ingredients consolidated correctly
+• App behaves like a modern intelligent shopping system
+
+---
+
+SUCCESS CRITERIA:
+
+User can:
+
+• See WHY meals were recommended
+• Trust recommendations
+• Avoid unwanted additives
+• Manage shopping easily
+• Never see duplicate products
+• Have consistent basket state everywhere
+
+END PHASE 13

@@ -1,0 +1,150 @@
+Fix the supermarket integration so the shopping list carries over correctly from the shopping list page to the supermarkets page.
+
+Current problem:
+Items added to the shopping list do not appear on the supermarkets page.
+
+Goal:
+Use the same shopping_list database table and ensure supermarkets page loads and displays those items.
+
+---
+
+## PART 1 — Verify shopping_list table
+
+Ensure shopping_list table exists:
+
+shopping_list:
+
+* id INTEGER PRIMARY KEY
+* user_id INTEGER
+* ingredient_name TEXT
+* quantity TEXT
+* created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+
+---
+
+## PART 2 — Create backend route to fetch shopping list
+
+Create route:
+
+GET /api/shopping-list
+
+Logic:
+
+1. Get logged-in user_id from session
+2. Query database:
+
+SELECT * FROM shopping_list
+WHERE user_id = ?
+
+ORDER BY created_at DESC
+
+3. Return JSON:
+
+{
+items: [
+{
+id,
+ingredient_name,
+quantity
+}
+]
+}
+
+---
+
+## PART 3 — Update supermarkets page frontend
+
+File:
+/public/supermarkets.js
+
+When page loads:
+
+Fetch shopping list:
+
+fetch('/api/shopping-list')
+
+Display each item as:
+
+Tesco button
+Sainsbury button
+Asda button
+Amazon button
+
+---
+
+## PART 4 — Generate supermarket links dynamically
+
+Example:
+
+Tesco:
+[https://www.tesco.com/groceries/en-GB/search?query=INGREDIENT_NAME](https://www.tesco.com/groceries/en-GB/search?query=INGREDIENT_NAME)
+
+Sainsbury:
+[https://www.sainsburys.co.uk/gol-ui/SearchResults/INGREDIENT_NAME](https://www.sainsburys.co.uk/gol-ui/SearchResults/INGREDIENT_NAME)
+
+Amazon:
+[https://www.amazon.co.uk/s?k=INGREDIENT_NAME](https://www.amazon.co.uk/s?k=INGREDIENT_NAME)
+
+---
+
+## PART 5 — Display UI format
+
+Example display:
+
+Garlic cloves (2)
+
+[Search Tesco]
+[Search Sainsbury]
+[Search Asda]
+[Search Amazon]
+
+---
+
+## PART 6 — Ensure consistency across pages
+
+Shopping list page and supermarkets page must both use:
+
+GET /api/shopping-list
+
+Do NOT store shopping list in localStorage.
+
+Use database only.
+
+---
+
+## PART 7 — Add refresh button
+
+Button:
+
+Refresh Shopping List
+
+Calls GET /api/shopping-list again.
+
+---
+
+## PART 8 — Ensure user isolation
+
+Only show shopping list for logged-in user.
+
+---
+
+## PART 9 — Files to update
+
+/routes/shopping-list.js
+/public/supermarkets.js
+/views/supermarkets.html
+/server.js
+
+---
+
+## PART 10 — Debug logging
+
+Add console logs:
+
+console.log("Shopping list loaded:", items.length)
+
+---
+
+## PART 11 — Final explanation
+
+Explain how shopping list now persists across all pages.

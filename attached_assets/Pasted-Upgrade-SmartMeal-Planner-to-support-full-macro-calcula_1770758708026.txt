@@ -1,0 +1,225 @@
+Upgrade SmartMeal Planner to support full macro calculation, weekly meal planner, meal rotation, and automatic weekly meal plan suggestions using shared ingredients.
+
+Use existing stack:
+Node.js, Express, SQLite, HTML, CSS, vanilla JavaScript.
+
+Do not break existing functionality.
+
+---
+
+## PART 1 — Add Servings Support to Meals
+
+Update meals table:
+
+Add column:
+servings INTEGER DEFAULT 1
+
+Update meal creation and import forms to include:
+
+"Number of servings"
+
+Save servings value when creating or importing meals.
+
+---
+
+## PART 2 — Calculate Macros for Entire Meal and Per Serving
+
+Update nutrition system.
+
+Create or update nutrition table:
+
+nutrition:
+
+* id
+
+* meal_id
+
+* calories_total
+
+* protein_total
+
+* carbs_total
+
+* fat_total
+
+* sugar_total
+
+* salt_total
+
+* calories_per_serving
+
+* protein_per_serving
+
+* carbs_per_serving
+
+* fat_per_serving
+
+* sugar_per_serving
+
+* salt_per_serving
+
+Create backend route:
+
+POST /calculate-macros/:meal_id
+
+Logic:
+
+1. Fetch ingredients for meal
+
+2. For each ingredient:
+   Call OpenFoodFacts API:
+   [https://world.openfoodfacts.org/cgi/search.pl?search_terms=INGREDIENT&json=1](https://world.openfoodfacts.org/cgi/search.pl?search_terms=INGREDIENT&json=1)
+
+3. Extract macros:
+   calories
+   protein
+   carbs
+   fat
+   sugar
+   salt
+
+4. Sum all ingredient macros → calories_total, etc.
+
+5. Divide totals by servings → calories_per_serving, etc.
+
+6. Store results in nutrition table
+
+---
+
+## PART 3 — Display Macros on Meal Page
+
+Update meal details page to show:
+
+Example display:
+
+Nutrition (Total Meal):
+Calories: 1200 kcal
+Protein: 80 g
+Carbs: 100 g
+Fat: 40 g
+
+Per Serving (4 servings):
+Calories: 300 kcal
+Protein: 20 g
+Carbs: 25 g
+Fat: 10 g
+
+---
+
+## PART 4 — Weekly Meal Planner
+
+Create new table:
+
+meal_plans:
+
+* id
+* user_id
+* week_start_date
+
+meal_plan_items:
+
+* id
+* meal_plan_id
+* meal_id
+* day_of_week (Monday–Sunday)
+
+Create new page:
+/views/meal-planner.html
+
+Display weekly calendar layout:
+
+Monday
+Tuesday
+Wednesday
+Thursday
+Friday
+Saturday
+Sunday
+
+User can assign meals to each day using dropdown.
+
+Save selections to database.
+
+---
+
+## PART 5 — Meal Rotation System
+
+Add button:
+
+"Reuse last week's plan"
+
+When clicked:
+
+Copy previous week's meal_plan_items into current week.
+
+---
+
+## PART 6 — Automatic Weekly Meal Plan Generator
+
+Create route:
+
+POST /generate-meal-plan
+
+Logic:
+
+1. Get user's meals
+
+2. Analyze ingredients across meals
+
+3. Find meals that share common ingredients
+
+Example:
+Chicken stir fry → chicken, onion
+Chicken curry → chicken, onion
+
+Prefer meals sharing ingredients.
+
+4. Select 7 meals that maximize ingredient reuse.
+
+5. Assign meals to weekly planner automatically.
+
+6. Save to meal_plan_items table.
+
+---
+
+## PART 7 — Shopping List from Weekly Plan
+
+Create button:
+
+"Generate Shopping List from Weekly Plan"
+
+Combine ingredients from all planned meals.
+
+Remove duplicates.
+
+Store in shopping_list table.
+
+---
+
+## PART 8 — Diet Compatibility Support
+
+Create diets table:
+
+diets:
+
+* id
+* name
+
+Insert:
+
+Keto
+Vegan
+Vegetarian
+Gluten-Free
+Dairy-Free
+
+Create meal_diets table:
+
+meal_diets:
+
+* meal_id
+* diet_id
+
+Allow user to select diets when creating meals.
+
+Update meal generator to filter m

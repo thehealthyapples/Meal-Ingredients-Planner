@@ -1,0 +1,300 @@
+PHASE 9.5 — ITEM-LEVEL PRICE TIER CONTROL, CUSTOM TOTALS, SUPERMARKET EXPORT, MEAL HOVER & BUTTON, UI CLEANUP FOR My Meals and Import, AND FULL LIST TIDYING
+
+OBJECTIVE:
+
+* Allow each shopping list item to have its own selected price tier (budget / standard / premium / organic), even if overall default is budget.
+* Recalculate and display custom totals when any individual ingredient’s tier or price is edited.
+* Provide a well‑formatted shopping list export or basket creation flow via the supermarket button at the top of the shopping list page.
+* Add a Meal button for each ingredient row so hovering shows which meal(s) the ingredient comes from.
+* Simplify the My Meals page to show only meal pictures, with ingredient preview on hover.
+* Move the Import bar to My Meals page, below Add Meal, opening a prompt for URL in a new window.
+* Clean up remaining shopping list errors, ensure all columns sortable, ensure categories and prices are consistent.
+* Ensure multi-meal quantities work and remain traceable.
+
+---
+
+## PART 1 — PRICE TIER PER ITEM
+
+1. Ensure price tier system exists:
+
+price_tier enum values:
+
+* budget
+* standard
+* premium
+* organic
+
+2. Storage:
+
+Add column to product_matches or ingredients table if not already present:
+
+selected_tier TEXT DEFAULT NULL
+
+Interpretation:
+
+* If selected_tier is NULL → use user default tier
+* If selected_tier is set → use that tier’s product and price for this ingredient
+
+3. UI:
+
+In shopping list table row, add a dropdown for tier:
+
+[Budget ▼]  [Standard ▼]  [Premium ▼]  [Organic ▼]
+
+Selecting a tier for that item:
+
+* Updates selected_tier for that item in DB
+* Triggers re‑calculation of totals for the superstores and overall
+
+4. Display:
+
+Show the chosen product and price corresponding to the selected tier.
+If selected_tier = premium, show product from premium tier if available; else fall back to another available tier.
+
+---
+
+## PART 2 — CUSTOM TOTALS UPDATE
+
+1. Whenever:
+
+* a tier is changed on any item
+
+* manual price overrides happen
+
+* quantity is edited
+  recalculate:
+
+* Per‑supermarket totals
+
+* Overall cheapest or preferred total
+
+2. Calculation method:
+
+For each ingredient:
+
+* Determine the selected product from the chosen tier
+* Use that product’s full price (not proportional) for display
+* Optionally compute price per unit only for info or comparison
+* Add full price to that supermarket’s total
+
+If an item does not have selected tier or no product in that tier:
+
+* Fallback to default tier or indicate missing price
+
+3. UI:
+
+Show updated totals immediately in the totals area at the top of the shopping list page (see Part 7).
+
+---
+
+## PART 3 — SUPERMARKET BUTTON: EXPORT / CREATE BASKET
+
+1. Add or update button at top of shopping list page:
+
+[ Send to supermarket ]
+
+2. Action:
+
+Option A (first pass, safest):
+
+* Generate a nicely formatted shopping list page or PDF
+
+  * Ingredient | Qty | Unit | Tier | Supermarket | Product link
+* Open in a new tab or download for user to print or share
+
+Option B (if possible per supermarket):
+
+* For each ingredient, open supermarket search page pre-populated with item
+* Or if API / partnership available, create a basket with items
+* This requires per-supermarket integration; if unavailable, provide Option A only and explain.
+
+3. Implementation:
+
+* On click, fetch consolidated ingredients plus selected tiers
+* For each ingredient and tier, find the matching product URL
+* Create a clean list output with product links
+* Optionally, for supermarkets allowing quick search link, compile a single link list or multi-tab view.
+
+4. UI:
+
+Prompt user:
+
+* Choose supermarket to send to
+* Choose output format: Web page / PDF / Open search pages
+
+---
+
+## PART 4 — MEAL BUTTON & HOVER TO SHOW SOURCE MEALS
+
+1. Add a new column or clickable button in each shopping list row:
+
+[ Meal ]
+
+2. When button is hovered:
+
+* Show tooltip or popover that lists meal(s) that contributed that ingredient, including:
+
+  * Meal name(s)
+  * Quantity used per meal
+  * Instance count if meal was added multiple times
+
+3. DB support:
+
+Ensure ingredient_sources or similar table correctly tracks:
+
+* ingredient_id
+* meal_id
+* meal_name
+* quantity and unit added from that meal
+
+4. Logic:
+
+When hovering, query ingredient_sources for that ingredient row, list unique meal names, with quantity or count.
+
+---
+
+## PART 5 — My Meals PAGE CLEANUP: IMAGE‑ONLY GRID with Hover Details
+
+1. Page layout:
+
+* Remove text or other details from meal cards; show only the meal image in a grid.
+* Allow responsive grid view; use fixed-size cards or flexible.
+
+2. Hover behavior:
+
+On hover over meal image:
+
+* Show overlay or tooltip containing:
+
+  * Meal name
+  * Category (if exists)
+  * Basic ingredient list or count
+  * Optional calories or macro info
+
+3. Accessibility:
+
+Ensure hover also works with click/tap for mobile; show overlay on click or tap if hover is unavailable.
+
+4. File updates:
+
+Modify /views/myMeals.html or /views/meals.html (depending on naming) and /public/myMeals.js or similar.
+
+---
+
+## PART 6 — IMPORT TAB MOVED TO My Meals with URL PROMPT
+
+1. Remove or hide the separate Import tab or link if exists.
+
+2. On My Meals page, below Add Meal button, add:
+
+[ Import Recipe ] button
+
+3. Action on click:
+
+* Prompt user for a URL in a small modal or new window.
+* Once URL entered, use existing import logic to fetch and parse recipe.
+* After import, optionally redirect user to the newly imported meal or update meal grid.
+
+4. Implementation details:
+
+* Use modal to allow quick URL entry; if desired, open a new browser window (pop-up) to handle import separately.
+* Ensure user remains on My Meals page and sees new meal image appear after import.
+
+---
+
+## PART 7 — TOTALS AND UI IMPROVEMENTS
+
+1. Totals location:
+
+At the top of shopping list page, above the table, show a summary section:
+
+---
+
+SHOPPING LIST SUMMARY
+
+Selected supermarket: [Tesco ▼]  // or multiple tabs
+Budget total: £XX.XX
+Standard total: £YY.YY
+Premium total: £ZZ.ZZ
+Organic total: £AA.AA
+Custom total: £BB.BB      // If user manually overrides
+-------------------------------------------------------
+
+2. Highlight the currently active tier total.
+
+3. Sorting:
+
+Ensure all columns in shopping list table are sortable:
+
+* Ingredient name
+* Category
+* Quantity
+* Unit
+* Tier
+* Tesco price
+* Sainsbury price
+* Asda price
+* Cheapest or selected price
+* Meal button column (if non-sortable, keep neutral)
+
+Implement ascending/descending toggle on header click.
+
+---
+
+## PART 8 — FURTHER CLEANUP OF SHOPPING LIST ERRORS
+
+1. Review ingredientCleaner and categorizer to remove leftover clutter; ensure every row has:
+
+* Clean ingredient_name
+* Quantity as numeric
+* Unit standardized
+* Category assigned
+
+2. For any wrong or ambiguous entries:
+
+* Allow manual override via editable table cells (name, quantity, unit, category)
+* After manual changes, trigger recalculation of totals and any price tier matching
+
+3. Ensure duplicate names with different units are handled:
+
+* If same ingredient appears in two rows but with different units (e.g., g vs lb), either unify unit or keep separate but clearly flagged; allow user to choose consolidation or keep separate.
+
+---
+
+## PART 9 — MULTI‑MEAL QUANTITY HANDLING
+
+1. Ensure each ingredient row tracks total quantity based on all meal instances, not just a simple sum:
+
+* If meal added twice with 2 eggs each, ingredient_sources should tally 4 eggs total.
+* If user edits quantity manually, ingredient_sources may remain for traceability, but main quantity is what matters for totals.
+
+2. Reflect multi‑meal usage in hover tooltip, indicating quantity from each meal instance.
+
+---
+
+## PART 10 — STABILITY & BACKWARDS COMPATIBILITY
+
+1. Existing shopping list entries:
+
+* Migrate to new structure gracefully.
+* For rows lacking normalized data, run cleaning and parsing; if parsing fails, leave original text and allow manual override.
+
+2. Ensure all new UI features degrade gracefully if JS fails or permissions blocked.
+
+---
+
+## PART 11 — FINAL EXPLANATION REQUIRED FROM REPLIT
+
+When complete, explain:
+
+* How per‑item tier selection works in code
+* How totals are recalculated after any change
+* How supermarket export/basket creation works, including fallback if not supported
+* How meal hover tooltip works and which DB tables track sources
+* How My Meals page is simplified and how import flow was moved
+* How sorting and manual overrides function
+* How cleanup and multi‑meal handling are implemented
+
+---
+
+END OF PHASE 9.5 PROMPT

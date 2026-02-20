@@ -1,0 +1,235 @@
+PHASE 9.2 — STRUCTURED INGREDIENT SYSTEM AND SHOPPING LIST CLEANING
+
+OBJECTIVE:
+Convert shopping list from unstructured text into structured, clean, machine-readable format so supermarkets can identify products and prices can be retrieved.
+
+---
+
+## PART 1 — NEW DATABASE STRUCTURE
+
+Create new table:
+
+CREATE TABLE ingredients (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+user_id INTEGER,
+
+ingredient_name TEXT NOT NULL,
+normalized_name TEXT NOT NULL,
+
+quantity REAL,
+unit TEXT,
+
+category TEXT,
+
+created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+Example rows:
+
+ingredient_name: Salmon Fillet
+normalized_name: salmon fillet
+quantity: 550
+unit: g
+category: fish
+
+ingredient_name: Egg
+normalized_name: egg
+quantity: 6
+unit: unit
+category: dairy
+
+---
+
+## PART 2 — CLEAN EXISTING SHOPPING LIST
+
+Create cleaning function:
+
+/utils/ingredientCleaner.js
+
+Function:
+
+cleanIngredient(rawText)
+
+Removes:
+
+Zest
+Serve
+Saturates
+Juice
+About
+Cut into chunks
+Handful
+Thumb-size
+Extra descriptive words
+
+Example:
+
+Input:
+"Salmon Fillets About 550g/1lb 4oz In Total Cut Into Chunk — 8"
+
+Output:
+
+{
+name: "salmon fillet",
+quantity: 550,
+unit: "g"
+}
+
+---
+
+## PART 3 — SPLIT INTO 3 FIELDS
+
+Every ingredient must be stored as:
+
+ingredient_name
+quantity
+unit
+
+NOT as a single string.
+
+---
+
+## PART 4 — CONSOLIDATE DUPLICATES
+
+Group by normalized_name
+
+Sum quantity.
+
+Example:
+
+500 g salmon
+800 g salmon
+
+Result:
+
+1300 g salmon
+
+---
+
+## PART 5 — CLEAN SHOPPING LIST DISPLAY
+
+Display as table:
+
+Ingredient | Quantity | Unit
+
+Salmon Fillet | 1300 | g
+Egg | 6 | unit
+Milk | 600 | ml
+
+---
+
+## PART 6 — CREATE SUPERMARKET PRODUCT SEARCH SERVICE
+
+Create file:
+
+/services/supermarketService.js
+
+Function:
+
+searchProduct(ingredientName)
+
+Search APIs:
+
+Tesco Search URL:
+[https://www.tesco.com/groceries/en-GB/search?query=](https://www.tesco.com/groceries/en-GB/search?query=)
+
+Sainsbury Search URL:
+[https://www.sainsburys.co.uk/gol-ui/SearchResults/](https://www.sainsburys.co.uk/gol-ui/SearchResults/)
+
+Extract:
+
+product name
+price
+price per unit
+image
+
+---
+
+## PART 7 — STORE PRODUCT MATCHES
+
+Create table:
+
+product_matches
+
+Fields:
+
+ingredient_name
+supermarket
+product_name
+price
+price_per_unit
+product_url
+image_url
+
+---
+
+## PART 8 — DISPLAY PRICE COMPARISON IN APP
+
+Shopping list page shows:
+
+Salmon Fillet — 1300g
+
+Tesco: £6.50
+Sainsbury: £6.80
+Asda: £6.20
+
+---
+
+## PART 9 — TOTAL COST CALCULATOR
+
+Calculate total basket cost:
+
+Sum of all ingredient prices
+
+Display:
+
+Estimated total cost: £42.80
+
+---
+
+## PART 10 — UI UPDATE
+
+Display table:
+
+Ingredient | Quantity | Unit | Tesco | Sainsbury | Asda | Cheapest
+
+---
+
+## PART 11 — FILES TO CREATE
+
+/utils/ingredientCleaner.js
+/services/supermarketService.js
+
+Modify:
+
+/routes/shoppingList.js
+/public/shoppingList.js
+/views/shoppingList.html
+
+---
+
+## PART 12 — SUCCESS TEST
+
+Before:
+
+"Salmon Fillets About 550g"
+
+After:
+
+Ingredient: Salmon Fillet
+Quantity: 550
+Unit: g
+
+Supermarket prices visible.
+
+---
+
+PART 13 — FINAL EXPLANATION REQUIRED
+
+Explain:
+
+ingredient cleaning logic
+database structure
+price lookup logic
+cost calculation logic

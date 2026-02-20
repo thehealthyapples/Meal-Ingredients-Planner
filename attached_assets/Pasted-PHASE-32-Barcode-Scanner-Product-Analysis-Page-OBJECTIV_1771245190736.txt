@@ -1,0 +1,280 @@
+PHASE 32 — Barcode Scanner (Product Analysis Page)
+
+OBJECTIVE:
+Allow users to scan product barcodes using phone camera or desktop webcam.
+
+Frontend Implementation
+
+Install dependency:
+
+npm install @zxing/browser
+
+Create component:
+
+components/BarcodeScanner.tsx
+
+Features:
+
+• Uses device camera
+• Live scanning
+• Detects EAN-13, EAN-8, UPC
+• Mobile optimized
+• Shows scan overlay frame
+
+Component logic:
+
+When barcode detected → call:
+
+/api/products/barcode/{barcode}
+
+Fetch product from:
+
+Priority order:
+
+Your SMP database
+
+OpenFoodFacts API
+
+Store locally if not exists
+
+UI Layout on Product Analysis Page:
+
+Add button:
+
+Scan Barcode
+
+When clicked:
+
+Opens fullscreen camera modal
+
+After scan:
+
+Closes modal
+Loads Product Analysis page with result
+
+Backend endpoint:
+
+Create:
+
+GET /api/products/barcode/:barcode
+
+Logic:
+
+Check local DB first
+
+If not found:
+
+Fetch:
+https://world.openfoodfacts.org/api/v0/product/{barcode}.json
+
+Store locally
+
+Return standardized SMP product object
+
+End Phase.
+
+PHASE 33 — Apple Sound Effects System (Optional, Default ON)
+
+OBJECTIVE:
+Play subtle premium sound when Elite food detected.
+
+Create:
+
+assets/sounds/
+
+Add files:
+
+elite-chime.mp3
+neutral-click.mp3
+warning-tone.mp3
+
+Create:
+
+services/soundService.ts
+
+Logic:
+
+export function playAppleSound(rating: number) {
+
+if (!userSettings.soundEnabled) return
+
+if (rating === 5)
+play elite-chime
+
+if rating <=2
+play warning-tone
+
+else
+play neutral-click
+
+}
+
+Trigger sound when:
+
+• Product analysed
+• Shopping list updated
+• Healthier swap selected
+
+Add User Setting:
+
+Settings table:
+
+soundEnabled: boolean default true
+
+End Phase.
+
+PHASE 34 — Elite Food Streak System (Optional, Default ON)
+
+OBJECTIVE:
+Track how often users select elite foods.
+
+Database:
+
+Create table:
+
+UserStreaks
+
+id
+userId
+currentEliteStreak
+bestEliteStreak
+lastEliteDate
+weeklyEliteCount
+
+Logic:
+
+When user adds product with rating 5:
+
+Increment:
+
+currentEliteStreak
+weeklyEliteCount
+
+If missed day:
+
+reset currentEliteStreak
+
+UI Display Locations:
+
+Dashboard:
+
+"You chose 4 Elite foods this week"
+
+Shopping list:
+
+Small badge:
+
++1 Elite Choice
+
+Planner:
+
+Weekly summary
+
+Add User Setting:
+
+eliteTrackingEnabled default true
+
+End Phase.
+
+PHASE 35 — Apple Health Score Trend System
+
+OBJECTIVE:
+Track improvement in user's food quality over time.
+
+Database:
+
+Create table:
+
+UserHealthTrend
+
+id
+userId
+date
+averageAppleScore
+eliteCount
+processedCount
+
+Logic:
+
+Daily cron job:
+
+Calculate:
+
+average apple rating of products added that day
+
+Store record
+
+Create component:
+
+components/HealthTrendChart.tsx
+
+Use chart library:
+
+npm install recharts
+
+Display:
+
+• 7 day trend
+• 30 day trend
+• 90 day trend
+
+Graph shows:
+
+Average Apple Score over time
+
+Add User Setting:
+
+healthTrendEnabled default true
+
+End Phase.
+
+PHASE 36 — User Optional Feature Settings System
+
+OBJECTIVE:
+Allow users to enable/disable premium intelligence features.
+
+Update UserPreferences table:
+
+soundEnabled boolean default true
+eliteTrackingEnabled boolean default true
+healthTrendEnabled boolean default true
+barcodeScannerEnabled boolean default true
+
+Create page:
+
+Settings → Intelligence Settings
+
+Options:
+
+☑ Sound effects
+☑ Elite food streak tracking
+☑ Health trend tracking
+☑ Barcode scanning
+
+Changes apply instantly.
+
+End Phase.
+
+PHASE 37 — Product Analysis Page Integration
+
+Update Product Analysis page.
+
+Add top section:
+
+Scan Barcode button
+Search Product input
+
+Product Result
+
+Apple Rating
+Health Breakdown
+Trend impact
+
+If elite product:
+
+Show:
+
++1 Elite Streak
+Play sound
+
+End Phase.

@@ -1,0 +1,244 @@
+Phase 9.3 – My Meals UI Improvements and Shopping List Integration
+
+Objective
+Improve the My Meals page and Planner so meals always show their name, ingredients appear on hover, meals can be added multiple times to the shopping list, and planner supports adding per meal, per day, or per week. All meals must also be automatically analysed.
+
+---
+
+## PART 1 – My Meals Page – Meal Card Display
+
+Requirements:
+
+1. Each meal must display:
+   • Meal image (full card)
+   • Meal name ALWAYS visible in the top-left corner of the image
+   • Name must be readable with semi-transparent background overlay
+
+Example structure:
+
+<div class="meal-card">
+  <img src={meal.image} class="meal-image"/>
+
+  <div class="meal-name-overlay">
+    {meal.name}
+  </div>
+</div>
+
+CSS required:
+
+.meal-card {
+position: relative;
+}
+
+.meal-name-overlay {
+position: absolute;
+top: 6px;
+left: 6px;
+background: rgba(0,0,0,0.65);
+color: white;
+padding: 4px 8px;
+border-radius: 6px;
+font-size: 13px;
+font-weight: 500;
+}
+
+---
+
+## PART 2 – Hover on Meal Card Shows Ingredients
+
+When user hovers over a meal card:
+
+• Show ingredient list overlay
+• Overlay must cover image
+• Must fade in smoothly
+• Must be scrollable if long
+
+Example:
+
+<div class="meal-hover-overlay">
+  {meal.ingredients.map(ingredient => (
+    <div>
+      {ingredient.quantity} {ingredient.unit} {ingredient.name}
+    </div>
+  ))}
+</div>
+
+CSS:
+
+.meal-hover-overlay {
+position: absolute;
+inset: 0;
+background: rgba(0,0,0,0.85);
+color: white;
+opacity: 0;
+transition: opacity 0.2s;
+padding: 10px;
+overflow-y: auto;
+}
+
+.meal-card:hover .meal-hover-overlay {
+opacity: 1;
+}
+
+---
+
+## PART 3 – Add to Shopping List From My Meals
+
+User must be able to add meal 1 or more times.
+
+Add quantity selector:
+
+<select id="quantity-selector">
+  <option value="1">1x</option>
+  <option value="2">2x</option>
+  <option value="3">3x</option>
+  <option value="4">4x</option>
+</select>
+
+Add button:
+
+<button onclick="addMealToShoppingList(meal.id, quantity)">
+  Add to Shopping List
+</button>
+
+Backend function must:
+
+• Multiply ingredient quantities by selected multiplier
+• Add ingredients to shopping list
+• Preserve mealId reference
+
+Example logic:
+
+async function addMealToShoppingList(mealId, multiplier) {
+
+const meal = await db.meals.get(mealId)
+
+for (const ingredient of meal.ingredients) {
+
+```
+await shoppingList.addOrMerge({
+  ingredientId: ingredient.id,
+  quantity: ingredient.quantity * multiplier,
+  mealId: mealId
+})
+```
+
+}
+}
+
+---
+
+## PART 4 – Automatic Meal Analysis
+
+All meals must be automatically analysed when:
+
+• created
+• imported
+• edited
+
+Analysis must calculate:
+
+• estimatedCostBudget
+• estimatedCostStandard
+• estimatedCostPremium
+• estimatedCostOrganic
+
+Store on meal object:
+
+{
+estimatedCostBudget,
+estimatedCostStandard,
+estimatedCostPremium,
+estimatedCostOrganic
+}
+
+Call analyseMeal(mealId) automatically after save/import.
+
+---
+
+## PART 5 – Planner – Add to Shopping List Controls
+
+Planner must allow adding shopping list at 3 levels:
+
+LEVEL 1 – Per Meal
+
+Each meal in planner must have button:
+
+<button onclick="addMealToShoppingList(meal.id, 1)">
+  Add to Shopping List
+</button>
+
+LEVEL 2 – Per Day
+
+Each day must have button:
+
+<button onclick="addDayToShoppingList(date)">
+  Add Day to Shopping List
+</button>
+
+Function:
+
+async function addDayToShoppingList(date) {
+
+const meals = planner.getMealsForDate(date)
+
+for (const meal of meals) {
+await addMealToShoppingList(meal.id, 1)
+}
+
+}
+
+LEVEL 3 – Per Week
+
+Each week must have button:
+
+<button onclick="addWeekToShoppingList(weekStartDate)">
+  Add Week to Shopping List
+</button>
+
+Function:
+
+async function addWeekToShoppingList(weekStartDate) {
+
+const meals = planner.getMealsForWeek(weekStartDate)
+
+for (const meal of meals) {
+await addMealToShoppingList(meal.id, 1)
+}
+
+}
+
+---
+
+## PART 6 – Shopping List Must Preserve Meal Source
+
+Shopping list item must store:
+
+{
+ingredientId,
+quantity,
+mealId
+}
+
+This will allow showing which meal ingredient came from.
+
+---
+
+## Expected Result
+
+My Meals page:
+• Meal name always visible
+• Ingredients visible on hover
+• Add meal to shopping list
+• Add meal multiple times
+
+Planner:
+• Add per meal
+• Add per day
+• Add per week
+
+Backend:
+• Automatic meal analysis
+• Shopping list stores meal references
+
+Implement using existing project structure and components.

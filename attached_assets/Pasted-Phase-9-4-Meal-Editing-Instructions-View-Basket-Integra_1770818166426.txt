@@ -1,0 +1,251 @@
+Phase 9.4 – Meal Editing, Instructions View, Basket Integration, and Carnivore Diet Support
+
+Objective
+Add full meal editing (copy-edit), proper instructions display, add-to-basket from My Meals grid, and support Carnivore diet type.
+
+---
+
+## PART 1 – Edit Meal Function (Copy and Append)
+
+Requirement:
+
+When user clicks "Edit" on a meal:
+
+• The system MUST create a COPY of the meal
+• Original meal must NOT be modified
+• New meal name must append "(Edited)"
+
+Example:
+
+Original:
+"Salmon with Vegetables"
+
+New copy:
+"Salmon with Vegetables (Edited)"
+
+Backend function:
+
+async function editMeal(mealId) {
+
+const originalMeal = await db.meals.get(mealId)
+
+const newMeal = {
+...originalMeal,
+id: generateNewId(),
+name: originalMeal.name + " (Edited)",
+createdAt: new Date()
+}
+
+await db.meals.insert(newMeal)
+
+openMealEditor(newMeal.id)
+
+}
+
+Purpose:
+This allows safe editing without breaking planner or shopping list references.
+
+---
+
+## PART 2 – Instructions Must Be Imported and Stored
+
+All imported meals (BBC Good Food, MealDB, manual import, etc.) MUST store:
+
+{
+name,
+image,
+ingredients[],
+instructions,
+dietTypes[],
+nutrition,
+costAnalysis
+}
+
+Instructions must be saved as structured text or array.
+
+Example:
+
+instructions: [
+"Preheat oven to 180°C",
+"Season salmon",
+"Bake for 20 minutes"
+]
+
+---
+
+## PART 3 – Meal Detail Page Layout (Separate Tab View)
+
+When opening a meal, display proper layout:
+
+TOP LEFT:
+• Meal image
+• Meal name
+
+BELOW IMAGE / RIGHT SIDE:
+
+Two column layout:
+
+LEFT COLUMN – Ingredients
+RIGHT COLUMN – Instructions
+
+Example layout:
+
+---
+
+| IMAGE        | Meal Name              |
+|              |                        |
+|              | Ingredients | Instructions
+|              |             |
+|              | • 200g fish| Step 1...
+|              | • 1 lemon  | Step 2...
+---------------------------------------
+
+React layout example:
+
+<div class="meal-detail">
+
+  <div class="meal-header">
+    <img src={meal.image}/>
+    <h1>{meal.name}</h1>
+  </div>
+
+  <div class="meal-columns">
+
+```
+<div class="ingredients-column">
+  {meal.ingredients.map(i => (
+    <div>{i.quantity} {i.unit} {i.name}</div>
+  ))}
+</div>
+
+<div class="instructions-column">
+  {meal.instructions.map(step => (
+    <div>{step}</div>
+  ))}
+</div>
+```
+
+  </div>
+
+</div>
+
+---
+
+## PART 4 – My Meals Grid Must Include Add to Basket Button
+
+Each meal card must include:
+
+• Meal image
+• Meal name (top left overlay)
+• Hover shows ingredients
+• Add to Basket button
+• Quantity selector
+
+Example:
+
+<select id="qty">
+  <option>1x</option>
+  <option>2x</option>
+  <option>3x</option>
+</select>
+
+<button onclick="addMealToShoppingList(meal.id, qty)">
+  Add to Basket
+</button>
+
+Must work directly from grid view without opening meal.
+
+---
+
+## PART 5 – Import Must Capture Instructions Properly
+
+When importing from external sites:
+
+Extract and store:
+
+• ingredients
+• instructions
+• image
+• diet types (if available)
+
+Ensure instructions are never empty.
+
+If instructions missing, store fallback:
+
+instructions: ["No instructions available"]
+
+---
+
+## PART 6 – Add Carnivore Diet Type Support
+
+Add new diet type:
+
+"Carnivore"
+
+Update enum:
+
+const dietTypes = [
+"None",
+"Vegetarian",
+"Vegan",
+"Gluten Free",
+"Keto",
+"Carnivore"
+]
+
+Carnivore rules:
+
+Allowed:
+• Meat
+• Fish
+• Eggs
+• Animal fats
+
+Avoid:
+• Vegetables
+• Fruits
+• Grains
+• Sugars
+
+Meals must support multiple diet types:
+
+dietTypes: ["Carnivore"]
+
+Planner filtering must include Carnivore option.
+
+---
+
+## PART 7 – Database Schema Update
+
+Ensure meals table includes:
+
+meals {
+id
+name
+image
+ingredients JSON
+instructions JSON
+dietTypes JSON
+nutrition JSON
+estimatedCostBudget
+estimatedCostStandard
+estimatedCostPremium
+estimatedCostOrganic
+createdAt
+}
+
+---
+
+## EXPECTED RESULT
+
+User can:
+
+• Click Edit → creates safe editable copy
+• View meal instructions in proper layout
+• See ingredients and instructions clearly separated
+• Add meals to basket directly from My Meals grid
+• Import meals with full instructions
+• Filter meals by Carnivore diet
+• Manage meals safely without breaking planner
+
+Implement using existing frontend components and backend services.

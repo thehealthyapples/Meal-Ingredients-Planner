@@ -1,0 +1,327 @@
+Phase 10.0 – Products Page: Ingredient Scraping, Ultra-Processed Food Detection, and Healthier Alternatives Engine
+
+Objective
+Build a Products Analysis system that pulls ingredient lists from packaged foods and evaluates whether the product is Ultra-Processed (UPF), minimally processed, or whole food, and suggests healthier alternatives.
+
+This is a core USP feature.
+
+---
+
+## PART 1 – Create Products Page
+
+Create new page:
+
+/products
+
+Purpose:
+Allow users to search and analyse packaged supermarket foods such as:
+
+• Ketchup
+• Mayonnaise
+• Ready meals
+• Soups
+• Sauces
+• Snacks
+• Frozen meals
+
+Page must include:
+
+• Search bar
+• Product results list
+• Product analysis panel
+• UPF rating badge
+• Ingredient breakdown
+• Healthier alternatives
+
+---
+
+## PART 2 – Product Data Sources (API Integration)
+
+Use OpenFoodFacts API as primary source.
+
+Endpoint example:
+
+https://world.openfoodfacts.org/api/v2/product/{barcode}.json
+
+Search endpoint:
+
+https://world.openfoodfacts.org/cgi/search.pl?search_terms=ketchup&search_simple=1&json=1
+
+Pull fields:
+
+product_name
+ingredients_text
+ingredients_tags
+image_url
+nutriments
+nova_group
+brands
+
+Save into database:
+
+products {
+id
+name
+brand
+ingredients_text
+ingredients_array
+image
+nutriments JSON
+nova_group
+analysis JSON
+}
+
+---
+
+## PART 3 – Ingredient Parsing Engine
+
+Convert ingredients_text into structured ingredients.
+
+Example input:
+
+"Tomatoes (80%), sugar, vinegar, salt, modified starch, flavourings"
+
+Convert into:
+
+[
+{ name: "Tomatoes", percent: 80 },
+{ name: "Sugar" },
+{ name: "Vinegar" },
+{ name: "Salt" },
+{ name: "Modified starch" },
+{ name: "Flavourings" }
+]
+
+Function:
+
+function parseIngredients(text) {
+return text.split(",").map(i => cleanIngredient(i))
+}
+
+---
+
+## PART 4 – Ultra-Processed Food Detection (NOVA Classification)
+
+Use NOVA classification if available from OpenFoodFacts:
+
+nova_group meanings:
+
+1 = Whole food
+2 = Processed ingredient
+3 = Processed food
+4 = Ultra-Processed Food (UPF)
+
+Display badge:
+
+Green = Whole food
+Yellow = Processed
+Orange = Processed food
+Red = Ultra-Processed
+
+If nova_group missing, calculate manually.
+
+---
+
+## PART 5 – Manual UPF Detection Engine
+
+Flag as Ultra-Processed if ingredients include:
+
+preservatives
+emulsifiers
+stabilisers
+modified starch
+artificial flavourings
+artificial sweeteners
+hydrogenated oils
+maltodextrin
+colourings
+E-numbers
+
+Detection example:
+
+const upfIndicators = [
+"emulsifier",
+"stabiliser",
+"modified starch",
+"flavouring",
+"maltodextrin",
+"colour",
+"sweetener",
+"hydrogenated"
+]
+
+function detectUPF(ingredients) {
+return ingredients.some(i =>
+upfIndicators.some(flag =>
+i.name.toLowerCase().includes(flag)
+)
+)
+}
+
+---
+
+## PART 6 – Health Score Calculation
+
+Calculate score from 0–100:
+
+Start at 100
+
+Subtract points for:
+
+UPF ingredient: −10 each
+Artificial sweetener: −15
+Preservative: −10
+High sugar: −10
+High saturated fat: −10
+
+Add points for:
+
+Whole ingredients: +5
+Organic ingredients: +5
+
+Store result:
+
+analysis: {
+score: 72,
+nova_group: 4,
+isUltraProcessed: true,
+warnings: [
+"Contains emulsifiers",
+"Contains flavourings"
+]
+}
+
+---
+
+## PART 7 – Suggest Healthier Alternatives
+
+When product is Ultra-Processed, suggest alternatives:
+
+Example:
+
+Product:
+"Heinz Tomato Ketchup"
+
+Suggest:
+
+"Organic Tomato Ketchup"
+"Homemade ketchup recipe"
+"Low sugar ketchup"
+
+Method:
+
+Search OpenFoodFacts for:
+
+same category
+nova_group <= 2
+higher health score
+
+OR suggest recipe alternative from your recipe database.
+
+---
+
+## PART 8 – UI Display Layout
+
+Product card:
+
+---
+
+| Image                        |
+| Product name                |
+| Brand                       |
+| UPF Badge: Ultra-Processed |
+| Health Score: 42/100       |
+------------------------------
+
+When clicked:
+
+LEFT:
+
+• Ingredient list
+• Highlight harmful ingredients
+
+RIGHT:
+
+• Nutrition info
+• Health score
+• Health warnings
+• Suggested alternatives
+
+---
+
+## PART 9 – Highlight Harmful Ingredients in Red
+
+Example:
+
+Tomatoes
+Sugar
+Salt
+Modified starch ← red
+Flavourings ← red
+
+---
+
+## PART 10 – Allow Users to Compare Products
+
+Example:
+
+Heinz Ketchup – Score 42
+Organic Ketchup – Score 78
+
+Display comparison table.
+
+---
+
+## PART 11 – Allow Integration With Shopping List
+
+When adding product to shopping list:
+
+Store health score and UPF flag.
+
+Show warning icon if Ultra-Processed.
+
+---
+
+## PART 12 – Database Schema
+
+products table:
+
+id
+name
+brand
+image
+ingredients_text
+ingredients_array JSON
+nova_group
+health_score
+is_ultra_processed
+warnings JSON
+nutriments JSON
+
+---
+
+## EXPECTED RESULT
+
+User can:
+
+• Search any supermarket packaged product
+• View ingredient breakdown
+• Detect Ultra-Processed foods
+• See harmful ingredients highlighted
+• Get health score
+• See healthier alternatives
+• Compare products
+• Make healthier shopping decisions
+
+This becomes a core USP feature of the platform.
+
+---
+
+Future Enhancement Ready:
+
+Barcode scanning
+Supermarket integration
+Personalised recommendations
+Diet-based filtering (Keto, Vegan, Carnivore, etc.)
+
+Implemen

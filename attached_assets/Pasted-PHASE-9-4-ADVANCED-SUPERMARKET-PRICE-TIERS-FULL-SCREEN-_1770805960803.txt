@@ -1,0 +1,312 @@
+PHASE 9.4 — ADVANCED SUPERMARKET PRICE TIERS, FULL-SCREEN PRICE COMPARISON, MEAL TRACEABILITY, AND MULTI-MEAL SUPPORT
+
+OBJECTIVES:
+
+1. Allow price selection tiers:
+
+   * Cheapest
+   * Best Quality (Finest / Taste the Difference / Extra Special)
+   * Organic
+
+2. Expand supermarket results into full-screen detailed comparison view
+
+3. Allow same meal to be added multiple times (correct quantity multiplication)
+
+4. Track which meal each ingredient came from
+
+5. Show ingredient source meal on hover tooltip
+
+---
+
+## PART 1 — ADD PRICE TIER SYSTEM
+
+Create price_tier enum:
+
+"budget"
+"standard"
+"premium"
+"organic"
+
+Add to user_settings table:
+
+preferred_price_tier TEXT DEFAULT "standard"
+
+---
+
+## PART 2 — UPDATE SUPERMARKET SEARCH SERVICE
+
+Modify:
+
+/services/supermarketService.js
+
+When searching products, classify each result:
+
+budget:
+lowest price per unit
+
+standard:
+normal branded items
+
+premium:
+Tesco Finest
+Taste the Difference (Sainsbury)
+Extra Special (Asda)
+
+organic:
+contains keyword "organic"
+
+Store all results:
+
+product_matches table:
+
+ingredient_name
+supermarket
+product_name
+price
+price_per_unit
+weight
+tier
+image_url
+product_url
+
+---
+
+## PART 3 — FILTER RESULTS BY TIER
+
+When displaying prices:
+
+Use user preferred tier.
+
+Example:
+
+User selects "organic"
+
+Only show organic matches.
+
+---
+
+## PART 4 — FULL SCREEN PRICE COMPARISON VIEW
+
+Create new page:
+
+/views/priceComparison.html
+
+When user clicks ingredient price:
+
+Open full screen modal or page showing:
+
+Product image
+Product name
+Weight
+Price
+Price per unit
+Tier
+Supermarket
+Link to product
+
+Layout:
+
+Grid view
+
+Tesco products
+Sainsbury products
+Asda products
+
+---
+
+## PART 5 — SUPPORT MULTIPLE MEAL INSTANCES
+
+Create new table:
+
+meal_instances
+
+Fields:
+
+id
+user_id
+meal_id
+instance_count
+
+When user adds meal twice:
+
+instance_count = 2
+
+Ingredient quantities multiplied by instance_count.
+
+Example:
+
+Meal uses 2 eggs
+
+If instance_count = 3
+
+Add 6 eggs to shopping list
+
+---
+
+## PART 6 — TRACK INGREDIENT SOURCE MEAL
+
+Update ingredients table:
+
+Add column:
+
+source_meal_id INTEGER
+source_meal_name TEXT
+
+Example:
+
+ingredient_name: egg
+quantity: 6
+source_meal_name: Pancakes
+
+---
+
+## PART 7 — SHOW SOURCE MEAL ON HOVER
+
+Frontend:
+
+/public/shoppingList.js
+
+Add tooltip:
+
+Hover over ingredient:
+
+Show:
+
+Used in:
+
+Pancakes
+Salmon Curry
+Fish Pie
+
+If multiple meals, show all.
+
+---
+
+## PART 8 — INGREDIENT TRACEABILITY STRUCTURE
+
+Create table:
+
+ingredient_sources
+
+Fields:
+
+ingredient_id
+meal_id
+meal_name
+quantity
+
+Allows full traceability.
+
+---
+
+## PART 9 — FULL SCREEN SHOPPING LIST VIEW
+
+Improve shopping list layout:
+
+Use full screen width.
+
+Columns:
+
+Ingredient
+Category
+Quantity
+Unit
+Tesco Budget
+Tesco Premium
+Tesco Organic
+Sainsbury Budget
+Asda Budget
+Best Option
+
+Click any price → open full comparison view.
+
+---
+
+## PART 10 — MEAL MULTIPLIER UI
+
+On meal cards add:
+
+"+" button
+"-" button
+
+Display:
+
+Meal count: 2
+
+Updates ingredient quantities live.
+
+---
+
+## PART 11 — UPDATE TOTAL COST CALCULATOR
+
+Calculate totals based on:
+
+selected price tier
+meal instance count
+
+Display:
+
+Budget total: £42
+Premium total: £68
+Organic total: £91
+
+---
+
+## PART 12 — FILES TO CREATE OR MODIFY
+
+Create:
+
+/views/priceComparison.html
+/public/priceComparison.js
+
+Modify:
+
+/services/supermarketService.js
+/routes/shoppingList.js
+/routes/meals.js
+/public/shoppingList.js
+/public/selectMeals.js
+
+Database updates:
+
+ingredients table
+meal_instances table
+ingredient_sources table
+
+---
+
+## PART 13 — SUCCESS TESTS
+
+Test 1:
+
+Add meal twice
+
+Ingredient quantity doubles correctly.
+
+Test 2:
+
+Hover ingredient shows source meals.
+
+Test 3:
+
+Select organic tier → organic products displayed.
+
+Test 4:
+
+Click price → full screen comparison opens.
+
+Test 5:
+
+Totals update based on tier.
+
+---
+
+PART 14 — FINAL EXPLANATION REQUIRED
+
+Explain:
+
+price tier logic
+meal instance logic
+ingredient traceability
+full screen comparison system
+tier filtering system

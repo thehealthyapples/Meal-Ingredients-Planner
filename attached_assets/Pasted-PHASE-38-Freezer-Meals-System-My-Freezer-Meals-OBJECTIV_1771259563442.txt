@@ -1,0 +1,258 @@
+PHASE 38 — Freezer Meals System ("My Freezer Meals")
+
+OBJECTIVE:
+Allow users to store cooked meals in their freezer inventory, add them to planner, and prevent duplicate ingredient shopping.
+
+PART 1 — Database Schema
+
+Create new table:
+
+FreezerMeals
+
+Fields:
+
+id: string (UUID)
+userId: string
+mealId: string
+mealName: string
+mealImage: string
+portionsAvailable: number
+dateFrozen: datetime
+expiryDate: datetime (optional)
+notes: string (optional)
+
+Also update Meals table:
+
+Add field:
+
+isFreezerEligible: boolean default true
+
+PART 2 — UI: Add to Freezer Button
+
+On My Meals page
+Each meal widget must include new button:
+
+Button label:
+
+Add to Freezer
+
+Icon:
+
+Snowflake icon
+
+When clicked:
+
+Show modal:
+
+Add to Freezer
+
+Fields:
+
+Portions: [ + – selector ] default 1
+Date Frozen: default today
+Expiry Date: optional
+Notes: optional
+
+Buttons:
+
+Cancel
+Add to Freezer
+
+On confirm:
+
+Insert record into FreezerMeals table
+
+PART 3 — My Meals Page: Freezer Section
+
+On My Meals page create new section:
+
+My Freezer Meals
+
+Position:
+
+Below My Meals
+Or as tab toggle:
+
+My Meals | My Freezer
+
+Display freezer meals using same card layout with modifications:
+
+Show snowflake badge
+
+Show:
+
+Meal image
+Meal name
+Portions remaining
+Date frozen
+
+Buttons:
+
+Add to Planner
+Add to Basket
+Remove from Freezer
+
+PART 4 — Planner Integration
+
+User must be able to add freezer meal to planner.
+
+Planner display should show:
+
+Meal name
+Snowflake icon
+Label:
+
+Freezer Meal
+
+Planner logic:
+
+DO NOT add ingredients to shopping list for freezer meals.
+
+PART 5 — Shopping List Behaviour
+
+When freezer meal added to shopping list:
+
+Shopping list must display:
+
+Column:
+
+Type: Freezer Meal
+
+Row display example:
+
+Chicken Curry — Freezer Meal
+Status: Already in freezer
+Icon: Snowflake
+
+IMPORTANT:
+
+Do NOT include ingredients.
+
+Only include:
+
+Meal name
+Freezer indicator
+
+PART 6 — Shopping List Visual Indicator
+
+Add column:
+
+Source
+
+Possible values:
+
+Recipe
+Freezer
+Manual
+Ready Meal
+
+Freezer rows show:
+
+Snowflake icon
+Text:
+
+In Freezer
+
+Row styling:
+
+Slight blue background tint
+
+PART 7 — Basket and Planner Logic Update
+
+Update shopping list generator:
+
+If meal source == freezer
+
+Skip ingredient expansion
+
+Add single meal reference row instead
+
+PART 8 — Freezer Inventory Tracking Logic
+
+When freezer meal added to planner:
+
+Reduce portionsAvailable by 1
+
+If portionsAvailable == 0
+
+Remove from freezer list OR mark as depleted
+
+PART 9 — Dashboard Widget (Premium Feature)
+
+Add dashboard widget:
+
+Freezer Inventory
+
+Example display:
+
+Freezer Inventory
+
+8 meals available
+12 portions total
+
+Button:
+
+View Freezer Meals
+
+PART 10 — Meal Widget Indicator
+
+On My Meals page, if meal exists in freezer:
+
+Show badge:
+
+In Freezer (3 portions)
+
+PART 11 — API Endpoints
+
+Create endpoints:
+
+POST /api/freezer/add
+
+GET /api/freezer/meals
+
+POST /api/freezer/use
+
+DELETE /api/freezer/remove
+
+PART 12 — Visual UX Rules (Important)
+
+Freezer meals must be visually distinct:
+
+Use:
+
+Snowflake icon
+Blue accent color
+Label:
+
+Freezer Meal
+
+NOT confused with normal meals
+
+Expected Final Behaviour Example
+
+User flow:
+
+User cooks chilli → adds to freezer (4 portions)
+
+Freezer inventory shows:
+
+Chilli
+4 portions
+
+User adds chilli to planner Wednesday
+
+Planner shows:
+
+Chilli ❄ Freezer Meal
+
+Shopping list shows:
+
+Chilli
+Status: In Freezer ❄
+(no ingredients listed)
+
+Result
+
+This creates a true freezer inventory system.
+
+This is a major premium feature competitors lack.

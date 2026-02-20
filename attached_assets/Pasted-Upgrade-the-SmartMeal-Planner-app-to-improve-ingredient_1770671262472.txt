@@ -1,0 +1,180 @@
+Upgrade the SmartMeal Planner app to improve ingredient handling, recipe image importing, and UI styling.
+
+Use the existing stack:
+
+Node.js
+
+Express
+
+SQLite
+
+HTML, CSS, vanilla JavaScript
+
+Cheerio for parsing
+
+Make the following changes:
+
+PART 1 — Separate Ingredients and Macros
+
+Problem:
+Currently macro nutrients like "Calories", "Protein", "Fat", etc. are being imported as ingredients and added to the shopping list. This is incorrect.
+
+Solution:
+
+Update ingredient extraction logic in /routes/import.js:
+
+When parsing ingredients, EXCLUDE any lines containing macro keywords such as:
+
+calories
+cal
+energy
+protein
+fat
+carbs
+carbohydrates
+sugar
+salt
+sodium
+nutrition
+per serving
+kcal
+kj
+fiber
+fibre
+
+These should NOT be saved in the ingredients table.
+
+Create a new database table called nutrition:
+
+nutrition table structure:
+
+id
+
+meal_id
+
+calories
+
+protein
+
+carbs
+
+fat
+
+sugar
+
+salt
+
+If nutrition information is found, store it in the nutrition table instead of ingredients.
+
+Shopping list generator must ONLY use ingredients table.
+
+PART 2 — Import and Store Recipe Image
+
+Add image extraction and storage.
+
+Update meals table:
+
+Add new column:
+image_url TEXT
+
+When importing recipe, extract image using cheerio from:
+
+meta property="og"
+or
+img tags with:
+
+recipe
+
+main
+
+hero
+
+featured
+
+Example selectors:
+$('meta[property="og"]').attr('content')
+
+Save image_url to meals table.
+
+Update meals page UI to display recipe image above meal name:
+
+Add CSS:
+
+.meal-image {
+width: 100%;
+max-width: 300px;
+border-radius: 12px;
+}
+
+PART 3 — Improve UI with Food-Based Styling
+
+Update CSS to make the app visually food-themed.
+
+Use fruit emoji as ingredient bullet points:
+
+Replace bullet points with:
+🍎 🍊 🍓 🥕
+
+Example CSS:
+
+ul.ingredients li::before {
+content: "🍎 ";
+}
+
+Use vegetable emoji for menu navigation:
+
+Dashboard: 🥦 Dashboard
+Meals: 🍽️ Meals
+Import: 🥕 Import Recipe
+Shopping List: 🛒 Shopping List
+
+Improve overall styling:
+
+Use warm food-friendly colors:
+
+background: #fff8f0;
+primary: #ff7f50;
+secondary: #4caf50;
+
+Add card layout for meals:
+
+.meal-card {
+background: white;
+border-radius: 12px;
+padding: 15px;
+margin: 10px;
+box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+PART 4 — File updates required
+
+Update:
+
+/routes/import.js
+/routes/meals.js
+/db/database.js
+/public/style.css
+/views/meals.html
+/views/dashboard.html
+
+PART 5 — Requirements
+
+Do not break existing functionality
+
+Keep code clean and commented
+
+Automatically handle missing images gracefully
+
+Only ingredients appear in shopping list
+
+Nutrition stored separately
+
+PART 6 — Final step
+
+Explain:
+
+how nutrition is now separated
+
+how images are stored
+
+how UI styling works

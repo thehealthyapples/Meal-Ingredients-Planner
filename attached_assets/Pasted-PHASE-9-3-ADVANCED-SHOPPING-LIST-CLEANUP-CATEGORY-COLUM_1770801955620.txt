@@ -1,0 +1,283 @@
+PHASE 9.3 — ADVANCED SHOPPING LIST CLEANUP, CATEGORY COLUMN, SORTING, TRUE PRODUCT PRICING, MANUAL OVERRIDES, AND UI IMPROVEMENTS
+
+OBJECTIVES:
+
+1. Add food category column (Produce, Meat, Dairy, Fish, Pantry, etc.)
+2. Make all shopping list columns sortable
+3. Show actual supermarket product prices (not proportional prices)
+4. Improve ingredient cleaning accuracy
+5. Add manual override/edit capability for all fields
+6. Move "Add to Shopping List" buttons to top of Select Meals page
+7. Display supermarket totals at top of shopping list page
+
+---
+
+## PART 1 — ADD CATEGORY COLUMN
+
+Update ingredients table:
+
+ALTER TABLE ingredients ADD COLUMN category TEXT;
+
+Create auto-categorization service:
+
+/utils/ingredientCategorizer.js
+
+Function:
+
+categorizeIngredient(name)
+
+Use keyword matching:
+
+Produce:
+apple, banana, carrot, onion, potato, cucumber, lettuce, pepper
+
+Meat:
+chicken, beef, pork, lamb, steak, mince
+
+Fish:
+salmon, tuna, cod, prawn, trout
+
+Dairy:
+milk, cheese, butter, yogurt, egg
+
+Pantry:
+rice, pasta, flour, oil, sugar, soy sauce
+
+Return category string.
+
+Run categorizer when ingredient added.
+
+---
+
+## PART 2 — SORTABLE COLUMNS
+
+Shopping list table columns:
+
+Ingredient
+Category
+Quantity
+Unit
+Tesco Price
+Sainsbury Price
+Asda Price
+Cheapest Price
+
+Frontend file:
+/public/shoppingList.js
+
+Make columns sortable:
+
+Click column header → sort ascending/descending
+
+Sort types:
+
+text sort → ingredient, category
+numeric sort → quantity, price
+
+---
+
+## PART 3 — FIX PRICE RETURN (SHOW FULL PRODUCT PRICE)
+
+IMPORTANT CHANGE:
+
+Currently showing proportional price (incorrect).
+
+Instead show full product price.
+
+Example:
+
+Tesco result:
+
+Chicken Breast 1kg pack
+Price: £6.50
+
+Display:
+
+Tesco: £6.50
+
+NOT:
+
+Tesco: £3.25 (partial)
+
+Store:
+
+product_price
+product_weight
+price_per_unit
+
+---
+
+## PART 4 — IMPROVE INGREDIENT CLEANING ENGINE
+
+Enhance ingredientCleaner.js:
+
+Remove words:
+
+about
+serve
+to serve
+handful
+knob
+thumb-size
+piece
+cut into chunks
+saturates
+zest
+juice
+plus
+and
+or
+
+Normalize singular form:
+
+eggs → egg
+fillets → fillet
+potatoes → potato
+
+Remove duplicate words.
+
+---
+
+## PART 5 — MANUAL OVERRIDE SYSTEM
+
+Make shopping list table editable.
+
+User can click any field:
+
+Ingredient name
+Quantity
+Unit
+Category
+
+Convert table cells into editable inputs.
+
+When edited:
+
+Call API:
+
+PUT /api/ingredients/:id
+
+Update database.
+
+Recalculate totals after edit.
+
+---
+
+## PART 6 — MOVE "ADD TO SHOPPING LIST" BUTTONS
+
+File:
+/views/selectMeals.html
+
+Move button to top of meal card.
+
+Structure:
+
+[Add to Shopping List]
+[Meal Image]
+[Meal Name]
+[Calories]
+[Macros]
+
+---
+
+## PART 7 — DISPLAY SUPERMARKET TOTALS AT TOP
+
+At top of shopping list page show:
+
+Tesco total: £42.50
+Sainsbury total: £44.20
+Asda total: £40.10
+
+Cheapest total: £40.10
+
+Calculate using full product prices.
+
+---
+
+## PART 8 — ADD TOTAL COST SUMMARY TABLE
+
+Create summary box at top:
+
+---
+
+SHOPPING SUMMARY
+
+Total items: 18
+
+Tesco: £42.50
+Sainsbury: £44.20
+Asda: £40.10
+
+## Best option: Asda
+
+---
+
+## PART 9 — UI IMPROVEMENTS
+
+Table layout:
+
+Ingredient | Category | Quantity | Unit | Tesco | Sainsbury | Asda | Edit
+
+Add icons:
+
+Produce → 🥕
+Meat → 🥩
+Fish → 🐟
+Dairy → 🥛
+Pantry → 🌾
+
+---
+
+## PART 10 — FILES TO MODIFY
+
+Create:
+/utils/ingredientCategorizer.js
+
+Modify:
+/utils/ingredientCleaner.js
+/services/supermarketService.js
+/routes/ingredients.js
+/public/shoppingList.js
+/views/shoppingList.html
+/views/selectMeals.html
+
+---
+
+## PART 11 — SUCCESS TESTS
+
+Test 1:
+
+Chicken Breast 500g
+Chicken Breast 750g
+
+Result:
+
+Chicken Breast | Meat | 1250g
+
+Test 2:
+
+Columns sortable.
+
+Test 3:
+
+Manual edit works.
+
+Test 4:
+
+Supermarket totals appear at top.
+
+Test 5:
+
+Full product price displayed.
+
+---
+
+PART 12 — FINAL EXPLANATION REQUIRED
+
+Explain:
+
+categorization logic
+sorting logic
+manual override system
+price logic
+total calculation logic

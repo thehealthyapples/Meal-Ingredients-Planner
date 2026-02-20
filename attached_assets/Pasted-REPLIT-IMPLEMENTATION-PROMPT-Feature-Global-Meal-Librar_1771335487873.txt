@@ -1,0 +1,347 @@
+REPLIT IMPLEMENTATION PROMPT
+Feature: Global Meal Library Import (Drinks, Baby Food, Kids Meals, Ready Meals)
+Objective
+
+Create a structured, scalable system that automatically imports and manages:
+
+Drinks
+
+Baby food
+
+Kids meals
+
+Ready meals
+
+These must appear inside:
+
+My Meals page
+
+
+as pre-loaded default meals available to all users.
+
+This system must integrate with:
+
+SMP Apple Rating
+
+Planner
+
+Shopping List
+
+Freezer Meals
+
+Product Analysis
+
+PART 1 — Create new Meal Categories
+
+Update meal category enum:
+
+MealCategory:
+
+BREAKFAST
+LUNCH
+DINNER
+SNACK
+DRINK
+BABY_MEAL
+KIDS_MEAL
+READY_MEAL
+FROZEN_MEAL
+FREEZER_MEAL
+
+PART 2 — Add new Meal Source Type
+
+Add:
+
+MealSource:
+
+USER_CREATED
+SYSTEM_IMPORTED
+OPENFOODFACTS
+SUPERMARKET
+RECIPE_IMPORT
+
+PART 3 — Extend Meal Database Schema
+
+Update Meal model:
+
+Meal {
+
+ id: string
+
+ name: string
+
+ category: MealCategory
+
+ source: MealSource
+
+ supermarket?: string
+
+ isReadyMeal: boolean
+
+ isFrozenMeal: boolean
+
+ isBabyMeal: boolean
+
+ isKidsMeal: boolean
+
+ isDrink: boolean
+
+ isPreloaded: boolean
+
+ imageUrl?: string
+
+ ingredients?: string[]
+
+ nutrition?: {
+   calories?: number
+   protein?: number
+   carbs?: number
+   fat?: number
+ }
+
+ smpScore?: number
+
+ smpRating?: number
+
+ novaGroup?: number
+
+ barcode?: string
+
+ createdAt: timestamp
+
+}
+
+PART 4 — Import data from OpenFoodFacts API
+
+Create service:
+
+services/openFoodFactsImporter.ts
+
+
+Function:
+
+importCategory(category, limit)
+
+
+Use endpoints:
+
+https://world.openfoodfacts.org/category/beverages.json
+https://world.openfoodfacts.org/category/baby-foods.json
+https://world.openfoodfacts.org/category/ready-meals.json
+https://world.openfoodfacts.org/category/frozen-foods.json
+
+
+For each product extract:
+
+product_name
+ingredients_text
+nutriments
+image_url
+nova_group
+code (barcode)
+brands
+
+PART 5 — Map imported products to Meal Categories
+
+Mapping logic:
+
+IF category = beverages
+  category = DRINK
+  isDrink = true
+
+IF category = baby-foods
+  category = BABY_MEAL
+  isBabyMeal = true
+
+IF category = ready-meals
+  category = READY_MEAL
+  isReadyMeal = true
+
+IF category = frozen-foods
+  category = FROZEN_MEAL
+  isFrozenMeal = true
+
+
+Set:
+
+source = OPENFOODFACTS
+isPreloaded = true
+
+PART 6 — Automatically calculate SMP Rating
+
+For each imported product run:
+
+calculateSMPScore(product)
+
+
+Store:
+
+smpScore
+smpRating
+novaGroup
+
+PART 7 — Add to Global Meal Library
+
+Create new table:
+
+GlobalMealLibrary
+
+
+Rules:
+
+Preloaded meals appear for ALL users
+Users cannot delete them
+Users CAN:
+
+add to planner
+add to basket
+add to freezer
+duplicate and edit
+
+PART 8 — My Meals Page UI Update
+
+Add sections:
+
+My Meals
+
+Sections:
+
+Ready Meals
+Frozen Meals
+Drinks
+Baby Meals
+Kids Meals
+My Created Meals
+My Freezer Meals
+
+
+Each meal card shows:
+
+image
+meal name
+apple rating
+category badge
+
+buttons:
+
+Add to Planner
+Add to Basket
+Add to Freezer
+View Analysis
+
+PART 9 — Planner Integration
+
+Planner must allow adding:
+
+Drink → breakfast, lunch, dinner, snack slots
+
+Baby meal → baby slots
+
+Kids meal → child slots
+
+Ready meal → lunch or dinner
+
+PART 10 — Shopping List Integration
+
+When adding Ready Meal or Drink to basket:
+
+Create basket item:
+
+name: meal.name
+
+isMeal: true
+
+linkedMealId
+
+
+Enable:
+
+Product Analysis
+Shop selection
+SMP comparison
+
+PART 11 — Import Limits
+
+Initial import targets:
+
+100 drinks
+100 baby meals
+100 kids meals
+200 ready meals
+100 frozen meals
+
+
+Total: 600 preloaded meals
+
+PART 12 — Add Admin Import Trigger
+
+Create admin function:
+
+importGlobalMeals()
+
+
+Runs:
+
+importCategory("beverages", 100)
+importCategory("baby-foods", 100)
+importCategory("ready-meals", 200)
+importCategory("frozen-foods", 100)
+
+PART 13 — Prevent duplicates
+
+Before saving:
+
+Check:
+
+barcode exists
+OR
+name + brand exists
+
+
+Skip duplicates.
+
+PART 14 — Performance optimization
+
+Cache imported meals locally.
+
+Do NOT call OpenFoodFacts repeatedly.
+
+Only import once.
+
+PART 15 — Future compatibility
+
+Structure must support:
+
+Tesco
+Waitrose
+Marks & Spencer
+Morrisons
+Aldi
+Lidl
+Sainsbury's
+
+
+so their products can also populate Ready Meals and Drinks.
+
+Expected Result
+
+Users will instantly see:
+
+600+ meals including:
+
+Ready meals
+Frozen meals
+Drinks
+Baby meals
+Kids meals
+
+
+Fully usable in:
+
+Planner
+Shopping List
+Freezer
+Product Analysis
+
+
+with SMP ratings applied.

@@ -1,0 +1,249 @@
+PHASE 17 — SMART MEAL SUGGESTION ENGINE (PLANNER INTEGRATION)
+
+OBJECTIVE:
+Allow the Planner "Suggest Meals" button to intelligently pull meals from:
+
+• TheMealDB API
+• BBC Good Food (via API or structured scraper)
+
+Then automatically allocate meals into the planner based on:
+
+• UserPreferences (Phase 12)
+• Smart settings (bottom-of-page planner controls)
+• Diet type
+• Budget level
+• UPF strictness
+• Quality preference
+
+---
+
+## PART 1 — EXTERNAL MEAL SOURCE INTEGRATION
+
+Create externalMealService.ts
+
+Functions:
+
+searchMealDB(filters)
+searchGoodFood(filters)
+
+MealDB endpoint example:
+https://www.themealdb.com/api/json/v1/1/filter.php?c=Chicken
+
+GoodFood:
+Use search query via API or scraper endpoint.
+
+Normalize all external meals into SMP format:
+
+{
+name,
+image,
+ingredients[],
+instructions[],
+dietTypes[],
+estimatedCost,
+estimatedUPFScore,
+source,
+sourceUrl
+}
+
+IMPORTANT:
+Do NOT bulk import.
+Only store meals that are:
+
+• Selected
+• Allocated to planner
+• Saved by user
+
+Cache locally after first use.
+
+---
+
+## PART 2 — SMART FILTERING BASED ON USERPREFERENCES
+
+Pull from UserPreferences:
+
+dietTypes
+excludedIngredients
+healthGoals
+budgetLevel
+preferredStores
+upfSensitivity
+qualityPreference
+calorieTarget
+
+Apply filtering rules:
+
+1. Diet match required
+2. Exclude unwanted ingredients
+3. Respect calorie target if defined
+4. Apply UPF strictness:
+
+Strict:
+Reject meals with UPF score > threshold
+
+Moderate:
+Allow moderate processing
+
+Flexible:
+No filtering
+
+5. Apply budget filter:
+   Remove meals above cost threshold (estimate using ingredient price averages)
+
+---
+
+## PART 3 — SMART SETTINGS (PLANNER PAGE CONTROLS)
+
+Planner bottom section should allow:
+
+Meals per day
+Include leftovers toggle
+Max weekly budget
+Max weekly UPF score
+Preferred cuisine
+Include fish X times per week
+Include red meat X times per week
+Vegetarian days toggle
+
+Pass these settings into recommendation engine.
+
+---
+
+## PART 4 — MEAL SCORING SYSTEM
+
+Create mealScoringService.ts
+
+Score each candidate meal based on:
+
+* Diet match
+* Goal alignment
+* Budget alignment
+* Low UPF score
+* Variety (avoid repeating proteins)
+* Ingredient overlap (reduce waste)
+
+Score formula example:
+
+score =
+dietMatchScore +
+goalScore +
+budgetScore +
+upfScoreAdjustment +
+varietyScore +
+overlapScore
+
+Sort meals by score descending.
+
+---
+
+## PART 5 — AUTO ALLOCATION INTO PLANNER
+
+When user clicks "Suggest Meals":
+
+1. Fetch candidate meals
+2. Score meals
+3. Select top N meals
+4. Allocate into planner grid:
+
+Week view:
+Monday breakfast
+Monday lunch
+Monday dinner
+...
+
+Avoid duplicates within week.
+
+Respect:
+Max fish
+Max red meat
+Vegetarian day rules
+
+---
+
+## PART 6 — VARIETY CONTROL
+
+Avoid:
+
+Chicken 5 days in a row
+
+Implement protein tracking:
+
+Track primary protein category:
+
+chicken
+beef
+fish
+vegetarian
+pork
+lamb
+
+Ensure distribution across week.
+
+---
+
+## PART 7 — COST ESTIMATION
+
+Estimate meal cost using:
+
+Average ingredient pricing
+User budget tier
+Store preferences
+
+Reject meal if:
+
+Exceeds weekly max budget (if set)
+
+---
+
+## PART 8 — UPF ESTIMATION
+
+Before saving meal:
+
+Analyze ingredients using existing UPF engine.
+
+Assign:
+
+estimatedUPFScore
+
+Filter based on strictness.
+
+---
+
+## PART 9 — UI FLOW
+
+Planner page:
+
+Add button:
+
+"Smart Suggest Week"
+
+On click:
+
+Show loading animation
+Generate week plan
+Display with:
+
+Source badge (MealDB / Good Food)
+UPF indicator
+Estimated cost per meal
+
+Allow user to:
+
+Regenerate individual meal
+Lock specific meal before regenerating
+
+---
+
+## PART 10 — RESULT
+
+Planner becomes:
+
+Personalized
+Budget-aware
+UPF-aware
+Variety-controlled
+Externally powered
+
+Meals are intelligently sourced and allocated.
+
+END PHASE 17

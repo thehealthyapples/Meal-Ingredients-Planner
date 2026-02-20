@@ -1,0 +1,208 @@
+PHASE 29 — Apple Rating SVG System
+
+Create:
+
+components/AppleRating.tsx
+
+Requirements:
+
+Use inline SVG (not image files)
+
+Accept props:
+
+rating: number (1–5)
+
+hasCape: boolean
+
+size: small | medium | large
+
+Component should:
+
+Render correct apple expression per rating
+
+Render multiple apples in row
+
+Apply glow for rating >=4
+
+Render gold cape overlay if hasCape = true
+
+Animate slight bounce on load (CSS animation 0.4s ease-out)
+
+Use flexbox for row layout.
+
+End phase.
+
+3️⃣ Micro-Interaction Animation System
+
+Premium apps feel alive. Subtle only.
+
+Animation Rules
+On rating load:
+
+Apples fade in 0.2s
+
+Slight upward bounce 4px
+
+5-apple glow pulses once (very subtle)
+
+On hover (desktop):
+
+Apples scale 1.05
+
+Tooltip appears:
+“SMP Rating: 5 — Elite Whole Food”
+
+On product analyse result:
+
+If score drops:
+Apples briefly shake left-right 2px
+
+If score increases:
+Soft green flash behind apples
+
+Add this to Replit:
+
+Add CSS:
+
+@keyframes appleBounce {
+0% { transform: translateY(6px); opacity: 0; }
+60% { transform: translateY(-3px); opacity: 1; }
+100% { transform: translateY(0); }
+}
+
+@keyframes glowPulse {
+0% { filter: drop-shadow(0 0 0px #3CB043); }
+50% { filter: drop-shadow(0 0 6px #3CB043); }
+100% { filter: drop-shadow(0 0 0px #3CB043); }
+}
+
+Apply conditionally for rating === 5.
+
+End phase.
+
+4️⃣ Product Analysis Result Card Design (Premium Layout)
+
+This is where it must feel £10+/month.
+
+Layout Structure
+
+Card:
+
+Product Name
+Shop Logo
+Apple Rating (large)
+
+Health Breakdown:
+
+• Ultra-Processed: Yes/No
+• Additives: 3 detected
+• Emulsifiers: 2 detected
+• Organic: No
+• Superfoods: 0
+
+Verdict:
+“Moderately processed. Contains emulsifiers that may affect gut health.”
+
+Alternative Suggestions:
+[Best Choice at Tesco – 5 Apples]
+[Best Choice at Waitrose – 4 Apples]
+
+Design Rules
+
+Large apple display top-right
+
+Cape visible for elite
+
+Use white card
+
+16px padding
+
+Rounded corners 20px
+
+Very soft shadow
+
+Replit Prompt:
+
+PHASE 30 — Product Analysis Card Redesign
+
+Redesign ProductAnalysisCard component.
+
+Requirements:
+
+AppleRating component displayed large at top right.
+
+Show structured health breakdown.
+
+Highlight risk factors in red.
+
+Highlight organic and superfood in green.
+
+Add “Find Healthier Alternative” button.
+
+Premium spacing and clean typography.
+
+End phase.
+
+5️⃣ “Bad Apple Warning” Screen
+
+This is a strong UX differentiator.
+
+Trigger when:
+
+Rating = 1 apple
+OR
+
+NOVA 4 + additives > 5
+
+Screen Design
+
+Large sad bitten apple centered.
+
+Headline:
+⚠️ Highly Ultra-Processed
+
+Text:
+“This product contains multiple high-risk additives and emulsifiers. Consider a cleaner alternative.”
+
+Button:
+Find Better Option
+
+Secondary:
+Add Anyway (muted grey)
+
+Replit Prompt:
+
+PHASE 31 — Bad Apple Warning Modal
+
+Create modal component.
+
+Trigger if:
+
+rating <= 1
+
+Display:
+
+Large 1-apple icon
+
+Risk summary
+
+CTA button to healthier alternatives
+
+Add soft shake animation on open.
+
+End phase.
+
+6️⃣ Elite “Cape Apple” Brand Strategy
+
+The cape becomes:
+
+Badge of honour
+
+Social proof moment
+
+Screenshot-worthy element
+
+You can later introduce:
+
+🏆 “Elite Food of the Week”
+Only shown for 5-apple + cape products.

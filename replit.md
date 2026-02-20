@@ -1,0 +1,48 @@
+# SmartMeal Planner
+
+## Overview
+SmartMeal Planner is a full-stack web application designed to streamline meal planning, grocery management, and healthy eating. It empowers users to create meal plans, import recipes, generate consolidated shopping lists, and leverage advanced features like nutritional analysis, allergen detection, healthier ingredient swaps, and AI-powered meal plan generation compatible with specific diets. The project's vision is to offer an intelligent, seamless, and personalized experience for optimizing meal preparation and grocery shopping, promoting healthier lifestyles.
+
+## User Preferences
+Preferred communication style: Simple, everyday language.
+
+## System Architecture
+
+### Core Technologies
+The application utilizes a React and TypeScript frontend with Vite, `wouter` for routing, and `@tanstack/react-query` for state management. The UI is built using `shadcn/ui` (new-york style) and Tailwind CSS, with `framer-motion` for animations. The backend is an Express.js server on Node.js with TypeScript, executed via `tsx`. PostgreSQL serves as the primary database, managed by Drizzle ORM. Authentication is session-based using `passport`. Shared Zod schemas ensure type-safe validation across the frontend and backend.
+
+### UI/UX Decisions
+The UI adopts a new-york style from `shadcn/ui` and uses Tailwind CSS for styling. Animations are incorporated using `framer-motion`. The weekly planner features a full-width layout for improved readability, tabbed navigation for weeks, and inline renaming capabilities. Visual cues like badges (e.g., "UK" for products, "READY MEAL" for system meals) and color-coded indicators (Nutri-Score, NOVA group, SMP Score) are used to convey information efficiently.
+
+### Technical Implementations
+-   **Meal Planning & Management**: Comprehensive CRUD for meal plans, supporting AI-powered meal suggestions, plan duplication, and consolidated shopping list generation.
+-   **Recipe Integration**: Multi-source recipe search (TheMealDB, BBC Good Food, AllRecipes, Jamie Oliver, Serious Eats) with direct import, prioritizing JSON-LD schema extraction. Includes a flexible scraper utility.
+-   **Nutrition & Health Analysis**: Calculates nutritional values, detects allergens, suggests healthier ingredient swaps, and computes a health score using OpenFoodFacts, including UPF detection, NOVA classification, and additive risk assessment.
+-   **Shopping List & Grocery Management**: Generates consolidated shopping lists with ingredient normalization, unit conversion, and categorization. Integrates with OpenFoodFacts and Spoonacular for product lookup, pricing, and real-time product matching across multiple supermarkets. Features a price tier system and per-item store selection.
+-   **Supermarket Integration**: Supports exporting shopping lists to specific supermarket search pages and direct basket creation with certain providers (via Whisk API).
+-   **User Personalization**: An onboarding wizard captures user preferences (diet, allergens, health goals, budget, stores, UPF sensitivity, quality, calorie targets) to drive personalized meal recommendations.
+-   **Product Intelligence**: Advanced product analysis includes additive detection (80+ E-number database), a sophisticated UPF scoring algorithm (0-100), SMP apple rating system (1-5), and processing indicator detection. Filters are available for managing UPF and specific additive risks. The system includes a "Bovaer-risk" filter for dairy/meat products.
+-   **Ingredient Normalization**: Canonical ingredient registry for consistent display and internal quantity storage in grams/ml, with density-based and unit-to-weight consolidation for accurate conversions.
+-   **Meal Template Architecture**: Separates generic meal concepts from specific implementations (scratch vs. ready meals) using a `meal_templates` table and a resolution engine to pick optimal implementations based on user preferences.
+-   **Smart Suggestions Auto-Import**: Automatically imports external recipes from smart suggestions, creating local meals and templates. Meal scoring incorporates simplicity bonuses.
+-   **Expanded Coverage & Validation**: Enhanced ingredient cleaning and shopping list items flagged for manual review. Store-specific pricing and product naming.
+-   **UK Product Coverage**: Prioritizes UK product search results from Open Food Facts.
+-   **6-Week Planner**: A dedicated weekly planner with 6 customizable weeks, each containing 7 days. Uses a normalized `planner_entries` table instead of flat columns, with entries containing `mealType` (breakfast/lunch/dinner/snacks), `audience` (adult/baby/child), `mealId`, `isDrink`, and `drinkType`. Supports bulk assignment of meals across multiple weeks, days, and slots. Frontend uses `findEntry(entries, mealType, audience, isDrink)` helper for entry lookup. API uses `PUT /api/planner/days/:dayId/entries` for upsert and `DELETE /api/planner/days/:dayId/entries` for removal.
+-   **Product Analysis on Shopping List**: Allows detailed analysis of shopping list items, displaying product images, Nutri-Score, NOVA group, SMP Rating, UPF Score, Health Score, and additive details. Users can select the healthiest product match.
+-   **Strict SMP Rating System**: Implements a strict anti-UPF scoring model based on NOVA penalties, additive risks, and bonuses for organic, superfoods, and simplicity. Provides transparent score breakdowns.
+-   **Intelligence Features**: Includes a Barcode Scanner for product lookup, user-configurable sound effects for product selection feedback, streak tracking for consecutive high-rated food choices, and health trend charts visualizing daily aggregates of SMP ratings. These features are managed via user preferences.
+-   **Freezer Meals System**: Track pre-cooked frozen meals with portion management. Features include: `freezer_meals` table with portions/dates/batch info, "Add to Freezer" dialog on meal cards, dedicated Freezer tab in My Meals with portion progress bars and expiry tracking, snowflake badges on meals with frozen portions, snowflake indicators in the weekly planner for meals with frozen stock, and "In Freezer" badges on shopping list items whose source meals have frozen portions available. Uses `isFreezerEligible` flag on meals table.
+-   **Calorie Display System**: Shows per-meal calorie counts (orange text) on planner meal rows and daily calorie summary in each day column header. Uses bulk nutrition endpoint (`POST /api/nutrition/bulk`) for efficient data fetching. Respects `showCalories` planner setting toggle. Daily totals include baby/child/drink slots when those features are enabled.
+-   **Global Meal Library Import**: Admin-triggered import of meals from OpenFoodFacts API across categories (beverages, baby foods, ready meals, frozen foods). Imports ~600 meals with nutrition data, images, barcodes, and brand info. Uses `barcode` and `brand` fields on meals table. Deduplicate by barcode and name. Imported meals appear as system meals (`isSystemMeal=true`, `mealSourceType="openfoodfacts"`) with proper flags (`isDrink`, `audience`, `isReadyMeal`, `isFreezerEligible`). New categories: Baby Meal, Kids Meal, Frozen Meal. Admin endpoints: `POST /api/admin/import-global-meals` and `GET /api/admin/import-status`. UI shows "Import Library" button on My Meals page when no imports exist. Filter tabs include Frozen Meals. Meal cards show brand/type badges for imported meals.
+-   **Premium Profile Page**: Comprehensive `/profile` page serving as health control center, household configuration hub, and nutrition control panel. Features: Profile header with display name editing, Health Snapshot (BMI auto-calculation, daily calories, activity level with color-coded indicators), Household Settings (adults/children/babies counters), Nutrition Targets (auto/manual calorie mode with Mifflin-St Jeor formula), Goals & Diet Preferences (goal type, diet types, activity level selection), Feature Toggles (health score tracking, trend tracking, sound effects, barcode scanner), Account Settings. Uses `displayName` and `profilePhotoUrl` on users table; `calorieMode`, `heightCm`, `weightKg`, `activityLevel`, `goalType`, `adultsCount`, `childrenCount`, `babiesCount` on user_preferences table. API: `GET /api/profile` and `PUT /api/profile` with Zod validation. Avatar in NavBar links to profile page.
+
+## External Dependencies
+
+-   **PostgreSQL**: Relational database.
+-   **Cheerio**: Server-side HTML parsing for web scraping.
+-   **TheMealDB API**: Recipe data.
+-   **OpenFoodFacts API**: Grocery product lookup, nutrition, and UPF data.
+-   **Spoonacular API**: Grocery product search, matching, and price data.
+-   **Google Fonts**: Custom typography.
+-   **@zxing/browser + @zxing/library**: Barcode scanning functionality.
+-   **recharts**: Charting library for data visualization.

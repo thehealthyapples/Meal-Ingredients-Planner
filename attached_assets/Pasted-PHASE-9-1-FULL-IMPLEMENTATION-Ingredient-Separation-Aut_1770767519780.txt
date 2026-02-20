@@ -1,0 +1,358 @@
+PHASE 9.1 — FULL IMPLEMENTATION: Ingredient Separation, Automatic Quantity Summation, Unit Conversion, and External Recipe Planner Integration
+
+CRITICAL OBJECTIVES:
+
+1. Separate ingredient name, quantity, and unit into structured fields
+2. Correctly sum identical ingredients regardless of how they were added
+3. Convert between metric and imperial units
+4. Ensure 500g chicken + 750g chicken = 1250g chicken
+5. Fix planner so it actually pulls recipes from BBC Good Food and MealDB
+6. Allow filtering by diet type (Keto, Vegan, Vegetarian, Gluten-Free)
+7. Allow targeting calories per person per day
+
+---
+
+## PART 1 — DATABASE STRUCTURE FIX
+
+Update shopping_list table:
+
+CREATE TABLE IF NOT EXISTS shopping_list (
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+user_id INTEGER NOT NULL,
+
+ingredient_name TEXT NOT NULL,
+quantity REAL NOT NULL,
+unit TEXT NOT NULL,
+
+normalized_name TEXT NOT NULL,
+
+created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+IMPORTANT:
+ingredient_name = display name ("Chicken Breast")
+normalized_name = lowercase singular ("chicken breast")
+
+---
+
+## PART 2 — INGREDIENT PARSER
+
+Create file:
+/utils/ingredientParser.js
+
+Function:
+
+parseIngredient(inputString)
+
+Example inputs:
+"500g chicken breast"
+"1 kg chicken breast"
+"2 chicken breasts"
+"750 grams chicken breast"
+
+Output:
+
+{
+name: "chicken breast",
+normalized_name: "chicken breast",
+quantity: 500,
+unit: "g"
+}
+
+Rules:
+
+Recognize units:
+
+metric:
+g, gram, grams
+kg, kilogram, kilograms
+ml, l
+
+imperial:
+oz, lb, lbs
+
+count:
+egg, eggs
+clove, cloves
+piece, pieces
+
+Normalize units:
+
+grams → g
+kilograms → g (multiply by 1000)
+lbs → g (multiply by 453.592)
+oz → g (multiply by 28.3495)
+
+---
+
+## PART 3 — CONSOLIDATION ENGINE
+
+Create file:
+/utils/shoppingListConsolidator.js
+
+Function:
+
+consolidateShoppingList(items)
+
+Input example:
+
+[
+{name:"chicken breast", quantity:500, unit:"g"},
+{name:"chicken breast", quantity:750, unit:"g"},
+{name:"egg", quantity:10, unit:"unit"},
+{name:"egg", quantity:4, unit:"unit"}
+]
+
+Output:
+
+[
+{name:"chicken breast", quantity:1250, unit:"g"},
+{name:"egg", quantity:14, unit:"unit"}
+]
+
+Logic:
+
+Group by normalized_name AND unit
+
+Sum quantities
+
+---
+
+## PART 4 — UPDATE ADD TO SHOPPING LIST ROUTE
+
+File:
+/routes/shoppingList.js
+
+When adding ingredient:
+
+1. Parse ingredient using ingredientParser
+2. Convert to normalized form
+3. Check if ingredient exists:
+
+SELECT * FROM shopping_list
+WHERE user_id = ?
+AND normalized_name = ?
+AND unit = ?
+
+4. If exists:
+
+UPDATE shopping_list
+SET quantity = quantity + NEW_QUANTITY
+
+5. Else insert new row
+
+---
+
+## PART 5 — UNIT CONVERSION SYSTEM
+
+Create:
+/utils/unitConverter.js
+
+Functions:
+
+convertToMetric(quantity, unit)
+convertToImperial(quantity, unit)
+
+Examples:
+
+1250 g → 1.25 kg
+1250 g → 2.75 lb
+
+User preference stored in:
+
+user_settings table:
+
+preferred_unit_system:
+"metric"
+"imperial"
+
+---
+
+## PART 6 — SHOPPING LIST DISPLAY FIX
+
+When displaying shopping list:
+
+Load all ingredients
+Run consolidation
+Convert to user preferred unit system
+Display clean format:
+
+Chicken Breast — 1.25 kg
+Eggs — 14
+
+---
+
+## PART 7 — BBC GOOD FOOD INTEGRATION
+
+Create file:
+/services/bbcGoodFoodService.js
+
+Use scraping with axios and cheerio:
+
+Search URL:
+
+[https://www.bbcgoodfood.com/search?q=QUERY](https://www.bbcgoodfood.com/search?q=QUERY)
+
+Extract:
+
+recipe title
+recipe url
+image
+calories
+diet tags if present
+
+Return JSON array
+
+---
+
+## PART 8 — MEALDB INTEGRATION
+
+Create:
+/services/mealdbService.js
+
+API:
+
+[https://www.themealdb.com/api/json/v1/1/search.php?s=QUERY](https://www.themealdb.com/api/json/v1/1/search.php?s=QUERY)
+
+Extract:
+
+name
+ingredients
+image
+instructions
+
+---
+
+## PART 9 — UNIFIED RECIPE SEARCH SERVICE
+
+Create:
+/services/recipeService.js
+
+Function:
+
+searchRecipes(query, diet, calories)
+
+Combine results from:
+
+BBC Good Food
+MealDB
+
+Filter by diet if possible
+
+Return combined list
+
+---
+
+## PART 10 — MEAL PLANNER CALORIE TARGETING
+
+User inputs:
+
+calories_per_day
+people_count
+
+Example:
+
+2000 calories
+2 people
+
+Planner target:
+
+4000 calories total per day
+
+Planner selects meals that sum close to target
+
+---
+
+## PART 11 — SUGGEST MEALS BUTTON FIX
+
+Planner button must call:
+
+GET /api/recipes/search?query=&diet=&calories=
+
+Display:
+
+image
+name
+calories
+Add to planner button
+
+---
+
+## PART 12 — FILES TO CREATE OR MODIFY
+
+Create:
+
+/utils/ingredientParser.js
+/utils/shoppingListConsolidator.js
+/utils/unitConverter.js
+
+/services/bbcGoodFoodService.js
+/services/mealdbService.js
+/services/recipeService.js
+
+Modify:
+
+/routes/shoppingList.js
+/routes/recipes.js
+/routes/planner.js
+
+Frontend:
+
+/public/planner.js
+/public/shoppingList.js
+
+---
+
+## PART 13 — SUCCESS TEST CASES
+
+Test 1:
+
+Add:
+
+500g chicken
+750g chicken
+
+Result:
+
+1250g chicken
+
+Test 2:
+
+Add:
+
+10 eggs
+4 eggs
+
+Result:
+
+14 eggs
+
+Test 3:
+
+Switch to imperial
+
+1250g chicken → 2.75 lb
+
+Test 4:
+
+Search "chicken"
+
+Results show BBC Good Food and MealDB recipes
+
+Test 5:
+
+Set diet = Vegan
+
+Only vegan meals shown
+
+---
+
+PART 14 — FINAL EXPLANATION REQUIRED FROM REPLIT
+
+Explain:
+
+ingredient parsing logic
+consolidation logic
+unit conversion logic
+planner integration logic
+external recipe integration

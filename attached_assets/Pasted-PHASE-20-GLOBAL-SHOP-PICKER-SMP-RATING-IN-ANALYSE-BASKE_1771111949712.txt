@@ -1,0 +1,238 @@
+PHASE 20 — GLOBAL SHOP PICKER + SMP RATING IN ANALYSE BASKET
+
+OBJECTIVE:
+
+Allow users to:
+
+1. Select a global supermarket for the entire basket
+2. Automatically update all product selections
+3. Automatically pull SMP Rating using Product Analysis logic
+4. Recalculate total basket price instantly
+
+This must work in real-time.
+
+---
+
+PART 1 — DATABASE STRUCTURE
+
+Update BasketItems table:
+
+Add fields:
+
+selectedStore: string
+selectedProductId: string
+smpRating: number
+smpRatingLabel: string
+productScoreDetails: json
+
+---
+
+PART 2 — GLOBAL STORE PICKER UI
+
+On Analyse Basket page:
+
+Add at top of page:
+
+Dropdown selector:
+
+Select Store:
+
+Tesco
+Sainsbury's
+Waitrose
+Aldi
+Lidl
+Morrisons
+Ocado
+
+File:
+
+client/pages/AnalyseBasketPage.tsx
+
+Component:
+
+<Select
+value={globalStore}
+onChange={handleGlobalStoreChange}
+/>
+
+---
+
+PART 3 — GLOBAL STORE CHANGE LOGIC
+
+Create function:
+
+async function handleGlobalStoreChange(store) {
+
+setGlobalStore(store);
+
+await api.post(
+"/api/basket/update-store",
+{ store }
+);
+
+reloadBasket();
+}
+
+---
+
+PART 4 — BACKEND STORE UPDATE
+
+Endpoint:
+
+POST /api/basket/update-store
+
+Logic:
+
+For each basket item:
+
+1. Find matching product from selected store
+2. Select best match based on:
+
+Priority order:
+
+Exact match
+Same brand
+Same category
+Closest price
+
+Update:
+
+selectedStore
+selectedProductId
+price
+
+Call SMP rating calculation
+
+Save
+
+---
+
+PART 5 — SMP RATING INTEGRATION
+
+Reuse existing Product Analysis logic.
+
+Import:
+
+import {
+calculateSMPRating
+} from "../services/productAnalysisService";
+
+When product selected:
+
+const rating =
+calculateSMPRating(product);
+
+Update basket item:
+
+smpRating = rating.score
+
+smpRatingLabel =
+rating.label
+
+productScoreDetails =
+rating.details
+
+---
+
+PART 6 — DISPLAY SMP RATING COLUMN
+
+On Analyse Basket page table:
+
+Add column:
+
+SMP Rating
+
+Display:
+
+🍏🍏🍏🍏🍏
+
+Or numeric:
+
+5 Apples
+
+Component:
+
+<SmpRating rating={item.smpRating} />
+
+---
+
+PART 7 — CLICK TO VIEW DETAILS
+
+Click rating opens modal:
+
+Shows:
+
+Additives
+UPF classification
+Ingredients
+Risk level
+Why score was assigned
+
+Reuse:
+
+ProductAnalysisModal
+
+---
+
+PART 8 — RECALCULATE TOTAL PRICE
+
+Backend:
+
+function recalculateBasketTotal() {
+
+sum all basket items:
+
+item.price * item.quantity
+
+}
+
+Return total
+
+Frontend updates instantly.
+
+---
+
+PART 9 — PER ITEM STORE OVERRIDE
+
+Each basket item still has its own store selector.
+
+Global picker sets default.
+
+User can override per item.
+
+---
+
+PART 10 — PERFORMANCE OPTIMIZATION
+
+Batch update basket items
+
+Avoid individual API calls
+
+Use single endpoint.
+
+---
+
+PART 11 — FALLBACK SAFETY
+
+If product not found in selected store:
+
+Keep existing product
+
+Mark item:
+
+"Not available in selected store"
+
+Show warning icon.
+
+---
+
+RESULT:
+
+User can instantly switch entire basket between Tesco, Aldi, Lidl, etc.
+
+Basket price updates instantly.
+
+SMP Ratings automatically calculated and displayed.
+
+This creates a true intelligent supermarket comparison system.

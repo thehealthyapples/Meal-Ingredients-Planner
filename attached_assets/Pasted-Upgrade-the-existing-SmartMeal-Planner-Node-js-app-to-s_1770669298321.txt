@@ -1,0 +1,123 @@
+Upgrade the existing SmartMeal Planner Node.js app to support importing recipes from a URL.
+
+Use the existing stack:
+
+Node.js
+
+Express
+
+SQLite
+
+HTML, CSS, vanilla JavaScript
+
+Add the following new feature:
+
+RECIPE IMPORT FROM URL
+
+New page:
+Create a page called "Import Recipe" accessible from the dashboard.
+
+The page must contain:
+
+Input field for recipe URL
+
+Submit button
+
+Area to preview extracted recipe name and ingredients before saving
+
+Backend endpoint:
+Create a new POST endpoint:
+
+POST /import-recipe
+
+This endpoint should:
+
+Accept a recipe URL from the frontend
+
+Fetch the HTML from the URL using node-fetch or axios
+
+Parse the HTML
+
+Extract:
+
+Recipe title (from tag or h1)
+
+Ingredients (from common patterns like , elements containing "ingredient", or structured data)
+
+Return JSON:
+{
+title: "...",
+ingredients: ["ingredient 1", "ingredient 2"]
+}
+
+Ingredient extraction logic:
+Implement a simple extraction approach:
+
+Look for elements
+
+Filter lines containing measurements (g, kg, ml, cup, tsp, tbsp)
+
+Filter lines between 3 and 100 characters
+
+Remove duplicates
+
+Keep logic simple and readable.
+
+Save imported recipe:
+Add another POST endpoint:
+
+POST /save-imported-recipe
+
+This should:
+
+Save the recipe title into meals table
+
+Save each ingredient into ingredients table
+
+Link to logged-in user
+
+Frontend functionality:
+Import Recipe page should:
+
+Let user paste URL
+
+Click "Import"
+
+Show preview of recipe name and ingredients
+
+Show "Save Recipe" button
+
+Save into user's meals when clicked
+
+Navigation:
+Add "Import Recipe" link to dashboard and meals page.
+
+File structure:
+Add new files if needed:
+/routes/import.js
+/views/import.html
+/public/import.js
+
+Requirements:
+
+Use axios or node-fetch for fetching web pages
+
+Use cheerio for HTML parsing
+
+Add clear comments explaining each part
+
+Handle errors gracefully
+
+Only allow logged-in users
+
+Installation:
+Add required dependencies to package.json:
+
+axios
+
+cheerio
+
+Final step:
+Explain how the import feature works and how to use it.
+
+Modify the existing project without breaking current functionality.
