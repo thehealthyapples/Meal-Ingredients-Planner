@@ -24,6 +24,15 @@ app.use(
 
 app.use(express.urlencoded({ extended: false }));
 
+/**
+ * Health endpoint:
+ * - Useful for Replit autoscale
+ * - Quick way to confirm the server is alive without hitting DB-heavy routes
+ */
+app.get("/health", (_req, res) => {
+  res.status(200).send("ok");
+});
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
@@ -38,20 +47,30 @@ export function log(message: string, source = "express") {
 app.use((req, res, next) => {
   const start = Date.now();
   const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  // Avoid logging huge JSON bodies (can slow dev + clutter logs)
+  let capturedJsonResponse: Record<string, any> | undefined;
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
+    // Capture only for API responses; keep it light
+    if (path.startsWith("/api") && bodyJson && typeof bodyJson === "object") {
+      capturedJsonResponse = bodyJson as Record<string, any>;
+    }
     return originalResJson.apply(res, [bodyJson, ...args]);
   };
 
   res.on("finish", () => {
     const duration = Date.now() - start;
+
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+
+      // In production, avoid logging full JSON payloads (privacy/perf)
+      if (process.env.NODE_ENV !== "production" && capturedJsonResponse) {
+        const preview = JSON.stringify(capturedJsonResponse);
+        // Trim very large payload logs
+        logLine += ` :: ${preview.length > 500 ? preview.slice(0, 500) + "…" : preview}`;
       }
 
       log(logLine);
@@ -62,8 +81,27 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  await runTemplateMigration().catch(err => console.error("[Template Migration] Error:", err));
-  await seedReadyMeals().catch(err => console.error("[Seed Ready Meals] Error:", err));
+  /**
+   * IMPORTANT:
+   * Seeding/migrations on every boot can slow deployments and cause inconsistent data.
+   * - Keep migrations if required (depends on your workflow)
+   * - Run seeding only in development by default
+   *
+   * If you truly need these in production, use an explicit env flag like RUN_SEEDS=true
+   */
+  const isProd = process.env.NODE_ENV === "production";
+  const runSeeds = process.env.RUN_SEEDS === "true";
+
+  await runTemplateMigration().catch((err) =>
+    console.error("[Template Migration] Error:", err),
+  );
+
+  if (!isProd || runSeeds) {
+    await seedReadyMeals().catch((err) =>
+      console.error("[Seed Ready Meals] Error:", err),
+    );
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
@@ -79,9 +117,7 @@ app.use((req, res, next) => {
     return res.status(status).json({ message });
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // Only setup Vite in development (after routes)
   if (process.env.NODE_ENV === "production") {
     serveStatic(app);
   } else {
@@ -89,11 +125,9 @@ app.use((req, res, next) => {
     await setupVite(httpServer, app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
+  // Replit requires PORT and 0.0.0.0
   const port = parseInt(process.env.PORT || "5000", 10);
+
   httpServer.listen(
     {
       port,
