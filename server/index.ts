@@ -28,11 +28,11 @@ app.use(express.urlencoded({ extended: false }));
  * Health endpoint:
  * - Useful for Replit autoscale
  * - Quick way to confirm the server is alive without hitting DB-heavy routes
- *
-* app.get("/health", (_req, res) => {
+ */
+app.get("/health", (_req, res) => {
   res.status(200).send("ok");
 });
- */
+
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
