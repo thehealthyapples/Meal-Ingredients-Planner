@@ -63,7 +63,12 @@ app.use((req, res, next) => {
 
 (async () => {
   await runTemplateMigration().catch(err => console.error("[Template Migration] Error:", err));
-  await seedReadyMeals().catch(err => console.error("[Seed Ready Meals] Error:", err));
+
+  const shouldSeed = process.env.NODE_ENV !== "production" || process.env.RUN_SEEDS === "true";
+  if (shouldSeed) {
+    await seedReadyMeals().catch(err => console.error("[Seed Ready Meals] Error:", err));
+  }
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
@@ -77,6 +82,11 @@ app.use((req, res, next) => {
     }
 
     return res.status(status).json({ message });
+  });
+
+  app.get("/health", (_req, res) => {
+    res.set("Content-Type", "text/plain");
+    res.status(200).send("ok");
   });
 
   // importantly only setup vite in development and after
