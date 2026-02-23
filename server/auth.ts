@@ -107,11 +107,18 @@ export function setupAuth(app: Express) {
         res.status(201).json(user);
       });
     } catch (err: any) {
-      console.error("Registration error:", err);
-      const msg = err?.message?.includes("duplicate")
-        ? "An account with that email already exists."
-        : "Failed to create account. Please try again.";
-      res.status(500).json({ message: msg });
+      console.error("Registration error details:", {
+        message: err?.message,
+        code: err?.code,
+        detail: err?.detail,
+        stack: err?.stack,
+      });
+
+      if (err?.code === "23505") {
+        return res.status(409).json({ message: "Account already exists." });
+      }
+
+      res.status(500).json({ message: "Failed to create account. Please try again." });
     }
   });
 
