@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { ChefHat, ArrowRight, Lock } from "lucide-react";
+import { ArrowRight, Lock } from "lucide-react";
 import { useLocation } from "wouter";
+import FiveApplesLogo from "@/components/FiveApplesLogo";
 
 export default function AuthPage() {
   const { login, user } = useUser();
@@ -27,10 +28,8 @@ export default function AuthPage() {
         
         <div className="relative z-10">
           <div className="flex items-center gap-3 text-primary-foreground mb-8">
-            <div className="bg-white/20 p-2.5 rounded-xl backdrop-blur-sm">
-              <ChefHat className="w-8 h-8" />
-            </div>
-            <h1 className="text-3xl font-bold font-display tracking-tight">SmartMeal Planner</h1>
+            <FiveApplesLogo size={32} />
+            <h1 className="text-3xl font-bold font-display tracking-tight" data-testid="text-brand-title">The Healthy Apples</h1>
           </div>
           
           <div className="space-y-6 max-w-lg">
@@ -66,7 +65,7 @@ export default function AuthPage() {
               </Badge>
             </div>
             <h2 className="text-2xl font-bold tracking-tight" data-testid="text-auth-title">Welcome back</h2>
-            <p className="text-muted-foreground mt-2" data-testid="text-auth-subtitle">Sign in with your beta account to access SmartMeal Planner.</p>
+            <p className="text-muted-foreground mt-2" data-testid="text-auth-subtitle">Sign in with your beta account to access The Healthy Apples.</p>
           </div>
 
           <AuthForm onSubmit={(data) => login(data)} />

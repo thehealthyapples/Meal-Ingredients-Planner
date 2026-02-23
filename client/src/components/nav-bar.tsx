@@ -9,6 +9,7 @@ import {
   Package, User, LogOut, ShoppingCart,
 } from "lucide-react";
 import { api } from "@shared/routes";
+import FiveApplesLogo from "@/components/FiveApplesLogo";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -43,7 +44,7 @@ export function NavBar() {
 
   if (!user) return null;
 
-  const pageTitle = PAGE_TITLES[location] || (location.startsWith("/meals/") ? "Meal Details" : "SmartMeal");
+  const pageTitle = PAGE_TITLES[location] || (location.startsWith("/meals/") ? "Meal Details" : "The Healthy Apples");
   const userInitial = (user.username || "U").charAt(0).toUpperCase();
 
   return (
@@ -51,11 +52,9 @@ export function NavBar() {
       <header className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur-xl border-b border-border" data-testid="top-nav-bar">
         <div className="flex h-14 items-center px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto">
           <Link href="/" className="flex items-center gap-2.5 shrink-0" data-testid="link-logo">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">S</span>
-            </div>
+            <FiveApplesLogo size={20} />
             <span className="hidden sm:inline font-semibold text-base tracking-tight" data-testid="text-brand">
-              SmartMeal
+              The Healthy Apples
             </span>
           </Link>
 

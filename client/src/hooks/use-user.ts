@@ -54,7 +54,7 @@ export function useUser() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/user"], data);
-      toast({ title: "Account created!", description: "Welcome to SmartMeal Planner." });
+      toast({ title: "Account created!", description: "Welcome to The Healthy Apples." });
     },
     onError: (error: Error) => {
       toast({ 

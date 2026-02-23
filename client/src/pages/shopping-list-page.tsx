@@ -598,7 +598,7 @@ export default function ShoppingListPage() {
 
   useEffect(() => {
     document.title = "SMP \u2013 Analyse Basket";
-    return () => { document.title = "SmartMeal Planner"; };
+    return () => { document.title = "The Healthy Apples"; };
   }, []);
 
   const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);

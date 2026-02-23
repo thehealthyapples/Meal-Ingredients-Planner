@@ -12,6 +12,7 @@ import {
   Store, Star, Shield,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import FiveApplesLogo from "@/components/FiveApplesLogo";
 
 const DIET_OPTIONS = [
   { id: "none", label: "No Restriction", icon: ChefHat, desc: "All food types" },
@@ -128,11 +129,9 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-2xl">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <div className="bg-primary p-2 rounded-md">
-              <ChefHat className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-bold" data-testid="text-onboarding-title">SmartMeal Planner</h1>
+          <div className="inline-flex items-center gap-3 mb-4">
+            <FiveApplesLogo size={24} />
+            <h1 className="text-2xl font-bold" data-testid="text-onboarding-title">The Healthy Apples</h1>
           </div>
           <p className="text-muted-foreground">Let's personalize your experience</p>
         </div>
