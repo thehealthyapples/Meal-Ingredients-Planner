@@ -27,9 +27,9 @@ export default function AuthPage() {
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3" />
         
         <div className="relative z-10">
-          <div className="flex items-center gap-3 text-primary-foreground mb-8">
-            <FiveApplesLogo size={32} />
-            <h1 className="text-3xl font-bold font-display tracking-tight" data-testid="text-brand-title">The Healthy Apples</h1>
+          <div className="flex items-center gap-4 text-primary-foreground mb-8">
+            <h1 className="text-4xl font-bold font-display tracking-tight" data-testid="text-brand-title">The Healthy Apples</h1>
+            <FiveApplesLogo size={40} />
           </div>
           
           <div className="space-y-6 max-w-lg">
