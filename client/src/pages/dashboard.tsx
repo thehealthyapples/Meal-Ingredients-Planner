@@ -71,63 +71,71 @@ export default function Dashboard() {
         className="grid grid-cols-2 lg:grid-cols-4 gap-4"
       >
         <motion.div variants={item}>
-          <Card className="h-full" data-testid="card-total-meals">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">My Meals</span>
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Utensils className="h-4 w-4 text-primary" />
+          <Link href="/meals" aria-label="Go to My Meals">
+            <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-total-meals">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">My Meals</span>
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                    <Utensils className="h-4 w-4 text-primary" />
+                  </div>
                 </div>
-              </div>
-              <div className="text-3xl font-semibold tracking-tight" data-testid="text-meal-count">{userMeals.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">recipes saved</p>
-            </CardContent>
-          </Card>
+                <div className="text-3xl font-semibold tracking-tight" data-testid="text-meal-count">{userMeals.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">recipes saved</p>
+              </CardContent>
+            </Card>
+          </Link>
         </motion.div>
 
         <motion.div variants={item}>
-          <Card className="h-full" data-testid="card-basket-items">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Basket</span>
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <ShoppingBasket className="h-4 w-4 text-primary" />
+          <Link href="/analyse-basket" aria-label="Go to Basket">
+            <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-basket-items">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Basket</span>
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                    <ShoppingBasket className="h-4 w-4 text-primary" />
+                  </div>
                 </div>
-              </div>
-              <div className="text-3xl font-semibold tracking-tight">{shoppingListItems.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">items to buy</p>
-            </CardContent>
-          </Card>
+                <div className="text-3xl font-semibold tracking-tight">{shoppingListItems.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">items to buy</p>
+              </CardContent>
+            </Card>
+          </Link>
         </motion.div>
 
         <motion.div variants={item}>
-          <Card className="h-full" data-testid="card-recipes">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recipes</span>
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <TrendingUp className="h-4 w-4 text-primary" />
+          <Link href="/meals" aria-label="Go to Recipes">
+            <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-recipes">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Recipes</span>
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                  </div>
                 </div>
-              </div>
-              <div className="text-3xl font-semibold tracking-tight">{recipeMeals.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">from scratch</p>
-            </CardContent>
-          </Card>
+                <div className="text-3xl font-semibold tracking-tight">{recipeMeals.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">from scratch</p>
+              </CardContent>
+            </Card>
+          </Link>
         </motion.div>
 
         <motion.div variants={item}>
-          <Card className="h-full" data-testid="card-planner">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Planner</span>
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <CalendarDays className="h-4 w-4 text-primary" />
+          <Link href="/weekly-planner" aria-label="Go to Planner">
+            <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-planner">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Planner</span>
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+                    <CalendarDays className="h-4 w-4 text-primary" />
+                  </div>
                 </div>
-              </div>
-              <div className="text-3xl font-semibold tracking-tight">{plannerWeeks.length || 6}</div>
-              <p className="text-xs text-muted-foreground mt-1">weeks planned</p>
-            </CardContent>
-          </Card>
+                <div className="text-3xl font-semibold tracking-tight">{plannerWeeks.length || 6}</div>
+                <p className="text-xs text-muted-foreground mt-1">weeks planned</p>
+              </CardContent>
+            </Card>
+          </Link>
         </motion.div>
       </motion.div>
 
