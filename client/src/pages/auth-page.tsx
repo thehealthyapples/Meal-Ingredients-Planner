@@ -1,19 +1,39 @@
+import { useState } from "react";
 import { useUser } from "@/hooks/use-user";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema, type InsertUser } from "@shared/schema";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Lock } from "lucide-react";
+import { ArrowRight, Lock, UserPlus } from "lucide-react";
 import { useLocation } from "wouter";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
 
+type AppConfig = {
+  registrationEnabled: boolean;
+  environment: string;
+};
+
 export default function AuthPage() {
-  const { login, user } = useUser();
+  const { login, register, user, isLoggingIn, isRegistering } = useUser();
   const [, setLocation] = useLocation();
+  const [mode, setMode] = useState<"login" | "register">("login");
+
+  const { data: config } = useQuery<AppConfig>({
+    queryKey: ["/api/config"],
+    queryFn: async () => {
+      const res = await fetch("/api/config");
+      if (!res.ok) return { registrationEnabled: false, environment: "beta" };
+      return res.json();
+    },
+  });
+
+  const registrationEnabled = config?.registrationEnabled ?? false;
+  const isBeta = !registrationEnabled;
 
   if (user) {
     setLocation("/");
@@ -58,30 +78,89 @@ export default function AuthPage() {
       <div className="flex items-center justify-center p-6 lg:p-12">
         <div className="w-full max-w-md space-y-8">
           <div className="text-center lg:text-left mb-8">
-            <div className="flex items-center gap-2 mb-3">
-              <Badge variant="secondary" className="text-xs">
-                <Lock className="h-3 w-3 mr-1" />
-                Private Beta
-              </Badge>
-            </div>
-            <h2 className="text-2xl font-bold tracking-tight" data-testid="text-auth-title">Welcome back</h2>
-            <p className="text-muted-foreground mt-2" data-testid="text-auth-subtitle">Sign in with your beta account to access The Healthy Apples.</p>
-          </div>
-
-          <AuthForm onSubmit={(data) => login(data)} />
-
-          <div className="text-center pt-4 border-t">
-            <p className="text-sm text-muted-foreground" data-testid="text-beta-notice">
-              This app is in private beta. To request access, please contact the team.
+            {isBeta && (
+              <div className="flex items-center gap-2 mb-3">
+                <Badge variant="secondary" className="text-xs">
+                  <Lock className="h-3 w-3 mr-1" />
+                  Private Beta
+                </Badge>
+              </div>
+            )}
+            <h2 className="text-2xl font-bold tracking-tight" data-testid="text-auth-title">
+              {mode === "login" ? "Welcome back" : "Create your account"}
+            </h2>
+            <p className="text-muted-foreground mt-2" data-testid="text-auth-subtitle">
+              {mode === "login"
+                ? isBeta
+                  ? "Sign in with your beta account to access The Healthy Apples."
+                  : "Sign in to access The Healthy Apples."
+                : "Sign up to start planning healthier meals."}
             </p>
           </div>
+
+          {mode === "login" ? (
+            <AuthForm
+              onSubmit={(data) => login(data)}
+              submitLabel="Sign In"
+              isSubmitting={isLoggingIn}
+              testIdPrefix="login"
+            />
+          ) : (
+            <AuthForm
+              onSubmit={(data) => register(data)}
+              submitLabel="Create Account"
+              isSubmitting={isRegistering}
+              testIdPrefix="register"
+              isRegister
+            />
+          )}
+
+          {registrationEnabled ? (
+            <div className="text-center pt-4 border-t">
+              {mode === "login" ? (
+                <p className="text-sm text-muted-foreground" data-testid="text-switch-to-register">
+                  Don't have an account?{" "}
+                  <button
+                    onClick={() => setMode("register")}
+                    className="text-primary font-medium hover:underline"
+                    data-testid="button-switch-register"
+                  >
+                    Create one
+                  </button>
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground" data-testid="text-switch-to-login">
+                  Already have an account?{" "}
+                  <button
+                    onClick={() => setMode("login")}
+                    className="text-primary font-medium hover:underline"
+                    data-testid="button-switch-login"
+                  >
+                    Sign in
+                  </button>
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="text-center pt-4 border-t">
+              <p className="text-sm text-muted-foreground" data-testid="text-beta-notice">
+                This app is in private beta. To request access, please contact the team.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-function AuthForm({ onSubmit }: { onSubmit: (data: InsertUser) => void }) {
+function AuthForm({ onSubmit, submitLabel, isSubmitting, testIdPrefix, isRegister }: {
+  onSubmit: (data: InsertUser) => void;
+  submitLabel: string;
+  isSubmitting: boolean;
+  testIdPrefix: string;
+  isRegister?: boolean;
+}) {
   const form = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
     defaultValues: { username: "", password: "" },
@@ -99,7 +178,7 @@ function AuthForm({ onSubmit }: { onSubmit: (data: InsertUser) => void }) {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="you@example.com" className="h-12 bg-white/50" {...field} data-testid="input-username" />
+                    <Input placeholder="you@example.com" className="h-12 bg-white/50" {...field} data-testid={`input-${testIdPrefix}-username`} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -112,7 +191,7 @@ function AuthForm({ onSubmit }: { onSubmit: (data: InsertUser) => void }) {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="Enter your password" className="h-12 bg-white/50" {...field} data-testid="input-password" />
+                    <Input type="password" placeholder={isRegister ? "Create a password (min 6 characters)" : "Enter your password"} className="h-12 bg-white/50" {...field} data-testid={`input-${testIdPrefix}-password`} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -121,11 +200,20 @@ function AuthForm({ onSubmit }: { onSubmit: (data: InsertUser) => void }) {
             <Button 
               type="submit" 
               className="w-full h-12 text-base font-semibold shadow-lg shadow-primary/20"
-              disabled={form.formState.isSubmitting}
-              data-testid="button-login"
+              disabled={isSubmitting}
+              data-testid={`button-${testIdPrefix}-submit`}
             >
-              Sign In
-              <ArrowRight className="ml-2 h-4 w-4" />
+              {isRegister ? (
+                <>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  {submitLabel}
+                </>
+              ) : (
+                <>
+                  {submitLabel}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
+              )}
             </Button>
           </form>
         </Form>

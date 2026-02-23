@@ -28,6 +28,8 @@ async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "r3pl1t_s3cr3t_k3y_123456",
@@ -69,15 +71,51 @@ export function setupAuth(app: Express) {
     }
   });
 
-  app.post("/api/register", async (_req, res) => {
-    return res.status(403).json({ message: "Private beta — registration is currently closed. Request access to join." });
+  app.get("/api/config", (_req, res) => {
+    res.json({
+      registrationEnabled: isProduction,
+      environment: isProduction ? "production" : "beta",
+    });
+  });
+
+  app.post("/api/register", async (req, res) => {
+    if (!isProduction) {
+      return res.status(403).json({ message: "Private beta — registration is currently closed. Request access to join." });
+    }
+
+    const { username, password } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username and password are required." });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters." });
+    }
+
+    try {
+      const existing = await storage.getUserByUsername(username);
+      if (existing) {
+        return res.status(409).json({ message: "An account with that email already exists." });
+      }
+
+      const user = await storage.createUser({
+        username,
+        password: await hashPassword(password),
+      });
+
+      req.login(user, (loginErr) => {
+        if (loginErr) return res.status(500).json({ message: "Account created but login failed. Please sign in." });
+        res.status(201).json(user);
+      });
+    } catch (err) {
+      res.status(500).json({ message: "Failed to create account. Please try again." });
+    }
   });
 
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: any, user: SelectUser | false) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: "Invalid username or password" });
-      if (!user.isBetaUser) {
+      if (!isProduction && !user.isBetaUser) {
         return res.status(403).json({ message: "Private beta — your account does not have beta access. Request access to join." });
       }
       req.login(user, (loginErr) => {
