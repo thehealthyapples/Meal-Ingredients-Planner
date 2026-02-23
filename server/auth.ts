@@ -28,7 +28,7 @@ async function comparePasswords(supplied: string, stored: string) {
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
-const isProduction = process.env.NODE_ENV === "production";
+const isProduction = process.env.NODE_ENV === "production" || process.env.ENABLE_REGISTRATION === "true";
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
