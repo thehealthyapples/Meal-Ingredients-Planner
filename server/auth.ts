@@ -106,8 +106,12 @@ export function setupAuth(app: Express) {
         if (loginErr) return res.status(500).json({ message: "Account created but login failed. Please sign in." });
         res.status(201).json(user);
       });
-    } catch (err) {
-      res.status(500).json({ message: "Failed to create account. Please try again." });
+    } catch (err: any) {
+      console.error("Registration error:", err);
+      const msg = err?.message?.includes("duplicate")
+        ? "An account with that email already exists."
+        : "Failed to create account. Please try again.";
+      res.status(500).json({ message: msg });
     }
   });
 
