@@ -127,6 +127,9 @@ export interface IStorage {
   useFreezerMealPortion(id: number): Promise<FreezerMeal | undefined>;
   deleteFreezerMeal(id: number): Promise<void>;
   updateMealFreezerEligible(mealId: number, eligible: boolean): Promise<Meal | undefined>;
+  getUserByVerificationToken(token: string): Promise<User | undefined>;
+  setEmailVerificationToken(userId: number, token: string, expires: Date): Promise<void>;
+  markEmailVerified(userId: number): Promise<void>;
   sessionStore: session.Store;
 }
 
@@ -909,6 +912,19 @@ export class DatabaseStorage implements IStorage {
   async updateMealFreezerEligible(mealId: number, eligible: boolean): Promise<Meal | undefined> {
     const [result] = await db.update(meals).set({ isFreezerEligible: eligible }).where(eq(meals.id, mealId)).returning();
     return result;
+  }
+
+  async getUserByVerificationToken(token: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.emailVerificationToken, token));
+    return user;
+  }
+
+  async setEmailVerificationToken(userId: number, token: string, expires: Date): Promise<void> {
+    await db.update(users).set({ emailVerificationToken: token, emailVerificationExpires: expires }).where(eq(users.id, userId));
+  }
+
+  async markEmailVerified(userId: number): Promise<void> {
+    await db.update(users).set({ emailVerified: true, emailVerificationToken: null, emailVerificationExpires: null }).where(eq(users.id, userId));
   }
 }
 

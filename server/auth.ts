@@ -6,6 +6,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
+import { sendVerificationEmail } from "./email";
 
 declare global {
   namespace Express {
@@ -14,6 +15,8 @@ declare global {
 }
 
 const scryptAsync = promisify(scrypt);
+
+const APP_BASE_URL = process.env.APP_BASE_URL || "https://www.thehealthyapples.com";
 
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
@@ -102,17 +105,22 @@ export function setupAuth(app: Express) {
         password: await hashPassword(password),
       });
 
-      req.login(user, (loginErr) => {
-        if (loginErr) return res.status(500).json({ message: "Account created but login failed. Please sign in." });
-        res.status(201).json(user);
+      const token = randomBytes(32).toString("hex");
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await storage.setEmailVerificationToken(user.id, token, expires);
+
+      const emailResult = await sendVerificationEmail(username, token);
+
+      if (!emailResult.success) {
+        console.warn("[Auth] Email service unavailable — user created but verification email not sent");
+      }
+
+      res.status(201).json({
+        message: "Account created. Please check your email to verify your account.",
+        needsVerification: true,
       });
     } catch (err: any) {
-      console.error("Registration error details:", {
-        message: err?.message,
-        code: err?.code,
-        detail: err?.detail,
-        stack: err?.stack,
-      });
+      console.error("Registration error:", err?.message);
 
       if (err?.code === "23505") {
         return res.status(409).json({ message: "Account already exists." });
@@ -122,12 +130,46 @@ export function setupAuth(app: Express) {
     }
   });
 
+  app.get("/api/verify-email", async (req, res) => {
+    const { token } = req.query;
+
+    if (!token || typeof token !== "string") {
+      return res.status(400).json({ message: "Invalid verification link." });
+    }
+
+    try {
+      const user = await storage.getUserByVerificationToken(token);
+
+      if (!user) {
+        return res.redirect(`${APP_BASE_URL}/auth?verify_error=invalid`);
+      }
+
+      if (user.emailVerified) {
+        return res.redirect(`${APP_BASE_URL}/auth?verified=1`);
+      }
+
+      if (user.emailVerificationExpires && new Date(user.emailVerificationExpires) < new Date()) {
+        return res.redirect(`${APP_BASE_URL}/auth?verify_error=expired`);
+      }
+
+      await storage.markEmailVerified(user.id);
+
+      return res.redirect(`${APP_BASE_URL}/auth?verified=1`);
+    } catch (err: any) {
+      console.error("[Auth] Email verification error:", err?.message);
+      return res.redirect(`${APP_BASE_URL}/auth?verify_error=server`);
+    }
+  });
+
   app.post("/api/login", (req, res, next) => {
     passport.authenticate("local", (err: any, user: SelectUser | false) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: "Invalid username or password" });
       if (!isProduction && !user.isBetaUser) {
         return res.status(403).json({ message: "Private beta — your account does not have beta access. Request access to join." });
+      }
+      if (isProduction && !user.emailVerified) {
+        return res.status(403).json({ message: "Please verify your email before logging in." });
       }
       req.login(user, (loginErr) => {
         if (loginErr) return next(loginErr);

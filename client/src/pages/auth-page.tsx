@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUser } from "@/hooks/use-user";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Lock, UserPlus } from "lucide-react";
-import { useLocation } from "wouter";
+import { ArrowRight, Lock, UserPlus, CheckCircle2, AlertTriangle, Mail } from "lucide-react";
+import { useLocation, useSearch } from "wouter";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
 
 type AppConfig = {
@@ -19,9 +19,13 @@ type AppConfig = {
 };
 
 export default function AuthPage() {
-  const { login, register, user, isLoggingIn, isRegistering } = useUser();
+  const { login, register, registerResult, user, isLoggingIn, isRegistering } = useUser();
   const [, setLocation] = useLocation();
   const [mode, setMode] = useState<"login" | "register">("login");
+  const searchString = useSearch();
+  const params = new URLSearchParams(searchString);
+  const verified = params.get("verified") === "1";
+  const verifyError = params.get("verify_error");
 
   const { data: config } = useQuery<AppConfig>({
     queryKey: ["/api/config"],
@@ -34,6 +38,8 @@ export default function AuthPage() {
 
   const registrationEnabled = config?.registrationEnabled ?? false;
   const isBeta = !registrationEnabled;
+
+  const showCheckEmail = registerResult?.needsVerification === true;
 
   if (user) {
     setLocation("/");
@@ -77,76 +83,120 @@ export default function AuthPage() {
 
       <div className="flex items-center justify-center p-6 lg:p-12">
         <div className="w-full max-w-md space-y-8">
-          <div className="text-center lg:text-left mb-8">
-            {isBeta && (
-              <div className="flex items-center gap-2 mb-3">
-                <Badge variant="secondary" className="text-xs">
-                  <Lock className="h-3 w-3 mr-1" />
-                  Private Beta
-                </Badge>
-              </div>
-            )}
-            <h2 className="text-2xl font-bold tracking-tight" data-testid="text-auth-title">
-              {mode === "login" ? "Welcome back" : "Create your account"}
-            </h2>
-            <p className="text-muted-foreground mt-2" data-testid="text-auth-subtitle">
-              {mode === "login"
-                ? isBeta
-                  ? "Sign in with your beta account to access The Healthy Apples."
-                  : "Sign in to access The Healthy Apples."
-                : "Sign up to start planning healthier meals."}
-            </p>
-          </div>
-
-          {mode === "login" ? (
-            <AuthForm
-              onSubmit={(data) => login(data)}
-              submitLabel="Sign In"
-              isSubmitting={isLoggingIn}
-              testIdPrefix="login"
-            />
-          ) : (
-            <AuthForm
-              onSubmit={(data) => register(data)}
-              submitLabel="Create Account"
-              isSubmitting={isRegistering}
-              testIdPrefix="register"
-              isRegister
-            />
+          {verified && (
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200 text-green-800" data-testid="banner-email-verified">
+              <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
+              <p className="text-sm font-medium">Email verified — you can log in now.</p>
+            </div>
           )}
 
-          {registrationEnabled ? (
-            <div className="text-center pt-4 border-t">
-              {mode === "login" ? (
-                <p className="text-sm text-muted-foreground" data-testid="text-switch-to-register">
-                  Don't have an account?{" "}
-                  <button
-                    onClick={() => setMode("register")}
-                    className="text-primary font-medium hover:underline"
-                    data-testid="button-switch-register"
-                  >
-                    Create one
-                  </button>
-                </p>
-              ) : (
-                <p className="text-sm text-muted-foreground" data-testid="text-switch-to-login">
-                  Already have an account?{" "}
-                  <button
-                    onClick={() => setMode("login")}
-                    className="text-primary font-medium hover:underline"
-                    data-testid="button-switch-login"
-                  >
-                    Sign in
-                  </button>
-                </p>
-              )}
-            </div>
-          ) : (
-            <div className="text-center pt-4 border-t">
-              <p className="text-sm text-muted-foreground" data-testid="text-beta-notice">
-                This app is in private beta. To request access, please contact the team.
+          {verifyError && (
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800" data-testid="banner-verify-error">
+              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+              <p className="text-sm font-medium">
+                {verifyError === "expired" 
+                  ? "Verification link has expired. Please register again."
+                  : verifyError === "invalid"
+                  ? "Invalid verification link. Please check your email or register again."
+                  : "Something went wrong. Please try again."}
               </p>
             </div>
+          )}
+
+          {showCheckEmail ? (
+            <div className="text-center space-y-6" data-testid="panel-check-email">
+              <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Mail className="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight" data-testid="text-check-email-title">Check your email</h2>
+                <p className="text-muted-foreground mt-2">
+                  We've sent a verification link to your email address. Please click the link to verify your account before logging in.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => window.location.reload()}
+                className="mt-4"
+                data-testid="button-back-to-login"
+              >
+                Back to login
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="text-center lg:text-left mb-8">
+                {isBeta && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <Badge variant="secondary" className="text-xs">
+                      <Lock className="h-3 w-3 mr-1" />
+                      Private Beta
+                    </Badge>
+                  </div>
+                )}
+                <h2 className="text-2xl font-bold tracking-tight" data-testid="text-auth-title">
+                  {mode === "login" ? "Welcome back" : "Create your account"}
+                </h2>
+                <p className="text-muted-foreground mt-2" data-testid="text-auth-subtitle">
+                  {mode === "login"
+                    ? isBeta
+                      ? "Sign in with your beta account to access The Healthy Apples."
+                      : "Sign in to access The Healthy Apples."
+                    : "Sign up to start planning healthier meals."}
+                </p>
+              </div>
+
+              {mode === "login" ? (
+                <AuthForm
+                  onSubmit={(data) => login(data)}
+                  submitLabel="Sign In"
+                  isSubmitting={isLoggingIn}
+                  testIdPrefix="login"
+                />
+              ) : (
+                <AuthForm
+                  onSubmit={(data) => register(data)}
+                  submitLabel="Create Account"
+                  isSubmitting={isRegistering}
+                  testIdPrefix="register"
+                  isRegister
+                />
+              )}
+
+              {registrationEnabled ? (
+                <div className="text-center pt-4 border-t">
+                  {mode === "login" ? (
+                    <p className="text-sm text-muted-foreground" data-testid="text-switch-to-register">
+                      Don't have an account?{" "}
+                      <button
+                        onClick={() => setMode("register")}
+                        className="text-primary font-medium hover:underline"
+                        data-testid="button-switch-register"
+                      >
+                        Create one
+                      </button>
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground" data-testid="text-switch-to-login">
+                      Already have an account?{" "}
+                      <button
+                        onClick={() => setMode("login")}
+                        className="text-primary font-medium hover:underline"
+                        data-testid="button-switch-login"
+                      >
+                        Sign in
+                      </button>
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center pt-4 border-t">
+                  <p className="text-sm text-muted-foreground" data-testid="text-beta-notice">
+                    This app is in private beta. To request access, please contact the team.
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

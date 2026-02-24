@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, real, boolean, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, boolean, unique, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -13,6 +13,9 @@ export const users = pgTable("users", {
   onboardingCompleted: boolean("onboarding_completed").notNull().default(false),
   starterMealsLoaded: boolean("starter_meals_loaded").notNull().default(false),
   isBetaUser: boolean("is_beta_user").notNull().default(false),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  emailVerificationToken: text("email_verification_token"),
+  emailVerificationExpires: timestamp("email_verification_expires"),
 });
 
 export const mealCategories = pgTable("meal_categories", {

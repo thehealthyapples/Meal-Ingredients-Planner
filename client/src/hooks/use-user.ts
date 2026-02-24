@@ -2,8 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { InsertUser, User } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
-// Assuming standard auth endpoints based on implementation notes
-// Even if not explicitly in routes_manifest, these are required for the app to function per instructions
 export function useUser() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -49,12 +47,20 @@ export function useUser() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
       });
-      if (!res.ok) throw new Error((await res.json()).message || "Registration failed");
-      return await res.json();
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Registration failed");
+      return data;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["/api/user"], data);
-      toast({ title: "Account created!", description: "Welcome to The Healthy Apples." });
+      if (data.needsVerification) {
+        toast({
+          title: "Check your email",
+          description: data.message || "Please check your email to verify your account.",
+        });
+      } else {
+        queryClient.setQueryData(["/api/user"], data);
+        toast({ title: "Account created!", description: "Welcome to The Healthy Apples." });
+      }
     },
     onError: (error: Error) => {
       toast({ 
@@ -71,7 +77,7 @@ export function useUser() {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
-      queryClient.clear(); // Clear all data on logout
+      queryClient.clear();
       toast({ title: "Logged out", description: "See you next time!" });
     },
   });
@@ -82,6 +88,7 @@ export function useUser() {
     error,
     login: loginMutation.mutate,
     register: registerMutation.mutate,
+    registerResult: registerMutation.data,
     logout: logoutMutation.mutate,
     isLoggingIn: loginMutation.isPending,
     isRegistering: registerMutation.isPending,
