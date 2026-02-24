@@ -1,0 +1,69 @@
+We are live in production on Render and we need to add EMAIL VERIFICATION on signup.
+
+Stack: Node/Express backend + Postgres (Neon) + our existing /api/register and /api/login routes.
+We already create users in the database and login currently works without email verification.
+
+GOAL:
+When a user registers, we must send a verification email to their email address. The user must click the link to verify before they can log in.
+
+REQUIREMENTS (do all of these):
+1) Database changes:
+   - Add fields to the users table:
+     - email_verified BOOLEAN NOT NULL DEFAULT false
+     - email_verification_token TEXT
+     - email_verification_expires TIMESTAMP
+   - Create and run a migration (Drizzle if available, otherwise the project's migration system).
+   - Ensure existing users are not broken (default false is fine).
+
+2) Token generation:
+   - Use crypto.randomBytes(32).toString("hex") to generate a secure token.
+   - Set expiry to 24 hours from creation.
+
+3) Register flow (/api/register):
+   - After creating the user, generate token + expiry, store them on the user record.
+   - Send an email containing a verification link:
+       https://www.thehealthyapples.com/verify-email?token=THE_TOKEN
+     (Use an environment variable APP_BASE_URL, fallback to https://www.thehealthyapples.com)
+
+   - Return a success response like:
+     { message: "Account created. Please check your email to verify your account." }
+   - Do NOT log secrets or full tokens to console in production.
+
+4) Email provider:
+   - Implement using Resend (preferred) OR SendGrid if Resend is not present.
+   - Add env var support:
+       RESEND_API_KEY
+       EMAIL_FROM (e.g. no-reply@thehealthyapples.com)
+       APP_BASE_URL
+   - If provider is missing, fail gracefully with a clear server log and a 500 response that says:
+     "Email service not configured."
+
+5) Verification endpoint:
+   - Add a new backend route:
+       GET /api/verify-email?token=...
+   - It must:
+     - Validate token exists
+     - Find user by token
+     - Ensure expiry is in the future
+     - Set email_verified=true
+     - Clear email_verification_token and email_verification_expires
+     - Respond with a simple JSON message OR redirect to a front-end page:
+       (Preferred) redirect to `${APP_BASE_URL}/login?verified=1`
+
+6) Login restriction (/api/login):
+   - If user.email_verified is false, block login:
+       return 403 with { message: "Please verify your email before logging in." }
+
+7) Frontend (minimal):
+   - If the login page sees query param verified=1, show a “Email verified – you can log in now” message.
+   - On register, show a message telling them to check email.
+
+8) Testing:
+   - Add a short README section: “How to set up email verification in Render”
+     Include which env vars to set and example values (do not include real keys).
+   - Ensure local dev still works; if email keys are missing locally, just log a warning and still create the user but mark them unverified and return the “check email” message.
+
+IMPORTANT:
+- Keep the rest of the auth logic unchanged.
+- Do not introduce breaking changes to existing routes.
+- Use secure practices and do not expose tokens in logs or responses.
