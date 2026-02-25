@@ -48,4 +48,4 @@ The UI adopts a new-york style from `shadcn/ui` and uses Tailwind CSS for stylin
 -   **Google Fonts**: Custom typography.
 -   **@zxing/browser + @zxing/library**: Barcode scanning functionality.
 -   **recharts**: Charting library for data visualization.
--   **Resend**: Email delivery for verification emails.
+-   **Nodemailer + Namecheap SMTP**: Email delivery for verification emails via `hello@thehealthyapples.com`. Uses `mail.privateemail.com:465` (SSL). Env vars: `SMTP_USER`, `SMTP_PASS` (secrets), `SMTP_HOST` (default `mail.privateemail.com`), `SMTP_PORT` (default `465`), `EMAIL_FROM` (default `hello@thehealthyapples.com`), `APP_BASE_URL` (default `https://www.thehealthyapples.com`).
