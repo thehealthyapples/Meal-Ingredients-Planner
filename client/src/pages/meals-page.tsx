@@ -1026,7 +1026,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
     setPendingAction(null);
   };
 
-  if (localMealId && importedMeal) {
+  if (localMealId && importedMeal && !plannerOpen && !analysisOpen) {
     return (
       <div onClick={(e) => e.stopPropagation()}>
         <NutritionBadges mealId={localMealId} nutrition={nutritionMap.get(localMealId)} />
