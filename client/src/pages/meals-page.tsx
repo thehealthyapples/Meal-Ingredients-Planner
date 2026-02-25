@@ -931,56 +931,202 @@ function WebSourceBadge({ recipe }: { recipe: WebSearchRecipe }) {
   );
 }
 
-function WebResultActions({ recipe, importedMealId }: { recipe: WebSearchRecipe; importedMealId: number }) {
-  const queryClient = useQueryClient();
+function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, nutritionMap }: {
+  recipe: WebSearchRecipe;
+  importedMealId: number | null;
+  importedMeal: any;
+  onImport: (recipe: WebSearchRecipe) => Promise<number | null>;
+  nutritionMap: Map<number, any>;
+}) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
+  const [importing, setImporting] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [localMealId, setLocalMealId] = useState<number | null>(importedMealId);
   const [plannerOpen, setPlannerOpen] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
+  const { isMealInBasket, addToBasket } = useBasket();
 
-  const addToListMutation = useMutation({
-    mutationFn: async () => {
+  useEffect(() => {
+    if (importedMealId) setLocalMealId(importedMealId);
+  }, [importedMealId]);
+
+  const ensureImported = async (): Promise<number | null> => {
+    if (localMealId) return localMealId;
+    setImporting(true);
+    try {
+      const newId = await onImport(recipe);
+      if (newId) setLocalMealId(newId);
+      return newId;
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleAnalyse = async () => {
+    setPendingAction("analyse");
+    const mealId = await ensureImported();
+    if (!mealId) { setPendingAction(null); return; }
+    try {
+      const res = await apiRequest('POST', api.analyze.meal.path, { mealId });
+      const data = await res.json() as AnalysisResult;
+      setAnalysisResult(data);
+      setAnalysisOpen(true);
+      queryClient.invalidateQueries({ queryKey: ['/api/meals', mealId, 'nutrition'] });
+      toast({ title: "Analysis complete", description: "Nutrition data calculated." });
+    } catch {
+      toast({ title: "Analysis failed", variant: "destructive" });
+    }
+    setPendingAction(null);
+  };
+
+  const handlePlanner = async () => {
+    setPendingAction("planner");
+    const mealId = await ensureImported();
+    if (!mealId) { setPendingAction(null); return; }
+    setPendingAction(null);
+    setPlannerOpen(true);
+  };
+
+  const handleEdit = async () => {
+    setPendingAction("edit");
+    const mealId = await ensureImported();
+    if (!mealId) { setPendingAction(null); return; }
+    try {
+      const res = await apiRequest('POST', buildUrl(api.meals.copy.path, { id: mealId }));
+      const newMeal = await res.json() as { id: number; name: string };
+      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      navigate(`/meals/${newMeal.id}`);
+    } catch {
+      toast({ title: "Failed to create editable copy", variant: "destructive" });
+    }
+    setPendingAction(null);
+  };
+
+  const handleBasket = async () => {
+    setPendingAction("basket");
+    const mealId = await ensureImported();
+    if (!mealId) { setPendingAction(null); return; }
+    try {
+      addToBasket({ mealId, quantity: 1 });
       const res = await apiRequest('POST', api.shoppingList.generateFromMeals.path, {
-        mealSelections: [{ mealId: importedMealId, count: 1 }],
+        mealSelections: [{ mealId, count: 1 }],
       });
-      return res.json();
-    },
-    onSuccess: () => {
+      await res.json();
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
       toast({ title: "Added to basket", description: `"${recipe.name}" added to shopping list.` });
-    },
-    onError: () => {
-      toast({ title: "Failed to add", description: "Could not add to basket.", variant: "destructive" });
-    },
-  });
+    } catch {
+      toast({ title: "Failed to add to basket", variant: "destructive" });
+    }
+    setPendingAction(null);
+  };
+
+  if (localMealId && importedMeal) {
+    return (
+      <div onClick={(e) => e.stopPropagation()}>
+        <NutritionBadges mealId={localMealId} nutrition={nutritionMap.get(localMealId)} />
+        <MealActionBar
+          mealId={localMealId}
+          mealName={recipe.name}
+          ingredients={importedMeal.ingredients || recipe.ingredients || []}
+          isReadyMeal={false}
+          isDrink={!!importedMeal.isDrink}
+          audience={importedMeal.audience || "adult"}
+          isFreezerEligible={false}
+          onFreezeClick={() => {}}
+          servings={importedMeal.servings || 1}
+          sourceUrl={recipe.url || null}
+        />
+      </div>
+    );
+  }
+
+  const isDisabled = importing || !!pendingAction;
 
   return (
-    <div className="flex items-center gap-1.5" data-testid={`web-actions-${recipe.id}`}>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => addToListMutation.mutate()}
-        disabled={addToListMutation.isPending}
-        className="flex-1 gap-1 text-xs"
-        data-testid={`button-web-add-basket-${recipe.id}`}
-      >
-        {addToListMutation.isPending ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
-        ) : (
-          <ShoppingCart className="h-3 w-3" />
-        )}
-        Add to Basket
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => setPlannerOpen(true)}
-        data-testid={`button-web-add-planner-${recipe.id}`}
-      >
-        <CalendarDays className="h-4 w-4" />
-      </Button>
-      <AddToPlannerDialog mealId={importedMealId} mealName={recipe.name} isDrink={false} audience="adult" open={plannerOpen} onOpenChange={setPlannerOpen} />
+    <div className="w-full flex flex-col gap-2" onClick={(e) => e.stopPropagation()} data-testid={`web-preview-actions-${recipe.id}`}>
+      <div className="flex items-center gap-1 justify-end">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleEdit}
+              disabled={isDisabled}
+              data-testid={`button-web-edit-${recipe.id}`}
+            >
+              {pendingAction === "edit" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent><p className="text-xs">Edit recipe</p></TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleBasket}
+              disabled={isDisabled}
+              data-testid={`button-web-basket-${recipe.id}`}
+            >
+              {pendingAction === "basket" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBasket className="h-4 w-4" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent><p className="text-xs">Add to shopping list</p></TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleAnalyse}
+              disabled={isDisabled}
+              data-testid={`button-web-analyse-${recipe.id}`}
+            >
+              {pendingAction === "analyse" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Microscope className="h-4 w-4" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent><p className="text-xs">Analyse</p></TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handlePlanner}
+              disabled={isDisabled}
+              data-testid={`button-web-planner-${recipe.id}`}
+            >
+              {pendingAction === "planner" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarDays className="h-4 w-4" />}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent><p className="text-xs">Add to planner</p></TooltipContent>
+        </Tooltip>
+      </div>
+
+      {localMealId && (
+        <AddToPlannerDialog mealId={localMealId} mealName={recipe.name} isDrink={false} audience="adult" open={plannerOpen} onOpenChange={setPlannerOpen} />
+      )}
+
+      <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Meal Analysis
+            </DialogTitle>
+            <DialogDescription>
+              Nutrition breakdown, allergen detection, and healthier suggestions
+            </DialogDescription>
+          </DialogHeader>
+          {analysisResult && <AnalysisResultContent analysis={analysisResult} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -2264,6 +2410,17 @@ export default function MealsPage() {
                                       </div>
                                     )}
                                   </div>
+                                  {!isPreviewLoading && (
+                                    <div className="border-t mt-2 pt-2">
+                                      <WebPreviewActionBar
+                                        recipe={recipe}
+                                        importedMealId={importedMealId ?? null}
+                                        importedMeal={importedMeal}
+                                        onImport={handleWebImport}
+                                        nutritionMap={nutritionMap}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               </motion.div>
                             )}
@@ -2321,27 +2478,6 @@ export default function MealsPage() {
                                   )}
                                 </Button>
                               </div>
-                              {isImported && importedMealMap.has(recipe.id) && (() => {
-                                const savedMealId = importedMealMap.get(recipe.id)!;
-                                const savedMeal = meals?.find(m => m.id === savedMealId);
-                                return (
-                                  <>
-                                    <NutritionBadges mealId={savedMealId} nutrition={nutritionMap.get(savedMealId)} />
-                                    <MealActionBar
-                                      mealId={savedMealId}
-                                      mealName={recipe.name}
-                                      ingredients={savedMeal?.ingredients || recipe.ingredients || []}
-                                      isReadyMeal={false}
-                                      isDrink={!!savedMeal?.isDrink}
-                                      audience={savedMeal?.audience || "adult"}
-                                      isFreezerEligible={false}
-                                      onFreezeClick={() => {}}
-                                      servings={savedMeal?.servings || 1}
-                                      sourceUrl={recipe.url || null}
-                                    />
-                                  </>
-                                );
-                              })()}
                             </div>
                           </CardContent>
                         </Card>
