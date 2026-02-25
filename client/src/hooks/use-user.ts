@@ -87,6 +87,7 @@ export function useUser() {
     isLoading,
     error,
     login: loginMutation.mutate,
+    loginError: loginMutation.error,
     register: registerMutation.mutate,
     registerResult: registerMutation.data,
     logout: logoutMutation.mutate,

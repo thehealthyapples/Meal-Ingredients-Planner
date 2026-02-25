@@ -178,6 +178,33 @@ export function setupAuth(app: Express) {
     })(req, res, next);
   });
 
+  app.post("/api/resend-verification", async (req, res) => {
+    const { email } = req.body;
+    if (!email || typeof email !== "string") {
+      return res.status(400).json({ message: "Email is required." });
+    }
+
+    try {
+      const user = await storage.getUserByUsername(email.trim().toLowerCase());
+      if (!user) {
+        return res.json({ message: "If that email exists, a verification link has been sent." });
+      }
+      if (user.emailVerified) {
+        return res.json({ message: "Your email is already verified. You can log in." });
+      }
+
+      const token = randomBytes(32).toString("hex");
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      await storage.setEmailVerificationToken(user.id, token, expires);
+      await sendVerificationEmail(email, token);
+
+      res.json({ message: "Verification email sent. Please check your inbox." });
+    } catch (err: any) {
+      console.error("[Auth] Resend verification error:", err?.message);
+      res.status(500).json({ message: "Failed to resend verification email." });
+    }
+  });
+
   app.post("/api/logout", (req, res, next) => {
     req.logout((err) => {
       if (err) return next(err);

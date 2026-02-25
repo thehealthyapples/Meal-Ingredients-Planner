@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Lock, UserPlus, CheckCircle2, AlertTriangle, Mail } from "lucide-react";
+import { ArrowRight, Lock, UserPlus, CheckCircle2, AlertTriangle, Mail, Loader2, RefreshCw } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
 
@@ -19,9 +19,11 @@ type AppConfig = {
 };
 
 export default function AuthPage() {
-  const { login, register, registerResult, user, isLoggingIn, isRegistering } = useUser();
+  const { login, loginError, register, registerResult, user, isLoggingIn, isRegistering } = useUser();
   const [, setLocation] = useLocation();
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [lastLoginEmail, setLastLoginEmail] = useState("");
+  const [resendState, setResendState] = useState<"idle" | "loading" | "sent">("idle");
   const searchString = useSearch();
   const params = new URLSearchParams(searchString);
   const verified = params.get("verified") === "1";
@@ -40,6 +42,21 @@ export default function AuthPage() {
   const isBeta = !registrationEnabled;
 
   const showCheckEmail = registerResult?.needsVerification === true;
+  const needsEmailVerification = loginError?.message?.toLowerCase().includes("verify your email");
+
+  const handleResend = async (email: string) => {
+    if (!email || resendState === "loading") return;
+    setResendState("loading");
+    try {
+      await fetch("/api/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+    } finally {
+      setResendState("sent");
+    }
+  };
 
   if (user) {
     setLocation("/");
@@ -114,10 +131,27 @@ export default function AuthPage() {
                   We've sent a verification link to your email address. Please click the link to verify your account before logging in.
                 </p>
               </div>
+              {resendState === "sent" ? (
+                <div className="flex items-center justify-center gap-2 text-sm text-primary font-medium" data-testid="text-resend-sent">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Email resent — check your inbox
+                </div>
+              ) : (
+                <Button
+                  variant="outline"
+                  onClick={() => handleResend(registerResult?.email || lastLoginEmail)}
+                  disabled={resendState === "loading"}
+                  className="gap-2"
+                  data-testid="button-resend-verification"
+                >
+                  {resendState === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  Resend verification email
+                </Button>
+              )}
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => window.location.reload()}
-                className="mt-4"
+                className="mt-2"
                 data-testid="button-back-to-login"
               >
                 Back to login
@@ -147,15 +181,49 @@ export default function AuthPage() {
               </div>
 
               {mode === "login" ? (
-                <AuthForm
-                  onSubmit={(data) => login(data)}
-                  submitLabel="Sign In"
-                  isSubmitting={isLoggingIn}
-                  testIdPrefix="login"
-                />
+                <>
+                  <AuthForm
+                    onSubmit={(data) => {
+                      setLastLoginEmail(data.username);
+                      setResendState("idle");
+                      login(data);
+                    }}
+                    submitLabel="Sign In"
+                    isSubmitting={isLoggingIn}
+                    testIdPrefix="login"
+                  />
+                  {needsEmailVerification && (
+                    <div className="mt-4 p-4 rounded-lg bg-amber-50 border border-amber-200" data-testid="panel-needs-verification">
+                      <p className="text-sm text-amber-800 font-medium mb-3">
+                        Your email address hasn't been verified yet. Check your inbox for the verification link, or request a new one.
+                      </p>
+                      {resendState === "sent" ? (
+                        <div className="flex items-center gap-2 text-sm text-primary font-medium" data-testid="text-resend-sent-login">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Verification email sent — check your inbox
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleResend(lastLoginEmail)}
+                          disabled={resendState === "loading"}
+                          className="gap-2 w-full"
+                          data-testid="button-resend-login"
+                        >
+                          {resendState === "loading" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          Resend verification email
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </>
               ) : (
                 <AuthForm
-                  onSubmit={(data) => register(data)}
+                  onSubmit={(data) => {
+                    setLastLoginEmail(data.username);
+                    register(data);
+                  }}
                   submitLabel="Create Account"
                   isSubmitting={isRegistering}
                   testIdPrefix="register"
