@@ -1020,7 +1020,7 @@ export default function MealsPage() {
     queryKey: ['/api/freezer'],
   });
   const [addToFreezerMealId, setAddToFreezerMealId] = useState<number | null>(null);
-  const [expandedMealId, setExpandedMealId] = useState<number | null>(null);
+  const [expandedMealId, setExpandedMealId] = useState<number | string | null>(null);
   const [expandedTab, setExpandedTab] = useState<"ingredients" | "method">("ingredients");
   const [freezerPortions, setFreezerPortions] = useState(4);
   const [freezerLabel, setFreezerLabel] = useState("");
@@ -2128,7 +2128,7 @@ export default function MealsPage() {
                         exit={{ opacity: 0, scale: 0.95 }}
                         layout
                       >
-                        <Card className="overflow-hidden h-full flex flex-col" data-testid={`card-web-result-${recipe.id}`}>
+                        <Card className="overflow-hidden h-full flex flex-col cursor-pointer" onClick={() => { const webId = `web-${recipe.id}`; setExpandedMealId(expandedMealId === webId ? null : webId); setExpandedTab("ingredients"); }} data-testid={`card-web-result-${recipe.id}`}>
                           {recipe.image && (
                             <div className="w-full aspect-[4/3] overflow-hidden">
                               <img
@@ -2140,7 +2140,85 @@ export default function MealsPage() {
                               />
                             </div>
                           )}
-                          <CardContent className="p-4 flex-1 flex flex-col justify-between gap-3">
+                          <AnimatePresence>
+                            {expandedMealId === `web-${recipe.id}` && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.25, ease: "easeInOut" }}
+                                className="overflow-hidden border-t"
+                                onClick={(e) => e.stopPropagation()}
+                                data-testid={`expanded-detail-web-${recipe.id}`}
+                              >
+                                <div className="px-3 pt-2 pb-1">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex gap-1">
+                                      <Button
+                                        variant={expandedTab === "ingredients" ? "default" : "ghost"}
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={() => setExpandedTab("ingredients")}
+                                        data-testid={`tab-ingredients-web-${recipe.id}`}
+                                      >
+                                        Ingredients
+                                      </Button>
+                                      <Button
+                                        variant={expandedTab === "method" ? "default" : "ghost"}
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={() => setExpandedTab("method")}
+                                        data-testid={`tab-method-web-${recipe.id}`}
+                                      >
+                                        Method
+                                      </Button>
+                                    </div>
+                                    {recipe.url && (
+                                      <a
+                                        href={recipe.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                                        data-testid={`link-source-web-${recipe.id}`}
+                                      >
+                                        Source
+                                        <ExternalLink className="h-3 w-3" />
+                                      </a>
+                                    )}
+                                  </div>
+                                  <div className="max-h-52 overflow-y-auto">
+                                    {expandedTab === "ingredients" ? (
+                                      <div className="space-y-1 pb-2" data-testid={`expanded-ingredients-web-${recipe.id}`}>
+                                        {(recipe.ingredients || []).length > 0 ? recipe.ingredients.map((ing, i) => {
+                                          const parsed = parseIngredient(ing);
+                                          return (
+                                            <div key={i} className="text-sm flex gap-2 py-0.5" data-testid={`expanded-ingredient-web-${recipe.id}-${i}`}>
+                                              <span className="text-muted-foreground shrink-0 w-20 text-right text-xs leading-5">{parsed.detail || ''}</span>
+                                              <span className="text-foreground">{parsed.name}</span>
+                                            </div>
+                                          );
+                                        }) : (
+                                          <p className="text-sm text-muted-foreground py-4 text-center">No ingredients listed</p>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-2 pb-2" data-testid={`expanded-method-web-${recipe.id}`}>
+                                        {recipe.instructions && recipe.instructions.length > 0 ? recipe.instructions.map((step, i) => (
+                                          <div key={i} className="flex gap-2 text-sm" data-testid={`expanded-step-web-${recipe.id}-${i}`}>
+                                            <span className="text-primary font-semibold shrink-0 w-6 text-right">{i + 1}.</span>
+                                            <span className="text-foreground leading-relaxed">{step}</span>
+                                          </div>
+                                        )) : (
+                                          <p className="text-sm text-muted-foreground py-4 text-center">No method available</p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                          <CardContent className="p-4 flex-1 flex flex-col justify-between gap-3" onClick={(e) => e.stopPropagation()}>
                             <div>
                               <h3 className="font-semibold text-base leading-tight" data-testid={`text-web-recipe-name-${recipe.id}`}>
                                 {recipe.name}
