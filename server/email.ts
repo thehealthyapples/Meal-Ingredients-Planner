@@ -1,30 +1,43 @@
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
 
 const APP_BASE_URL = process.env.APP_BASE_URL || "https://www.thehealthyapples.com";
-const EMAIL_FROM = process.env.EMAIL_FROM || "no-reply@thehealthyapples.com";
+const EMAIL_FROM = process.env.EMAIL_FROM || "hello@thehealthyapples.com";
+const SMTP_HOST = process.env.SMTP_HOST || "mail.privateemail.com";
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || "465", 10);
+const SMTP_USER = process.env.SMTP_USER;
+const SMTP_PASS = process.env.SMTP_PASS;
 
-let resend: Resend | null = null;
+let transporter: nodemailer.Transporter | null = null;
 
-if (process.env.RESEND_API_KEY) {
-  resend = new Resend(process.env.RESEND_API_KEY);
+if (SMTP_USER && SMTP_PASS) {
+  transporter = nodemailer.createTransport({
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+  });
+  console.log(`[Email] SMTP configured via ${SMTP_HOST}:${SMTP_PORT} as ${SMTP_USER}`);
 } else {
-  console.warn("[Email] RESEND_API_KEY not set — email sending is disabled");
+  console.warn("[Email] SMTP_USER or SMTP_PASS not set — email sending is disabled");
 }
 
 export async function sendVerificationEmail(
   to: string,
   token: string
 ): Promise<{ success: boolean }> {
-  if (!resend) {
-    console.warn("[Email] Cannot send verification email — email service not configured");
+  if (!transporter) {
+    console.warn("[Email] Cannot send verification email — SMTP not configured");
     return { success: false };
   }
 
   const verifyUrl = `${APP_BASE_URL}/api/verify-email?token=${token}`;
 
   try {
-    await resend.emails.send({
-      from: EMAIL_FROM,
+    await transporter.sendMail({
+      from: `"The Healthy Apples" <${EMAIL_FROM}>`,
       to,
       subject: "Verify your email — The Healthy Apples",
       html: `
@@ -52,6 +65,7 @@ export async function sendVerificationEmail(
       `,
     });
 
+    console.log(`[Email] Verification email sent to ${to}`);
     return { success: true };
   } catch (err: any) {
     console.error("[Email] Failed to send verification email:", err?.message);
