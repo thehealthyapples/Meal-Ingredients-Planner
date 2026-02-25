@@ -1575,6 +1575,114 @@ export async function registerRoutes(
     }
   });
 
+  app.post('/api/preview-recipe', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const { url } = z.object({ url: z.string().url() }).parse(req.body);
+
+      const browserHeaders: Record<string, string> = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1',
+      };
+
+      let html = '';
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      try {
+        const nativeRes = await fetch(url, { headers: browserHeaders, signal: controller.signal, redirect: 'follow' });
+        clearTimeout(timeout);
+        if (nativeRes.ok) html = await nativeRes.text();
+      } catch { clearTimeout(timeout); }
+
+      if (!html) {
+        try {
+          const axiosRes = await axios.get(url, { headers: browserHeaders, timeout: 15000, maxContentLength: 5 * 1024 * 1024, maxRedirects: 5 });
+          html = axiosRes.data;
+        } catch {}
+      }
+
+      if (!html) {
+        return res.json({ ingredients: [], instructions: [], error: 'Could not access this recipe page' });
+      }
+
+      const $ = cheerio.load(html);
+      const jsonLdRecipe = extractJsonLdRecipe($);
+
+      if (jsonLdRecipe && jsonLdRecipe.recipeIngredient && jsonLdRecipe.recipeIngredient.length > 0) {
+        const ingredients = jsonLdRecipe.recipeIngredient.map(i => i.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
+        const instructions = extractJsonLdInstructions(jsonLdRecipe.recipeInstructions);
+        return res.json({ ingredients, instructions: instructions.length > 0 ? instructions : [] });
+      }
+
+      const ingredients: string[] = [];
+      const measurements = ['g', 'kg', 'ml', 'l', 'cup', 'cups', 'tsp', 'tbsp', 'teaspoon', 'tablespoon', 'pound', 'lb', 'oz', 'ounce', 'pinch', 'dash', 'clove', 'cloves', 'slice', 'slices', 'piece', 'pieces'];
+      const measurementRegex = new RegExp(`\\d+\\s*(${measurements.join('|')})`, 'i');
+
+      $('li').each((_, el) => {
+        const text = $(el).text().trim();
+        if (text.length < 3 || text.length > 100) return;
+        if (isMacroLine(text)) return;
+        const isIngredient = measurementRegex.test(text) || $(el).attr('class')?.toLowerCase().includes('ingredient') || $(el).parent().attr('class')?.toLowerCase().includes('ingredient');
+        if (isIngredient && !ingredients.includes(text)) ingredients.push(text);
+      });
+
+      if (ingredients.length === 0) {
+        $('p, div').each((_, el) => {
+          const text = $(el).text().trim();
+          if (text.length >= 3 && text.length <= 100 && !isMacroLine(text) && measurementRegex.test(text) && !ingredients.includes(text)) {
+            ingredients.push(text);
+          }
+        });
+      }
+
+      const instructions: string[] = [];
+      const methodSelectors = [
+        '.method-steps__list-item p', '.method-steps__list-item > div p', '.recipe-method li p',
+        '.recipe-method li', '.method-steps li', '.recipe-steps li',
+        '.instructions li', '.method li', '.steps li', '.directions li',
+        '.recipe-method ol li', '.recipe-directions li',
+        '[class*="instruction"] li', '[class*="method"] li', '[class*="step"] li', '[class*="direction"] li',
+        '.recipe-method p', '.method-steps p',
+      ];
+
+      for (const sel of methodSelectors) {
+        $(sel).each((_, el) => {
+          const text = $(el).text().trim();
+          if (text.length >= 5 && text.length <= 1000 && !instructions.includes(text)) instructions.push(text);
+        });
+        if (instructions.length > 0) break;
+      }
+
+      if (instructions.length === 0) {
+        $('ol li').each((_, el) => {
+          const text = $(el).text().trim();
+          if (text.length >= 10 && text.length <= 1000 && !measurementRegex.test(text) && !isMacroLine(text) && !ingredients.includes(text) && !instructions.includes(text)) {
+            instructions.push(text);
+          }
+        });
+      }
+
+      const cleanedInstructions = instructions.map(text => text.replace(/^step\s*\d+\s*/i, '').trim()).filter(text => text.length >= 5);
+
+      res.json({ ingredients, instructions: cleanedInstructions });
+    } catch (err) {
+      console.error('Preview recipe error:', err);
+      res.json({ ingredients: [], instructions: [], error: 'Failed to fetch recipe details' });
+    }
+  });
+
   app.get('/api/product-alternatives', async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {

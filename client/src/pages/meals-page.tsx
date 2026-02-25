@@ -1021,6 +1021,8 @@ export default function MealsPage() {
   });
   const [addToFreezerMealId, setAddToFreezerMealId] = useState<number | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | string | null>(null);
+  const [webPreviewCache, setWebPreviewCache] = useState<Record<string, { ingredients: string[]; instructions: string[]; loading?: boolean; error?: string }>>({});
+
   const [expandedTab, setExpandedTab] = useState<"ingredients" | "method">("ingredients");
   const [freezerPortions, setFreezerPortions] = useState(4);
   const [freezerLabel, setFreezerLabel] = useState("");
@@ -2122,8 +2124,11 @@ export default function MealsPage() {
                     const isImported = recentlyImportedIds.has(recipe.id);
                     const importedMealId = importedMealMap.get(recipe.id);
                     const importedMeal = importedMealId ? meals?.find(m => m.id === importedMealId) : null;
-                    const displayIngredients = importedMeal?.ingredients?.length ? importedMeal.ingredients : recipe.ingredients || [];
-                    const displayInstructions = importedMeal?.instructions?.length ? importedMeal.instructions : recipe.instructions || [];
+                    const webId = `web-${recipe.id}`;
+                    const preview = webPreviewCache[webId];
+                    const displayIngredients = importedMeal?.ingredients?.length ? importedMeal.ingredients : preview?.ingredients?.length ? preview.ingredients : recipe.ingredients || [];
+                    const displayInstructions = importedMeal?.instructions?.length ? importedMeal.instructions : preview?.instructions?.length ? preview.instructions : recipe.instructions || [];
+                    const isPreviewLoading = preview?.loading === true;
                     return (
                       <motion.div
                         key={recipe.id}
@@ -2132,7 +2137,41 @@ export default function MealsPage() {
                         exit={{ opacity: 0, scale: 0.95 }}
                         layout
                       >
-                        <Card className="overflow-hidden h-full flex flex-col cursor-pointer" onClick={() => { const webId = `web-${recipe.id}`; setExpandedMealId(expandedMealId === webId ? null : webId); setExpandedTab("ingredients"); }} data-testid={`card-web-result-${recipe.id}`}>
+                        <Card className="overflow-hidden h-full flex flex-col cursor-pointer" onClick={() => {
+                          const webId = `web-${recipe.id}`;
+                          if (expandedMealId === webId) {
+                            setExpandedMealId(null);
+                            return;
+                          }
+                          setExpandedMealId(webId);
+                          setExpandedTab("ingredients");
+                          if (!webPreviewCache[webId] && !importedMeal && recipe.url) {
+                            setWebPreviewCache(prev => ({ ...prev, [webId]: { ingredients: [], instructions: [], loading: true } }));
+                            fetch('/api/preview-recipe', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ url: recipe.url }),
+                            })
+                              .then(r => r.json())
+                              .then((data: { ingredients?: string[]; instructions?: string[]; error?: string }) => {
+                                setWebPreviewCache(prev => ({
+                                  ...prev,
+                                  [webId]: {
+                                    ingredients: data.ingredients || [],
+                                    instructions: data.instructions || [],
+                                    loading: false,
+                                    error: data.error,
+                                  },
+                                }));
+                              })
+                              .catch(() => {
+                                setWebPreviewCache(prev => ({
+                                  ...prev,
+                                  [webId]: { ingredients: [], instructions: [], loading: false, error: 'Failed to load recipe details' },
+                                }));
+                              });
+                          }
+                        }} data-testid={`card-web-result-${recipe.id}`}>
                           {recipe.image && (
                             <div className="w-full aspect-[4/3] overflow-hidden">
                               <img
@@ -2191,7 +2230,14 @@ export default function MealsPage() {
                                     )}
                                   </div>
                                   <div className="max-h-52 overflow-y-auto">
-                                    {expandedTab === "ingredients" ? (
+                                    {isPreviewLoading ? (
+                                      <div className="flex items-center justify-center py-6 gap-2">
+                                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                        <span className="text-sm text-muted-foreground">Loading recipe details...</span>
+                                      </div>
+                                    ) : preview?.error && displayIngredients.length === 0 ? (
+                                      <p className="text-sm text-muted-foreground py-4 text-center">{preview.error}</p>
+                                    ) : expandedTab === "ingredients" ? (
                                       <div className="space-y-1 pb-2" data-testid={`expanded-ingredients-web-${recipe.id}`}>
                                         {displayIngredients.length > 0 ? displayIngredients.map((ing, i) => {
                                           const parsed = parseIngredient(ing);
@@ -2202,7 +2248,7 @@ export default function MealsPage() {
                                             </div>
                                           );
                                         }) : (
-                                          <p className="text-sm text-muted-foreground py-4 text-center">{isImported ? "No ingredients listed" : "Save this recipe to view ingredients"}</p>
+                                          <p className="text-sm text-muted-foreground py-4 text-center">No ingredients found on this page</p>
                                         )}
                                       </div>
                                     ) : (
@@ -2213,7 +2259,7 @@ export default function MealsPage() {
                                             <span className="text-foreground leading-relaxed">{step}</span>
                                           </div>
                                         )) : (
-                                          <p className="text-sm text-muted-foreground py-4 text-center">{isImported ? "No method available" : "Save this recipe to view the method"}</p>
+                                          <p className="text-sm text-muted-foreground py-4 text-center">No method found on this page</p>
                                         )}
                                       </div>
                                     )}
