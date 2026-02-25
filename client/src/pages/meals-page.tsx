@@ -1020,6 +1020,8 @@ export default function MealsPage() {
     queryKey: ['/api/freezer'],
   });
   const [addToFreezerMealId, setAddToFreezerMealId] = useState<number | null>(null);
+  const [expandedMealId, setExpandedMealId] = useState<number | null>(null);
+  const [expandedTab, setExpandedTab] = useState<"ingredients" | "method">("ingredients");
   const [freezerPortions, setFreezerPortions] = useState(4);
   const [freezerLabel, setFreezerLabel] = useState("");
   const [freezerNotes, setFreezerNotes] = useState("");
@@ -1625,7 +1627,7 @@ export default function MealsPage() {
                   exit={{ opacity: 0, y: 12 }}
                   transition={{ duration: 0.2, delay: index * 0.03 }}
                 >
-                  <Card className="h-full flex flex-col group cursor-pointer overflow-hidden hover-elevate transition-all duration-200" onClick={() => navigate(`/meals/${meal.id}`)} data-testid={`card-meal-${meal.id}`}>
+                  <Card className="h-full flex flex-col group cursor-pointer overflow-hidden hover-elevate transition-all duration-200" onClick={(e) => { e.stopPropagation(); setExpandedMealId(expandedMealId === meal.id ? null : meal.id); setExpandedTab("ingredients"); }} data-testid={`card-meal-${meal.id}`}>
                     <div className="relative w-full h-48 overflow-hidden rounded-t-md">
                       {meal.isReadyMeal && !meal.imageUrl ? (
                         <div className={`w-full h-full flex flex-col items-center justify-center gap-2 px-4 relative ${
@@ -1776,6 +1778,82 @@ export default function MealsPage() {
                         </div>
                       )}
                     </div>
+                    <AnimatePresence>
+                      {expandedMealId === meal.id && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25, ease: "easeInOut" }}
+                          className="overflow-hidden border-t"
+                          onClick={(e) => e.stopPropagation()}
+                          data-testid={`expanded-detail-${meal.id}`}
+                        >
+                          <div className="px-3 pt-2 pb-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex gap-1">
+                                <Button
+                                  variant={expandedTab === "ingredients" ? "default" : "ghost"}
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => setExpandedTab("ingredients")}
+                                  data-testid={`tab-ingredients-${meal.id}`}
+                                >
+                                  Ingredients
+                                </Button>
+                                <Button
+                                  variant={expandedTab === "method" ? "default" : "ghost"}
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => setExpandedTab("method")}
+                                  data-testid={`tab-method-${meal.id}`}
+                                >
+                                  Method
+                                </Button>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs text-muted-foreground"
+                                onClick={() => navigate(`/meals/${meal.id}`)}
+                                data-testid={`link-full-detail-${meal.id}`}
+                              >
+                                Full Details
+                                <ExternalLink className="h-3 w-3 ml-1" />
+                              </Button>
+                            </div>
+                            <div className="max-h-52 overflow-y-auto">
+                              {expandedTab === "ingredients" ? (
+                                <div className="space-y-1 pb-2" data-testid={`expanded-ingredients-${meal.id}`}>
+                                  {meal.ingredients.length > 0 ? meal.ingredients.map((ing, i) => {
+                                    const parsed = parseIngredient(ing);
+                                    return (
+                                      <div key={i} className="text-sm flex gap-2 py-0.5" data-testid={`expanded-ingredient-${meal.id}-${i}`}>
+                                        <span className="text-muted-foreground shrink-0 w-20 text-right text-xs leading-5">{parsed.detail || ''}</span>
+                                        <span className="text-foreground">{parsed.name}</span>
+                                      </div>
+                                    );
+                                  }) : (
+                                    <p className="text-sm text-muted-foreground py-4 text-center">No ingredients listed</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="space-y-2 pb-2" data-testid={`expanded-method-${meal.id}`}>
+                                  {meal.instructions && meal.instructions.length > 0 ? meal.instructions.map((step, i) => (
+                                    <div key={i} className="flex gap-2 text-sm" data-testid={`expanded-step-${meal.id}-${i}`}>
+                                      <span className="text-primary font-semibold shrink-0 w-6 text-right">{i + 1}.</span>
+                                      <span className="text-foreground leading-relaxed">{step}</span>
+                                    </div>
+                                  )) : (
+                                    <p className="text-sm text-muted-foreground py-4 text-center">No method available</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                     <CardFooter className="py-2 px-3 flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
                       {!meal.isReadyMeal && (
                         <div className="flex items-center gap-1.5 flex-wrap w-full">
@@ -1809,7 +1887,7 @@ export default function MealsPage() {
                   exit={{ opacity: 0, x: -12 }}
                   transition={{ duration: 0.15, delay: index * 0.02 }}
                 >
-                  <Card className="group" data-testid={`card-meal-${meal.id}`}>
+                  <Card className="group cursor-pointer" onClick={() => { setExpandedMealId(expandedMealId === meal.id ? null : meal.id); setExpandedTab("ingredients"); }} data-testid={`card-meal-${meal.id}`}>
                     <div className="flex items-stretch relative">
                       {meal.isReadyMeal ? (
                         <div className={`w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center gap-1 px-2 relative ${
@@ -1896,7 +1974,7 @@ export default function MealsPage() {
                             <DietBadges mealId={meal.id} />
                           </div>
                         </div>
-                        <div className="flex flex-col gap-2 shrink-0 min-w-[200px]">
+                        <div className="flex flex-col gap-2 shrink-0 min-w-[200px]" onClick={(e) => e.stopPropagation()}>
                           <MealActionBar
                             mealId={meal.id}
                             mealName={meal.name}
@@ -1914,7 +1992,7 @@ export default function MealsPage() {
                               variant="ghost"
                               size="icon"
                               className="text-muted-foreground invisible group-hover:visible self-end"
-                              onClick={() => deleteMeal.mutate(meal.id)}
+                              onClick={(e) => { e.stopPropagation(); deleteMeal.mutate(meal.id); }}
                               data-testid={`button-delete-meal-${meal.id}`}
                             >
                               <Trash2 className="h-4 w-4" />
@@ -1923,6 +2001,82 @@ export default function MealsPage() {
                         </div>
                       </div>
                     </div>
+                    <AnimatePresence>
+                      {expandedMealId === meal.id && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.25, ease: "easeInOut" }}
+                          className="overflow-hidden border-t"
+                          onClick={(e) => e.stopPropagation()}
+                          data-testid={`expanded-detail-${meal.id}`}
+                        >
+                          <div className="px-4 py-3">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex gap-1">
+                                <Button
+                                  variant={expandedTab === "ingredients" ? "default" : "ghost"}
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => setExpandedTab("ingredients")}
+                                  data-testid={`tab-ingredients-${meal.id}`}
+                                >
+                                  Ingredients
+                                </Button>
+                                <Button
+                                  variant={expandedTab === "method" ? "default" : "ghost"}
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => setExpandedTab("method")}
+                                  data-testid={`tab-method-${meal.id}`}
+                                >
+                                  Method
+                                </Button>
+                              </div>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs text-muted-foreground"
+                                onClick={() => navigate(`/meals/${meal.id}`)}
+                                data-testid={`link-full-detail-${meal.id}`}
+                              >
+                                Full Details
+                                <ExternalLink className="h-3 w-3 ml-1" />
+                              </Button>
+                            </div>
+                            <div className="max-h-64 overflow-y-auto">
+                              {expandedTab === "ingredients" ? (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 pb-2" data-testid={`expanded-ingredients-${meal.id}`}>
+                                  {meal.ingredients.length > 0 ? meal.ingredients.map((ing, i) => {
+                                    const parsed = parseIngredient(ing);
+                                    return (
+                                      <div key={i} className="text-sm flex gap-2 py-0.5" data-testid={`expanded-ingredient-${meal.id}-${i}`}>
+                                        <span className="text-muted-foreground shrink-0 w-20 text-right text-xs leading-5">{parsed.detail || ''}</span>
+                                        <span className="text-foreground">{parsed.name}</span>
+                                      </div>
+                                    );
+                                  }) : (
+                                    <p className="text-sm text-muted-foreground py-4 text-center col-span-2">No ingredients listed</p>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="space-y-2 pb-2" data-testid={`expanded-method-${meal.id}`}>
+                                  {meal.instructions && meal.instructions.length > 0 ? meal.instructions.map((step, i) => (
+                                    <div key={i} className="flex gap-2 text-sm" data-testid={`expanded-step-${meal.id}-${i}`}>
+                                      <span className="text-primary font-semibold shrink-0 w-6 text-right">{i + 1}.</span>
+                                      <span className="text-foreground leading-relaxed">{step}</span>
+                                    </div>
+                                  )) : (
+                                    <p className="text-sm text-muted-foreground py-4 text-center">No method available</p>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </Card>
                 </motion.div>
               ))}
