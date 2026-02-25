@@ -2120,6 +2120,10 @@ export default function MealsPage() {
                   {webSearchResults.map((recipe) => {
                     const isImporting = webImportingIds.has(recipe.id);
                     const isImported = recentlyImportedIds.has(recipe.id);
+                    const importedMealId = importedMealMap.get(recipe.id);
+                    const importedMeal = importedMealId ? meals?.find(m => m.id === importedMealId) : null;
+                    const displayIngredients = importedMeal?.ingredients?.length ? importedMeal.ingredients : recipe.ingredients || [];
+                    const displayInstructions = importedMeal?.instructions?.length ? importedMeal.instructions : recipe.instructions || [];
                     return (
                       <motion.div
                         key={recipe.id}
@@ -2189,7 +2193,7 @@ export default function MealsPage() {
                                   <div className="max-h-52 overflow-y-auto">
                                     {expandedTab === "ingredients" ? (
                                       <div className="space-y-1 pb-2" data-testid={`expanded-ingredients-web-${recipe.id}`}>
-                                        {(recipe.ingredients || []).length > 0 ? recipe.ingredients.map((ing, i) => {
+                                        {displayIngredients.length > 0 ? displayIngredients.map((ing, i) => {
                                           const parsed = parseIngredient(ing);
                                           return (
                                             <div key={i} className="text-sm flex gap-2 py-0.5" data-testid={`expanded-ingredient-web-${recipe.id}-${i}`}>
@@ -2198,18 +2202,18 @@ export default function MealsPage() {
                                             </div>
                                           );
                                         }) : (
-                                          <p className="text-sm text-muted-foreground py-4 text-center">No ingredients listed</p>
+                                          <p className="text-sm text-muted-foreground py-4 text-center">{isImported ? "No ingredients listed" : "Save this recipe to view ingredients"}</p>
                                         )}
                                       </div>
                                     ) : (
                                       <div className="space-y-2 pb-2" data-testid={`expanded-method-web-${recipe.id}`}>
-                                        {recipe.instructions && recipe.instructions.length > 0 ? recipe.instructions.map((step, i) => (
+                                        {displayInstructions.length > 0 ? displayInstructions.map((step, i) => (
                                           <div key={i} className="flex gap-2 text-sm" data-testid={`expanded-step-web-${recipe.id}-${i}`}>
                                             <span className="text-primary font-semibold shrink-0 w-6 text-right">{i + 1}.</span>
                                             <span className="text-foreground leading-relaxed">{step}</span>
                                           </div>
                                         )) : (
-                                          <p className="text-sm text-muted-foreground py-4 text-center">No method available</p>
+                                          <p className="text-sm text-muted-foreground py-4 text-center">{isImported ? "No method available" : "Save this recipe to view the method"}</p>
                                         )}
                                       </div>
                                     )}
