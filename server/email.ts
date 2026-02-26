@@ -3,7 +3,7 @@ import nodemailer from "nodemailer";
 const APP_BASE_URL = process.env.APP_BASE_URL || "https://www.thehealthyapples.com";
 const EMAIL_FROM = process.env.EMAIL_FROM || "hello@thehealthyapples.com";
 const SMTP_HOST = process.env.SMTP_HOST || "mail.privateemail.com";
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || "465", 10);
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || "587", 10);
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 
@@ -13,7 +13,7 @@ if (SMTP_USER && SMTP_PASS) {
   transporter = nodemailer.createTransport({
     host: SMTP_HOST,
     port: SMTP_PORT,
-    secure: SMTP_PORT === 465,
+    secure: false,
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,
@@ -36,7 +36,11 @@ export async function sendVerificationEmail(
   const verifyUrl = `${APP_BASE_URL}/api/verify-email?token=${token}`;
 
   try {
-    await transporter.sendMail({
+    console.log(`[Email] Verifying SMTP connection before sending to ${to}...`);
+    await transporter.verify();
+    console.log("[Email] SMTP connection verified successfully");
+
+    const info = await transporter.sendMail({
       from: `"The Healthy Apples" <${EMAIL_FROM}>`,
       to,
       subject: "Verify your email — The Healthy Apples",
@@ -65,10 +69,23 @@ export async function sendVerificationEmail(
       `,
     });
 
-    console.log(`[Email] Verification email sent to ${to}`);
-    return { success: true };
-  } catch (err: any) {
-    console.error("[Email] Failed to send verification email:", err?.message);
+    console.log(`[Email] Send result — messageId: ${info.messageId}`);
+    console.log(`[Email] Accepted: ${JSON.stringify(info.accepted)}`);
+    console.log(`[Email] Rejected: ${JSON.stringify(info.rejected)}`);
+
+    if (info.rejected && info.rejected.length > 0) {
+      console.warn(`[Email] WARNING: The following addresses were rejected: ${JSON.stringify(info.rejected)}`);
+    }
+
+    if (info.accepted && info.accepted.length > 0) {
+      console.log(`[Email] Verification email successfully delivered to ${to}`);
+      return { success: true };
+    } else {
+      console.warn(`[Email] Email was not accepted by the server for ${to}`);
+      return { success: false };
+    }
+  } catch (err: unknown) {
+    console.error("[Email] Failed to send verification email — full error:", err);
     return { success: false };
   }
 }
