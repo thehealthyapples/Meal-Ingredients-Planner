@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -131,6 +131,8 @@ export default function MealPlannerPage() {
   const [dupName, setDupName] = useState("");
   const [suggestion, setSuggestion] = useState<SuggestionResult | null>(null);
   const [suggestDietId, setSuggestDietId] = useState<number | undefined>(undefined);
+  const [dietFromProfile, setDietFromProfile] = useState(false);
+  const dietAutoSetRef = useRef(false);
   const [calorieTarget, setCalorieTarget] = useState<string>("");
   const [peopleCount, setPeopleCount] = useState<string>("1");
   const [recipeSearchQuery, setRecipeSearchQuery] = useState("");
@@ -164,6 +166,26 @@ export default function MealPlannerPage() {
   const { data: allDiets = [] } = useQuery<Diet[]>({
     queryKey: ['/api/diets'],
   });
+
+  const { data: plannerUserPrefs } = useQuery<{ dietTypes?: string[] }>({
+    queryKey: ['/api/user/preferences'],
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (dietAutoSetRef.current) return;
+    if (!plannerUserPrefs || allDiets.length === 0) return;
+    const dietTypes = plannerUserPrefs.dietTypes || [];
+    if (dietTypes.length > 0) {
+      const firstName = dietTypes[0].toLowerCase();
+      const match = allDiets.find(d => d.name.toLowerCase() === firstName || firstName.includes(d.name.toLowerCase()) || d.name.toLowerCase().includes(firstName));
+      if (match) {
+        setSuggestDietId(match.id);
+        setDietFromProfile(true);
+      }
+    }
+    dietAutoSetRef.current = true;
+  }, [plannerUserPrefs, allDiets]);
 
   const { data: allCategories = [] } = useQuery<MealCategory[]>({
     queryKey: ['/api/categories'],
@@ -833,9 +855,15 @@ export default function MealPlannerPage() {
                         </label>
                       </div>
                       {allDiets.length > 0 && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <label className="text-sm text-muted-foreground">Diet:</label>
-                          <Select value={suggestDietId ? String(suggestDietId) : "none"} onValueChange={v => setSuggestDietId(v === "none" ? undefined : Number(v))}>
+                          <Select
+                            value={suggestDietId ? String(suggestDietId) : "none"}
+                            onValueChange={v => {
+                              setSuggestDietId(v === "none" ? undefined : Number(v));
+                              setDietFromProfile(false);
+                            }}
+                          >
                             <SelectTrigger className="w-[140px]" data-testid="select-smart-diet">
                               <SelectValue placeholder="Any" />
                             </SelectTrigger>
@@ -846,6 +874,11 @@ export default function MealPlannerPage() {
                               ))}
                             </SelectContent>
                           </Select>
+                          {dietFromProfile && suggestDietId && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-green-700 border-green-400 dark:text-green-400" data-testid="badge-diet-from-profile">
+                              from profile
+                            </Badge>
+                          )}
                         </div>
                       )}
                     </div>

@@ -55,6 +55,24 @@ function parseIngredient(raw: string): { name: string; detail: string | null } {
   return { name, detail: null };
 }
 
+function getDietFilterKey(name: string): string {
+  const n = name.toLowerCase().replace(/[\s_]+/g, '-');
+  if (n.includes('vegan')) return 'vegan';
+  if (n.includes('vegetarian')) return 'vegetarian';
+  if (n.includes('dairy')) return 'dairy-free';
+  if (n.includes('gluten')) return 'gluten-free';
+  if (n.includes('keto')) return 'keto';
+  return '';
+}
+
+const DIET_FILTER_OPTIONS = [
+  { value: 'vegan', label: 'Vegan' },
+  { value: 'vegetarian', label: 'Vegetarian' },
+  { value: 'dairy-free', label: 'Dairy-Free' },
+  { value: 'gluten-free', label: 'Gluten-Free' },
+  { value: 'keto', label: 'Keto' },
+];
+
 function useViewPreference() {
   const [view, setView] = useState<'grid' | 'list'>(() => {
     try {
@@ -1141,6 +1159,8 @@ export default function MealsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [mealTypeFilter, setMealTypeFilter] = useState<string>("all");
   const [audienceFilter, setAudienceFilter] = useState<string>("all-audience");
+  const [webDietFilter, setWebDietFilter] = useState<string>("");
+  const webDietInitRef = useRef(false);
   const [webSearchResults, setWebSearchResults] = useState<WebSearchRecipe[]>([]);
   const [webHasMore, setWebHasMore] = useState(false);
   const [webCurrentPage, setWebCurrentPage] = useState(1);
@@ -1267,6 +1287,22 @@ export default function MealsPage() {
     retry: false,
   });
 
+  const { data: userPrefs } = useQuery<{ dietTypes?: string[] }>({
+    queryKey: ['/api/user/preferences'],
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (webDietInitRef.current) return;
+    if (!userPrefs) return;
+    const dietTypes = userPrefs.dietTypes || [];
+    if (dietTypes.length > 0) {
+      const key = getDietFilterKey(dietTypes[0]);
+      if (key) setWebDietFilter(key);
+    }
+    webDietInitRef.current = true;
+  }, [userPrefs]);
+
   const guessWebCategory = (recipe: WebSearchRecipe): number | undefined => {
     const name = (recipe.name || '').toLowerCase();
     const cat = (recipe.category || '').toLowerCase();
@@ -1291,7 +1327,7 @@ export default function MealsPage() {
     if (!query) return;
     setWebIsSearching(true);
     try {
-      const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(query)}&page=${page}`, { signal });
+      const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(query)}&page=${page}${webDietFilter ? `&diet=${encodeURIComponent(webDietFilter)}` : ''}`, { signal });
       if (!res.ok) throw new Error("Search failed");
       const data: { recipes: WebSearchRecipe[]; hasMore: boolean } = await res.json();
       if (page === 1) {
@@ -1363,7 +1399,7 @@ export default function MealsPage() {
       if (webSearchAbortRef.current) webSearchAbortRef.current.abort();
       if (productSearchAbortRef.current) productSearchAbortRef.current.abort();
     };
-  }, [searchTerm]);
+  }, [searchTerm, webDietFilter]);
 
   const handleWebLoadMore = () => {
     performWebSearch(webSearchQuery, webCurrentPage + 1);
@@ -2250,7 +2286,7 @@ export default function MealsPage() {
 
       {(webSearchResults.length > 0 || webIsSearching) && searchSource !== "products" && (
         <div className="mt-8" data-testid="section-web-results">
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
             <Globe className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold tracking-tight">From the Web</h2>
             {webIsSearching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
@@ -2259,6 +2295,33 @@ export default function MealsPage() {
                 Results for "{webSearchQuery}"
               </span>
             )}
+            <div className="flex items-center gap-2 ml-auto">
+              {webDietFilter && (
+                <Badge variant="secondary" className="gap-1.5 pr-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800" data-testid="badge-web-diet-filter">
+                  <Leaf className="h-3 w-3" />
+                  {DIET_FILTER_OPTIONS.find(o => o.value === webDietFilter)?.label ?? webDietFilter}
+                  <button
+                    onClick={() => setWebDietFilter("")}
+                    className="ml-0.5 rounded-full hover:bg-green-200 dark:hover:bg-green-800 p-0.5"
+                    aria-label="Remove diet filter"
+                    data-testid="button-clear-web-diet"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </Badge>
+              )}
+              <Select value={webDietFilter || "none"} onValueChange={v => setWebDietFilter(v === "none" ? "" : v)}>
+                <SelectTrigger className="h-7 text-xs w-[130px]" data-testid="select-web-diet-filter">
+                  <SelectValue placeholder="Any diet" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Any diet</SelectItem>
+                  {DIET_FILTER_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {webSearchResults.length > 0 && (
