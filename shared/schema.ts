@@ -1,4 +1,5 @@
-import { pgTable, text, serial, integer, real, boolean, unique, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, boolean, unique, timestamp, varchar } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -697,3 +698,49 @@ export type MealTemplate = typeof mealTemplates.$inferSelect;
 export type InsertMealTemplate = z.infer<typeof insertMealTemplateSchema>;
 export type MealTemplateProduct = typeof mealTemplateProducts.$inferSelect;
 export type InsertMealTemplateProduct = z.infer<typeof insertMealTemplateProductSchema>;
+
+// ─── Meal Plan Templates ───────────────────────────────────────────────────────
+
+export const mealPlanTemplates = pgTable("meal_plan_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  isDefault: boolean("is_default").notNull().default(false),
+  isPremium: boolean("is_premium").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const mealPlanTemplateItems = pgTable(
+  "meal_plan_template_items",
+  {
+    id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+    templateId: varchar("template_id")
+      .notNull()
+      .references(() => mealPlanTemplates.id, { onDelete: "cascade" }),
+    weekNumber: integer("week_number").notNull(),
+    dayOfWeek: integer("day_of_week").notNull(),
+    mealSlot: text("meal_slot").notNull(),
+    mealId: integer("meal_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    uniqueSlot: unique().on(table.templateId, table.weekNumber, table.dayOfWeek, table.mealSlot),
+  })
+);
+
+export const insertMealPlanTemplateSchema = createInsertSchema(mealPlanTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMealPlanTemplateItemSchema = createInsertSchema(mealPlanTemplateItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type MealPlanTemplate = typeof mealPlanTemplates.$inferSelect;
+export type InsertMealPlanTemplate = z.infer<typeof insertMealPlanTemplateSchema>;
+export type MealPlanTemplateItem = typeof mealPlanTemplateItems.$inferSelect;
+export type InsertMealPlanTemplateItem = z.infer<typeof insertMealPlanTemplateItemSchema>;

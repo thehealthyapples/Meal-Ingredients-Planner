@@ -1,4 +1,4 @@
-import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals } from "@shared/schema";
+import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, ilike, sql, inArray } from "drizzle-orm";
 import session from "express-session";
@@ -134,6 +134,14 @@ export interface IStorage {
   getUserByResetToken(token: string): Promise<User | undefined>;
   updatePassword(userId: number, hashedPassword: string): Promise<void>;
   clearPasswordResetToken(userId: number): Promise<void>;
+
+  // ── Meal Plan Templates ──────────────────────────────────────────────────────
+  createOrUpdateTemplate(name: string, description: string | null, isDefault: boolean): Promise<MealPlanTemplate>;
+  upsertTemplateItemsBulk(templateId: string, items: Omit<InsertMealPlanTemplateItem, "templateId">[]): Promise<MealPlanTemplateItem[]>;
+  getTemplateWithItems(id: string): Promise<(MealPlanTemplate & { items: MealPlanTemplateItem[] }) | undefined>;
+  getDefaultTemplate(): Promise<(MealPlanTemplate & { items: MealPlanTemplateItem[] }) | undefined>;
+  listTemplates(): Promise<MealPlanTemplate[]>;
+
   sessionStore: session.Store;
 }
 
@@ -946,6 +954,95 @@ export class DatabaseStorage implements IStorage {
 
   async clearPasswordResetToken(userId: number): Promise<void> {
     await db.update(users).set({ passwordResetToken: null, passwordResetExpires: null }).where(eq(users.id, userId));
+  }
+
+  // ── Meal Plan Templates ──────────────────────────────────────────────────────
+
+  async createOrUpdateTemplate(
+    name: string,
+    description: string | null,
+    isDefault: boolean
+  ): Promise<MealPlanTemplate> {
+    if (isDefault) {
+      await db
+        .update(mealPlanTemplates)
+        .set({ isDefault: false, updatedAt: new Date() })
+        .where(eq(mealPlanTemplates.isDefault, true));
+    }
+    const existing = await db
+      .select()
+      .from(mealPlanTemplates)
+      .where(eq(mealPlanTemplates.name, name))
+      .limit(1);
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(mealPlanTemplates)
+        .set({ description, isDefault, updatedAt: new Date() })
+        .where(eq(mealPlanTemplates.id, existing[0].id))
+        .returning();
+      return updated;
+    }
+    const [created] = await db
+      .insert(mealPlanTemplates)
+      .values({ name, description, isDefault })
+      .returning();
+    return created;
+  }
+
+  async upsertTemplateItemsBulk(
+    templateId: string,
+    items: Omit<InsertMealPlanTemplateItem, "templateId">[]
+  ): Promise<MealPlanTemplateItem[]> {
+    if (items.length === 0) return [];
+    const rows = items.map(item => ({ ...item, templateId }));
+    const result = await db
+      .insert(mealPlanTemplateItems)
+      .values(rows)
+      .onConflictDoUpdate({
+        target: [
+          mealPlanTemplateItems.templateId,
+          mealPlanTemplateItems.weekNumber,
+          mealPlanTemplateItems.dayOfWeek,
+          mealPlanTemplateItems.mealSlot,
+        ],
+        set: { mealId: sql`EXCLUDED.meal_id` },
+      })
+      .returning();
+    return result;
+  }
+
+  async getTemplateWithItems(
+    id: string
+  ): Promise<(MealPlanTemplate & { items: MealPlanTemplateItem[] }) | undefined> {
+    const [template] = await db
+      .select()
+      .from(mealPlanTemplates)
+      .where(eq(mealPlanTemplates.id, id))
+      .limit(1);
+    if (!template) return undefined;
+    const items = await db
+      .select()
+      .from(mealPlanTemplateItems)
+      .where(eq(mealPlanTemplateItems.templateId, id))
+      .orderBy(mealPlanTemplateItems.weekNumber, mealPlanTemplateItems.dayOfWeek, mealPlanTemplateItems.mealSlot);
+    return { ...template, items };
+  }
+
+  async getDefaultTemplate(): Promise<(MealPlanTemplate & { items: MealPlanTemplateItem[] }) | undefined> {
+    const [template] = await db
+      .select()
+      .from(mealPlanTemplates)
+      .where(eq(mealPlanTemplates.isDefault, true))
+      .limit(1);
+    if (!template) return undefined;
+    return this.getTemplateWithItems(template.id);
+  }
+
+  async listTemplates(): Promise<MealPlanTemplate[]> {
+    return db
+      .select()
+      .from(mealPlanTemplates)
+      .orderBy(mealPlanTemplates.name);
   }
 }
 

@@ -75,6 +75,31 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-02-27_meal_plan_templates",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS meal_plan_templates (
+         id          VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+         name        TEXT NOT NULL,
+         description TEXT,
+         is_default  BOOLEAN NOT NULL DEFAULT FALSE,
+         is_premium  BOOLEAN NOT NULL DEFAULT FALSE,
+         created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE TABLE IF NOT EXISTS meal_plan_template_items (
+         id           VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+         template_id  VARCHAR NOT NULL REFERENCES meal_plan_templates(id) ON DELETE CASCADE,
+         week_number  INTEGER NOT NULL CHECK (week_number BETWEEN 1 AND 6),
+         day_of_week  INTEGER NOT NULL CHECK (day_of_week BETWEEN 1 AND 7),
+         meal_slot    TEXT NOT NULL CHECK (meal_slot IN ('breakfast','lunch','dinner')),
+         meal_id      INTEGER NOT NULL REFERENCES meals(id) ON DELETE RESTRICT,
+         created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         UNIQUE (template_id, week_number, day_of_week, meal_slot)
+       )`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
