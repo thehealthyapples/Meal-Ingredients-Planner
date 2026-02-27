@@ -114,6 +114,7 @@ export interface IStorage {
   getPlannerDays(weekId: number): Promise<PlannerDay[]>;
   getPlannerDay(id: number): Promise<PlannerDay | undefined>;
   getPlannerEntriesForDay(dayId: number): Promise<PlannerEntry[]>;
+  getPlannerEntriesByDayIds(dayIds: number[]): Promise<PlannerEntry[]>;
   upsertPlannerEntry(dayId: number, mealType: string, audience: string, mealId: number | null, calories?: number, isDrink?: boolean, drinkType?: string | null): Promise<PlannerEntry | null>;
   deletePlannerEntry(id: number): Promise<void>;
   getPlannerEntriesForWeek(weekId: number): Promise<PlannerEntry[]>;

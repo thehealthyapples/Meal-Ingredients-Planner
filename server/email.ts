@@ -3,23 +3,24 @@ import nodemailer from "nodemailer";
 const APP_BASE_URL = process.env.APP_BASE_URL || "https://www.thehealthyapples.com";
 const EMAIL_FROM = process.env.EMAIL_FROM || "hello@thehealthyapples.com";
 const SMTP_HOST = process.env.SMTP_HOST || "mail.privateemail.com";
-const SMTP_PORT = parseInt(process.env.SMTP_PORT || "587", 10);
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || "465", 10);
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 
 let transporter: nodemailer.Transporter | null = null;
 
 if (SMTP_USER && SMTP_PASS) {
+  const useSSL = SMTP_PORT === 465;
   transporter = nodemailer.createTransport({
     host: SMTP_HOST,
     port: SMTP_PORT,
-    secure: false,
+    secure: useSSL,
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,
     },
   });
-  console.log(`[Email] SMTP configured via ${SMTP_HOST}:${SMTP_PORT} as ${SMTP_USER}`);
+  console.log(`[Email] SMTP configured via ${SMTP_HOST}:${SMTP_PORT} (secure=${useSSL}) as ${SMTP_USER}`);
 } else {
   console.warn("[Email] SMTP_USER or SMTP_PASS not set — email sending is disabled");
 }
