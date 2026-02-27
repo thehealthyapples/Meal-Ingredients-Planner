@@ -36,10 +36,6 @@ export async function sendVerificationEmail(
   const verifyUrl = `${APP_BASE_URL}/api/verify-email?token=${token}`;
 
   try {
-    console.log(`[Email] Verifying SMTP connection before sending to ${to}...`);
-    await transporter.verify();
-    console.log("[Email] SMTP connection verified successfully");
-
     const info = await transporter.sendMail({
       from: `"The Healthy Apples" <${EMAIL_FROM}>`,
       to,

@@ -18,7 +18,7 @@ type AppConfig = {
   environment: string;
 };
 
-type AuthMode = "login" | "register" | "forgot" | "reset";
+type AuthMode = "login" | "register" | "forgot" | "reset" | "resend";
 
 export default function AuthPage() {
   const { login, loginError, register, registerResult, user, isLoggingIn, isRegistering } = useUser();
@@ -29,6 +29,9 @@ export default function AuthPage() {
 
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotState, setForgotState] = useState<"idle" | "loading" | "sent">("idle");
+
+  const [resendEmail, setResendEmail] = useState("");
+  const [standaloneResendState, setStandaloneResendState] = useState<"idle" | "loading" | "sent">("idle");
 
   const [resetToken, setResetToken] = useState("");
   const [resetNewPassword, setResetNewPassword] = useState("");
@@ -90,6 +93,21 @@ export default function AuthPage() {
       });
     } finally {
       setForgotState("sent");
+    }
+  };
+
+  const handleStandaloneResend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resendEmail.trim() || standaloneResendState === "loading") return;
+    setStandaloneResendState("loading");
+    try {
+      await fetch("/api/resend-verification", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: resendEmail.trim() }),
+      });
+    } finally {
+      setStandaloneResendState("sent");
     }
   };
 
@@ -286,6 +304,65 @@ export default function AuthPage() {
               </div>
             </div>
 
+          ) : mode === "resend" ? (
+            <div className="space-y-6" data-testid="panel-resend-verification">
+              <div>
+                <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <Mail className="h-7 w-7 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold tracking-tight">Resend verification email</h2>
+                <p className="text-muted-foreground mt-2">
+                  Enter your email address and we'll send you a new verification link.
+                </p>
+              </div>
+
+              {standaloneResendState === "sent" ? (
+                <div className="flex flex-col items-center gap-4 py-6 text-center" data-testid="panel-resend-sent">
+                  <div className="mx-auto w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+                    <CheckCircle2 className="h-7 w-7 text-green-600" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground">
+                    Verification email sent — please check your inbox and click the link to verify your account.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleStandaloneResend} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium" htmlFor="resend-email">Email address</label>
+                    <Input
+                      id="resend-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      className="h-12"
+                      value={resendEmail}
+                      onChange={e => setResendEmail(e.target.value)}
+                      required
+                      data-testid="input-resend-email"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full h-12 text-base font-semibold"
+                    disabled={standaloneResendState === "loading"}
+                    data-testid="button-send-verification-link"
+                  >
+                    {standaloneResendState === "loading" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
+                    Send verification link
+                  </Button>
+                </form>
+              )}
+
+              <div className="text-center pt-2">
+                <button
+                  onClick={() => { setMode("login"); setStandaloneResendState("idle"); setResendEmail(""); }}
+                  className="text-sm text-primary font-medium hover:underline"
+                  data-testid="link-back-to-login-resend"
+                >
+                  Back to sign in
+                </button>
+              </div>
+            </div>
+
           ) : mode === "reset" ? (
             <div className="space-y-6" data-testid="panel-reset-password">
               <div>
@@ -395,14 +472,27 @@ export default function AuthPage() {
                     isSubmitting={isLoggingIn}
                     testIdPrefix="login"
                   />
-                  <div className="text-center mt-2">
-                    <button
-                      onClick={() => setMode("forgot")}
-                      className="text-sm text-muted-foreground hover:text-primary hover:underline transition-colors"
-                      data-testid="link-forgot-password"
-                    >
-                      Forgot your password?
-                    </button>
+                  <div className="text-center mt-2 space-y-1">
+                    <div>
+                      <button
+                        onClick={() => setMode("forgot")}
+                        className="text-sm text-muted-foreground hover:text-primary hover:underline transition-colors"
+                        data-testid="link-forgot-password"
+                      >
+                        Forgot your password?
+                      </button>
+                    </div>
+                    {registrationEnabled && (
+                      <div>
+                        <button
+                          onClick={() => { setMode("resend"); setStandaloneResendState("idle"); setResendEmail(""); }}
+                          className="text-sm text-muted-foreground hover:text-primary hover:underline transition-colors"
+                          data-testid="link-resend-verification"
+                        >
+                          Didn't receive your verification email?
+                        </button>
+                      </div>
+                    )}
                   </div>
                   {needsEmailVerification && (
                     <div className="mt-4 p-4 rounded-lg bg-amber-50 border border-amber-200" data-testid="panel-needs-verification">
