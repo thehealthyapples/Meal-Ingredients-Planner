@@ -3276,6 +3276,19 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/meals/lookup", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
+    if (!query) return res.json([]);
+    try {
+      const results = await storage.lookupMeals(query);
+      res.json(results);
+    } catch (err) {
+      console.error("Meal lookup error:", err);
+      res.status(500).json({ message: "Failed to look up meals" });
+    }
+  });
+
   app.get("/api/meals/recommended", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {

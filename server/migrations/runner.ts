@@ -100,6 +100,13 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-02-27_add_meals_created_at",
+    statements: [
+      "ALTER TABLE meals ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

@@ -78,6 +78,7 @@ export const meals = pgTable("meals", {
   barcode: text("barcode"),
   brand: text("brand"),
   originalMealId: integer("original_meal_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const nutrition = pgTable("nutrition", {

@@ -7,6 +7,14 @@ import { pool } from "./db";
 
 const PostgresSessionStore = connectPg(session);
 
+export type MealLookupResult = {
+  id: number;
+  title: string;
+  source: string;
+  sourceUrl: string | null;
+  createdAt: Date;
+};
+
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
@@ -134,6 +142,9 @@ export interface IStorage {
   getUserByResetToken(token: string): Promise<User | undefined>;
   updatePassword(userId: number, hashedPassword: string): Promise<void>;
   clearPasswordResetToken(userId: number): Promise<void>;
+
+  // ── Meal Lookup ───────────────────────────────────────────────────────────────
+  lookupMeals(query: string): Promise<MealLookupResult[]>;
 
   // ── Meal Plan Templates ──────────────────────────────────────────────────────
   createOrUpdateTemplate(name: string, description: string | null, isDefault: boolean): Promise<MealPlanTemplate>;
@@ -954,6 +965,35 @@ export class DatabaseStorage implements IStorage {
 
   async clearPasswordResetToken(userId: number): Promise<void> {
     await db.update(users).set({ passwordResetToken: null, passwordResetExpires: null }).where(eq(users.id, userId));
+  }
+
+  // ── Meal Lookup ───────────────────────────────────────────────────────────────
+
+  async lookupMeals(query: string): Promise<MealLookupResult[]> {
+    const q = query.trim();
+    const { rows } = await pool.query<{
+      id: number;
+      name: string;
+      meal_source_type: string;
+      source_url: string | null;
+      created_at: Date;
+    }>(
+      `SELECT id, name, meal_source_type, source_url, created_at
+       FROM meals
+       WHERE name ILIKE $1
+       ORDER BY
+         CASE WHEN lower(name) = lower($2) THEN 0 ELSE 1 END,
+         id DESC
+       LIMIT 20`,
+      [`%${q}%`, q]
+    );
+    return rows.map(r => ({
+      id: r.id,
+      title: r.name,
+      source: r.meal_source_type,
+      sourceUrl: r.source_url,
+      createdAt: r.created_at,
+    }));
   }
 
   // ── Meal Plan Templates ──────────────────────────────────────────────────────

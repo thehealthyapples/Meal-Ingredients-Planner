@@ -112,6 +112,7 @@ ORDER BY applied_at;
 | `2026-02-27_backfill_user_diet_fields` | Backfills diet fields from `user_preferences` |
 | `2026-02-27_password_reset_tokens` | Adds `password_reset_token` and `password_reset_expires` to `users` |
 | `2026-02-27_meal_plan_templates` | Creates `meal_plan_templates` and `meal_plan_template_items` tables (see below) |
+| `2026-02-27_add_meals_created_at` | Adds `created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()` to `meals` (enables stable ordering in the meal lookup endpoint) |
 
 ---
 
