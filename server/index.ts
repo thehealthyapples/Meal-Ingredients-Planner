@@ -4,7 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { runTemplateMigration } from "./template-migration";
 import { seedReadyMeals } from "./lib/seed-ready-meals";
-import { ensureUserDietColumns } from "./migrations/ensureUserDietColumns";
+import { runMigrations } from "./migrations/runner";
 
 const app = express();
 const httpServer = createServer(app);
@@ -63,7 +63,7 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  await ensureUserDietColumns().catch(err => console.error("[Migration] ensureUserDietColumns failed — app may be degraded:", err?.message ?? err));
+  await runMigrations();
   await runTemplateMigration().catch(err => console.error("[Template Migration] Error:", err));
   await seedReadyMeals().catch(err => console.error("[Seed Ready Meals] Error:", err));
   await registerRoutes(httpServer, app);

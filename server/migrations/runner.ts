@@ -37,6 +37,36 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-02-27_backfill_user_diet_fields",
+    statements: [
+      `UPDATE users u
+       SET
+         diet_pattern = CASE
+           WHEN up.diet_types && ARRAY['vegan']                THEN 'Vegan'
+           WHEN up.diet_types && ARRAY['vegetarian']           THEN 'Vegetarian'
+           WHEN up.diet_types && ARRAY['mediterranean']        THEN 'Mediterranean'
+           WHEN up.diet_types && ARRAY['dash']                 THEN 'DASH'
+           WHEN up.diet_types && ARRAY['mind']                 THEN 'MIND'
+           WHEN up.diet_types && ARRAY['flexitarian']          THEN 'Flexitarian'
+           WHEN up.diet_types && ARRAY['keto']                 THEN 'Keto'
+           WHEN up.diet_types && ARRAY['paleo']                THEN 'Paleo'
+           WHEN up.diet_types && ARRAY['low-carb', 'atkins']  THEN 'Low-Carb'
+           WHEN up.diet_types && ARRAY['carnivore']            THEN 'Carnivore'
+           ELSE NULL
+         END,
+         diet_restrictions = ARRAY_REMOVE(
+           ARRAY[
+             CASE WHEN up.diet_types && ARRAY['gluten-free'] THEN 'Gluten-Free'::TEXT END,
+             CASE WHEN up.diet_types && ARRAY['dairy-free']  THEN 'Dairy-Free'::TEXT END
+           ],
+           NULL
+         )
+       FROM user_preferences up
+       WHERE up.user_id = u.id`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
