@@ -759,6 +759,11 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(plannerEntries).where(eq(plannerEntries.dayId, dayId));
   }
 
+  async getPlannerEntriesByDayIds(dayIds: number[]): Promise<PlannerEntry[]> {
+    if (dayIds.length === 0) return [];
+    return await db.select().from(plannerEntries).where(inArray(plannerEntries.dayId, dayIds));
+  }
+
   async upsertPlannerEntry(dayId: number, mealType: string, audience: string, mealId: number | null, calories: number = 0, isDrink: boolean = false, drinkType: string | null = null): Promise<PlannerEntry | null> {
     if (mealId === null) {
       await db.delete(plannerEntries).where(

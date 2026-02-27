@@ -4157,6 +4157,103 @@ export async function registerRoutes(
     }
   });
 
+  // Plan template routes
+  app.get("/api/plan-templates/default", async (req, res) => {
+    try {
+      const template = await storage.getDefaultTemplate();
+      if (!template) return res.status(404).json({ message: "No default template found" });
+      res.json({ id: template.id, name: template.name, description: template.description, itemCount: template.items.length });
+    } catch (err) {
+      console.error("[PlanTemplates] getDefault error:", err);
+      res.status(500).json({ message: "Failed to fetch default template" });
+    }
+  });
+
+  app.get("/api/plan-templates/:id", async (req, res) => {
+    try {
+      const template = await storage.getTemplateWithItems(req.params.id);
+      if (!template) return res.status(404).json({ message: "Template not found" });
+      res.json(template);
+    } catch (err) {
+      console.error("[PlanTemplates] getById error:", err);
+      res.status(500).json({ message: "Failed to fetch template" });
+    }
+  });
+
+  app.post("/api/plan-templates/:id/apply", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user!.id;
+    const templateId = req.params.id;
+    const mode = req.query.mode === "keep" ? "keep" : "replace";
+
+    try {
+      const template = await storage.getTemplateWithItems(templateId);
+      if (!template) return res.status(404).json({ message: "Template not found" });
+
+      console.log(`[PlanTemplates] apply: user=${userId}, template="${template.name}", mode=${mode}, items=${template.items.length}`);
+
+      // Ensure planner weeks/days exist for user (idempotent)
+      const weeks = await storage.createPlannerWeeks(userId);
+
+      // Build lookup map: `${weekNumber}:${plannerDayOfWeek}` → dayId
+      // Template dayOfWeek 1-7 (Mon=1, Sun=7) → Planner dayOfWeek 0-6 (Sun=0, Mon=1, Sat=6)
+      // Conversion: plannerDay = templateDay % 7
+      const dayIdMap = new Map<string, number>();
+      const allDayIds: number[] = [];
+      for (const week of weeks) {
+        const days = await storage.getPlannerDays(week.id);
+        for (const day of days) {
+          dayIdMap.set(`${week.weekNumber}:${day.dayOfWeek}`, day.id);
+          allDayIds.push(day.id);
+        }
+      }
+
+      // Preload all existing entries in one query
+      const existingEntries = await storage.getPlannerEntriesByDayIds(allDayIds);
+      const occupiedSlots = new Set(
+        existingEntries.map(e => `${e.dayId}:${e.mealType}:${e.audience}`)
+      );
+
+      let createdCount = 0;
+      let updatedCount = 0;
+      let skippedCount = 0;
+
+      for (const item of template.items) {
+        const plannerDayOfWeek = item.dayOfWeek % 7;
+        const dayId = dayIdMap.get(`${item.weekNumber}:${plannerDayOfWeek}`);
+
+        if (dayId === undefined) {
+          console.warn(`[PlanTemplates] no day found for W${item.weekNumber}D${item.dayOfWeek}`);
+          skippedCount++;
+          continue;
+        }
+
+        const slotKey = `${dayId}:${item.mealSlot}:adult`;
+        const hasExisting = occupiedSlots.has(slotKey);
+
+        if (mode === "keep" && hasExisting) {
+          skippedCount++;
+          continue;
+        }
+
+        await storage.upsertPlannerEntry(dayId, item.mealSlot, "adult", item.mealId);
+
+        if (hasExisting) {
+          updatedCount++;
+        } else {
+          createdCount++;
+          occupiedSlots.add(slotKey);
+        }
+      }
+
+      console.log(`[PlanTemplates] apply done: created=${createdCount}, updated=${updatedCount}, skipped=${skippedCount}`);
+      res.json({ templateName: template.name, createdCount, updatedCount, skippedCount });
+    } catch (err) {
+      console.error("[PlanTemplates] apply error:", err);
+      res.status(500).json({ message: "Failed to apply template" });
+    }
+  });
+
   app.get("/api/admin/import-status", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const user = await storage.getUser(req.user!.id);

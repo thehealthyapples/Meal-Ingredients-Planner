@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingCart, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine } from "lucide-react";
+import { Pencil, X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingCart, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, Sparkles } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -90,6 +90,31 @@ export default function WeeklyPlannerPage() {
   const toggleSetting = (key: string, value: boolean) => {
     updateSettingsMutation.mutate({ [key]: value });
   };
+
+  const loadTemplateMutation = useMutation({
+    mutationFn: async () => {
+      const defaultRes = await fetch("/api/plan-templates/default");
+      if (!defaultRes.ok) throw new Error("No default template found");
+      const { id } = await defaultRes.json();
+      const applyRes = await apiRequest("POST", `/api/plan-templates/${id}/apply?mode=replace`);
+      if (!applyRes.ok) throw new Error("Failed to apply template");
+      return applyRes.json();
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      toast({
+        title: "Plan loaded!",
+        description: `${data.createdCount + data.updatedCount} meals added to your planner.`,
+      });
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "Failed to load plan",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const { data: fullPlanner = [], isLoading } = useQuery<FullWeek[]>({
     queryKey: ["/api/planner/full"],
@@ -415,6 +440,17 @@ export default function WeeklyPlannerPage() {
           <Badge variant="outline" data-testid="badge-week-progress">
             {weekStats.filled} / {weekStats.total} meals planned
           </Badge>
+          <Button
+            size="sm"
+            onClick={() => loadTemplateMutation.mutate()}
+            disabled={loadTemplateMutation.isPending}
+            data-testid="button-load-family-plan"
+          >
+            {loadTemplateMutation.isPending
+              ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
+            Load Family 6-Week Plan
+          </Button>
           <Button size="sm" variant="outline" onClick={() => setSettingsOpen(true)} data-testid="button-planner-settings">
             <Settings className="h-3.5 w-3.5 mr-1.5" />
             Options

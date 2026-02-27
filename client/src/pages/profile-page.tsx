@@ -201,6 +201,8 @@ export default function ProfilePage() {
         onSave={(prefs) => savePreferences(prefs)}
       />
 
+      <MealPlanSection />
+
       <FeatureToggles
         prefs={prefs}
         onToggle={(field, value) => saveField(field, value)}
@@ -812,6 +814,56 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
             ))}
           </div>
         </div>
+      </div>
+    </Card>
+  );
+}
+
+function MealPlanSection() {
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  const handleLoad = async () => {
+    setLoading(true);
+    try {
+      const defaultRes = await fetch("/api/plan-templates/default");
+      if (!defaultRes.ok) throw new Error("No default template found");
+      const { id } = await defaultRes.json();
+      const applyRes = await fetch(`/api/plan-templates/${id}/apply?mode=replace`, { method: "POST" });
+      if (!applyRes.ok) throw new Error("Failed to apply template");
+      const data = await applyRes.json();
+      toast({
+        title: "Plan loaded!",
+        description: `${data.createdCount + data.updatedCount} meals added to your planner.`,
+      });
+    } catch (err: any) {
+      toast({ title: "Failed to load plan", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Card className="p-5" data-testid="card-meal-plan">
+      <div className="flex items-center gap-2 mb-4">
+        <Sparkles className="h-4 w-4 text-muted-foreground" />
+        <h3 className="font-semibold text-sm">Meal Plan</h3>
+      </div>
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Load a ready-made 6-week family dinner plan covering all six weeks of your planner. This replaces any dinners currently in your planner.
+        </p>
+        <Button
+          onClick={handleLoad}
+          disabled={loading}
+          className="w-full"
+          data-testid="button-load-family-plan-profile"
+        >
+          {loading
+            ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            : <Sparkles className="h-4 w-4 mr-2" />}
+          Load The Healthy Apples Family 6-Week Meal Plan
+        </Button>
       </div>
     </Card>
   );
