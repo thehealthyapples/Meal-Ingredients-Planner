@@ -14,7 +14,7 @@ import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { insertMealSchema, type InsertMeal, type Nutrition, type Diet, type MealDiet, type MealCategory, type FreezerMeal } from "@shared/schema";
+import { insertMealSchema, type InsertMeal, type Nutrition, type Diet, type MealDiet, type MealCategory, type FreezerMeal, type Meal } from "@shared/schema";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -1135,6 +1135,16 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
   );
 }
 
+const MEAL_CATEGORY_ORDER = ["from_web", "ready_meals", "drinks"] as const;
+const CATEGORY_DROPDOWN_ORDER = ["Drink", "Smoothie", "Baby Meal", "Kids Meal", "Frozen Meal"];
+
+function getMealDisplayCategory(meal: Meal): string {
+  if (meal.isDrink) return "drinks";
+  if (meal.isReadyMeal) return "ready_meals";
+  if (meal.isSystemMeal) return "from_web";
+  return "other";
+}
+
 export default function MealsPage() {
   const { meals, isLoading, deleteMeal, createMeal } = useMeals();
   const [, navigate] = useLocation();
@@ -1530,9 +1540,13 @@ export default function MealsPage() {
     const matchesUpf = !mealsUpfFilter || meal.isReadyMeal !== true;
     return matchesSearch && matchesCategory && matchesType && matchesAudience && matchesDiet && matchesUpf;
   })?.sort((a, b) => {
-    const aReady = a.isReadyMeal ? 1 : 0;
-    const bReady = b.isReadyMeal ? 1 : 0;
-    return aReady - bReady;
+    const catA = getMealDisplayCategory(a);
+    const catB = getMealDisplayCategory(b);
+    const idxA = MEAL_CATEGORY_ORDER.indexOf(catA as typeof MEAL_CATEGORY_ORDER[number]);
+    const idxB = MEAL_CATEGORY_ORDER.indexOf(catB as typeof MEAL_CATEGORY_ORDER[number]);
+    const orderA = idxA === -1 ? MEAL_CATEGORY_ORDER.length : idxA;
+    const orderB = idxB === -1 ? MEAL_CATEGORY_ORDER.length : idxB;
+    return orderA - orderB;
   });
 
   return (
@@ -1566,7 +1580,11 @@ export default function MealsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
-              {allCategories.map(cat => (
+              {[...allCategories].sort((a, b) => {
+                const ia = CATEGORY_DROPDOWN_ORDER.indexOf(a.name);
+                const ib = CATEGORY_DROPDOWN_ORDER.indexOf(b.name);
+                return (ia === -1 ? CATEGORY_DROPDOWN_ORDER.length : ia) - (ib === -1 ? CATEGORY_DROPDOWN_ORDER.length : ib);
+              }).map(cat => (
                 <SelectItem key={cat.id} value={cat.name} data-testid={`option-category-${cat.name}`}>
                   {cat.name}
                 </SelectItem>
@@ -1783,6 +1801,316 @@ export default function MealsPage() {
           </Button>
         )}
       </div>
+
+      {(webSearchResults.length > 0 || webIsSearching) && searchSource !== "products" && (
+        <div className="mt-8" data-testid="section-web-results">
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <Globe className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold tracking-tight">From the Web</h2>
+            {webIsSearching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            {webSearchQuery && !webIsSearching && (
+              <span className="text-sm text-muted-foreground">
+                Results for "{webSearchQuery}"
+              </span>
+            )}
+            <div className="flex items-center gap-2 ml-auto flex-wrap">
+              <Select
+                value={webDietPattern || "none"}
+                onValueChange={v => { setMatchMyProfile(false); setWebDietPattern(v === "none" ? "" : v); }}
+              >
+                <SelectTrigger className="h-7 text-xs w-[140px]" data-testid="select-web-diet-pattern">
+                  <SelectValue placeholder="Any pattern" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Any pattern</SelectItem>
+                  {["Mediterranean", "DASH", "MIND", "Flexitarian", "Vegetarian", "Vegan", "Keto", "Low-Carb", "Paleo", "Carnivore"].map(p => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant={webDietRestrictions.includes("Gluten-Free") ? "secondary" : "outline"}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setMatchMyProfile(false);
+                  setWebDietRestrictions(prev =>
+                    prev.includes("Gluten-Free") ? prev.filter(r => r !== "Gluten-Free") : [...prev, "Gluten-Free"]
+                  );
+                }}
+                data-testid="toggle-web-restriction-gluten"
+              >
+                Gluten-Free
+              </Button>
+              <Button
+                variant={webDietRestrictions.includes("Dairy-Free") ? "secondary" : "outline"}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setMatchMyProfile(false);
+                  setWebDietRestrictions(prev =>
+                    prev.includes("Dairy-Free") ? prev.filter(r => r !== "Dairy-Free") : [...prev, "Dairy-Free"]
+                  );
+                }}
+                data-testid="toggle-web-restriction-dairy"
+              >
+                Dairy-Free
+              </Button>
+            </div>
+          </div>
+
+          {webSearchResults.length > 0 && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <AnimatePresence mode="popLayout">
+                  {webSearchResults.map((recipe) => {
+                    const isImporting = webImportingIds.has(recipe.id);
+                    const isImported = recentlyImportedIds.has(recipe.id);
+                    const importedMealId = importedMealMap.get(recipe.id);
+                    const importedMeal = importedMealId ? meals?.find(m => m.id === importedMealId) : null;
+                    const webId = `web-${recipe.id}`;
+                    const preview = webPreviewCache[webId];
+                    const displayIngredients = importedMeal?.ingredients?.length ? importedMeal.ingredients : preview?.ingredients?.length ? preview.ingredients : recipe.ingredients || [];
+                    const displayInstructions = importedMeal?.instructions?.length ? importedMeal.instructions : preview?.instructions?.length ? preview.instructions : recipe.instructions || [];
+                    const isPreviewLoading = preview?.loading === true;
+                    return (
+                      <motion.div
+                        key={recipe.id}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        layout
+                      >
+                        <Card className="overflow-hidden h-full flex flex-col cursor-pointer" onClick={() => {
+                          const webId = `web-${recipe.id}`;
+                          if (expandedMealId === webId) {
+                            setExpandedMealId(null);
+                            return;
+                          }
+                          setExpandedMealId(webId);
+                          setExpandedTab("ingredients");
+                          if (!webPreviewCache[webId] && !importedMeal && recipe.url) {
+                            setWebPreviewCache(prev => ({ ...prev, [webId]: { ingredients: [], instructions: [], loading: true } }));
+                            fetch('/api/preview-recipe', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ url: recipe.url }),
+                            })
+                              .then(r => r.json())
+                              .then((data: { ingredients?: string[]; instructions?: string[]; error?: string }) => {
+                                setWebPreviewCache(prev => ({
+                                  ...prev,
+                                  [webId]: {
+                                    ingredients: data.ingredients || [],
+                                    instructions: data.instructions || [],
+                                    loading: false,
+                                    error: data.error,
+                                  },
+                                }));
+                              })
+                              .catch(() => {
+                                setWebPreviewCache(prev => ({
+                                  ...prev,
+                                  [webId]: { ingredients: [], instructions: [], loading: false, error: 'Failed to load recipe details' },
+                                }));
+                              });
+                          }
+                        }} data-testid={`card-web-result-${recipe.id}`}>
+                          {recipe.image && (
+                            <div className="w-full aspect-[4/3] overflow-hidden">
+                              <img
+                                src={recipe.image}
+                                alt={recipe.name}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                                data-testid={`img-web-recipe-${recipe.id}`}
+                              />
+                            </div>
+                          )}
+                          <AnimatePresence>
+                            {expandedMealId === `web-${recipe.id}` && (
+                              <motion.div
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                transition={{ duration: 0.25, ease: "easeInOut" }}
+                                className="overflow-hidden border-t"
+                                onClick={(e) => e.stopPropagation()}
+                                data-testid={`expanded-detail-web-${recipe.id}`}
+                              >
+                                <div className="px-3 pt-2 pb-1">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex gap-1">
+                                      <Button
+                                        variant={expandedTab === "ingredients" ? "default" : "ghost"}
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={() => setExpandedTab("ingredients")}
+                                        data-testid={`tab-ingredients-web-${recipe.id}`}
+                                      >
+                                        Ingredients
+                                      </Button>
+                                      <Button
+                                        variant={expandedTab === "method" ? "default" : "ghost"}
+                                        size="sm"
+                                        className="h-7 text-xs"
+                                        onClick={() => setExpandedTab("method")}
+                                        data-testid={`tab-method-web-${recipe.id}`}
+                                      >
+                                        Method
+                                      </Button>
+                                    </div>
+                                    {recipe.url && (
+                                      <a
+                                        href={recipe.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                                        data-testid={`link-source-web-${recipe.id}`}
+                                      >
+                                        Source
+                                        <ExternalLink className="h-3 w-3" />
+                                      </a>
+                                    )}
+                                  </div>
+                                  <div className="max-h-52 overflow-y-auto">
+                                    {isPreviewLoading ? (
+                                      <div className="flex items-center justify-center py-6 gap-2">
+                                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                        <span className="text-sm text-muted-foreground">Loading recipe details...</span>
+                                      </div>
+                                    ) : preview?.error && displayIngredients.length === 0 ? (
+                                      <p className="text-sm text-muted-foreground py-4 text-center">{preview.error}</p>
+                                    ) : expandedTab === "ingredients" ? (
+                                      <div className="space-y-1 pb-2" data-testid={`expanded-ingredients-web-${recipe.id}`}>
+                                        {displayIngredients.length > 0 ? displayIngredients.map((ing, i) => {
+                                          const parsed = parseIngredient(ing);
+                                          return (
+                                            <div key={i} className="text-sm flex gap-2 py-0.5" data-testid={`expanded-ingredient-web-${recipe.id}-${i}`}>
+                                              <span className="text-muted-foreground shrink-0 w-20 text-right text-xs leading-5">{parsed.detail || ''}</span>
+                                              <span className="text-foreground">{parsed.name}</span>
+                                            </div>
+                                          );
+                                        }) : (
+                                          <p className="text-sm text-muted-foreground py-4 text-center">No ingredients found on this page</p>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="space-y-2 pb-2" data-testid={`expanded-method-web-${recipe.id}`}>
+                                        {displayInstructions.length > 0 ? displayInstructions.map((step, i) => (
+                                          <div key={i} className="flex gap-2 text-sm" data-testid={`expanded-step-web-${recipe.id}-${i}`}>
+                                            <span className="text-primary font-semibold shrink-0 w-6 text-right">{i + 1}.</span>
+                                            <span className="text-foreground leading-relaxed">{step}</span>
+                                          </div>
+                                        )) : (
+                                          <p className="text-sm text-muted-foreground py-4 text-center">No method found on this page</p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {!isPreviewLoading && (
+                                    <div className="border-t mt-2 pt-2">
+                                      <WebPreviewActionBar
+                                        recipe={recipe}
+                                        importedMealId={importedMealId ?? null}
+                                        importedMeal={importedMeal}
+                                        onImport={handleWebImport}
+                                        nutritionMap={nutritionMap}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                          <CardContent className="p-4 flex-1 flex flex-col justify-between gap-3" onClick={(e) => e.stopPropagation()}>
+                            <div>
+                              <h3 className="font-semibold text-base leading-tight" data-testid={`text-web-recipe-name-${recipe.id}`}>
+                                {recipe.name}
+                              </h3>
+                              <WebSourceBadge recipe={recipe} />
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Select
+                                  value={String(webImportCategoryMap[recipe.id] ?? guessWebCategory(recipe) ?? "")}
+                                  onValueChange={(val) => setWebImportCategoryMap(prev => ({ ...prev, [recipe.id]: Number(val) }))}
+                                >
+                                  <SelectTrigger className="flex-1" data-testid={`select-web-import-category-${recipe.id}`}>
+                                    <SelectValue placeholder="Category" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {allCategories.map(cat => {
+                                      const Icon = getCategoryIcon(cat.name);
+                                      return (
+                                        <SelectItem key={cat.id} value={String(cat.id)} data-testid={`option-web-import-category-${cat.id}`}>
+                                          <span className="flex items-center gap-1.5">
+                                            <Icon className={`h-3 w-3 ${getCategoryColor(cat.name)}`} />
+                                            {cat.name}
+                                          </span>
+                                        </SelectItem>
+                                      );
+                                    })}
+                                  </SelectContent>
+                                </Select>
+                                <Button
+                                  size="sm"
+                                  variant={isImported ? "secondary" : "default"}
+                                  onClick={() => handleWebImport(recipe)}
+                                  disabled={isImporting || isImported}
+                                  className="shrink-0 gap-1"
+                                  data-testid={`button-web-import-${recipe.id}`}
+                                >
+                                  {isImporting ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : isImported ? (
+                                    <>
+                                      <Check className="h-3.5 w-3.5" />
+                                      Saved
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Download className="h-3.5 w-3.5" />
+                                      Save
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+              </div>
+
+              {webHasMore && (
+                <div className="text-center pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleWebLoadMore}
+                    disabled={webIsSearching}
+                    data-testid="button-web-load-more"
+                  >
+                    {webIsSearching ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Load More
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {webIsSearching && webSearchResults.length === 0 && (
+            <div className="text-center py-8 text-muted-foreground">
+              <Loader2 className="h-8 w-8 mx-auto mb-3 animate-spin opacity-50" />
+              <p className="text-sm">Searching the web for recipes...</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {mealTypeFilter === "freezer" ? (
         <div className="space-y-4">
@@ -2375,316 +2703,6 @@ export default function MealsPage() {
               : "Try creating a new meal to get started."
             }
           </p>
-        </div>
-      )}
-
-      {(webSearchResults.length > 0 || webIsSearching) && searchSource !== "products" && (
-        <div className="mt-8" data-testid="section-web-results">
-          <div className="flex items-center gap-3 mb-4 flex-wrap">
-            <Globe className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold tracking-tight">From the Web</h2>
-            {webIsSearching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-            {webSearchQuery && !webIsSearching && (
-              <span className="text-sm text-muted-foreground">
-                Results for "{webSearchQuery}"
-              </span>
-            )}
-            <div className="flex items-center gap-2 ml-auto flex-wrap">
-              <Select
-                value={webDietPattern || "none"}
-                onValueChange={v => { setMatchMyProfile(false); setWebDietPattern(v === "none" ? "" : v); }}
-              >
-                <SelectTrigger className="h-7 text-xs w-[140px]" data-testid="select-web-diet-pattern">
-                  <SelectValue placeholder="Any pattern" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Any pattern</SelectItem>
-                  {["Mediterranean", "DASH", "MIND", "Flexitarian", "Vegetarian", "Vegan", "Keto", "Low-Carb", "Paleo", "Carnivore"].map(p => (
-                    <SelectItem key={p} value={p}>{p}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                variant={webDietRestrictions.includes("Gluten-Free") ? "secondary" : "outline"}
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => {
-                  setMatchMyProfile(false);
-                  setWebDietRestrictions(prev =>
-                    prev.includes("Gluten-Free") ? prev.filter(r => r !== "Gluten-Free") : [...prev, "Gluten-Free"]
-                  );
-                }}
-                data-testid="toggle-web-restriction-gluten"
-              >
-                Gluten-Free
-              </Button>
-              <Button
-                variant={webDietRestrictions.includes("Dairy-Free") ? "secondary" : "outline"}
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => {
-                  setMatchMyProfile(false);
-                  setWebDietRestrictions(prev =>
-                    prev.includes("Dairy-Free") ? prev.filter(r => r !== "Dairy-Free") : [...prev, "Dairy-Free"]
-                  );
-                }}
-                data-testid="toggle-web-restriction-dairy"
-              >
-                Dairy-Free
-              </Button>
-            </div>
-          </div>
-
-          {webSearchResults.length > 0 && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                <AnimatePresence mode="popLayout">
-                  {webSearchResults.map((recipe) => {
-                    const isImporting = webImportingIds.has(recipe.id);
-                    const isImported = recentlyImportedIds.has(recipe.id);
-                    const importedMealId = importedMealMap.get(recipe.id);
-                    const importedMeal = importedMealId ? meals?.find(m => m.id === importedMealId) : null;
-                    const webId = `web-${recipe.id}`;
-                    const preview = webPreviewCache[webId];
-                    const displayIngredients = importedMeal?.ingredients?.length ? importedMeal.ingredients : preview?.ingredients?.length ? preview.ingredients : recipe.ingredients || [];
-                    const displayInstructions = importedMeal?.instructions?.length ? importedMeal.instructions : preview?.instructions?.length ? preview.instructions : recipe.instructions || [];
-                    const isPreviewLoading = preview?.loading === true;
-                    return (
-                      <motion.div
-                        key={recipe.id}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        layout
-                      >
-                        <Card className="overflow-hidden h-full flex flex-col cursor-pointer" onClick={() => {
-                          const webId = `web-${recipe.id}`;
-                          if (expandedMealId === webId) {
-                            setExpandedMealId(null);
-                            return;
-                          }
-                          setExpandedMealId(webId);
-                          setExpandedTab("ingredients");
-                          if (!webPreviewCache[webId] && !importedMeal && recipe.url) {
-                            setWebPreviewCache(prev => ({ ...prev, [webId]: { ingredients: [], instructions: [], loading: true } }));
-                            fetch('/api/preview-recipe', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ url: recipe.url }),
-                            })
-                              .then(r => r.json())
-                              .then((data: { ingredients?: string[]; instructions?: string[]; error?: string }) => {
-                                setWebPreviewCache(prev => ({
-                                  ...prev,
-                                  [webId]: {
-                                    ingredients: data.ingredients || [],
-                                    instructions: data.instructions || [],
-                                    loading: false,
-                                    error: data.error,
-                                  },
-                                }));
-                              })
-                              .catch(() => {
-                                setWebPreviewCache(prev => ({
-                                  ...prev,
-                                  [webId]: { ingredients: [], instructions: [], loading: false, error: 'Failed to load recipe details' },
-                                }));
-                              });
-                          }
-                        }} data-testid={`card-web-result-${recipe.id}`}>
-                          {recipe.image && (
-                            <div className="w-full aspect-[4/3] overflow-hidden">
-                              <img
-                                src={recipe.image}
-                                alt={recipe.name}
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                                data-testid={`img-web-recipe-${recipe.id}`}
-                              />
-                            </div>
-                          )}
-                          <AnimatePresence>
-                            {expandedMealId === `web-${recipe.id}` && (
-                              <motion.div
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.25, ease: "easeInOut" }}
-                                className="overflow-hidden border-t"
-                                onClick={(e) => e.stopPropagation()}
-                                data-testid={`expanded-detail-web-${recipe.id}`}
-                              >
-                                <div className="px-3 pt-2 pb-1">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <div className="flex gap-1">
-                                      <Button
-                                        variant={expandedTab === "ingredients" ? "default" : "ghost"}
-                                        size="sm"
-                                        className="h-7 text-xs"
-                                        onClick={() => setExpandedTab("ingredients")}
-                                        data-testid={`tab-ingredients-web-${recipe.id}`}
-                                      >
-                                        Ingredients
-                                      </Button>
-                                      <Button
-                                        variant={expandedTab === "method" ? "default" : "ghost"}
-                                        size="sm"
-                                        className="h-7 text-xs"
-                                        onClick={() => setExpandedTab("method")}
-                                        data-testid={`tab-method-web-${recipe.id}`}
-                                      >
-                                        Method
-                                      </Button>
-                                    </div>
-                                    {recipe.url && (
-                                      <a
-                                        href={recipe.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                                        data-testid={`link-source-web-${recipe.id}`}
-                                      >
-                                        Source
-                                        <ExternalLink className="h-3 w-3" />
-                                      </a>
-                                    )}
-                                  </div>
-                                  <div className="max-h-52 overflow-y-auto">
-                                    {isPreviewLoading ? (
-                                      <div className="flex items-center justify-center py-6 gap-2">
-                                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                                        <span className="text-sm text-muted-foreground">Loading recipe details...</span>
-                                      </div>
-                                    ) : preview?.error && displayIngredients.length === 0 ? (
-                                      <p className="text-sm text-muted-foreground py-4 text-center">{preview.error}</p>
-                                    ) : expandedTab === "ingredients" ? (
-                                      <div className="space-y-1 pb-2" data-testid={`expanded-ingredients-web-${recipe.id}`}>
-                                        {displayIngredients.length > 0 ? displayIngredients.map((ing, i) => {
-                                          const parsed = parseIngredient(ing);
-                                          return (
-                                            <div key={i} className="text-sm flex gap-2 py-0.5" data-testid={`expanded-ingredient-web-${recipe.id}-${i}`}>
-                                              <span className="text-muted-foreground shrink-0 w-20 text-right text-xs leading-5">{parsed.detail || ''}</span>
-                                              <span className="text-foreground">{parsed.name}</span>
-                                            </div>
-                                          );
-                                        }) : (
-                                          <p className="text-sm text-muted-foreground py-4 text-center">No ingredients found on this page</p>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <div className="space-y-2 pb-2" data-testid={`expanded-method-web-${recipe.id}`}>
-                                        {displayInstructions.length > 0 ? displayInstructions.map((step, i) => (
-                                          <div key={i} className="flex gap-2 text-sm" data-testid={`expanded-step-web-${recipe.id}-${i}`}>
-                                            <span className="text-primary font-semibold shrink-0 w-6 text-right">{i + 1}.</span>
-                                            <span className="text-foreground leading-relaxed">{step}</span>
-                                          </div>
-                                        )) : (
-                                          <p className="text-sm text-muted-foreground py-4 text-center">No method found on this page</p>
-                                        )}
-                                      </div>
-                                    )}
-                                  </div>
-                                  {!isPreviewLoading && (
-                                    <div className="border-t mt-2 pt-2">
-                                      <WebPreviewActionBar
-                                        recipe={recipe}
-                                        importedMealId={importedMealId ?? null}
-                                        importedMeal={importedMeal}
-                                        onImport={handleWebImport}
-                                        nutritionMap={nutritionMap}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                          <CardContent className="p-4 flex-1 flex flex-col justify-between gap-3" onClick={(e) => e.stopPropagation()}>
-                            <div>
-                              <h3 className="font-semibold text-base leading-tight" data-testid={`text-web-recipe-name-${recipe.id}`}>
-                                {recipe.name}
-                              </h3>
-                              <WebSourceBadge recipe={recipe} />
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex items-center gap-2">
-                                <Select
-                                  value={String(webImportCategoryMap[recipe.id] ?? guessWebCategory(recipe) ?? "")}
-                                  onValueChange={(val) => setWebImportCategoryMap(prev => ({ ...prev, [recipe.id]: Number(val) }))}
-                                >
-                                  <SelectTrigger className="flex-1" data-testid={`select-web-import-category-${recipe.id}`}>
-                                    <SelectValue placeholder="Category" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {allCategories.map(cat => {
-                                      const Icon = getCategoryIcon(cat.name);
-                                      return (
-                                        <SelectItem key={cat.id} value={String(cat.id)} data-testid={`option-web-import-category-${cat.id}`}>
-                                          <span className="flex items-center gap-1.5">
-                                            <Icon className={`h-3 w-3 ${getCategoryColor(cat.name)}`} />
-                                            {cat.name}
-                                          </span>
-                                        </SelectItem>
-                                      );
-                                    })}
-                                  </SelectContent>
-                                </Select>
-                                <Button
-                                  size="sm"
-                                  variant={isImported ? "secondary" : "default"}
-                                  onClick={() => handleWebImport(recipe)}
-                                  disabled={isImporting || isImported}
-                                  className="shrink-0 gap-1"
-                                  data-testid={`button-web-import-${recipe.id}`}
-                                >
-                                  {isImporting ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                  ) : isImported ? (
-                                    <>
-                                      <Check className="h-3.5 w-3.5" />
-                                      Saved
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Download className="h-3.5 w-3.5" />
-                                      Save
-                                    </>
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    );
-                  })}
-                </AnimatePresence>
-              </div>
-
-              {webHasMore && (
-                <div className="text-center pt-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleWebLoadMore}
-                    disabled={webIsSearching}
-                    data-testid="button-web-load-more"
-                  >
-                    {webIsSearching ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : null}
-                    Load More
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {webIsSearching && webSearchResults.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Loader2 className="h-8 w-8 mx-auto mb-3 animate-spin opacity-50" />
-              <p className="text-sm">Searching the web for recipes...</p>
-            </div>
-          )}
         </div>
       )}
 
