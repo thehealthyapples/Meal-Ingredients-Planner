@@ -1198,11 +1198,26 @@ export async function registerRoutes(
     try {
       const q = (req.query.q as string || '').trim();
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
-      const dietPattern = (req.query.dietPattern as string || '').trim() || null;
-      const dietRestrictionsRaw = (req.query.dietRestrictions as string || '').trim();
-      const dietRestrictions = dietRestrictionsRaw
-        ? dietRestrictionsRaw.split(',').map(s => s.trim()).filter(Boolean)
-        : [];
+      // Diet filtering: explicit query param > user profile > no filter
+      // If the query param is absent (undefined) we fall back to the logged-in user's
+      // saved preferences. If it is present (even empty string) it acts as an override.
+      const queryDietPattern = req.query.dietPattern as string | undefined;
+      const queryDietRestrictions = req.query.dietRestrictions as string | undefined;
+
+      const effectiveDietPattern: string | null =
+        queryDietPattern !== undefined
+          ? queryDietPattern.trim() || null          // explicit param (empty string → null)
+          : (req.user?.dietPattern ?? null);         // fall back to profile
+
+      const effectiveDietRestrictions: string[] =
+        queryDietRestrictions !== undefined
+          ? queryDietRestrictions.trim()             // explicit param provided
+            ? queryDietRestrictions.split(',').map(s => s.trim()).filter(Boolean)
+            : []
+          : (req.user?.dietRestrictions?.filter(Boolean) ?? []);  // fall back to profile
+
+      console.log("[search-recipes] Effective dietPattern:", effectiveDietPattern);
+      console.log("[search-recipes] Effective dietRestrictions:", effectiveDietRestrictions);
       const perPage = 9;
 
       if (!q) {
@@ -1316,8 +1331,8 @@ export async function registerRoutes(
         }
       }
 
-      if (dietPattern || dietRestrictions.length > 0) {
-        const ctx = { dietPattern, dietRestrictions };
+      if (effectiveDietPattern || effectiveDietRestrictions.length > 0) {
+        const ctx = { dietPattern: effectiveDietPattern, dietRestrictions: effectiveDietRestrictions };
 
         const scored = interleaved.map(recipe => {
           const text = [
@@ -1330,7 +1345,7 @@ export async function registerRoutes(
           return {
             recipe,
             excluded: shouldExcludeRecipe(text, ctx),
-            score: scoreRecipeForDiet(text, dietPattern),
+            score: scoreRecipeForDiet(text, effectiveDietPattern),
           };
         });
 
