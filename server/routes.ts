@@ -4254,6 +4254,51 @@ export async function registerRoutes(
     }
   });
 
+  // GET /api/admin/meals/export?source=web|custom|all&format=csv|json
+  // Guard: authenticated + isBetaUser (same as other admin endpoints)
+  // source=web  → meals with a sourceUrl (imported from the web)
+  // source=custom → user-created meals with no sourceUrl and not system meals
+  // source=all (default) → every meal in the database
+  // format=csv (default) → text/csv download; format=json → JSON array
+  app.get("/api/admin/meals/export", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = await storage.getUser(req.user!.id);
+    if (!user?.isBetaUser) return res.status(403).json({ message: "Admin access required" });
+
+    const rawSource = req.query.source as string | undefined;
+    const source = rawSource === "web" || rawSource === "custom" ? rawSource : "all";
+    const format = req.query.format === "json" ? "json" : "csv";
+
+    try {
+      const rows = await storage.getMealsExport(source);
+
+      if (format === "json") {
+        return res.json(rows);
+      }
+
+      // CSV output
+      const escape = (v: string | null | undefined) => {
+        if (v == null) return "";
+        const s = String(v);
+        return s.includes(",") || s.includes('"') || s.includes("\n")
+          ? `"${s.replace(/"/g, '""')}"`
+          : s;
+      };
+      const header = "id,name,source,source_url,user_id,created_at";
+      const lines = rows.map(r =>
+        [r.id, escape(r.name), escape(r.mealSourceType), escape(r.sourceUrl), r.userId, r.createdAt.toISOString()].join(",")
+      );
+      const csv = [header, ...lines].join("\n");
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="meals-export-${source}-${Date.now()}.csv"`);
+      return res.send(csv);
+    } catch (err) {
+      console.error("[Admin] meals export error:", err);
+      res.status(500).json({ message: "Export failed" });
+    }
+  });
+
   app.get("/api/admin/import-status", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const user = await storage.getUser(req.user!.id);

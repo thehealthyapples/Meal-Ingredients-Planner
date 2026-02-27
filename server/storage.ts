@@ -1,6 +1,6 @@
 import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, ilike, sql, inArray } from "drizzle-orm";
+import { eq, and, ilike, sql, inArray, isNull, isNotNull } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -153,6 +153,7 @@ export interface IStorage {
   getTemplateWithItems(id: string): Promise<(MealPlanTemplate & { items: MealPlanTemplateItem[] }) | undefined>;
   getDefaultTemplate(): Promise<(MealPlanTemplate & { items: MealPlanTemplateItem[] }) | undefined>;
   listTemplates(): Promise<MealPlanTemplate[]>;
+  getMealsExport(source?: "web" | "custom" | "all"): Promise<{ id: number; name: string; mealSourceType: string; sourceUrl: string | null; userId: number; createdAt: Date }[]>;
 
   sessionStore: session.Store;
 }
@@ -1089,6 +1090,27 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(mealPlanTemplates)
       .orderBy(mealPlanTemplates.name);
+  }
+
+  async getMealsExport(source: "web" | "custom" | "all" = "all"): Promise<{ id: number; name: string; mealSourceType: string; sourceUrl: string | null; userId: number; createdAt: Date }[]> {
+    const base = db
+      .select({
+        id: meals.id,
+        name: meals.name,
+        mealSourceType: meals.mealSourceType,
+        sourceUrl: meals.sourceUrl,
+        userId: meals.userId,
+        createdAt: meals.createdAt,
+      })
+      .from(meals);
+
+    if (source === "web") {
+      return base.where(isNotNull(meals.sourceUrl)).orderBy(meals.id);
+    }
+    if (source === "custom") {
+      return base.where(and(isNull(meals.sourceUrl), eq(meals.isSystemMeal, false))).orderBy(meals.id);
+    }
+    return base.orderBy(meals.id);
   }
 }
 

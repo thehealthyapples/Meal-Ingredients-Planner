@@ -228,3 +228,38 @@ one meal per slot per day per week per template.
 | `getTemplateWithItems(id)` | Returns template + all items ordered by week/day/slot |
 | `getDefaultTemplate()` | Returns the `is_default=true` template with items, or `undefined` |
 | `listTemplates()` | Returns all templates ordered by name (no items) |
+| `getMealsExport(source?)` | Returns `{ id, name, mealSourceType, sourceUrl, userId, createdAt }[]` filtered by source (`web`/`custom`/`all`) |
+
+---
+
+## Admin Endpoints
+
+### `GET /api/admin/meals/export`
+
+Returns a list of meals for building seed files (e.g. `seed/family-plan.json`).
+
+**Auth:** Must be logged in with `isBetaUser = true` (same guard as other admin routes).
+
+**Query params:**
+
+| Param | Values | Default | Description |
+|-------|--------|---------|-------------|
+| `source` | `web`, `custom`, `all` | `all` | `web` = meals with a `source_url` (imported recipes); `custom` = user-created meals without a URL and not system meals; `all` = everything |
+| `format` | `csv`, `json` | `csv` | Response format |
+
+**CSV columns:** `id, name, source, source_url, user_id, created_at`
+
+**Examples:**
+```
+# Download CSV of all web-imported meals
+GET /api/admin/meals/export?source=web
+
+# JSON list of all meals
+GET /api/admin/meals/export?source=all&format=json
+```
+
+**Typical workflow for updating `seed/family-plan.json`:**
+1. Browse to `/api/admin/meals/export?source=web&format=json` while logged in as a beta user.
+2. Find the stable `id` values for desired meals.
+3. Update `seed/family-plan.json` using the integer `mealId` field.
+4. Re-run `npx tsx script/seed-family-plan.ts` to refresh the template.
