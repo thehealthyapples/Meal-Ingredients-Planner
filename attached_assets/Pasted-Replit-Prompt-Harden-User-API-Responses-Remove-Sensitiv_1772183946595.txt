@@ -1,0 +1,75 @@
+Replit Prompt — Harden User API Responses (Remove Sensitive Fields)
+
+We have a security issue: /api/user is returning sensitive fields including password (hashed), emailVerificationToken, and emailVerificationExpires. These must NEVER be sent to the client.
+
+Implement the following changes:
+
+1) Create a single “safe user” sanitizer helper
+
+Add a helper function in the server (choose an appropriate location, e.g. server/lib/sanitizeUser.ts or server/utils/sanitizeUser.ts) that takes a user object and returns a safe version for API responses.
+
+The helper must REMOVE these fields if present:
+
+password
+
+emailVerificationToken
+
+emailVerificationExpires
+
+resetPasswordToken (if exists)
+
+resetPasswordExpires (if exists)
+
+any other secret/token fields you find (e.g. oauth tokens)
+
+It should return a plain JSON-safe object.
+
+Example behavior:
+Input user may include sensitive fields; output must not include them.
+
+2) Apply the sanitizer to all endpoints that return user objects
+
+At minimum:
+
+GET /api/user
+
+Any login/register responses returning a user
+
+Any profile update endpoint that returns the updated user (e.g. PUT /api/profile)
+
+Replace any res.json(req.user) / res.json(user) patterns with:
+res.json(sanitizeUser(user))
+
+3) Ensure TypeScript types stay correct
+
+Add a type for the “safe user” response if helpful
+
+Ensure compilation passes
+
+4) Add a quick regression check
+
+Add a small test (or lightweight assertion) that verifies responses from /api/user do NOT contain:
+
+"password"
+
+"emailVerificationToken"
+
+"emailVerificationExpires"
+
+This can be:
+
+a minimal unit test if a test setup exists, OR
+
+a simple dev-only assertion/log check (but prefer a test if possible)
+
+Acceptance Criteria
+
+/api/user response does not include password hashes or verification tokens
+
+Login/register/profile update responses do not include these fields
+
+App still functions normally (auth + onboarding + profile)
+
+Stop after implementing this hardening and confirm with a manual request to /api/user.
+
+If Replit asks “which other fields are sensitive?”, tell it: anything secret/token/hash related, and err on the side of removing it from API responses.

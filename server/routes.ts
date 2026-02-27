@@ -19,6 +19,7 @@ import { generateSmartSuggestion, type SmartSuggestSettings, type LockedEntry } 
 import { searchAllRecipes, searchJamieOliver, searchSeriousEats, type ExternalMealCandidate } from "./lib/external-meal-service";
 import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreezerMealSchema, updateMealSchema } from "@shared/schema";
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
+import { sanitizeUser } from "./lib/sanitizeUser";
 
 function ingredientMatchesMeal(consolidatedName: string, mealIngredients: string[]): boolean {
   const target = consolidatedName.toLowerCase().trim();
@@ -3324,7 +3325,7 @@ export async function registerRoutes(
         console.error("Error preloading starter meals:", preloadErr);
       }
 
-      res.json(user);
+      res.json(sanitizeUser(user!));
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid preferences data", errors: err.errors });

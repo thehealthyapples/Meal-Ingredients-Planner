@@ -7,6 +7,7 @@ import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
 import { sendVerificationEmail } from "./email";
+import { sanitizeUser } from "./lib/sanitizeUser";
 
 declare global {
   namespace Express {
@@ -173,7 +174,7 @@ export function setupAuth(app: Express) {
       }
       req.login(user, (loginErr) => {
         if (loginErr) return next(loginErr);
-        res.status(200).json(user);
+        res.status(200).json(sanitizeUser(user));
       });
     })(req, res, next);
   });
@@ -214,6 +215,6 @@ export function setupAuth(app: Express) {
 
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    res.json(req.user);
+    res.json(sanitizeUser(req.user as SelectUser));
   });
 }
