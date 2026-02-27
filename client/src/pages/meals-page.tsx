@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { insertMealSchema, type InsertMeal, type Nutrition, type Diet, type MealDiet, type MealCategory, type FreezerMeal } from "@shared/schema";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
@@ -3102,18 +3103,23 @@ function CreateMealDialog() {
     queryKey: ['/api/categories'],
   });
 
-  const form = useForm<InsertMeal>({
-    resolver: zodResolver(insertMealSchema),
+  const createMealFormSchema = insertMealSchema.extend({
+    ingredients: z.array(z.object({ value: z.string() })),
+  });
+  type CreateMealFormValues = z.infer<typeof createMealFormSchema>;
+
+  const form = useForm<CreateMealFormValues>({
+    resolver: zodResolver(createMealFormSchema),
     defaultValues: {
       name: "",
-      ingredients: [""],
+      ingredients: [{ value: "" }],
       servings: 1,
     }
   });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
-    name: "ingredients" as any
+    name: "ingredients",
   });
 
   const toggleDiet = (dietId: number) => {
@@ -3122,13 +3128,13 @@ function CreateMealDialog() {
     );
   };
 
-  const onSubmit = async (data: InsertMeal) => {
+  const onSubmit = async (data: CreateMealFormValues) => {
     const catName = categories.find(c => c.id === selectedCategory)?.name?.toLowerCase() || "";
     const isDrink = catName === "drink" || catName === "smoothie";
     const audience = catName === "baby meal" ? "baby" : catName === "kids meal" ? "child" : "adult";
     const cleanData = {
       ...data,
-      ingredients: data.ingredients.filter(i => i.trim() !== ""),
+      ingredients: data.ingredients.map(i => i.value).filter(v => v.trim() !== ""),
       categoryId: selectedCategory || null,
       audience,
       isDrink,
@@ -3260,7 +3266,7 @@ function CreateMealDialog() {
                   <div key={field.id} className="flex gap-2">
                     <FormField
                       control={form.control}
-                      name={`ingredients.${index}`}
+                      name={`ingredients.${index}.value`}
                       render={({ field }) => (
                         <FormItem className="flex-1">
                           <FormControl>
@@ -3287,7 +3293,7 @@ function CreateMealDialog() {
                 variant="outline"
                 size="sm"
                 className="w-full border-dashed"
-                onClick={() => append("")}
+                onClick={() => append({ value: "" })}
                 data-testid="button-add-ingredient"
               >
                 <Plus className="mr-2 h-3 w-3" />
