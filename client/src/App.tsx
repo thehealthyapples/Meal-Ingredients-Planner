@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Switch, Route, useLocation, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useUser } from "@/hooks/use-user";
@@ -21,6 +21,26 @@ import SupermarketsPage from "@/pages/supermarkets-page";
 import MealDetailPage from "@/pages/meal-detail-page";
 import WeeklyPlannerPage from "@/pages/weekly-planner-page";
 import ProfilePage from "@/pages/profile-page";
+
+function SiteFooter() {
+  const { data: config } = useQuery<{ supportEmail?: string; suggestionsEmail?: string }>({
+    queryKey: ["/api/config"],
+  });
+  const support = config?.supportEmail || "support@thehealthyapples.com";
+  const suggestions = config?.suggestionsEmail || "suggestions@thehealthyapples.com";
+
+  return (
+    <footer className="hidden md:flex items-center justify-center gap-6 py-3 border-t bg-background text-xs text-muted-foreground" data-testid="site-footer">
+      <a href={`mailto:${support}`} className="hover:text-primary hover:underline transition-colors" data-testid="footer-link-support">
+        Support: {support}
+      </a>
+      <span aria-hidden="true">·</span>
+      <a href={`mailto:${suggestions}`} className="hover:text-primary hover:underline transition-colors" data-testid="footer-link-suggestions">
+        Suggestions: {suggestions}
+      </a>
+    </footer>
+  );
+}
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
@@ -47,6 +67,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
       <main className="min-h-[calc(100vh-4rem)] bg-background pb-20 md:pb-0">
         <Component />
       </main>
+      <SiteFooter />
     </>
   );
 }

@@ -16,6 +16,8 @@ import FiveApplesLogo from "@/components/FiveApplesLogo";
 type AppConfig = {
   registrationEnabled: boolean;
   environment: string;
+  supportEmail?: string;
+  suggestionsEmail?: string;
 };
 
 type AuthMode = "login" | "register" | "forgot" | "reset" | "resend";

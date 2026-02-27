@@ -263,3 +263,30 @@ GET /api/admin/meals/export?source=all&format=json
 2. Find the stable `id` values for desired meals.
 3. Update `seed/family-plan.json` using the integer `mealId` field.
 4. Re-run `npx tsx script/seed-family-plan.ts` to refresh the template.
+
+---
+
+## Contact Email Configuration
+
+Contact emails are surfaced across the app via `/api/config` — no client-side hardcoding.
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SUPPORT_EMAIL` | `support@thehealthyapples.com` | Shown as support contact in profile page and site footer |
+| `SUGGESTIONS_EMAIL` | `suggestions@thehealthyapples.com` | Shown as suggestions contact in profile page and site footer |
+
+### Render Deploy Steps
+
+1. In Render dashboard → your service → **Environment**
+2. Add two environment variables:
+   - `SUPPORT_EMAIL` = your support address
+   - `SUGGESTIONS_EMAIL` = your suggestions address
+3. Click **Save Changes** → Render will trigger a redeploy automatically
+4. Once deployed, visit the profile page or any page footer to confirm the correct emails appear
+
+### UI locations
+
+- **Profile page** — "Contact" card section between Shopping Preferences and Meal Plan
+- **Site footer** — desktop-only, appears below every protected page (`hidden md:flex`)

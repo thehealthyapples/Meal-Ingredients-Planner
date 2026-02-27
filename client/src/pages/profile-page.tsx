@@ -16,7 +16,7 @@ import {
   Plus, Minus, Save, Activity, Scale, Ruler,
   Baby, PersonStanding, Users, Apple, TrendingUp,
   Volume2, Scan, Loader2, ArrowLeft, Check, Store,
-  PiggyBank, ShieldAlert, Sparkles, Ban
+  PiggyBank, ShieldAlert, Sparkles, Ban, Mail
 } from "lucide-react";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES } from "@/lib/diets";
@@ -200,6 +200,8 @@ export default function ProfilePage() {
         prefs={prefs}
         onSave={(prefs) => savePreferences(prefs)}
       />
+
+      <ContactSection />
 
       <MealPlanSection />
 
@@ -813,6 +815,47 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
               </Button>
             ))}
           </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function ContactSection() {
+  const { data: config } = useQuery<{ supportEmail?: string; suggestionsEmail?: string }>({
+    queryKey: ["/api/config"],
+  });
+
+  const support = config?.supportEmail || "support@thehealthyapples.com";
+  const suggestions = config?.suggestionsEmail || "suggestions@thehealthyapples.com";
+
+  return (
+    <Card className="p-5" data-testid="card-contact">
+      <div className="flex items-center gap-2 mb-4">
+        <Mail className="h-4 w-4 text-muted-foreground" />
+        <h3 className="font-semibold text-sm">Contact</h3>
+      </div>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Support</span>
+          <a
+            href={`mailto:${support}`}
+            className="text-sm text-primary hover:underline font-medium"
+            data-testid="link-support-email"
+          >
+            {support}
+          </a>
+        </div>
+        <Separator />
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Suggestions</span>
+          <a
+            href={`mailto:${suggestions}`}
+            className="text-sm text-primary hover:underline font-medium"
+            data-testid="link-suggestions-email"
+          >
+            {suggestions}
+          </a>
         </div>
       </div>
     </Card>

@@ -75,10 +75,15 @@ export function setupAuth(app: Express) {
     }
   });
 
+  const SUPPORT_EMAIL = process.env.SUPPORT_EMAIL || "support@thehealthyapples.com";
+  const SUGGESTIONS_EMAIL = process.env.SUGGESTIONS_EMAIL || "suggestions@thehealthyapples.com";
+
   app.get("/api/config", (_req, res) => {
     res.json({
       registrationEnabled: isProduction,
       environment: isProduction ? "production" : "beta",
+      supportEmail: SUPPORT_EMAIL,
+      suggestionsEmail: SUGGESTIONS_EMAIL,
     });
   });
 
