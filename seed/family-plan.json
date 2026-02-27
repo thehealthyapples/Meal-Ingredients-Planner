@@ -1,0 +1,79 @@
+{
+  "name": "The Healthy Apples Family 6 week meal plan",
+  "description": "Default 6-week family dinner plan",
+  "isDefault": true,
+  "weeks": [
+    {
+      "weekNumber": 1,
+      "days": [
+        { "dayOfWeek": 1, "dinner": { "mealId": 1562, "sourceUrl": "https://www.bbcgoodfood.com/recipes/spinach-sweet-potato-lentil-dhal", "title": "Spinach, sweet potato & lentil dhal" } },
+        { "dayOfWeek": 2, "dinner": { "mealId": 466,  "sourceUrl": "https://www.bbcgoodfood.com/recipes/teriyaki-salmon-sesame-pak-choi", "title": "Teriyaki salmon" } },
+        { "dayOfWeek": 3, "dinner": { "mealId": 1478, "sourceUrl": "https://www.bbcgoodfood.com/recipes/best-spaghetti-bolognese-recipe", "title": "The best spaghetti bolognese recipe" } },
+        { "dayOfWeek": 4, "dinner": { "mealId": 400,  "sourceUrl": "http://www.bbcgoodfood.com/recipes/3235/thai-green-chicken-curry", "title": "Thai Green Curry" } },
+        { "dayOfWeek": 5, "dinner": { "mealId": 1560, "sourceUrl": "https://www.bbcgoodfood.com/recipes/beef-burger-sweet-potato-chilli-chips", "title": "Beef burger with sweet potato chilli chips" } },
+        { "dayOfWeek": 6, "dinner": { "mealId": 1568, "sourceUrl": "https://www.bbcgoodfood.com/recipes/seafood-paella", "title": "Seafood paella" } },
+        { "dayOfWeek": 7, "dinner": { "mealId": 1387, "sourceUrl": "https://www.bbcgoodfood.com/recipes/classic-lasagne", "title": "Lasagne" } }
+      ]
+    },
+    {
+      "weekNumber": 2,
+      "days": [
+        { "dayOfWeek": 1, "dinner": { "mealId": 1564, "sourceUrl": "https://www.bbcgoodfood.com/recipes/red-lentil-squash-dhal", "title": "Red lentil & squash dhal" } },
+        { "dayOfWeek": 2, "dinner": { "mealId": 1484, "sourceUrl": "https://www.deliaonline.com/recipes/international/european/italian-recipes/pasta-puttanesca-tarts-spaghetti", "title": "Pasta Puttanesca (Tart's Spaghetti)" } },
+        { "dayOfWeek": 3, "dinner": { "mealId": 1565, "sourceUrl": "https://www.bbcgoodfood.com/recipes/chickpea-coconut-dhal", "title": "Chickpea & coconut dhal" } },
+        { "dayOfWeek": 4, "dinner": { "mealId": 468,  "sourceUrl": "https://www.bbcgoodfood.com/recipes/moules-mariniere", "title": "Moules marinière" } },
+        { "dayOfWeek": 5, "dinner": { "mealId": 1165, "sourceUrl": "https://www.bbcgoodfood.com/recipes/pizza-margherita-4-easy-steps", "title": "Pizza Margherita in 4 easy steps" } },
+        { "dayOfWeek": 6, "dinner": { "mealId": 1634, "sourceUrl": "https://www.saveur.com/article/Recipes/Classic-Steak-Diane", "title": "Steak Diane" } },
+        { "dayOfWeek": 7, "dinner": { "mealId": 911,  "sourceUrl": "https://www.bbcgoodfood.com/recipes/prawn-harissa-spaghetti", "title": "Prawn & harissa spaghetti" } }
+      ]
+    },
+    {
+      "weekNumber": 3,
+      "days": [
+        { "dayOfWeek": 1, "dinner": { "mealId": 1555, "sourceUrl": "https://www.bbcgoodfood.com/recipes/lentil-sweet-potato-curry", "title": "Lentil & sweet potato curry" } },
+        { "dayOfWeek": 2, "dinner": { "mealId": 399,  "sourceUrl": "https://www.bbcgoodfood.com/recipes/thai-curry-noodle-soup", "title": "Thai curry noodle soup" } },
+        { "dayOfWeek": 3, "dinner": { "mealId": 1570, "sourceUrl": "https://www.bbcgoodfood.com/recipes/easy-paella", "title": "Easy paella" } },
+        { "dayOfWeek": 4, "dinner": { "mealId": 1167, "sourceUrl": "https://www.allrecipes.com/recipe/267974/my-big-fat-greek-salad/", "title": "My Big Fat Greek Salad" } },
+        { "dayOfWeek": 5, "dinner": { "mealId": 109,  "sourceUrl": "https://www.bbcgoodfood.com/recipes/molten-cheese-stuffed-burgers", "title": "Molten cheese-stuffed burgers" } },
+        { "dayOfWeek": 6, "dinner": { "mealId": 1566, "sourceUrl": "https://www.bbcgoodfood.com/recipes/one-pan-coconut-dhal", "title": "One-pan coconut dhal" } },
+        { "dayOfWeek": 7, "dinner": { "mealId": 532,  "sourceUrl": "https://www.allrecipes.com/recipe/12718/mussels-mariniere/", "title": "Mussels Mariniere" } }
+      ]
+    },
+    {
+      "weekNumber": 4,
+      "days": [
+        { "dayOfWeek": 1, "dinner": { "mealId": 1563, "sourceUrl": "https://www.bbcgoodfood.com/recipes/khatti-dhal", "title": "Khatti dhal" } },
+        { "dayOfWeek": 2, "dinner": { "mealId": 1569, "sourceUrl": "https://www.bbcgoodfood.com/recipes/easiest-ever-paella", "title": "Seafood rice" } },
+        { "dayOfWeek": 3, "dinner": { "mealId": 1567, "sourceUrl": "https://www.bbcgoodfood.com/recipes/quick-easy-chickpea-coconut-dhal", "title": "Quick & easy chickpea coconut dhal" } },
+        { "dayOfWeek": 4, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/beef-burger-sweet-potato-chilli-chips", "title": "Beef burger with sweet potato chilli chips" } },
+        { "dayOfWeek": 5, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/easy-paella", "title": "Easy paella" } },
+        { "dayOfWeek": 6, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/teriyaki-salmon-sesame-pak-choi", "title": "Teriyaki salmon" } },
+        { "dayOfWeek": 7, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/classic-lasagne", "title": "Lasagne" } }
+      ]
+    },
+    {
+      "weekNumber": 5,
+      "days": [
+        { "dayOfWeek": 1, "dinner": { "sourceUrl": "http://www.bbcgoodfood.com/recipes/3235/thai-green-chicken-curry", "title": "Thai Green Curry" } },
+        { "dayOfWeek": 2, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/prawn-harissa-spaghetti", "title": "Prawn & harissa spaghetti" } },
+        { "dayOfWeek": 3, "dinner": { "sourceUrl": "https://www.saveur.com/article/Recipes/Classic-Steak-Diane", "title": "Steak Diane" } },
+        { "dayOfWeek": 4, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/red-lentil-squash-dhal", "title": "Red lentil & squash dhal" } },
+        { "dayOfWeek": 5, "dinner": { "mealId": 1166, "sourceUrl": "https://www.allrecipes.com/recipe/14522/pizza-on-the-grill-i/", "title": "Pizza on the Grill" } },
+        { "dayOfWeek": 6, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/moules-mariniere", "title": "Moules marinière" } },
+        { "dayOfWeek": 7, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/best-spaghetti-bolognese-recipe", "title": "The best spaghetti bolognese recipe" } }
+      ]
+    },
+    {
+      "weekNumber": 6,
+      "days": [
+        { "dayOfWeek": 1, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/spinach-sweet-potato-lentil-dhal", "title": "Spinach, sweet potato & lentil dhal" } },
+        { "dayOfWeek": 2, "dinner": { "sourceUrl": "https://www.deliaonline.com/recipes/international/european/italian-recipes/pasta-puttanesca-tarts-spaghetti", "title": "Pasta Puttanesca (Tart's Spaghetti)" } },
+        { "dayOfWeek": 3, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/chickpea-coconut-dhal", "title": "Chickpea & coconut dhal" } },
+        { "dayOfWeek": 4, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/lentil-sweet-potato-curry", "title": "Lentil & sweet potato curry" } },
+        { "dayOfWeek": 5, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/molten-cheese-stuffed-burgers", "title": "Molten cheese-stuffed burgers" } },
+        { "dayOfWeek": 6, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/seafood-paella", "title": "Seafood paella" } },
+        { "dayOfWeek": 7, "dinner": { "sourceUrl": "https://www.bbcgoodfood.com/recipes/pizza-margherita-4-easy-steps", "title": "Pizza Margherita in 4 easy steps" } }
+      ]
+    }
+  ]
+}

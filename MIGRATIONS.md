@@ -116,6 +116,74 @@ ORDER BY applied_at;
 
 ---
 
+## Seed scripts
+
+### family-plan seed (`script/seed-family-plan.ts`)
+
+Populates the `meal_plan_templates` / `meal_plan_template_items` tables with the
+default 6-week family dinner plan defined in `seed/family-plan.json`.
+
+**The seed script is fully idempotent** — safe to run any number of times.
+It resolves meals using a priority order:
+
+1. `mealId` — direct primary key lookup (fastest, most reliable)
+2. `sourceUrl` — looks up by `source_url` column; picks newest on collision and logs a warning
+3. `title` — case-insensitive `name` match; picks newest on collision and logs a warning
+
+Slots that cannot be resolved (none of the three keys match) are skipped with a
+warning — the script never crashes on a missing meal.
+
+#### Running locally (Replit)
+
+From the Replit Shell tab:
+
+```bash
+npx tsx script/seed-family-plan.ts
+```
+
+Or, if you add this to `package.json` scripts first:
+
+```json
+"seed:family-plan": "tsx script/seed-family-plan.ts"
+```
+
+then:
+
+```bash
+npm run seed:family-plan
+```
+
+#### Running on Render (one-off)
+
+1. Open your Render service dashboard.
+2. Click the **Shell** tab (available on paid plans) or use a **one-off job**.
+3. Run:
+
+```bash
+npx tsx script/seed-family-plan.ts
+```
+
+Alternatively, create a Render one-off job with the command above targeting the
+same `DATABASE_URL` environment variable already set on the service.
+
+You should see output like:
+
+```
+[FamilyPlanSeed] Loaded plan: "The Healthy Apples Family 6 week meal plan" (6 weeks)
+[FamilyPlanSeed] Resolved 42 / 42 dinner slots (0 skipped)
+[FamilyPlanSeed] Template upserted: "..." (isDefault=true)
+[FamilyPlanSeed] Upserted 42 dinner items
+[FamilyPlanSeed] ✓ Done
+```
+
+#### Updating the plan
+
+Edit `seed/family-plan.json` and re-run the seed. The `upsertTemplateItemsBulk`
+helper uses `ON CONFLICT DO UPDATE` on `(template_id, week_number, day_of_week, meal_slot)`,
+so existing slots are updated in place and no duplicates are created.
+
+---
+
 ## meal_plan_templates migration detail
 
 ### Tables created
