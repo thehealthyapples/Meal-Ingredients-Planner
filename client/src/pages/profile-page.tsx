@@ -18,7 +18,6 @@ import {
   Volume2, Scan, Loader2, ArrowLeft, Check, Store,
   PiggyBank, ShieldAlert, Sparkles, Ban
 } from "lucide-react";
-import { Link } from "wouter";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES } from "@/lib/diets";
 
@@ -156,11 +155,22 @@ export default function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-4" data-testid="page-profile">
       <div className="flex items-center gap-3 mb-2">
-        <Link href="/">
-          <Button variant="ghost" size="icon" data-testid="button-back-profile">
+          <Button
+            variant="ghost"
+            size="icon"
+            data-testid="button-back-profile"
+            onClick={() => {
+              const prev = sessionStorage.getItem("profileReturnPath");
+              if (prev) {
+                sessionStorage.removeItem("profileReturnPath");
+                window.location.href = prev;
+              } else {
+                window.history.back();
+              }
+            }}
+          >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-        </Link>
         <h1 className="text-xl font-semibold" data-testid="text-profile-title">Profile</h1>
       </div>
 
@@ -267,7 +277,7 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
               />
             ))}
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Health Score</p>
+          <p className="text-[11px] text-muted-foreground mt-1">The Healthy Apples Score</p>
         </div>
       </div>
     </Card>
@@ -809,8 +819,8 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
 
 function FeatureToggles({ prefs, onToggle }: { prefs: any; onToggle: (field: string, value: boolean) => void }) {
   const toggles = [
-    { key: "eliteTrackingEnabled", label: "Apple Health Score tracking", icon: Apple, default: true },
-    { key: "healthTrendEnabled", label: "Apple trend tracking", icon: TrendingUp, default: true },
+    { key: "eliteTrackingEnabled", label: "The Healthy Apples Health Score tracking", icon: Apple, default: true },
+    { key: "healthTrendEnabled", label: "The Healthy Apples trend tracking", icon: TrendingUp, default: true },
     { key: "soundEnabled", label: "Sound effects", icon: Volume2, default: true },
     { key: "barcodeScannerEnabled", label: "Barcode scanner", icon: Scan, default: true },
   ];

@@ -76,7 +76,7 @@ export function NavBar() {
               </Button>
             </Link>
             <div className="flex items-center gap-2">
-              <Link href="/profile">
+              <Link href="/profile" onClick={() => sessionStorage.setItem("profileReturnPath", window.location.pathname + window.location.search)}>
                 <Avatar className="h-8 w-8 cursor-pointer" data-testid="avatar-user">
                   <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
                     {userInitial}

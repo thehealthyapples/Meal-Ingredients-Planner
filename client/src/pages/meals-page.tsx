@@ -1347,10 +1347,15 @@ export default function MealsPage() {
       const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(query)}&page=${page}${dietParam}`, { signal });
       if (!res.ok) throw new Error("Search failed");
       const data: { recipes: WebSearchRecipe[]; hasMore: boolean } = await res.json();
+      const PREMIUM_MARKER = "This is a premium piece of content available to subscribed users.";
+      const filtered = data.recipes.filter(r => {
+        const allText = [r.name, r.category, r.cuisine, ...(r.ingredients || []), ...(r.instructions || [])].filter(Boolean).join("\0");
+        return !allText.includes(PREMIUM_MARKER);
+      });
       if (page === 1) {
-        setWebSearchResults(data.recipes);
+        setWebSearchResults(filtered);
       } else {
-        setWebSearchResults(prev => [...prev, ...data.recipes]);
+        setWebSearchResults(prev => [...prev, ...filtered]);
       }
       setWebHasMore(data.hasMore);
       setWebCurrentPage(page);
@@ -1478,7 +1483,10 @@ export default function MealsPage() {
           body: JSON.stringify({ url: recipe.url }),
           credentials: 'include',
         });
-        if (!res.ok) throw new Error('Import failed');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData?.message || 'Import failed');
+        }
         const imported = await res.json();
         result = await createMeal.mutateAsync({
           name: imported.name || recipe.name,
@@ -1506,8 +1514,8 @@ export default function MealsPage() {
       }
       toast({ title: "Meal saved", description: `"${recipe.name}" has been added to your meals.` });
       return result?.id ?? null;
-    } catch {
-      toast({ title: "Import failed", description: "Could not import this recipe.", variant: "destructive" });
+    } catch (err: any) {
+      toast({ title: "Import failed", description: err?.message || "Could not import this recipe.", variant: "destructive" });
       return null;
     } finally {
       setWebImportingIds(prev => {
@@ -1731,7 +1739,7 @@ export default function MealsPage() {
         </div>
         <Select
           value={mealsDietPattern || "none"}
-          onValueChange={v => { setMatchMyProfile(false); setMealsDietPattern(v === "none" ? "" : v); }}
+          onValueChange={v => { setMatchMyProfile(false); const p = v === "none" ? "" : v; setMealsDietPattern(p); setWebDietPattern(p); }}
         >
           <SelectTrigger className="h-8 text-xs w-[150px]" data-testid="select-meals-diet-pattern">
             <SelectValue placeholder="Any diet pattern" />
@@ -1749,9 +1757,11 @@ export default function MealsPage() {
           className="h-8 text-xs"
           onClick={() => {
             setMatchMyProfile(false);
-            setMealsDietRestrictions(prev =>
-              prev.includes("Gluten-Free") ? prev.filter(r => r !== "Gluten-Free") : [...prev, "Gluten-Free"]
-            );
+            setMealsDietRestrictions(prev => {
+              const next = prev.includes("Gluten-Free") ? prev.filter(r => r !== "Gluten-Free") : [...prev, "Gluten-Free"];
+              setWebDietRestrictions(next);
+              return next;
+            });
           }}
           data-testid="toggle-meals-restriction-gluten"
         >
@@ -1764,9 +1774,11 @@ export default function MealsPage() {
           className="h-8 text-xs"
           onClick={() => {
             setMatchMyProfile(false);
-            setMealsDietRestrictions(prev =>
-              prev.includes("Dairy-Free") ? prev.filter(r => r !== "Dairy-Free") : [...prev, "Dairy-Free"]
-            );
+            setMealsDietRestrictions(prev => {
+              const next = prev.includes("Dairy-Free") ? prev.filter(r => r !== "Dairy-Free") : [...prev, "Dairy-Free"];
+              setWebDietRestrictions(next);
+              return next;
+            });
           }}
           data-testid="toggle-meals-restriction-dairy"
         >
@@ -1793,6 +1805,8 @@ export default function MealsPage() {
               setMealsDietPattern("");
               setMealsDietRestrictions([]);
               setMealsUpfFilter(false);
+              setWebDietPattern("");
+              setWebDietRestrictions([]);
             }}
             data-testid="button-clear-diet-filters"
           >

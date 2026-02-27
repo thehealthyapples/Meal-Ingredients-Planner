@@ -1355,6 +1355,12 @@ export async function registerRoutes(
           .map(e => e.recipe);
       }
 
+      const PREMIUM_MARKER = "This is a premium piece of content available to subscribed users.";
+      interleaved = interleaved.filter(recipe => {
+        const allText = [recipe.name, recipe.category, recipe.cuisine, ...(recipe.ingredients || []), ...(recipe.instructions || [])].filter(Boolean).join("\0");
+        return !allText.includes(PREMIUM_MARKER);
+      });
+
       const start = (page - 1) * perPage;
       const end = start + perPage;
       const recipes = interleaved.slice(start, end);
@@ -1451,6 +1457,8 @@ export async function registerRoutes(
 
       const jsonLdRecipe = extractJsonLdRecipe($);
 
+      const IMPORT_PREMIUM_MARKER = "This is a premium piece of content available to subscribed users.";
+
       if (jsonLdRecipe && jsonLdRecipe.recipeIngredient && jsonLdRecipe.recipeIngredient.length > 0) {
         const title = jsonLdRecipe.name || $('h1').first().text().trim() || $('title').text().trim() || 'Imported Recipe';
         const ingredients = jsonLdRecipe.recipeIngredient.map(i => i.replace(/<[^>]+>/g, '').trim()).filter(Boolean);
@@ -1458,6 +1466,11 @@ export async function registerRoutes(
         const finalInstructions = instructions.length > 0 ? instructions : ["No instructions available"];
         const imageUrl = extractJsonLdImage(jsonLdRecipe) || $('meta[property="og:image"]').attr('content') || null;
         const nutrition = extractJsonLdNutrition(jsonLdRecipe.nutrition);
+
+        const importAllText = [...ingredients, ...finalInstructions].join("\0");
+        if (importAllText.includes(IMPORT_PREMIUM_MARKER)) {
+          return res.status(403).json({ message: "This recipe is behind a paywall and cannot be imported." });
+        }
 
         let servings = 1;
         if (jsonLdRecipe.recipeYield) {
@@ -1580,6 +1593,11 @@ export async function registerRoutes(
           const numMatch = text.match(/(\d+)/);
           if (numMatch) { servings = parseInt(numMatch[1], 10) || 1; break; }
         }
+      }
+
+      const fallbackAllText = [...ingredients, ...finalInstructions].join("\0");
+      if (fallbackAllText.includes(IMPORT_PREMIUM_MARKER)) {
+        return res.status(403).json({ message: "This recipe is behind a paywall and cannot be imported." });
       }
 
       res.json({ title, ingredients, instructions: finalInstructions, imageUrl, nutrition: nutritionData, servings });
