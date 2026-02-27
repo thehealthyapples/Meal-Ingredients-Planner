@@ -25,6 +25,8 @@ import { useBasket } from "@/hooks/use-basket";
 import { useLocation } from "wouter";
 import { MealWatermark, getWatermarkType } from "@/components/meal-watermark";
 import { default as AppleRating } from "@/components/AppleRating";
+import { Switch } from "@/components/ui/switch";
+import { shouldExcludeRecipe } from "@/lib/dietRules";
 
 function parseIngredient(raw: string): { name: string; detail: string | null } {
   let text = raw.trim();
@@ -56,38 +58,6 @@ function parseIngredient(raw: string): { name: string; detail: string | null } {
   return { name, detail: null };
 }
 
-function getDietFilterKey(name: string): string {
-  const n = name.toLowerCase().replace(/[\s_]+/g, '-');
-  if (n.includes('vegan')) return 'vegan';
-  if (n.includes('vegetarian')) return 'vegetarian';
-  if (n.includes('mediterranean')) return 'mediterranean';
-  if (n.includes('dash')) return 'dash';
-  if (n.includes('flexitarian')) return 'flexitarian';
-  if (n.includes('mind')) return 'mind';
-  if (n.includes('keto')) return 'keto';
-  if (n.includes('paleo')) return 'paleo';
-  if (n.includes('low-carb') || n.includes('atkins')) return 'low-carb';
-  if (n.includes('intermittent')) return 'intermittent-fasting';
-  if (n.includes('dairy')) return 'dairy-free';
-  if (n.includes('gluten')) return 'gluten-free';
-  return '';
-}
-
-const DIET_FILTER_OPTIONS = [
-  { value: 'Vegan', label: 'Vegan' },
-  { value: 'Vegetarian', label: 'Vegetarian' },
-  { value: 'Mediterranean', label: 'Mediterranean' },
-  { value: 'DASH', label: 'DASH' },
-  { value: 'Flexitarian', label: 'Flexitarian' },
-  { value: 'MIND', label: 'MIND' },
-  { value: 'Keto', label: 'Keto' },
-  { value: 'Paleo', label: 'Paleo' },
-  { value: 'Low-Carb', label: 'Low-Carb' },
-  { value: 'Gluten-Free', label: 'Gluten-Free' },
-  { value: 'Dairy-Free', label: 'Dairy-Free' },
-];
-
-const DIET_RESTRICTIONS_SET = new Set(['Gluten-Free', 'Dairy-Free']);
 
 function useViewPreference() {
   const [view, setView] = useState<'grid' | 'list'>(() => {
@@ -1175,7 +1145,12 @@ export default function MealsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [mealTypeFilter, setMealTypeFilter] = useState<string>("all");
   const [audienceFilter, setAudienceFilter] = useState<string>("all-audience");
-  const [webDietFilter, setWebDietFilter] = useState<string>("");
+  const [matchMyProfile, setMatchMyProfile] = useState<boolean>(false);
+  const [mealsDietPattern, setMealsDietPattern] = useState<string>("");
+  const [mealsDietRestrictions, setMealsDietRestrictions] = useState<string[]>([]);
+  const [mealsUpfFilter, setMealsUpfFilter] = useState<boolean>(false);
+  const [webDietPattern, setWebDietPattern] = useState<string>("");
+  const [webDietRestrictions, setWebDietRestrictions] = useState<string[]>([]);
   const [webSearchResults, setWebSearchResults] = useState<WebSearchRecipe[]>([]);
   const [webHasMore, setWebHasMore] = useState(false);
   const [webCurrentPage, setWebCurrentPage] = useState(1);
@@ -1302,19 +1277,33 @@ export default function MealsPage() {
     retry: false,
   });
 
-  const { data: userPrefs } = useQuery<{ dietTypes?: string[] }>({
-    queryKey: ['/api/user/preferences'],
+  const { data: userProfile } = useQuery<any>({
+    queryKey: ['/api/profile'],
     retry: false,
   });
 
   useEffect(() => {
-    if (!userPrefs) return;
-    const dietTypes = userPrefs.dietTypes || [];
-    if (dietTypes.length > 0) {
-      const key = getDietFilterKey(dietTypes[0]);
-      if (key) setWebDietFilter(key);
+    if (!matchMyProfile || !userProfile) return;
+    const pattern = userProfile.dietPattern ?? "";
+    const restrictions: string[] = userProfile.dietRestrictions ?? [];
+    const upfSens = userProfile.upfSensitivity ?? "flexible";
+    const upfOn = upfSens === "strict" || upfSens === "moderate";
+    setMealsDietPattern(pattern);
+    setMealsDietRestrictions(restrictions);
+    setMealsUpfFilter(upfOn);
+    setWebDietPattern(pattern);
+    setWebDietRestrictions(restrictions);
+  }, [matchMyProfile, userProfile]);
+
+  useEffect(() => {
+    if (!matchMyProfile) {
+      setMealsDietPattern("");
+      setMealsDietRestrictions([]);
+      setMealsUpfFilter(false);
+      setWebDietPattern("");
+      setWebDietRestrictions([]);
     }
-  }, [userPrefs]);
+  }, [matchMyProfile]);
 
   const guessWebCategory = (recipe: WebSearchRecipe): number | undefined => {
     const name = (recipe.name || '').toLowerCase();
@@ -1340,11 +1329,11 @@ export default function MealsPage() {
     if (!query) return;
     setWebIsSearching(true);
     try {
-      const dietParam = webDietFilter
-        ? DIET_RESTRICTIONS_SET.has(webDietFilter)
-          ? `&dietRestrictions=${encodeURIComponent(webDietFilter)}`
-          : `&dietPattern=${encodeURIComponent(webDietFilter)}`
+      const patternParam = webDietPattern ? `&dietPattern=${encodeURIComponent(webDietPattern)}` : '';
+      const restrictionsParam = webDietRestrictions.length
+        ? `&dietRestrictions=${encodeURIComponent(webDietRestrictions.join(','))}`
         : '';
+      const dietParam = patternParam + restrictionsParam;
       const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(query)}&page=${page}${dietParam}`, { signal });
       if (!res.ok) throw new Error("Search failed");
       const data: { recipes: WebSearchRecipe[]; hasMore: boolean } = await res.json();
@@ -1417,7 +1406,7 @@ export default function MealsPage() {
       if (webSearchAbortRef.current) webSearchAbortRef.current.abort();
       if (productSearchAbortRef.current) productSearchAbortRef.current.abort();
     };
-  }, [searchTerm, webDietFilter]);
+  }, [searchTerm, webDietPattern, webDietRestrictions]);
 
   const handleWebLoadMore = () => {
     performWebSearch(webSearchQuery, webCurrentPage + 1);
@@ -1534,7 +1523,12 @@ export default function MealsPage() {
     else if (audienceFilter === "baby") matchesAudience = meal.audience === "baby" || meal.audience === "universal";
     else if (audienceFilter === "child") matchesAudience = meal.audience === "child" || meal.audience === "universal";
     else if (audienceFilter === "drinks") matchesAudience = meal.isDrink === true;
-    return matchesSearch && matchesCategory && matchesType && matchesAudience;
+    const effectivePattern = mealsDietPattern.trim() || null;
+    const ctx = { dietPattern: effectivePattern, dietRestrictions: mealsDietRestrictions };
+    const mealText = [meal.name, ...(meal.ingredients ?? [])].join(' ').toLowerCase();
+    const matchesDiet = !shouldExcludeRecipe(mealText, ctx);
+    const matchesUpf = !mealsUpfFilter || meal.isReadyMeal !== true;
+    return matchesSearch && matchesCategory && matchesType && matchesAudience && matchesDiet && matchesUpf;
   })?.sort((a, b) => {
     const aReady = a.isReadyMeal ? 1 : 0;
     const bReady = b.isReadyMeal ? 1 : 0;
@@ -1706,6 +1700,88 @@ export default function MealsPage() {
             </Button>
           ))}
         </div>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mr-1">
+          <Switch
+            checked={matchMyProfile}
+            onCheckedChange={setMatchMyProfile}
+            data-testid="toggle-match-profile"
+          />
+          <span className="text-sm font-medium">Match my profile</span>
+        </div>
+        <Select
+          value={mealsDietPattern || "none"}
+          onValueChange={v => { setMatchMyProfile(false); setMealsDietPattern(v === "none" ? "" : v); }}
+        >
+          <SelectTrigger className="h-8 text-xs w-[150px]" data-testid="select-meals-diet-pattern">
+            <SelectValue placeholder="Any diet pattern" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Any diet pattern</SelectItem>
+            {["Mediterranean", "DASH", "MIND", "Flexitarian", "Vegetarian", "Vegan", "Keto", "Low-Carb", "Paleo", "Carnivore"].map(p => (
+              <SelectItem key={p} value={p}>{p}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Button
+          variant={mealsDietRestrictions.includes("Gluten-Free") ? "secondary" : "outline"}
+          size="sm"
+          className="h-8 text-xs"
+          onClick={() => {
+            setMatchMyProfile(false);
+            setMealsDietRestrictions(prev =>
+              prev.includes("Gluten-Free") ? prev.filter(r => r !== "Gluten-Free") : [...prev, "Gluten-Free"]
+            );
+          }}
+          data-testid="toggle-meals-restriction-gluten"
+        >
+          <Wheat className="h-3.5 w-3.5 mr-1.5" />
+          Gluten-Free
+        </Button>
+        <Button
+          variant={mealsDietRestrictions.includes("Dairy-Free") ? "secondary" : "outline"}
+          size="sm"
+          className="h-8 text-xs"
+          onClick={() => {
+            setMatchMyProfile(false);
+            setMealsDietRestrictions(prev =>
+              prev.includes("Dairy-Free") ? prev.filter(r => r !== "Dairy-Free") : [...prev, "Dairy-Free"]
+            );
+          }}
+          data-testid="toggle-meals-restriction-dairy"
+        >
+          <Droplet className="h-3.5 w-3.5 mr-1.5" />
+          Dairy-Free
+        </Button>
+        <Button
+          variant={mealsUpfFilter ? "secondary" : "outline"}
+          size="sm"
+          className="h-8 text-xs"
+          onClick={() => { setMatchMyProfile(false); setMealsUpfFilter(prev => !prev); }}
+          data-testid="toggle-meals-upf-filter"
+        >
+          <Leaf className={`h-3.5 w-3.5 mr-1.5 ${mealsUpfFilter ? "text-green-500" : ""}`} />
+          Hide High-UPF
+        </Button>
+        {(mealsDietPattern || mealsDietRestrictions.length > 0 || mealsUpfFilter || matchMyProfile) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 text-xs text-muted-foreground"
+            onClick={() => {
+              setMatchMyProfile(false);
+              setMealsDietPattern("");
+              setMealsDietRestrictions([]);
+              setMealsUpfFilter(false);
+            }}
+            data-testid="button-clear-diet-filters"
+          >
+            <X className="h-3 w-3 mr-1" />
+            Clear all
+          </Button>
+        )}
       </div>
 
       {mealTypeFilter === "freezer" ? (
@@ -2313,32 +2389,49 @@ export default function MealsPage() {
                 Results for "{webSearchQuery}"
               </span>
             )}
-            <div className="flex items-center gap-2 ml-auto">
-              {webDietFilter && (
-                <Badge variant="secondary" className="gap-1.5 pr-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border border-green-200 dark:border-green-800" data-testid="badge-web-diet-filter">
-                  <Leaf className="h-3 w-3" />
-                  {DIET_FILTER_OPTIONS.find(o => o.value === webDietFilter)?.label ?? webDietFilter}
-                  <button
-                    onClick={() => setWebDietFilter("")}
-                    className="ml-0.5 rounded-full hover:bg-green-200 dark:hover:bg-green-800 p-0.5"
-                    aria-label="Remove diet filter"
-                    data-testid="button-clear-web-diet"
-                  >
-                    <X className="h-2.5 w-2.5" />
-                  </button>
-                </Badge>
-              )}
-              <Select value={webDietFilter || "none"} onValueChange={v => setWebDietFilter(v === "none" ? "" : v)}>
-                <SelectTrigger className="h-7 text-xs w-[130px]" data-testid="select-web-diet-filter">
-                  <SelectValue placeholder="Any diet" />
+            <div className="flex items-center gap-2 ml-auto flex-wrap">
+              <Select
+                value={webDietPattern || "none"}
+                onValueChange={v => { setMatchMyProfile(false); setWebDietPattern(v === "none" ? "" : v); }}
+              >
+                <SelectTrigger className="h-7 text-xs w-[140px]" data-testid="select-web-diet-pattern">
+                  <SelectValue placeholder="Any pattern" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Any diet</SelectItem>
-                  {DIET_FILTER_OPTIONS.map(opt => (
-                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  <SelectItem value="none">Any pattern</SelectItem>
+                  {["Mediterranean", "DASH", "MIND", "Flexitarian", "Vegetarian", "Vegan", "Keto", "Low-Carb", "Paleo", "Carnivore"].map(p => (
+                    <SelectItem key={p} value={p}>{p}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <Button
+                variant={webDietRestrictions.includes("Gluten-Free") ? "secondary" : "outline"}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setMatchMyProfile(false);
+                  setWebDietRestrictions(prev =>
+                    prev.includes("Gluten-Free") ? prev.filter(r => r !== "Gluten-Free") : [...prev, "Gluten-Free"]
+                  );
+                }}
+                data-testid="toggle-web-restriction-gluten"
+              >
+                Gluten-Free
+              </Button>
+              <Button
+                variant={webDietRestrictions.includes("Dairy-Free") ? "secondary" : "outline"}
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setMatchMyProfile(false);
+                  setWebDietRestrictions(prev =>
+                    prev.includes("Dairy-Free") ? prev.filter(r => r !== "Dairy-Free") : [...prev, "Dairy-Free"]
+                  );
+                }}
+                data-testid="toggle-web-restriction-dairy"
+              >
+                Dairy-Free
+              </Button>
             </div>
           </div>
 
