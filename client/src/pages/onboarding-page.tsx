@@ -9,27 +9,36 @@ import {
   ChefHat, ArrowRight, ArrowLeft, Check,
   Leaf, Flame, Wheat, Ban, Sparkles,
   Heart, ShieldAlert, PiggyBank, Dumbbell, TrendingDown,
-  Store, Star, Shield,
+  Store, Star, Shield, Drumstick,
   Fish, Activity, Scale, Brain, Mountain, Zap, Clock,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
+import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES } from "@/lib/diets";
+import type { LucideIcon } from "lucide-react";
 
-const DIET_OPTIONS = [
-  { id: "none", label: "No Restriction", icon: ChefHat, desc: "All food types" },
-  { id: "vegetarian", label: "Vegetarian", icon: Leaf, desc: "No meat or fish" },
-  { id: "vegan", label: "Vegan", icon: Leaf, desc: "No animal products" },
-  { id: "mediterranean", label: "Mediterranean", icon: Fish, desc: "Olive oil, fish & veg" },
-  { id: "dash", label: "DASH", icon: Activity, desc: "Heart-healthy, low sodium" },
-  { id: "flexitarian", label: "Flexitarian", icon: Scale, desc: "Mostly plant-based" },
-  { id: "mind", label: "MIND", icon: Brain, desc: "Brain-healthy foods" },
-  { id: "keto", label: "Keto", icon: Flame, desc: "High fat, low carb" },
-  { id: "paleo", label: "Paleo", icon: Mountain, desc: "Whole, unprocessed foods" },
-  { id: "low-carb", label: "Low-Carb / Atkins", icon: Zap, desc: "Reduced carbohydrates" },
-  { id: "intermittent-fasting", label: "Intermittent Fasting", icon: Clock, desc: "Time-restricted eating" },
-  { id: "gluten-free", label: "Gluten-Free", icon: Wheat, desc: "No gluten" },
-  { id: "dairy-free", label: "Dairy-Free", icon: Ban, desc: "No dairy products" },
-];
+const PATTERN_ICONS: Record<string, LucideIcon> = {
+  Mediterranean: Fish,
+  DASH: Activity,
+  MIND: Brain,
+  Flexitarian: Scale,
+  Vegetarian: Leaf,
+  Vegan: Leaf,
+  Keto: Flame,
+  "Low-Carb": Zap,
+  Paleo: Mountain,
+  Carnivore: Drumstick,
+};
+
+const RESTRICTION_ICONS: Record<string, LucideIcon> = {
+  "Gluten-Free": Wheat,
+  "Dairy-Free": Ban,
+};
+
+const SCHEDULE_ICONS: Record<string, LucideIcon> = {
+  "None": ChefHat,
+  "Intermittent Fasting": Clock,
+};
 
 const GOAL_OPTIONS = [
   { id: "eat-healthier", label: "Eat Healthier", icon: Heart, desc: "Better nutrition choices" },
@@ -69,7 +78,11 @@ export default function OnboardingPage() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
-  const [dietTypes, setDietTypes] = useState<string[]>([]);
+
+  const [dietPattern, setDietPattern] = useState<string | null>(null);
+  const [dietRestrictions, setDietRestrictions] = useState<string[]>([]);
+  const [eatingSchedule, setEatingSchedule] = useState<string | null>(null);
+
   const [healthGoals, setHealthGoals] = useState<string[]>([]);
   const [budgetLevel, setBudgetLevel] = useState("standard");
   const [preferredStores, setPreferredStores] = useState<string[]>([]);
@@ -78,7 +91,9 @@ export default function OnboardingPage() {
   const completeMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/user/complete-onboarding", {
-        dietTypes,
+        dietPattern: dietPattern ?? null,
+        dietRestrictions,
+        eatingSchedule: eatingSchedule ?? null,
         healthGoals,
         budgetLevel,
         preferredStores,
@@ -94,12 +109,8 @@ export default function OnboardingPage() {
     },
   });
 
-  function toggleSelection(value: string, list: string[], setter: (v: string[]) => void) {
-    if (value === "none") {
-      setter([]);
-      return;
-    }
-    setter(list.includes(value) ? list.filter(v => v !== value) : [...list.filter(v => v !== "none"), value]);
+  function toggleList<T extends string>(value: T, list: T[], setter: (v: T[]) => void) {
+    setter(list.includes(value) ? list.filter(v => v !== value) : [...list, value]);
   }
 
   const canProceed = () => {
@@ -167,7 +178,7 @@ export default function OnboardingPage() {
 
         <Card>
           <CardContent className="p-6">
-            <div className="overflow-hidden relative min-h-[320px]">
+            <div className="overflow-hidden relative min-h-[360px]">
               <AnimatePresence mode="wait" custom={direction}>
                 <motion.div
                   key={step}
@@ -179,34 +190,107 @@ export default function OnboardingPage() {
                   transition={{ duration: 0.25, ease: "easeInOut" }}
                   className="w-full"
                 >
+
                   {step === 0 && (
-                    <div>
-                      <h2 className="text-xl font-semibold mb-1">What's your diet?</h2>
-                      <p className="text-sm text-muted-foreground mb-4">Select all that apply, or leave empty for no restrictions.</p>
-                      <div className="grid grid-cols-2 gap-3">
-                        {DIET_OPTIONS.map((opt) => {
-                          const Icon = opt.icon;
-                          const selected = opt.id === "none" ? dietTypes.length === 0 : dietTypes.includes(opt.id);
-                          return (
-                            <button
-                              key={opt.id}
-                              onClick={() => toggleSelection(opt.id, dietTypes, setDietTypes)}
-                              className={`flex items-center gap-3 p-3 rounded-md border text-left transition-colors ${
-                                selected
-                                  ? "border-primary bg-primary/5"
-                                  : "border-border hover-elevate"
-                              }`}
-                              data-testid={`button-diet-${opt.id}`}
-                            >
-                              <Icon className={`w-5 h-5 flex-shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />
-                              <div className="min-w-0">
-                                <div className="font-medium text-sm">{opt.label}</div>
-                                <div className="text-xs text-muted-foreground">{opt.desc}</div>
-                              </div>
-                              {selected && <Check className="w-4 h-4 text-primary ml-auto flex-shrink-0" />}
-                            </button>
-                          );
-                        })}
+                    <div className="space-y-5">
+                      <div>
+                        <h2 className="text-xl font-semibold mb-1">What's your diet?</h2>
+                        <p className="text-sm text-muted-foreground">Choose a diet pattern, any restrictions, and your eating schedule.</p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Diet pattern — pick one</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            onClick={() => setDietPattern(null)}
+                            className={`flex items-center gap-3 p-3 rounded-md border text-left transition-colors ${
+                              !dietPattern ? "border-primary bg-primary/5" : "border-border hover-elevate"
+                            }`}
+                            data-testid="button-diet-pattern-none"
+                          >
+                            <ChefHat className={`w-5 h-5 flex-shrink-0 ${!dietPattern ? "text-primary" : "text-muted-foreground"}`} />
+                            <div className="min-w-0">
+                              <div className="font-medium text-sm">No preference</div>
+                              <div className="text-xs text-muted-foreground">All diet types</div>
+                            </div>
+                            {!dietPattern && <Check className="w-4 h-4 text-primary ml-auto flex-shrink-0" />}
+                          </button>
+                          {DIET_PATTERNS.map((opt) => {
+                            const Icon = PATTERN_ICONS[opt.value] ?? Star;
+                            const selected = dietPattern === opt.value;
+                            return (
+                              <button
+                                key={opt.value}
+                                onClick={() => setDietPattern(selected ? null : opt.value)}
+                                className={`flex items-center gap-3 p-3 rounded-md border text-left transition-colors ${
+                                  selected ? "border-primary bg-primary/5" : "border-border hover-elevate"
+                                }`}
+                                data-testid={`button-diet-pattern-${opt.value}`}
+                              >
+                                <Icon className={`w-5 h-5 flex-shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                                <div className="min-w-0">
+                                  <div className="font-medium text-sm">{opt.label}</div>
+                                  <div className="text-xs text-muted-foreground">{opt.desc}</div>
+                                </div>
+                                {selected && <Check className="w-4 h-4 text-primary ml-auto flex-shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Dietary restrictions — select all that apply</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {DIET_RESTRICTIONS.map((opt) => {
+                            const Icon = RESTRICTION_ICONS[opt.value] ?? Ban;
+                            const selected = dietRestrictions.includes(opt.value);
+                            return (
+                              <button
+                                key={opt.value}
+                                onClick={() => toggleList(opt.value, dietRestrictions, setDietRestrictions)}
+                                className={`flex items-center gap-3 p-3 rounded-md border text-left transition-colors ${
+                                  selected ? "border-primary bg-primary/5" : "border-border hover-elevate"
+                                }`}
+                                data-testid={`button-diet-restriction-${opt.value}`}
+                              >
+                                <Icon className={`w-5 h-5 flex-shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                                <div className="min-w-0">
+                                  <div className="font-medium text-sm">{opt.label}</div>
+                                  <div className="text-xs text-muted-foreground">{opt.desc}</div>
+                                </div>
+                                {selected && <Check className="w-4 h-4 text-primary ml-auto flex-shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Eating schedule</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {EATING_SCHEDULES.map((opt) => {
+                            const Icon = SCHEDULE_ICONS[opt.value] ?? Clock;
+                            const selected = (eatingSchedule ?? "None") === opt.value;
+                            return (
+                              <button
+                                key={opt.value}
+                                onClick={() => setEatingSchedule(opt.value === "None" ? null : opt.value)}
+                                className={`flex items-center gap-3 p-3 rounded-md border text-left transition-colors ${
+                                  selected ? "border-primary bg-primary/5" : "border-border hover-elevate"
+                                }`}
+                                data-testid={`button-diet-schedule-${opt.value}`}
+                              >
+                                <Icon className={`w-5 h-5 flex-shrink-0 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                                <div className="min-w-0">
+                                  <div className="font-medium text-sm">{opt.label}</div>
+                                  <div className="text-xs text-muted-foreground">{opt.desc}</div>
+                                </div>
+                                {selected && <Check className="w-4 h-4 text-primary ml-auto flex-shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -222,11 +306,9 @@ export default function OnboardingPage() {
                           return (
                             <button
                               key={opt.id}
-                              onClick={() => toggleSelection(opt.id, healthGoals, setHealthGoals)}
+                              onClick={() => toggleList(opt.id, healthGoals, setHealthGoals)}
                               className={`flex items-center gap-3 p-3 rounded-md border text-left transition-colors ${
-                                selected
-                                  ? "border-primary bg-primary/5"
-                                  : "border-border hover-elevate"
+                                selected ? "border-primary bg-primary/5" : "border-border hover-elevate"
                               }`}
                               data-testid={`button-goal-${opt.id}`}
                             >
@@ -255,9 +337,7 @@ export default function OnboardingPage() {
                               key={opt.id}
                               onClick={() => setBudgetLevel(opt.id)}
                               className={`flex items-center gap-3 p-3 rounded-md border text-left transition-colors ${
-                                selected
-                                  ? "border-primary bg-primary/5"
-                                  : "border-border hover-elevate"
+                                selected ? "border-primary bg-primary/5" : "border-border hover-elevate"
                               }`}
                               data-testid={`button-budget-${opt.id}`}
                             >
@@ -283,11 +363,9 @@ export default function OnboardingPage() {
                           return (
                             <button
                               key={opt.id}
-                              onClick={() => toggleSelection(opt.id, preferredStores, setPreferredStores)}
+                              onClick={() => toggleList(opt.id, preferredStores, setPreferredStores)}
                               className={`flex items-center gap-3 p-3 rounded-md border text-left transition-colors ${
-                                selected
-                                  ? "border-primary bg-primary/5"
-                                  : "border-border hover-elevate"
+                                selected ? "border-primary bg-primary/5" : "border-border hover-elevate"
                               }`}
                               data-testid={`button-store-${opt.id}`}
                             >
@@ -314,9 +392,7 @@ export default function OnboardingPage() {
                               key={opt.id}
                               onClick={() => setUpfSensitivity(opt.id)}
                               className={`flex items-center gap-3 p-4 rounded-md border text-left transition-colors ${
-                                selected
-                                  ? "border-primary bg-primary/5"
-                                  : "border-border hover-elevate"
+                                selected ? "border-primary bg-primary/5" : "border-border hover-elevate"
                               }`}
                               data-testid={`button-upf-${opt.id}`}
                             >
@@ -332,6 +408,7 @@ export default function OnboardingPage() {
                       </div>
                     </div>
                   )}
+
                 </motion.div>
               </AnimatePresence>
             </div>

@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
+import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES } from "@/lib/diets";
 
 interface ProfileData {
   id: number;
@@ -28,6 +29,9 @@ interface ProfileData {
   profilePhotoUrl: string | null;
   measurementPreference: string;
   isBetaUser: boolean;
+  dietPattern: string | null;
+  dietRestrictions: string[];
+  eatingSchedule: string | null;
   preferences: any;
   health: {
     bmi: number | null;
@@ -47,7 +51,6 @@ interface ProfileData {
 }
 
 type GoalType = "lose" | "maintain" | "build" | "health";
-type DietType = "vegetarian" | "vegan" | "mediterranean" | "dash" | "flexitarian" | "mind" | "keto" | "paleo" | "low-carb" | "intermittent-fasting" | "gluten-free" | "dairy-free";
 type ActivityLevel = "low" | "moderate" | "high";
 
 const GOALS: { value: GoalType; label: string }[] = [
@@ -55,21 +58,6 @@ const GOALS: { value: GoalType; label: string }[] = [
   { value: "maintain", label: "Maintain weight" },
   { value: "build", label: "Build muscle" },
   { value: "health", label: "Improve health" },
-];
-
-const DIET_TYPES: { value: DietType; label: string }[] = [
-  { value: "vegetarian", label: "Vegetarian" },
-  { value: "vegan", label: "Vegan" },
-  { value: "mediterranean", label: "Mediterranean" },
-  { value: "dash", label: "DASH" },
-  { value: "flexitarian", label: "Flexitarian" },
-  { value: "mind", label: "MIND" },
-  { value: "keto", label: "Keto" },
-  { value: "paleo", label: "Paleo" },
-  { value: "low-carb", label: "Low-Carb / Atkins" },
-  { value: "intermittent-fasting", label: "Intermittent Fasting" },
-  { value: "gluten-free", label: "Gluten-Free" },
-  { value: "dairy-free", label: "Dairy-Free" },
 ];
 
 const ACTIVITY_LEVELS: { value: ActivityLevel; label: string }[] = [
@@ -195,7 +183,7 @@ export default function ProfilePage() {
 
       <GoalsPreferences
         profile={profile}
-        onSave={(prefs) => savePreferences(prefs)}
+        onSave={(data) => updateMutation.mutate(data)}
       />
 
       <ShoppingPreferences
@@ -523,24 +511,32 @@ function CalorieSettings({ profile, onSave }: { profile: ProfileData; onSave: (p
   );
 }
 
-function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (prefs: any) => void }) {
+function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (data: any) => void }) {
   const prefs = profile.preferences || {};
   const [goal, setGoal] = useState<string>(prefs.goalType || profile.health.goalType || "maintain");
   const [activity, setActivity] = useState<string>(prefs.activityLevel || profile.health.activityLevel || "moderate");
-  const [dietTypes, setDietTypes] = useState<string[]>(prefs.dietTypes || []);
+  const [dietPattern, setDietPattern] = useState<string | null>(profile.dietPattern ?? null);
+  const [dietRestrictions, setDietRestrictions] = useState<string[]>(profile.dietRestrictions ?? []);
+  const [eatingSchedule, setEatingSchedule] = useState<string | null>(profile.eatingSchedule ?? null);
   const [healthGoals, setHealthGoals] = useState<string[]>(prefs.healthGoals || []);
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     setGoal(prefs.goalType || profile.health.goalType || "maintain");
     setActivity(prefs.activityLevel || profile.health.activityLevel || "moderate");
-    setDietTypes(prefs.dietTypes || []);
+    setDietPattern(profile.dietPattern ?? null);
+    setDietRestrictions(profile.dietRestrictions ?? []);
+    setEatingSchedule(profile.eatingSchedule ?? null);
     setHealthGoals(prefs.healthGoals || []);
     setDirty(false);
-  }, [prefs.goalType, prefs.activityLevel, JSON.stringify(prefs.dietTypes), JSON.stringify(prefs.healthGoals), profile.health.goalType, profile.health.activityLevel]);
+  }, [
+    prefs.goalType, prefs.activityLevel, JSON.stringify(prefs.healthGoals),
+    profile.health.goalType, profile.health.activityLevel,
+    profile.dietPattern, JSON.stringify(profile.dietRestrictions), profile.eatingSchedule,
+  ]);
 
-  const toggleDiet = (diet: string) => {
-    setDietTypes(prev => prev.includes(diet) ? prev.filter(d => d !== diet) : [...prev, diet]);
+  const toggleRestriction = (r: string) => {
+    setDietRestrictions(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
     setDirty(true);
   };
 
@@ -550,7 +546,12 @@ function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (
   };
 
   const save = () => {
-    onSave({ goalType: goal, activityLevel: activity, dietTypes, healthGoals });
+    onSave({
+      dietPattern: dietPattern ?? null,
+      dietRestrictions,
+      eatingSchedule: eatingSchedule ?? null,
+      preferences: { goalType: goal, activityLevel: activity, healthGoals },
+    });
     setDirty(false);
   };
 
@@ -611,18 +612,63 @@ function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (
         <Separator />
 
         <div>
-          <Label className="text-xs text-muted-foreground mb-2 block">Diet type</Label>
+          <Label className="text-xs text-muted-foreground mb-2 block">Diet pattern</Label>
           <div className="flex flex-wrap gap-2">
-            {DIET_TYPES.map((d) => (
+            <Badge
+              variant={!dietPattern ? "default" : "outline"}
+              className="cursor-pointer"
+              onClick={() => { setDietPattern(null); setDirty(true); }}
+              data-testid="badge-diet-pattern-none"
+            >
+              {!dietPattern && <Check className="h-3 w-3 mr-1" />}
+              None
+            </Badge>
+            {DIET_PATTERNS.map((d) => (
               <Badge
                 key={d.value}
-                variant={dietTypes.includes(d.value) ? "default" : "outline"}
+                variant={dietPattern === d.value ? "default" : "outline"}
                 className="cursor-pointer"
-                onClick={() => toggleDiet(d.value)}
-                data-testid={`badge-diet-${d.value}`}
+                onClick={() => { setDietPattern(dietPattern === d.value ? null : d.value); setDirty(true); }}
+                data-testid={`badge-diet-pattern-${d.value}`}
               >
-                {dietTypes.includes(d.value) && <Check className="h-3 w-3 mr-1" />}
+                {dietPattern === d.value && <Check className="h-3 w-3 mr-1" />}
                 {d.label}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <Label className="text-xs text-muted-foreground mb-2 block">Dietary restrictions</Label>
+          <div className="flex flex-wrap gap-2">
+            {DIET_RESTRICTIONS.map((r) => (
+              <Badge
+                key={r.value}
+                variant={dietRestrictions.includes(r.value) ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => toggleRestriction(r.value)}
+                data-testid={`badge-restriction-${r.value}`}
+              >
+                {dietRestrictions.includes(r.value) && <Check className="h-3 w-3 mr-1" />}
+                {r.label}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <Label className="text-xs text-muted-foreground mb-2 block">Eating schedule</Label>
+          <div className="flex flex-wrap gap-2">
+            {EATING_SCHEDULES.map((s) => (
+              <Badge
+                key={s.value}
+                variant={(eatingSchedule ?? "None") === s.value ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => { setEatingSchedule(s.value === "None" ? null : s.value); setDirty(true); }}
+                data-testid={`badge-schedule-${s.value}`}
+              >
+                {(eatingSchedule ?? "None") === s.value && <Check className="h-3 w-3 mr-1" />}
+                {s.label}
               </Badge>
             ))}
           </div>

@@ -498,6 +498,9 @@ export async function registerRoutes(
       profilePhotoUrl: user.profilePhotoUrl,
       measurementPreference: user.measurementPreference,
       isBetaUser: user.isBetaUser,
+      dietPattern: user.dietPattern ?? null,
+      dietRestrictions: user.dietRestrictions ?? [],
+      eatingSchedule: user.eatingSchedule ?? null,
       preferences: prefs || {},
       health: {
         bmi,
@@ -3332,10 +3335,23 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       if (req.body && Object.keys(req.body).length > 0) {
-        const parsed = preferencesSchema.parse(req.body);
-        await storage.upsertUserPreferences(req.user!.id, parsed);
+        const onboardingSchema = preferencesSchema.extend({
+          dietPattern: z.string().nullable().optional(),
+          dietRestrictions: z.array(z.string()).optional(),
+          eatingSchedule: z.string().nullable().optional(),
+        });
+        const parsed = onboardingSchema.parse(req.body);
+        const { dietPattern, dietRestrictions, eatingSchedule, ...prefFields } = parsed;
+        await storage.upsertUserPreferences(req.user!.id, prefFields);
         if (parsed.budgetLevel) {
           await storage.updateUserPriceTier(req.user!.id, parsed.budgetLevel);
+        }
+        if (dietPattern !== undefined || dietRestrictions !== undefined || eatingSchedule !== undefined) {
+          await storage.updateUserProfile(req.user!.id, {
+            dietPattern: dietPattern ?? null,
+            dietRestrictions: dietRestrictions ?? [],
+            eatingSchedule: eatingSchedule ?? null,
+          });
         }
       }
       const user = await storage.completeOnboarding(req.user!.id);
