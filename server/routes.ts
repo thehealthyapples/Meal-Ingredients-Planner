@@ -1981,7 +1981,7 @@ export async function registerRoutes(
         }
       }
 
-      const healthScore = calculateHealthScore(savedNutrition);
+      const healthScore = calculateHealthScore(savedNutrition ?? {});
 
       res.json({
         nutrition: savedNutrition,
