@@ -1309,18 +1309,13 @@ export async function registerRoutes(
       }
 
       if (diet) {
-        const dietKeywords: Record<string, string[]> = {
-          vegan: ['vegan', 'plant-based', 'plant based'],
-          vegetarian: ['vegetarian', 'veggie', 'vegan'],
-          'gluten-free': ['gluten-free', 'gluten free'],
-          'dairy-free': ['dairy-free', 'dairy free'],
-          keto: ['keto', 'low-carb', 'low carb'],
-        };
-        const dietTerms = dietKeywords[diet] || [diet];
         const nonMeatIngredients = ['chicken', 'beef', 'pork', 'lamb', 'bacon', 'steak', 'ham', 'turkey', 'duck', 'sausage', 'mince', 'veal', 'venison', 'prawn', 'shrimp', 'fish', 'salmon', 'tuna', 'cod', 'crab', 'lobster', 'mussel', 'anchovy', 'sardine'];
         const dairyIngredients = ['milk', 'cheese', 'cream', 'butter', 'yogurt', 'yoghurt', 'cheddar', 'mozzarella', 'parmesan', 'ricotta'];
+        const highCarbIngredients = ['rice', 'pasta', 'bread', 'potato', 'sugar', 'flour', 'noodle', 'corn', 'oat', 'cereal', 'wheat', 'honey', 'syrup', 'juice', 'banana', 'grape', 'mango'];
+        const grainAndLegumes = ['rice', 'pasta', 'bread', 'oat', 'corn', 'wheat', 'barley', 'rye', 'couscous', 'noodle', 'tortilla', 'beans', 'lentil', 'chickpea', 'soy', 'tofu', 'legume', 'peanut'];
 
         interleaved = interleaved.filter(recipe => {
+          const nameAndCat = [recipe.name, recipe.category || ''].join(' ').toLowerCase();
           const textToCheck = [
             recipe.name,
             recipe.category || '',
@@ -1342,10 +1337,40 @@ export async function registerRoutes(
             return !glutenIngredients.some(g => textToCheck.includes(g));
           }
           if (diet === 'keto') {
-            const highCarbIngredients = ['rice', 'pasta', 'bread', 'potato', 'sugar', 'flour', 'noodle', 'corn', 'oat', 'cereal', 'wheat', 'honey', 'syrup', 'juice', 'banana', 'grape', 'mango'];
             return !highCarbIngredients.some(c => textToCheck.includes(c));
           }
-          return dietTerms.some(term => textToCheck.includes(term));
+          if (diet === 'mediterranean') {
+            const medKeywords = ['mediterranean', 'greek', 'italian', 'olive', 'seafood', 'vegetable', 'legume', 'bean', 'lentil', 'tomato', 'herb', 'lemon', 'garlic'];
+            const heavyRedMeat = ['burger', 'meatball', 'hot dog', 'barbecue brisket', 'pulled pork'];
+            return medKeywords.some(k => textToCheck.includes(k)) &&
+                   !heavyRedMeat.some(m => nameAndCat.includes(m));
+          }
+          if (diet === 'dash') {
+            const dashKeywords = ['vegetable', 'fruit', 'whole grain', 'legume', 'bean', 'lentil', 'chicken', 'fish', 'seafood', 'low fat', 'low-fat'];
+            const highSodium = ['canned soup', 'salt cod', 'bacon', 'salami', 'pepperoni', 'processed'];
+            return dashKeywords.some(k => textToCheck.includes(k)) &&
+                   !highSodium.some(m => nameAndCat.includes(m));
+          }
+          if (diet === 'flexitarian') {
+            const heavyMeatNames = ['burger', 'steak', 'bacon', 'pork chop', 'rib', 'brisket', 'hot dog', 'sausage casserole', 'full english', 'carnitas', 'pulled pork'];
+            return !heavyMeatNames.some(m => nameAndCat.includes(m));
+          }
+          if (diet === 'mind') {
+            const mindKeywords = ['berr', 'blueberr', 'strawberr', 'leafy', 'spinach', 'kale', 'broccoli', 'fish', 'salmon', 'tuna', 'nut', 'walnut', 'almond', 'olive oil', 'whole grain', 'oat', 'bean', 'lentil'];
+            return mindKeywords.some(k => textToCheck.includes(k));
+          }
+          if (diet === 'paleo') {
+            return !grainAndLegumes.some(g => textToCheck.includes(g)) &&
+                   !dairyIngredients.some(d => textToCheck.includes(d));
+          }
+          if (diet === 'low-carb') {
+            const lowCarbExcludes = ['bread', 'pasta', 'rice', 'sugar', 'potato', 'corn', 'flour', 'noodle', 'oat', 'cereal', 'syrup', 'honey'];
+            return !lowCarbExcludes.some(c => textToCheck.includes(c));
+          }
+          if (diet === 'intermittent-fasting') {
+            return true;
+          }
+          return nameAndCat.includes(diet);
         });
       }
 

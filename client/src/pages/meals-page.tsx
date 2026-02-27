@@ -59,18 +59,31 @@ function getDietFilterKey(name: string): string {
   const n = name.toLowerCase().replace(/[\s_]+/g, '-');
   if (n.includes('vegan')) return 'vegan';
   if (n.includes('vegetarian')) return 'vegetarian';
+  if (n.includes('mediterranean')) return 'mediterranean';
+  if (n.includes('dash')) return 'dash';
+  if (n.includes('flexitarian')) return 'flexitarian';
+  if (n.includes('mind')) return 'mind';
+  if (n.includes('keto')) return 'keto';
+  if (n.includes('paleo')) return 'paleo';
+  if (n.includes('low-carb') || n.includes('atkins')) return 'low-carb';
+  if (n.includes('intermittent')) return 'intermittent-fasting';
   if (n.includes('dairy')) return 'dairy-free';
   if (n.includes('gluten')) return 'gluten-free';
-  if (n.includes('keto')) return 'keto';
   return '';
 }
 
 const DIET_FILTER_OPTIONS = [
   { value: 'vegan', label: 'Vegan' },
   { value: 'vegetarian', label: 'Vegetarian' },
-  { value: 'dairy-free', label: 'Dairy-Free' },
-  { value: 'gluten-free', label: 'Gluten-Free' },
+  { value: 'mediterranean', label: 'Mediterranean' },
+  { value: 'dash', label: 'DASH' },
+  { value: 'flexitarian', label: 'Flexitarian' },
+  { value: 'mind', label: 'MIND' },
   { value: 'keto', label: 'Keto' },
+  { value: 'paleo', label: 'Paleo' },
+  { value: 'low-carb', label: 'Low-Carb' },
+  { value: 'gluten-free', label: 'Gluten-Free' },
+  { value: 'dairy-free', label: 'Dairy-Free' },
 ];
 
 function useViewPreference() {
@@ -1160,7 +1173,6 @@ export default function MealsPage() {
   const [mealTypeFilter, setMealTypeFilter] = useState<string>("all");
   const [audienceFilter, setAudienceFilter] = useState<string>("all-audience");
   const [webDietFilter, setWebDietFilter] = useState<string>("");
-  const webDietInitRef = useRef(false);
   const [webSearchResults, setWebSearchResults] = useState<WebSearchRecipe[]>([]);
   const [webHasMore, setWebHasMore] = useState(false);
   const [webCurrentPage, setWebCurrentPage] = useState(1);
@@ -1293,14 +1305,12 @@ export default function MealsPage() {
   });
 
   useEffect(() => {
-    if (webDietInitRef.current) return;
     if (!userPrefs) return;
     const dietTypes = userPrefs.dietTypes || [];
     if (dietTypes.length > 0) {
       const key = getDietFilterKey(dietTypes[0]);
       if (key) setWebDietFilter(key);
     }
-    webDietInitRef.current = true;
   }, [userPrefs]);
 
   const guessWebCategory = (recipe: WebSearchRecipe): number | undefined => {

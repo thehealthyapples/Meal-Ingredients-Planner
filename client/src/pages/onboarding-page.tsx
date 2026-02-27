@@ -7,9 +7,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   ChefHat, ArrowRight, ArrowLeft, Check,
-  Leaf, Flame, Wheat, Drumstick, Ban, Sparkles,
+  Leaf, Flame, Wheat, Ban, Sparkles,
   Heart, ShieldAlert, PiggyBank, Dumbbell, TrendingDown,
   Store, Star, Shield,
+  Fish, Activity, Scale, Brain, Mountain, Zap, Clock,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
@@ -18,10 +19,16 @@ const DIET_OPTIONS = [
   { id: "none", label: "No Restriction", icon: ChefHat, desc: "All food types" },
   { id: "vegetarian", label: "Vegetarian", icon: Leaf, desc: "No meat or fish" },
   { id: "vegan", label: "Vegan", icon: Leaf, desc: "No animal products" },
+  { id: "mediterranean", label: "Mediterranean", icon: Fish, desc: "Olive oil, fish & veg" },
+  { id: "dash", label: "DASH", icon: Activity, desc: "Heart-healthy, low sodium" },
+  { id: "flexitarian", label: "Flexitarian", icon: Scale, desc: "Mostly plant-based" },
+  { id: "mind", label: "MIND", icon: Brain, desc: "Brain-healthy foods" },
   { id: "keto", label: "Keto", icon: Flame, desc: "High fat, low carb" },
+  { id: "paleo", label: "Paleo", icon: Mountain, desc: "Whole, unprocessed foods" },
+  { id: "low-carb", label: "Low-Carb / Atkins", icon: Zap, desc: "Reduced carbohydrates" },
+  { id: "intermittent-fasting", label: "Intermittent Fasting", icon: Clock, desc: "Time-restricted eating" },
   { id: "gluten-free", label: "Gluten-Free", icon: Wheat, desc: "No gluten" },
-  { id: "carnivore", label: "Carnivore", icon: Drumstick, desc: "Meat-based diet" },
-  { id: "upf-free", label: "UPF-Free", icon: Ban, desc: "No ultra-processed foods" },
+  { id: "dairy-free", label: "Dairy-Free", icon: Ban, desc: "No dairy products" },
 ];
 
 const GOAL_OPTIONS = [

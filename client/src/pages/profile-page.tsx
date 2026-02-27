@@ -47,7 +47,7 @@ interface ProfileData {
 }
 
 type GoalType = "lose" | "maintain" | "build" | "health";
-type DietType = "balanced" | "upf-free" | "vegetarian" | "vegan" | "keto";
+type DietType = "vegetarian" | "vegan" | "mediterranean" | "dash" | "flexitarian" | "mind" | "keto" | "paleo" | "low-carb" | "intermittent-fasting" | "gluten-free" | "dairy-free";
 type ActivityLevel = "low" | "moderate" | "high";
 
 const GOALS: { value: GoalType; label: string }[] = [
@@ -58,11 +58,18 @@ const GOALS: { value: GoalType; label: string }[] = [
 ];
 
 const DIET_TYPES: { value: DietType; label: string }[] = [
-  { value: "balanced", label: "Balanced" },
-  { value: "upf-free", label: "UPF Free" },
   { value: "vegetarian", label: "Vegetarian" },
   { value: "vegan", label: "Vegan" },
+  { value: "mediterranean", label: "Mediterranean" },
+  { value: "dash", label: "DASH" },
+  { value: "flexitarian", label: "Flexitarian" },
+  { value: "mind", label: "MIND" },
   { value: "keto", label: "Keto" },
+  { value: "paleo", label: "Paleo" },
+  { value: "low-carb", label: "Low-Carb / Atkins" },
+  { value: "intermittent-fasting", label: "Intermittent Fasting" },
+  { value: "gluten-free", label: "Gluten-Free" },
+  { value: "dairy-free", label: "Dairy-Free" },
 ];
 
 const ACTIVITY_LEVELS: { value: ActivityLevel; label: string }[] = [
