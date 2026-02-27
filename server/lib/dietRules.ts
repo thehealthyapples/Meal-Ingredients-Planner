@@ -65,11 +65,17 @@ const LOW_CARB_EXCLUDE = [
   "oats", "cereal", "tortilla", "pita", "pitta",
 ];
 
+// Paleo excludes grains, dairy, legumes — but NOT sweet potato (a Paleo staple).
+// We list grains explicitly here rather than spreading HIGH_CARB_KEYWORDS so we
+// can omit "potato"/"potatoes" which would incorrectly catch "sweet potato".
 const PALEO_EXCLUDE = [
-  ...HIGH_CARB_KEYWORDS,
+  "bread", "pasta", "rice", "noodle", "noodles", "flour",
+  "oats", "oat", "cereal", "corn", "wheat", "couscous",
+  "barley", "rye", "tortilla", "pita", "pitta",
+  "panko", "cracker", "crackers",
   "milk", "cream", "butter", "cheese", "yogurt", "yoghurt",
   "beans", "lentils", "chickpeas", "hummus", "peanut", "peanuts",
-  "soy", "tofu", "edamame", "corn",
+  "soy", "tofu", "edamame",
 ];
 
 const CARNIVORE_PLANT_KEYWORDS = [

@@ -74,18 +74,20 @@ function getDietFilterKey(name: string): string {
 }
 
 const DIET_FILTER_OPTIONS = [
-  { value: 'vegan', label: 'Vegan' },
-  { value: 'vegetarian', label: 'Vegetarian' },
-  { value: 'mediterranean', label: 'Mediterranean' },
-  { value: 'dash', label: 'DASH' },
-  { value: 'flexitarian', label: 'Flexitarian' },
-  { value: 'mind', label: 'MIND' },
-  { value: 'keto', label: 'Keto' },
-  { value: 'paleo', label: 'Paleo' },
-  { value: 'low-carb', label: 'Low-Carb' },
-  { value: 'gluten-free', label: 'Gluten-Free' },
-  { value: 'dairy-free', label: 'Dairy-Free' },
+  { value: 'Vegan', label: 'Vegan' },
+  { value: 'Vegetarian', label: 'Vegetarian' },
+  { value: 'Mediterranean', label: 'Mediterranean' },
+  { value: 'DASH', label: 'DASH' },
+  { value: 'Flexitarian', label: 'Flexitarian' },
+  { value: 'MIND', label: 'MIND' },
+  { value: 'Keto', label: 'Keto' },
+  { value: 'Paleo', label: 'Paleo' },
+  { value: 'Low-Carb', label: 'Low-Carb' },
+  { value: 'Gluten-Free', label: 'Gluten-Free' },
+  { value: 'Dairy-Free', label: 'Dairy-Free' },
 ];
+
+const DIET_RESTRICTIONS_SET = new Set(['Gluten-Free', 'Dairy-Free']);
 
 function useViewPreference() {
   const [view, setView] = useState<'grid' | 'list'>(() => {
@@ -1338,7 +1340,12 @@ export default function MealsPage() {
     if (!query) return;
     setWebIsSearching(true);
     try {
-      const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(query)}&page=${page}${webDietFilter ? `&diet=${encodeURIComponent(webDietFilter)}` : ''}`, { signal });
+      const dietParam = webDietFilter
+        ? DIET_RESTRICTIONS_SET.has(webDietFilter)
+          ? `&dietRestrictions=${encodeURIComponent(webDietFilter)}`
+          : `&dietPattern=${encodeURIComponent(webDietFilter)}`
+        : '';
+      const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(query)}&page=${page}${dietParam}`, { signal });
       if (!res.ok) throw new Error("Search failed");
       const data: { recipes: WebSearchRecipe[]; hasMore: boolean } = await res.json();
       if (page === 1) {

@@ -17,6 +17,7 @@ import { analyzeProductUPF } from "./lib/upf-analysis-service";
 import { createBasket, getBasketSupermarkets } from "./lib/supermarket-basket-service";
 import { generateSmartSuggestion, type SmartSuggestSettings, type LockedEntry } from "./lib/smart-suggest-service";
 import { searchAllRecipes, searchJamieOliver, searchSeriousEats, type ExternalMealCandidate } from "./lib/external-meal-service";
+import { shouldExcludeRecipe, scoreRecipeForDiet } from "./lib/dietRules";
 import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreezerMealSchema, updateMealSchema } from "@shared/schema";
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
 import { sanitizeUser } from "./lib/sanitizeUser";
@@ -1197,7 +1198,11 @@ export async function registerRoutes(
     try {
       const q = (req.query.q as string || '').trim();
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
-      const diet = (req.query.diet as string || '').trim().toLowerCase();
+      const dietPattern = (req.query.dietPattern as string || '').trim() || null;
+      const dietRestrictionsRaw = (req.query.dietRestrictions as string || '').trim();
+      const dietRestrictions = dietRestrictionsRaw
+        ? dietRestrictionsRaw.split(',').map(s => s.trim()).filter(Boolean)
+        : [];
       const perPage = 9;
 
       if (!q) {
@@ -1311,70 +1316,28 @@ export async function registerRoutes(
         }
       }
 
-      if (diet) {
-        const nonMeatIngredients = ['chicken', 'beef', 'pork', 'lamb', 'bacon', 'steak', 'ham', 'turkey', 'duck', 'sausage', 'mince', 'veal', 'venison', 'prawn', 'shrimp', 'fish', 'salmon', 'tuna', 'cod', 'crab', 'lobster', 'mussel', 'anchovy', 'sardine'];
-        const dairyIngredients = ['milk', 'cheese', 'cream', 'butter', 'yogurt', 'yoghurt', 'cheddar', 'mozzarella', 'parmesan', 'ricotta'];
-        const highCarbIngredients = ['rice', 'pasta', 'bread', 'potato', 'sugar', 'flour', 'noodle', 'corn', 'oat', 'cereal', 'wheat', 'honey', 'syrup', 'juice', 'banana', 'grape', 'mango'];
-        const grainAndLegumes = ['rice', 'pasta', 'bread', 'oat', 'corn', 'wheat', 'barley', 'rye', 'couscous', 'noodle', 'tortilla', 'beans', 'lentil', 'chickpea', 'soy', 'tofu', 'legume', 'peanut'];
+      if (dietPattern || dietRestrictions.length > 0) {
+        const ctx = { dietPattern, dietRestrictions };
 
-        interleaved = interleaved.filter(recipe => {
-          const nameAndCat = [recipe.name, recipe.category || ''].join(' ').toLowerCase();
-          const textToCheck = [
+        const scored = interleaved.map(recipe => {
+          const text = [
             recipe.name,
             recipe.category || '',
+            recipe.cuisine || '',
             ...(recipe.ingredients || []),
           ].join(' ').toLowerCase();
 
-          if (diet === 'vegan') {
-            return !nonMeatIngredients.some(m => textToCheck.includes(m)) &&
-                   !dairyIngredients.some(d => textToCheck.includes(d));
-          }
-          if (diet === 'vegetarian') {
-            return !nonMeatIngredients.some(m => textToCheck.includes(m));
-          }
-          if (diet === 'dairy-free') {
-            return !dairyIngredients.some(d => textToCheck.includes(d));
-          }
-          if (diet === 'gluten-free') {
-            const glutenIngredients = ['flour', 'wheat', 'bread', 'pasta', 'noodle', 'couscous', 'barley', 'rye', 'semolina', 'spaghetti', 'macaroni', 'penne', 'fettuccine', 'lasagne', 'tortilla', 'crouton', 'breadcrumb', 'panko', 'pastry', 'pie crust'];
-            return !glutenIngredients.some(g => textToCheck.includes(g));
-          }
-          if (diet === 'keto') {
-            return !highCarbIngredients.some(c => textToCheck.includes(c));
-          }
-          if (diet === 'mediterranean') {
-            const medKeywords = ['mediterranean', 'greek', 'italian', 'olive', 'seafood', 'vegetable', 'legume', 'bean', 'lentil', 'tomato', 'herb', 'lemon', 'garlic'];
-            const heavyRedMeat = ['burger', 'meatball', 'hot dog', 'barbecue brisket', 'pulled pork'];
-            return medKeywords.some(k => textToCheck.includes(k)) &&
-                   !heavyRedMeat.some(m => nameAndCat.includes(m));
-          }
-          if (diet === 'dash') {
-            const dashKeywords = ['vegetable', 'fruit', 'whole grain', 'legume', 'bean', 'lentil', 'chicken', 'fish', 'seafood', 'low fat', 'low-fat'];
-            const highSodium = ['canned soup', 'salt cod', 'bacon', 'salami', 'pepperoni', 'processed'];
-            return dashKeywords.some(k => textToCheck.includes(k)) &&
-                   !highSodium.some(m => nameAndCat.includes(m));
-          }
-          if (diet === 'flexitarian') {
-            const heavyMeatNames = ['burger', 'steak', 'bacon', 'pork chop', 'rib', 'brisket', 'hot dog', 'sausage casserole', 'full english', 'carnitas', 'pulled pork'];
-            return !heavyMeatNames.some(m => nameAndCat.includes(m));
-          }
-          if (diet === 'mind') {
-            const mindKeywords = ['berr', 'blueberr', 'strawberr', 'leafy', 'spinach', 'kale', 'broccoli', 'fish', 'salmon', 'tuna', 'nut', 'walnut', 'almond', 'olive oil', 'whole grain', 'oat', 'bean', 'lentil'];
-            return mindKeywords.some(k => textToCheck.includes(k));
-          }
-          if (diet === 'paleo') {
-            return !grainAndLegumes.some(g => textToCheck.includes(g)) &&
-                   !dairyIngredients.some(d => textToCheck.includes(d));
-          }
-          if (diet === 'low-carb') {
-            const lowCarbExcludes = ['bread', 'pasta', 'rice', 'sugar', 'potato', 'corn', 'flour', 'noodle', 'oat', 'cereal', 'syrup', 'honey'];
-            return !lowCarbExcludes.some(c => textToCheck.includes(c));
-          }
-          if (diet === 'intermittent-fasting') {
-            return true;
-          }
-          return nameAndCat.includes(diet);
+          return {
+            recipe,
+            excluded: shouldExcludeRecipe(text, ctx),
+            score: scoreRecipeForDiet(text, dietPattern),
+          };
         });
+
+        interleaved = scored
+          .filter(e => !e.excluded)
+          .sort((a, b) => b.score - a.score)
+          .map(e => e.recipe);
       }
 
       const start = (page - 1) * perPage;
