@@ -847,6 +847,49 @@ function FeatureToggles({ prefs, onToggle }: { prefs: any; onToggle: (field: str
 
 function AccountSettings({ profile }: { profile: ProfileData }) {
   const { logout } = useUser();
+  const { toast } = useToast();
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [pwState, setPwState] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [pwError, setPwError] = useState("");
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPwError("");
+    if (newPassword !== confirmPassword) {
+      setPwError("New passwords don't match.");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPwError("New password must be at least 6 characters.");
+      return;
+    }
+    setPwState("loading");
+    try {
+      const res = await fetch("/api/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPwError(data.message || "Something went wrong.");
+        setPwState("error");
+      } else {
+        setPwState("success");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setShowChangePassword(false);
+        toast({ title: "Password changed", description: "Your password has been updated successfully." });
+      }
+    } catch {
+      setPwError("Something went wrong. Please try again.");
+      setPwState("error");
+    }
+  };
 
   return (
     <Card className="p-5" data-testid="card-account">
@@ -878,6 +921,82 @@ function AccountSettings({ profile }: { profile: ProfileData }) {
               <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30">Active</Badge>
             </div>
           </>
+        )}
+
+        <Separator />
+
+        {!showChangePassword ? (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => { setShowChangePassword(true); setPwState("idle"); setPwError(""); }}
+            data-testid="button-show-change-password"
+          >
+            Change Password
+          </Button>
+        ) : (
+          <form onSubmit={handleChangePassword} className="space-y-3" data-testid="form-change-password">
+            <p className="text-sm font-medium">Change Password</p>
+            {pwError && (
+              <p className="text-xs text-destructive" data-testid="text-pw-error">{pwError}</p>
+            )}
+            <div className="space-y-1">
+              <Label htmlFor="current-password" className="text-xs">Current password</Label>
+              <Input
+                id="current-password"
+                type="password"
+                placeholder="Your current password"
+                value={currentPassword}
+                onChange={e => setCurrentPassword(e.target.value)}
+                required
+                data-testid="input-current-password"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="new-password-profile" className="text-xs">New password</Label>
+              <Input
+                id="new-password-profile"
+                type="password"
+                placeholder="At least 6 characters"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                required
+                data-testid="input-new-password-profile"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="confirm-password-profile" className="text-xs">Confirm new password</Label>
+              <Input
+                id="confirm-password-profile"
+                type="password"
+                placeholder="Repeat new password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                required
+                data-testid="input-confirm-password-profile"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                size="sm"
+                className="flex-1"
+                disabled={pwState === "loading"}
+                data-testid="button-update-password"
+              >
+                {pwState === "loading" ? "Updating…" : "Update Password"}
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => { setShowChangePassword(false); setPwError(""); setPwState("idle"); setCurrentPassword(""); setNewPassword(""); setConfirmPassword(""); }}
+                data-testid="button-cancel-change-password"
+              >
+                Cancel
+              </Button>
+            </div>
+          </form>
         )}
 
         <Separator />

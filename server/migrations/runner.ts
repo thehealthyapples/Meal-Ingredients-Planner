@@ -67,6 +67,14 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-02-27_password_reset_tokens",
+    statements: [
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_token TEXT",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires TIMESTAMPTZ",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

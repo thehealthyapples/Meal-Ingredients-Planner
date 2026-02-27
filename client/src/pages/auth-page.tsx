@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Lock, UserPlus, CheckCircle2, AlertTriangle, Mail, Loader2, RefreshCw } from "lucide-react";
+import { ArrowRight, Lock, UserPlus, CheckCircle2, AlertTriangle, Mail, Loader2, RefreshCw, KeyRound } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
 
@@ -18,16 +18,36 @@ type AppConfig = {
   environment: string;
 };
 
+type AuthMode = "login" | "register" | "forgot" | "reset";
+
 export default function AuthPage() {
   const { login, loginError, register, registerResult, user, isLoggingIn, isRegistering } = useUser();
   const [, setLocation] = useLocation();
-  const [mode, setMode] = useState<"login" | "register">("login");
+  const [mode, setMode] = useState<AuthMode>("login");
   const [lastLoginEmail, setLastLoginEmail] = useState("");
   const [resendState, setResendState] = useState<"idle" | "loading" | "sent">("idle");
+
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotState, setForgotState] = useState<"idle" | "loading" | "sent">("idle");
+
+  const [resetToken, setResetToken] = useState("");
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [resetState, setResetState] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [resetError, setResetError] = useState("");
+
   const searchString = useSearch();
   const params = new URLSearchParams(searchString);
   const verified = params.get("verified") === "1";
   const verifyError = params.get("verify_error");
+  const resetTokenParam = params.get("reset_token");
+
+  useEffect(() => {
+    if (resetTokenParam) {
+      setResetToken(resetTokenParam);
+      setMode("reset");
+    }
+  }, [resetTokenParam]);
 
   const { data: config } = useQuery<AppConfig>({
     queryKey: ["/api/config"],
@@ -55,6 +75,58 @@ export default function AuthPage() {
       });
     } finally {
       setResendState("sent");
+    }
+  };
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim() || forgotState === "loading") return;
+    setForgotState("loading");
+    try {
+      await fetch("/api/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: forgotEmail.trim() }),
+      });
+    } finally {
+      setForgotState("sent");
+    }
+  };
+
+  const handleResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetError("");
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetError("Passwords don't match.");
+      return;
+    }
+    if (resetNewPassword.length < 6) {
+      setResetError("Password must be at least 6 characters.");
+      return;
+    }
+    setResetState("loading");
+    try {
+      const res = await fetch("/api/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: resetToken, newPassword: resetNewPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setResetError(data.message || "Something went wrong.");
+        setResetState("error");
+      } else {
+        setResetState("success");
+        setTimeout(() => {
+          setMode("login");
+          setResetState("idle");
+          setResetNewPassword("");
+          setResetConfirmPassword("");
+        }, 2000);
+      }
+    } catch {
+      setResetError("Something went wrong. Please try again.");
+      setResetState("error");
     }
   };
 
@@ -157,6 +229,137 @@ export default function AuthPage() {
                 Back to login
               </Button>
             </div>
+
+          ) : mode === "forgot" ? (
+            <div className="space-y-6" data-testid="panel-forgot-password">
+              <div>
+                <h2 className="text-2xl font-bold tracking-tight">Forgot your password?</h2>
+                <p className="text-muted-foreground mt-2">
+                  Enter your email address and we'll send you a link to reset your password.
+                </p>
+              </div>
+
+              {forgotState === "sent" ? (
+                <div className="flex flex-col items-center gap-4 py-6 text-center" data-testid="panel-forgot-sent">
+                  <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Mail className="h-7 w-7 text-primary" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground">
+                    Check your inbox — if your email is registered, a reset link is on its way.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleForgotSubmit} className="space-y-4">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium" htmlFor="forgot-email">Email address</label>
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      className="h-12"
+                      value={forgotEmail}
+                      onChange={e => setForgotEmail(e.target.value)}
+                      required
+                      data-testid="input-forgot-email"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full h-12 text-base font-semibold"
+                    disabled={forgotState === "loading"}
+                    data-testid="button-send-reset"
+                  >
+                    {forgotState === "loading" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Mail className="h-4 w-4 mr-2" />}
+                    Send Reset Link
+                  </Button>
+                </form>
+              )}
+
+              <div className="text-center pt-2">
+                <button
+                  onClick={() => { setMode("login"); setForgotState("idle"); setForgotEmail(""); }}
+                  className="text-sm text-primary font-medium hover:underline"
+                  data-testid="link-back-to-login"
+                >
+                  Back to sign in
+                </button>
+              </div>
+            </div>
+
+          ) : mode === "reset" ? (
+            <div className="space-y-6" data-testid="panel-reset-password">
+              <div>
+                <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                  <KeyRound className="h-7 w-7 text-primary" />
+                </div>
+                <h2 className="text-2xl font-bold tracking-tight">Set a new password</h2>
+                <p className="text-muted-foreground mt-2">
+                  Choose a strong password with at least 6 characters.
+                </p>
+              </div>
+
+              {resetState === "success" ? (
+                <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200 text-green-800" data-testid="banner-reset-success">
+                  <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
+                  <p className="text-sm font-medium">Password updated! Redirecting to login…</p>
+                </div>
+              ) : (
+                <form onSubmit={handleResetSubmit} className="space-y-4">
+                  {resetError && (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700" data-testid="banner-reset-error">
+                      <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                      <p className="text-sm">{resetError}</p>
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium" htmlFor="reset-new-password">New password</label>
+                    <Input
+                      id="reset-new-password"
+                      type="password"
+                      placeholder="At least 6 characters"
+                      className="h-12"
+                      value={resetNewPassword}
+                      onChange={e => setResetNewPassword(e.target.value)}
+                      required
+                      data-testid="input-new-password"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium" htmlFor="reset-confirm-password">Confirm new password</label>
+                    <Input
+                      id="reset-confirm-password"
+                      type="password"
+                      placeholder="Repeat your new password"
+                      className="h-12"
+                      value={resetConfirmPassword}
+                      onChange={e => setResetConfirmPassword(e.target.value)}
+                      required
+                      data-testid="input-confirm-password"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full h-12 text-base font-semibold"
+                    disabled={resetState === "loading"}
+                    data-testid="button-reset-password"
+                  >
+                    {resetState === "loading" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                    Update Password
+                  </Button>
+                </form>
+              )}
+
+              <div className="text-center pt-2">
+                <button
+                  onClick={() => { setMode("login"); setResetState("idle"); setResetError(""); }}
+                  className="text-sm text-primary font-medium hover:underline"
+                  data-testid="link-back-to-login-from-reset"
+                >
+                  Back to sign in
+                </button>
+              </div>
+            </div>
+
           ) : (
             <>
               <div className="text-center lg:text-left mb-8">
@@ -192,6 +395,15 @@ export default function AuthPage() {
                     isSubmitting={isLoggingIn}
                     testIdPrefix="login"
                   />
+                  <div className="text-center mt-2">
+                    <button
+                      onClick={() => setMode("forgot")}
+                      className="text-sm text-muted-foreground hover:text-primary hover:underline transition-colors"
+                      data-testid="link-forgot-password"
+                    >
+                      Forgot your password?
+                    </button>
+                  </div>
                   {needsEmailVerification && (
                     <div className="mt-4 p-4 rounded-lg bg-amber-50 border border-amber-200" data-testid="panel-needs-verification">
                       <p className="text-sm text-amber-800 font-medium mb-3">

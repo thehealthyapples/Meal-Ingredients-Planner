@@ -19,6 +19,8 @@ export const users = pgTable("users", {
   dietPattern: text("diet_pattern"),
   dietRestrictions: text("diet_restrictions").array(),
   eatingSchedule: text("eating_schedule"),
+  passwordResetToken: text("password_reset_token"),
+  passwordResetExpires: timestamp("password_reset_expires"),
 });
 
 export const mealCategories = pgTable("meal_categories", {

@@ -6,7 +6,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
-import { sendVerificationEmail } from "./email";
+import { sendVerificationEmail, sendPasswordResetEmail } from "./email";
 import { sanitizeUser } from "./lib/sanitizeUser";
 
 declare global {
@@ -203,6 +203,91 @@ export function setupAuth(app: Express) {
     } catch (err: any) {
       console.error("[Auth] Resend verification error:", err?.message);
       res.status(500).json({ message: "Failed to resend verification email." });
+    }
+  });
+
+  app.post("/api/forgot-password", async (req, res) => {
+    const { username } = req.body;
+    const safeResponse = { message: "If that email is registered, a reset link has been sent." };
+
+    if (!username || typeof username !== "string") {
+      return res.json(safeResponse);
+    }
+
+    try {
+      const user = await storage.getUserByUsername(username.trim().toLowerCase());
+      if (user) {
+        const token = randomBytes(32).toString("hex");
+        const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+        await storage.setPasswordResetToken(user.id, token, expires);
+        await sendPasswordResetEmail(username.trim().toLowerCase(), token);
+      }
+    } catch (err: any) {
+      console.error("[Auth] Forgot password error:", err?.message);
+    }
+
+    res.json(safeResponse);
+  });
+
+  app.post("/api/reset-password", async (req, res) => {
+    const { token, newPassword } = req.body;
+
+    if (!token || typeof token !== "string") {
+      return res.status(400).json({ message: "Invalid or expired reset link." });
+    }
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters." });
+    }
+
+    try {
+      const user = await storage.getUserByResetToken(token);
+      if (!user) {
+        return res.status(400).json({ message: "Invalid or expired reset link." });
+      }
+      if (user.passwordResetExpires && new Date(user.passwordResetExpires) < new Date()) {
+        return res.status(400).json({ message: "Reset link has expired. Please request a new one." });
+      }
+
+      const hashed = await hashPassword(newPassword);
+      await storage.updatePassword(user.id, hashed);
+      await storage.clearPasswordResetToken(user.id);
+
+      res.json({ message: "Password updated. You can now log in." });
+    } catch (err: any) {
+      console.error("[Auth] Reset password error:", err?.message);
+      res.status(500).json({ message: "Something went wrong. Please try again." });
+    }
+  });
+
+  app.post("/api/change-password", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Not logged in." });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ message: "Both current and new password are required." });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: "New password must be at least 6 characters." });
+    }
+
+    try {
+      const user = await storage.getUser((req.user as SelectUser).id);
+      if (!user) return res.status(404).json({ message: "User not found." });
+
+      const valid = await comparePasswords(currentPassword, user.password);
+      if (!valid) {
+        return res.status(400).json({ message: "Current password is incorrect." });
+      }
+
+      const hashed = await hashPassword(newPassword);
+      await storage.updatePassword(user.id, hashed);
+
+      res.json({ message: "Password changed successfully." });
+    } catch (err: any) {
+      console.error("[Auth] Change password error:", err?.message);
+      res.status(500).json({ message: "Something went wrong. Please try again." });
     }
   });
 
