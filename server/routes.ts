@@ -524,9 +524,16 @@ export async function registerRoutes(
     res.json(buildProfileResponse(user, prefs));
   });
 
+  const ALLOWED_DIET_PATTERNS = ["Mediterranean", "DASH", "MIND", "Flexitarian", "Vegetarian", "Vegan", "Keto", "Low-Carb", "Paleo", "Carnivore"] as const;
+  const ALLOWED_DIET_RESTRICTIONS = ["Gluten-Free", "Dairy-Free"] as const;
+  const ALLOWED_EATING_SCHEDULES = ["None", "Intermittent Fasting"] as const;
+
   const profileUpdateSchema = z.object({
     displayName: z.string().optional(),
     profilePhotoUrl: z.string().nullable().optional(),
+    dietPattern: z.enum(ALLOWED_DIET_PATTERNS).nullable().optional(),
+    dietRestrictions: z.array(z.enum(ALLOWED_DIET_RESTRICTIONS)).optional(),
+    eatingSchedule: z.enum(ALLOWED_EATING_SCHEDULES).nullable().optional(),
     preferences: z.object({
       calorieMode: z.enum(["auto", "manual"]).optional(),
       calorieTarget: z.number().optional(),
@@ -555,10 +562,13 @@ export async function registerRoutes(
     try {
       const parsed = profileUpdateSchema.parse(req.body);
 
-      if (parsed.displayName !== undefined || parsed.profilePhotoUrl !== undefined) {
-        const profileFields: any = {};
-        if (parsed.displayName !== undefined) profileFields.displayName = parsed.displayName;
-        if (parsed.profilePhotoUrl !== undefined) profileFields.profilePhotoUrl = parsed.profilePhotoUrl;
+      const profileFields: Partial<Parameters<typeof storage.updateUserProfile>[1]> = {};
+      if (parsed.displayName !== undefined) profileFields.displayName = parsed.displayName;
+      if (parsed.profilePhotoUrl !== undefined) profileFields.profilePhotoUrl = parsed.profilePhotoUrl;
+      if (parsed.dietPattern !== undefined) profileFields.dietPattern = parsed.dietPattern;
+      if (parsed.dietRestrictions !== undefined) profileFields.dietRestrictions = parsed.dietRestrictions;
+      if (parsed.eatingSchedule !== undefined) profileFields.eatingSchedule = parsed.eatingSchedule;
+      if (Object.keys(profileFields).length > 0) {
         await storage.updateUserProfile(req.user!.id, profileFields);
       }
 

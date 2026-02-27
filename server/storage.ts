@@ -74,7 +74,7 @@ export interface IStorage {
   batchUpdateShoppingListStore(userId: number, store: string | null): Promise<void>;
   getUserPreferences(userId: number): Promise<UserPreferences | undefined>;
   upsertUserPreferences(userId: number, prefs: InsertUserPreferences): Promise<UserPreferences>;
-  updateUserProfile(id: number, fields: Partial<Pick<User, 'displayName' | 'profilePhotoUrl'>>): Promise<User | undefined>;
+  updateUserProfile(id: number, fields: Partial<Pick<User, 'displayName' | 'profilePhotoUrl' | 'dietPattern' | 'dietRestrictions' | 'eatingSchedule'>>): Promise<User | undefined>;
   completeOnboarding(userId: number): Promise<User | undefined>;
   getAllAdditives(): Promise<Additive[]>;
   getAdditiveByName(name: string): Promise<Additive | undefined>;
@@ -536,7 +536,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async updateUserProfile(id: number, fields: Partial<Pick<User, 'displayName' | 'profilePhotoUrl'>>): Promise<User | undefined> {
+  async updateUserProfile(id: number, fields: Partial<Pick<User, 'displayName' | 'profilePhotoUrl' | 'dietPattern' | 'dietRestrictions' | 'eatingSchedule'>>): Promise<User | undefined> {
     const [result] = await db.update(users).set(fields).where(eq(users.id, id)).returning();
     return result;
   }

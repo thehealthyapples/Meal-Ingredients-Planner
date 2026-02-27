@@ -16,6 +16,9 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   emailVerificationToken: text("email_verification_token"),
   emailVerificationExpires: timestamp("email_verification_expires"),
+  dietPattern: text("diet_pattern"),
+  dietRestrictions: text("diet_restrictions").array(),
+  eatingSchedule: text("eating_schedule"),
 });
 
 export const mealCategories = pgTable("meal_categories", {
