@@ -1,0 +1,81 @@
+In The Healthy Apples (Replit + GitHub + Render + Neon Postgres), implement a clean authorization + subscription foundation.
+
+GOAL
+- Separate “role” (permissions) from “subscription tier” (feature access).
+- Ensure these two emails are admins:
+  - Lindsayclapson@outlook.com
+  - colinclapson@hotmail.co.uk
+
+DATABASE (Neon Postgres)
+1) Add columns to the users table (or equivalent):
+   - role TEXT NOT NULL DEFAULT 'user' CHECK (role IN ('user','admin'))
+   - subscription_tier TEXT NOT NULL DEFAULT 'free' CHECK (subscription_tier IN ('free','premium','friends_family'))
+   - subscription_status TEXT NULL  -- optional placeholder (e.g. 'active','trialing','canceled')
+   - subscription_expires_at TIMESTAMPTZ NULL  -- optional placeholder
+   - updated_at TIMESTAMPTZ NOT NULL DEFAULT now()  (only if you don’t already have it)
+
+2) Add a migration to apply these changes safely.
+   - If constraints/checks aren’t supported by your current migration approach, implement them as plain SQL.
+   - Migration must be idempotent (safe if run once; if rerun it should not break).
+
+ADMIN PROMOTION (one-time script)
+3) Add a script `scripts/promote-admins.ts` (or .js) that:
+   - Looks up users by email (case-insensitive) for:
+     - Lindsayclapson@outlook.com
+     - colinclapson@hotmail.co.uk
+   - Sets role='admin' for those users.
+   - If a user does not exist yet, log a clear message but do not crash.
+   - Output a summary of updates.
+
+4) Add npm scripts:
+   - "db:migrate" (if not already present)
+   - "admin:promote" -> runs the promote-admins script
+
+BACKEND AUTHZ + SUBSCRIPTION HELPERS
+5) Add a small shared module, e.g. `server/auth/access.ts`, that exports:
+   - isAdmin(user): boolean  (user.role === 'admin')
+   - getTier(user): 'free'|'premium'|'friends_family'
+   - hasPremiumAccess(user): boolean  (tier === 'premium' OR tier === 'friends_family')
+   - assertAdmin(req,res,next): middleware that 403s if not admin
+   - requirePremium(req,res,next): middleware that 402/403s if no premium access (choose one and standardize)
+
+6) Update `/api/user` response to include:
+   - role
+   - subscriptionTier
+   - hasPremiumAccess (boolean)
+
+7) Update `/api/config` to include feature flags for future control (env-driven, defaults true):
+   - FAMILY_PLAN_ENABLED (boolean)
+   - PREMIUM_FEATURES_ENABLED (boolean)
+   Return:
+   - familyPlanEnabled
+   - premiumFeaturesEnabled
+
+FRONTEND
+8) Update the client to display the new fields in Profile (or a settings section):
+   - Role (admin/user) (admin only visible to admin or visible to self—your choice)
+   - Subscription tier
+   - If hasPremiumAccess: show “Premium Active” badge; otherwise “Free”
+
+INTEGRATION POINTS (don’t fully implement limits yet, just wire checks)
+9) Add placeholders where your freemium limits will later be enforced:
+   - Product analyser: before running analysis, call hasPremiumAccess; if not, enforce limit (TODO) but do not break current behavior.
+   - Planner: before allowing >2 days/week for free users (TODO).
+   - My Meals: before allowing >3 meals for free users (TODO).
+   For now, just add clearly marked TODOs and a single central helper that will later count usage.
+
+DEPLOYMENT NOTES (Render + Neon)
+10) Add /docs/roles-and-subscriptions.md including:
+   - How to run migrations locally (Replit) and in prod (Render)
+   - How to run `npm run admin:promote` in prod after Lindsay/Colin accounts exist
+   - How to set env vars in Render:
+     - FAMILY_PLAN_ENABLED=true
+     - PREMIUM_FEATURES_ENABLED=true
+
+DELIVERABLES
+- Migration(s)
+- promote-admins script
+- server access helpers + middleware
+- api/user + api/config updated
+- minimal client display updates
+- docs file
