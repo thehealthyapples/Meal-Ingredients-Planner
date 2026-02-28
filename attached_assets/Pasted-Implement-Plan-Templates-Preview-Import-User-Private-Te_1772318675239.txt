@@ -1,0 +1,153 @@
+Implement Plan Templates Preview + Import + User Private Templates for The Healthy Apples, preserving existing UUID (varchar) IDs for template tables.
+
+CONSTRAINTS / CURRENT REALITY
+- meal_plan_templates + meal_plan_template_items already exist and use UUID varchar IDs. DO NOT change IDs or recreate tables.
+- Users have a single active planner stored in planner_weeks + planner_days (one set per user; e.g. unique(user_id, week_number)). Keep this model.
+- Meals can be custom or web-scraped; both are stored in DB and referenced by meal_id.
+- Roles/subscription already exist (role: user/admin; subscription_tier: free/premium/friends_family).
+- promote-admins script already exists as script/promote-admins.ts; use it (no duplicates).
+- Admin emails: colinclapson@hotmail.co.uk, lindsayclapson@outlook.com
+
+GOALS
+1) Global THA templates (admin-authored): create draft → snapshot from planner → publish → users can preview + import (all/week/day/meal)
+2) Private user templates: users can save their current 6-week planner as a template (NOT active), preview it, and import from it later
+3) Granular import scopes: all / week / day / meal slot + modes: replace / fill-empty
+4) Tier gating:
+   - Free: only Standard global template import + can save up to 4 private templates
+   - Premium/Friends&Family: can import any published global template + unlimited (or high limit) private templates
+5) Template lifecycle: draft/published/archived for GLOBAL templates. No hard delete. Private templates do not publish.
+
+DATABASE MIGRATIONS (ADDITIVE ONLY)
+A) Extend meal_plan_templates with columns:
+- owner_user_id INTEGER NULL REFERENCES users(id) ON DELETE CASCADE
+  * NULL => global/admin template
+  * non-null => user private template
+- season TEXT NULL
+- status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published','archived'))
+- created_by INTEGER NULL REFERENCES users(id)
+- published_at TIMESTAMPTZ NULL
+- updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+
+B) Add indexes:
+- index on meal_plan_templates(owner_user_id)
+- index on meal_plan_templates(status)
+(Keep existing indices intact.)
+
+CONFIG
+Extend /api/config to return:
+- maxPrivateTemplatesFree = 4
+- maxPrivateTemplatesPremium = null (unlimited) OR a high number (e.g. 50)
+- templatesEnabled = true
+
+SERVER: LISTING & VIEWING
+1) GET /api/plan-templates/library (auth required)
+Return:
+{
+  globalTemplates: [...],  // published global templates; tier gated
+  myTemplates: [...]       // private templates for this user
+}
+Rules:
+- globalTemplates are where owner_user_id IS NULL AND status='published'
+  - if free tier: return ONLY the Standard/default template (is_default=true)
+  - if premium/friends_family: return ALL published global templates
+- myTemplates are where owner_user_id = current user id (any status, but treat as private)
+
+2) GET /api/plan-templates/:id (auth required)
+Return template metadata + items.
+Access rules:
+- if owner_user_id is null: must be published OR user is admin
+- if owner_user_id is not null: only the owner (or admin) can view
+
+SERVER: IMPORT INTO SINGLE PLANNER
+3) POST /api/plan-templates/:id/import (auth required)
+Body:
+{
+  scope: "all"|"week"|"day"|"meal",
+  weekNumber?: 1..6,
+  dayOfWeek?: 1..7,
+  mealSlot?: "breakfast"|"lunch"|"dinner",
+  mode?: "replace"|"keep"
+}
+Behavior:
+- Verify user can access the template (global published per tier OR private owned)
+- Filter template items by scope
+- Write into the user’s planner_weeks/planner_days for the SAME week/day:
+  - ensure planner week exists for user + weekNumber
+  - ensure planner day exists for that dayOfWeek
+  - map mealSlot to the planner_days fields (breakfast/lunch/dinner meal_id)
+  - mode=replace overwrites; mode=keep only fills empty
+Return summary: created/updated/skipped + affected slots
+
+SERVER: USER PRIVATE TEMPLATES
+4) POST /api/plan-templates/mine (auth required)
+Body: { name, season?, description? }
+Behavior:
+- Enforce per-tier limits using /api/config values:
+  - free: max 4 private templates
+  - premium/friends_family: unlimited/high limit
+- Create new private template:
+  - owner_user_id = current user id
+  - status = 'draft' (private)
+- Snapshot current user planner weeks 1..6 into template items (transaction)
+Return template id + counts
+
+5) PUT /api/plan-templates/mine/:id (auth required)
+Allow updating name/season/description for a private template (owner only).
+(Do not add publish/archive for private templates.)
+
+6) POST /api/plan-templates/mine/:id/snapshot-from-planner (auth required)
+Owner can re-snapshot their current planner into their private template items.
+
+SERVER: ADMIN GLOBAL TEMPLATE MANAGEMENT
+7) Admin-only endpoints operate ONLY on global templates (owner_user_id IS NULL):
+- GET /api/admin/plan-templates (all global templates, any status)
+- POST /api/admin/plan-templates (create global draft; owner_user_id NULL; created_by admin id)
+- PUT /api/admin/plan-templates/:id (edit metadata)
+- POST /api/admin/plan-templates/:id/snapshot-from-planner (admin’s planner -> template items)
+- POST /api/admin/plan-templates/:id/publish (status='published', published_at=now())
+- POST /api/admin/plan-templates/:id/archive (status='archived')
+- POST /api/admin/plan-templates/:id/restore (status='draft')
+
+GUARDRAILS
+- Disallow publish/archive/restore actions on any template where owner_user_id IS NOT NULL (private).
+- Ensure there is always one published default Standard template:
+  - Prevent archiving the current default unless another published template is set default first.
+  - Enforce only one is_default=true among published global templates.
+
+CLIENT UI (SINGLE PLANNER + TEMPLATE PREVIEW)
+8) Planner page:
+- Add a “Templates” panel with two sections:
+  - “THA Templates” (global templates returned by library endpoint)
+  - “My Templates” (private templates)
+- Each template supports:
+  - Select to preview read-only 6×7 grid
+  - Import buttons:
+    * Import All
+    * Import Week
+    * Import Day
+    * Import Meal Slot
+  - Mode toggle: Replace / Fill empty
+
+9) Add “Save as Template” button for users:
+- Opens modal to name the template
+- Calls POST /api/plan-templates/mine
+- Shows remaining template count for free users (from config)
+
+10) Admin controls (visible only if role=admin):
+- Create global template
+- Snapshot my planner -> selected global template
+- Publish / Archive / Restore
+(Place inside Templates panel or an /admin/plans page; choose simplest implementation.)
+
+DOCS
+11) Write /docs/templates-preview-import.md explaining:
+- Admin workflow: create → build in planner → snapshot → publish
+- User workflow: preview → import all/week/day/meal; save private templates
+- Tier rules (free vs premium/friends_family)
+- Guardrails (no hard delete; private templates stay private)
+
+DELIVERABLES
+- additive migrations only (no ID changes)
+- endpoints + access rules + guardrails
+- UI templates panel + save-as-template
+- docs

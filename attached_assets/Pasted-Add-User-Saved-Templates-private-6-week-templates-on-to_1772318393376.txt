@@ -1,0 +1,69 @@
+Add “User Saved Templates” (private 6-week templates) on top of the existing Templates Preview + Import system. Users can save their current 6-week planner as a template without making it active.
+
+IMPORTANT
+- meal_plan_templates and meal_plan_template_items already exist and use UUID string IDs. Do NOT change IDs.
+- Users have one active planner (planner_weeks unique per user/week_number) — keep that.
+
+DATABASE
+1) Add column to meal_plan_templates:
+   - owner_user_id INTEGER NULL REFERENCES users(id) ON DELETE CASCADE
+   Meaning:
+   - NULL owner_user_id => global/admin template (Standard, Summer etc.)
+   - non-null owner_user_id => user private template
+
+2) (Optional) Add index:
+   - index on (owner_user_id, created_at desc)
+
+SERVER ENDPOINTS
+3) List templates should return two groups:
+   - Global published templates:
+       status='published' AND owner_user_id IS NULL
+       Tier gating:
+         * free users: only Standard (is_default=true)
+         * premium/friends_family: all published
+   - User templates (private):
+       owner_user_id = current user id
+       (status can be 'draft' and does not need publishing)
+
+   Implement either:
+   - GET /api/plan-templates/library
+     returns { globalTemplates: [...], myTemplates: [...] }
+   OR keep existing published endpoint and add:
+   - GET /api/plan-templates/mine
+
+4) Create user template from planner (private save, does NOT modify planner):
+   - POST /api/plan-templates/mine
+     Body: { name, description? }
+     Behavior:
+       - Enforce per-tier limits:
+          * free: max 4 templates
+          * premium/friends_family: higher limit or unlimited (choose unlimited unless config says otherwise)
+       - Create template row with owner_user_id=current user id, status='draft'
+       - Snapshot the user’s current planner weeks 1..6 into meal_plan_template_items (replace items if re-saving same template)
+       - Return new template id
+
+5) Update existing admin snapshot endpoint to ensure it sets owner_user_id = NULL for global templates and created_by = admin id.
+
+CLIENT UX
+6) Planner page:
+   - Add button: “Save as Template”
+   - Modal: template name input + Save
+   - On success: toast + refresh Templates panel
+
+7) Templates panel:
+   - Add tabs or sections:
+     - “THA Templates” (global)
+     - “My Templates” (private)
+   - Each template can be previewed and imported all/week/day/meal just like global templates.
+
+LIMITS / CONFIG
+8) Add config values returned by /api/config:
+   - maxPrivateTemplatesFree = 4
+   - maxPrivateTemplatesPremium = (e.g. 50 or null for unlimited)
+   Enforce server-side.
+
+DELIVERABLES
+- migration adding owner_user_id
+- endpoints
+- UI changes (Save as Template + My Templates section)
+- docs update in /docs/templates-preview-import.md

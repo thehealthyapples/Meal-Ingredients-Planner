@@ -1,0 +1,112 @@
+In The Healthy Apples (Replit + GitHub + Render + Neon), implement multi 6-week plan templates with admin authoring/publishing, user enable/active selection, and basket scoping. The planner data model uses two tables: one for weeks and one for days.
+
+ASSUMPTIONS
+- There are existing planner tables similar to:
+  - planner_weeks: (id, user_id, week_start_date or week_index, ...)
+  - planner_days: (id, planner_week_id, day_of_week/date, meal slots/meals, ...)
+- We already have meal_plan_templates + meal_plan_template_items.
+
+GOAL
+- Admins (Colin/Lindsay) can create unlimited 6-week plan templates (Standard, Summer, etc.) and publish them.
+- Premium/friends_family users can enable multiple published plans and choose ONE active plan.
+- Free users can only use Standard.
+- Basket generation only uses meals from the ACTIVE plan’s week/day unless explicitly overridden.
+
+DATABASE MIGRATIONS
+1) meal_plan_templates: add metadata fields:
+   - created_by uuid null references users(id)
+   - season text null
+   - status text not null default 'draft' check (status in ('draft','published','archived'))
+   - published_at timestamptz null
+   - updated_at timestamptz not null default now()
+
+2) Create user_plan_preferences:
+   - user_id uuid not null references users(id) on delete cascade
+   - template_id uuid not null references meal_plan_templates(id) on delete cascade
+   - is_enabled boolean not null default true
+   - is_active boolean not null default false
+   - created_at timestamptz not null default now()
+   - updated_at timestamptz not null default now()
+   - primary key (user_id, template_id)
+   Add “one active plan per user” enforcement:
+   - Prefer partial unique index: unique(user_id) where is_active=true (if supported)
+   - Otherwise enforce in application code.
+
+3) Update planner_weeks to support multiple plans stored concurrently:
+   - add column source_template_id uuid null references meal_plan_templates(id)
+   - add column plan_instance_key text null (optional) to support multiple instances later; not required now
+   IMPORTANT: update any uniqueness constraints so weeks don’t collide across plans.
+   Example: if you currently enforce unique(user_id, week_start_date) you must change to unique(user_id, week_start_date, source_template_id)
+   (Or if you use week_index, include source_template_id there instead.)
+
+4) planner_days:
+   - If planner_days does not already store meal references per slot, keep current structure.
+   - No need to add source_template_id here if planner_week_id already links to planner_weeks which has source_template_id.
+
+SERVER: ADMIN + TEMPLATE MANAGEMENT
+5) Admin authorization:
+   - Ensure users have role 'admin'|'user' and Colin/Lindsay are admins:
+     colinclapson@hotmail.co.uk, lindsayclapson@outlook.com
+   - Add script npm run admin:promote that sets role='admin' for those emails (case-insensitive).
+
+6) Template endpoints:
+   - GET /api/plan-templates/published
+   - GET /api/plan-templates/:id
+   - POST /api/admin/plan-templates (create draft)
+   - PUT /api/admin/plan-templates/:id (edit metadata)
+   - POST /api/admin/plan-templates/:id/publish
+   - POST /api/admin/plan-templates/:id/archive
+
+SERVER: SNAPSHOT FROM PLANNER -> TEMPLATE (ADMIN AUTHORING)
+7) Implement admin-only snapshot:
+   - POST /api/admin/plan-templates/:id/snapshot-from-planner
+   Reads the admin’s CURRENTLY ACTIVE plan instance (or default Standard) for the next 6 weeks from planner_weeks/planner_days.
+   Converts it into meal_plan_template_items:
+     week_number 1..6, day_of_week 1..7, meal_slot, meal_id
+   Replaces template items atomically (transaction).
+
+8) Also allow creating a new template from planner:
+   - POST /api/admin/plan-templates/from-planner with {name, season, description}
+   Creates template draft + snapshots.
+
+SERVER: USER PREFERENCES + LOADING PLANS INTO PLANNER
+9) User plan preference endpoints:
+   - GET /api/user/plan-preferences
+     returns published templates + user preference flags (enabled/active)
+     Default: Standard enabled+active
+   - PUT /api/user/plan-preferences
+     accepts {templateId, isEnabled?, isActive?}
+     Rules:
+       - free users: only Standard can be enabled/active
+       - premium/friends_family: any published template can be enabled; exactly one active at a time
+
+10) Loading a template into the user planner creates planner_weeks/planner_days for that template:
+   - POST /api/plan-templates/:id/load?mode=replace|keep
+   Behavior:
+     - Determine the 6 target weeks (based on your current planner logic)
+     - For each week, create or upsert planner_weeks row with source_template_id = templateId
+     - Then create/upsert planner_days under each week and set the meal slots from template items
+     - mode=replace overwrites slots for that template’s weeks/days
+     - mode=keep only fills empty slots
+
+CLIENT UX
+11) Add a Plans panel:
+   - list published plans
+   - toggles show/hide (is_enabled)
+   - radio select active plan (is_active)
+   - “Load plan” button per plan (calls /load)
+   V1: Planner grid displays only the ACTIVE plan.
+
+BASKET SCOPING (CRITICAL)
+12) Update basket/shopping list generation:
+   - Default basket queries ONLY planner_days that belong to planner_weeks with source_template_id == userActiveTemplateId
+   - Add explicit override: user can generate basket for another plan by passing templateId override.
+   - Ensure “only food from the specific 6 week plan/day ends up in basket” unless explicit override action is used.
+
+DELIVERABLES
+- migrations (including planner uniqueness update to include source_template_id)
+- admin promotion script
+- all endpoints above
+- planner UI plan selector
+- basket scoping update
+- docs: /docs/multi-plan-weeks-days.md

@@ -1,0 +1,161 @@
+Implement “Plan Templates Preview + Import” (Seasonal plans) for The Healthy Apples, keeping the existing planner model (one planner per user using planner_weeks + planner_days). Templates are shared/read-only; users can import all/week/day/meal into their single planner.
+
+STACK/CONSTRAINTS
+- Replit → GitHub → Render → Neon Postgres
+- Existing planner tables: planner_weeks + planner_days
+- planner_weeks currently enforces one set per user (e.g. UNIQUE(user_id, week_number)) — keep this. Users have ONE planner.
+- Meals may be custom or scraped from the web; all are stored in DB and referenced by meal_id.
+- User IDs are INTEGER (serial) in this codebase. Use INTEGER FKs throughout.
+
+ROLES + SUBSCRIPTIONS
+- Users table must have:
+  - role: 'user'|'admin' (default 'user')
+  - subscription_tier: 'free'|'premium'|'friends_family' (default 'free')
+- Ensure these accounts are admins (case-insensitive):
+  - colinclapson@hotmail.co.uk
+  - lindsayclapson@outlook.com
+- Reuse existing script if present: script/promote-admins.ts (do not create a duplicate). If not present, create one and add npm script "admin:promote".
+
+TEMPLATE DATA MODEL
+A) meal_plan_templates table (create or extend; INTEGER ids)
+- id SERIAL PK
+- name TEXT NOT NULL  (e.g. “Standard”, “Summer”)
+- season TEXT NULL  (optional label)
+- description TEXT NULL
+- status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft','published','archived'))
+- is_default BOOLEAN NOT NULL DEFAULT false   -- Standard plan
+- is_premium BOOLEAN NOT NULL DEFAULT false  -- optional, can be derived from access rules
+- created_by INTEGER NULL REFERENCES users(id)
+- published_at TIMESTAMPTZ NULL
+- created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+- updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+
+B) meal_plan_template_items table (create or extend; INTEGER ids)
+- id SERIAL PK
+- template_id INTEGER NOT NULL REFERENCES meal_plan_templates(id) ON DELETE CASCADE
+- week_number INT NOT NULL CHECK (week_number BETWEEN 1 AND 6)
+- day_of_week INT NOT NULL CHECK (day_of_week BETWEEN 1 AND 7) -- Monday=1
+- meal_slot TEXT NOT NULL CHECK (meal_slot IN ('breakfast','lunch','dinner'))
+- meal_id INTEGER NOT NULL REFERENCES meals(id)
+- UNIQUE(template_id, week_number, day_of_week, meal_slot)
+
+LIFECYCLE RULES (NO HARD DELETE)
+- Admins may publish/unpublish by changing status:
+  - draft -> published
+  - published -> archived (“unpublish”)
+  - archived -> draft (“restore”)
+- Do NOT implement hard delete for published templates. If any delete exists, restrict to draft only (optional).
+
+ACCESS RULES
+- GET published templates:
+  - Free users: only Standard (is_default=true AND status='published')
+  - Premium/Friends_Family: all status='published'
+- Import:
+  - Free users: can import ONLY Standard
+  - Premium/Friends_Family: can import any published template
+
+SERVER ENDPOINTS (USER)
+1) List templates available to user:
+- GET /api/plan-templates/published
+  Returns: id, name, season, description, is_default, published_at
+
+2) View a template (for preview UI):
+- GET /api/plan-templates/:id
+  Returns: template metadata + items (week_number, day_of_week, meal_slot, meal_id)
+
+3) Import from template into the user’s single planner:
+- POST /api/plan-templates/:id/import
+  Auth required.
+  Body:
+    {
+      "scope": "all" | "week" | "day" | "meal",
+      "weekNumber": 1..6 (required for week/day/meal),
+      "dayOfWeek": 1..7 (required for day/meal),
+      "mealSlot": "breakfast"|"lunch"|"dinner" (required for meal),
+      "mode": "replace"|"keep" (default "replace")
+    }
+
+  Behavior:
+  - Validate subscription access (free only Standard; premium/friends_family any published)
+  - Load template items filtered by scope:
+    - all: all items
+    - week: items where week_number=weekNumber
+    - day: items where week_number=weekNumber AND day_of_week=dayOfWeek
+    - meal: items where week_number=weekNumber AND day_of_week=dayOfWeek AND meal_slot=mealSlot
+  - Write to planner_weeks/planner_days for the SAME week/day:
+    - Ensure planner_week exists for user + weekNumber (create if missing)
+    - Ensure planner_day exists for that dayOfWeek in that week (create if missing)
+    - Map meal_slot -> the correct field(s) in planner_days (breakfast/lunch/dinner meal_id)
+    - If mode=replace: overwrite target slot(s)
+    - If mode=keep: only set if slot is empty/null
+  - Return summary:
+    - updatedCount, createdCount, skippedCount
+    - list of affected (week, day, slot)
+
+SERVER ENDPOINTS (ADMIN)
+4) Admin list all templates:
+- GET /api/admin/plan-templates
+  Returns draft + published + archived templates
+
+5) Admin create template:
+- POST /api/admin/plan-templates
+  Body: { name, season?, description? }
+  Creates template with status='draft', created_by=admin user id
+
+6) Admin update metadata:
+- PUT /api/admin/plan-templates/:id
+  Body: { name?, season?, description? }
+  Only allow edits when status != 'archived' (or allow metadata edits always if you prefer)
+
+7) Admin lifecycle:
+- POST /api/admin/plan-templates/:id/publish   -> status='published', published_at=now()
+- POST /api/admin/plan-templates/:id/archive   -> status='archived' (unpublish)
+- POST /api/admin/plan-templates/:id/restore   -> status='draft'
+
+8) Admin authoring: snapshot planner -> template items (recommended)
+- POST /api/admin/plan-templates/:id/snapshot-from-planner
+  Reads the admin’s current planner weeks 1..6 and writes template items:
+    week_number, day_of_week, meal_slot, meal_id
+  Replace existing items transactionally.
+  Return summary counts.
+
+CLIENT UX (ALL USERS)
+9) Planner page: add “Templates” panel:
+- Dropdown/select to choose a template to preview (Standard, Summer, etc.)
+- Read-only 6-week preview grid (week x day, show meals per slot)
+- Import controls:
+  - Import All (scope=all)
+  - Import Week (per week row)
+  - Import Day (per day)
+  - Import Meal (per meal slot)
+- Mode toggle: Replace / Fill Empty (default Replace)
+- Clear messaging: importing modifies “My Planner” (single planner).
+
+CLIENT UX (ADMINS)
+10) Admin tools in Templates panel (or a dedicated /admin/plans page):
+- Create new template (name/season/description)
+- Snapshot my planner -> selected template
+- Publish / Archive / Restore
+- Set Standard default (optional):
+  - Only one template can have is_default=true; enforce when saving
+
+SHOPPING LIST / BASKET
+11) No changes required for V1: shopping list should continue to use the user’s planner data (which is now the merged result of imports). Ensure no template items are used directly for basket unless imported.
+
+DEPLOYMENT / DOCS
+12) Add docs: /docs/templates-preview-import.md:
+- How admins create a Summer plan:
+  1) Build in My Planner
+  2) Snapshot to “Summer” template
+  3) Publish
+- How users preview and import by all/week/day/meal
+- Tier rules (free vs premium/friends_family)
+- How to run migrations on Neon via Render deploy process
+- How to run admin promotion script after accounts exist
+
+DELIVERABLES
+- migrations
+- endpoints + access checks
+- UI Templates panel + import actions
+- admin snapshot + publish/archive/restore
+- docs
