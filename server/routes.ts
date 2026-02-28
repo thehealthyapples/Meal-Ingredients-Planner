@@ -4289,7 +4289,7 @@ export async function registerRoutes(
         if (template.status !== "published" && !isAdmin(user)) {
           return res.status(404).json({ message: "Template not found" });
         }
-        if (!template.isDefault && !hasPremiumAccess(user) && !isAdmin(user)) {
+        if (template.isPremium && !hasPremiumAccess(user) && !isAdmin(user)) {
           return res.status(403).json({ message: "Premium required to import this plan" });
         }
       } else {
@@ -4579,6 +4579,65 @@ export async function registerRoutes(
     } catch (err) {
       console.error("Error getting import status:", err);
       res.status(500).json({ message: "Failed to get import status" });
+    }
+  });
+
+  // ── Admin User Management ────────────────────────────────────────────────────
+
+  app.get("/api/admin/users", assertAdmin, async (req, res) => {
+    try {
+      const query = typeof req.query.query === "string" ? req.query.query.trim() : "";
+      const limit = Math.min(parseInt(String(req.query.limit || "25"), 10) || 25, 100);
+      const offset = parseInt(String(req.query.offset || "0"), 10) || 0;
+
+      const result = await storage.searchUsers(query, limit, offset);
+
+      await storage.createAuditLog({
+        adminUserId: req.user!.id,
+        action: "USER_SEARCH",
+        metadata: { queryLength: query.length, resultCount: result.total },
+      });
+
+      res.json({ users: result.users, total: result.total, limit, offset });
+    } catch (err) {
+      console.error("[AdminUsers] search error:", err);
+      res.status(500).json({ message: "Failed to search users" });
+    }
+  });
+
+  app.put("/api/admin/users/:id/subscription", assertAdmin, async (req, res) => {
+    try {
+      const targetId = parseInt(req.params.id, 10);
+      if (isNaN(targetId)) return res.status(400).json({ message: "Invalid user id" });
+
+      if (targetId === req.user!.id) {
+        return res.status(400).json({ message: "Admins cannot change their own subscription tier via this endpoint" });
+      }
+
+      const { subscriptionTier } = z.object({
+        subscriptionTier: z.enum(["free", "premium", "friends_family"]),
+      }).parse(req.body);
+
+      const currentUser = await storage.getUser(targetId);
+      if (!currentUser) return res.status(404).json({ message: "User not found" });
+
+      const oldTier = currentUser.subscriptionTier;
+      const updated = await storage.setUserSubscriptionTier(targetId, subscriptionTier);
+
+      await storage.createAuditLog({
+        adminUserId: req.user!.id,
+        action: "SET_SUBSCRIPTION_TIER",
+        targetUserId: targetId,
+        metadata: { oldTier, newTier: subscriptionTier },
+      });
+
+      console.log(`[AdminUsers] tier change: admin=${req.user!.id}, target=${targetId}, ${oldTier} → ${subscriptionTier}`);
+
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      console.error("[AdminUsers] tier update error:", err);
+      res.status(500).json({ message: "Failed to update subscription tier" });
     }
   });
 

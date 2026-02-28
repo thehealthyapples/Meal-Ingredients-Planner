@@ -21,6 +21,7 @@ import SupermarketsPage from "@/pages/supermarkets-page";
 import MealDetailPage from "@/pages/meal-detail-page";
 import WeeklyPlannerPage from "@/pages/weekly-planner-page";
 import ProfilePage from "@/pages/profile-page";
+import AdminUsersPage from "@/pages/admin-users-page";
 
 function SiteFooter() {
   const { data: config } = useQuery<{ supportEmail?: string; suggestionsEmail?: string }>({
@@ -88,6 +89,7 @@ function Router() {
       <Route path="/weekly-planner" component={() => <ProtectedRoute component={WeeklyPlannerPage} />} />
       <Route path="/supermarkets" component={() => <ProtectedRoute component={SupermarketsPage} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
+      <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersPage} />} />
       
       <Route component={NotFound} />
     </Switch>

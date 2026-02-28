@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, real, boolean, unique, timestamp, varchar, index } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, boolean, unique, timestamp, varchar, index, jsonb } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -758,3 +758,22 @@ export type MealPlanTemplate = typeof mealPlanTemplates.$inferSelect;
 export type InsertMealPlanTemplate = z.infer<typeof insertMealPlanTemplateSchema>;
 export type MealPlanTemplateItem = typeof mealPlanTemplateItems.$inferSelect;
 export type InsertMealPlanTemplateItem = z.infer<typeof insertMealPlanTemplateItemSchema>;
+
+// ─── Admin Audit Log ──────────────────────────────────────────────────────────
+
+export const adminAuditLog = pgTable("admin_audit_log", {
+  id: serial("id").primaryKey(),
+  adminUserId: integer("admin_user_id").notNull().references(() => users.id),
+  action: text("action").notNull(),
+  targetUserId: integer("target_user_id").references(() => users.id),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type AdminAuditLog = typeof adminAuditLog.$inferSelect;
+export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;

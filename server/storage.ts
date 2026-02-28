@@ -1,4 +1,4 @@
-import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems } from "@shared/schema";
+import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, ilike, sql, inArray, isNull, isNotNull } from "drizzle-orm";
 import session from "express-session";
@@ -13,6 +13,16 @@ export type MealLookupResult = {
   source: string;
   sourceUrl: string | null;
   createdAt: Date;
+};
+
+export type SafeUser = {
+  id: number;
+  username: string;
+  displayName: string | null;
+  role: string;
+  subscriptionTier: string;
+  subscriptionStatus: string | null;
+  createdAt?: Date;
 };
 
 export interface IStorage {
@@ -165,6 +175,11 @@ export interface IStorage {
   snapshotPlannerToTemplate(templateId: string, userId: number): Promise<{ itemCount: number }>;
   importTemplateItems(userId: number, templateId: string, scope: { type: "all" | "week" | "day" | "meal"; weekNumber?: number; dayOfWeek?: number; mealSlot?: string }, mode: "replace" | "keep"): Promise<{ createdCount: number; updatedCount: number; skippedCount: number }>;
   getMealsExport(source?: "web" | "custom" | "all"): Promise<{ id: number; name: string; mealSourceType: string; sourceUrl: string | null; userId: number; createdAt: Date }[]>;
+
+  // ── Admin User Management ────────────────────────────────────────────────────
+  searchUsers(query: string, limit: number, offset: number): Promise<{ users: SafeUser[]; total: number }>;
+  setUserSubscriptionTier(userId: number, tier: "free" | "premium" | "friends_family"): Promise<SafeUser>;
+  createAuditLog(entry: { adminUserId: number; action: string; targetUserId?: number; metadata?: object }): Promise<void>;
 
   sessionStore: session.Store;
 }
@@ -1118,14 +1133,14 @@ export class DatabaseStorage implements IStorage {
         publishedAt: mealPlanTemplates.publishedAt,
         createdAt: mealPlanTemplates.createdAt,
         updatedAt: mealPlanTemplates.updatedAt,
-        itemCount: sql<number>`(SELECT COUNT(*) FROM meal_plan_template_items WHERE template_id = ${mealPlanTemplates.id})`.mapWith(Number),
+        itemCount: sql<number>`(SELECT COUNT(*) FROM meal_plan_template_items WHERE template_id = meal_plan_templates.id)`.mapWith(Number),
       })
       .from(mealPlanTemplates)
       .where(
         and(
           isNull(mealPlanTemplates.ownerUserId),
           eq(mealPlanTemplates.status, "published"),
-          ...(tier === "free" ? [eq(mealPlanTemplates.isDefault, true)] : []),
+          ...(tier === "free" ? [eq(mealPlanTemplates.isPremium, false)] : []),
         )
       )
       .orderBy(mealPlanTemplates.isDefault, mealPlanTemplates.name);
@@ -1147,7 +1162,7 @@ export class DatabaseStorage implements IStorage {
         publishedAt: mealPlanTemplates.publishedAt,
         createdAt: mealPlanTemplates.createdAt,
         updatedAt: mealPlanTemplates.updatedAt,
-        itemCount: sql<number>`(SELECT COUNT(*) FROM meal_plan_template_items WHERE template_id = ${mealPlanTemplates.id})`.mapWith(Number),
+        itemCount: sql<number>`(SELECT COUNT(*) FROM meal_plan_template_items WHERE template_id = meal_plan_templates.id)`.mapWith(Number),
       })
       .from(mealPlanTemplates)
       .where(isNull(mealPlanTemplates.ownerUserId))
@@ -1169,7 +1184,7 @@ export class DatabaseStorage implements IStorage {
         publishedAt: mealPlanTemplates.publishedAt,
         createdAt: mealPlanTemplates.createdAt,
         updatedAt: mealPlanTemplates.updatedAt,
-        itemCount: sql<number>`(SELECT COUNT(*) FROM meal_plan_template_items WHERE template_id = ${mealPlanTemplates.id})`.mapWith(Number),
+        itemCount: sql<number>`(SELECT COUNT(*) FROM meal_plan_template_items WHERE template_id = meal_plan_templates.id)`.mapWith(Number),
       })
       .from(mealPlanTemplates)
       .where(eq(mealPlanTemplates.ownerUserId, userId))
@@ -1363,6 +1378,62 @@ export class DatabaseStorage implements IStorage {
       return base.where(and(isNull(meals.sourceUrl), eq(meals.isSystemMeal, false))).orderBy(meals.id);
     }
     return base.orderBy(meals.id);
+  }
+
+  // ── Admin User Management ────────────────────────────────────────────────────
+
+  async searchUsers(query: string, limit: number, offset: number): Promise<{ users: SafeUser[]; total: number }> {
+    const safeFields = {
+      id: users.id,
+      username: users.username,
+      displayName: users.displayName,
+      role: users.role,
+      subscriptionTier: users.subscriptionTier,
+      subscriptionStatus: users.subscriptionStatus,
+    };
+
+    let baseQuery = db.select(safeFields).from(users);
+    let countQuery = db.select({ count: sql<number>`COUNT(*)`.mapWith(Number) }).from(users);
+
+    if (query) {
+      const pattern = `%${query}%`;
+      const condition = sql`(${users.username} ILIKE ${pattern} OR ${users.displayName} ILIKE ${pattern})`;
+      baseQuery = baseQuery.where(condition) as typeof baseQuery;
+      countQuery = countQuery.where(condition) as typeof countQuery;
+    }
+
+    const [rows, [{ count }]] = await Promise.all([
+      baseQuery.orderBy(sql`${users.id} DESC`).limit(limit).offset(offset),
+      countQuery,
+    ]);
+
+    return { users: rows, total: count };
+  }
+
+  async setUserSubscriptionTier(userId: number, tier: "free" | "premium" | "friends_family"): Promise<SafeUser> {
+    const [updated] = await db
+      .update(users)
+      .set({ subscriptionTier: tier })
+      .where(eq(users.id, userId))
+      .returning({
+        id: users.id,
+        username: users.username,
+        displayName: users.displayName,
+        role: users.role,
+        subscriptionTier: users.subscriptionTier,
+        subscriptionStatus: users.subscriptionStatus,
+      });
+    if (!updated) throw new Error(`User ${userId} not found`);
+    return updated;
+  }
+
+  async createAuditLog(entry: { adminUserId: number; action: string; targetUserId?: number; metadata?: object }): Promise<void> {
+    await db.insert(adminAuditLog).values({
+      adminUserId: entry.adminUserId,
+      action: entry.action,
+      targetUserId: entry.targetUserId ?? null,
+      metadata: entry.metadata ?? null,
+    });
   }
 }
 

@@ -33,6 +33,7 @@ The UI features a new-york style from `shadcn/ui` with Tailwind CSS for styling 
 -   **Plan Templates Preview + Import**: Two-layer template system — global THA templates (admin-authored, published) and user private templates (personal saved planners). Templates panel in the planner shows a read-only 6×7 preview grid with granular import controls (all/week/day/meal slot) in replace or fill-empty mode. Admins manage full lifecycle (create draft → snapshot from planner → publish/archive/restore). Free users: Standard template + up to 4 private saved; premium: all published + unlimited private. See `docs/templates-preview-import.md`.
 -   **Premium Profile Page**: A comprehensive `/profile` page acting as a health control center, household configuration, and nutrition control panel. It includes editable display name, health snapshot (BMI, daily calories), household settings, nutrition targets, goals & diet preferences, feature toggles, and account settings.
 -   **Authorization + Subscription Foundation**: Implements `role` (user/admin) and `subscription_tier` (free/premium/friends_family) for access control, with middleware for premium feature requirements and admin-specific routes.
+-   **Admin User Management**: Admin-only page at `/admin/users` for searching users (by email/display name) and changing subscription tiers (free/premium/friends_family). All tier changes are recorded in `admin_audit_log` with old/new tier, admin ID, and timestamp. Accessible via "Admin" link in the nav bar for admin users only.
 
 ## External Dependencies
 

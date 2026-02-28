@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   LayoutDashboard, Utensils, CalendarDays, ShoppingBasket,
-  Package, User, LogOut, ShoppingCart,
+  Package, User, LogOut, ShoppingCart, ShieldCheck,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
@@ -29,6 +29,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/supermarkets": "Supermarkets",
   "/import-recipe": "Import Recipe",
   "/profile": "Profile",
+  "/admin/users": "User Management",
 };
 
 export function NavBar() {
@@ -125,6 +126,22 @@ export function NavBar() {
             );
           })}
           <div className="ml-auto flex items-center gap-3 pl-4">
+            {(user as any)?.role === "admin" && (
+              <Link href="/admin/users">
+                <Button
+                  variant="ghost"
+                  className={`gap-2 h-9 px-3 rounded-lg text-sm transition-colors ${
+                    location.startsWith("/admin")
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-testid="nav-admin"
+                >
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>Admin</span>
+                </Button>
+              </Link>
+            )}
             <a
               href={`mailto:${support}`}
               className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
