@@ -1,0 +1,65 @@
+Implement an admin-only “User Search & Tier Management” tool so admins can set users to friends_family.
+
+Assumptions:
+- Users already have fields: role, subscription_tier (free/premium/friends_family)
+- Admins are detected via role='admin'
+- Stack: Replit + GitHub + Render + Neon
+
+BACKEND
+1) Add admin-only endpoint to search users:
+   GET /api/admin/users?query=...&limit=25&offset=0
+   - Auth required + admin-only
+   - query should match case-insensitive against:
+     - email
+     - (optional) name / displayName if exists
+   - Return minimal safe fields (avoid sensitive data):
+     { id, email, name?, createdAt, role, subscriptionTier }
+
+   Requirements:
+   - pagination via limit/offset
+   - if query is empty, return most recent users (limit/offset)
+   - log admin actions (who searched, query length, count returned) but do NOT log full emails in plain text if you already follow privacy practices.
+
+2) Add admin-only endpoint to update a user’s subscription tier:
+   PUT /api/admin/users/:id/subscription
+   Body: { subscriptionTier: "free"|"premium"|"friends_family" }
+   - Auth required + admin-only
+   - Validate tier value
+   - Update subscription_tier
+   - Return updated user summary
+
+3) Add (recommended) audit logging:
+   Create table admin_audit_log (if you don’t already have one):
+     - id serial pk
+     - admin_user_id int not null references users(id)
+     - action text not null (e.g. 'SET_SUBSCRIPTION_TIER')
+     - target_user_id int null references users(id)
+     - metadata jsonb null (store oldTier/newTier)
+     - created_at timestamptz default now()
+   Log tier changes with old/new values.
+
+4) Security:
+   - Prevent admins from changing their own role via this endpoint (tier changes are ok).
+   - Ensure only admins can call these endpoints.
+
+FRONTEND
+5) Add an Admin page: /admin/users (visible only if role==='admin')
+   - Search input + button (debounced optional)
+   - Results table showing: Email | Created | Tier | Actions
+   - For each user: dropdown to change tier, Save button
+   - Toast notifications on success/failure
+   - Add a simple confirm dialog for tier changes
+
+6) Ensure that changing a user to friends_family immediately grants premium access wherever hasPremiumAccess is used.
+
+DOCS
+7) Add /docs/admin-users.md:
+   - How admins search users
+   - How to set friends_family
+   - Note: keep access limited and treat user data carefully (privacy/GDPR)
+
+DELIVERABLES
+- server endpoints
+- admin page UI
+- optional audit log table + logging
+- docs
