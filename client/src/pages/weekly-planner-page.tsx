@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingCart, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, Sparkles } from "lucide-react";
+import { Pencil, X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingCart, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, Sparkles, LayoutGrid } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { TemplatesPanel } from "@/components/templates-panel";
+import { useUser } from "@/hooks/use-user";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -64,6 +66,8 @@ export default function WeeklyPlannerPage() {
   const [bulkMealFilter, setBulkMealFilter] = useState<"all" | "recipes" | "ready">("all");
   const [bulkStep, setBulkStep] = useState<1 | 2>(1);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const { user } = useUser();
 
   const { data: plannerSettings } = useQuery<{
     showCalories: boolean;
@@ -442,14 +446,11 @@ export default function WeeklyPlannerPage() {
           </Badge>
           <Button
             size="sm"
-            onClick={() => loadTemplateMutation.mutate()}
-            disabled={loadTemplateMutation.isPending}
-            data-testid="button-load-family-plan"
+            onClick={() => setTemplatesOpen(true)}
+            data-testid="button-open-templates"
           >
-            {loadTemplateMutation.isPending
-              ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-              : <Sparkles className="h-3.5 w-3.5 mr-1.5" />}
-            Load Family 6-Week Plan
+            <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
+            Templates
           </Button>
           <Button size="sm" variant="outline" onClick={() => setSettingsOpen(true)} data-testid="button-planner-settings">
             <Settings className="h-3.5 w-3.5 mr-1.5" />
@@ -901,6 +902,8 @@ export default function WeeklyPlannerPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <TemplatesPanel open={templatesOpen} onClose={() => setTemplatesOpen(false)} user={user} />
     </div>
   );
 }

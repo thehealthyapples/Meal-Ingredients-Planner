@@ -21,7 +21,7 @@ import { shouldExcludeRecipe, scoreRecipeForDiet } from "./lib/dietRules";
 import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreezerMealSchema, updateMealSchema } from "@shared/schema";
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
 import { sanitizeUser } from "./lib/sanitizeUser";
-import { isAdmin, hasPremiumAccess } from "./lib/access";
+import { isAdmin, hasPremiumAccess, assertAdmin } from "./lib/access";
 
 function ingredientMatchesMeal(consolidatedName: string, mealIngredients: string[]): boolean {
   const target = consolidatedName.toLowerCase().trim();
@@ -4164,7 +4164,270 @@ export async function registerRoutes(
     }
   });
 
-  // Plan template routes
+  // ── Template Library (user-facing) ─────────────────────────────────────────
+
+  app.get("/api/plan-templates/library", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const user = req.user!;
+      const tier = hasPremiumAccess(user) ? "premium" : "free";
+      const [globalTemplates, myTemplates] = await Promise.all([
+        storage.getPublishedGlobalTemplates(tier),
+        storage.getUserPrivateTemplates(user.id),
+      ]);
+      res.json({ globalTemplates, myTemplates });
+    } catch (err) {
+      console.error("[Templates] library error:", err);
+      res.status(500).json({ message: "Failed to fetch template library" });
+    }
+  });
+
+  app.get("/api/plan-templates/mine", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const templates = await storage.getUserPrivateTemplates(req.user!.id);
+      res.json(templates);
+    } catch (err) {
+      console.error("[Templates] mine list error:", err);
+      res.status(500).json({ message: "Failed to fetch your templates" });
+    }
+  });
+
+  app.post("/api/plan-templates/mine", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const user = req.user!;
+      const MAX_FREE = parseInt(process.env.MAX_PRIVATE_TEMPLATES_FREE || "4");
+      if (!hasPremiumAccess(user)) {
+        const count = await storage.countUserPrivateTemplates(user.id);
+        if (count >= MAX_FREE) {
+          return res.status(403).json({ message: `Free plan limit is ${MAX_FREE} saved templates. Upgrade to Premium for unlimited.` });
+        }
+      }
+      const { name, season, description } = z.object({
+        name: z.string().min(1),
+        season: z.string().optional(),
+        description: z.string().optional(),
+      }).parse(req.body);
+
+      const template = await storage.createPrivateTemplate(user.id, { name, season, description });
+      const { itemCount } = await storage.snapshotPlannerToTemplate(template.id, user.id);
+      res.status(201).json({ id: template.id, name: template.name, itemCount });
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      console.error("[Templates] create mine error:", err);
+      res.status(500).json({ message: "Failed to save template" });
+    }
+  });
+
+  app.put("/api/plan-templates/mine/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const userId = req.user!.id;
+      const { name, season, description } = z.object({
+        name: z.string().min(1).optional(),
+        season: z.string().optional(),
+        description: z.string().optional(),
+      }).parse(req.body);
+
+      const template = await storage.getTemplateWithItems(req.params.id);
+      if (!template || template.ownerUserId !== userId) return res.status(404).json({ message: "Template not found" });
+
+      const updated = await storage.updateTemplateMetadata(req.params.id, { name, season, description });
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      console.error("[Templates] update mine error:", err);
+      res.status(500).json({ message: "Failed to update template" });
+    }
+  });
+
+  app.post("/api/plan-templates/mine/:id/snapshot-from-planner", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const userId = req.user!.id;
+      const template = await storage.getTemplateWithItems(req.params.id);
+      if (!template || template.ownerUserId !== userId) return res.status(404).json({ message: "Template not found" });
+
+      const { itemCount } = await storage.snapshotPlannerToTemplate(req.params.id, userId);
+      res.json({ itemCount });
+    } catch (err) {
+      console.error("[Templates] re-snapshot mine error:", err);
+      res.status(500).json({ message: "Failed to snapshot planner into template" });
+    }
+  });
+
+  app.delete("/api/plan-templates/mine/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      await storage.deletePrivateTemplate(req.params.id, req.user!.id);
+      res.sendStatus(204);
+    } catch (err: any) {
+      if (err?.message?.includes("not found")) return res.status(404).json({ message: "Template not found" });
+      console.error("[Templates] delete mine error:", err);
+      res.status(500).json({ message: "Failed to delete template" });
+    }
+  });
+
+  app.post("/api/plan-templates/:id/import", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const user = req.user!;
+      const templateId = req.params.id;
+      const { scope, weekNumber, dayOfWeek, mealSlot, mode } = z.object({
+        scope: z.enum(["all", "week", "day", "meal"]),
+        weekNumber: z.number().int().min(1).max(6).optional(),
+        dayOfWeek: z.number().int().min(1).max(7).optional(),
+        mealSlot: z.enum(["breakfast", "lunch", "dinner"]).optional(),
+        mode: z.enum(["replace", "keep"]).default("replace"),
+      }).parse(req.body);
+
+      const template = await storage.getTemplateWithItems(templateId);
+      if (!template) return res.status(404).json({ message: "Template not found" });
+
+      if (template.ownerUserId === null || template.ownerUserId === undefined) {
+        if (template.status !== "published" && !isAdmin(user)) {
+          return res.status(404).json({ message: "Template not found" });
+        }
+        if (!template.isDefault && !hasPremiumAccess(user) && !isAdmin(user)) {
+          return res.status(403).json({ message: "Premium required to import this plan" });
+        }
+      } else {
+        if (template.ownerUserId !== user.id && !isAdmin(user)) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+
+      if ((scope === "week" || scope === "day" || scope === "meal") && weekNumber === undefined) {
+        return res.status(400).json({ message: "weekNumber required for this scope" });
+      }
+      if ((scope === "day" || scope === "meal") && dayOfWeek === undefined) {
+        return res.status(400).json({ message: "dayOfWeek required for this scope" });
+      }
+      if (scope === "meal" && !mealSlot) {
+        return res.status(400).json({ message: "mealSlot required for this scope" });
+      }
+
+      const result = await storage.importTemplateItems(user.id, templateId, { type: scope, weekNumber, dayOfWeek, mealSlot }, mode);
+      res.json({ templateName: template.name, ...result });
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      console.error("[Templates] import error:", err);
+      res.status(500).json({ message: "Failed to import template" });
+    }
+  });
+
+  // ── Admin Template Management ────────────────────────────────────────────────
+
+  app.get("/api/admin/plan-templates", assertAdmin, async (req, res) => {
+    try {
+      const templates = await storage.getAllGlobalTemplatesAdmin();
+      res.json(templates);
+    } catch (err) {
+      console.error("[AdminTemplates] list error:", err);
+      res.status(500).json({ message: "Failed to fetch templates" });
+    }
+  });
+
+  app.post("/api/admin/plan-templates", assertAdmin, async (req, res) => {
+    try {
+      const { name, season, description } = z.object({
+        name: z.string().min(1),
+        season: z.string().optional(),
+        description: z.string().optional(),
+      }).parse(req.body);
+
+      const template = await storage.createGlobalTemplate({ name, season, description, createdBy: req.user!.id });
+      res.status(201).json(template);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      console.error("[AdminTemplates] create error:", err);
+      res.status(500).json({ message: "Failed to create template" });
+    }
+  });
+
+  app.put("/api/admin/plan-templates/:id", assertAdmin, async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      const template = await storage.getTemplateWithItems(id);
+      if (!template || template.ownerUserId !== null) return res.status(404).json({ message: "Template not found" });
+      if (template.status === "archived") return res.status(400).json({ message: "Cannot edit an archived template" });
+
+      const { name, season, description } = z.object({
+        name: z.string().min(1).optional(),
+        season: z.string().optional(),
+        description: z.string().optional(),
+      }).parse(req.body);
+
+      const updated = await storage.updateTemplateMetadata(id, { name, season, description });
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      console.error("[AdminTemplates] update error:", err);
+      res.status(500).json({ message: "Failed to update template" });
+    }
+  });
+
+  app.post("/api/admin/plan-templates/:id/publish", assertAdmin, async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      const template = await storage.getTemplateWithItems(id);
+      if (!template || template.ownerUserId !== null) return res.status(404).json({ message: "Template not found" });
+
+      const updated = await storage.setGlobalTemplateStatus(id, "published", new Date());
+      res.json(updated);
+    } catch (err) {
+      console.error("[AdminTemplates] publish error:", err);
+      res.status(500).json({ message: "Failed to publish template" });
+    }
+  });
+
+  app.post("/api/admin/plan-templates/:id/archive", assertAdmin, async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      const template = await storage.getTemplateWithItems(id);
+      if (!template || template.ownerUserId !== null) return res.status(404).json({ message: "Template not found" });
+      if (template.isDefault) {
+        return res.status(400).json({ message: "Cannot archive the Standard template while it is the default. Set another published template as default first." });
+      }
+      const updated = await storage.setGlobalTemplateStatus(id, "archived", null);
+      res.json(updated);
+    } catch (err) {
+      console.error("[AdminTemplates] archive error:", err);
+      res.status(500).json({ message: "Failed to archive template" });
+    }
+  });
+
+  app.post("/api/admin/plan-templates/:id/restore", assertAdmin, async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      const template = await storage.getTemplateWithItems(id);
+      if (!template || template.ownerUserId !== null) return res.status(404).json({ message: "Template not found" });
+
+      const updated = await storage.setGlobalTemplateStatus(id, "draft");
+      res.json(updated);
+    } catch (err) {
+      console.error("[AdminTemplates] restore error:", err);
+      res.status(500).json({ message: "Failed to restore template" });
+    }
+  });
+
+  app.post("/api/admin/plan-templates/:id/snapshot-from-planner", assertAdmin, async (req, res) => {
+    try {
+      const id = req.params.id as string;
+      const template = await storage.getTemplateWithItems(id);
+      if (!template || template.ownerUserId !== null) return res.status(404).json({ message: "Template not found" });
+
+      const { itemCount } = await storage.snapshotPlannerToTemplate(id, req.user!.id);
+      console.log(`[AdminTemplates] snapshot: template="${template.name}", itemCount=${itemCount}`);
+      res.json({ itemCount });
+    } catch (err) {
+      console.error("[AdminTemplates] snapshot error:", err);
+      res.status(500).json({ message: "Failed to snapshot planner into template" });
+    }
+  });
+
+  // Plan template routes (backwards-compatible)
   app.get("/api/plan-templates/default", async (req, res) => {
     try {
       const template = await storage.getDefaultTemplate();

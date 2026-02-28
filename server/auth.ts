@@ -81,6 +81,11 @@ export function setupAuth(app: Express) {
   app.get("/api/config", (_req, res) => {
     const familyPlanEnabled = process.env.FAMILY_PLAN_ENABLED !== "false";
     const premiumFeaturesEnabled = process.env.PREMIUM_FEATURES_ENABLED !== "false";
+    const templatesEnabled = process.env.TEMPLATES_ENABLED !== "false";
+    const maxPrivateTemplatesFree = parseInt(process.env.MAX_PRIVATE_TEMPLATES_FREE || "4");
+    const maxPrivateTemplatesPremium = process.env.MAX_PRIVATE_TEMPLATES_PREMIUM
+      ? parseInt(process.env.MAX_PRIVATE_TEMPLATES_PREMIUM)
+      : null;
     res.json({
       registrationEnabled: isProduction,
       environment: isProduction ? "production" : "beta",
@@ -88,6 +93,9 @@ export function setupAuth(app: Express) {
       suggestionsEmail: SUGGESTIONS_EMAIL,
       familyPlanEnabled,
       premiumFeaturesEnabled,
+      templatesEnabled,
+      maxPrivateTemplatesFree,
+      maxPrivateTemplatesPremium,
     });
   });
 

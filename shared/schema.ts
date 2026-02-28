@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, real, boolean, unique, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, boolean, unique, timestamp, varchar, index } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -713,9 +713,17 @@ export const mealPlanTemplates = pgTable("meal_plan_templates", {
   description: text("description"),
   isDefault: boolean("is_default").notNull().default(false),
   isPremium: boolean("is_premium").notNull().default(false),
+  ownerUserId: integer("owner_user_id"),
+  season: text("season"),
+  status: text("status").notNull().default("published"),
+  createdBy: integer("created_by"),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("meal_plan_templates_owner_idx").on(table.ownerUserId),
+  index("meal_plan_templates_status_idx").on(table.status),
+]);
 
 export const mealPlanTemplateItems = pgTable(
   "meal_plan_template_items",

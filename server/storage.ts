@@ -153,6 +153,17 @@ export interface IStorage {
   getTemplateWithItems(id: string): Promise<(MealPlanTemplate & { items: MealPlanTemplateItem[] }) | undefined>;
   getDefaultTemplate(): Promise<(MealPlanTemplate & { items: MealPlanTemplateItem[] }) | undefined>;
   listTemplates(): Promise<MealPlanTemplate[]>;
+  getPublishedGlobalTemplates(tier: string): Promise<(MealPlanTemplate & { itemCount: number })[]>;
+  getAllGlobalTemplatesAdmin(): Promise<(MealPlanTemplate & { itemCount: number })[]>;
+  getUserPrivateTemplates(userId: number): Promise<(MealPlanTemplate & { itemCount: number })[]>;
+  countUserPrivateTemplates(userId: number): Promise<number>;
+  createGlobalTemplate(data: { name: string; season?: string; description?: string; createdBy: number }): Promise<MealPlanTemplate>;
+  createPrivateTemplate(userId: number, data: { name: string; season?: string; description?: string }): Promise<MealPlanTemplate>;
+  updateTemplateMetadata(id: string, data: Partial<{ name: string; season: string; description: string }>): Promise<MealPlanTemplate>;
+  setGlobalTemplateStatus(id: string, status: "draft" | "published" | "archived", publishedAt?: Date | null): Promise<MealPlanTemplate>;
+  deletePrivateTemplate(id: string, userId: number): Promise<void>;
+  snapshotPlannerToTemplate(templateId: string, userId: number): Promise<{ itemCount: number }>;
+  importTemplateItems(userId: number, templateId: string, scope: { type: "all" | "week" | "day" | "meal"; weekNumber?: number; dayOfWeek?: number; mealSlot?: string }, mode: "replace" | "keep"): Promise<{ createdCount: number; updatedCount: number; skippedCount: number }>;
   getMealsExport(source?: "web" | "custom" | "all"): Promise<{ id: number; name: string; mealSourceType: string; sourceUrl: string | null; userId: number; createdAt: Date }[]>;
 
   sessionStore: session.Store;
@@ -1090,6 +1101,247 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(mealPlanTemplates)
       .orderBy(mealPlanTemplates.name);
+  }
+
+  async getPublishedGlobalTemplates(tier: string): Promise<(MealPlanTemplate & { itemCount: number })[]> {
+    const rows = await db
+      .select({
+        id: mealPlanTemplates.id,
+        name: mealPlanTemplates.name,
+        description: mealPlanTemplates.description,
+        isDefault: mealPlanTemplates.isDefault,
+        isPremium: mealPlanTemplates.isPremium,
+        ownerUserId: mealPlanTemplates.ownerUserId,
+        season: mealPlanTemplates.season,
+        status: mealPlanTemplates.status,
+        createdBy: mealPlanTemplates.createdBy,
+        publishedAt: mealPlanTemplates.publishedAt,
+        createdAt: mealPlanTemplates.createdAt,
+        updatedAt: mealPlanTemplates.updatedAt,
+        itemCount: sql<number>`(SELECT COUNT(*) FROM meal_plan_template_items WHERE template_id = ${mealPlanTemplates.id})`.mapWith(Number),
+      })
+      .from(mealPlanTemplates)
+      .where(
+        and(
+          isNull(mealPlanTemplates.ownerUserId),
+          eq(mealPlanTemplates.status, "published"),
+          ...(tier === "free" ? [eq(mealPlanTemplates.isDefault, true)] : []),
+        )
+      )
+      .orderBy(mealPlanTemplates.isDefault, mealPlanTemplates.name);
+    return rows;
+  }
+
+  async getAllGlobalTemplatesAdmin(): Promise<(MealPlanTemplate & { itemCount: number })[]> {
+    return db
+      .select({
+        id: mealPlanTemplates.id,
+        name: mealPlanTemplates.name,
+        description: mealPlanTemplates.description,
+        isDefault: mealPlanTemplates.isDefault,
+        isPremium: mealPlanTemplates.isPremium,
+        ownerUserId: mealPlanTemplates.ownerUserId,
+        season: mealPlanTemplates.season,
+        status: mealPlanTemplates.status,
+        createdBy: mealPlanTemplates.createdBy,
+        publishedAt: mealPlanTemplates.publishedAt,
+        createdAt: mealPlanTemplates.createdAt,
+        updatedAt: mealPlanTemplates.updatedAt,
+        itemCount: sql<number>`(SELECT COUNT(*) FROM meal_plan_template_items WHERE template_id = ${mealPlanTemplates.id})`.mapWith(Number),
+      })
+      .from(mealPlanTemplates)
+      .where(isNull(mealPlanTemplates.ownerUserId))
+      .orderBy(mealPlanTemplates.createdAt);
+  }
+
+  async getUserPrivateTemplates(userId: number): Promise<(MealPlanTemplate & { itemCount: number })[]> {
+    return db
+      .select({
+        id: mealPlanTemplates.id,
+        name: mealPlanTemplates.name,
+        description: mealPlanTemplates.description,
+        isDefault: mealPlanTemplates.isDefault,
+        isPremium: mealPlanTemplates.isPremium,
+        ownerUserId: mealPlanTemplates.ownerUserId,
+        season: mealPlanTemplates.season,
+        status: mealPlanTemplates.status,
+        createdBy: mealPlanTemplates.createdBy,
+        publishedAt: mealPlanTemplates.publishedAt,
+        createdAt: mealPlanTemplates.createdAt,
+        updatedAt: mealPlanTemplates.updatedAt,
+        itemCount: sql<number>`(SELECT COUNT(*) FROM meal_plan_template_items WHERE template_id = ${mealPlanTemplates.id})`.mapWith(Number),
+      })
+      .from(mealPlanTemplates)
+      .where(eq(mealPlanTemplates.ownerUserId, userId))
+      .orderBy(mealPlanTemplates.createdAt);
+  }
+
+  async countUserPrivateTemplates(userId: number): Promise<number> {
+    const [row] = await db
+      .select({ count: sql<number>`COUNT(*)`.mapWith(Number) })
+      .from(mealPlanTemplates)
+      .where(eq(mealPlanTemplates.ownerUserId, userId));
+    return row?.count ?? 0;
+  }
+
+  async createGlobalTemplate(data: { name: string; season?: string; description?: string; createdBy: number }): Promise<MealPlanTemplate> {
+    const [row] = await db
+      .insert(mealPlanTemplates)
+      .values({
+        name: data.name,
+        description: data.description ?? null,
+        season: data.season ?? null,
+        status: "draft",
+        createdBy: data.createdBy,
+        ownerUserId: null,
+        isDefault: false,
+        isPremium: false,
+      })
+      .returning();
+    return row;
+  }
+
+  async createPrivateTemplate(userId: number, data: { name: string; season?: string; description?: string }): Promise<MealPlanTemplate> {
+    const [row] = await db
+      .insert(mealPlanTemplates)
+      .values({
+        name: data.name,
+        description: data.description ?? null,
+        season: data.season ?? null,
+        status: "draft",
+        createdBy: userId,
+        ownerUserId: userId,
+        isDefault: false,
+        isPremium: false,
+      })
+      .returning();
+    return row;
+  }
+
+  async updateTemplateMetadata(id: string, data: Partial<{ name: string; season: string; description: string }>): Promise<MealPlanTemplate> {
+    const [row] = await db
+      .update(mealPlanTemplates)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(mealPlanTemplates.id, id))
+      .returning();
+    return row;
+  }
+
+  async setGlobalTemplateStatus(id: string, status: "draft" | "published" | "archived", publishedAt?: Date | null): Promise<MealPlanTemplate> {
+    const updateData: Partial<MealPlanTemplate> = { status, updatedAt: new Date() };
+    if (publishedAt !== undefined) updateData.publishedAt = publishedAt;
+    const [row] = await db
+      .update(mealPlanTemplates)
+      .set(updateData)
+      .where(and(eq(mealPlanTemplates.id, id), isNull(mealPlanTemplates.ownerUserId)))
+      .returning();
+    return row;
+  }
+
+  async deletePrivateTemplate(id: string, userId: number): Promise<void> {
+    const [row] = await db
+      .select()
+      .from(mealPlanTemplates)
+      .where(and(eq(mealPlanTemplates.id, id), eq(mealPlanTemplates.ownerUserId, userId)))
+      .limit(1);
+    if (!row) throw new Error("Template not found or not owned by user");
+    await db.delete(mealPlanTemplates).where(eq(mealPlanTemplates.id, id));
+  }
+
+  async snapshotPlannerToTemplate(templateId: string, userId: number): Promise<{ itemCount: number }> {
+    const weeks = await this.getPlannerWeeks(userId);
+    const newItems: { templateId: string; weekNumber: number; dayOfWeek: number; mealSlot: string; mealId: number }[] = [];
+
+    for (const week of weeks) {
+      const days = await this.getPlannerDays(week.id);
+      for (const day of days) {
+        const entries = await this.getPlannerEntriesForDay(day.id);
+        for (const entry of entries) {
+          if (entry.isDrink) continue;
+          const templateDay = day.dayOfWeek === 0 ? 7 : day.dayOfWeek;
+          newItems.push({
+            templateId,
+            weekNumber: week.weekNumber,
+            dayOfWeek: templateDay,
+            mealSlot: entry.mealType,
+            mealId: entry.mealId,
+          });
+        }
+      }
+    }
+
+    await db.transaction(async (tx) => {
+      await tx.delete(mealPlanTemplateItems).where(eq(mealPlanTemplateItems.templateId, templateId));
+      if (newItems.length > 0) {
+        await tx.insert(mealPlanTemplateItems).values(newItems);
+      }
+      await tx.update(mealPlanTemplates).set({ updatedAt: new Date() }).where(eq(mealPlanTemplates.id, templateId));
+    });
+
+    return { itemCount: newItems.length };
+  }
+
+  async importTemplateItems(
+    userId: number,
+    templateId: string,
+    scope: { type: "all" | "week" | "day" | "meal"; weekNumber?: number; dayOfWeek?: number; mealSlot?: string },
+    mode: "replace" | "keep"
+  ): Promise<{ createdCount: number; updatedCount: number; skippedCount: number }> {
+    let items = await db
+      .select()
+      .from(mealPlanTemplateItems)
+      .where(eq(mealPlanTemplateItems.templateId, templateId));
+
+    if (scope.type === "week" && scope.weekNumber !== undefined) {
+      items = items.filter(i => i.weekNumber === scope.weekNumber);
+    } else if (scope.type === "day" && scope.weekNumber !== undefined && scope.dayOfWeek !== undefined) {
+      items = items.filter(i => i.weekNumber === scope.weekNumber && i.dayOfWeek === scope.dayOfWeek);
+    } else if (scope.type === "meal" && scope.weekNumber !== undefined && scope.dayOfWeek !== undefined && scope.mealSlot) {
+      items = items.filter(i => i.weekNumber === scope.weekNumber && i.dayOfWeek === scope.dayOfWeek && i.mealSlot === scope.mealSlot);
+    }
+
+    const weeks = await this.createPlannerWeeks(userId);
+    const weekMap = new Map<number, number>();
+    for (const week of weeks) weekMap.set(week.weekNumber, week.id);
+
+    const allDayIds: number[] = [];
+    const dayIdMap = new Map<string, number>();
+    for (const week of weeks) {
+      const days = await this.getPlannerDays(week.id);
+      for (const day of days) {
+        dayIdMap.set(`${week.weekNumber}:${day.dayOfWeek}`, day.id);
+        allDayIds.push(day.id);
+      }
+    }
+
+    const existingEntries = await this.getPlannerEntriesByDayIds(allDayIds);
+    const occupiedSlots = new Set(existingEntries.map(e => `${e.dayId}:${e.mealType}:${e.audience}`));
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    let skippedCount = 0;
+
+    for (const item of items) {
+      const plannerDay = item.dayOfWeek % 7;
+      const dayId = dayIdMap.get(`${item.weekNumber}:${plannerDay}`);
+      if (dayId === undefined) { skippedCount++; continue; }
+
+      const slotKey = `${dayId}:${item.mealSlot}:adult`;
+      const hasExisting = occupiedSlots.has(slotKey);
+
+      if (mode === "keep" && hasExisting) { skippedCount++; continue; }
+
+      await this.upsertPlannerEntry(dayId, item.mealSlot, "adult", item.mealId);
+
+      if (hasExisting) {
+        updatedCount++;
+      } else {
+        createdCount++;
+        occupiedSlots.add(slotKey);
+      }
+    }
+
+    return { createdCount, updatedCount, skippedCount };
   }
 
   async getMealsExport(source: "web" | "custom" | "all" = "all"): Promise<{ id: number; name: string; mealSourceType: string; sourceUrl: string | null; userId: number; createdAt: Date }[]> {
