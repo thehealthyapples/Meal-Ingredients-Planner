@@ -150,10 +150,11 @@ export default function AuthPage() {
     }
   };
 
-  if (user) {
-    setLocation("/");
-    return null;
-  }
+  useEffect(() => {
+    if (user) setLocation("/");
+  }, [user, setLocation]);
+
+  if (user) return null;
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2 bg-background">
