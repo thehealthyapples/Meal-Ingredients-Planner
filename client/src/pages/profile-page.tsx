@@ -1028,6 +1028,26 @@ function AccountSettings({ profile }: { profile: ProfileData }) {
           </>
         )}
 
+        {(profile as any).role === "admin" && (
+          <>
+            <Separator />
+            <div className="flex items-center justify-between" data-testid="row-role">
+              <p className="text-sm font-medium">Role</p>
+              <Badge className="bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/30" data-testid="badge-role">Admin</Badge>
+            </div>
+          </>
+        )}
+
+        <Separator />
+        <div className="flex items-center justify-between" data-testid="row-subscription">
+          <p className="text-sm font-medium">Subscription</p>
+          {(profile as any).hasPremiumAccess ? (
+            <Badge className="bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/30" data-testid="badge-subscription-premium">Premium Active</Badge>
+          ) : (
+            <Badge variant="outline" className="text-muted-foreground" data-testid="badge-subscription-free">Free</Badge>
+          )}
+        </div>
+
         <Separator />
 
         {!showChangePassword ? (

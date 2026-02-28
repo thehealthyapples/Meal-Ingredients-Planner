@@ -79,11 +79,15 @@ export function setupAuth(app: Express) {
   const SUGGESTIONS_EMAIL = process.env.SUGGESTIONS_EMAIL || "suggestions@thehealthyapples.com";
 
   app.get("/api/config", (_req, res) => {
+    const familyPlanEnabled = process.env.FAMILY_PLAN_ENABLED !== "false";
+    const premiumFeaturesEnabled = process.env.PREMIUM_FEATURES_ENABLED !== "false";
     res.json({
       registrationEnabled: isProduction,
       environment: isProduction ? "production" : "beta",
       supportEmail: SUPPORT_EMAIL,
       suggestionsEmail: SUGGESTIONS_EMAIL,
+      familyPlanEnabled,
+      premiumFeaturesEnabled,
     });
   });
 

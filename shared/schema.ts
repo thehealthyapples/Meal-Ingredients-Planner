@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, real, boolean, unique, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, real, boolean, unique, timestamp, varchar, pgEnum } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -22,6 +22,11 @@ export const users = pgTable("users", {
   eatingSchedule: text("eating_schedule"),
   passwordResetToken: text("password_reset_token"),
   passwordResetExpires: timestamp("password_reset_expires"),
+  role: text("role").notNull().default("user"),
+  subscriptionTier: text("subscription_tier").notNull().default("free"),
+  subscriptionStatus: text("subscription_status"),
+  subscriptionExpiresAt: timestamp("subscription_expires_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const mealCategories = pgTable("meal_categories", {

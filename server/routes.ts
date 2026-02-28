@@ -21,6 +21,7 @@ import { shouldExcludeRecipe, scoreRecipeForDiet } from "./lib/dietRules";
 import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreezerMealSchema, updateMealSchema } from "@shared/schema";
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
 import { sanitizeUser } from "./lib/sanitizeUser";
+import { isAdmin, hasPremiumAccess } from "./lib/access";
 
 function ingredientMatchesMeal(consolidatedName: string, mealIngredients: string[]): boolean {
   const target = consolidatedName.toLowerCase().trim();
@@ -499,6 +500,9 @@ export async function registerRoutes(
       profilePhotoUrl: user.profilePhotoUrl,
       measurementPreference: user.measurementPreference,
       isBetaUser: user.isBetaUser,
+      role: user.role ?? "user",
+      subscriptionTier: user.subscriptionTier ?? "free",
+      hasPremiumAccess: hasPremiumAccess(user),
       dietPattern: user.dietPattern ?? null,
       dietRestrictions: user.dietRestrictions ?? [],
       eatingSchedule: user.eatingSchedule ?? null,
@@ -731,6 +735,7 @@ export async function registerRoutes(
 
   app.get(api.meals.list.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    // TODO [PREMIUM]: hasPremiumAccess(user) — enforce >3 meals limit for free users
     const [userMeals, systemMeals] = await Promise.all([
       storage.getMeals(req.user!.id),
       storage.getSystemMeals(),
@@ -1755,6 +1760,7 @@ export async function registerRoutes(
       const alternatives = mergedAlts
         .map((p: any) => {
           const ingredientsText = p.ingredients_text || p.ingredients_text_en || '';
+          // TODO [PREMIUM]: hasPremiumAccess(user) — enforce analysis limit for free users
           const analysis = ingredientsText ? analyzeProduct(ingredientsText, p.nutriments || null, p.nova_group || null) : null;
           const altUpf = ingredientsText && analysis ? analyzeProductUPF(ingredientsText, allAdditives, analysis.healthScore, {
             productName: p.product_name || p.product_name_en || '',
@@ -3597,6 +3603,7 @@ export async function registerRoutes(
 
   app.put("/api/planner/days/:dayId/entries", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
+    // TODO [PREMIUM]: hasPremiumAccess(user) — enforce >2 days/week for free users
     try {
       const day = await storage.getPlannerDay(Number(req.params.dayId));
       if (!day) {
@@ -4146,7 +4153,7 @@ export async function registerRoutes(
   app.post("/api/admin/import-global-meals", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const user = await storage.getUser(req.user!.id);
-    if (!user?.isBetaUser) return res.status(403).json({ message: "Admin access required" });
+    if (!isAdmin(user)) return res.status(403).json({ message: "Admin access required" });
     try {
       const limits = req.body?.limits || undefined;
       const results = await importGlobalMeals(limits);
@@ -4263,7 +4270,7 @@ export async function registerRoutes(
   app.get("/api/admin/meals/export", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const user = await storage.getUser(req.user!.id);
-    if (!user?.isBetaUser) return res.status(403).json({ message: "Admin access required" });
+    if (!isAdmin(user)) return res.status(403).json({ message: "Admin access required" });
 
     const rawSource = req.query.source as string | undefined;
     const source = rawSource === "web" || rawSource === "custom" ? rawSource : "all";
@@ -4302,7 +4309,7 @@ export async function registerRoutes(
   app.get("/api/admin/import-status", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const user = await storage.getUser(req.user!.id);
-    if (!user?.isBetaUser) return res.status(403).json({ message: "Admin access required" });
+    if (!isAdmin(user)) return res.status(403).json({ message: "Admin access required" });
     try {
       const status = await getImportStatus();
       res.json(status);

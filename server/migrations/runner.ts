@@ -107,6 +107,21 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-02-28_add_roles_and_subscriptions",
+    statements: [
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_tier TEXT NOT NULL DEFAULT 'free'",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_status TEXT",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()",
+      "ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check",
+      "ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('user','admin'))",
+      "ALTER TABLE users DROP CONSTRAINT IF EXISTS users_subscription_tier_check",
+      "ALTER TABLE users ADD CONSTRAINT users_subscription_tier_check CHECK (subscription_tier IN ('free','premium','friends_family'))",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
