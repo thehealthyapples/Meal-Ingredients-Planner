@@ -40,6 +40,13 @@ export function NavBar() {
     enabled: !!user,
   });
 
+  const { data: config } = useQuery<{ supportEmail?: string; suggestionsEmail?: string }>({
+    queryKey: ["/api/config"],
+    enabled: !!user,
+  });
+  const support = config?.supportEmail || "support@thehealthyapples.com";
+  const suggestions = config?.suggestionsEmail || "suggestions@thehealthyapples.com";
+
   const itemCount = shoppingListItems.length;
 
   if (!user) return null;
@@ -117,6 +124,23 @@ export function NavBar() {
               </Link>
             );
           })}
+          <div className="ml-auto flex items-center gap-3 pl-4">
+            <a
+              href={`mailto:${support}`}
+              className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
+              data-testid="nav-link-support"
+            >
+              Support: {support}
+            </a>
+            <span className="text-muted-foreground/40 text-xs" aria-hidden="true">·</span>
+            <a
+              href={`mailto:${suggestions}`}
+              className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
+              data-testid="nav-link-suggestions"
+            >
+              Suggestions: {suggestions}
+            </a>
+          </div>
         </nav>
       </header>
 
