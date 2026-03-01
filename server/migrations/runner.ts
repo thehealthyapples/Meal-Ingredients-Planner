@@ -156,6 +156,17 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-01_add_template_sharing",
+    statements: [
+      "ALTER TABLE meal_plan_templates ADD COLUMN IF NOT EXISTS share_token TEXT",
+      "ALTER TABLE meal_plan_templates ADD COLUMN IF NOT EXISTS visibility TEXT NOT NULL DEFAULT 'private'",
+      "CREATE UNIQUE INDEX IF NOT EXISTS meal_plan_templates_share_token_idx ON meal_plan_templates (share_token) WHERE share_token IS NOT NULL",
+      "ALTER TABLE meal_plan_templates DROP CONSTRAINT IF EXISTS meal_plan_templates_visibility_check",
+      "ALTER TABLE meal_plan_templates ADD CONSTRAINT meal_plan_templates_visibility_check CHECK (visibility IN ('private','shared'))",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

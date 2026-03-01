@@ -4317,6 +4317,65 @@ export async function registerRoutes(
     }
   });
 
+  // ── Template Sharing ────────────────────────────────────────────────────────
+
+  app.post("/api/plan-templates/mine/:id/share", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user!;
+    const templateId = req.params.id;
+    try {
+      const tier = user.subscriptionTier as string;
+      const hasPremium = tier === "premium" || tier === "friends_family";
+      if (!hasPremium) {
+        const sharedCount = await storage.countSharedTemplates(user.id);
+        const templates = await storage.getUserPrivateTemplates(user.id);
+        const thisTemplate = templates.find(t => t.id === templateId);
+        const alreadyShared = thisTemplate?.visibility === "shared";
+        if (!alreadyShared && sharedCount >= 1) {
+          return res.status(403).json({ message: "Free accounts can share 1 plan at a time. Upgrade to Premium to share more." });
+        }
+      }
+      const token = await storage.sharePlanTemplate(templateId, user.id);
+      const url = `${req.protocol}://${req.get("host")}/shared/${token}`;
+      res.json({ shareToken: token, url });
+    } catch (err: any) {
+      if (err?.message?.includes("not found")) return res.status(404).json({ message: "Template not found" });
+      console.error("[Templates] share error:", err);
+      res.status(500).json({ message: "Failed to share template" });
+    }
+  });
+
+  app.post("/api/plan-templates/mine/:id/unshare", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      await storage.unsharePlanTemplate(req.params.id, req.user!.id);
+      res.sendStatus(200);
+    } catch (err: any) {
+      if (err?.message?.includes("not found")) return res.status(404).json({ message: "Template not found" });
+      console.error("[Templates] unshare error:", err);
+      res.status(500).json({ message: "Failed to unshare template" });
+    }
+  });
+
+  app.get("/api/shared/:token", async (req, res) => {
+    try {
+      const result = await storage.getSharedTemplate(req.params.token);
+      if (!result) return res.status(404).json({ message: "Shared plan not found" });
+
+      const { template, items } = result;
+      res.json({
+        id: template.id,
+        name: template.name,
+        description: template.description,
+        season: template.season,
+        items,
+      });
+    } catch (err) {
+      console.error("[Templates] get shared error:", err);
+      res.status(500).json({ message: "Failed to load shared plan" });
+    }
+  });
+
   // ── Admin Template Management ────────────────────────────────────────────────
 
   app.get("/api/admin/plan-templates", assertAdmin, async (req, res) => {

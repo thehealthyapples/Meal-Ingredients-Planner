@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingCart, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, Sparkles, LayoutGrid } from "lucide-react";
+import { Pencil, X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingCart, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, Sparkles, LayoutGrid, Share2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TemplatesPanel } from "@/components/templates-panel";
+import { SharePlanDialog } from "@/components/share-plan-dialog";
 import { useUser } from "@/hooks/use-user";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -67,6 +68,7 @@ export default function WeeklyPlannerPage() {
   const [bulkStep, setBulkStep] = useState<1 | 2>(1);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [sharePlanOpen, setSharePlanOpen] = useState(false);
   const { user } = useUser();
 
   const { data: plannerSettings } = useQuery<{
@@ -459,6 +461,10 @@ export default function WeeklyPlannerPage() {
           <Button size="sm" variant="outline" onClick={() => setBulkAssignOpen(true)} data-testid="button-bulk-assign">
             <Copy className="h-3.5 w-3.5 mr-1.5" />
             Bulk Assign
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setSharePlanOpen(true)} data-testid="button-share-plan">
+            <Share2 className="h-3.5 w-3.5 mr-1.5" />
+            Share Plan
           </Button>
           <Button size="sm" onClick={addAllToBasket} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
             <ShoppingBasket className="h-3.5 w-3.5 mr-1.5" />
@@ -904,6 +910,7 @@ export default function WeeklyPlannerPage() {
       </Dialog>
 
       <TemplatesPanel open={templatesOpen} onClose={() => setTemplatesOpen(false)} user={user} />
+      <SharePlanDialog open={sharePlanOpen} onOpenChange={setSharePlanOpen} />
     </div>
   );
 }

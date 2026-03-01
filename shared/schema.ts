@@ -718,6 +718,8 @@ export const mealPlanTemplates = pgTable("meal_plan_templates", {
   status: text("status").notNull().default("published"),
   createdBy: integer("created_by"),
   publishedAt: timestamp("published_at", { withTimezone: true }),
+  shareToken: text("share_token"),
+  visibility: text("visibility").notNull().default("private"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [

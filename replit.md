@@ -34,6 +34,7 @@ The UI features a new-york style from `shadcn/ui` with Tailwind CSS for styling 
 -   **Premium Profile Page**: A comprehensive `/profile` page acting as a health control center, household configuration, and nutrition control panel. It includes editable display name, health snapshot (BMI, daily calories), household settings, nutrition targets, goals & diet preferences, feature toggles, and account settings.
 -   **Authorization + Subscription Foundation**: Implements `role` (user/admin) and `subscription_tier` (free/premium/friends_family) for access control, with middleware for premium feature requirements and admin-specific routes.
 -   **Admin User Management**: Admin-only page at `/admin/users` for searching users (by email/display name) and changing subscription tiers (free/premium/friends_family). All tier changes are recorded in `admin_audit_log` with old/new tier, admin ID, and timestamp. Accessible via "Admin" link in the nav bar for admin users only.
+-   **Share 6 Week Plan via Link**: Users can share saved private plan templates via a secure public link (`/shared/:token`). Token is a UUID v4 stored on the template. Recipients see a read-only 6-week grid and can import (logged-in) or are prompted to register. Free users: max 1 shared plan; premium/friends_family: unlimited. Share/unshare from the planner header "Share Plan" button. See `docs/share-plans.md`.
 
 ## External Dependencies
 

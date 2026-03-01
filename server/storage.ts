@@ -176,6 +176,12 @@ export interface IStorage {
   importTemplateItems(userId: number, templateId: string, scope: { type: "all" | "week" | "day" | "meal"; weekNumber?: number; dayOfWeek?: number; mealSlot?: string }, mode: "replace" | "keep"): Promise<{ createdCount: number; updatedCount: number; skippedCount: number }>;
   getMealsExport(source?: "web" | "custom" | "all"): Promise<{ id: number; name: string; mealSourceType: string; sourceUrl: string | null; userId: number; createdAt: Date }[]>;
 
+  // ── Template Sharing ─────────────────────────────────────────────────────────
+  sharePlanTemplate(templateId: string, userId: number): Promise<string>;
+  unsharePlanTemplate(templateId: string, userId: number): Promise<void>;
+  getSharedTemplate(token: string): Promise<{ template: MealPlanTemplate; items: MealPlanTemplateItem[] } | null>;
+  countSharedTemplates(userId: number): Promise<number>;
+
   // ── Admin User Management ────────────────────────────────────────────────────
   searchUsers(query: string, limit: number, offset: number): Promise<{ users: SafeUser[]; total: number }>;
   setUserSubscriptionTier(userId: number, tier: "free" | "premium" | "friends_family"): Promise<SafeUser>;
@@ -1378,6 +1384,62 @@ export class DatabaseStorage implements IStorage {
       return base.where(and(isNull(meals.sourceUrl), eq(meals.isSystemMeal, false))).orderBy(meals.id);
     }
     return base.orderBy(meals.id);
+  }
+
+  // ── Template Sharing ─────────────────────────────────────────────────────────
+
+  async sharePlanTemplate(templateId: string, userId: number): Promise<string> {
+    const [row] = await db
+      .select()
+      .from(mealPlanTemplates)
+      .where(and(eq(mealPlanTemplates.id, templateId), eq(mealPlanTemplates.ownerUserId, userId)))
+      .limit(1);
+    if (!row) throw new Error("Template not found or not owned by user");
+
+    const token = row.shareToken ?? crypto.randomUUID();
+    await db
+      .update(mealPlanTemplates)
+      .set({ shareToken: token, visibility: "shared", updatedAt: new Date() })
+      .where(eq(mealPlanTemplates.id, templateId));
+    return token;
+  }
+
+  async unsharePlanTemplate(templateId: string, userId: number): Promise<void> {
+    const [row] = await db
+      .select()
+      .from(mealPlanTemplates)
+      .where(and(eq(mealPlanTemplates.id, templateId), eq(mealPlanTemplates.ownerUserId, userId)))
+      .limit(1);
+    if (!row) throw new Error("Template not found or not owned by user");
+
+    await db
+      .update(mealPlanTemplates)
+      .set({ shareToken: null, visibility: "private", updatedAt: new Date() })
+      .where(eq(mealPlanTemplates.id, templateId));
+  }
+
+  async getSharedTemplate(token: string): Promise<{ template: MealPlanTemplate; items: MealPlanTemplateItem[] } | null> {
+    const [template] = await db
+      .select()
+      .from(mealPlanTemplates)
+      .where(and(eq(mealPlanTemplates.shareToken, token), eq(mealPlanTemplates.visibility, "shared")))
+      .limit(1);
+    if (!template) return null;
+
+    const items = await db
+      .select()
+      .from(mealPlanTemplateItems)
+      .where(eq(mealPlanTemplateItems.templateId, template.id));
+
+    return { template, items };
+  }
+
+  async countSharedTemplates(userId: number): Promise<number> {
+    const rows = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(mealPlanTemplates)
+      .where(and(eq(mealPlanTemplates.ownerUserId, userId), eq(mealPlanTemplates.visibility, "shared")));
+    return rows[0]?.count ?? 0;
   }
 
   // ── Admin User Management ────────────────────────────────────────────────────
