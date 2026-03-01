@@ -1,0 +1,133 @@
+ADD-ON: Pantry Staples + Components + Pairings (to include after the multi-recipe planner work)
+
+We also want to incorporate “staples” (larder/fridge/freezer) and reusable homemade “components” (e.g. pesto/sauces/bone broth) plus optional pairing suggestions, in a way that avoids a big rewrite.
+
+BUILD ORDER (PHASED, SAFE)
+Phase 1: Pantry Staples (fastest, biggest weekly value)
+Phase 2: Components as Meals (medium effort, leverages multi-recipe slots)
+Phase 3: Pairings Suggestions (small delight layer)
+
+PHASE 1 — PANTRY STAPLES
+Goal:
+Users maintain a list of ingredients they “usually have” so the shopping list can hide/de-emphasize them by default, with an option to include them when needed.
+
+DB (additive):
+1) Create table user_pantry_items
+- id: serial primary key
+- user_id: integer not null references users(id) on delete cascade
+- ingredient_key: text not null               // normalized ingredient name (e.g. "olive oil")
+- category: text not null check in ('larder','fridge','freezer')
+- default_have: boolean not null default true
+- notes: text null
+- created_at: timestamptz not null default now()
+Constraints:
+- unique(user_id, ingredient_key)
+Indexes:
+- index(user_id)
+
+Server:
+2) Add normalization helper used consistently:
+normalizeIngredientKey(s: string): string
+- lowercase
+- trim
+- remove punctuation
+- collapse multiple spaces
+
+3) Pantry endpoints (auth required; owner-only):
+- GET /api/pantry
+  returns pantry items grouped or as a flat list
+- POST /api/pantry
+  body: { ingredient: string, category: 'larder'|'fridge'|'freezer', notes?: string }
+  stores ingredient_key=normalizeIngredientKey(ingredient)
+- DELETE /api/pantry/:id
+  deletes item (owner-only)
+
+Client:
+4) Add a “Pantry / Staples” section in Profile (or Settings):
+- list items grouped by category
+- add form: ingredient + category + optional notes
+- delete item
+
+5) Shopping list UI:
+- For each ingredient line, compute ingredient_key (same normalization)
+- If ingredient_key exists in user pantry items default_have=true, mark as Staple
+- Split UI into sections:
+  - “This week”
+  - “Staples (usually in stock)” collapsed by default
+- Add per-line toggle “Need this this week” (can be client-only state for MVP; no persistence required)
+
+Acceptance:
+- User can add staples like olive oil, apple cider vinegar, chilli flakes, herbs/spices.
+- Shopping list collapses those into Staples by default.
+
+PHASE 2 — COMPONENTS AS MEALS
+Goal:
+Homemade base items (HM bread, pancakes, wraps, pepper sauce, bone broth, baked beans, homemade pasta, pesto etc.) are treated as “component recipes” and can be added to planner slots (including alongside other meals). Basket automatically includes them because it iterates all planner entries.
+
+DB (additive):
+6) Extend meals table:
+- kind: text not null default 'meal' check in ('meal','component')
+(If a type field already exists, extend it rather than adding a new one.)
+
+Server:
+7) Ensure meal create/update supports kind (admin-only if preferred):
+- existing meals default to kind='meal'
+- components use kind='component'
+
+Client:
+8) Meal creation/edit UI:
+- add Type selector (Meal / Component) visible to admins
+9) Meal picker/search:
+- add filter toggle “All / Meals / Components” OR show “Component” badge in results
+
+Acceptance:
+- Admin can mark items like Bone Broth, Pepper Sauce, Baked Beans as components.
+- Components can be added in the Day View drawer using the existing add-item flow.
+- Basket includes component ingredients automatically.
+
+PHASE 3 — PAIRINGS (SUGGESTED ADD-ONS)
+Goal:
+When a user adds a base meal, show admin-curated suggestions for add-ons (often components). User chooses whether to add; never auto-add.
+
+DB (additive):
+10) Create table meal_pairings
+- id: serial primary key
+- base_meal_id: integer not null references meals(id) on delete cascade
+- suggested_meal_id: integer not null references meals(id) on delete cascade
+- note: text null                      // e.g. “Great with jacket potatoes”
+- priority: integer not null default 0
+- created_by: integer null references users(id)
+- created_at: timestamptz not null default now()
+Constraints:
+- unique(base_meal_id, suggested_meal_id)
+Index:
+- (base_meal_id, priority desc)
+
+Server:
+11) Public endpoint:
+- GET /api/meal-pairings/:mealId
+  returns suggested meals ordered by priority desc
+
+12) Admin endpoints (admin-only):
+- POST /api/admin/meal-pairings
+  body: { baseMealId, suggestedMealId, note?, priority? }
+- DELETE /api/admin/meal-pairings/:id
+
+Client:
+13) In Day View drawer, after user adds a meal to a slot:
+- fetch GET /api/meal-pairings/:mealId
+- show a small “Suggested add-ons” panel with buttons:
+  [Add Homemade Baked Beans] [Add Pepper Sauce] etc.
+- Clicking a suggestion adds it to the same slot (or snacks) using the existing POST /api/planner/days/:dayId/items endpoint.
+
+Acceptance:
+- Adding “Jacket potato” can suggest “Baked beans”.
+- Adding “Steak” can suggest “Pepper sauce”.
+- Suggestions are optional and one-click to add.
+
+DOCS
+14) Add docs/pantry-components-pairings.md
+- Explain pantry staples vs components vs pairings
+- Explain how staples affect shopping list display
+- Explain component recipes + multi-entry planner slots
+- Explain pairing suggestions workflow
