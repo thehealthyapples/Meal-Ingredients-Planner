@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth } from "./auth";
+import { setupAuth, hashPassword } from "./auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
 import axios from "axios";
@@ -4697,6 +4697,41 @@ export async function registerRoutes(
       if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
       console.error("[AdminUsers] tier update error:", err);
       res.status(500).json({ message: "Failed to update subscription tier" });
+    }
+  });
+
+  app.post("/api/admin/users/:id/reset-password", assertAdmin, async (req, res) => {
+    try {
+      const targetId = parseInt(req.params.id, 10);
+      if (isNaN(targetId)) return res.status(400).json({ message: "Invalid user id" });
+
+      if (targetId === req.user!.id) {
+        return res.status(400).json({ message: "Admins cannot reset their own password via this endpoint" });
+      }
+
+      const { newPassword } = z.object({
+        newPassword: z.string().min(8, "Password must be at least 8 characters"),
+      }).parse(req.body);
+
+      const targetUser = await storage.getUser(targetId);
+      if (!targetUser) return res.status(404).json({ message: "User not found" });
+
+      const hashed = await hashPassword(newPassword);
+      await storage.updatePassword(targetId, hashed);
+
+      await storage.createAuditLog({
+        adminUserId: req.user!.id,
+        action: "ADMIN_RESET_PASSWORD",
+        targetUserId: targetId,
+        metadata: {},
+      });
+
+      console.log(`[AdminUsers] password reset: admin=${req.user!.id}, target=${targetId}`);
+      res.sendStatus(200);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      console.error("[AdminUsers] reset-password error:", err);
+      res.status(500).json({ message: "Failed to reset password" });
     }
   });
 

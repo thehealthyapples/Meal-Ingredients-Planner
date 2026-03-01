@@ -19,7 +19,7 @@ const scryptAsync = promisify(scrypt);
 
 const APP_BASE_URL = process.env.APP_BASE_URL || "https://www.thehealthyapples.com";
 
-async function hashPassword(password: string) {
+export async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
   return `${buf.toString("hex")}.${salt}`;

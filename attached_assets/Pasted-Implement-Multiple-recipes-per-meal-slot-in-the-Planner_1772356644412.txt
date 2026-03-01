@@ -1,0 +1,78 @@
+Implement “Multiple recipes per meal slot” in the Planner so each day’s breakfast/lunch/dinner can contain multiple meals, and all included meals contribute to the basket/shopping list.
+
+CURRENT REALITY / CONSTRAINTS
+- Planner uses planner_weeks + planner_days tables.
+- planner_days currently stores a single meal per slot (e.g. breakfast_meal_id/lunch_meal_id/dinner_meal_id) OR equivalent.
+- We need additive changes (no massive rewrite), with backward compatibility and a data backfill.
+- Basket/shopping list must include ALL recipes for a selected day/plan.
+
+DATABASE (ADDITIVE)
+1) Create new table: planner_day_items
+   - id: serial primary key
+   - planner_day_id: integer not null references planner_days(id) on delete cascade
+   - meal_slot: text not null check in ('breakfast','lunch','dinner')
+   - meal_id: integer not null references meals(id) on delete restrict
+   - position: integer not null default 0
+   - servings_multiplier: numeric not null default 1  (optional; keep if easy)
+   - created_at: timestamptz not null default now()
+
+   Add index on (planner_day_id, meal_slot)
+   Add optional unique constraint on (planner_day_id, meal_slot, meal_id) to prevent accidental duplicates.
+
+MIGRATION / BACKFILL
+2) Write a one-time backfill migration/script:
+   For each planner_days row:
+   - if breakfast_meal_id not null and no planner_day_items exist for that day+breakfast, insert an item row
+   - same for lunch and dinner
+   Set position=0.
+   Make it idempotent (safe to re-run).
+
+SERVER STORAGE/API
+3) Update planner read endpoints to return slot meals as arrays:
+   For each planner day:
+   - breakfastMeals: [{ id, title, ... , servings_multiplier, position }]
+   - lunchMeals: [...]
+   - dinnerMeals: [...]
+   Keep existing single-meal fields temporarily for compatibility but make the client use arrays.
+
+4) Add endpoints to manage items:
+   - POST /api/planner/days/:dayId/items
+     Body: { mealSlot, mealId, position?, servingsMultiplier? }
+     Adds a meal item to that slot.
+   - PUT /api/planner/items/:itemId
+     Body: { position?, servingsMultiplier? }
+   - DELETE /api/planner/items/:itemId
+
+   Ensure auth and ownership checks: day belongs to logged-in user.
+
+CLIENT UI (PLANNER)
+5) Update planner UI to show multiple meals per slot:
+   - Each slot (Breakfast/Lunch/Dinner) displays a list of “meal chips/cards”
+   - Add button per slot: “+ Add recipe”
+     opens existing meal picker/search (web meals + saved meals)
+     selecting a meal calls POST /items
+   - Each meal chip has:
+     - remove (x)
+     - optional drag reorder (or simple up/down buttons) to set position
+     - optional servings multiplier control (1x, 2x, etc.)
+
+6) When a slot is empty, show the existing “Add” affordance.
+
+BASKET / SHOPPING LIST
+7) Update shopping list generation so it includes ALL meals in the selected scope:
+   - When generating for a day/week, load planner_day_items for the included days and aggregate ingredients across all meal_id rows.
+   - If servings_multiplier exists, multiply ingredient quantities accordingly.
+   - Ensure no missing meals: do not rely on breakfast_meal_id/lunch_meal_id/dinner_meal_id anymore; use planner_day_items as source of truth.
+
+ACCEPTANCE TESTS
+8) Add checks:
+   - A day with dinner having 3 meals results in 3 meal cards in UI
+   - Basket for that day includes ingredients from all 3 meals
+   - Backfill creates planner_day_items for existing single-meal planner entries
+   - Removing one meal from slot removes its basket ingredients but keeps others
+
+DELIVERABLES
+- migration + backfill
+- server query updates and new endpoints
+- planner UI changes
+- basket/shopping list update

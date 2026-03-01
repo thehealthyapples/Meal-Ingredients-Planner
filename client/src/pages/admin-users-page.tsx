@@ -17,8 +17,12 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, ChevronLeft, ChevronRight, ShieldCheck } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ShieldCheck, KeyRound, Eye, EyeOff, Loader2 } from "lucide-react";
 
 type SafeUser = {
   id: number;
@@ -62,6 +66,11 @@ export default function AdminUsersPage() {
   const [pendingTiers, setPendingTiers] = useState<Record<number, string>>({});
   const [confirmDialog, setConfirmDialog] = useState<{ userId: number; username: string; newTier: string } | null>(null);
 
+  const [resetDialog, setResetDialog] = useState<{ userId: number; username: string } | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
   if ((user as any)?.role !== "admin") {
     setLocation("/");
     return null;
@@ -101,6 +110,18 @@ export default function AdminUsersPage() {
     },
   });
 
+  const resetPasswordMutation = useMutation({
+    mutationFn: ({ userId, password }: { userId: number; password: string }) =>
+      apiRequest("POST", `/api/admin/users/${userId}/reset-password`, { newPassword: password }),
+    onSuccess: () => {
+      toast({ title: "Password reset", description: "The user's password has been updated successfully." });
+      closeResetDialog();
+    },
+    onError: (err: any) => {
+      toast({ title: "Reset failed", description: err.message || "Failed to reset password.", variant: "destructive" });
+    },
+  });
+
   function handleSearch() {
     setActiveQuery(searchInput.trim());
     setOffset(0);
@@ -116,6 +137,23 @@ export default function AdminUsersPage() {
     tierMutation.mutate({ userId: confirmDialog.userId, tier: confirmDialog.newTier });
     setConfirmDialog(null);
   }
+
+  function openResetDialog(u: SafeUser) {
+    setResetDialog({ userId: u.id, username: u.username });
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowPassword(false);
+  }
+
+  function closeResetDialog() {
+    setResetDialog(null);
+    setNewPassword("");
+    setConfirmPassword("");
+  }
+
+  const passwordsMatch = newPassword === confirmPassword;
+  const passwordValid = newPassword.length >= 8;
+  const canSubmitReset = passwordValid && passwordsMatch && newPassword.length > 0;
 
   const total = data?.total ?? 0;
   const users_list = data?.users ?? [];
@@ -156,20 +194,21 @@ export default function AdminUsersPage() {
               <TableHead>Tier</TableHead>
               <TableHead>Change Tier</TableHead>
               <TableHead className="w-20">Save</TableHead>
+              <TableHead className="w-32">Password</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 6 }).map((_, j) => (
+                  {Array.from({ length: 7 }).map((_, j) => (
                     <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : users_list.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
@@ -177,6 +216,7 @@ export default function AdminUsersPage() {
               users_list.map((u) => {
                 const currentTier = pendingTiers[u.id] ?? u.subscriptionTier;
                 const isDirty = pendingTiers[u.id] !== undefined && pendingTiers[u.id] !== u.subscriptionTier;
+                const isSelf = u.id === (user as any)?.id;
                 return (
                   <TableRow key={u.id} data-testid={`row-user-${u.id}`}>
                     <TableCell className="font-mono text-sm">{u.username}</TableCell>
@@ -220,6 +260,19 @@ export default function AdminUsersPage() {
                         data-testid={`button-save-tier-${u.id}`}
                       >
                         Save
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={isSelf}
+                        onClick={() => openResetDialog(u)}
+                        data-testid={`button-reset-password-${u.id}`}
+                        title={isSelf ? "Cannot reset your own password here" : "Reset password"}
+                      >
+                        <KeyRound className="h-3.5 w-3.5 mr-1.5" />
+                        Reset
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -276,6 +329,81 @@ export default function AdminUsersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!resetDialog} onOpenChange={(open) => !open && closeResetDialog()}>
+        <DialogContent className="sm:max-w-sm" data-testid="dialog-reset-password">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-4 w-4" />
+              Reset Password
+            </DialogTitle>
+            <DialogDescription>
+              Set a new password for <strong>{resetDialog?.username}</strong>.
+              They will be able to log in with this password immediately.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="new-password">New Password</Label>
+              <div className="relative">
+                <Input
+                  id="new-password"
+                  type={showPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="Min. 8 characters"
+                  className="pr-10"
+                  data-testid="input-new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  data-testid="button-toggle-password-visibility"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {newPassword.length > 0 && !passwordValid && (
+                <p className="text-xs text-destructive" data-testid="text-password-too-short">Password must be at least 8 characters</p>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="confirm-password">Confirm Password</Label>
+              <Input
+                id="confirm-password"
+                type={showPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="Repeat new password"
+                data-testid="input-confirm-password"
+              />
+              {confirmPassword.length > 0 && !passwordsMatch && (
+                <p className="text-xs text-destructive" data-testid="text-passwords-mismatch">Passwords do not match</p>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeResetDialog} data-testid="button-cancel-reset">
+              Cancel
+            </Button>
+            <Button
+              disabled={!canSubmitReset || resetPasswordMutation.isPending}
+              onClick={() => resetDialog && resetPasswordMutation.mutate({ userId: resetDialog.userId, password: newPassword })}
+              data-testid="button-confirm-reset-password"
+            >
+              {resetPasswordMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Resetting...</>
+              ) : (
+                "Reset Password"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
