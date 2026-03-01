@@ -214,6 +214,26 @@ export default function WeeklyPlannerPage() {
     },
   });
 
+  const addEntryMutation = useMutation({
+    mutationFn: async (params: { dayId: number; mealType: string; audience: string; mealId: number; position: number; isDrink: boolean; drinkType?: string | null }) => {
+      const res = await apiRequest("POST", `/api/planner/days/${params.dayId}/items`, {
+        mealSlot: params.mealType,
+        mealId: params.mealId,
+        position: params.position,
+        audience: params.audience,
+        isDrink: params.isDrink,
+        drinkType: params.drinkType ?? null,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to add meal", variant: "destructive" });
+    },
+  });
+
   const addToBasketMutation = useMutation({
     mutationFn: async (mealSelections: { mealId: number; count: number }[]) => {
       const res = await apiRequest("POST", api.shoppingList.generateFromMeals.path, { mealSelections });
@@ -359,12 +379,19 @@ export default function WeeklyPlannerPage() {
 
   const selectMeal = (mealId: number) => {
     if (!pickerTarget) return;
-    upsertEntryMutation.mutate({
+    const day = fullPlanner.flatMap(w => w.days).find(d => d.id === pickerTarget.dayId);
+    const position = day
+      ? pickerTarget.isDrink
+        ? getDrinkEntries(day.entries).length
+        : getSlotEntries(day.entries, pickerTarget.mealType, pickerTarget.audience, false).length
+      : 0;
+    addEntryMutation.mutate({
       dayId: pickerTarget.dayId,
       mealType: pickerTarget.mealType,
       audience: pickerTarget.audience,
       mealId,
-      isDrink: pickerTarget.isDrink,
+      position,
+      isDrink: pickerTarget.isDrink ?? false,
       drinkType: pickerTarget.drinkType,
     });
     setMealPickerOpen(false);
