@@ -937,12 +937,13 @@ function WebSourceBadge({ recipe }: { recipe: WebSearchRecipe }) {
   );
 }
 
-function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, nutritionMap }: {
+function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, nutritionMap, onFreezeClick }: {
   recipe: WebSearchRecipe;
   importedMealId: number | null;
   importedMeal: any;
   onImport: (recipe: WebSearchRecipe) => Promise<number | null>;
   nutritionMap: Map<number, any>;
+  onFreezeClick?: () => void;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1043,8 +1044,8 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
           isReadyMeal={false}
           isDrink={!!importedMeal.isDrink}
           audience={importedMeal.audience || "adult"}
-          isFreezerEligible={false}
-          onFreezeClick={() => {}}
+          isFreezerEligible={!!importedMeal.isFreezerEligible}
+          onFreezeClick={onFreezeClick ?? (() => {})}
           servings={importedMeal.servings || 1}
           sourceUrl={recipe.url || null}
         />
@@ -2032,6 +2033,7 @@ export default function MealsPage() {
                                         importedMeal={importedMeal}
                                         onImport={handleWebImport}
                                         nutritionMap={nutritionMap}
+                                        onFreezeClick={importedMealId ? () => setAddToFreezerMealId(importedMealId) : undefined}
                                       />
                                     </div>
                                   )}
