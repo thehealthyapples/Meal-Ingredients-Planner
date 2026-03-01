@@ -122,6 +122,13 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-01_seed_admin_users",
+    statements: [
+      "UPDATE users SET role = 'admin' WHERE username IN ('colinclapson@hotmail.co.uk', 'lindsayclapson@outlook.com')",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
