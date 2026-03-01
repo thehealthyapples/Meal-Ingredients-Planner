@@ -1,4 +1,4 @@
-import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, MealPairing, InsertMealPairing, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, mealPairings } from "@shared/schema";
+import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, mealPairings, ingredientProducts } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
 import { eq, and, ilike, sql, inArray, isNull, isNotNull } from "drizzle-orm";
@@ -200,6 +200,13 @@ export interface IStorage {
   getMealPairings(mealId: number): Promise<{ pairing: MealPairing; meal: Meal }[]>;
   addMealPairing(data: InsertMealPairing): Promise<MealPairing>;
   deleteMealPairing(id: number): Promise<MealPairing | undefined>;
+
+  // ── Ingredient Products (THA Picks) ────────────────────────────────────────
+  getIngredientProductsForKeys(keys: string[]): Promise<IngredientProduct[]>;
+  searchIngredientProducts(query: string): Promise<IngredientProduct[]>;
+  createIngredientProduct(data: InsertIngredientProduct): Promise<IngredientProduct>;
+  updateIngredientProduct(id: number, data: Partial<InsertIngredientProduct>): Promise<IngredientProduct | undefined>;
+  deactivateIngredientProduct(id: number): Promise<void>;
 
   sessionStore: session.Store;
 }
@@ -1569,6 +1576,43 @@ export class DatabaseStorage implements IStorage {
   async deleteMealPairing(id: number): Promise<MealPairing | undefined> {
     const [deleted] = await db.delete(mealPairings).where(eq(mealPairings.id, id)).returning();
     return deleted;
+  }
+
+  // ── Ingredient Products (THA Picks) ────────────────────────────────────────
+
+  async getIngredientProductsForKeys(keys: string[]): Promise<IngredientProduct[]> {
+    if (keys.length === 0) return [];
+    return db
+      .select()
+      .from(ingredientProducts)
+      .where(and(eq(ingredientProducts.isActive, true), inArray(ingredientProducts.ingredientKey, keys)))
+      .orderBy(sql`${ingredientProducts.priority} DESC`);
+  }
+
+  async searchIngredientProducts(query: string): Promise<IngredientProduct[]> {
+    if (!query.trim()) {
+      return db.select().from(ingredientProducts).orderBy(sql`${ingredientProducts.priority} DESC`);
+    }
+    const pattern = `%${query}%`;
+    return db
+      .select()
+      .from(ingredientProducts)
+      .where(sql`${ingredientProducts.ingredientKey} ILIKE ${pattern} OR ${ingredientProducts.productName} ILIKE ${pattern}`)
+      .orderBy(sql`${ingredientProducts.priority} DESC`);
+  }
+
+  async createIngredientProduct(data: InsertIngredientProduct): Promise<IngredientProduct> {
+    const [row] = await db.insert(ingredientProducts).values(data).returning();
+    return row;
+  }
+
+  async updateIngredientProduct(id: number, data: Partial<InsertIngredientProduct>): Promise<IngredientProduct | undefined> {
+    const [row] = await db.update(ingredientProducts).set(data).where(eq(ingredientProducts.id, id)).returning();
+    return row;
+  }
+
+  async deactivateIngredientProduct(id: number): Promise<void> {
+    await db.update(ingredientProducts).set({ isActive: false }).where(eq(ingredientProducts.id, id));
   }
 }
 

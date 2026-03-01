@@ -4924,5 +4924,117 @@ export async function registerRoutes(
     }
   });
 
+  // ── Ingredient Products (THA Picks) ──────────────────────────────────────────
+
+  app.get("/api/admin/ingredient-products", async (req, res) => {
+    if (!req.isAuthenticated() || req.user!.role !== "admin") return res.sendStatus(403);
+    try {
+      const query = typeof req.query.query === "string" ? req.query.query : "";
+      const picks = await storage.searchIngredientProducts(query);
+      res.json(picks);
+    } catch (err) {
+      console.error("[IngredientProducts] GET admin error:", err);
+      res.status(500).json({ message: "Failed to fetch THA Picks" });
+    }
+  });
+
+  app.post("/api/admin/ingredient-products", async (req, res) => {
+    if (!req.isAuthenticated() || req.user!.role !== "admin") return res.sendStatus(403);
+    try {
+      const schema = z.object({
+        ingredientKey: z.string().min(1),
+        productName: z.string().min(1),
+        retailer: z.string().min(1),
+        size: z.string().optional().nullable(),
+        notes: z.string().optional().nullable(),
+        tags: z.any().optional().nullable(),
+        priority: z.number().int().default(0),
+        isActive: z.boolean().default(true),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+      const { normalizeIngredientKey } = await import("@shared/normalize");
+      const data = {
+        ...parsed.data,
+        ingredientKey: normalizeIngredientKey(parsed.data.ingredientKey),
+        createdBy: req.user!.id,
+      };
+      const pick = await storage.createIngredientProduct(data);
+      res.status(201).json(pick);
+    } catch (err: any) {
+      const msg = err?.message ?? "";
+      if (msg.includes("unique") || msg.includes("duplicate") || msg.includes("UNIQUE")) {
+        return res.status(409).json({ error: "already_exists" });
+      }
+      console.error("[IngredientProducts] POST admin error:", err);
+      res.status(500).json({ message: "Failed to create THA Pick" });
+    }
+  });
+
+  app.put("/api/admin/ingredient-products/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user!.role !== "admin") return res.sendStatus(403);
+    try {
+      const id = parseInt(req.params.id as string);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      const schema = z.object({
+        ingredientKey: z.string().min(1).optional(),
+        productName: z.string().min(1).optional(),
+        retailer: z.string().min(1).optional(),
+        size: z.string().nullable().optional(),
+        notes: z.string().nullable().optional(),
+        tags: z.any().optional(),
+        priority: z.number().int().optional(),
+        isActive: z.boolean().optional(),
+      });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+      let data = { ...parsed.data };
+      if (data.ingredientKey) {
+        const { normalizeIngredientKey } = await import("@shared/normalize");
+        data.ingredientKey = normalizeIngredientKey(data.ingredientKey);
+      }
+      const updated = await storage.updateIngredientProduct(id, data);
+      if (!updated) return res.status(404).json({ message: "THA Pick not found" });
+      res.json(updated);
+    } catch (err) {
+      console.error("[IngredientProducts] PUT admin error:", err);
+      res.status(500).json({ message: "Failed to update THA Pick" });
+    }
+  });
+
+  app.delete("/api/admin/ingredient-products/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user!.role !== "admin") return res.sendStatus(403);
+    try {
+      const id = parseInt(req.params.id as string);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      await storage.deactivateIngredientProduct(id);
+      res.sendStatus(204);
+    } catch (err) {
+      console.error("[IngredientProducts] DELETE admin error:", err);
+      res.status(500).json({ message: "Failed to deactivate THA Pick" });
+    }
+  });
+
+  app.post("/api/ingredient-products/lookup", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const schema = z.object({ ingredientKeys: z.array(z.string()) });
+      const parsed = schema.safeParse(req.body);
+      if (!parsed.success) return res.json({ recommendations: {} });
+      const { ingredientKeys } = parsed.data;
+      if (ingredientKeys.length === 0) return res.json({ recommendations: {} });
+      const picks = await storage.getIngredientProductsForKeys(ingredientKeys);
+      const grouped: Record<string, typeof picks> = {};
+      for (const pick of picks) {
+        if (!grouped[pick.ingredientKey]) grouped[pick.ingredientKey] = [];
+        grouped[pick.ingredientKey].push(pick);
+      }
+      res.json({ recommendations: grouped });
+    } catch (err) {
+      console.error("[IngredientProducts] Lookup error (non-fatal):", err);
+      res.json({ recommendations: {} });
+    }
+  });
+
   return httpServer;
 }

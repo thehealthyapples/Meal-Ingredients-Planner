@@ -215,6 +215,28 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-01_ingredient_products",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS ingredient_products (
+        id SERIAL PRIMARY KEY,
+        ingredient_key TEXT NOT NULL,
+        product_name TEXT NOT NULL,
+        retailer TEXT NOT NULL,
+        size TEXT,
+        notes TEXT,
+        tags JSONB,
+        priority INT NOT NULL DEFAULT 0,
+        is_active BOOLEAN NOT NULL DEFAULT true,
+        created_by INT REFERENCES users(id),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      )`,
+      "CREATE INDEX IF NOT EXISTS idx_ingredient_products_key ON ingredient_products(ingredient_key)",
+      "CREATE INDEX IF NOT EXISTS idx_ingredient_products_active ON ingredient_products(is_active)",
+      "CREATE UNIQUE INDEX IF NOT EXISTS uniq_ingredient_products_key_name_retailer ON ingredient_products(ingredient_key, product_name, retailer)",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

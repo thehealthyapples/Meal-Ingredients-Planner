@@ -22,6 +22,7 @@ import MealDetailPage from "@/pages/meal-detail-page";
 import WeeklyPlannerPage from "@/pages/weekly-planner-page";
 import ProfilePage from "@/pages/profile-page";
 import AdminUsersPage from "@/pages/admin-users-page";
+import AdminIngredientProductsPage from "@/pages/admin-ingredient-products-page";
 import SharedPlanPage from "@/pages/shared-plan-page";
 
 function SiteFooter() {
@@ -91,6 +92,7 @@ function Router() {
       <Route path="/supermarkets" component={() => <ProtectedRoute component={SupermarketsPage} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersPage} />} />
+      <Route path="/admin/ingredient-products" component={() => <ProtectedRoute component={AdminIngredientProductsPage} />} />
       <Route path="/shared/:token" component={SharedPlanPage} />
 
       <Route component={NotFound} />

@@ -45,7 +45,7 @@ import { normalizeIngredientKey } from "@shared/normalize";
 import { formatItemDisplay } from "@/lib/unit-display";
 import AppleRating from "@/components/AppleRating";
 import BadAppleWarningModal from "@/components/BadAppleWarningModal";
-import type { ShoppingListItem, ProductMatch, IngredientSource, SupermarketLink, FreezerMeal } from "@shared/schema";
+import type { ShoppingListItem, ProductMatch, IngredientSource, SupermarketLink, FreezerMeal, IngredientProduct } from "@shared/schema";
 
 function capitalizeWords(str: string): string {
   return str.replace(/\b\w/g, c => c.toUpperCase());
@@ -653,6 +653,7 @@ export default function ShoppingListPage() {
 
   const [neededThisWeek, setNeededThisWeek] = useState<Set<number>>(new Set());
   const [staplesOpen, setStaplesOpen] = useState(false);
+  const [thaPicks, setThaPicks] = useState<Record<string, IngredientProduct[]>>({});
 
   const toggleNeededThisWeek = (id: number) => {
     setNeededThisWeek(prev => {
@@ -826,10 +827,28 @@ export default function ShoppingListPage() {
       if (!res.ok) throw new Error('Failed to lookup prices');
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
       toast({ title: "Products Matched", description: "Real grocery products matched and prices loaded across supermarkets." });
+      try {
+        const rawKeys = savedItems.map(i => normalizeIngredientKey(i.ingredientName ?? '')).filter(Boolean);
+        const uniqueKeys = [...new Set(rawKeys)];
+        if (uniqueKeys.length > 0) {
+          const res = await fetch('/api/ingredient-products/lookup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ingredientKeys: uniqueKeys }),
+            credentials: 'include',
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setThaPicks(data.recommendations ?? {});
+          }
+        }
+      } catch (e) {
+        console.warn('[THA Picks] Lookup failed (non-fatal):', e);
+      }
     },
     onError: () => {
       toast({ title: "Error", description: "Could not lookup prices.", variant: "destructive" });
@@ -1621,6 +1640,9 @@ export default function ShoppingListPage() {
                               const activeStore = item.selectedStore || cheapest?.supermarket;
                               const activeMatch = activeStore ? itemPrices?.get(activeStore) : (itemPrices?.values().next().value as ProductMatch | undefined);
                               const displayMatch = item.selectedStore ? activeMatch : (activeMatch || (itemPrices?.values().next().value as ProductMatch | undefined));
+                              const itemKey = normalizeIngredientKey(item.ingredientName ?? '');
+                              const topPick = (thaPicks[itemKey] ?? [])[0];
+                              const showHint = topPick && topPick.productName !== displayMatch?.productName;
                               return (
                                 <td className="px-2 py-1.5">
                                   {displayMatch ? (
@@ -1650,6 +1672,39 @@ export default function ShoppingListPage() {
                                     </span>
                                   ) : (
                                     <span className="text-muted-foreground text-xs">-</span>
+                                  )}
+                                  {showHint && (
+                                    <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                      {topPick.notes ? (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span
+                                              className="text-[10px] text-amber-600 dark:text-amber-400 cursor-default"
+                                              data-testid={`text-tha-pick-${item.id}`}
+                                            >
+                                              ⭐ THA Pick: {topPick.productName} ({topPick.retailer})
+                                            </span>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="bottom" className="max-w-[200px]">
+                                            {topPick.notes}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      ) : (
+                                        <span
+                                          className="text-[10px] text-amber-600 dark:text-amber-400"
+                                          data-testid={`text-tha-pick-${item.id}`}
+                                        >
+                                          ⭐ THA Pick: {topPick.productName} ({topPick.retailer})
+                                        </span>
+                                      )}
+                                      <button
+                                        className="text-[10px] text-primary hover:underline font-medium"
+                                        onClick={() => updateItem.mutate({ id: item.id, fields: { matchedStore: topPick.retailer, matchedProductId: null, matchedPrice: null } })}
+                                        data-testid={`button-use-tha-pick-${item.id}`}
+                                      >
+                                        [Use]
+                                      </button>
+                                    </div>
                                   )}
                                 </td>
                               );

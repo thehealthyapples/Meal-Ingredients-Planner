@@ -820,3 +820,25 @@ export const insertMealPairingSchema = createInsertSchema(mealPairings).omit({
 
 export type MealPairing = typeof mealPairings.$inferSelect;
 export type InsertMealPairing = z.infer<typeof insertMealPairingSchema>;
+
+export const ingredientProducts = pgTable("ingredient_products", {
+  id: serial("id").primaryKey(),
+  ingredientKey: text("ingredient_key").notNull(),
+  productName: text("product_name").notNull(),
+  retailer: text("retailer").notNull(),
+  size: text("size"),
+  notes: text("notes"),
+  tags: jsonb("tags"),
+  priority: integer("priority").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertIngredientProductSchema = createInsertSchema(ingredientProducts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type IngredientProduct = typeof ingredientProducts.$inferSelect;
+export type InsertIngredientProduct = z.infer<typeof insertIngredientProductSchema>;
