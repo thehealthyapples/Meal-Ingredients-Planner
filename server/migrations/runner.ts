@@ -129,6 +129,33 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-01_create_admin_audit_log",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS admin_audit_log (
+         id              SERIAL PRIMARY KEY,
+         admin_user_id   INTEGER NOT NULL REFERENCES users(id),
+         action          TEXT NOT NULL,
+         target_user_id  INTEGER REFERENCES users(id),
+         metadata        JSONB,
+         created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+       )`,
+    ],
+  },
+
+  {
+    id: "2026-03-01_extend_meal_plan_templates",
+    statements: [
+      "ALTER TABLE meal_plan_templates ADD COLUMN IF NOT EXISTS owner_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE",
+      "ALTER TABLE meal_plan_templates ADD COLUMN IF NOT EXISTS season TEXT",
+      "ALTER TABLE meal_plan_templates ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'published'",
+      "ALTER TABLE meal_plan_templates ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)",
+      "ALTER TABLE meal_plan_templates ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ",
+      "CREATE INDEX IF NOT EXISTS meal_plan_templates_owner_idx ON meal_plan_templates (owner_user_id)",
+      "CREATE INDEX IF NOT EXISTS meal_plan_templates_status_idx ON meal_plan_templates (status)",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
