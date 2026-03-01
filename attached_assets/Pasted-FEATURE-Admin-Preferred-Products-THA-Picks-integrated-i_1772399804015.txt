@@ -1,0 +1,121 @@
+FEATURE: Admin Preferred Products (THA Picks) integrated into Basket “Analyse / Match Products” flow
+GOAL: Let admins curate preferred buyable products for common ingredients (e.g. Aldi passata, Aldi olive oil). These should appear in the Basket matched table after Analyse Basket, without breaking existing matching, pricing, tiers, or shop logic.
+
+NON-NEGOTIABLES (SAFETY)
+- Do NOT change existing basket math, pricing totals, tier selection, shop selection, or export formats.
+- Do NOT remove or rewrite existing “Analyse Basket / Match Products” logic. We only add a recommendation overlay.
+- If anything fails (no recommendation, bad data), the system must fall back to the current behaviour.
+- All changes additive + backward-compatible.
+
+USER EXPERIENCE (HOW IT SHOULD LOOK)
+- The “Matched Product” column is where recommendations appear.
+- When a THA Pick exists for an ingredient:
+  A) If the item is currently unmatched OR auto-matched:
+     - Show “⭐ THA Pick” label next to the recommended product in the match dropdown/list.
+     - Optionally: show a small inline hint under the current match:
+       “⭐ THA Pick: Aldi Passata 500g — 100% tomatoes [Use]”
+  B) Clicking [Use] swaps the matched product to the THA pick (using existing “Change” mechanics; do not invent a new selection system).
+
+- Keep the main Basket (raw ingredient list) unchanged.
+- Keep Analyse Basket flow unchanged, except it now surfaces THA Picks in the matched results.
+
+DATABASE (ADDITIVE)
+1) Create table ingredient_products (admin curated “THA Picks”)
+- id: serial primary key
+- ingredient_key: text not null              // normalized key e.g. "passata", "olive oil"
+- product_name: text not null                // display name e.g. "Aldi Passata 500g"
+- retailer: text not null                    // e.g. "Aldi", "Tesco"
+- size: text null                            // optional e.g. "500g", "750ml"
+- notes: text null                           // e.g. "100% tomatoes, no additives"
+- tags: jsonb null                           // e.g. ["UPF-friendly","value"]
+- priority: int not null default 0           // higher = preferred
+- is_active: boolean not null default true
+- created_by: int null references users(id)
+- created_at: timestamptz not null default now()
+Indexes:
+- index(ingredient_key)
+- index(retailer)
+- index(is_active)
+Constraint:
+- allow multiple rows per ingredient_key (different retailers) ordered by priority
+
+SERVER (ADD RECOMMENDATION LOOKUP; DO NOT ALTER EXISTING MATCH PIPELINE)
+2) Add ingredient normalization helper (shared server utility):
+normalizeIngredientKey(s: string): string
+- lowercase
+- trim
+- remove punctuation
+- collapse spaces
+(Keep it simple; no fuzzy matching in V1.)
+
+3) Admin CRUD endpoints (admin-only):
+- GET /api/admin/ingredient-products?query=
+  query matches ingredient_key OR product_name (ILIKE)
+- POST /api/admin/ingredient-products
+- PUT /api/admin/ingredient-products/:id
+- DELETE /api/admin/ingredient-products/:id
+  soft delete by setting is_active=false
+
+4) Public lookup endpoint (auth required; used by basket UI/analysis):
+- POST /api/ingredient-products/lookup
+  Body: { ingredientKeys: string[] }
+  Returns:
+  {
+    recommendations: {
+      [ingredientKey: string]: Array<{
+        id, product_name, retailer, size, notes, tags, priority
+      }>
+    }
+  }
+- Only return is_active=true rows, ordered by priority desc.
+
+INTEGRATION POINT: Basket “Analyse / Match Products”
+5) Identify where Basket analysis/matching builds the list of items and matched products.
+- Without changing existing behaviour, add a step:
+  - Collect unique ingredientKeys for the basket items (normalizeIngredientKey on ingredient name)
+  - Call storage to fetch ingredient_products for those keys
+  - Attach recommendations to each basket row in the analysis response (or fetch from client after analysis completes)
+IMPORTANT:
+- If recommendations lookup fails, do NOT fail analysis. Proceed with existing analysis output.
+
+CLIENT (MINIMAL UI CHANGE, NO BREAKING)
+6) In the Basket analysed/matched table UI:
+- For each row, compute ingredientKey from Ingredient column (same normalization)
+- Use recommendations map to find THA picks for that row.
+
+Display rules:
+- If no recommendations: no UI change.
+- If recommendations exist:
+  - Show a small “⭐ THA Pick” badge next to the top recommendation (highest priority) in the “Change” dropdown/list.
+  - Also show an inline hint under Matched Product (only if space allows, subtle text):
+    “⭐ THA Pick: <product_name> (<retailer>) — <notes> [Use]”
+  - [Use] triggers the existing product-change action (same endpoint as your “Change” control), selecting that product.
+  - Do NOT auto-switch user-selected matches. Only suggest.
+
+7) Optional (safe UX improvement, does not break anything):
+- If a row is currently unmatched and there is a THA Pick:
+  - Default-select the THA Pick as the match ONLY when there is no existing match.
+  - If this risks side effects, skip auto-select and rely on the [Use] suggestion.
+
+ADMIN UI
+8) Add /admin/products page (admin-only):
+- search box
+- table of ingredient_products (ingredient_key, product_name, retailer, priority, active)
+- create/edit form
+- deactivate toggle (sets is_active=false)
+
+DOCS
+9) Add docs/preferred-products.md
+- What THA Picks are
+- How ingredient matching works (normalized text key)
+- How to manage picks (admin page)
+- How it appears in the Basket matched table
+- Safety guarantees (fallback to existing matching if no picks / errors)
+
+ACCEPTANCE TESTS
+- With no ingredient_products rows: basket behaviour is unchanged.
+- Add THA Pick for ingredient_key="passata":
+  - After Analyse Basket, passata row shows ⭐ THA Pick suggestion.
+  - Clicking [Use] switches matched product to the recommended one.
+- If recommendation lookup endpoint fails: Analyse Basket still works as before.
+- No changes to totals, pricing tiers, exports except where the user explicitly chooses a different matched product.
