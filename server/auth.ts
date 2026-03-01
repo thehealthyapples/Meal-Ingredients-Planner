@@ -35,16 +35,20 @@ async function comparePasswords(supplied: string, stored: string) {
 const isProduction = process.env.NODE_ENV === "production" || process.env.ENABLE_REGISTRATION === "true";
 
 export function setupAuth(app: Express) {
+  app.set("trust proxy", 1);
+
   const sessionSettings: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || "r3pl1t_s3cr3t_k3y_123456",
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    },
   };
-
-  if (app.get("env") === "production") {
-    app.set("trust proxy", 1);
-  }
 
   app.use(session(sessionSettings));
   app.use(passport.initialize());
