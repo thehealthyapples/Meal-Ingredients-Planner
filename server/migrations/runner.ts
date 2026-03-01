@@ -167,6 +167,13 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-01_add_planner_entry_position",
+    statements: [
+      "ALTER TABLE planner_entries ADD COLUMN IF NOT EXISTS position INTEGER NOT NULL DEFAULT 0",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
