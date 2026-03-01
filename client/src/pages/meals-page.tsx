@@ -27,6 +27,7 @@ import { MealWatermark, getWatermarkType } from "@/components/meal-watermark";
 import { default as AppleRating } from "@/components/AppleRating";
 import { Switch } from "@/components/ui/switch";
 import { shouldExcludeRecipe } from "@/lib/dietRules";
+import { useUser } from "@/hooks/use-user";
 
 function parseIngredient(raw: string): { name: string; detail: string | null } {
   let text = raw.trim();
@@ -3227,6 +3228,7 @@ function CreateMealDialog() {
   const [open, setOpen] = useState(false);
   const [selectedDiets, setSelectedDiets] = useState<number[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | undefined>(undefined);
+  const { user } = useUser();
   
   const { data: allDiets = [] } = useQuery<Diet[]>({
     queryKey: ['/api/diets'],
@@ -3247,6 +3249,7 @@ function CreateMealDialog() {
       name: "",
       ingredients: [{ value: "" }],
       servings: 1,
+      kind: "meal",
     }
   });
 
@@ -3348,6 +3351,29 @@ function CreateMealDialog() {
                 </SelectContent>
               </Select>
             </div>
+
+            {user?.role === 'admin' && (
+              <FormField
+                control={form.control}
+                name="kind"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Type</FormLabel>
+                    <Select value={field.value ?? "meal"} onValueChange={field.onChange}>
+                      <SelectTrigger data-testid="select-meal-kind">
+                        <SelectValue placeholder="Select type..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="meal">Meal</SelectItem>
+                        <SelectItem value="component">Component</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Components are reusable building blocks (e.g. Bone Broth, Pepper Sauce) that can be paired with meals.</p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

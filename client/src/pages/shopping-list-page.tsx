@@ -41,6 +41,7 @@ import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { api, buildUrl } from "@shared/routes";
+import { normalizeIngredientKey } from "@shared/normalize";
 import { formatItemDisplay } from "@/lib/unit-display";
 import AppleRating from "@/components/AppleRating";
 import BadAppleWarningModal from "@/components/BadAppleWarningModal";
@@ -641,6 +642,32 @@ export default function ShoppingListPage() {
   const { data: freezerMeals = [] } = useQuery<FreezerMeal[]>({
     queryKey: ['/api/freezer'],
   });
+
+  const { data: pantryItems = [] } = useQuery<{ id: number; ingredientKey: string }[]>({
+    queryKey: ['/api/pantry'],
+  });
+
+  const pantryKeySet = useMemo(() => {
+    return new Set(pantryItems.map(p => p.ingredientKey));
+  }, [pantryItems]);
+
+  const [neededThisWeek, setNeededThisWeek] = useState<Set<number>>(new Set());
+  const [staplesOpen, setStaplesOpen] = useState(false);
+
+  const toggleNeededThisWeek = (id: number) => {
+    setNeededThisWeek(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const isStaple = (item: ShoppingListItem) => {
+    const key = normalizeIngredientKey(
+      (item as any).ingredientName ?? (item as any).name ?? item.productName ?? ''
+    );
+    return pantryKeySet.has(key) && !neededThisWeek.has(item.id);
+  };
 
   const frozenMealIds = useMemo(() => {
     const ids = new Set<number>();
@@ -1434,7 +1461,7 @@ export default function ShoppingListPage() {
                   </thead>
                   <tbody>
                     <AnimatePresence>
-                      {sortedItems.map((item) => {
+                      {sortedItems.filter(i => !isStaple(i)).map((item) => {
                         const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
                         const itemPrices = pricesByItem.get(item.id);
                         const cheapest = getCheapestForItem(item.id);
@@ -1861,6 +1888,74 @@ export default function ShoppingListPage() {
                                 </Button>
                               </div>
                             </td>
+                          </motion.tr>
+                        );
+                      })}
+
+                      {/* Staples section */}
+                      {sortedItems.some(i => isStaple(i)) && (
+                        <tr>
+                          <td colSpan={99} className="pt-2 pb-0 px-2">
+                            <button
+                              className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left"
+                              onClick={() => setStaplesOpen(o => !o)}
+                              data-testid="button-toggle-staples"
+                            >
+                              {staplesOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                              Staples — usually in stock ({sortedItems.filter(i => isStaple(i)).length})
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+
+                      {staplesOpen && sortedItems.filter(i => isStaple(i)).map((item) => {
+                        const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
+                        const itemPrices = pricesByItem.get(item.id);
+                        const cheapest = getCheapestForItem(item.id);
+                        const cat = item.category || 'other';
+                        const catColor = CATEGORY_COLORS[cat] || CATEGORY_COLORS.other;
+                        const CatIcon = CATEGORY_ICONS[cat] || CircleDot;
+                        const sources = sourcesByItem.get(item.id) || [];
+                        const itemTier = getItemTier(item);
+                        const tierInfo = TIER_LABELS[itemTier] || TIER_LABELS.standard;
+
+                        return (
+                          <motion.tr
+                            key={`staple-${item.id}`}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 0.6 }}
+                            exit={{ opacity: 0 }}
+                            className="border-b border-border/30 bg-muted/5"
+                            data-testid={`row-staple-${item.id}`}
+                          >
+                            <td className="px-2 py-1.5" />
+                            <td className="px-2 py-1.5">
+                              <div className="flex items-center gap-1.5">
+                                <CatIcon className="h-3 w-3 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground line-through">{item.productName}</span>
+                                <button
+                                  className="ml-2 text-[10px] text-primary hover:underline whitespace-nowrap"
+                                  onClick={() => toggleNeededThisWeek(item.id)}
+                                  data-testid={`button-need-this-week-${item.id}`}
+                                >
+                                  Need this week ↑
+                                </button>
+                              </div>
+                            </td>
+                            <td className="px-2 py-1.5 text-right text-xs text-muted-foreground">{qty}</td>
+                            <td className="px-2 py-1.5 text-xs text-muted-foreground">{unitLabel}</td>
+                            {hasPrices && <td className="px-2 py-1.5" />}
+                            <td className="px-2 py-1.5">
+                              <Badge variant="outline" className={`text-[10px] ${catColor}`}>{cat}</Badge>
+                            </td>
+                            {hasPrices && <td className="px-2 py-1.5" />}
+                            <td className="px-2 py-1.5 text-center">
+                              {sources.length > 0 && (
+                                <span className="text-[10px] text-muted-foreground">{sources.length}M</span>
+                              )}
+                            </td>
+                            {hasPrices && <><td /><td /><td /></>}
+                            <td className="px-2 py-1.5" />
                           </motion.tr>
                         );
                       })}

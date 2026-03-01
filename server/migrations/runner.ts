@@ -174,6 +174,47 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-01_add_meals_kind",
+    statements: [
+      "ALTER TABLE meals ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'meal'",
+    ],
+  },
+
+  {
+    id: "2026-03-01_user_pantry_items",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS user_pantry_items (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        ingredient_key TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'larder' CHECK (category IN ('larder','fridge','freezer')),
+        default_have BOOLEAN NOT NULL DEFAULT TRUE,
+        notes TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(user_id, ingredient_key)
+      )`,
+      "CREATE INDEX IF NOT EXISTS user_pantry_items_user_id_idx ON user_pantry_items(user_id)",
+    ],
+  },
+
+  {
+    id: "2026-03-01_meal_pairings",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS meal_pairings (
+        id SERIAL PRIMARY KEY,
+        base_meal_id INTEGER NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
+        suggested_meal_id INTEGER NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
+        note TEXT,
+        priority INTEGER NOT NULL DEFAULT 0,
+        created_by INTEGER REFERENCES users(id),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(base_meal_id, suggested_meal_id)
+      )`,
+      "CREATE INDEX IF NOT EXISTS meal_pairings_base_meal_idx ON meal_pairings(base_meal_id, priority DESC)",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

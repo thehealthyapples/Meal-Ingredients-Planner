@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Coffee, Sun, Moon, Cookie, Wine,
-  ChevronUp, ChevronDown, X, Plus, Search, Loader2, ChefHat, UtensilsCrossed,
+  ChevronUp, ChevronDown, X, Plus, Search, Loader2, ChefHat, UtensilsCrossed, Sparkles,
 } from "lucide-react";
 import type { PlannerEntry, Meal } from "@shared/schema";
 
@@ -63,6 +64,19 @@ interface SearchState {
   open: boolean;
 }
 
+type KindFilter = "all" | "meal" | "component";
+
+interface PairingResult {
+  pairing: {
+    id: number;
+    baseMealId: number;
+    suggestedMealId: number;
+    note: string | null;
+    priority: number;
+  };
+  meal: Meal;
+}
+
 function SlotSection({
   slot,
   dayId,
@@ -81,11 +95,26 @@ function SlotSection({
   const { toast } = useToast();
   const [search, setSearch] = useState<SearchState>({ query: "", results: [], loading: false, open: false });
   const [swapping, setSwapping] = useState(false);
+  const [kindFilter, setKindFilter] = useState<KindFilter>("all");
+  const [lastAddedMealId, setLastAddedMealId] = useState<number | null>(null);
+  const [pairingsDismissed, setPairingsDismissed] = useState(false);
+
+  const { data: pairingsData = [] } = useQuery<PairingResult[]>({
+    queryKey: ["/api/meal-pairings", lastAddedMealId],
+    enabled: lastAddedMealId !== null && !pairingsDismissed,
+  });
 
   const filteredResults = search.query.trim()
     ? allMeals.filter(m => {
-        if (slot.isDrink) return m.isDrink && m.name.toLowerCase().includes(search.query.toLowerCase());
-        return !m.isDrink && m.name.toLowerCase().includes(search.query.toLowerCase());
+        if (slot.isDrink) {
+          if (!m.isDrink) return false;
+        } else {
+          if (m.isDrink) return false;
+        }
+        if (!m.name.toLowerCase().includes(search.query.toLowerCase())) return false;
+        if (kindFilter === "meal") return (m as any).kind !== "component";
+        if (kindFilter === "component") return (m as any).kind === "component";
+        return true;
       }).slice(0, 8)
     : [];
 
@@ -98,10 +127,12 @@ function SlotSection({
         isDrink: slot.isDrink,
         drinkType: slot.isDrink ? "soft" : null,
       });
-      return res.json();
+      return { json: await res.json(), mealId };
     },
-    onSuccess: () => {
+    onSuccess: ({ mealId }) => {
       setSearch({ query: "", results: [], loading: false, open: false });
+      setPairingsDismissed(false);
+      setLastAddedMealId(mealId);
       onPlannerInvalidate();
     },
     onError: () => {
@@ -139,6 +170,8 @@ function SlotSection({
 
   const SlotIcon = slot.icon;
 
+  const showPairings = lastAddedMealId !== null && !pairingsDismissed && pairingsData.length > 0;
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
@@ -171,6 +204,9 @@ function SlotSection({
                   </div>
                 )}
                 <span className="flex-1 text-xs truncate" title={meal?.name}>{meal?.name ?? "Unknown meal"}</span>
+                {(meal as any)?.kind === "component" && (
+                  <Badge variant="outline" className="text-[10px] h-4 px-1 text-violet-600 border-violet-300">Component</Badge>
+                )}
                 <div className="flex items-center gap-0.5 flex-shrink-0">
                   <button
                     onClick={() => idx > 0 && swapPositions(entries[idx - 1], entry)}
@@ -206,6 +242,44 @@ function SlotSection({
         </div>
       )}
 
+      {showPairings && (
+        <div className="rounded-md border border-border/50 bg-muted/20 p-2.5 space-y-2" data-testid={`panel-pairings-${slot.key}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Sparkles className="h-3 w-3" />
+              <span>Goes well with…</span>
+            </div>
+            <button
+              className="h-4 w-4 rounded text-muted-foreground hover:text-foreground flex items-center justify-center"
+              onClick={() => setPairingsDismissed(true)}
+              data-testid={`button-dismiss-pairings-${slot.key}`}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {pairingsData.map(({ pairing, meal: suggestedMeal }) => (
+              <Button
+                key={pairing.id}
+                variant="outline"
+                size="sm"
+                className="h-6 text-xs gap-1 px-2"
+                onClick={() => addMutation.mutate(suggestedMeal.id)}
+                disabled={addMutation.isPending}
+                data-testid={`button-add-pairing-${suggestedMeal.id}`}
+                title={pairing.note ?? undefined}
+              >
+                <Plus className="h-2.5 w-2.5" />
+                {suggestedMeal.name}
+                {(suggestedMeal as any).kind === "component" && (
+                  <Badge variant="outline" className="text-[9px] h-3.5 px-0.5 text-violet-600 border-violet-300 ml-0.5">C</Badge>
+                )}
+              </Button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-1">
         {!search.open ? (
           <Button
@@ -220,13 +294,30 @@ function SlotSection({
           </Button>
         ) : (
           <div className="space-y-1">
+            {!slot.isDrink && (
+              <div className="flex gap-1">
+                {(["all", "meal", "component"] as KindFilter[]).map(k => (
+                  <button
+                    key={k}
+                    onClick={() => setKindFilter(k)}
+                    className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${kindFilter === k ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:text-foreground"}`}
+                    data-testid={`button-kind-filter-${k}-${slot.key}`}
+                  >
+                    {k === "all" ? "All" : k === "meal" ? "Meals" : "Components"}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
               <Input
                 autoFocus
                 placeholder={slot.isDrink ? "Search drinks…" : "Search recipes…"}
                 value={search.query}
-                onChange={e => setSearch(s => ({ ...s, query: e.target.value }))}
+                onChange={e => {
+                  setSearch(s => ({ ...s, query: e.target.value }));
+                  if (e.target.value) setPairingsDismissed(true);
+                }}
                 className="pl-7 h-7 text-xs"
                 data-testid={`input-search-slot-${slot.key}`}
                 onKeyDown={e => e.key === "Escape" && setSearch({ query: "", results: [], loading: false, open: false })}
@@ -247,7 +338,10 @@ function SlotSection({
                     ) : (
                       <ChefHat className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     )}
-                    <span className="truncate">{meal.name}</span>
+                    <span className="truncate flex-1">{meal.name}</span>
+                    {(meal as any).kind === "component" && (
+                      <Badge variant="outline" className="text-[9px] h-4 px-1 text-violet-600 border-violet-300 flex-shrink-0">Component</Badge>
+                    )}
                   </button>
                 ))}
               </div>

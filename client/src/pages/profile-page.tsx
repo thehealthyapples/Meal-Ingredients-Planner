@@ -11,13 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   User, Heart, Home, Flame, Target, Settings, Shield,
   Plus, Minus, Save, Activity, Scale, Ruler,
   Baby, PersonStanding, Users, Apple, TrendingUp,
   Volume2, Scan, Loader2, ArrowLeft, Check, Store,
-  PiggyBank, ShieldAlert, Sparkles, Ban, Mail
+  PiggyBank, ShieldAlert, Sparkles, Ban, Mail, Trash2, Package
 } from "lucide-react";
+import { normalizeIngredientKey } from "@shared/normalize";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES } from "@/lib/diets";
 
@@ -200,6 +202,8 @@ export default function ProfilePage() {
         prefs={prefs}
         onSave={(prefs) => savePreferences(prefs)}
       />
+
+      <PantryStaplesSection />
 
       <ContactSection />
 
@@ -817,6 +821,158 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
           </div>
         </div>
       </div>
+    </Card>
+  );
+}
+
+const PANTRY_CATEGORIES = [
+  { value: "larder", label: "Larder" },
+  { value: "fridge", label: "Fridge" },
+  { value: "freezer", label: "Freezer" },
+] as const;
+
+type PantryCategory = "larder" | "fridge" | "freezer";
+
+interface PantryItem {
+  id: number;
+  userId: number;
+  ingredientKey: string;
+  category: string;
+  defaultHave: boolean;
+  notes: string | null;
+  createdAt: string;
+}
+
+function PantryStaplesSection() {
+  const { toast } = useToast();
+  const qclient = useQueryClient();
+  const [ingredient, setIngredient] = useState("");
+  const [category, setCategory] = useState<PantryCategory>("larder");
+  const [notes, setNotes] = useState("");
+
+  const { data: items = [], isLoading } = useQuery<PantryItem[]>({
+    queryKey: ["/api/pantry"],
+  });
+
+  const addMutation = useMutation({
+    mutationFn: (data: { ingredient: string; category: string; notes?: string }) =>
+      apiRequest("POST", "/api/pantry", data),
+    onSuccess: () => {
+      qclient.invalidateQueries({ queryKey: ["/api/pantry"] });
+      setIngredient("");
+      setNotes("");
+    },
+    onError: (err: any) => {
+      const body = err?.body ?? err;
+      if (body?.error === "already_exists") {
+        toast({ title: "Already in pantry", description: "This ingredient is already listed.", variant: "destructive" });
+      } else {
+        toast({ title: "Failed to add item", variant: "destructive" });
+      }
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/pantry/${id}`),
+    onSuccess: () => qclient.invalidateQueries({ queryKey: ["/api/pantry"] }),
+    onError: () => toast({ title: "Failed to remove item", variant: "destructive" }),
+  });
+
+  const grouped = PANTRY_CATEGORIES.map(cat => ({
+    ...cat,
+    items: items.filter(i => i.category === cat.value),
+  }));
+
+  const handleAdd = () => {
+    if (!ingredient.trim()) return;
+    addMutation.mutate({ ingredient: ingredient.trim(), category, notes: notes.trim() || undefined });
+  };
+
+  return (
+    <Card className="p-5" data-testid="card-pantry-staples">
+      <div className="flex items-center gap-2 mb-1">
+        <Package className="h-4 w-4 text-muted-foreground" />
+        <h3 className="font-semibold text-sm">Pantry Staples</h3>
+      </div>
+      <p className="text-xs text-muted-foreground mb-4">
+        Ingredients you usually have at home. They'll be collapsed in your shopping list so you only focus on what you actually need.
+      </p>
+
+      <div className="flex gap-2 mb-4 flex-wrap">
+        <Input
+          placeholder="e.g. olive oil, chilli flakes…"
+          value={ingredient}
+          onChange={e => setIngredient(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && handleAdd()}
+          className="flex-1 min-w-[150px] text-sm"
+          data-testid="input-pantry-ingredient"
+        />
+        <Select value={category} onValueChange={v => setCategory(v as PantryCategory)}>
+          <SelectTrigger className="w-28 text-sm" data-testid="select-pantry-category">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PANTRY_CATEGORIES.map(c => (
+              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          placeholder="Notes (optional)"
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          className="flex-1 min-w-[100px] text-sm"
+          data-testid="input-pantry-notes"
+        />
+        <Button
+          size="sm"
+          onClick={handleAdd}
+          disabled={!ingredient.trim() || addMutation.isPending}
+          data-testid="button-pantry-add"
+        >
+          {addMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+          <span className="ml-1">Add</span>
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-full" />
+          <Skeleton className="h-6 w-3/4" />
+        </div>
+      ) : items.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic">No staples added yet — try olive oil, herbs, spices…</p>
+      ) : (
+        <div className="space-y-4">
+          {grouped.filter(g => g.items.length > 0).map(group => (
+            <div key={group.value}>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">{group.label}</p>
+              <div className="space-y-1">
+                {group.items.map(item => (
+                  <div key={item.id} className="flex items-center justify-between gap-2 py-1" data-testid={`row-pantry-item-${item.id}`}>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm">{item.ingredientKey}</span>
+                      {item.notes && (
+                        <span className="text-xs text-muted-foreground ml-2">— {item.notes}</span>
+                      )}
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                      onClick={() => deleteMutation.mutate(item.id)}
+                      disabled={deleteMutation.isPending}
+                      data-testid={`button-pantry-delete-${item.id}`}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </Card>
   );
 }

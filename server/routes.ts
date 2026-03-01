@@ -760,6 +760,9 @@ export async function registerRoutes(
     try {
       const input = api.meals.create.input.parse(req.body);
       const { nutrition: nutritionData, ...mealData } = input;
+      if ((mealData as any).kind === 'component' && req.user!.role !== 'admin') {
+        (mealData as any).kind = 'meal';
+      }
       const meal = await storage.createMeal(req.user!.id, mealData);
       
       if (nutritionData && Object.values(nutritionData).some(v => v)) {
@@ -904,11 +907,14 @@ export async function registerRoutes(
       return res.status(400).json({ message: "Invalid data", errors: parsed.error.flatten() });
     }
 
-    const updateData: Partial<{ name: string; ingredients: string[]; instructions: string[]; servings: number }> = {};
+    const updateData: Partial<{ name: string; ingredients: string[]; instructions: string[]; servings: number; kind: string }> = {};
     if (parsed.data.name !== undefined) updateData.name = parsed.data.name;
     if (parsed.data.ingredients !== undefined) updateData.ingredients = parsed.data.ingredients;
     if (parsed.data.instructions !== undefined && parsed.data.instructions !== null) updateData.instructions = parsed.data.instructions;
     if (parsed.data.servings !== undefined) updateData.servings = parsed.data.servings;
+    if (parsed.data.kind !== undefined) {
+      updateData.kind = (parsed.data.kind === 'component' && req.user!.role !== 'admin') ? 'meal' : parsed.data.kind;
+    }
 
     const updated = await storage.updateMeal(meal.id, updateData);
     res.json(updated);
@@ -4801,6 +4807,120 @@ export async function registerRoutes(
       if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
       console.error("[AdminUsers] reset-password error:", err);
       res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+
+  // ── Pantry Staples ──────────────────────────────────────────────────────────
+  app.get("/api/pantry", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const items = await storage.getPantryItems(req.user!.id);
+      res.json(items);
+    } catch (err) {
+      console.error("[Pantry] GET error:", err);
+      res.status(500).json({ message: "Failed to fetch pantry items" });
+    }
+  });
+
+  app.post("/api/pantry", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const schema = z.object({
+        ingredient: z.string().min(1),
+        category: z.enum(["larder", "fridge", "freezer"]),
+        notes: z.string().optional(),
+      });
+      const { ingredient, category, notes } = schema.parse(req.body);
+      const item = await storage.addPantryItem(req.user!.id, ingredient, category, notes);
+      res.status(201).json(item);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      const msg = String((err as any)?.message ?? "");
+      if (msg.includes("unique") || msg.includes("duplicate") || msg.includes("UNIQUE")) {
+        return res.status(409).json({ error: "already_exists" });
+      }
+      console.error("[Pantry] POST error:", err);
+      res.status(500).json({ message: "Failed to add pantry item" });
+    }
+  });
+
+  app.delete("/api/pantry/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      await storage.deletePantryItem(req.user!.id, id);
+      res.sendStatus(204);
+    } catch (err) {
+      console.error("[Pantry] DELETE error:", err);
+      res.status(500).json({ message: "Failed to delete pantry item" });
+    }
+  });
+
+  // ── Meal Pairings ─────────────────────────────────────────────────────────
+  app.get("/api/meal-pairings/:mealId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const mealId = parseInt(req.params.mealId);
+      if (isNaN(mealId)) return res.status(400).json({ message: "Invalid mealId" });
+      const results = await storage.getMealPairings(mealId);
+      res.json(results);
+    } catch (err) {
+      console.error("[Pairings] GET error:", err);
+      res.status(500).json({ message: "Failed to fetch pairings" });
+    }
+  });
+
+  app.post("/api/admin/meal-pairings", async (req, res) => {
+    if (!req.isAuthenticated() || req.user!.role !== "admin") return res.sendStatus(403);
+    try {
+      const schema = z.object({
+        baseMealId: z.number().int(),
+        suggestedMealId: z.number().int(),
+        note: z.string().optional(),
+        priority: z.number().int().optional(),
+      });
+      const { baseMealId, suggestedMealId, note, priority } = schema.parse(req.body);
+      const pairing = await storage.addMealPairing({
+        baseMealId,
+        suggestedMealId,
+        note: note ?? null,
+        priority: priority ?? 0,
+        createdBy: req.user!.id,
+      });
+      await storage.createAuditLog({
+        adminUserId: req.user!.id,
+        action: "meal_pairing_created",
+        metadata: { baseMealId, suggestedMealId },
+      });
+      res.status(201).json(pairing);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      const msg = String((err as any)?.message ?? "");
+      if (msg.includes("unique") || msg.includes("duplicate") || msg.includes("UNIQUE")) {
+        return res.status(409).json({ error: "already_exists" });
+      }
+      console.error("[Pairings] POST admin error:", err);
+      res.status(500).json({ message: "Failed to create pairing" });
+    }
+  });
+
+  app.delete("/api/admin/meal-pairings/:id", async (req, res) => {
+    if (!req.isAuthenticated() || req.user!.role !== "admin") return res.sendStatus(403);
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      const deleted = await storage.deleteMealPairing(id);
+      if (!deleted) return res.status(404).json({ message: "Pairing not found" });
+      await storage.createAuditLog({
+        adminUserId: req.user!.id,
+        action: "meal_pairing_deleted",
+        metadata: { id, baseMealId: deleted.baseMealId, suggestedMealId: deleted.suggestedMealId },
+      });
+      res.sendStatus(204);
+    } catch (err) {
+      console.error("[Pairings] DELETE admin error:", err);
+      res.status(500).json({ message: "Failed to delete pairing" });
     }
   });
 

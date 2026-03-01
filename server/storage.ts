@@ -1,4 +1,5 @@
-import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog } from "@shared/schema";
+import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, MealPairing, InsertMealPairing, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, mealPairings } from "@shared/schema";
+import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
 import { eq, and, ilike, sql, inArray, isNull, isNotNull } from "drizzle-orm";
 import session from "express-session";
@@ -34,7 +35,7 @@ export interface IStorage {
   getMeal(id: number): Promise<Meal | undefined>;
   createMeal(userId: number, insertMeal: InsertMeal): Promise<Meal>;
   deleteMeal(id: number): Promise<void>;
-  updateMeal(id: number, data: Partial<{ name: string; ingredients: string[]; instructions: string[]; servings: number }>): Promise<Meal | undefined>;
+  updateMeal(id: number, data: Partial<{ name: string; ingredients: string[]; instructions: string[]; servings: number; kind: string }>): Promise<Meal | undefined>;
   updateMealInstructions(id: number, instructions: string[], ingredients?: string[]): Promise<Meal | undefined>;
   getNutrition(mealId: number): Promise<Nutrition | undefined>;
   getNutritionBulk(mealIds: number[]): Promise<Nutrition[]>;
@@ -190,6 +191,16 @@ export interface IStorage {
   setUserSubscriptionTier(userId: number, tier: "free" | "premium" | "friends_family"): Promise<SafeUser>;
   createAuditLog(entry: { adminUserId: number; action: string; targetUserId?: number; metadata?: object }): Promise<void>;
 
+  // ── Pantry Staples ───────────────────────────────────────────────────────────
+  getPantryItems(userId: number): Promise<UserPantryItem[]>;
+  addPantryItem(userId: number, ingredient: string, category: string, notes?: string): Promise<UserPantryItem>;
+  deletePantryItem(userId: number, id: number): Promise<void>;
+
+  // ── Meal Pairings ─────────────────────────────────────────────────────────────
+  getMealPairings(mealId: number): Promise<{ pairing: MealPairing; meal: Meal }[]>;
+  addMealPairing(data: InsertMealPairing): Promise<MealPairing>;
+  deleteMealPairing(id: number): Promise<MealPairing | undefined>;
+
   sessionStore: session.Store;
 }
 
@@ -250,7 +261,7 @@ export class DatabaseStorage implements IStorage {
     return meal;
   }
 
-  async updateMeal(id: number, data: Partial<{ name: string; ingredients: string[]; instructions: string[]; servings: number }>): Promise<Meal | undefined> {
+  async updateMeal(id: number, data: Partial<{ name: string; ingredients: string[]; instructions: string[]; servings: number; kind: string }>): Promise<Meal | undefined> {
     const [meal] = await db.update(meals).set(data).where(eq(meals.id, id)).returning();
     return meal;
   }
@@ -1519,6 +1530,45 @@ export class DatabaseStorage implements IStorage {
       targetUserId: entry.targetUserId ?? null,
       metadata: entry.metadata ?? null,
     });
+  }
+
+  // ── Pantry Staples ──────────────────────────────────────────────────────────
+  async getPantryItems(userId: number): Promise<UserPantryItem[]> {
+    return db.select().from(userPantryItems).where(eq(userPantryItems.userId, userId));
+  }
+
+  async addPantryItem(userId: number, ingredient: string, category: string, notes?: string): Promise<UserPantryItem> {
+    const ingredientKey = normalizeIngredientKey(ingredient);
+    const [item] = await db
+      .insert(userPantryItems)
+      .values({ userId, ingredientKey, category, notes: notes ?? null })
+      .returning();
+    return item;
+  }
+
+  async deletePantryItem(userId: number, id: number): Promise<void> {
+    await db.delete(userPantryItems).where(and(eq(userPantryItems.id, id), eq(userPantryItems.userId, userId)));
+  }
+
+  // ── Meal Pairings ─────────────────────────────────────────────────────────
+  async getMealPairings(mealId: number): Promise<{ pairing: MealPairing; meal: Meal }[]> {
+    const rows = await db
+      .select({ pairing: mealPairings, meal: meals })
+      .from(mealPairings)
+      .innerJoin(meals, eq(mealPairings.suggestedMealId, meals.id))
+      .where(eq(mealPairings.baseMealId, mealId))
+      .orderBy(sql`${mealPairings.priority} DESC`);
+    return rows;
+  }
+
+  async addMealPairing(data: InsertMealPairing): Promise<MealPairing> {
+    const [pairing] = await db.insert(mealPairings).values(data).returning();
+    return pairing;
+  }
+
+  async deleteMealPairing(id: number): Promise<MealPairing | undefined> {
+    const [deleted] = await db.delete(mealPairings).where(eq(mealPairings.id, id)).returning();
+    return deleted;
   }
 }
 

@@ -83,6 +83,7 @@ export const meals = pgTable("meals", {
   barcode: text("barcode"),
   brand: text("brand"),
   originalMealId: integer("original_meal_id"),
+  kind: text("kind").notNull().default("meal"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -189,6 +190,7 @@ export const insertMealSchema = createInsertSchema(meals).pick({
   barcode: true,
   brand: true,
   originalMealId: true,
+  kind: true,
 });
 
 export const updateMealSchema = createInsertSchema(meals).pick({
@@ -196,6 +198,7 @@ export const updateMealSchema = createInsertSchema(meals).pick({
   ingredients: true,
   instructions: true,
   servings: true,
+  kind: true,
 }).partial();
 
 export type UpdateMeal = z.infer<typeof updateMealSchema>;
@@ -781,3 +784,39 @@ export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLog).omit(
 
 export type AdminAuditLog = typeof adminAuditLog.$inferSelect;
 export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
+
+export const userPantryItems = pgTable("user_pantry_items", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  ingredientKey: text("ingredient_key").notNull(),
+  category: text("category").notNull().default("larder"),
+  defaultHave: boolean("default_have").notNull().default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertUserPantryItemSchema = createInsertSchema(userPantryItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type UserPantryItem = typeof userPantryItems.$inferSelect;
+export type InsertUserPantryItem = z.infer<typeof insertUserPantryItemSchema>;
+
+export const mealPairings = pgTable("meal_pairings", {
+  id: serial("id").primaryKey(),
+  baseMealId: integer("base_meal_id").notNull().references(() => meals.id, { onDelete: "cascade" }),
+  suggestedMealId: integer("suggested_meal_id").notNull().references(() => meals.id, { onDelete: "cascade" }),
+  note: text("note"),
+  priority: integer("priority").notNull().default(0),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertMealPairingSchema = createInsertSchema(mealPairings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type MealPairing = typeof mealPairings.$inferSelect;
+export type InsertMealPairing = z.infer<typeof insertMealPairingSchema>;
