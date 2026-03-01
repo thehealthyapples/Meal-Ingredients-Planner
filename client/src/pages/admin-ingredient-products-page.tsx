@@ -20,7 +20,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, Plus, Edit2, Trash2, Star } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, Star, RotateCcw } from "lucide-react";
 import { normalizeIngredientKey } from "@shared/normalize";
 import type { IngredientProduct } from "@shared/schema";
 
@@ -113,6 +113,21 @@ export default function AdminIngredientProductsPage() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to deactivate.", variant: "destructive" });
+    },
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: (id: number) =>
+      apiRequest("PUT", `/api/admin/ingredient-products/${id}`, { isActive: true }).then(r => {
+        if (!r.ok) return r.json().then(e => Promise.reject(e));
+        return r.json();
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/ingredient-products"] });
+      toast({ title: "THA Pick re-activated" });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to re-activate.", variant: "destructive" });
     },
   });
 
@@ -260,7 +275,7 @@ export default function AdminIngredientProductsPage() {
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      {pick.isActive && (
+                      {pick.isActive ? (
                         <Button
                           size="icon"
                           variant="ghost"
@@ -269,6 +284,17 @@ export default function AdminIngredientProductsPage() {
                           data-testid={`button-deactivate-${pick.id}`}
                         >
                           <Trash2 className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-green-600 hover:text-green-700"
+                          onClick={() => reactivateMutation.mutate(pick.id)}
+                          disabled={reactivateMutation.isPending}
+                          data-testid={`button-reactivate-${pick.id}`}
+                        >
+                          <RotateCcw className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
