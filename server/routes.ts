@@ -5023,11 +5023,17 @@ export async function registerRoutes(
       if (!parsed.success) return res.json({ recommendations: {} });
       const { ingredientKeys } = parsed.data;
       if (ingredientKeys.length === 0) return res.json({ recommendations: {} });
-      const picks = await storage.getIngredientProductsForKeys(ingredientKeys);
-      const grouped: Record<string, typeof picks> = {};
-      for (const pick of picks) {
-        if (!grouped[pick.ingredientKey]) grouped[pick.ingredientKey] = [];
-        grouped[pick.ingredientKey].push(pick);
+      const allPicks = await storage.getAllActiveIngredientProducts();
+      const grouped: Record<string, typeof allPicks> = {};
+      for (const clientKey of ingredientKeys) {
+        const clientWords = new Set(clientKey.split(' ').filter(Boolean));
+        for (const pick of allPicks) {
+          const pickWords = pick.ingredientKey.split(' ').filter(Boolean);
+          if (pickWords.length > 0 && pickWords.every(w => clientWords.has(w))) {
+            if (!grouped[clientKey]) grouped[clientKey] = [];
+            grouped[clientKey].push(pick);
+          }
+        }
       }
       res.json({ recommendations: grouped });
     } catch (err) {

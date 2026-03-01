@@ -203,6 +203,7 @@ export interface IStorage {
 
   // ── Ingredient Products (THA Picks) ────────────────────────────────────────
   getIngredientProductsForKeys(keys: string[]): Promise<IngredientProduct[]>;
+  getAllActiveIngredientProducts(): Promise<IngredientProduct[]>;
   searchIngredientProducts(query: string): Promise<IngredientProduct[]>;
   createIngredientProduct(data: InsertIngredientProduct): Promise<IngredientProduct>;
   updateIngredientProduct(id: number, data: Partial<InsertIngredientProduct>): Promise<IngredientProduct | undefined>;
@@ -1586,6 +1587,14 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(ingredientProducts)
       .where(and(eq(ingredientProducts.isActive, true), inArray(ingredientProducts.ingredientKey, keys)))
+      .orderBy(sql`${ingredientProducts.priority} DESC`);
+  }
+
+  async getAllActiveIngredientProducts(): Promise<IngredientProduct[]> {
+    return db
+      .select()
+      .from(ingredientProducts)
+      .where(eq(ingredientProducts.isActive, true))
       .orderBy(sql`${ingredientProducts.priority} DESC`);
   }
 

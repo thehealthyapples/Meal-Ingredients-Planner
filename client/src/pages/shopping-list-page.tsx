@@ -664,9 +664,7 @@ export default function ShoppingListPage() {
   };
 
   const isStaple = (item: ShoppingListItem) => {
-    const key = normalizeIngredientKey(
-      (item as any).ingredientName ?? (item as any).name ?? item.productName ?? ''
-    );
+    const key = normalizeIngredientKey(item.normalizedName ?? item.productName ?? '');
     return pantryKeySet.has(key) && !neededThisWeek.has(item.id);
   };
 
@@ -832,8 +830,8 @@ export default function ShoppingListPage() {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
       toast({ title: "Products Matched", description: "Real grocery products matched and prices loaded across supermarkets." });
       try {
-        const rawKeys = savedItems.map(i => normalizeIngredientKey(i.ingredientName ?? '')).filter(Boolean);
-        const uniqueKeys = [...new Set(rawKeys)];
+        const rawKeys = savedItems.map(i => normalizeIngredientKey(i.normalizedName ?? i.productName ?? '')).filter(Boolean);
+        const uniqueKeys = Array.from(new Set(rawKeys));
         if (uniqueKeys.length > 0) {
           const res = await fetch('/api/ingredient-products/lookup', {
             method: 'POST',
@@ -997,6 +995,24 @@ export default function ShoppingListPage() {
 
   const hasPrices = allPriceMatches.length > 0;
   const hasItemOverrides = savedItems.some(i => i.selectedTier !== null);
+
+  useEffect(() => {
+    if (!hasPrices || savedItems.length === 0 || Object.keys(thaPicks).length > 0) return;
+    const rawKeys = savedItems
+      .map(i => normalizeIngredientKey(i.normalizedName ?? i.productName ?? ''))
+      .filter(Boolean);
+    const uniqueKeys = Array.from(new Set(rawKeys));
+    if (uniqueKeys.length === 0) return;
+    fetch('/api/ingredient-products/lookup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ingredientKeys: uniqueKeys }),
+      credentials: 'include',
+    })
+      .then(res => (res.ok ? res.json() : null))
+      .then(data => { if (data) setThaPicks(data.recommendations ?? {}); })
+      .catch(e => console.warn('[THA Picks] Lookup on load failed (non-fatal):', e));
+  }, [hasPrices, savedItems.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -1640,7 +1656,7 @@ export default function ShoppingListPage() {
                               const activeStore = item.selectedStore || cheapest?.supermarket;
                               const activeMatch = activeStore ? itemPrices?.get(activeStore) : (itemPrices?.values().next().value as ProductMatch | undefined);
                               const displayMatch = item.selectedStore ? activeMatch : (activeMatch || (itemPrices?.values().next().value as ProductMatch | undefined));
-                              const itemKey = normalizeIngredientKey(item.ingredientName ?? '');
+                              const itemKey = normalizeIngredientKey(item.normalizedName ?? item.productName ?? '');
                               const topPick = (thaPicks[itemKey] ?? [])[0];
                               const showHint = topPick && topPick.productName !== displayMatch?.productName;
                               return (
