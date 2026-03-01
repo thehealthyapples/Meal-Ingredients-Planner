@@ -647,11 +647,12 @@ function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience,
   const addMutation = useMutation({
     mutationFn: async () => {
       for (const a of assignments) {
-        await apiRequest("PUT", `/api/planner/days/${a.dayId}/entries`, {
-          mealType: a.mealType,
+        await apiRequest("POST", `/api/planner/days/${a.dayId}/items`, {
+          mealSlot: a.mealType,
           audience: a.audience,
           mealId,
           isDrink: a.isDrink,
+          position: 0,
         });
       }
     },
