@@ -127,6 +127,9 @@ export interface IStorage {
   getPlannerEntriesByDayIds(dayIds: number[]): Promise<PlannerEntry[]>;
   upsertPlannerEntry(dayId: number, mealType: string, audience: string, mealId: number | null, calories?: number, isDrink?: boolean, drinkType?: string | null): Promise<PlannerEntry | null>;
   deletePlannerEntry(id: number): Promise<void>;
+  addPlannerEntry(dayId: number, mealType: string, audience: string, mealId: number, position?: number, calories?: number, isDrink?: boolean, drinkType?: string | null): Promise<PlannerEntry>;
+  updatePlannerEntryPosition(id: number, position: number): Promise<PlannerEntry | undefined>;
+  getPlannerEntryById(id: number): Promise<PlannerEntry | undefined>;
   getPlannerEntriesForWeek(weekId: number): Promise<PlannerEntry[]>;
   getSystemMeals(): Promise<Meal[]>;
   getSystemMealByName(name: string): Promise<Meal | undefined>;
@@ -832,6 +835,26 @@ export class DatabaseStorage implements IStorage {
 
   async deletePlannerEntry(id: number): Promise<void> {
     await db.delete(plannerEntries).where(eq(plannerEntries.id, id));
+  }
+
+  async addPlannerEntry(dayId: number, mealType: string, audience: string, mealId: number, position: number = 0, calories: number = 0, isDrink: boolean = false, drinkType: string | null = null): Promise<PlannerEntry> {
+    const [result] = await db.insert(plannerEntries).values({
+      dayId, mealType, audience, mealId, position, calories, isDrink, drinkType,
+    }).returning();
+    return result;
+  }
+
+  async updatePlannerEntryPosition(id: number, position: number): Promise<PlannerEntry | undefined> {
+    const [result] = await db.update(plannerEntries)
+      .set({ position })
+      .where(eq(plannerEntries.id, id))
+      .returning();
+    return result;
+  }
+
+  async getPlannerEntryById(id: number): Promise<PlannerEntry | undefined> {
+    const [result] = await db.select().from(plannerEntries).where(eq(plannerEntries.id, id));
+    return result;
   }
 
   async getPlannerEntriesForWeek(weekId: number): Promise<PlannerEntry[]> {

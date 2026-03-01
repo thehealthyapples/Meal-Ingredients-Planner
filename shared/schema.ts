@@ -338,6 +338,7 @@ export const plannerEntries = pgTable("planner_entries", {
   calories: integer("calories").default(0),
   isDrink: boolean("is_drink").notNull().default(false),
   drinkType: text("drink_type"),
+  position: integer("position").notNull().default(0),
 });
 
 export const diets = pgTable("diets", {
@@ -398,6 +399,7 @@ export const insertPlannerEntrySchema = createInsertSchema(plannerEntries).pick(
   calories: true,
   isDrink: true,
   drinkType: true,
+  position: true,
 });
 
 export const updatePlannerWeekSchema = z.object({

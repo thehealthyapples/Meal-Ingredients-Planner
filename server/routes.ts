@@ -3661,14 +3661,83 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/planner/days/:dayId/items", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const day = await storage.getPlannerDay(Number(req.params.dayId));
+      if (!day) return res.status(404).json({ message: "Day not found" });
+      const week = await storage.getPlannerWeek(day.weekId);
+      if (!week || week.userId !== req.user!.id) return res.status(404).json({ message: "Day not found" });
+
+      const bodySchema = z.object({
+        mealSlot: z.enum(["breakfast", "lunch", "dinner", "snacks"]),
+        mealId: z.number().int(),
+        position: z.number().int().min(0).optional(),
+        audience: z.string().optional().default("adult"),
+        calories: z.number().int().optional(),
+        isDrink: z.boolean().optional().default(false),
+        drinkType: z.string().nullable().optional(),
+      });
+      const parsed = bodySchema.parse(req.body);
+
+      const meal = await storage.getMeal(parsed.mealId);
+      if (!meal || (!meal.isSystemMeal && meal.userId !== req.user!.id)) {
+        return res.status(400).json({ message: "Invalid meal ID" });
+      }
+
+      const entry = await storage.addPlannerEntry(
+        day.id,
+        parsed.mealSlot,
+        parsed.audience,
+        parsed.mealId,
+        parsed.position ?? 0,
+        parsed.calories ?? 0,
+        parsed.isDrink,
+        parsed.drinkType ?? null,
+      );
+      res.status(201).json(entry);
+    } catch (err: any) {
+      if (err?.name === "ZodError") return res.status(400).json({ message: "Invalid input", errors: err.errors });
+      console.error("Error adding planner item:", err);
+      res.status(500).json({ message: "Failed to add planner item" });
+    }
+  });
+
   app.delete("/api/planner/entries/:entryId", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      await storage.deletePlannerEntry(Number(req.params.entryId));
+      const entryId = Number(req.params.entryId);
+      const entry = await storage.getPlannerEntryById(entryId);
+      if (!entry) return res.status(404).json({ message: "Entry not found" });
+      const day = await storage.getPlannerDay(entry.dayId);
+      if (!day) return res.status(404).json({ message: "Entry not found" });
+      const week = await storage.getPlannerWeek(day.weekId);
+      if (!week || week.userId !== req.user!.id) return res.status(404).json({ message: "Entry not found" });
+      await storage.deletePlannerEntry(entryId);
       res.json({ success: true });
     } catch (err) {
       console.error("Error deleting planner entry:", err);
       res.status(500).json({ message: "Failed to delete planner entry" });
+    }
+  });
+
+  app.patch("/api/planner/entries/:entryId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const entryId = Number(req.params.entryId);
+      const entry = await storage.getPlannerEntryById(entryId);
+      if (!entry) return res.status(404).json({ message: "Entry not found" });
+      const day = await storage.getPlannerDay(entry.dayId);
+      if (!day) return res.status(404).json({ message: "Entry not found" });
+      const week = await storage.getPlannerWeek(day.weekId);
+      if (!week || week.userId !== req.user!.id) return res.status(404).json({ message: "Entry not found" });
+      const { position } = z.object({ position: z.number().int() }).parse(req.body);
+      const updated = await storage.updatePlannerEntryPosition(entryId, position);
+      res.json(updated);
+    } catch (err: any) {
+      if (err?.name === "ZodError") return res.status(400).json({ message: "Invalid input" });
+      console.error("Error updating planner entry position:", err);
+      res.status(500).json({ message: "Failed to update planner entry" });
     }
   });
 

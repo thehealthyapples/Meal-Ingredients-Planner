@@ -16,6 +16,7 @@ The UI features a new-york style from `shadcn/ui` with Tailwind CSS for styling 
 
 ### Technical Implementations
 -   **Meal Planning & Management**: CRUD operations for meal plans, AI-powered suggestions, plan duplication, and consolidated shopping list generation. A 6-week planner supports bulk meal assignments and detailed entries per slot.
+-   **Multi-Recipe Planner Slots**: Each meal slot (Breakfast/Lunch/Dinner/Snacks/Drinks) in the 6-week planner supports multiple recipes. The main grid shows compact "Slot (N)" count badges and the primary meal title only. A Day View drawer (opened per day) provides full add/remove/reorder editing with collision-safe 3-step position swaps. Sorting is deterministic (position ASC, id ASC). Basket generation requires no changes as it already iterates all entries. See `docs/planner-multi-recipes.md`.
 -   **Recipe Integration**: Multi-source recipe search and import (e.g., TheMealDB, BBC Good Food) with JSON-LD schema extraction and a flexible scraper.
 -   **Nutrition & Health Analysis**: Calculates nutritional values, detects allergens, suggests healthier ingredient swaps, and computes a health score using OpenFoodFacts data, including UPF detection, NOVA classification, and additive risk assessment.
 -   **Shopping List & Grocery Management**: Generates consolidated shopping lists with ingredient normalization, unit conversion, categorization, and product lookup/pricing via OpenFoodFacts and Spoonacular. Features a price tier system and per-item store selection.

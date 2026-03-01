@@ -1,0 +1,116 @@
+Implement “Multiple recipes per meal slot” in the Planner with a clean, non-crowded UI. Add an expandable Day View (drawer/modal) for detailed editing. In the main grid, DO NOT list multiple recipes; instead show slot labels with a subtle count badge like “Dinner (3)”.
+
+CURRENT REALITY / CONSTRAINTS
+- Planner uses planner_weeks + planner_days.
+- planner_days currently stores a single meal per slot (e.g. breakfast_meal_id/lunch_meal_id/dinner_meal_id) or equivalent.
+- We need additive changes (no massive rewrite), backward-compatible, with idempotent data backfill.
+- The main 6-week grid must not become crowded when multiple recipes are added.
+- Provide an “Expand Day” view to manage multiple recipes cleanly.
+- All recipes in any given meal slot must be included in the basket/shopping list.
+
+DATABASE (ADDITIVE)
+1) Create new table: planner_day_items
+   - id: serial primary key
+   - planner_day_id: integer not null references planner_days(id) on delete cascade
+   - meal_slot: text not null check in ('breakfast','lunch','dinner')
+   - meal_id: integer not null references meals(id) on delete restrict
+   - position: integer not null default 0
+   - servings_multiplier: numeric not null default 1 (optional; include if easy)
+   - created_at: timestamptz not null default now()
+
+   Index: (planner_day_id, meal_slot)
+   Optional unique: (planner_day_id, meal_slot, meal_id) to prevent duplicates (use servings_multiplier for extra portions).
+
+MIGRATION / BACKFILL (IDEMPOTENT)
+2) Backfill existing planner data into planner_day_items:
+   For each planner_days row:
+   - if breakfast_meal_id not null and no item exists for (day, 'breakfast', that meal_id), insert it
+   - same for lunch and dinner
+   position=0, servings_multiplier=1
+   Must be safe to rerun.
+
+SERVER STORAGE/API
+3) Update planner read responses to include slot arrays:
+   For each planner day return:
+   - breakfastMeals: [{ itemId, mealId, title, position, servingsMultiplier }]
+   - lunchMeals: [...]
+   - dinnerMeals: [...]
+   Keep legacy single-meal fields temporarily if required, but client must use arrays.
+
+4) Add endpoints to manage items:
+   - POST /api/planner/days/:dayId/items
+     Body: { mealSlot, mealId, position?, servingsMultiplier? }
+   - PUT /api/planner/items/:itemId
+     Body: { position?, servingsMultiplier? }
+   - DELETE /api/planner/items/:itemId
+   Auth + ownership checks required.
+
+BASKET / SHOPPING LIST (SOURCE OF TRUTH = planner_day_items)
+5) Update shopping list generation to aggregate ALL meals for selected scope:
+   - For the selected day/week, load planner_day_items for included days
+   - Aggregate ingredients across all referenced meal_id values
+   - Apply servings_multiplier if present
+   - Do NOT rely on breakfast_meal_id/lunch_meal_id/dinner_meal_id anymore
+
+CLIENT UI — KEEP GRID CLEAN (SUMMARY-FIRST)
+6) Main 6-week planner grid must display compact summaries only:
+   For each day cell, show three rows (Breakfast/Lunch/Dinner) with:
+   - Slot label always visible: “Breakfast”, “Lunch”, “Dinner”
+   - If count == 0: show a small “+ Add” button/link on the right of that row
+   - If count == 1: show a single truncated meal title chip (one line only)
+   - If count >= 2: DO NOT list recipes; instead show:
+       - a single truncated primary title (first item by position)
+       - and a subtle count badge in the label: “Dinner (3)” or a small pill “3”
+   The goal is: the grid is readable at a glance and never grows vertically because of multiple recipes.
+
+   Visual rule:
+   - Each slot row must be max 1 line tall (fixed height), with ellipsis truncation.
+   - Counts appear next to the slot label: e.g. “Dinner (3)”.
+
+7) Add an “Expand Day” affordance that’s obvious but not noisy:
+   - Each day cell header (date/day name row) has an expand icon/button labeled “Expand”
+   - Clicking opens a Day View (drawer on desktop; full-screen modal on mobile)
+   - Also allow clicking the day header itself to expand (optional)
+
+DAY VIEW (DETAILED EDITING, WHERE MULTI-RECIPES LIVE)
+8) Implement Day View UI focused on clarity:
+   Header:
+   - Day name + date
+   - Close button
+   - Optional: “Clear Day” (with confirm)
+   Body:
+   - Three sections: Breakfast / Lunch / Dinner
+   Each section includes:
+   - List of all items for that slot as compact cards/chips
+     Each item shows:
+       - meal title
+       - optional servings multiplier control (1x default)
+       - remove (x)
+       - reorder controls (drag-and-drop if easy; otherwise up/down arrows)
+   - Button: “+ Add recipe” opens existing meal picker/search and adds an item
+
+   Persist model:
+   - Either auto-save on each change (preferred)
+   - Or explicit Save button (acceptable if easier)
+
+IMPORT / TEMPLATES COMPATIBILITY
+9) Ensure template import writes correctly:
+   - Current templates likely contain one meal per slot; import should create one planner_day_items row per slot.
+   - In future, if templates include multi-recipes per slot, import should insert multiple rows preserving position.
+
+ACCEPTANCE TESTS
+10) Verify:
+   - Add 3 recipes to Dinner:
+       * Main grid shows “Dinner (3)” and 1 truncated primary title, no list.
+       * Day View shows all 3 recipes and allows reorder/remove.
+   - Basket for that day includes ingredients from all 3 recipes.
+   - Backfill creates planner_day_items for existing planner entries.
+   - Main grid does not get taller/crowded due to multiple recipes.
+
+DELIVERABLES
+- migrations + idempotent backfill
+- server storage updates + endpoints
+- shopping list updated to use planner_day_items
+- planner grid summary UI changes with “Slot (count)” display
+- Day View drawer/modal UI
+- docs/planner-multi-recipes.md

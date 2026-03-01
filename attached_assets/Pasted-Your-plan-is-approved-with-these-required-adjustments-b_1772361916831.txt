@@ -1,0 +1,81 @@
+Your plan is approved with these required adjustments because the planner supports Snacks AND Drinks:
+
+GLOBAL REQUIREMENTS
+- Multi-recipe slots must apply to: breakfast, lunch, dinner, snacks.
+- Drinks must also be manageable in the Day View (view/add/remove/reorder).
+- Grid stays compact: show “Slot (N)” counts (e.g., “Dinner (3)”, “Snacks (2)”, “Drinks (4)”) and show only the primary title.
+- Sorting must be deterministic: sort by position ASC then id ASC.
+- Reorder must be collision-safe: use a temp position (-1) during swaps to avoid transient duplicates.
+
+T001 (schema): keep as-is
+- position column on planner_entries is correct.
+
+T002 (storage): keep as-is
+- addPlannerEntry / updatePlannerEntryPosition / getPlannerEntryById are correct.
+
+T003 (routes): UPDATE BODY + DRINK SUPPORT
+1) POST /api/planner/days/:dayId/items
+- Extend request body Zod schema to support drinks:
+  {
+    mealSlot: z.enum(["breakfast","lunch","dinner","snacks"]),   // keep
+    mealId: z.number().int(),
+    position: z.number().int().min(0).optional(),
+    audience: z.string().optional().default("adult"),
+    calories: z.number().int().optional(),
+    isDrink: z.boolean().optional().default(false),
+    drinkType: z.string().nullable().optional()
+  }
+- Pass isDrink + drinkType through to storage.addPlannerEntry.
+- For drinks:
+  - Use mealSlot="snacks" unless your existing model uses a dedicated mealType="drinks".
+  - MUST align with your existing drinks storage conventions in planner_entries (whatever weekly planner already uses).
+- Keep ownership checks exactly as described.
+
+2) PATCH /api/planner/entries/:entryId
+- Keep, but allow updating position only.
+
+3) DELETE /api/planner/entries/:entryId
+- Keep ownership fix exactly as described.
+
+T004 (grid UI): UPDATE TO INCLUDE SNACKS + DRINKS + STABLE SORT
+- Update getSlotEntries to accept isDrink + optional drinkType or provide a dedicated getDrinkEntries helper.
+- Filtering rules:
+  - Meal slots: entry.isDrink === false AND entry.mealType === slot AND entry.audience === audience
+  - Drinks: entry.isDrink === true (and optionally group by drinkType if needed)
+- Sorting: position ASC, then id ASC.
+- UI:
+  - For each meal slot row: show “Slot (N)” when N>=2 and show only first title.
+  - Add a Drinks row in the grid if drinks are displayed in the main planner:
+    - If count == 0: show “+ Add drink”
+    - If count == 1: show one drink title
+    - If count >=2: show “Drinks (N)” + first title only
+- Expand button stays in day header, visible and obvious.
+
+T005 (Day View Drawer): EXPAND TO 5 SECTIONS + SAFE REORDER SWAP
+- Day View must include sections:
+  - Breakfast, Lunch, Dinner, Snacks (isDrink=false)
+  - Drinks (isDrink=true)
+- “+ Add recipe” for each meal/snacks section (uses POST /days/:dayId/items with isDrink=false)
+- “+ Add drink” for drinks section (POST with isDrink=true and drinkType if required)
+
+Safe reorder implementation:
+- Do NOT simply PATCH both entries sequentially.
+- Use a collision-safe swap:
+  Suppose swapping entryA (pos=a) and entryB (pos=b):
+    1) PATCH entryA position -> -1
+    2) PATCH entryB position -> a
+    3) PATCH entryA position -> b
+- This prevents transient duplicate positions and makes ordering stable.
+
+Also ensure:
+- Entries are grouped and sorted by position ASC then id ASC.
+
+T006 (wiring): keep as-is
+
+T007 (docs): update wording to mention Snacks + Drinks and safe swap ordering
+- docs/planner-multi-recipes.md must mention:
+  - multi-recipe slots for breakfast/lunch/dinner/snacks
+  - drinks supported via isDrink=true entries
+  - grid summary rules (Slot (N))
+  - Day View drawer for editing
+  - basket compatibility (no change because it iterates all day.entries)

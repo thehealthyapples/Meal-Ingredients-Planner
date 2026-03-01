@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingCart, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, Sparkles, LayoutGrid, Share2 } from "lucide-react";
+import { Pencil, X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingCart, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, Sparkles, LayoutGrid, Share2, LayoutList } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TemplatesPanel } from "@/components/templates-panel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
+import { DayViewDrawer } from "@/components/day-view-drawer";
 import { useUser } from "@/hooks/use-user";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -48,6 +49,18 @@ function findEntry(entries: PlannerEntry[], mealType: string, audience: string, 
   return entries.find(e => e.mealType === mealType && e.audience === audience && e.isDrink === isDrink);
 }
 
+function getSlotEntries(entries: PlannerEntry[], mealType: string, audience: string, isDrink: boolean = false): PlannerEntry[] {
+  return entries
+    .filter(e => e.mealType === mealType && e.audience === audience && e.isDrink === isDrink)
+    .sort((a, b) => a.position !== b.position ? a.position - b.position : a.id - b.id);
+}
+
+function getDrinkEntries(entries: PlannerEntry[]): PlannerEntry[] {
+  return entries
+    .filter(e => e.isDrink === true)
+    .sort((a, b) => a.position !== b.position ? a.position - b.position : a.id - b.id);
+}
+
 export default function WeeklyPlannerPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -69,6 +82,8 @@ export default function WeeklyPlannerPage() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [sharePlanOpen, setSharePlanOpen] = useState(false);
+  const [expandedDayId, setExpandedDayId] = useState<number | null>(null);
+  const [expandedDayLabel, setExpandedDayLabel] = useState("");
   const { user } = useUser();
 
   const { data: plannerSettings } = useQuery<{
@@ -373,6 +388,9 @@ export default function WeeklyPlannerPage() {
     const bIdx = MONDAY_FIRST_ORDER.indexOf(b.dayOfWeek);
     return aIdx - bIdx;
   }) || [];
+  const expandedDay = expandedDayId != null
+    ? fullPlanner.flatMap(w => w.days).find(d => d.id === expandedDayId) ?? null
+    : null;
 
   const weekStats = useMemo(() => {
     if (!sortedDays.length) return { filled: 0, total: sortedDays.length * MEAL_TYPES.length };
@@ -578,6 +596,7 @@ export default function WeeklyPlannerPage() {
                     onAddMeal={openPicker}
                     onClearEntry={clearEntry}
                     onAddDayToBasket={addDayToBasket}
+                    onExpand={(d, label) => { setExpandedDayId(d.id); setExpandedDayLabel(label); }}
                     isUpdating={upsertEntryMutation.isPending}
                     isAddingToBasket={addToBasketMutation.isPending}
                     freezerMeals={freezerMeals}
@@ -593,6 +612,16 @@ export default function WeeklyPlannerPage() {
           </TabsContent>
         ))}
       </Tabs>
+
+      <DayViewDrawer
+        open={!!expandedDay}
+        onClose={() => setExpandedDayId(null)}
+        day={expandedDay}
+        dayLabel={expandedDayLabel}
+        getMeal={getMeal}
+        allMeals={meals}
+        onPlannerInvalidate={() => qc.invalidateQueries({ queryKey: ["/api/planner/full"] })}
+      />
 
       <Dialog open={mealPickerOpen} onOpenChange={setMealPickerOpen}>
         <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
@@ -1039,6 +1068,7 @@ function DayColumn({
   onAddMeal,
   onClearEntry,
   onAddDayToBasket,
+  onExpand,
   isUpdating,
   isAddingToBasket,
   freezerMeals = [],
@@ -1053,6 +1083,7 @@ function DayColumn({
   onAddMeal: (target: EntryTarget) => void;
   onClearEntry: (target: EntryTarget) => void;
   onAddDayToBasket: (day: FullDay) => void;
+  onExpand: (day: FullDay, label: string) => void;
   isUpdating: boolean;
   isAddingToBasket: boolean;
   freezerMeals?: FreezerMeal[];
@@ -1077,29 +1108,43 @@ function DayColumn({
   return (
     <Card className="overflow-visible" data-testid={`card-day-${day.dayOfWeek}`}>
       <div className="px-3 py-2 border-b flex items-center justify-between gap-1">
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-sm">{DAY_NAMES[day.dayOfWeek]}</h3>
+        <div className="flex items-center gap-2 min-w-0">
+          <h3 className="font-semibold text-sm truncate">{DAY_NAMES[day.dayOfWeek]}</h3>
           {showCalories && dayCalories > 0 && (
-            <span className="text-xs text-orange-500 font-medium" data-testid={`text-day-calories-${day.dayOfWeek}`}>
+            <span className="text-xs text-orange-500 font-medium flex-shrink-0" data-testid={`text-day-calories-${day.dayOfWeek}`}>
               {dayCalories} kcal
             </span>
           )}
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => onAddDayToBasket(day)}
-          disabled={isAddingToBasket}
-          data-testid={`button-add-day-basket-${day.dayOfWeek}`}
-          title="Add this day's meals to basket"
-        >
-          <ShoppingBasket className="h-3.5 w-3.5" />
-        </Button>
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => onExpand(day, DAY_NAMES[day.dayOfWeek])}
+            data-testid={`button-expand-day-${day.dayOfWeek}`}
+            title="Expand day view"
+          >
+            <LayoutList className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => onAddDayToBasket(day)}
+            disabled={isAddingToBasket}
+            data-testid={`button-add-day-basket-${day.dayOfWeek}`}
+            title="Add this day's meals to basket"
+          >
+            <ShoppingBasket className="h-3.5 w-3.5" />
+          </Button>
+        </div>
       </div>
       <CardContent className="p-2 space-y-2">
         {MEAL_TYPES.map((slot) => {
-          const adultEntry = findEntry(day.entries, slot.key, "adult");
+          const adultEntries = getSlotEntries(day.entries, slot.key, "adult", false);
+          const primaryAdultEntry = adultEntries[0];
+          const adultCount = adultEntries.length;
           const babyEntry = findEntry(day.entries, slot.key, "baby");
           const childEntry = findEntry(day.entries, slot.key, "child");
           const SlotIcon = slot.icon;
@@ -1108,13 +1153,15 @@ function DayColumn({
             <div key={slot.key} className="space-y-1">
               <div className="flex items-center gap-1">
                 <SlotIcon className={`h-3 w-3 ${slot.color}`} />
-                <span className="text-xs font-medium text-muted-foreground">{slot.label}</span>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {adultCount >= 2 ? `${slot.label} (${adultCount})` : slot.label}
+                </span>
               </div>
               <EntrySlotRow
                 dayId={day.id}
                 dayOfWeek={day.dayOfWeek}
-                entry={adultEntry}
-                meal={getMeal(adultEntry?.mealId ?? null)}
+                entry={primaryAdultEntry}
+                meal={getMeal(primaryAdultEntry?.mealId ?? null)}
                 mealType={slot.key}
                 audience="adult"
                 isDrink={false}
@@ -1123,7 +1170,7 @@ function DayColumn({
                 onAddMeal={onAddMeal}
                 onClearEntry={onClearEntry}
                 isUpdating={isUpdating}
-                calories={showCalories && adultEntry ? nutritionMap.get(adultEntry.mealId) : undefined}
+                calories={showCalories && primaryAdultEntry ? nutritionMap.get(primaryAdultEntry.mealId) : undefined}
               />
               {enableBabyMeals && (
                 <EntrySlotRow
@@ -1167,18 +1214,22 @@ function DayColumn({
           );
         })}
         {enableDrinks && (() => {
-          const drinkEntry = findEntry(day.entries, "snacks", "adult", true);
+          const drinkEntries = getDrinkEntries(day.entries);
+          const drinkCount = drinkEntries.length;
+          const primaryDrinkEntry = drinkEntries[0];
           return (
             <div className="space-y-1">
               <div className="flex items-center gap-1">
                 <Wine className="h-3 w-3 text-purple-400" />
-                <span className="text-xs font-medium text-muted-foreground">Drinks</span>
+                <span className="text-xs font-medium text-muted-foreground">
+                  {drinkCount >= 2 ? `Drinks (${drinkCount})` : "Drinks"}
+                </span>
               </div>
               <EntrySlotRow
                 dayId={day.id}
                 dayOfWeek={day.dayOfWeek}
-                entry={drinkEntry}
-                meal={getMeal(drinkEntry?.mealId ?? null)}
+                entry={primaryDrinkEntry}
+                meal={getMeal(primaryDrinkEntry?.mealId ?? null)}
                 mealType="snacks"
                 audience="adult"
                 isDrink={true}
@@ -1187,7 +1238,7 @@ function DayColumn({
                 onAddMeal={onAddMeal}
                 onClearEntry={onClearEntry}
                 isUpdating={isUpdating}
-                calories={showCalories && drinkEntry ? nutritionMap.get(drinkEntry.mealId) : undefined}
+                calories={showCalories && primaryDrinkEntry ? nutritionMap.get(primaryDrinkEntry.mealId) : undefined}
               />
             </div>
           );
