@@ -1695,7 +1695,7 @@ export default function MealsPage() {
               variant={mealTypeFilter === value ? "secondary" : "ghost"}
               size="sm"
               className={idx > 0 ? "border-l border-border rounded-none" : "rounded-r-none"}
-              onClick={() => setMealTypeFilter(value)}
+              onClick={() => setMealTypeFilter(prev => prev === value && value !== "all" ? "all" : value)}
               data-testid={`button-filter-${value}`}
             >
               {Icon && <Icon className={`h-3.5 w-3.5 mr-1 ${iconColor || ""}`} />}
@@ -1721,7 +1721,7 @@ export default function MealsPage() {
               variant={audienceFilter === value ? "secondary" : "ghost"}
               size="sm"
               className={idx > 0 ? "border-l border-border rounded-none" : "rounded-r-none"}
-              onClick={() => setAudienceFilter(value)}
+              onClick={() => setAudienceFilter(prev => prev === value && value !== "all-audience" ? "all-audience" : value)}
               data-testid={`button-audience-${value}`}
             >
               {Icon && <Icon className={`h-3.5 w-3.5 mr-1 ${iconColor || ""}`} />}
