@@ -1,12 +1,15 @@
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   LayoutDashboard, Utensils, CalendarDays, ShoppingBasket,
   Package, User, LogOut, ShoppingCart, ShieldCheck, Star,
+  MoreHorizontal, Mail,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
@@ -36,6 +39,7 @@ const PAGE_TITLES: Record<string, string> = {
 export function NavBar() {
   const [location] = useLocation();
   const { user, logout } = useUser();
+  const [moreOpen, setMoreOpen] = useState(false);
 
   const { data: shoppingListItems = [] } = useQuery<any[]>({
     queryKey: [api.shoppingList.list.path],
@@ -50,6 +54,7 @@ export function NavBar() {
   const suggestions = config?.suggestionsEmail || "suggestions@thehealthyapples.com";
 
   const itemCount = shoppingListItems.length;
+  const isAdmin = (user as any)?.role === "admin";
 
   if (!user) return null;
 
@@ -127,7 +132,7 @@ export function NavBar() {
             );
           })}
           <div className="ml-auto flex items-center gap-3 pl-4">
-            {(user as any)?.role === "admin" && (
+            {isAdmin && (
               <>
                 <Link href="/admin/users">
                   <Button
@@ -199,8 +204,75 @@ export function NavBar() {
               </Link>
             );
           })}
+          <button
+            className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[56px] text-muted-foreground"
+            onClick={() => setMoreOpen(true)}
+            data-testid="mobile-nav-more"
+          >
+            <MoreHorizontal className="h-5 w-5" />
+            <span className="text-[10px] font-medium leading-tight">More</span>
+          </button>
         </div>
       </nav>
+
+      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl" data-testid="sheet-more-menu">
+          <SheetHeader className="mb-4">
+            <SheetTitle className="text-left">More</SheetTitle>
+          </SheetHeader>
+          <div className="flex flex-col gap-1">
+            <Link href="/profile" onClick={() => { setMoreOpen(false); sessionStorage.setItem("profileReturnPath", window.location.pathname); }}>
+              <button
+                className="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors"
+                data-testid="more-link-profile"
+              >
+                <User className="h-5 w-5 text-muted-foreground" />
+                <span className="font-medium">Profile</span>
+              </button>
+            </Link>
+
+            {isAdmin && (
+              <>
+                <div className="border-t border-border my-1" />
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1">Admin</p>
+                <Link href="/admin/users" onClick={() => setMoreOpen(false)}>
+                  <button
+                    className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/admin/users" ? "text-primary font-medium" : ""}`}
+                    data-testid="more-link-admin"
+                  >
+                    <ShieldCheck className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">Admin — User Management</span>
+                  </button>
+                </Link>
+                <Link href="/admin/ingredient-products" onClick={() => setMoreOpen(false)}>
+                  <button
+                    className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/admin/ingredient-products" ? "text-primary font-medium" : ""}`}
+                    data-testid="more-link-tha-picks"
+                  >
+                    <Star className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">THA Picks</span>
+                  </button>
+                </Link>
+              </>
+            )}
+
+            <div className="border-t border-border my-1" />
+            <a href={`mailto:${support}`} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm hover:bg-muted transition-colors" data-testid="more-link-support">
+              <Mail className="h-5 w-5 text-muted-foreground" />
+              <span className="text-muted-foreground">Support: {support}</span>
+            </a>
+
+            <button
+              className="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors text-destructive"
+              onClick={() => { setMoreOpen(false); logout(); }}
+              data-testid="more-button-logout"
+            >
+              <LogOut className="h-5 w-5" />
+              <span className="font-medium">Log out</span>
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
