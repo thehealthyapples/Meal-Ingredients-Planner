@@ -2198,7 +2198,7 @@ export async function registerRoutes(
         const batch = needsSmp.slice(i, i + batchSize);
         await Promise.all(batch.map(async (item) => {
           try {
-            const searchName = item.normalizedName || item.productName;
+            const searchName = (item as any).ingredientName || (item as any).name || item.normalizedName || item.productName;
             const cleanName = searchName.replace(/^\d+[\.\d]*\s*(g|kg|ml|l|oz|lb)\s+/i, '').trim();
             const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(cleanName)}&json=1&page_size=5&fields=${OFF_FIELDS}&tagtype_0=countries&tag_contains_0=contains&tag_0=united-kingdom`;
             const response = await axios.get(url, OFF_HEADERS);

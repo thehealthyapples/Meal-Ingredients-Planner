@@ -664,7 +664,7 @@ export default function ShoppingListPage() {
   };
 
   const isStaple = (item: ShoppingListItem) => {
-    const key = normalizeIngredientKey(item.normalizedName ?? item.productName ?? '');
+    const key = normalizeIngredientKey((item as any).ingredientName ?? (item as any).name ?? item.normalizedName ?? item.productName ?? '');
     return pantryKeySet.has(key) && !neededThisWeek.has(item.id);
   };
 
@@ -830,7 +830,7 @@ export default function ShoppingListPage() {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
       toast({ title: "Products Matched", description: "Real grocery products matched and prices loaded across supermarkets." });
       try {
-        const rawKeys = savedItems.map(i => normalizeIngredientKey(i.normalizedName ?? i.productName ?? '')).filter(Boolean);
+        const rawKeys = savedItems.map(i => normalizeIngredientKey((i as any).ingredientName ?? (i as any).name ?? i.normalizedName ?? i.productName ?? '')).filter(Boolean);
         const uniqueKeys = Array.from(new Set(rawKeys));
         if (uniqueKeys.length > 0) {
           const res = await fetch('/api/ingredient-products/lookup', {
@@ -999,7 +999,7 @@ export default function ShoppingListPage() {
   useEffect(() => {
     if (!hasPrices || savedItems.length === 0 || Object.keys(thaPicks).length > 0) return;
     const rawKeys = savedItems
-      .map(i => normalizeIngredientKey(i.normalizedName ?? i.productName ?? ''))
+      .map(i => normalizeIngredientKey((i as any).ingredientName ?? (i as any).name ?? i.normalizedName ?? i.productName ?? ''))
       .filter(Boolean);
     const uniqueKeys = Array.from(new Set(rawKeys));
     if (uniqueKeys.length === 0) return;
@@ -1656,7 +1656,7 @@ export default function ShoppingListPage() {
                               const activeStore = item.selectedStore || cheapest?.supermarket;
                               const activeMatch = activeStore ? itemPrices?.get(activeStore) : (itemPrices?.values().next().value as ProductMatch | undefined);
                               const displayMatch = item.selectedStore ? activeMatch : (activeMatch || (itemPrices?.values().next().value as ProductMatch | undefined));
-                              const itemKey = normalizeIngredientKey(item.normalizedName ?? item.productName ?? '');
+                              const itemKey = normalizeIngredientKey((item as any).ingredientName ?? (item as any).name ?? item.normalizedName ?? item.productName ?? '');
                               const topPick = (thaPicks[itemKey] ?? [])[0];
                               const showHint = topPick && topPick.productName !== displayMatch?.productName;
                               return (
