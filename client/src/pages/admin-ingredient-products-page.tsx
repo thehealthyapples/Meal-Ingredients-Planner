@@ -20,9 +20,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, Plus, Edit2, Trash2, Star, RotateCcw } from "lucide-react";
+import { Search, Plus, Edit2, Trash2, Star, RotateCcw, ScanLine, Loader2 } from "lucide-react";
 import { normalizeIngredientKey } from "@shared/normalize";
 import type { IngredientProduct } from "@shared/schema";
+import BarcodeScanner from "@/components/BarcodeScanner";
 
 type PickForm = {
   ingredientKey: string;
@@ -379,8 +380,57 @@ function PickFormFields({
   onChange: (field: keyof PickForm, value: string | number) => void;
   normalizedPreview: string | null;
 }) {
+  const { toast } = useToast();
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [lookingUp, setLookingUp] = useState(false);
+  const [scannedBarcode, setScannedBarcode] = useState<string | null>(null);
+
+  async function handleScan(barcode: string) {
+    setScannerOpen(false);
+    setLookingUp(true);
+    setScannedBarcode(barcode);
+    try {
+      const res = await fetch(
+        `https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=product_name,brands,quantity,stores`
+      );
+      const data = await res.json();
+      if (data.status === 1 && data.product) {
+        const product = data.product;
+        const nameParts = [product.brands, product.product_name].filter(Boolean);
+        const name = nameParts.join(" ").trim();
+        if (name) onChange("productName", name);
+        if (product.quantity) onChange("size", product.quantity);
+        if (product.stores) {
+          const firstStore = product.stores.split(",")[0].trim();
+          if (firstStore) onChange("retailer", firstStore);
+        }
+        toast({ title: "Product found", description: `Details filled from barcode ${barcode}` });
+      } else {
+        toast({
+          title: "Product not found",
+          description: `No product found for barcode ${barcode}. Fill in manually.`,
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Lookup failed",
+        description: "Could not reach OpenFoodFacts. Fill in manually.",
+        variant: "destructive",
+      });
+    } finally {
+      setLookingUp(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
+      <BarcodeScanner
+        isOpen={scannerOpen}
+        onScan={handleScan}
+        onClose={() => setScannerOpen(false)}
+      />
+
       <div className="space-y-1.5">
         <Label htmlFor="pick-ingredient-key">Ingredient</Label>
         <Input
@@ -396,16 +446,40 @@ function PickFormFields({
           </p>
         )}
       </div>
+
       <div className="space-y-1.5">
         <Label htmlFor="pick-product-name">Product Name</Label>
-        <Input
-          id="pick-product-name"
-          placeholder="e.g. Aldi Passata 500g"
-          value={form.productName}
-          onChange={e => onChange("productName", e.target.value)}
-          data-testid="input-product-name"
-        />
+        <div className="flex gap-2">
+          <Input
+            id="pick-product-name"
+            placeholder="e.g. Aldi Passata 500g"
+            value={form.productName}
+            onChange={e => onChange("productName", e.target.value)}
+            data-testid="input-product-name"
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            onClick={() => setScannerOpen(true)}
+            disabled={lookingUp}
+            title="Scan barcode to auto-fill product details"
+            data-testid="button-scan-barcode"
+          >
+            {lookingUp
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : <ScanLine className="h-4 w-4" />
+            }
+          </Button>
+        </div>
+        {scannedBarcode && (
+          <p className="text-xs text-muted-foreground" data-testid="text-scanned-barcode">
+            Barcode: <span className="font-mono">{scannedBarcode}</span>
+          </p>
+        )}
       </div>
+
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="pick-retailer">Retailer</Label>
@@ -428,6 +502,7 @@ function PickFormFields({
           />
         </div>
       </div>
+
       <div className="space-y-1.5">
         <Label htmlFor="pick-notes">Notes (optional)</Label>
         <Textarea
