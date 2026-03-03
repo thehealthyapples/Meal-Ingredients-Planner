@@ -9,17 +9,17 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import {
   LayoutDashboard, Utensils, CalendarDays, ShoppingBasket,
   Package, User, LogOut, ShoppingCart, ShieldCheck, Star,
-  MoreHorizontal, Mail,
+  MoreHorizontal, Mail, Archive,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/meals", label: "My Meals", icon: Utensils },
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
+  { href: "/meals", label: "My Meals", icon: Utensils },
+  { href: "/pantry", label: "Pantry", icon: Package },
   { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
-  { href: "/products", label: "Products", icon: Package },
+  { href: "/profile", label: "Profile", icon: User },
 ];
 
 const PAGE_TITLES: Record<string, string> = {
@@ -29,6 +29,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/planner": "Meal Plans",
   "/analyse-basket": "Analyse Basket",
   "/products": "Products",
+  "/pantry": "My Pantry",
   "/supermarkets": "Supermarkets",
   "/import-recipe": "Import Recipe",
   "/profile": "Profile",
@@ -221,13 +222,22 @@ export function NavBar() {
             <SheetTitle className="text-left">More</SheetTitle>
           </SheetHeader>
           <div className="flex flex-col gap-1">
-            <Link href="/profile" onClick={() => { setMoreOpen(false); sessionStorage.setItem("profileReturnPath", window.location.pathname); }}>
+            <Link href="/" onClick={() => setMoreOpen(false)}>
               <button
-                className="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors"
-                data-testid="more-link-profile"
+                className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/" ? "text-primary font-medium" : ""}`}
+                data-testid="more-link-dashboard"
               >
-                <User className="h-5 w-5 text-muted-foreground" />
-                <span className="font-medium">Profile</span>
+                <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
+                <span className="font-medium">Dashboard</span>
+              </button>
+            </Link>
+            <Link href="/products" onClick={() => setMoreOpen(false)}>
+              <button
+                className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/products" ? "text-primary font-medium" : ""}`}
+                data-testid="more-link-products"
+              >
+                <Archive className="h-5 w-5 text-muted-foreground" />
+                <span className="font-medium">Products</span>
               </button>
             </Link>
 

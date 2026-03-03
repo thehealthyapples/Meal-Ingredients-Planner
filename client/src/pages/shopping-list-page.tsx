@@ -34,13 +34,14 @@ import {
   CircleDot, Plus, Minus, Info, Layers, Crown, Sprout, Tag,
   Download, UtensilsCrossed, Store, Maximize2, Minimize2,
   ChevronDown, ChevronUp, AlertTriangle, Microscope, Filter, SlidersHorizontal,
-  Snowflake,
+  Snowflake, Home,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { api, buildUrl } from "@shared/routes";
+import { apiRequest } from "@/lib/queryClient";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { formatItemDisplay } from "@/lib/unit-display";
 import AppleRating from "@/components/AppleRating";
@@ -650,6 +651,15 @@ export default function ShoppingListPage() {
   const pantryKeySet = useMemo(() => {
     return new Set(pantryItems.map(p => p.ingredientKey));
   }, [pantryItems]);
+
+  const { data: shoppingExtras = [] } = useQuery<{ id: number; name: string; category: string }[]>({
+    queryKey: ['/api/shopping-list/extras'],
+  });
+
+  const deleteExtraMutation = useMutation({
+    mutationFn: (id: number) => apiRequest("DELETE", `/api/shopping-list/extras/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] }),
+  });
 
   const [neededThisWeek, setNeededThisWeek] = useState<Set<number>>(new Set());
   const [staplesOpen, setStaplesOpen] = useState(false);
@@ -2046,6 +2056,38 @@ export default function ShoppingListPage() {
           )}
         </Card>
       </div>
+
+      {shoppingExtras.length > 0 && (
+        <div className="px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto mt-4">
+          <Card className="overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Home className="h-4 w-4 text-primary" />
+                <span className="font-semibold text-sm">Household (Selected)</span>
+                <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{shoppingExtras.length}</Badge>
+              </div>
+              <span className="text-xs text-muted-foreground">Added from My Pantry</span>
+            </div>
+            <div className="divide-y divide-border">
+              {shoppingExtras.map(extra => (
+                <div key={extra.id} className="flex items-center justify-between px-4 py-2.5 group" data-testid={`row-extra-${extra.id}`}>
+                  <span className="text-sm">{extra.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => deleteExtraMutation.mutate(extra.id)}
+                    disabled={deleteExtraMutation.isPending}
+                    data-testid={`button-delete-extra-${extra.id}`}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      )}
 
       <Dialog open={!!comparisonItem} onOpenChange={(open) => { if (!open) setComparisonItem(null); }}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto" data-testid="dialog-price-comparison">

@@ -24,6 +24,7 @@ import ProfilePage from "@/pages/profile-page";
 import AdminUsersPage from "@/pages/admin-users-page";
 import AdminIngredientProductsPage from "@/pages/admin-ingredient-products-page";
 import SharedPlanPage from "@/pages/shared-plan-page";
+import PantryPage from "@/pages/pantry-page";
 
 function SiteFooter() {
   const { data: config } = useQuery<{ supportEmail?: string; suggestionsEmail?: string }>({
@@ -93,6 +94,7 @@ function Router() {
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersPage} />} />
       <Route path="/admin/ingredient-products" component={() => <ProtectedRoute component={AdminIngredientProductsPage} />} />
+      <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
       <Route path="/shared/:token" component={SharedPlanPage} />
 
       <Route component={NotFound} />

@@ -1,4 +1,4 @@
-import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, mealPairings, ingredientProducts } from "@shared/schema";
+import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
 import { eq, and, ilike, sql, inArray, isNull, isNotNull } from "drizzle-orm";
@@ -193,8 +193,14 @@ export interface IStorage {
 
   // ── Pantry Staples ───────────────────────────────────────────────────────────
   getPantryItems(userId: number): Promise<UserPantryItem[]>;
-  addPantryItem(userId: number, ingredient: string, category: string, notes?: string): Promise<UserPantryItem>;
+  addPantryItem(userId: number, ingredient: string, category: string, notes?: string, displayName?: string, isDefault?: boolean): Promise<UserPantryItem>;
   deletePantryItem(userId: number, id: number): Promise<void>;
+  seedDefaultHouseholdItems(userId: number): Promise<void>;
+
+  // ── Shopping List Extras ───────────────────────────────────────────────────
+  getShoppingListExtras(userId: number): Promise<ShoppingListExtra[]>;
+  addShoppingListExtra(userId: number, name: string, category?: string): Promise<ShoppingListExtra>;
+  deleteShoppingListExtra(userId: number, id: number): Promise<void>;
 
   // ── Meal Pairings ─────────────────────────────────────────────────────────────
   getMealPairings(mealId: number): Promise<{ pairing: MealPairing; meal: Meal }[]>;
@@ -1542,20 +1548,97 @@ export class DatabaseStorage implements IStorage {
 
   // ── Pantry Staples ──────────────────────────────────────────────────────────
   async getPantryItems(userId: number): Promise<UserPantryItem[]> {
-    return db.select().from(userPantryItems).where(eq(userPantryItems.userId, userId));
+    return db
+      .select()
+      .from(userPantryItems)
+      .where(and(eq(userPantryItems.userId, userId), eq(userPantryItems.isDeleted, false)))
+      .orderBy(userPantryItems.sortOrder, userPantryItems.createdAt);
   }
 
-  async addPantryItem(userId: number, ingredient: string, category: string, notes?: string): Promise<UserPantryItem> {
+  async addPantryItem(userId: number, ingredient: string, category: string, notes?: string, displayName?: string, isDefault?: boolean): Promise<UserPantryItem> {
     const ingredientKey = normalizeIngredientKey(ingredient);
     const [item] = await db
       .insert(userPantryItems)
-      .values({ userId, ingredientKey, category, notes: notes ?? null })
+      .values({
+        userId,
+        ingredientKey,
+        displayName: displayName ?? ingredient,
+        category,
+        notes: notes ?? null,
+        isDefault: isDefault ?? false,
+        isDeleted: false,
+      })
       .returning();
     return item;
   }
 
   async deletePantryItem(userId: number, id: number): Promise<void> {
-    await db.delete(userPantryItems).where(and(eq(userPantryItems.id, id), eq(userPantryItems.userId, userId)));
+    const [existing] = await db
+      .select()
+      .from(userPantryItems)
+      .where(and(eq(userPantryItems.id, id), eq(userPantryItems.userId, userId)))
+      .limit(1);
+    if (!existing) return;
+    if (existing.isDefault) {
+      await db
+        .update(userPantryItems)
+        .set({ isDeleted: true })
+        .where(eq(userPantryItems.id, id));
+    } else {
+      await db.delete(userPantryItems).where(eq(userPantryItems.id, id));
+    }
+  }
+
+  async seedDefaultHouseholdItems(userId: number): Promise<void> {
+    const defaults = [
+      "Toilet roll", "Kitchen roll", "Tissues", "Washing up liquid",
+      "Dishwasher tablets", "Laundry detergent", "Fabric conditioner",
+      "Bin bags", "Food bags / freezer bags", "Cling film",
+      "Baking paper", "Aluminium foil", "Sponges / scourers",
+      "Multi-surface cleaner", "Bleach", "Hand soap",
+      "Shower gel", "Shampoo", "Toothpaste",
+    ];
+    for (const name of defaults) {
+      const ingredientKey = normalizeIngredientKey(name);
+      try {
+        await db
+          .insert(userPantryItems)
+          .values({
+            userId,
+            ingredientKey,
+            displayName: name,
+            category: "household",
+            isDefault: true,
+            isDeleted: false,
+          })
+          .onConflictDoNothing();
+      } catch {
+        // skip duplicates silently
+      }
+    }
+  }
+
+  // ── Shopping List Extras ──────────────────────────────────────────────────
+  async getShoppingListExtras(userId: number): Promise<ShoppingListExtra[]> {
+    return db
+      .select()
+      .from(shoppingListExtras)
+      .where(eq(shoppingListExtras.userId, userId))
+      .orderBy(shoppingListExtras.createdAt);
+  }
+
+  async addShoppingListExtra(userId: number, name: string, category = "household"): Promise<ShoppingListExtra> {
+    const [item] = await db
+      .insert(shoppingListExtras)
+      .values({ userId, name, category })
+      .returning();
+    return item;
+  }
+
+  async deleteShoppingListExtra(userId: number, id: number): Promise<void> {
+    await db
+      .delete(shoppingListExtras)
+      .where(and(eq(shoppingListExtras.id, id), eq(shoppingListExtras.userId, userId)));
   }
 
   // ── Meal Pairings ─────────────────────────────────────────────────────────

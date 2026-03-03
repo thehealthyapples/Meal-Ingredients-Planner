@@ -789,8 +789,12 @@ export const userPantryItems = pgTable("user_pantry_items", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   ingredientKey: text("ingredient_key").notNull(),
+  displayName: text("display_name"),
   category: text("category").notNull().default("larder"),
   defaultHave: boolean("default_have").notNull().default(true),
+  isDefault: boolean("is_default").notNull().default(false),
+  isDeleted: boolean("is_deleted").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -802,6 +806,22 @@ export const insertUserPantryItemSchema = createInsertSchema(userPantryItems).om
 
 export type UserPantryItem = typeof userPantryItems.$inferSelect;
 export type InsertUserPantryItem = z.infer<typeof insertUserPantryItemSchema>;
+
+export const shoppingListExtras = pgTable("shopping_list_extras", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  category: text("category").notNull().default("household"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertShoppingListExtraSchema = createInsertSchema(shoppingListExtras).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type ShoppingListExtra = typeof shoppingListExtras.$inferSelect;
+export type InsertShoppingListExtra = z.infer<typeof insertShoppingListExtraSchema>;
 
 export const mealPairings = pgTable("meal_pairings", {
   id: serial("id").primaryKey(),

@@ -127,6 +127,10 @@ export function setupAuth(app: Express) {
         password: await hashPassword(password),
       });
 
+      storage.seedDefaultHouseholdItems(user.id).catch(e =>
+        console.warn("[Auth] Failed to seed household items:", e)
+      );
+
       const token = randomBytes(32).toString("hex");
       const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
       await storage.setEmailVerificationToken(user.id, token, expires);

@@ -4827,11 +4827,12 @@ export async function registerRoutes(
     try {
       const schema = z.object({
         ingredient: z.string().min(1),
-        category: z.enum(["larder", "fridge", "freezer"]),
+        displayName: z.string().optional(),
+        category: z.enum(["larder", "fridge", "freezer", "household"]),
         notes: z.string().optional(),
       });
-      const { ingredient, category, notes } = schema.parse(req.body);
-      const item = await storage.addPantryItem(req.user!.id, ingredient, category, notes);
+      const { ingredient, displayName, category, notes } = schema.parse(req.body);
+      const item = await storage.addPantryItem(req.user!.id, ingredient, category, notes, displayName ?? ingredient);
       res.status(201).json(item);
     } catch (err) {
       if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
@@ -4854,6 +4855,48 @@ export async function registerRoutes(
     } catch (err) {
       console.error("[Pantry] DELETE error:", err);
       res.status(500).json({ message: "Failed to delete pantry item" });
+    }
+  });
+
+  // ── Shopping List Extras ──────────────────────────────────────────────────
+  app.get("/api/shopping-list/extras", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const extras = await storage.getShoppingListExtras(req.user!.id);
+      res.json(extras);
+    } catch (err) {
+      console.error("[Extras] GET error:", err);
+      res.status(500).json({ message: "Failed to fetch extras" });
+    }
+  });
+
+  app.post("/api/shopping-list/extras", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const schema = z.object({
+        name: z.string().min(1),
+        category: z.string().optional(),
+      });
+      const { name, category } = schema.parse(req.body);
+      const item = await storage.addShoppingListExtra(req.user!.id, name, category);
+      res.status(201).json(item);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      console.error("[Extras] POST error:", err);
+      res.status(500).json({ message: "Failed to add extra" });
+    }
+  });
+
+  app.delete("/api/shopping-list/extras/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      await storage.deleteShoppingListExtra(req.user!.id, id);
+      res.sendStatus(204);
+    } catch (err) {
+      console.error("[Extras] DELETE error:", err);
+      res.status(500).json({ message: "Failed to delete extra" });
     }
   });
 
