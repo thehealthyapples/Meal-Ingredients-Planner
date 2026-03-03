@@ -1,0 +1,149 @@
+DELTA OBJECTIVE (small follow-up)
+
+The Pantry build is mostly complete, but it missed the default FOOD pantry preload list and the Food Pantry groups should be collapsible.
+
+Please implement:
+
+A) Seed default FOOD pantry items (~60 items incl. 20 spices) for all users (existing + new), similar to household seeding.
+B) Make Larder / Fridge / Freezer sections collapsible in /pantry UI (Household can remain expanded by default).
+
+-----------------------------------------
+A) DEFAULT FOOD PANTRY PRELOAD (SEEDING)
+-----------------------------------------
+
+1) Storage: add seedDefaultFoodPantryItems(userId)
+File: server/storage.ts
+
+- Implement seedDefaultFoodPantryItems(userId: number): Promise<void>
+- Insert default FOOD items with:
+  category in ('larder','fridge','freezer')
+  isDefault=true
+  isDeleted=false
+  sortOrder set to stable ordering (0..n) within each category
+  displayName set to the human name (e.g. "Milk", "Olive oil")
+  ingredientKey = normalizeIngredientKey(displayName)
+- Insert should be idempotent:
+  - If row already exists (conflict on unique(user_id, category, ingredient_key)) do nothing
+  - IMPORTANT: Do NOT recreate items that the user soft-deleted (isDeleted=true). If your insert uses onConflictDoNothing it will naturally skip existing rows; but if an item exists with isDeleted=true, it still exists, so it should stay skipped.
+
+2) Registration hook: seed food items for new users
+File: server/auth.ts (or wherever seedDefaultHouseholdItems is called)
+- After creating user, call BOTH:
+  storage.seedDefaultHouseholdItems(user.id)
+  storage.seedDefaultFoodPantryItems(user.id)
+(Keep fire-and-forget like current household seeding.)
+
+3) New seed script for existing users
+Create: scripts/seed-default-pantry-food.ts
+- Iterate all users and call storage.seedDefaultFoodPantryItems(user.id)
+- Make it safe to rerun.
+
+4) Default FOOD list (~60 items incl. 20 spices)
+
+FRIDGE (11)
+1. Milk
+2. Butter
+3. Eggs
+4. Cheese
+5. Greek yogurt
+6. Plain yogurt
+7. Double cream
+8. Sour cream
+9. Mayonnaise
+10. Mustard
+11. Ketchup
+
+FREEZER (8)
+1. Frozen peas
+2. Frozen sweetcorn
+3. Frozen berries
+4. Frozen spinach
+5. Frozen mixed vegetables
+6. Frozen chips
+7. Frozen bread (spare loaf)
+8. Ice cubes / frozen lemon wedges
+
+LARDER — BASICS (35)
+1. Olive oil
+2. Vegetable oil / rapeseed oil
+3. Apple cider vinegar
+4. Balsamic vinegar
+5. White wine vinegar
+6. Soy sauce
+7. Worcestershire sauce
+8. Stock cubes (chicken/veg)
+9. Tinned chopped tomatoes
+10. Passata
+11. Tomato puree
+12. Tinned baked beans
+13. Tinned chickpeas
+14. Tinned kidney beans
+15. Tinned lentils
+16. Tuna tins
+17. Rice (basmati)
+18. Pasta (dried)
+19. Couscous
+20. Oats
+21. Flour — plain
+22. Flour — self-raising
+23. Flour — bread flour
+24. Baking powder
+25. Bicarbonate of soda
+26. Yeast (dried)
+27. Sugar (granulated)
+28. Brown sugar
+29. Honey
+30. Peanut butter
+31. Jam
+32. Cornflour
+33. Breadcrumbs
+34. Cocoa powder
+35. Vanilla extract
+
+LARDER — SPICES & HERBS (20)  (these are part of larder; ensure they appear grouped/near each other in UI via sortOrder)
+1. Salt
+2. Black pepper
+3. Chilli flakes
+4. Paprika
+5. Smoked paprika
+6. Ground cumin
+7. Ground coriander
+8. Turmeric
+9. Curry powder
+10. Garam masala
+11. Cinnamon
+12. Nutmeg
+13. Mixed herbs
+14. Oregano
+15. Basil (dried)
+16. Thyme (dried)
+17. Rosemary (dried)
+18. Garlic granules
+19. Onion granules
+20. Ground ginger
+
+NOTE:
+- Total is approx 60+ items. If you need to trim, keep the spices at 20 and remove a few “optional” items first.
+- Store displayName exactly as above; ingredientKey is normalized from displayName.
+
+-----------------------------------------
+B) COLLAPSIBLE FOOD GROUPS ON /PANTRY
+-----------------------------------------
+
+File: client/src/pages/pantry-page.tsx
+
+5) Make Larder / Fridge / Freezer collapsible:
+- Use a simple local state:
+  const [openSections, setOpenSections] = useState({ larder: true, fridge: true, freezer: true, household: true })
+- Render each category header as a button row with a chevron icon.
+- Clicking toggles open/closed.
+- Default open = true for all sections (or: larder open, fridge/freezer collapsed by default — your choice; but MUST be collapsible).
+
+6) When collapsed:
+- Show only the header row and the count of items e.g. “Larder (42)”
+- Hide the list + add form inside that section (or keep add form visible under header; either acceptable but keep UI tidy).
+
+Acceptance:
+- After running seed script, all users see the default food list under Larder/Fridge/Freezer on /pantry.
+- New users automatically get both household + food defaults.
+- Larder/Fridge/Freezer sections can be collapsed/expanded, showing “Category (N)” in the header.

@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Plus, Loader2, Package, Home, Refrigerator, Archive, Layers, ShoppingCart } from "lucide-react";
+import { Trash2, Plus, Loader2, Package, Home, Refrigerator, Archive, Layers, ShoppingCart, ChevronDown, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -37,6 +37,11 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
   const qclient = useQueryClient();
   const [ingredient, setIngredient] = useState("");
   const [category, setCategory] = useState<FoodCategory>("larder");
+  const [openSections, setOpenSections] = useState<Record<FoodCategory, boolean>>({
+    larder: true,
+    fridge: false,
+    freezer: false,
+  });
 
   const addMutation = useMutation({
     mutationFn: (data: { ingredient: string; displayName: string; category: string }) =>
@@ -70,6 +75,10 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
   const handleAdd = () => {
     if (!ingredient.trim()) return;
     addMutation.mutate({ ingredient: ingredient.trim(), displayName: ingredient.trim(), category });
+  };
+
+  const toggleSection = (cat: FoodCategory) => {
+    setOpenSections(prev => ({ ...prev, [cat]: !prev[cat] }));
   };
 
   return (
@@ -117,36 +126,56 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
           <Skeleton className="h-6 w-full" />
           <Skeleton className="h-6 w-3/4" />
         </div>
-      ) : foodItems.length === 0 ? (
-        <p className="text-xs text-muted-foreground italic">No staples yet — try adding olive oil, herbs, spices…</p>
       ) : (
-        <div className="space-y-5">
-          {grouped.filter(g => g.items.length > 0).map(group => {
+        <div className="space-y-1 border border-border rounded-md overflow-hidden">
+          {grouped.map((group, idx) => {
             const Icon = group.icon;
+            const isOpen = openSections[group.value as FoodCategory];
+            const ChevronIcon = isOpen ? ChevronDown : ChevronRight;
             return (
-              <div key={group.value}>
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{group.label}</p>
-                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{group.items.length}</Badge>
-                </div>
-                <div className="space-y-1 pl-1">
-                  {group.items.map(item => (
-                    <div key={item.id} className="flex items-center justify-between gap-2 py-1 group" data-testid={`row-food-pantry-item-${item.id}`}>
-                      <span className="text-sm flex-1 min-w-0 truncate">{item.displayName || item.ingredientKey}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => deleteMutation.mutate(item.id)}
-                        disabled={deleteMutation.isPending}
-                        data-testid={`button-food-pantry-delete-${item.id}`}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
+              <div key={group.value} className={idx > 0 ? "border-t border-border" : ""}>
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-between px-3 py-2.5 hover:bg-muted/50 transition-colors text-left"
+                  onClick={() => toggleSection(group.value as FoodCategory)}
+                  data-testid={`button-toggle-${group.value}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-sm font-medium">{group.label}</span>
+                    <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{group.items.length}</Badge>
+                  </div>
+                  <ChevronIcon className="h-4 w-4 text-muted-foreground" />
+                </button>
+                {isOpen && (
+                  <div className="bg-muted/20 px-3 pb-3">
+                    {group.items.length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic pt-2">
+                        {group.value === "larder" ? "No larder staples yet — try adding olive oil or pasta." :
+                         group.value === "fridge" ? "No fridge staples yet — try adding milk or eggs." :
+                         "No freezer items yet."}
+                      </p>
+                    ) : (
+                      <div className="space-y-0.5 pt-1">
+                        {group.items.map(item => (
+                          <div key={item.id} className="flex items-center justify-between gap-2 py-1 group" data-testid={`row-food-pantry-item-${item.id}`}>
+                            <span className="text-sm flex-1 min-w-0 truncate">{item.displayName || item.ingredientKey}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => deleteMutation.mutate(item.id)}
+                              disabled={deleteMutation.isPending}
+                              data-testid={`button-food-pantry-delete-${item.id}`}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

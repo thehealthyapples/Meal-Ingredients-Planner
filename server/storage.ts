@@ -196,6 +196,7 @@ export interface IStorage {
   addPantryItem(userId: number, ingredient: string, category: string, notes?: string, displayName?: string, isDefault?: boolean): Promise<UserPantryItem>;
   deletePantryItem(userId: number, id: number): Promise<void>;
   seedDefaultHouseholdItems(userId: number): Promise<void>;
+  seedDefaultFoodPantryItems(userId: number): Promise<void>;
 
   // ── Shopping List Extras ───────────────────────────────────────────────────
   getShoppingListExtras(userId: number): Promise<ShoppingListExtra[]>;
@@ -1610,6 +1611,108 @@ export class DatabaseStorage implements IStorage {
             category: "household",
             isDefault: true,
             isDeleted: false,
+          })
+          .onConflictDoNothing();
+      } catch {
+        // skip duplicates silently
+      }
+    }
+  }
+
+  async seedDefaultFoodPantryItems(userId: number): Promise<void> {
+    const defaults: { name: string; category: "larder" | "fridge" | "freezer"; sortOrder: number }[] = [
+      // FRIDGE
+      { name: "Milk", category: "fridge", sortOrder: 0 },
+      { name: "Butter", category: "fridge", sortOrder: 1 },
+      { name: "Eggs", category: "fridge", sortOrder: 2 },
+      { name: "Cheese", category: "fridge", sortOrder: 3 },
+      { name: "Greek yogurt", category: "fridge", sortOrder: 4 },
+      { name: "Plain yogurt", category: "fridge", sortOrder: 5 },
+      { name: "Double cream", category: "fridge", sortOrder: 6 },
+      { name: "Sour cream", category: "fridge", sortOrder: 7 },
+      { name: "Mayonnaise", category: "fridge", sortOrder: 8 },
+      { name: "Mustard", category: "fridge", sortOrder: 9 },
+      { name: "Ketchup", category: "fridge", sortOrder: 10 },
+      // FREEZER
+      { name: "Frozen peas", category: "freezer", sortOrder: 0 },
+      { name: "Frozen sweetcorn", category: "freezer", sortOrder: 1 },
+      { name: "Frozen berries", category: "freezer", sortOrder: 2 },
+      { name: "Frozen spinach", category: "freezer", sortOrder: 3 },
+      { name: "Frozen mixed vegetables", category: "freezer", sortOrder: 4 },
+      { name: "Frozen chips", category: "freezer", sortOrder: 5 },
+      { name: "Frozen bread", category: "freezer", sortOrder: 6 },
+      { name: "Ice cubes", category: "freezer", sortOrder: 7 },
+      // LARDER — BASICS
+      { name: "Olive oil", category: "larder", sortOrder: 0 },
+      { name: "Vegetable oil", category: "larder", sortOrder: 1 },
+      { name: "Apple cider vinegar", category: "larder", sortOrder: 2 },
+      { name: "Balsamic vinegar", category: "larder", sortOrder: 3 },
+      { name: "White wine vinegar", category: "larder", sortOrder: 4 },
+      { name: "Soy sauce", category: "larder", sortOrder: 5 },
+      { name: "Worcestershire sauce", category: "larder", sortOrder: 6 },
+      { name: "Stock cubes", category: "larder", sortOrder: 7 },
+      { name: "Tinned chopped tomatoes", category: "larder", sortOrder: 8 },
+      { name: "Passata", category: "larder", sortOrder: 9 },
+      { name: "Tomato puree", category: "larder", sortOrder: 10 },
+      { name: "Tinned baked beans", category: "larder", sortOrder: 11 },
+      { name: "Tinned chickpeas", category: "larder", sortOrder: 12 },
+      { name: "Tinned kidney beans", category: "larder", sortOrder: 13 },
+      { name: "Tinned lentils", category: "larder", sortOrder: 14 },
+      { name: "Tuna tins", category: "larder", sortOrder: 15 },
+      { name: "Rice (basmati)", category: "larder", sortOrder: 16 },
+      { name: "Pasta (dried)", category: "larder", sortOrder: 17 },
+      { name: "Couscous", category: "larder", sortOrder: 18 },
+      { name: "Oats", category: "larder", sortOrder: 19 },
+      { name: "Flour — plain", category: "larder", sortOrder: 20 },
+      { name: "Flour — self-raising", category: "larder", sortOrder: 21 },
+      { name: "Flour — bread flour", category: "larder", sortOrder: 22 },
+      { name: "Baking powder", category: "larder", sortOrder: 23 },
+      { name: "Bicarbonate of soda", category: "larder", sortOrder: 24 },
+      { name: "Yeast (dried)", category: "larder", sortOrder: 25 },
+      { name: "Sugar (granulated)", category: "larder", sortOrder: 26 },
+      { name: "Brown sugar", category: "larder", sortOrder: 27 },
+      { name: "Honey", category: "larder", sortOrder: 28 },
+      { name: "Peanut butter", category: "larder", sortOrder: 29 },
+      { name: "Jam", category: "larder", sortOrder: 30 },
+      { name: "Cornflour", category: "larder", sortOrder: 31 },
+      { name: "Breadcrumbs", category: "larder", sortOrder: 32 },
+      { name: "Cocoa powder", category: "larder", sortOrder: 33 },
+      { name: "Vanilla extract", category: "larder", sortOrder: 34 },
+      // LARDER — SPICES & HERBS (sortOrder 100+ to group together)
+      { name: "Salt", category: "larder", sortOrder: 100 },
+      { name: "Black pepper", category: "larder", sortOrder: 101 },
+      { name: "Chilli flakes", category: "larder", sortOrder: 102 },
+      { name: "Paprika", category: "larder", sortOrder: 103 },
+      { name: "Smoked paprika", category: "larder", sortOrder: 104 },
+      { name: "Ground cumin", category: "larder", sortOrder: 105 },
+      { name: "Ground coriander", category: "larder", sortOrder: 106 },
+      { name: "Turmeric", category: "larder", sortOrder: 107 },
+      { name: "Curry powder", category: "larder", sortOrder: 108 },
+      { name: "Garam masala", category: "larder", sortOrder: 109 },
+      { name: "Cinnamon", category: "larder", sortOrder: 110 },
+      { name: "Nutmeg", category: "larder", sortOrder: 111 },
+      { name: "Mixed herbs", category: "larder", sortOrder: 112 },
+      { name: "Oregano", category: "larder", sortOrder: 113 },
+      { name: "Basil (dried)", category: "larder", sortOrder: 114 },
+      { name: "Thyme (dried)", category: "larder", sortOrder: 115 },
+      { name: "Rosemary (dried)", category: "larder", sortOrder: 116 },
+      { name: "Garlic granules", category: "larder", sortOrder: 117 },
+      { name: "Onion granules", category: "larder", sortOrder: 118 },
+      { name: "Ground ginger", category: "larder", sortOrder: 119 },
+    ];
+    for (const { name, category, sortOrder } of defaults) {
+      const ingredientKey = normalizeIngredientKey(name);
+      try {
+        await db
+          .insert(userPantryItems)
+          .values({
+            userId,
+            ingredientKey,
+            displayName: name,
+            category,
+            isDefault: true,
+            isDeleted: false,
+            sortOrder,
           })
           .onConflictDoNothing();
       } catch {

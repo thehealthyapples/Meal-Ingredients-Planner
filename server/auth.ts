@@ -130,6 +130,9 @@ export function setupAuth(app: Express) {
       storage.seedDefaultHouseholdItems(user.id).catch(e =>
         console.warn("[Auth] Failed to seed household items:", e)
       );
+      storage.seedDefaultFoodPantryItems(user.id).catch(e =>
+        console.warn("[Auth] Failed to seed food pantry items:", e)
+      );
 
       const token = randomBytes(32).toString("hex");
       const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
