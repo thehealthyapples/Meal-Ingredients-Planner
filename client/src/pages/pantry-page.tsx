@@ -42,6 +42,8 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
     fridge: false,
     freezer: false,
   });
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [sending, setSending] = useState(false);
 
   const addMutation = useMutation({
     mutationFn: (data: { ingredient: string; displayName: string; category: string }) =>
@@ -62,7 +64,10 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => apiRequest("DELETE", `/api/pantry/${id}`),
-    onSuccess: () => qclient.invalidateQueries({ queryKey: ["/api/pantry"] }),
+    onSuccess: (_, id) => {
+      setSelected(prev => { const next = new Set(prev); next.delete(id); return next; });
+      qclient.invalidateQueries({ queryKey: ["/api/pantry"] });
+    },
     onError: () => toast({ title: "Failed to remove item", variant: "destructive" }),
   });
 
@@ -81,14 +86,69 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
     setOpenSections(prev => ({ ...prev, [cat]: !prev[cat] }));
   };
 
+  const toggleItem = (id: number) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleGroupAll = (groupItems: PantryItem[]) => {
+    const ids = groupItems.map(i => i.id);
+    const allSelected = ids.every(id => selected.has(id));
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (allSelected) ids.forEach(id => next.delete(id));
+      else ids.forEach(id => next.add(id));
+      return next;
+    });
+  };
+
+  const sendToBasket = async () => {
+    if (selected.size === 0) return;
+    setSending(true);
+    const toSend = foodItems.filter(i => selected.has(i.id));
+    try {
+      await Promise.all(
+        toSend.map(item =>
+          apiRequest("POST", "/api/shopping-list/extras", {
+            name: item.displayName || item.ingredientKey,
+            category: item.category,
+          })
+        )
+      );
+      toast({ title: `Added ${toSend.length} item${toSend.length > 1 ? "s" : ""} to basket` });
+      setSelected(new Set());
+      qclient.invalidateQueries({ queryKey: ["/api/shopping-list/extras"] });
+    } catch {
+      toast({ title: "Failed to add to basket", variant: "destructive" });
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <Card className="p-5">
-      <div className="flex items-center gap-2 mb-1">
-        <Package className="h-4 w-4 text-primary" />
-        <h2 className="font-semibold text-base">Food Pantry</h2>
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-2">
+          <Package className="h-4 w-4 text-primary" />
+          <h2 className="font-semibold text-base">Food Pantry</h2>
+        </div>
+        {selected.size > 0 && (
+          <Button
+            size="sm"
+            onClick={sendToBasket}
+            disabled={sending}
+            data-testid="button-food-send-to-basket"
+          >
+            {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingCart className="h-3 w-3 mr-1" />}
+            Send {selected.size} to Basket
+          </Button>
+        )}
       </div>
       <p className="text-xs text-muted-foreground mb-4">
-        Ingredients you usually have at home — they'll be collapsed in your shopping list.
+        Tick items you need this week and tap "Send to Basket", or just keep them here to auto-collapse in your shopping list.
       </p>
 
       <div className="flex gap-2 mb-5 flex-wrap">
@@ -127,11 +187,13 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
           <Skeleton className="h-6 w-3/4" />
         </div>
       ) : (
-        <div className="space-y-1 border border-border rounded-md overflow-hidden">
+        <div className="border border-border rounded-md overflow-hidden">
           {grouped.map((group, idx) => {
             const Icon = group.icon;
             const isOpen = openSections[group.value as FoodCategory];
             const ChevronIcon = isOpen ? ChevronDown : ChevronRight;
+            const groupSelectedCount = group.items.filter(i => selected.has(i.id)).length;
+            const allGroupSelected = group.items.length > 0 && groupSelectedCount === group.items.length;
             return (
               <div key={group.value} className={idx > 0 ? "border-t border-border" : ""}>
                 <button
@@ -144,6 +206,9 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
                     <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-sm font-medium">{group.label}</span>
                     <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{group.items.length}</Badge>
+                    {groupSelectedCount > 0 && (
+                      <Badge variant="default" className="text-[10px] h-4 px-1.5">{groupSelectedCount} selected</Badge>
+                    )}
                   </div>
                   <ChevronIcon className="h-4 w-4 text-muted-foreground" />
                 </button>
@@ -156,22 +221,37 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
                          "No freezer items yet."}
                       </p>
                     ) : (
-                      <div className="space-y-0.5 pt-1">
-                        {group.items.map(item => (
-                          <div key={item.id} className="flex items-center justify-between gap-2 py-1 group" data-testid={`row-food-pantry-item-${item.id}`}>
-                            <span className="text-sm flex-1 min-w-0 truncate">{item.displayName || item.ingredientKey}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => deleteMutation.mutate(item.id)}
-                              disabled={deleteMutation.isPending}
-                              data-testid={`button-food-pantry-delete-${item.id}`}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        ))}
+                      <div className="pt-1">
+                        <div className="flex items-center gap-2 pb-1.5 mb-1 border-b border-border/50">
+                          <Checkbox
+                            checked={allGroupSelected}
+                            onCheckedChange={() => toggleGroupAll(group.items)}
+                            data-testid={`checkbox-select-all-${group.value}`}
+                          />
+                          <span className="text-xs text-muted-foreground">Select all</span>
+                        </div>
+                        <div className="space-y-0.5">
+                          {group.items.map(item => (
+                            <div key={item.id} className="flex items-center gap-2 py-1 group" data-testid={`row-food-pantry-item-${item.id}`}>
+                              <Checkbox
+                                checked={selected.has(item.id)}
+                                onCheckedChange={() => toggleItem(item.id)}
+                                data-testid={`checkbox-food-${item.id}`}
+                              />
+                              <span className="text-sm flex-1 min-w-0 truncate">{item.displayName || item.ingredientKey}</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => deleteMutation.mutate(item.id)}
+                                disabled={deleteMutation.isPending}
+                                data-testid={`button-food-pantry-delete-${item.id}`}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
