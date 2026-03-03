@@ -16,7 +16,8 @@ import { filterMealsByPreferences, rankMealsByPreferences } from "./lib/recommen
 import { analyzeProductUPF } from "./lib/upf-analysis-service";
 import { createBasket, getBasketSupermarkets } from "./lib/supermarket-basket-service";
 import { generateSmartSuggestion, type SmartSuggestSettings, type LockedEntry } from "./lib/smart-suggest-service";
-import { searchAllRecipes, searchJamieOliver, searchSeriousEats, type ExternalMealCandidate } from "./lib/external-meal-service";
+import { searchAllRecipes, searchJamieOliver, searchSeriousEats, searchEdamam, searchApiNinjas, searchBigOven, searchFatSecret, type ExternalMealCandidate } from "./lib/external-meal-service";
+import { seedSourceSettings, isSourceCallable, getSourceKeyForUrl, logAuditEvent, getAllSourceSettings, updateSourceSettings, getAuditLogs } from "./lib/recipe-source-gate";
 import { shouldExcludeRecipe, scoreRecipeForDiet } from "./lib/dietRules";
 import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreezerMealSchema, updateMealSchema } from "@shared/schema";
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
@@ -462,6 +463,9 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   setupAuth(app);
+
+  // Seed default recipe source settings (idempotent)
+  seedSourceSettings().catch(e => console.warn("[recipe-source-gate] Seed failed:", e));
 
   function buildProfileResponse(user: any, prefs: any) {
     const heightCm = prefs?.heightCm || null;
@@ -1238,8 +1242,15 @@ export async function registerRoutes(
       const keywords = q.split(/[,\s]+/).map(s => s.trim()).filter(Boolean);
       const lowerKeywords = keywords.map(k => k.toLowerCase());
 
-      const [mealDbResults, bbcResults, extraSiteResults] = await Promise.all([
+      const filters = { query: q };
+      const [
+        mealDbResults, bbcResults,
+        arResults, joResults, seResults,
+        edamamResults, apiNinjasResults, bigOvenResults, fatSecretResults,
+      ] = await Promise.all([
+        // TheMealDB — official API
         (async () => {
+          if (!(await isSourceCallable('themealdb'))) return [];
           try {
             if (keywords.length > 1) {
               const keywordResults = await Promise.all(
@@ -1250,12 +1261,9 @@ export async function registerRoutes(
                       { timeout: 10000 }
                     );
                     return (r.data.meals || []) as any[];
-                  } catch {
-                    return [] as any[];
-                  }
+                  } catch { return [] as any[]; }
                 })
               );
-
               const mealMap = new Map<string, { meal: any; score: number }>();
               for (const meals of keywordResults) {
                 for (const m of meals) {
@@ -1269,9 +1277,7 @@ export async function registerRoutes(
                   }
                 }
               }
-              return Array.from(mealMap.values())
-                .sort((a, b) => b.score - a.score)
-                .map(e => e.meal);
+              return Array.from(mealMap.values()).sort((a, b) => b.score - a.score).map(e => e.meal);
             } else {
               const response = await axios.get(
                 `https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(q)}`,
@@ -1279,20 +1285,24 @@ export async function registerRoutes(
               );
               return response.data.meals || [];
             }
-          } catch {
-            return [];
-          }
+          } catch { return []; }
         })(),
-        searchBBCGoodFood(q),
-        (async () => {
-          const filters = { query: q };
-          const [ar, jo, se] = await Promise.all([
-            searchAllRecipes(filters),
-            searchJamieOliver(filters),
-            searchSeriousEats(filters),
-          ]);
-          return [...ar, ...jo, ...se].map(candidateToRecipe);
-        })(),
+        // BBC Good Food — scraped
+        (async () => (await isSourceCallable('bbcgoodfood')) ? searchBBCGoodFood(q) : [])(),
+        // AllRecipes — scraped
+        (async () => (await isSourceCallable('allrecipes')) ? (await searchAllRecipes(filters)).map(candidateToRecipe) : [])(),
+        // Jamie Oliver — scraped
+        (async () => (await isSourceCallable('jamieoliver')) ? (await searchJamieOliver(filters)).map(candidateToRecipe) : [])(),
+        // Serious Eats — scraped
+        (async () => (await isSourceCallable('seriouseats')) ? (await searchSeriousEats(filters)).map(candidateToRecipe) : [])(),
+        // Edamam — official API
+        (async () => (await isSourceCallable('edamam')) ? (await searchEdamam(q)).map(candidateToRecipe) : [])(),
+        // API-Ninjas — official API
+        (async () => (await isSourceCallable('apininjas')) ? (await searchApiNinjas(q)).map(candidateToRecipe) : [])(),
+        // BigOven — official API
+        (async () => (await isSourceCallable('bigoven')) ? (await searchBigOven(q)).map(candidateToRecipe) : [])(),
+        // FatSecret — official API
+        (async () => (await isSourceCallable('fatsecret')) ? (await searchFatSecret(q)).map(candidateToRecipe) : [])(),
       ]);
 
       const mealDbMapped: NormalizedRecipe[] = mealDbResults.map((m: any) => ({
@@ -1320,16 +1330,16 @@ export async function registerRoutes(
         return result;
       };
 
-      const allRecipesResults = extraSiteResults.filter(r => r.source === 'AllRecipes');
-      const jamieOliverResults = extraSiteResults.filter(r => r.source === 'Jamie Oliver');
-      const seriousEatsResults = extraSiteResults.filter(r => r.source === 'Serious Eats');
-
       const sources = [
         dedup(mealDbMapped),
         dedup(bbcResults),
-        dedup(allRecipesResults),
-        dedup(jamieOliverResults),
-        dedup(seriousEatsResults),
+        dedup(arResults),
+        dedup(joResults),
+        dedup(seResults),
+        dedup(edamamResults),
+        dedup(apiNinjasResults),
+        dedup(bigOvenResults),
+        dedup(fatSecretResults),
       ];
 
       let interleaved: NormalizedRecipe[] = [];
@@ -1389,7 +1399,20 @@ export async function registerRoutes(
 
     try {
       const { url } = api.import.recipe.input.parse(req.body);
-      
+
+      // Source gate — check if this domain's source is enabled
+      const importSourceKey = getSourceKeyForUrl(url);
+      if (importSourceKey && !(await isSourceCallable(importSourceKey))) {
+        await logAuditEvent({
+          userId: (req.user as any)?.id ?? null,
+          action: "import",
+          sourceName: importSourceKey,
+          urlOrQuery: url,
+          reason: "source_disabled",
+        });
+        return res.status(403).json({ message: "This recipe source is currently disabled by the administrator." });
+      }
+
       const browserHeaders: Record<string, string> = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
@@ -5082,6 +5105,49 @@ export async function registerRoutes(
     } catch (err) {
       console.error("[IngredientProducts] Lookup error (non-fatal):", err);
       res.json({ recommendations: {} });
+    }
+  });
+
+  // ─── Admin: Recipe Source Controls ────────────────────────────────────────
+
+  app.get("/api/admin/recipe-sources", assertAdmin, async (req, res) => {
+    try {
+      const sources = await getAllSourceSettings();
+      res.json(sources);
+    } catch (err) {
+      console.error("[AdminRecipeSources] GET error:", err);
+      res.status(500).json({ message: "Failed to load recipe sources" });
+    }
+  });
+
+  app.put("/api/admin/recipe-sources", assertAdmin, async (req, res) => {
+    try {
+      const schema = z.object({
+        updates: z.array(z.object({ sourceKey: z.string(), enabled: z.boolean() })),
+      });
+      const { updates } = schema.parse(req.body);
+      await updateSourceSettings(updates);
+      const sources = await getAllSourceSettings();
+      res.json(sources);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      console.error("[AdminRecipeSources] PUT error:", err);
+      res.status(500).json({ message: "Failed to update recipe sources" });
+    }
+  });
+
+  app.get("/api/admin/recipe-audit-logs", assertAdmin, async (req, res) => {
+    try {
+      const result = await getAuditLogs({
+        page: parseInt(req.query.page as string ?? "1", 10) || 1,
+        pageSize: parseInt(req.query.pageSize as string ?? "50", 10) || 50,
+        sourceName: req.query.sourceName as string | undefined,
+        reason: req.query.reason as string | undefined,
+      });
+      res.json(result);
+    } catch (err) {
+      console.error("[AdminRecipeSources] Audit log GET error:", err);
+      res.status(500).json({ message: "Failed to load audit logs" });
     }
   });
 

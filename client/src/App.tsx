@@ -23,6 +23,7 @@ import WeeklyPlannerPage from "@/pages/weekly-planner-page";
 import ProfilePage from "@/pages/profile-page";
 import AdminUsersPage from "@/pages/admin-users-page";
 import AdminIngredientProductsPage from "@/pages/admin-ingredient-products-page";
+import AdminRecipeSourcesPage from "@/pages/admin-recipe-sources-page";
 import SharedPlanPage from "@/pages/shared-plan-page";
 import PantryPage from "@/pages/pantry-page";
 
@@ -94,6 +95,7 @@ function Router() {
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersPage} />} />
       <Route path="/admin/ingredient-products" component={() => <ProtectedRoute component={AdminIngredientProductsPage} />} />
+      <Route path="/admin/recipe-sources" component={() => <ProtectedRoute component={AdminRecipeSourcesPage} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
       <Route path="/shared/:token" component={SharedPlanPage} />
 

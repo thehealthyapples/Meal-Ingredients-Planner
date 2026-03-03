@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import {
   LayoutDashboard, Utensils, CalendarDays, ShoppingBasket,
   Package, User, LogOut, ShoppingCart, ShieldCheck, Star,
-  MoreHorizontal, Mail, Archive,
+  MoreHorizontal, Mail, Archive, Sliders,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
@@ -163,6 +163,20 @@ export function NavBar() {
                     <span>THA Picks</span>
                   </Button>
                 </Link>
+                <Link href="/admin/recipe-sources">
+                  <Button
+                    variant="ghost"
+                    className={`gap-2 h-9 px-3 rounded-lg text-sm transition-colors ${
+                      location === "/admin/recipe-sources"
+                        ? "bg-primary/10 text-primary font-medium"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                    data-testid="nav-recipe-sources"
+                  >
+                    <Sliders className="h-4 w-4" />
+                    <span>Recipe Sources</span>
+                  </Button>
+                </Link>
               </>
             )}
             <a
@@ -261,6 +275,15 @@ export function NavBar() {
                   >
                     <Star className="h-5 w-5 text-muted-foreground" />
                     <span className="font-medium">THA Picks</span>
+                  </button>
+                </Link>
+                <Link href="/admin/recipe-sources" onClick={() => setMoreOpen(false)}>
+                  <button
+                    className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/admin/recipe-sources" ? "text-primary font-medium" : ""}`}
+                    data-testid="more-link-recipe-sources"
+                  >
+                    <Sliders className="h-5 w-5 text-muted-foreground" />
+                    <span className="font-medium">Recipe Sources</span>
                   </button>
                 </Link>
               </>

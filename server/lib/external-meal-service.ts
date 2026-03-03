@@ -506,6 +506,175 @@ export async function searchSeriousEats(filters: {
   return results;
 }
 
+export async function searchEdamam(query: string): Promise<ExternalMealCandidate[]> {
+  const appId = process.env.EDAMAM_APP_ID;
+  const appKey = process.env.EDAMAM_APP_KEY;
+  if (!appId || !appKey) return [];
+  try {
+    const url = `https://api.edamam.com/api/recipes/v2?type=public&q=${encodeURIComponent(query)}&app_id=${appId}&app_key=${appKey}&field=label&field=image&field=url&field=ingredientLines&field=yield&field=cuisineType&field=mealType&field=dietLabels`;
+    const response = await fetch(url, { signal: AbortSignal.timeout(10000) });
+    if (!response.ok) return [];
+    const data = await response.json() as any;
+    const hits = data?.hits ?? [];
+    return hits.slice(0, 10).map((hit: any) => {
+      const recipe = hit.recipe;
+      const uriSlug = (recipe.uri ?? '').split('#recipe_').pop() ?? '';
+      return {
+        externalId: `edamam-${uriSlug}`,
+        name: recipe.label ?? 'Unknown',
+        image: recipe.image ?? null,
+        ingredients: recipe.ingredientLines ?? [],
+        instructions: [],
+        dietTypes: detectDietTypes(recipe.label ?? '', recipe.ingredientLines ?? []),
+        estimatedCost: null,
+        estimatedUPFScore: null,
+        source: "Edamam",
+        sourceUrl: recipe.url ?? null,
+        category: inferCategoryFromCuisineAndName(recipe.label ?? '', recipe.mealType?.[0] ?? null),
+        cuisine: recipe.cuisineType?.[0] ?? null,
+        primaryProtein: detectPrimaryProtein(recipe.ingredientLines ?? []),
+      } as ExternalMealCandidate;
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function searchApiNinjas(query: string): Promise<ExternalMealCandidate[]> {
+  const apiKey = process.env.API_NINJAS_API_KEY;
+  if (!apiKey) return [];
+  try {
+    const response = await fetch(
+      `https://api.api-ninjas.com/v1/recipe?query=${encodeURIComponent(query)}`,
+      { headers: { 'X-Api-Key': apiKey }, signal: AbortSignal.timeout(10000) }
+    );
+    if (!response.ok) return [];
+    const data = await response.json() as any[];
+    return data.slice(0, 10).map((item: any) => {
+      const ingredients = typeof item.ingredients === 'string'
+        ? item.ingredients.split('|').map((s: string) => s.trim()).filter(Boolean)
+        : [];
+      const instructions = typeof item.instructions === 'string'
+        ? item.instructions.split(/\r?\n/).filter((s: string) => s.trim().length > 0)
+        : [];
+      return {
+        externalId: `apininjas-${item.title?.toLowerCase().replace(/[^a-z0-9]/g, '-') ?? Math.random()}`,
+        name: item.title ?? 'Unknown',
+        image: null,
+        ingredients,
+        instructions,
+        dietTypes: detectDietTypes(item.title ?? '', ingredients),
+        estimatedCost: null,
+        estimatedUPFScore: null,
+        source: "API-Ninjas",
+        sourceUrl: null,
+        category: inferCategoryFromCuisineAndName(item.title ?? '', null),
+        cuisine: null,
+        primaryProtein: detectPrimaryProtein(ingredients),
+      } as ExternalMealCandidate;
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function searchBigOven(query: string): Promise<ExternalMealCandidate[]> {
+  const apiKey = process.env.BIGOVEN_API_KEY;
+  if (!apiKey) return [];
+  try {
+    const response = await fetch(
+      `https://api.bigoven.com/recipes?any_kw=${encodeURIComponent(query)}&api_key=${apiKey}&pg=1&rpp=10`,
+      { headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000) }
+    );
+    if (!response.ok) return [];
+    const data = await response.json() as any;
+    const results = data?.Results ?? [];
+    return results.map((item: any) => ({
+      externalId: `bigoven-${item.RecipeID}`,
+      name: item.Title ?? 'Unknown',
+      image: item.PhotoUrl ?? null,
+      ingredients: [],
+      instructions: [],
+      dietTypes: detectDietTypes(item.Title ?? '', []),
+      estimatedCost: null,
+      estimatedUPFScore: null,
+      source: "BigOven",
+      sourceUrl: item.WebURL ?? null,
+      category: inferCategoryFromCuisineAndName(item.Title ?? '', item.Category ?? null),
+      cuisine: item.Cuisine ?? null,
+      primaryProtein: detectPrimaryProtein([item.Title ?? '']),
+    } as ExternalMealCandidate));
+  } catch {
+    return [];
+  }
+}
+
+let fatSecretToken: { value: string; expiresAt: number } | null = null;
+
+async function getFatSecretToken(): Promise<string | null> {
+  if (fatSecretToken && Date.now() < fatSecretToken.expiresAt) return fatSecretToken.value;
+  const clientId = process.env.FATSECRET_CLIENT_ID;
+  const clientSecret = process.env.FATSECRET_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+  try {
+    const body = new URLSearchParams({ grant_type: 'client_credentials', scope: 'basic' });
+    const res = await fetch('https://oauth.fatsecret.com/connect/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+      },
+      body: body.toString(),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return null;
+    const json = await res.json() as any;
+    fatSecretToken = { value: json.access_token, expiresAt: Date.now() + (json.expires_in - 60) * 1000 };
+    return fatSecretToken.value;
+  } catch {
+    return null;
+  }
+}
+
+export async function searchFatSecret(query: string): Promise<ExternalMealCandidate[]> {
+  const token = await getFatSecretToken();
+  if (!token) return [];
+  try {
+    const params = new URLSearchParams({
+      method: 'recipes.search',
+      search_expression: query,
+      format: 'json',
+      max_results: '10',
+    });
+    const res = await fetch(`https://platform.fatsecret.com/rest/server.api?${params}`, {
+      headers: { 'Authorization': `Bearer ${token}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json() as any;
+    const recipes = data?.recipes?.recipe;
+    if (!recipes) return [];
+    const arr = Array.isArray(recipes) ? recipes : [recipes];
+    return arr.map((item: any) => ({
+      externalId: `fatsecret-${item.recipe_id}`,
+      name: item.recipe_name ?? 'Unknown',
+      image: item.recipe_image ?? null,
+      ingredients: item.recipe_description ? [item.recipe_description] : [],
+      instructions: [],
+      dietTypes: detectDietTypes(item.recipe_name ?? '', []),
+      estimatedCost: null,
+      estimatedUPFScore: null,
+      source: "FatSecret",
+      sourceUrl: item.recipe_url ?? null,
+      category: inferCategoryFromCuisineAndName(item.recipe_name ?? '', item.recipe_types?.recipe_type ?? null),
+      cuisine: null,
+      primaryProtein: detectPrimaryProtein([item.recipe_name ?? '']),
+    } as ExternalMealCandidate));
+  } catch {
+    return [];
+  }
+}
+
 export async function fetchExternalCandidates(filters: {
   query?: string;
   cuisine?: string;

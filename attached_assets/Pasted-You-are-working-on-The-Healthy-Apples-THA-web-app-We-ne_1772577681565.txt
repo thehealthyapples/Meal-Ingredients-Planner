@@ -1,0 +1,143 @@
+You are working on “The Healthy Apples” (THA) web app. We need to improve legal compliance for recipe data collection while keeping all existing integrations available in code until further legal discussion/permissions are granted. We are also adding new LEGAL API sources.
+
+CURRENT BEHAVIOR (DO NOT BREAK):
+- Recipe search queries multiple sources in parallel:
+  - TheMealDB (official API)
+  - BBC Good Food (HTML scraping)
+  - AllRecipes (HTML scraping / JSON-LD on import)
+  - Jamie Oliver (HTML scraping / JSON-LD on import)
+  - Serious Eats (HTML scraping / JSON-LD on import)
+- Users can also “Import from Web Page” by pasting any recipe URL.
+- On import, we extract JSON-LD Recipe schema where available (fallback to HTML scraping) and store recipe data locally.
+
+NEW GOAL:
+- Keep the scraped sources integrated but make them controllable by admin.
+- Add additional “official API / licensed sources”:
+  - Edamam Recipe Search API
+  - API-Ninjas Recipe API
+  - BigOven API
+  - FatSecret Platform API (recipe/food where applicable)
+
+COMPLIANCE UPDATE REQUIREMENTS:
+
+1) Add a global “Recipe Source Controls” panel in the Admin tab
+   - List each source with a toggle switch that enables/disables the source globally for ALL users:
+     OFFICIAL / LICENSED APIs:
+       - TheMealDB
+       - Edamam
+       - API-Ninjas Recipe API
+       - BigOven
+       - FatSecret
+     SCRAPED SOURCES (kept for now):
+       - BBC Good Food
+       - AllRecipes
+       - Jamie Oliver
+       - Serious Eats
+   - Default state:
+     - TheMealDB ON
+     - Edamam OFF (until keys configured)
+     - API-Ninjas OFF (until keys configured)
+     - BigOven OFF (until keys configured)
+     - FatSecret OFF (until keys configured)
+     - BBC Good Food ON (for now)
+     - AllRecipes ON (for now)
+     - Jamie Oliver ON (for now)
+     - Serious Eats ON (for now)
+
+2) Enforce the toggles everywhere (hard gate)
+   - During recipe search: do not call a source if it’s disabled.
+   - During “Import” from search results: if the recipe’s source is disabled, block import and show:
+     “This recipe source is currently disabled by the administrator.”
+   - During “Import from Web Page” (user-pasted URL):
+     - Detect the domain from the URL.
+     - If the domain matches a disabled scraped source (bbcgoodfood.com, allrecipes.com, jamieoliver.com, seriouseats.com), block import with the same message.
+     - If domain is unknown or not in the controlled list, allow import (unchanged), but log it.
+
+3) Add new “official API” integrations for search + import
+   - Edamam:
+     - Implement recipe search using Edamam Recipe Search API.
+     - Map results into THA’s standard RecipeSearchResult shape (title, image, source badge, external id/url).
+     - For import, fetch full recipe details from Edamam (using the appropriate endpoint/fields from the search response) and store as a THA recipe.
+   - API-Ninjas Recipe API:
+     - Implement search via API-Ninjas recipe endpoint.
+     - Map returned recipes into THA’s standard RecipeSearchResult shape.
+     - Import should store ingredients/instructions if provided by the API (do not scrape any websites for this source).
+   - BigOven:
+     - Implement search via BigOven API.
+     - Import should retrieve full recipe details via BigOven endpoints and store locally.
+   - FatSecret:
+     - Implement integration via FatSecret Platform API where it provides recipe/food items.
+     - If the API does not provide full recipe instructions, store what is provided (title, ingredients if present, nutrition) and clearly label the source as FatSecret.
+     - Do not scrape any websites for FatSecret.
+
+4) Secrets / configuration (must be production-safe)
+   - Add environment variables (server-side only, never expose in client):
+     - EDAMAM_APP_ID
+     - EDAMAM_APP_KEY
+     - API_NINJAS_API_KEY
+     - BIGOVEN_API_KEY (or their required credentials)
+     - FATSECRET_CLIENT_ID / FATSECRET_CLIENT_SECRET (or required credentials)
+   - If a source is toggled ON but required credentials are missing:
+     - Automatically treat it as “disabled_due_to_missing_credentials”
+     - Do not call it
+     - Log it for admins
+
+5) Compliance Mode improvements (auditability + safer ops)
+   - Always store source attribution fields for imported recipes:
+     - sourceName, sourceType (“official_api” | “scraped” | “user_url”), sourceUrl, importedAt,
+       importMethod (“search” | “paste-url”), originalUrl, originalDomain, externalId (if any)
+   - Add an audit log table (admin-viewable) of blocked attempts and errors:
+     - timestamp, userId (nullable), action (“search” | “import”), sourceName/domain, url/query,
+       reason (“source_disabled” | “missing_credentials” | “rate_limited” | “upstream_error”)
+   - Add rate limiting / throttling for SCRAPED sources only:
+     - per-source caps (e.g., max 30 requests/minute) + exponential backoff on 429/503
+     - ensure official APIs are not slowed by scraper throttles
+
+6) Data model / persistence
+   - Persist source toggle states in the database (NOT in memory).
+   - Implement secure admin-only endpoints:
+     - GET  /admin/recipe-sources  -> returns list of sources + enabled flag + sourceType + credentialStatus
+     - PUT  /admin/recipe-sources  -> updates enabled flags
+     - GET  /admin/audit-logs      -> paginated audit log list with filters (source, reason, date)
+   - Ensure only admins can access these endpoints (reuse existing auth/roles system).
+
+7) UI requirements
+   - Admin tab:
+     - “Recipe Sources” card with toggles grouped into:
+       - Official / Licensed APIs
+       - Scraped Sources (temporary)
+     - Show credential status (“Configured” / “Missing keys”) next to API sources.
+     - Add link/button to view “Audit Logs”.
+   - User-facing:
+     - Hide disabled sources from search UI (badges/filters).
+     - If user attempts import from disabled source (including pasted URL), show a friendly error toast/modal.
+
+8) Testing
+   - Add tests (or a runnable test script) verifying:
+     - Disabled source is never called in search.
+     - Import is blocked when source disabled.
+     - Pasted URL is blocked when domain matches a disabled scraped source.
+     - Missing credentials prevents API calls even if toggled ON.
+     - Audit log entries are created for blocked events and upstream errors.
+
+CONSTRAINTS:
+- Keep all existing scraped source code and integrations available (do not delete them).
+- Make changes minimally invasive and easy to revert.
+- Centralize source gating logic in a single shared module used by:
+  - search aggregation
+  - import flows (search import + pasted URL import)
+- Do not add any scraping for the new API sources; use their official endpoints only.
+- Ensure this works in production with concurrent users and does not leak secrets.
+
+DELIVERABLES:
+- Admin toggles + database persistence + enforcement.
+- New official API integrations (Edamam, API-Ninjas, BigOven, FatSecret) wired into search + import.
+- Audit logging + admin audit log view.
+- README section: setup env vars, enabling sources, and compliance behavior.
+
+Start by scanning the existing codebase to identify where sources are called for search and import, then:
+1) implement the shared source gating layer
+2) add DB tables/migrations for source toggles + audit logs
+3) wire the Admin UI
+4) integrate each official API source behind the same interface
+5) add tests/scripts

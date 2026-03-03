@@ -862,3 +862,37 @@ export const insertIngredientProductSchema = createInsertSchema(ingredientProduc
 
 export type IngredientProduct = typeof ingredientProducts.$inferSelect;
 export type InsertIngredientProduct = z.infer<typeof insertIngredientProductSchema>;
+
+export const recipeSourceSettings = pgTable("recipe_source_settings", {
+  id: serial("id").primaryKey(),
+  sourceKey: text("source_key").notNull().unique(),
+  enabled: boolean("enabled").notNull().default(true),
+  sourceType: text("source_type").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertRecipeSourceSettingsSchema = createInsertSchema(recipeSourceSettings).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export type RecipeSourceSettings = typeof recipeSourceSettings.$inferSelect;
+export type InsertRecipeSourceSettings = z.infer<typeof insertRecipeSourceSettingsSchema>;
+
+export const recipeSourceAuditLog = pgTable("recipe_source_audit_log", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  action: text("action").notNull(),
+  sourceName: text("source_name").notNull(),
+  urlOrQuery: text("url_or_query"),
+  reason: text("reason").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertRecipeSourceAuditLogSchema = createInsertSchema(recipeSourceAuditLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type RecipeSourceAuditLog = typeof recipeSourceAuditLog.$inferSelect;
+export type InsertRecipeSourceAuditLog = z.infer<typeof insertRecipeSourceAuditLogSchema>;
