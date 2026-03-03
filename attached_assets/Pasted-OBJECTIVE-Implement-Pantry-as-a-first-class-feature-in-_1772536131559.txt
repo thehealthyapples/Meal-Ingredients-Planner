@@ -1,0 +1,243 @@
+OBJECTIVE
+
+Implement Pantry as a first-class feature in The Healthy Apples.
+
+Pantry must:
+- Be its own top-level navigation tab (/pantry)
+- Include Food Staples + Household Essentials
+- Preload common household items for all users
+- Allow users to add/delete items
+- Allow selecting multiple household items and “Send Selected to Basket”
+- Remain simple (no inventory tracking, no quantity system)
+
+IMPORTANT DESIGN RULES (DO NOT OVERBUILD)
+
+- No stock/quantity tracking in V1.
+- Household items are NOT recipe-linked.
+- Ingredient matching for food staples uses normalized text only.
+- No fuzzy matching.
+- “Send to basket” uses a lightweight extras system.
+- Changes must be additive (no breaking planner/basket logic).
+
+---------------------------------------------------
+SECTION 1 — DATABASE (ADDITIVE, SAFE)
+---------------------------------------------------
+
+1) Update user_pantry_items table:
+
+Ensure fields:
+
+- id serial primary key
+- user_id int not null references users(id) on delete cascade
+- ingredient_key text not null
+- display_name text not null
+- category text not null check in ('larder','fridge','freezer','household')
+- default_have boolean not null default true
+- is_default boolean not null default false
+- is_deleted boolean not null default false
+- sort_order integer not null default 0
+- created_at timestamptz not null default now()
+
+Constraints:
+- unique(user_id, category, ingredient_key)
+
+Ingredient_key should use normalizeIngredientKey() for consistency.
+
+2) Add table: shopping_list_extras
+
+- id serial primary key
+- user_id int not null references users(id) on delete cascade
+- name text not null
+- category text not null default 'household'
+- created_at timestamptz not null default now()
+
+---------------------------------------------------
+SECTION 2 — DEFAULT HOUSEHOLD PRELOAD
+---------------------------------------------------
+
+Create script: script/seed-default-household.ts
+
+Default household list (preload for every user):
+
+- Toilet roll
+- Kitchen roll
+- Tissues
+- Washing up liquid
+- Dishwasher tablets
+- Laundry detergent
+- Fabric conditioner
+- Bin bags
+- Food bags / freezer bags
+- Cling film
+- Baking paper
+- Aluminium foil
+- Sponges / scourers
+- Multi-surface cleaner
+- Bleach
+- Hand soap
+- Shower gel
+- Shampoo
+- Toothpaste
+
+Rules:
+- Insert only if not already present.
+- Mark is_default=true.
+- Set category='household'.
+- Do not recreate deleted items (respect is_deleted=true).
+
+Hook into:
+- Existing users (run seed manually once).
+- New user registration flow (auto-create defaults after user creation).
+
+---------------------------------------------------
+SECTION 3 — SERVER ENDPOINTS
+---------------------------------------------------
+
+Pantry (auth required):
+
+GET /api/pantry
+- Return items where is_deleted=false
+- Group by category
+
+POST /api/pantry
+Body: { name: string, category: 'larder'|'fridge'|'freezer'|'household' }
+- Normalize name → ingredient_key
+- Insert new row (is_default=false)
+
+DELETE /api/pantry/:id
+- If is_default=true → set is_deleted=true
+- Else → hard delete (or soft delete consistently)
+
+Shopping List Extras:
+
+POST /api/shopping-list/extras
+Body: { name: string, category?: string }
+- Insert into shopping_list_extras
+
+GET /api/shopping-list/extras
+- Return user extras
+
+DELETE /api/shopping-list/extras/:id
+- Remove extra
+
+---------------------------------------------------
+SECTION 4 — NAVIGATION (MANDATORY)
+---------------------------------------------------
+
+Pantry must NOT live inside Profile.
+
+1) Create new page:
+client/src/pages/pantry-page.tsx
+
+2) Add route in App.tsx:
+<Route path="/pantry" component={PantryPage} />
+
+3) Update main nav (client/src/components/nav-bar.tsx):
+
+Add top-level nav item:
+
+Label: "Pantry"
+Route: "/pantry"
+Icon: Package (lucide-react)
+
+Position order:
+- Planner
+- My Meals
+- Pantry
+- Shopping List
+- Profile
+
+4) Remove Pantry UI from Profile page entirely.
+
+5) Protect /pantry route (auth required).
+
+ACCEPTANCE:
+- Pantry appears as its own tab.
+- It is not inside Profile.
+
+---------------------------------------------------
+SECTION 5 — PANTRY PAGE UI
+---------------------------------------------------
+
+Layout:
+
+Page Title: “My Pantry”
+
+Section 1:
+🍏 Food Pantry
+Subsections:
+- Larder
+- Fridge
+- Freezer
+
+Section 2:
+🏠 Household Essentials
+
+Each item row:
+- Checkbox (for selection)
+- Display name
+- Delete button
+
+Add item form:
+- Input field
+- Category select
+- Add button
+
+---------------------------------------------------
+SECTION 6 — SEND SELECTED TO BASKET
+---------------------------------------------------
+
+Household section must support multi-select.
+
+Add action button:
+[ Send Selected to Basket ]
+
+On click:
+- For each selected item:
+    POST /api/shopping-list/extras { name, category:'household' }
+- Show toast:
+    “Added X items to basket”
+- Clear selection
+
+---------------------------------------------------
+SECTION 7 — SHOPPING LIST PAGE UPDATE
+---------------------------------------------------
+
+When rendering shopping list:
+
+Merge:
+- Planner-derived ingredients (existing)
+- shopping_list_extras
+
+Add section:
+“Household (Selected)”
+
+Allow removing extras individually.
+
+No changes to recipe aggregation logic.
+
+---------------------------------------------------
+SECTION 8 — ACCEPTANCE CRITERIA
+---------------------------------------------------
+
+- Pantry is its own navigation tab.
+- Household essentials are preloaded for all users.
+- Users can delete default items (soft delete).
+- Users can add new items.
+- Users can multi-select and send to basket.
+- Shopping list shows these extras.
+- No stock tracking implemented.
+- No impact to planner logic.
+
+---------------------------------------------------
+DELIVERABLES
+---------------------------------------------------
+
+- Schema updates
+- Seed script
+- Registration hook
+- Endpoints
+- Pantry page
+- Nav update
+- Shopping list merge
+- docs/pantry-household.md

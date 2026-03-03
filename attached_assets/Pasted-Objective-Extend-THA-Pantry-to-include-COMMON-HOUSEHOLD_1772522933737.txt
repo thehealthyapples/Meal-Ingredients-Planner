@@ -1,0 +1,159 @@
+Objective
+
+Extend THA “Pantry” to include COMMON HOUSEHOLD ESSENTIALS (e.g., toilet roll, washing up liquid) in addition to food staples. The household list should be PRELOADED for all users by default, users can delete/add items, and there must be an easy “Send to Basket” flow for selected household items.
+
+IMPORTANT PRODUCT CHOICES (DO NOT OVERBUILD)
+- Do NOT implement stock/quantity tracking in V1 (no inventory management).
+- Household items are NOT recipe-linked (no ingredient matching needed).
+- Keep it simple: a user-curated list + quick add-to-basket for the current shop.
+
+----------------------------
+DATA MODEL (ADDITIVE, SAFE)
+----------------------------
+
+We already have (or are adding) user_pantry_items. Extend it to support household items and preloads.
+
+1) Update user_pantry_items schema:
+- Add category enum values to include household:
+  category: 'larder' | 'fridge' | 'freezer' | 'household'
+- Add optional columns:
+  - display_name: text nullable (what user sees, e.g. “Toilet roll”)
+  - is_deleted: boolean not null default false   // soft-delete so preloaded items can be “removed”
+  - is_default: boolean not null default false   // marks system-preloaded items
+  - sort_order: integer not null default 0       // stable ordering
+  (If you prefer not to add display_name, you can store it as the raw name and still keep ingredient_key for food matching only.)
+
+Constraints:
+- For household items, ingredient_key can simply equal normalizeKey(display_name) (still use same normalization).
+- Unique(user_id, category, ingredient_key) (or keep existing unique(user_id, ingredient_key) if you already have it, but ensure household and food don’t collide; better is unique(user_id, category, ingredient_key)).
+
+2) Add a seed script for default household essentials:
+Create script/seed-default-household.ts that inserts preloaded household items for all EXISTING users, and ensure NEW users also get them on registration.
+
+DEFAULT HOUSEHOLD LIST (preload these)
+- Toilet roll
+- Kitchen roll
+- Tissues
+- Washing up liquid
+- Dishwasher tablets (if relevant)
+- Laundry detergent
+- Fabric conditioner
+- Bin bags
+- Food bags / freezer bags
+- Cling film
+- Baking paper
+- Aluminium foil
+- Sponges / scourers
+- Multi-surface cleaner
+- Bleach (optional)
+- Hand soap
+- Shower gel (optional)
+- Shampoo (optional)
+- Toothpaste (optional)
+
+(Keep the list editable in code so we can tune it.)
+
+------------------------------------
+SERVER: PRELOAD + CRUD + “TO BASKET”
+------------------------------------
+
+3) Ensure default household items are created for users:
+A) Existing users:
+- Run script/seed-default-household.ts once (idempotent; only insert if missing and not deleted)
+
+B) New users:
+- In registration flow, after user insert, insert the default household items for that user (idempotent).
+
+4) Pantry endpoints (auth required):
+- GET /api/pantry
+  Returns pantry items grouped by category, excluding is_deleted=true.
+  Include metadata: is_default, sort_order.
+
+- POST /api/pantry
+  Body: { name: string, category: 'larder'|'fridge'|'freezer'|'household' }
+  Creates a new pantry item for the user (is_default=false).
+  Use normalizeKey(name) for ingredient_key; store display_name=name.
+
+- DELETE /api/pantry/:id
+  If item.is_default=true:
+    - soft delete: set is_deleted=true
+  Else:
+    - hard delete row (or also soft delete; either is fine)
+  Return success.
+
+5) “Send to Basket” for household items (easy flow)
+We need a lightweight “manual basket items” system that can be added to the current shopping list without touching recipe/basket aggregation.
+
+Add table: shopping_list_extras (recommended)
+- id serial pk
+- user_id int not null references users(id) on delete cascade
+- name text not null
+- category text not null default 'household'
+- created_at timestamptz default now()
+
+Endpoints:
+- POST /api/shopping-list/extras
+  Body: { name: string, category?: 'household'|'other' }
+  Adds an extra line item for the current user.
+
+- GET /api/shopping-list/extras
+  Returns extras for the user.
+
+- DELETE /api/shopping-list/extras/:id
+  Removes an extra item.
+
+(If you already have a shopping list persistence model, integrate extras into that instead; otherwise this “extras” table is the smallest clean add.)
+
+6) Shopping list rendering:
+- Wherever the shopping list is displayed, merge:
+  - ingredients derived from planner entries (existing)
+  - + shopping_list_extras items (new)
+Display extras in their own section “Household” (or merged into list if you prefer).
+
+------------------------------------
+CLIENT UI: PANTRY PAGE + QUICK ADD
+------------------------------------
+
+7) Pantry page should be a main tab (/pantry), not hidden in Profile.
+- Sections:
+  - Food Pantry: Larder / Fridge / Freezer
+  - Household Essentials
+- Each item row:
+  - checkbox to “Select”
+  - delete/remove button
+- Add item form:
+  - input + category selector + Add button
+
+8) “Send selected to basket” UX
+In Household Essentials section:
+- Provide a sticky action bar (or top-right button):
+  [Send selected to basket]
+- When clicked:
+  - For each selected item, call POST /api/shopping-list/extras with { name, category:'household' }
+  - Show toast “Added X items to basket”
+  - Optionally clear selection
+
+9) Shopping list page:
+- Add section “Household (selected)”
+- Show the extras added from pantry selection
+- Allow removing extras
+
+------------------------------------
+ACCEPTANCE CRITERIA
+------------------------------------
+- All users see a preloaded Household Essentials list on /pantry (even existing users after running seed).
+- Users can delete/remove default items (soft delete) and add new household items.
+- Users can select multiple household items and click “Send selected to basket”.
+- Shopping list/basket view includes these selected items as extra lines.
+- No recipe ingredient logic is required for household items.
+- System remains idempotent: seed + registration won’t create duplicates.
+
+------------------------------------
+DELIVERABLES
+------------------------------------
+- schema migrations (user_pantry_items extended; shopping_list_extras table)
+- seed script + registration hook for defaults
+- endpoints
+- /pantry page UI + nav link
+- shopping list UI merge for extras
+- docs/pantry-household.md explaining defaults + delete/add + send-to-basket
