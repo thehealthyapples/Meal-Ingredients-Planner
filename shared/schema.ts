@@ -869,11 +869,13 @@ export const recipeSourceSettings = pgTable("recipe_source_settings", {
   enabled: boolean("enabled").notNull().default(true),
   sourceType: text("source_type").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  adminUpdatedAt: timestamp("admin_updated_at", { withTimezone: true }),
 });
 
 export const insertRecipeSourceSettingsSchema = createInsertSchema(recipeSourceSettings).omit({
   id: true,
   updatedAt: true,
+  adminUpdatedAt: true,
 });
 
 export type RecipeSourceSettings = typeof recipeSourceSettings.$inferSelect;

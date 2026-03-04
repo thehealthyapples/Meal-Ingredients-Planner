@@ -1,5 +1,6 @@
 import { db } from "../db";
 import { recipeSourceSettings, recipeSourceAuditLog } from "@shared/schema";
+import { isNull } from "drizzle-orm";
 
 
 export type SourceKey =
@@ -123,8 +124,13 @@ export async function seedSourceSettings(): Promise<void> {
           enabled: source.defaultEnabled,
           sourceType: source.sourceType,
         })
-        .onConflictDoNothing();
+        .onConflictDoUpdate({
+          target: recipeSourceSettings.sourceKey,
+          set: { enabled: source.defaultEnabled, sourceType: source.sourceType },
+          setWhere: isNull(recipeSourceSettings.adminUpdatedAt),
+        });
     }
+    invalidateCache();
   } catch (e) {
     console.warn("[recipe-source-gate] Failed to seed source settings:", e);
   }
@@ -141,6 +147,7 @@ export async function getAllSourceSettings(): Promise<Array<RecipeSourceSettings
       enabled: row ? row.enabled : meta.defaultEnabled,
       sourceType: meta.sourceType,
       updatedAt: row?.updatedAt ?? new Date(),
+      adminUpdatedAt: row?.adminUpdatedAt ?? null,
       credentialStatus: getCredentialStatus(meta.sourceKey),
     };
   });
@@ -152,17 +159,19 @@ interface RecipeSourceSettings {
   enabled: boolean;
   sourceType: string;
   updatedAt: Date;
+  adminUpdatedAt: Date | null;
 }
 
 export async function updateSourceSettings(updates: Array<{ sourceKey: string; enabled: boolean }>): Promise<void> {
+  const now = new Date();
   for (const { sourceKey, enabled } of updates) {
     const meta = ALL_SOURCES.find(s => s.sourceKey === sourceKey);
     await db
       .insert(recipeSourceSettings)
-      .values({ sourceKey, enabled, sourceType: meta?.sourceType ?? "scraped", updatedAt: new Date() })
+      .values({ sourceKey, enabled, sourceType: meta?.sourceType ?? "scraped", updatedAt: now, adminUpdatedAt: now })
       .onConflictDoUpdate({
         target: recipeSourceSettings.sourceKey,
-        set: { enabled, updatedAt: new Date() },
+        set: { enabled, updatedAt: now, adminUpdatedAt: now },
       });
   }
   invalidateCache();
