@@ -1,0 +1,309 @@
+Objective
+
+Fix the UI regressions introduced in the “Calm Orchard” redesign:
+
+Remove all pastel colour blocks (pink/green/blue card fills, tinted headers, category colour panels) that no longer match the brand and look amateur.
+
+Ensure all cards/widgets use the Calm Orchard palette: warm cream + sage + subtle sun accent only.
+
+Keep the orchard/meadow backdrop behind the page, but never inside cards.
+
+Improve “My Meals” page widget/filter area so it feels calm and premium (reduce clutter visually) without removing any functionality.
+
+Hard constraints
+
+UI only: do NOT change API calls, business logic, matching logic, totals, exports, routing behavior, or data structures.
+
+Do NOT remove filter functionality—only restyle and reorganize presentation.
+
+Keep readability high: cards remain solid bg-card, tables remain clean.
+
+T018: Remove pastel backgrounds from Meal Cards (and any cards site-wide)
+Problem
+
+Meal cards currently have large pastel blocks (pink/green) behind icons/titles that clash with the new palette.
+
+Required outcome
+
+All cards use:
+
+background: bg-card
+
+border: border border-border
+
+no pastel fills / gradients inside the card body/header
+
+Steps
+
+Locate the Meal Card component(s). Likely files include (search for “MealCard”, “meal card”, or where cards are rendered on My Meals):
+
+client/src/pages/meals-page.tsx
+
+client/src/components/meals/*
+
+client/src/components/cards/*
+
+Search for and remove/replace any of these inside card markup:
+
+bg-pink-*, bg-green-*, bg-blue-*, bg-purple-*, bg-yellow-* (except brand sun accent usage)
+
+from-* to-* gradients
+
+opacity-* overlays used to tint the header area
+
+inline styles setting background colours based on category/type
+
+Replace with a clean card surface:
+
+Card wrapper: bg-card border border-border shadow-none rounded-[var(--radius)]
+
+Card header area: no fill; optionally add a subtle divider border-b border-border
+
+If there is an “icon tile” behind the icon, replace it with:
+
+bg-accent (very light sage wash)
+
+text-primary
+
+small square/pill (not a large half-card block)
+
+Acceptance
+
+No large pastel blocks remain in meal cards.
+
+Cards look consistent across categories.
+
+Only Calm Orchard palette is visible.
+
+T019: Replace category colour panels with subtle badges (no more colour blocks)
+Problem
+
+Categories like “Adult/Baby/Child/Drinks” and “Freezer/Frozen meals” appear to be driving tinted styling.
+
+Required outcome
+
+Keep category differentiation but express it as small badges, not background fills.
+
+Steps
+
+Anywhere categories are shown (tabs/chips/cards), ensure:
+
+selected state uses bg-accent text-primary
+
+unselected state uses bg-transparent border border-border text-muted-foreground
+
+no pastel fills
+
+Add a reusable badge style (CSS utility or component class):
+
+rounded-full px-2 py-1 text-xs
+
+bg-accent text-foreground
+
+optional: a tiny left dot using bg-primary
+
+Acceptance
+
+Categories remain clear, but visuals are calm and on-brand.
+
+No category-based card tinting exists.
+
+T020: Fix orchard backdrop bleed-through so it’s present but not washing out UI
+Problem
+
+Background may be either too faint OR causing weird tinting when combined with semi-transparent surfaces.
+
+Required outcome
+
+Orchard/meadow backdrop visible behind the page.
+
+Main content surfaces remain readable and premium.
+
+Steps
+
+In client/src/App.tsx, ensure layout layering is:
+
+<OrchardBackdrop /> at z-0
+
+content at z-10
+
+Ensure <main> uses a light wash (not too opaque, not too strong):
+
+Prefer: bg-background/60 (not /80)
+
+Keep cards fully solid bg-card
+
+Ensure no cards/widgets use bg-background/xx translucency (cards must remain solid).
+
+Acceptance
+
+Meadow is visible in the background.
+
+Cards remain clean white.
+
+No “muddy” overlay effect.
+
+T021: Calm + Premium Widgets on “My Meals” (reduce clutter without removing features)
+Problem
+
+My Meals page feels cluttered due to:
+
+global search
+
+local search
+
+multiple filter rows (tabs, chips, toggles)
+
+view toggles and action buttons
+
+Required outcome
+
+Keep everything, but create hierarchy:
+
+Row 1: Page title + key actions
+
+Row 2: Search + category dropdown
+
+Row 3: “Filters” collapsible panel holding advanced chips/toggles
+
+Tabs become calmer (less chunky, no bright colour blocks)
+
+Steps
+
+In client/src/pages/meals-page.tsx (or My Meals page file):
+
+Create a top “header bar” area:
+
+Left: My Meals title
+
+Right: Import Recipe, Add Meal, Import Library (same actions)
+Use calm button styles:
+
+Primary: Add Meal uses bg-primary text-white
+
+Secondary: outlined buttons border border-border bg-card
+
+Keep the page search input (if needed), but restyle:
+
+bg-card border border-border rounded-lg
+
+icon in muted foreground
+
+no pastel highlight states
+
+Convert the multi-row filter chips into a collapsible panel:
+
+Add a button: Filters with count of active filters (if easy; if not, omit count)
+
+Clicking toggles visibility (UI state only)
+
+Inside panel place:
+
+“Match my profile”
+
+diet pattern dropdown
+
+Gluten-Free / Dairy-Free / Hide High-UPF chips
+
+freezer toggles, etc.
+
+Restyle chips/tabs:
+
+Selected chip: bg-accent text-primary border border-primary/20
+
+Unselected chip: bg-card border border-border text-muted-foreground
+
+Hover: bg-accent/60
+
+Acceptance
+
+My Meals looks calmer, more premium.
+
+No features removed; only reorganized visually.
+
+The “advanced” chips no longer dominate the page.
+
+T022: Standardize all “widget” cards (Dashboard widgets + panels) to Calm Orchard
+Problem
+
+Widgets/panels likely inherited random fills/shadows.
+
+Required outcome
+
+Every widget/card uses:
+
+bg-card
+
+border border-border
+
+shadow-none
+
+consistent padding using spacing tokens
+
+Steps
+
+Identify common widget/card wrappers on:
+
+Dashboard
+
+Pantry
+
+Planner
+
+Basket summaries
+
+Ensure consistent styling:
+
+padding: var(--space-6) (24px) for major panels
+
+padding: var(--space-4) (16px) for smaller widgets
+
+headings use .title-section or .title-card
+
+numbers use .text-numeric
+
+Remove:
+
+gradient fills inside widgets
+
+pastel icon tiles
+
+heavy shadows
+
+Acceptance
+
+Widgets look consistent across pages.
+
+UI feels cohesive and not “prototype-ish”.
+
+T023: Visual QA (required)
+
+Verify:
+
+My Meals: no pastel card blocks; filters calmer; actions still work.
+
+Dashboard: widgets clean; backdrop present.
+
+Planner: unaffected, still readable.
+
+Basket: unchanged logic; styling consistent.
+
+Pantry: widgets clean.
+
+No hex colours introduced anywhere.
+
+Acceptance
+
+Pastel colours fully removed.
+
+Calm Orchard palette consistent across the product.
+
+No functional regressions.
+
+Notes to Replit (important)
+
+Do not delete filters or reduce capability—only move advanced filters into a collapsible “Filters” section.
+
+If any pastel styling comes from old category/theme mapping, keep the mapping for data, but remove it from presentation (use small neutral badges instead).
+
+Keep everything accessible: focus-visible rings, contrast, keyboard navigation.
