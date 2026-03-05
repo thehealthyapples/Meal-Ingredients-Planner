@@ -84,15 +84,19 @@ function SidebarNavItem({
     <Link
       href={href}
       onClick={onClick}
-      className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${
+      className={`flex items-center gap-3 w-full rounded-lg text-sm transition-colors ${
+        isCollapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"
+      } ${
         isActive
           ? "bg-accent text-primary font-medium"
           : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-      } ${isCollapsed ? "justify-center" : ""}`}
+      }`}
       data-testid={`sidebar-nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
     >
-      <Icon className="h-4 w-4 shrink-0" />
-      {!isCollapsed && <span>{label}</span>}
+      <span className="flex items-center justify-center min-w-[24px] flex-shrink-0">
+        <Icon className="h-4 w-4" />
+      </span>
+      {!isCollapsed && <span className="truncate">{label}</span>}
     </Link>
   );
 
@@ -183,6 +187,7 @@ export function TopBar() {
   const searchStr = useSearch();
   const { user, logout, itemCount, userInitial } = useNavData();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState(() => {
     const params = new URLSearchParams(searchStr);
     return params.get("q") || "";
@@ -203,87 +208,142 @@ export function TopBar() {
   if (!user) return null;
 
   const handleSearch = () => {
-    if (searchValue.trim()) navigate(`/meals?q=${encodeURIComponent(searchValue.trim())}`);
+    if (searchValue.trim()) {
+      navigate(`/meals?q=${encodeURIComponent(searchValue.trim())}`);
+      setMobileSearchOpen(false);
+    }
   };
   const handleSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") handleSearch();
+    if (e.key === "Escape") setMobileSearchOpen(false);
   };
+
+  const searchInput = (
+    <div className="relative flex-1">
+      <input
+        type="text"
+        placeholder="Search meals…"
+        value={searchValue}
+        onChange={(e) => setSearchValue(e.target.value)}
+        onKeyDown={handleSearchKey}
+        className="w-full h-8 pl-3 pr-8 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+        data-testid="input-search"
+      />
+      <button
+        onClick={handleSearch}
+        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+        data-testid="button-search"
+        aria-label="Search"
+      >
+        <Search className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+
+  const actions = (
+    <div className="flex items-center gap-1">
+      {/* Mobile search toggle */}
+      <button
+        className="md:hidden flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
+        onClick={() => setMobileSearchOpen((v) => !v)}
+        data-testid="button-mobile-search"
+        aria-label="Search"
+      >
+        <Search className="h-4 w-4" />
+      </button>
+      <Link
+        href="/analyse-basket"
+        className="relative flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
+        data-testid="button-basket-top"
+        aria-label="Basket"
+      >
+        <ShoppingCart className="h-4 w-4" />
+        {itemCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5">
+            {itemCount}
+          </span>
+        )}
+      </Link>
+      <Link
+        href="/profile"
+        onClick={() => sessionStorage.setItem("profileReturnPath", window.location.pathname + window.location.search)}
+      >
+        <Avatar className="h-8 w-8 cursor-pointer" data-testid="avatar-user">
+          <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+            {userInitial}
+          </AvatarFallback>
+        </Avatar>
+      </Link>
+      <button
+        className="hidden md:flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
+        onClick={() => logout()}
+        title="Logout"
+        data-testid="button-logout"
+        aria-label="Logout"
+      >
+        <LogOut className="h-4 w-4" />
+      </button>
+    </div>
+  );
 
   return (
     <>
-      <header
-        className="sticky top-0 z-50 h-14 w-full bg-card border-b border-border flex items-center px-3 gap-2 shrink-0"
-        data-testid="top-nav-bar"
-      >
-        <button
-          className="md:hidden flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
-          onClick={() => setMobileOpen(true)}
-          data-testid="button-mobile-menu"
-          aria-label="Open menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
-        <Link href="/" className="hidden md:flex items-center" data-testid="link-logo">
-          <img src="/logo-long.png" alt="The Healthy Apples" className="h-8 w-auto max-w-[180px] object-contain" />
-        </Link>
+      <div className="sticky top-0 z-50 shrink-0" data-testid="top-nav-bar">
+        {/* Main bar */}
+        <header className="h-14 w-full bg-card border-b border-border">
+          {/* Desktop: 3-column grid — search | logo | actions */}
+          <div className="hidden md:grid grid-cols-[1fr_auto_1fr] items-center h-full px-4 gap-3">
+            <div className="flex items-center max-w-sm w-full">
+              {searchInput}
+            </div>
+            <Link href="/" data-testid="link-logo" className="flex justify-center items-center">
+              <img
+                src="/logo-long.png"
+                alt="The Healthy Apples"
+                className="h-9 w-auto max-w-[200px] object-contain"
+              />
+            </Link>
+            <div className="flex items-center justify-end">
+              {actions}
+            </div>
+          </div>
 
-        <div className="flex-1 flex items-center gap-1 max-w-sm ml-2">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              placeholder="Search meals…"
-              value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
-              onKeyDown={handleSearchKey}
-              className="w-full h-8 pl-3 pr-8 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-              data-testid="input-search"
-            />
+          {/* Mobile: hamburger | logo | actions */}
+          <div className="md:hidden grid grid-cols-[auto_1fr_auto] items-center h-full px-2 gap-2">
             <button
-              onClick={handleSearch}
-              className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-              data-testid="button-search"
-              aria-label="Search"
+              className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
+              onClick={() => setMobileOpen(true)}
+              data-testid="button-mobile-menu"
+              aria-label="Open menu"
             >
-              <Search className="h-3.5 w-3.5" />
+              <Menu className="h-5 w-5" />
+            </button>
+            <Link href="/" className="flex justify-center items-center" data-testid="link-logo-mobile">
+              <img
+                src="/logo-long.png"
+                alt="The Healthy Apples"
+                className="h-7 w-auto max-w-[140px] object-contain"
+              />
+            </Link>
+            <div className="flex items-center justify-end">
+              {actions}
+            </div>
+          </div>
+        </header>
+
+        {/* Mobile search panel — slides in below header */}
+        {mobileSearchOpen && (
+          <div className="md:hidden bg-card border-b border-border px-3 py-2 flex items-center gap-2">
+            {searchInput}
+            <button
+              className="text-muted-foreground hover:text-foreground text-sm shrink-0"
+              onClick={() => setMobileSearchOpen(false)}
+            >
+              Cancel
             </button>
           </div>
-        </div>
-
-        <div className="flex items-center gap-1 ml-auto">
-          <Link
-            href="/analyse-basket"
-            className="relative flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
-            data-testid="button-basket-top"
-            aria-label="Basket"
-          >
-            <ShoppingCart className="h-4 w-4" />
-            {itemCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5">
-                {itemCount}
-              </span>
-            )}
-          </Link>
-          <Link
-            href="/profile"
-            onClick={() => sessionStorage.setItem("profileReturnPath", window.location.pathname + window.location.search)}
-          >
-            <Avatar className="h-8 w-8 cursor-pointer" data-testid="avatar-user">
-              <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
-                {userInitial}
-              </AvatarFallback>
-            </Avatar>
-          </Link>
-          <button
-            className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
-            onClick={() => logout()}
-            title="Logout"
-            data-testid="button-logout"
-            aria-label="Logout"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
-      </header>
+        )}
+      </div>
 
       {/* Mobile sidebar sheet */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -322,7 +382,7 @@ export function DesktopSidebar() {
 
   return (
     <aside
-      className={`hidden md:flex flex-col flex-shrink-0 bg-card border-r border-border transition-all duration-200 overflow-hidden ${
+      className={`hidden md:flex flex-col flex-shrink-0 bg-card border-r border-border transition-all duration-200 overflow-x-hidden overflow-y-auto ${
         isCollapsed ? "w-16" : "w-[220px]"
       }`}
       data-testid="desktop-sidebar"

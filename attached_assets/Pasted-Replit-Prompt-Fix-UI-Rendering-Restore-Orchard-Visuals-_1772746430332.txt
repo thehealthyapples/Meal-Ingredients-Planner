@@ -1,0 +1,234 @@
+Replit Prompt — Fix UI Rendering + Restore Orchard Visuals
+Objective
+
+Fix three UI issues in the Calm Orchard redesign:
+
+Sidebar render bug where a collapsed menu item is partially covered.
+
+Restore the orchard / meadow visual background in the dashboard hero section.
+
+Improve the top bar layout: move the search to the left and center the long logo prominently.
+
+No functional logic changes. Only layout, spacing, and visual improvements.
+
+Tasks
+T009: Fix sidebar render overlap (red box issue)
+Problem
+
+The sidebar menu item area is partially covered when the sidebar is collapsed.
+
+Likely cause:
+
+Sidebar width change (220px → 64px) not properly reflected in icon container width.
+
+Padding/margin mismatch inside the nav item component.
+
+Fix
+
+In:
+
+client/src/components/nav-bar.tsx
+
+Ensure sidebar nav items use a consistent flex layout.
+
+Example pattern:
+
+<li className="flex items-center gap-3 px-3 py-2 rounded-lg">
+
+For collapsed sidebar:
+
+w-16 justify-center
+
+For expanded sidebar:
+
+w-[220px] justify-start
+
+Ensure icon container:
+
+min-w-[24px]
+flex-shrink-0
+
+Also confirm:
+
+overflow-visible
+
+is set on the sidebar container to prevent clipping.
+
+Final sidebar container should look like:
+
+<aside className="bg-card border-r border-border flex flex-col">
+
+And nav items:
+
+<li className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-accent">
+Acceptance
+
+No menu item is clipped.
+
+Icons are centered when collapsed.
+
+Text labels appear when expanded.
+
+Sidebar collapse/expand transition works smoothly.
+
+T010: Restore orchard / meadow dashboard visual (yellow box)
+Problem
+
+The hero background currently shows a flat colour.
+
+We want the subtle orchard/field visual style previously shown in the design concept.
+
+Implementation
+
+Inside:
+
+client/src/pages/dashboard.tsx
+
+Enhance the hero section.
+
+Current hero:
+
+background: linear-gradient(180deg, hsl(var(--accent)) 0%, hsl(var(--background)) 100%);
+
+Add a decorative background layer.
+
+Implementation pattern
+
+Hero container:
+
+<div className="relative overflow-hidden">
+
+Background gradient layer:
+
+<div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--accent))_0%,hsl(var(--background))_100%)]" />
+
+Add meadow illustration layer:
+
+Create a subtle SVG landscape:
+
+client/src/components/illustrations/orchard-hero.tsx
+
+Render it at the bottom of the hero.
+
+Example container:
+
+<div className="absolute bottom-0 left-0 right-0 opacity-30 pointer-events-none">
+  <OrchardHero />
+</div>
+
+SVG style guidelines:
+
+rolling hill shapes
+
+subtle tree silhouettes
+
+use tokens:
+
+fill="hsl(var(--accent))"
+fill="hsl(var(--primary) / 0.2)"
+
+No hex colours.
+
+Acceptance
+
+Dashboard hero shows:
+
+soft gradient
+
+subtle landscape / orchard illustration
+
+illustration sits at bottom of hero
+
+does not interfere with content readability.
+
+T011: Improve top bar layout (blue box)
+Goal
+
+Improve visual hierarchy of the header:
+
+Search (left) → Large centered logo → Actions (right)
+
+Current
+logo | search | actions
+New Layout
+search | centered large logo | actions
+Update TopBar layout
+
+In:
+
+client/src/components/nav-bar.tsx
+
+Use a 3-column grid layout:
+
+<header className="grid grid-cols-[1fr_auto_1fr] items-center h-14 px-4 border-b border-border bg-card">
+Left section
+
+Search input:
+
+<div className="flex items-center">
+  <SearchInput />
+</div>
+
+Search width:
+
+max-w-md w-full
+Center section
+
+Add long logo:
+
+/public/logo-long.svg
+
+Render:
+
+<div className="flex justify-center">
+  <img src="/logo-long.svg" className="h-8 md:h-10" />
+</div>
+Right section
+
+Actions:
+
+<div className="flex items-center justify-end gap-4">
+  <BasketIcon />
+  <Avatar />
+</div>
+Mobile behaviour
+
+Mobile layout:
+
+hamburger | logo | actions
+
+Search moves into a dropdown or modal search panel.
+
+Acceptance
+
+Desktop:
+
+Search left
+
+Large centered logo
+
+Actions right
+
+Layout visually balanced
+
+Mobile:
+
+Hamburger left
+
+Logo centered
+
+Icons right
+
+Visual QA
+
+Verify:
+
+Sidebar collapse works and no menu clipping occurs.
+
+Dashboard hero displays meadow/orchard graphic.
+
+Top bar layout shows centered logo.
+
+Search remains functional (only triggers on Enter).
+
+No changes to navigation routes or logic.

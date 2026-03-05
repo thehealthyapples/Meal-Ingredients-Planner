@@ -10,6 +10,7 @@ import {
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { api } from "@shared/routes";
+import OrchardHero from "@/components/illustrations/orchard-hero";
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -50,29 +51,38 @@ export default function Dashboard() {
   return (
     <div>
       {/* Hero */}
-      <div
-        style={{
-          background: "linear-gradient(180deg, hsl(var(--accent)) 0%, hsl(var(--background)) 100%)",
-          padding: "var(--space-8) var(--space-6) 56px",
-        }}
-      >
-        <motion.div
-          initial={{ opacity: 0, y: -8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <h1 className="title-page" data-testid="text-welcome">
-            {getGreeting()}, <span className="text-primary">{user?.username}</span>
-          </h1>
-          <p className="text-sm text-muted-foreground mt-2">
-            {plannedMealCount > 0
-              ? `${plannedMealCount} healthy meal${plannedMealCount !== 1 ? "s" : ""} in your collection`
-              : "Start building your healthy meal collection"}
-          </p>
-        </motion.div>
+      <div className="relative overflow-hidden" style={{ paddingBottom: 0 }}>
+        {/* Gradient background */}
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(180deg, hsl(var(--accent)) 0%, hsl(var(--background)) 100%)" }}
+        />
+
+        {/* Orchard illustration at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ height: 100, opacity: 0.55 }}>
+          <OrchardHero />
+        </div>
+
+        {/* Content */}
+        <div className="relative z-10" style={{ padding: "var(--space-8) var(--space-6) 80px" }}>
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <h1 className="title-page" data-testid="text-welcome">
+              {getGreeting()}, <span className="text-primary">{user?.username}</span>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2">
+              {plannedMealCount > 0
+                ? `${plannedMealCount} healthy meal${plannedMealCount !== 1 ? "s" : ""} in your collection`
+                : "Start building your healthy meal collection"}
+            </p>
+          </motion.div>
+        </div>
 
         {/* Wave divider */}
-        <div className="absolute left-0 right-0" style={{ marginTop: "var(--space-8)" }}>
+        <div className="relative z-10">
           <svg
             viewBox="0 0 1440 32"
             fill="none"
