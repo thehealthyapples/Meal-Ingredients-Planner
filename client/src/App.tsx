@@ -49,7 +49,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
         <TopBar />
         <div className="flex flex-1 overflow-hidden">
           <DesktopSidebar />
-          <main className="flex-1 overflow-y-auto main-safe bg-background/80">
+          <main className="flex-1 overflow-y-auto main-safe bg-background/60">
             <Component />
           </main>
         </div>

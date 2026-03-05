@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -134,7 +134,7 @@ function DietBadges({ mealId }: { mealId: number }) {
   return (
     <div className="flex flex-wrap gap-1 mt-2">
       {dietNames.map(name => (
-        <Badge key={name} variant="outline" className="text-xs font-normal gap-1 border-green-500/30 text-green-700 dark:text-green-400" data-testid={`badge-diet-${name}`}>
+        <Badge key={name} variant="outline" className="text-xs font-normal gap-1 border-primary/30 text-primary" data-testid={`badge-diet-${name}`}>
           <Leaf className="h-3 w-3" />
           {name}
         </Badge>
@@ -222,15 +222,15 @@ function AnalysisResultContent({ analysis }: { analysis: AnalysisResult }) {
       {analysis.swaps.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <ArrowRight className="h-4 w-4 text-green-500" />
+            <ArrowRight className="h-4 w-4 text-primary" />
             Healthier Alternatives
           </h4>
           <div className="space-y-2">
             {analysis.swaps.map((swap, i) => (
-              <div key={i} className="flex items-center gap-2 p-2 rounded-md bg-green-500/5 border border-green-500/10" data-testid={`swap-suggestion-${i}`}>
+              <div key={i} className="flex items-center gap-2 p-2 rounded-md bg-accent/20 border border-border" data-testid={`swap-suggestion-${i}`}>
                 <Badge variant="secondary" className="text-xs">{swap.original}</Badge>
-                <ArrowRight className="h-3 w-3 text-green-500 shrink-0" />
-                <Badge variant="outline" className="text-xs border-green-500/30 text-green-700 dark:text-green-400">{swap.healthier}</Badge>
+                <ArrowRight className="h-3 w-3 text-primary shrink-0" />
+                <Badge variant="outline" className="text-xs border-primary/30 text-primary">{swap.healthier}</Badge>
               </div>
             ))}
           </div>
@@ -1162,6 +1162,7 @@ export default function MealsPage() {
   const [mealsDietPattern, setMealsDietPattern] = useState<string>("");
   const [mealsDietRestrictions, setMealsDietRestrictions] = useState<string[]>([]);
   const [mealsUpfFilter, setMealsUpfFilter] = useState<boolean>(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [webDietPattern, setWebDietPattern] = useState<string>("");
   const [webDietRestrictions, setWebDietRestrictions] = useState<string[]>([]);
   const [webSearchResults, setWebSearchResults] = useState<WebSearchRecipe[]>([]);
@@ -1560,70 +1561,21 @@ export default function MealsPage() {
     return orderA - orderB;
   });
 
+  const advancedFilterCount =
+    (matchMyProfile ? 1 : 0) +
+    (mealsDietPattern ? 1 : 0) +
+    mealsDietRestrictions.length +
+    (mealsUpfFilter ? 1 : 0);
+
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+      {/* Row A: title + action buttons */}
+      <div className="flex justify-between items-center gap-4 mb-4">
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight" data-testid="text-meals-title">My Meals</h1>
           <p className="text-sm text-muted-foreground mt-1">Manage your recipes and ingredients</p>
         </div>
-        
-        <div className="flex w-full md:w-auto gap-3 items-center">
-          <div className="relative flex-1 md:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search your meals and the web..." 
-              className="pl-9 pr-10"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              data-testid="input-search-meals"
-            />
-            {(webIsSearching || productIsSearching) && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-              </div>
-            )}
-          </div>
-
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[140px]" data-testid="select-category-filter">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {[...allCategories].sort((a, b) => {
-                const ia = CATEGORY_DROPDOWN_ORDER.indexOf(a.name);
-                const ib = CATEGORY_DROPDOWN_ORDER.indexOf(b.name);
-                return (ia === -1 ? CATEGORY_DROPDOWN_ORDER.length : ia) - (ib === -1 ? CATEGORY_DROPDOWN_ORDER.length : ib);
-              }).map(cat => (
-                <SelectItem key={cat.id} value={cat.name} data-testid={`option-category-${cat.name}`}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <div className="flex border border-border rounded-md">
-            <Button
-              variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-              size="icon"
-              className="rounded-r-none"
-              onClick={() => setViewMode('grid')}
-              data-testid="button-view-grid"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-              size="icon"
-              className="rounded-l-none border-l border-border"
-              onClick={() => setViewMode('list')}
-              data-testid="button-view-list"
-            >
-              <List className="h-4 w-4" />
-            </Button>
-          </div>
-          
+        <div className="flex items-center gap-2 shrink-0">
           <ImportRecipeDialog />
           <CreateMealDialog />
           {(!importStatus || importStatus.totalImported === 0) && (
@@ -1645,6 +1597,62 @@ export default function MealsPage() {
         </div>
       </div>
 
+      {/* Row B: search + category + view toggle */}
+      <div className="flex w-full gap-3 items-center mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search your meals and the web..."
+            className="pl-9 pr-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            data-testid="input-search-meals"
+          />
+          {(webIsSearching || productIsSearching) && (
+            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </div>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-[140px]" data-testid="select-category-filter">
+            <SelectValue placeholder="All Categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Categories</SelectItem>
+            {[...allCategories].sort((a, b) => {
+              const ia = CATEGORY_DROPDOWN_ORDER.indexOf(a.name);
+              const ib = CATEGORY_DROPDOWN_ORDER.indexOf(b.name);
+              return (ia === -1 ? CATEGORY_DROPDOWN_ORDER.length : ia) - (ib === -1 ? CATEGORY_DROPDOWN_ORDER.length : ib);
+            }).map(cat => (
+              <SelectItem key={cat.id} value={cat.name} data-testid={`option-category-${cat.name}`}>
+                {cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="flex border border-border rounded-md">
+          <Button
+            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+            size="icon"
+            className="rounded-r-none"
+            onClick={() => setViewMode('grid')}
+            data-testid="button-view-grid"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="icon"
+            className="rounded-l-none border-l border-border"
+            onClick={() => setViewMode('list')}
+            data-testid="button-view-list"
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
       {searchTerm.trim().length >= 2 && (
         <div className="flex items-center gap-2 mb-4" data-testid="search-source-tabs">
           <span className="text-sm text-muted-foreground mr-1">Show:</span>
@@ -1663,7 +1671,7 @@ export default function MealsPage() {
                 data-testid={`button-search-source-${value}`}
               >
                 {value === "recipes" && <Globe className="h-3.5 w-3.5 mr-1.5" />}
-                {value === "products" && <Leaf className="h-3.5 w-3.5 mr-1.5 text-emerald-500" />}
+                {value === "products" && <Leaf className="h-3.5 w-3.5 mr-1.5 text-primary" />}
                 {label}
                 {value === "recipes" && webSearchResults.length > 0 && (
                   <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">{webSearchResults.length}</Badge>
@@ -1686,9 +1694,9 @@ export default function MealsPage() {
             { value: "all", label: "All Meals", icon: null, iconColor: "" },
             { value: "recipes", label: "Recipes", icon: null, iconColor: "" },
             { value: "ready-meals", label: "Ready Meals", icon: null, iconColor: "" },
-            { value: "frozen-meals", label: "Frozen Meals", icon: Snowflake, iconColor: "text-blue-400" },
+            { value: "frozen-meals", label: "Frozen Meals", icon: Snowflake, iconColor: "text-muted-foreground" },
             { value: "my-meals", label: "My Meals Only", icon: null, iconColor: "" },
-            { value: "freezer", label: "Freezer", icon: Snowflake, iconColor: "text-blue-400" },
+            { value: "freezer", label: "Freezer", icon: Snowflake, iconColor: "text-muted-foreground" },
           ] as const).map(({ value, label, icon: Icon, iconColor }, idx) => (
             <Button
               key={value}
@@ -1712,9 +1720,9 @@ export default function MealsPage() {
           {([
             { value: "all-audience", label: "All", icon: null, iconColor: "" },
             { value: "adult", label: "Adult", icon: null, iconColor: "" },
-            { value: "baby", label: "Baby", icon: Baby, iconColor: "text-pink-400" },
-            { value: "child", label: "Child", icon: PersonStanding, iconColor: "text-sky-400" },
-            { value: "drinks", label: "Drinks", icon: Wine, iconColor: "text-purple-400" },
+            { value: "baby", label: "Baby", icon: Baby, iconColor: "text-muted-foreground" },
+            { value: "child", label: "Child", icon: PersonStanding, iconColor: "text-muted-foreground" },
+            { value: "drinks", label: "Drinks", icon: Wine, iconColor: "text-muted-foreground" },
           ] as const).map(({ value, label, icon: Icon, iconColor }, idx) => (
             <Button
               key={value}
@@ -1729,95 +1737,110 @@ export default function MealsPage() {
             </Button>
           ))}
         </div>
+        <Button
+          variant={showAdvancedFilters ? "secondary" : "outline"}
+          size="sm"
+          className="ml-auto h-8 gap-1.5"
+          onClick={() => setShowAdvancedFilters(v => !v)}
+          data-testid="button-toggle-advanced-filters"
+        >
+          <Sliders className="h-3.5 w-3.5" />
+          Filters
+          {advancedFilterCount > 0 && (
+            <Badge variant="secondary" className="ml-0.5 text-[10px] px-1.5 py-0">{advancedFilterCount}</Badge>
+          )}
+        </Button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <div className="flex items-center gap-2 mr-1">
-          <Switch
-            checked={matchMyProfile}
-            onCheckedChange={setMatchMyProfile}
-            data-testid="toggle-match-profile"
-          />
-          <span className="text-sm font-medium">Match my profile</span>
-        </div>
-        <Select
-          value={mealsDietPattern || "none"}
-          onValueChange={v => { setMatchMyProfile(false); const p = v === "none" ? "" : v; setMealsDietPattern(p); setWebDietPattern(p); }}
-        >
-          <SelectTrigger className="h-8 text-xs w-[150px]" data-testid="select-meals-diet-pattern">
-            <SelectValue placeholder="Any diet pattern" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Any diet pattern</SelectItem>
-            {["Mediterranean", "DASH", "MIND", "Flexitarian", "Vegetarian", "Vegan", "Keto", "Low-Carb", "Paleo", "Carnivore"].map(p => (
-              <SelectItem key={p} value={p}>{p}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Button
-          variant={mealsDietRestrictions.includes("Gluten-Free") ? "secondary" : "outline"}
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() => {
-            setMatchMyProfile(false);
-            setMealsDietRestrictions(prev => {
-              const next = prev.includes("Gluten-Free") ? prev.filter(r => r !== "Gluten-Free") : [...prev, "Gluten-Free"];
-              setWebDietRestrictions(next);
-              return next;
-            });
-          }}
-          data-testid="toggle-meals-restriction-gluten"
-        >
-          <Wheat className="h-3.5 w-3.5 mr-1.5" />
-          Gluten-Free
-        </Button>
-        <Button
-          variant={mealsDietRestrictions.includes("Dairy-Free") ? "secondary" : "outline"}
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() => {
-            setMatchMyProfile(false);
-            setMealsDietRestrictions(prev => {
-              const next = prev.includes("Dairy-Free") ? prev.filter(r => r !== "Dairy-Free") : [...prev, "Dairy-Free"];
-              setWebDietRestrictions(next);
-              return next;
-            });
-          }}
-          data-testid="toggle-meals-restriction-dairy"
-        >
-          <Droplet className="h-3.5 w-3.5 mr-1.5" />
-          Dairy-Free
-        </Button>
-        <Button
-          variant={mealsUpfFilter ? "secondary" : "outline"}
-          size="sm"
-          className="h-8 text-xs"
-          onClick={() => { setMatchMyProfile(false); setMealsUpfFilter(prev => !prev); }}
-          data-testid="toggle-meals-upf-filter"
-        >
-          <Leaf className={`h-3.5 w-3.5 mr-1.5 ${mealsUpfFilter ? "text-green-500" : ""}`} />
-          Hide High-UPF
-        </Button>
-        {(mealsDietPattern || mealsDietRestrictions.length > 0 || mealsUpfFilter || matchMyProfile) && (
+      {showAdvancedFilters && (
+        <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-lg border border-border bg-card">
+          <div className="flex items-center gap-2 mr-1">
+            <Switch
+              checked={matchMyProfile}
+              onCheckedChange={setMatchMyProfile}
+              data-testid="toggle-match-profile"
+            />
+            <span className="text-sm font-medium">Match my profile</span>
+          </div>
+          <Select
+            value={mealsDietPattern || "none"}
+            onValueChange={v => { setMatchMyProfile(false); const p = v === "none" ? "" : v; setMealsDietPattern(p); setWebDietPattern(p); }}
+          >
+            <SelectTrigger className="h-8 text-xs w-[150px]" data-testid="select-meals-diet-pattern">
+              <SelectValue placeholder="Any diet pattern" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Any diet pattern</SelectItem>
+              {["Mediterranean", "DASH", "MIND", "Flexitarian", "Vegetarian", "Vegan", "Keto", "Low-Carb", "Paleo", "Carnivore"].map(p => (
+                <SelectItem key={p} value={p}>{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
-            variant="ghost"
+            variant={mealsDietRestrictions.includes("Gluten-Free") ? "secondary" : "outline"}
             size="sm"
-            className="h-8 text-xs text-muted-foreground"
+            className="h-8 text-xs"
             onClick={() => {
               setMatchMyProfile(false);
-              setMealsDietPattern("");
-              setMealsDietRestrictions([]);
-              setMealsUpfFilter(false);
-              setWebDietPattern("");
-              setWebDietRestrictions([]);
+              setMealsDietRestrictions(prev => {
+                const next = prev.includes("Gluten-Free") ? prev.filter(r => r !== "Gluten-Free") : [...prev, "Gluten-Free"];
+                setWebDietRestrictions(next);
+                return next;
+              });
             }}
-            data-testid="button-clear-diet-filters"
+            data-testid="toggle-meals-restriction-gluten"
           >
-            <X className="h-3 w-3 mr-1" />
-            Clear all
+            <Wheat className="h-3.5 w-3.5 mr-1.5" />
+            Gluten-Free
           </Button>
-        )}
-      </div>
+          <Button
+            variant={mealsDietRestrictions.includes("Dairy-Free") ? "secondary" : "outline"}
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => {
+              setMatchMyProfile(false);
+              setMealsDietRestrictions(prev => {
+                const next = prev.includes("Dairy-Free") ? prev.filter(r => r !== "Dairy-Free") : [...prev, "Dairy-Free"];
+                setWebDietRestrictions(next);
+                return next;
+              });
+            }}
+            data-testid="toggle-meals-restriction-dairy"
+          >
+            <Droplet className="h-3.5 w-3.5 mr-1.5" />
+            Dairy-Free
+          </Button>
+          <Button
+            variant={mealsUpfFilter ? "secondary" : "outline"}
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => { setMatchMyProfile(false); setMealsUpfFilter(prev => !prev); }}
+            data-testid="toggle-meals-upf-filter"
+          >
+            <Leaf className={`h-3.5 w-3.5 mr-1.5 ${mealsUpfFilter ? "text-primary" : ""}`} />
+            Hide High-UPF
+          </Button>
+          {(mealsDietPattern || mealsDietRestrictions.length > 0 || mealsUpfFilter || matchMyProfile) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs text-muted-foreground"
+              onClick={() => {
+                setMatchMyProfile(false);
+                setMealsDietPattern("");
+                setMealsDietRestrictions([]);
+                setMealsUpfFilter(false);
+                setWebDietPattern("");
+                setWebDietRestrictions([]);
+              }}
+              data-testid="button-clear-diet-filters"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Clear all
+            </Button>
+          )}
+        </div>
+      )}
 
 
 
@@ -1826,7 +1849,7 @@ export default function MealsPage() {
           {freezerMeals.length === 0 ? (
             <Card className="p-8">
               <div className="flex flex-col items-center gap-3 text-center">
-                <Snowflake className="h-12 w-12 text-blue-300/40" />
+                <Snowflake className="h-12 w-12 text-muted-foreground/40" />
                 <h3 className="text-lg font-medium">No frozen meals yet</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
                   Cook a batch of your favourite meals and add them to the freezer to track portions. Look for the snowflake button on any meal card.
@@ -1847,17 +1870,17 @@ export default function MealsPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2, delay: index * 0.03 }}
                   >
-                    <Card className={`h-full flex flex-col overflow-hidden ${isExpired ? 'border-red-400/50' : 'border-blue-400/30'}`} data-testid={`card-freezer-${frozen.id}`}>
-                      <div className="relative w-full h-36 overflow-hidden rounded-t-md bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20">
+                    <Card className={`h-full flex flex-col overflow-hidden ${isExpired ? 'border-red-400/50' : 'border-border'}`} data-testid={`card-freezer-${frozen.id}`}>
+                      <div className="relative w-full h-36 overflow-hidden rounded-t-md bg-accent/30">
                         {meal?.imageUrl ? (
                           <img src={meal.imageUrl} alt={meal.name} className="w-full h-full object-cover opacity-70" />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">
-                            <Snowflake className="h-12 w-12 text-blue-300/40" />
+                            <Snowflake className="h-12 w-12 text-muted-foreground/40" />
                           </div>
                         )}
                         <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                          <Badge variant="secondary" className="bg-blue-500/90 text-white border-0 text-[10px]">
+                          <Badge variant="secondary" className="bg-primary/90 text-white border-0 text-[10px]">
                             <Snowflake className="h-3 w-3 mr-1" />
                             {frozen.remainingPortions}/{frozen.totalPortions} portions
                           </Badge>
@@ -1945,11 +1968,7 @@ export default function MealsPage() {
                   <Card className="h-full flex flex-col group cursor-pointer overflow-hidden hover-elevate transition-all duration-200" onClick={(e) => { e.stopPropagation(); setExpandedMealId(expandedMealId === meal.id ? null : meal.id); setExpandedTab("ingredients"); }} data-testid={`card-meal-${meal.id}`}>
                     <div className="relative w-full h-48 overflow-hidden rounded-t-md">
                       {meal.isReadyMeal && !meal.imageUrl ? (
-                        <div className={`w-full h-full flex flex-col items-center justify-center gap-2 px-4 relative ${
-                          meal.audience === 'baby' ? 'bg-pink-500/10 dark:bg-pink-500/15' :
-                          meal.audience === 'child' ? 'bg-sky-500/10 dark:bg-sky-500/15' :
-                          'bg-green-500/10 dark:bg-green-500/15'
-                        }`} data-testid={`placeholder-ready-meal-${meal.id}`}>
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 px-4 relative bg-accent/30" data-testid={`placeholder-ready-meal-${meal.id}`}>
                           {meal.audience === 'baby' ? (
                             <MealWatermark type="baby" size="lg" className="inset-0 m-auto flex items-center justify-center" />
                           ) : meal.audience === 'child' ? (
@@ -1957,21 +1976,9 @@ export default function MealsPage() {
                           ) : meal.isDrink ? (
                             <MealWatermark type="drink" size="lg" className="inset-0 m-auto flex items-center justify-center" />
                           ) : null}
-                          <UtensilsCrossed className={`h-10 w-10 relative z-10 ${
-                            meal.audience === 'baby' ? 'text-pink-500/30' :
-                            meal.audience === 'child' ? 'text-sky-500/30' :
-                            'text-green-500/30'
-                          }`} />
-                          <span className={`text-sm font-semibold text-center leading-tight relative z-10 ${
-                            meal.audience === 'baby' ? 'text-pink-700 dark:text-pink-400' :
-                            meal.audience === 'child' ? 'text-sky-700 dark:text-sky-400' :
-                            'text-green-700 dark:text-green-400'
-                          }`}>{meal.name}</span>
-                          <span className={`text-[10px] font-bold tracking-wider uppercase relative z-10 ${
-                            meal.audience === 'baby' ? 'text-pink-600/60 dark:text-pink-500/50' :
-                            meal.audience === 'child' ? 'text-sky-600/60 dark:text-sky-500/50' :
-                            'text-green-600/60 dark:text-green-500/50'
-                          }`}>
+                          <UtensilsCrossed className="h-10 w-10 relative z-10 text-muted-foreground/40" />
+                          <span className="text-sm font-semibold text-center leading-tight relative z-10 text-foreground">{meal.name}</span>
+                          <span className="text-[10px] font-bold tracking-wider uppercase relative z-10 text-muted-foreground/60">
                             {meal.isDrink ? 'Drink' : meal.audience === 'baby' ? 'Baby Meal' : meal.audience === 'child' ? 'Kids Meal' : 'Ready Meal'}
                           </span>
                         </div>
@@ -1997,11 +2004,7 @@ export default function MealsPage() {
                           )}
                         </>
                       ) : (
-                        <div className={`w-full h-full flex items-center justify-center relative ${
-                          meal.audience === 'baby' ? 'bg-gradient-to-br from-pink-100 to-pink-200/30 dark:from-pink-950/30 dark:to-pink-900/10' :
-                          meal.audience === 'child' ? 'bg-gradient-to-br from-sky-100 to-sky-200/30 dark:from-sky-950/30 dark:to-sky-900/10' :
-                          !meal.isSystemMeal ? 'bg-gradient-to-br from-green-100/50 to-green-200/20 dark:from-green-950/20 dark:to-green-900/10' : 'bg-gradient-to-br from-muted to-muted-foreground/10'
-                        }`} data-testid={`placeholder-meal-${meal.id}`}>
+                        <div className="w-full h-full flex items-center justify-center relative bg-accent/30" data-testid={`placeholder-meal-${meal.id}`}>
                           {meal.audience === 'baby' ? (
                             <MealWatermark type="baby" size="lg" className="relative" />
                           ) : meal.audience === 'child' ? (
@@ -2031,7 +2034,7 @@ export default function MealsPage() {
                       )}
                       {freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0) && (
                         <div className="absolute top-1.5 left-1.5 z-10" data-testid={`badge-frozen-${meal.id}`}>
-                          <Badge variant="secondary" className="bg-blue-500/90 text-white border-0 text-[10px]">
+                          <Badge variant="secondary" className="bg-primary/90 text-white border-0 text-[10px]">
                             <Snowflake className="h-3 w-3 mr-1" />
                             {freezerMeals.filter(f => f.mealId === meal.id).reduce((s, f) => s + f.remainingPortions, 0)} frozen
                           </Badge>
@@ -2205,11 +2208,7 @@ export default function MealsPage() {
                   <Card className="group cursor-pointer" onClick={() => { setExpandedMealId(expandedMealId === meal.id ? null : meal.id); setExpandedTab("ingredients"); }} data-testid={`card-meal-${meal.id}`}>
                     <div className="flex items-stretch relative">
                       {meal.isReadyMeal ? (
-                        <div className={`w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center gap-1 px-2 relative ${
-                          meal.audience === 'baby' ? 'bg-pink-500/10 dark:bg-pink-500/15' :
-                          meal.audience === 'child' ? 'bg-sky-500/10 dark:bg-sky-500/15' :
-                          'bg-green-500/10 dark:bg-green-500/15'
-                        }`}>
+                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center gap-1 px-2 relative bg-accent/30">
                           {meal.audience === 'baby' ? (
                             <MealWatermark type="baby" size="sm" className="inset-0 m-auto flex items-center justify-center" />
                           ) : meal.audience === 'child' ? (
@@ -2217,16 +2216,8 @@ export default function MealsPage() {
                           ) : meal.isDrink ? (
                             <MealWatermark type="drink" size="sm" className="inset-0 m-auto flex items-center justify-center" />
                           ) : null}
-                          <UtensilsCrossed className={`h-6 w-6 relative z-10 ${
-                            meal.audience === 'baby' ? 'text-pink-500/30' :
-                            meal.audience === 'child' ? 'text-sky-500/30' :
-                            'text-green-500/30'
-                          }`} />
-                          <span className={`text-[9px] font-bold tracking-wider uppercase relative z-10 ${
-                            meal.audience === 'baby' ? 'text-pink-600/60 dark:text-pink-500/50' :
-                            meal.audience === 'child' ? 'text-sky-600/60 dark:text-sky-500/50' :
-                            'text-green-600/60 dark:text-green-500/50'
-                          }`}>
+                          <UtensilsCrossed className="h-6 w-6 relative z-10 text-muted-foreground/40" />
+                          <span className="text-[9px] font-bold tracking-wider uppercase relative z-10 text-muted-foreground/60">
                             {meal.audience === 'baby' ? 'Baby Meal' : meal.audience === 'child' ? 'Kids Meal' : 'Ready Meal'}
                           </span>
                         </div>
@@ -2252,15 +2243,13 @@ export default function MealsPage() {
                           )}
                         </div>
                       ) : meal.audience === 'baby' || meal.audience === 'child' ? (
-                        <div className={`w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex items-center justify-center ${
-                          meal.audience === 'baby' ? 'bg-pink-100 dark:bg-pink-950/30' : 'bg-sky-100 dark:bg-sky-950/30'
-                        }`}>
+                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex items-center justify-center bg-accent/30">
                           <MealWatermark type={meal.audience === 'baby' ? 'baby' : 'child'} size="sm" className="relative" />
                         </div>
                       ) : !meal.isSystemMeal && !meal.imageUrl ? (
-                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex items-center justify-center bg-gradient-to-br from-green-100/40 to-green-200/20 dark:from-green-950/20 dark:to-green-900/10 relative">
+                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex items-center justify-center bg-accent/30 relative">
                           <MealWatermark type="adult" size="sm" className="inset-0 m-auto flex items-center justify-center" />
-                          <ChefHat className="h-8 w-8 text-green-500/30 relative z-10" />
+                          <ChefHat className="h-8 w-8 text-muted-foreground/30 relative z-10" />
                         </div>
                       ) : null}
                       <div className="flex-1 min-w-0 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
@@ -2418,7 +2407,7 @@ export default function MealsPage() {
       {(productResults.length > 0 || productIsSearching) && searchSource !== "recipes" && (
         <div className="mt-8" data-testid="section-product-results">
           <div className="flex items-center gap-3 mb-4">
-            <Leaf className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            <Leaf className="h-5 w-5 text-primary" />
             <h2 className="text-lg font-semibold tracking-tight">TheHealthyApples</h2>
             {productIsSearching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
             {!productIsSearching && productResults.length > 0 && (
@@ -2899,7 +2888,7 @@ export default function MealsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Snowflake className="h-5 w-5 text-blue-400" />
+              <Snowflake className="h-5 w-5 text-muted-foreground" />
               Add to Freezer
             </DialogTitle>
             <DialogDescription>
@@ -2943,7 +2932,7 @@ export default function MealsPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddToFreezerMealId(null)} data-testid="button-cancel-freeze">Cancel</Button>
             <Button
-              className="bg-blue-500 text-white"
+              className="bg-primary text-primary-foreground"
               disabled={addToFreezerMutation.isPending}
               onClick={() => {
                 if (addToFreezerMealId) {

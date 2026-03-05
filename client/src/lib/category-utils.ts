@@ -14,15 +14,15 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
 };
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  "Breakfast": "text-amber-500",
-  "Lunch": "text-green-500",
-  "Dinner": "text-orange-500",
-  "Snack": "text-pink-500",
-  "Smoothie": "text-purple-500",
-  "Dessert": "text-rose-500",
-  "Drink": "text-blue-500",
-  "Immune Boost": "text-emerald-500",
-  "Supplement": "text-cyan-500",
+  "Breakfast":    "text-muted-foreground",
+  "Lunch":        "text-muted-foreground",
+  "Dinner":       "text-muted-foreground",
+  "Snack":        "text-muted-foreground",
+  "Smoothie":     "text-muted-foreground",
+  "Dessert":      "text-muted-foreground",
+  "Drink":        "text-muted-foreground",
+  "Immune Boost": "text-muted-foreground",
+  "Supplement":   "text-muted-foreground",
 };
 
 export function getCategoryIcon(name: string): LucideIcon {
