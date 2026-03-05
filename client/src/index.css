@@ -1,90 +1,101 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --primary: 122 39% 49%;
-  --primary-foreground: 0 0% 100%;
+  --background:          42 27% 95%;
+  --foreground:          120 14% 14%;
 
-  --secondary: 43 72% 52%;
-  --secondary-foreground: 0 0% 100%;
+  --card:                0 0% 100%;
+  --card-foreground:     120 14% 14%;
 
-  --background: 80 11% 97%;
-  --foreground: 0 0% 10%;
-  
-  --muted: 80 6% 93%;
-  --muted-foreground: 0 0% 42%;
-  
-  --accent: 80 8% 94%;
-  --accent-foreground: 0 0% 13%;
-  
-  --destructive: 0 84% 60%;
+  --popover:             0 0% 100%;
+  --popover-foreground:  120 14% 14%;
+
+  --primary:             132 14% 44%;
+  --primary-foreground:  0 0% 100%;
+
+  --secondary:           42 89% 61%;
+  --secondary-foreground: 120 14% 14%;
+
+  --muted:               40 33% 97%;
+  --muted-foreground:    120 5% 34%;
+
+  --accent:              118 19% 94%;
+  --accent-foreground:   120 14% 14%;
+
+  --destructive:         0 84% 60%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 0 0% 93%;
-  --input: 0 0% 90%;
-  --ring: 122 39% 49%;
+  --border:              33 22% 87%;
+  --input:               33 22% 87%;
+  --ring:                132 14% 44%;
 
-  --radius: 0.75rem;
-  
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --radius:              0.75rem;
 
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 10%;
+  --row-alt:             40 33% 97%;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 10%;
+  --font-sans:    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
-  --sidebar: 0 0% 100%;
-  --sidebar-foreground: 0 0% 10%;
-  --sidebar-border: 0 0% 93%;
-  --sidebar-ring: 122 39% 49%;
-  --sidebar-primary: 122 39% 49%;
+  --sidebar:             0 0% 100%;
+  --sidebar-foreground:  120 14% 14%;
+  --sidebar-border:      33 22% 87%;
+  --sidebar-ring:        132 14% 44%;
+  --sidebar-primary:     132 14% 44%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 80 8% 94%;
-  --sidebar-accent-foreground: 0 0% 13%;
+  --sidebar-accent:      118 19% 94%;
+  --sidebar-accent-foreground: 120 14% 14%;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
 }
 
 .dark {
-  --background: 0 0% 7%;
-  --foreground: 0 0% 93%;
-  
-  --primary: 122 39% 52%;
-  --primary-foreground: 0 0% 100%;
-  
-  --secondary: 43 72% 48%;
-  --secondary-foreground: 0 0% 100%;
-  
-  --muted: 0 0% 14%;
-  --muted-foreground: 0 0% 60%;
-  
-  --accent: 0 0% 14%;
-  --accent-foreground: 0 0% 93%;
-  
-  --destructive: 0 62% 30%;
+  --background:          120 14% 8%;
+  --foreground:          40 20% 93%;
+
+  --card:                120 14% 11%;
+  --card-foreground:     40 20% 93%;
+
+  --popover:             120 14% 11%;
+  --popover-foreground:  40 20% 93%;
+
+  --primary:             132 14% 52%;
+  --primary-foreground:  0 0% 100%;
+
+  --secondary:           42 89% 55%;
+  --secondary-foreground: 120 14% 14%;
+
+  --muted:               120 10% 16%;
+  --muted-foreground:    120 5% 58%;
+
+  --accent:              120 10% 16%;
+  --accent-foreground:   40 20% 93%;
+
+  --destructive:         0 62% 30%;
   --destructive-foreground: 0 85% 97%;
-  
-  --border: 0 0% 16%;
-  --input: 0 0% 16%;
-  --ring: 122 39% 52%;
 
-  --card: 0 0% 10%;
-  --card-foreground: 0 0% 93%;
+  --border:              120 10% 20%;
+  --input:               120 10% 20%;
+  --ring:                132 14% 52%;
 
-  --popover: 0 0% 10%;
-  --popover-foreground: 0 0% 93%;
+  --row-alt:             120 10% 14%;
 
-  --sidebar: 0 0% 10%;
-  --sidebar-foreground: 0 0% 93%;
-  --sidebar-border: 0 0% 16%;
-  --sidebar-ring: 122 39% 52%;
-  --sidebar-primary: 122 39% 52%;
+  --sidebar:             120 14% 11%;
+  --sidebar-foreground:  40 20% 93%;
+  --sidebar-border:      120 10% 20%;
+  --sidebar-ring:        132 14% 52%;
+  --sidebar-primary:     132 14% 52%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 0 0% 14%;
-  --sidebar-accent-foreground: 0 0% 93%;
+  --sidebar-accent:      120 10% 16%;
+  --sidebar-accent-foreground: 40 20% 93%;
 }
 
 @layer base {
@@ -92,14 +103,18 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground;
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    @apply tracking-tight;
+    letter-spacing: -0.01em;
+  }
+  *:focus-visible {
+    outline: 2px solid hsl(var(--primary) / 0.35);
+    outline-offset: 2px;
   }
 }
 
@@ -112,7 +127,60 @@
     display: none;
   }
   .text-premium {
-    color: hsl(43 72% 52%);
+    color: hsl(var(--secondary));
+  }
+
+  .title-page {
+    font-family: var(--font-display);
+    font-size: 32px;
+    line-height: 38px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .title-section {
+    font-family: var(--font-display);
+    font-size: 22px;
+    line-height: 28px;
+    font-weight: 600;
+  }
+  .title-card {
+    font-family: var(--font-display);
+    font-size: 16px;
+    line-height: 22px;
+    font-weight: 500;
+  }
+  .text-table {
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .text-numeric {
+    font-family: var(--font-sans);
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 600;
+  }
+
+  .calm-table tbody tr:nth-child(even) {
+    background: hsl(var(--row-alt));
+  }
+  .calm-table tbody tr:hover {
+    background: hsl(var(--accent));
+    cursor: default;
+  }
+  .calm-table td,
+  .calm-table th {
+    font-size: 13px;
+    line-height: 18px;
+    padding: 8px 12px;
+  }
+
+  .main-safe {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
+  }
+  @media (min-width: 768px) {
+    .main-safe {
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
   }
 }
 
@@ -123,9 +191,9 @@
 }
 
 @keyframes glowPulse {
-  0% { filter: drop-shadow(0 0 0px #3CB043); }
-  50% { filter: drop-shadow(0 0 6px #3CB043); }
-  100% { filter: drop-shadow(0 0 0px #3CB043); }
+  0% { filter: drop-shadow(0 0 0px hsl(var(--primary))); }
+  50% { filter: drop-shadow(0 0 6px hsl(var(--primary))); }
+  100% { filter: drop-shadow(0 0 0px hsl(var(--primary))); }
 }
 
 @keyframes appleShake {

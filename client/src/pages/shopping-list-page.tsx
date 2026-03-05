@@ -1477,7 +1477,7 @@ export default function ShoppingListPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-xs" data-testid="table-analyse-basket">
+                <table className="w-full text-xs calm-table" data-testid="table-analyse-basket">
                   <thead>
                     <tr className="border-b border-border bg-muted/20">
                       <th className="px-2 py-2 w-8">
@@ -1831,10 +1831,10 @@ export default function ShoppingListPage() {
                               const isBestPrice = cheapest && selectedStore === cheapest.supermarket;
                               return (
                                 <>
-                                  <td className="px-2 py-1.5 text-right tabular-nums" data-testid={`text-price-${item.id}`}>
+                                  <td className={`px-2 py-1.5 text-right tabular-nums${isBestPrice ? ' bg-secondary/15' : ''}`} data-testid={`text-price-${item.id}`}>
                                     {selectedPrice !== null && selectedPrice !== undefined ? (
                                       <span
-                                        className={`cursor-pointer ${isBestPrice ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-foreground'}`}
+                                        className={`cursor-pointer ${isBestPrice ? 'text-primary font-semibold' : 'text-foreground'}`}
                                         onClick={() => setComparisonItem(item)}
                                       >
                                         {"\u00A3"}{selectedPrice.toFixed(2)}
@@ -1855,7 +1855,7 @@ export default function ShoppingListPage() {
                                       <span className="text-muted-foreground cursor-pointer" onClick={() => setComparisonItem(item)}>-</span>
                                     )}
                                   </td>
-                                  <td className="px-2 py-1.5">
+                                  <td className={`px-2 py-1.5${isBestPrice ? ' bg-secondary/15' : ''}`}>
                                     {(() => {
                                       const availableStores = SUPERMARKET_NAMES.filter(store => itemPrices?.has(store));
                                       const knownStores: string[] = (() => {
@@ -1866,6 +1866,11 @@ export default function ShoppingListPage() {
                                       const isBranded = !!item.matchedProductId;
                                       return (
                                         <div className="flex items-center gap-1">
+                                          {isBestPrice && (
+                                            <span className="inline-flex items-center shrink-0 bg-secondary text-secondary-foreground text-[10px] font-semibold px-1 py-0.5 rounded leading-none">
+                                              ✓ Best
+                                            </span>
+                                          )}
                                           <Select
                                             value={item.selectedStore || 'auto'}
                                             onValueChange={(val) => {

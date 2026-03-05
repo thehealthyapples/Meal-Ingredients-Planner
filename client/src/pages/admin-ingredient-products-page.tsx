@@ -214,7 +214,7 @@ export default function AdminIngredientProductsPage() {
       </div>
 
       <div className="rounded-md border">
-        <Table>
+        <Table className="calm-table">
           <TableHeader>
             <TableRow>
               <TableHead>Ingredient Key</TableHead>

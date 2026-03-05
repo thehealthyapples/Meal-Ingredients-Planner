@@ -185,7 +185,7 @@ export default function AdminUsersPage() {
       </div>
 
       <div className="border rounded-lg overflow-hidden" data-testid="table-users">
-        <Table>
+        <Table className="calm-table">
           <TableHeader>
             <TableRow>
               <TableHead>Email</TableHead>

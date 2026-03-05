@@ -252,7 +252,7 @@ export default function AdminRecipeSourcesPage() {
             ) : (
               <>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-xs" data-testid="table-audit-log">
+                  <table className="w-full text-xs calm-table" data-testid="table-audit-log">
                     <thead>
                       <tr className="text-muted-foreground border-b">
                         <th className="text-left pb-2 pr-3 font-medium">Date</th>
