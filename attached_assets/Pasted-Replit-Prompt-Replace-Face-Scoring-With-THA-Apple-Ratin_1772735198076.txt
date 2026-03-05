@@ -1,0 +1,166 @@
+Replit Prompt — Replace Face Scoring With THA Apple Rating (UI-wide)
+
+Objective
+
+Replace the existing face-based scoring UI across The Healthy Apples with the new AppleRating component (1–5 apples), using the master icon client/src/assets/icons/tha-apple.svg.
+
+Do not change scoring logic, values, database fields, API contracts, or calculations. Only replace the visual representation.
+
+Assumptions / Constraints
+
+Rating values are already available as a number (typically 1–5) in the UI.
+
+The master icon is manually uploaded by developer:
+
+client/src/assets/icons/tha-apple.svg
+
+All replacements must be centralized through a single component:
+
+client/src/components/ui/apple-rating.tsx
+
+Tasks
+T001 — Ensure new icon + rating components exist
+
+If not already present, create:
+
+client/src/components/icons/ThaAppleIcon.tsx
+
+import React from "react";
+
+type Props = {
+  size?: number;
+  className?: string;
+};
+
+export default function ThaAppleIcon({ size = 24, className = "" }: Props) {
+  return (
+    <img
+      src="/src/assets/icons/tha-apple.svg"
+      width={size}
+      height={size}
+      className={className}
+      alt="Healthy Apple"
+      draggable="false"
+    />
+  );
+}
+
+client/src/components/ui/apple-rating.tsx
+
+import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
+
+type Props = {
+  rating: number;
+  size?: number;
+  className?: string;
+};
+
+function clampRating(rating: number) {
+  if (!Number.isFinite(rating)) return 0;
+  return Math.max(0, Math.min(5, Math.round(rating)));
+}
+
+export default function AppleRating({ rating, size = 20, className = "" }: Props) {
+  const r = clampRating(rating);
+  if (r === 0) return null;
+
+  return (
+    <div className={`flex items-center gap-1 ${className}`}>
+      {Array.from({ length: r }).map((_, i) => (
+        <ThaAppleIcon key={i} size={size} />
+      ))}
+    </div>
+  );
+}
+T002 — Add a compatibility wrapper (so replacements are easy)
+
+Create:
+
+client/src/components/ui/score-badge.tsx
+
+import AppleRating from "@/components/ui/apple-rating";
+
+type Props = {
+  score: number; // existing numeric score (1–5)
+  size?: number;
+  className?: string;
+};
+
+export default function ScoreBadge({ score, size = 20, className = "" }: Props) {
+  return <AppleRating rating={score} size={size} className={className} />;
+}
+
+Important: From this point on, all pages should use <ScoreBadge score={...} /> so future changes are in one place.
+
+T003 — Replace face scoring UI everywhere in the client
+
+Search the client for the old face scoring components/usages and replace with the new one.
+
+Do a project-wide search for common patterns such as:
+
+components named like: FaceScore, ScoreFace, MoodScore, EmojiScore, RatingFace, ScoreIcon
+
+emoji usage: 😀 😐 😟 etc
+
+any mapping arrays that map score → face icon
+
+imports from any “face” scoring component
+
+Replace them with:
+
+import ScoreBadge from "@/components/ui/score-badge";
+...
+<ScoreBadge score={value} />
+
+Where value is the same rating number previously used for the faces.
+
+Do not change how value is computed.
+
+T004 — Ensure consistent sizing based on context
+
+Use these defaults:
+
+In dense tables / lists: size={16}
+
+In cards: size={20}
+
+In headers / hero: size={28}
+
+Example:
+
+<ScoreBadge score={meal.appleRating} size={16} />
+T005 — Replace any “label text” that mentioned faces
+
+If the UI contains text like “Face score” or “Mood score”, rename to:
+
+“Apple rating”
+
+“THA rating”
+
+“Rating”
+
+Keep it calm and premium.
+
+T006 — QA checklist (must pass)
+
+No TypeScript errors.
+
+No broken imports.
+
+Apple rating renders correctly for scores 1–5.
+
+Score 0 / null should render nothing (not an empty box).
+
+Existing score calculations are untouched.
+
+All previous face visuals are removed.
+
+Deliverables
+
+Apple icon component: ThaAppleIcon
+
+Apple rating component: AppleRating
+
+Wrapper: ScoreBadge
+
+Face scoring visuals fully replaced across the client
