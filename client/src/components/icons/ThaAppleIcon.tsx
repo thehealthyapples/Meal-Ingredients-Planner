@@ -1,4 +1,4 @@
-import thaAppleUrl from "@/assets/icons/tha-apple.svg?url";
+import thaAppleUrl from "@/assets/icons/tha-apple.png";
 
 type Props = {
   size?: number;
