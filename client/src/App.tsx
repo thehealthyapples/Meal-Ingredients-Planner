@@ -7,6 +7,8 @@ import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 
 import { TopBar, DesktopSidebar, MobileNav } from "@/components/nav-bar";
+import OrchardBackdrop from "@/components/layout/orchard-backdrop";
+import OrchardShell from "@/components/layout/orchard-shell";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import OnboardingPage from "@/pages/onboarding-page";
@@ -41,15 +43,18 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   if (!user.onboardingCompleted) return <Redirect to="/onboarding" />;
 
   return (
-    <div className="flex min-h-[100dvh] flex-col">
-      <TopBar />
-      <div className="flex flex-1 overflow-hidden">
-        <DesktopSidebar />
-        <main className="flex-1 overflow-y-auto main-safe bg-background">
-          <Component />
-        </main>
+    <div className="relative min-h-[100dvh]">
+      <OrchardBackdrop />
+      <div className="relative z-10 flex flex-col min-h-[100dvh]">
+        <TopBar />
+        <div className="flex flex-1 overflow-hidden">
+          <DesktopSidebar />
+          <main className="flex-1 overflow-y-auto main-safe bg-background/80">
+            <Component />
+          </main>
+        </div>
+        <MobileNav />
       </div>
-      <MobileNav />
     </div>
   );
 }
@@ -57,8 +62,8 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 function Router() {
   return (
     <Switch>
-      <Route path="/auth" component={AuthPage} />
-      <Route path="/onboarding" component={OnboardingPage} />
+      <Route path="/auth" component={() => <OrchardShell><AuthPage /></OrchardShell>} />
+      <Route path="/onboarding" component={() => <OrchardShell><OnboardingPage /></OrchardShell>} />
 
       <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
       <Route path="/meals/:id" component={() => <ProtectedRoute component={MealDetailPage} />} />

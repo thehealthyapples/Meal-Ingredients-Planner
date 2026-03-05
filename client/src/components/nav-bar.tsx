@@ -382,34 +382,47 @@ export function DesktopSidebar() {
 
   return (
     <aside
-      className={`hidden md:flex flex-col flex-shrink-0 bg-card border-r border-border transition-all duration-200 overflow-x-hidden overflow-y-auto ${
+      className={`hidden md:flex flex-col relative flex-shrink-0 bg-card border-r border-border transition-all duration-200 overflow-x-hidden overflow-y-auto ${
         isCollapsed ? "w-16" : "w-[220px]"
       }`}
       data-testid="desktop-sidebar"
     >
-      <div className={`flex ${isCollapsed ? "justify-center" : "justify-end"} px-2 pt-3 pb-1 shrink-0`}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              onClick={toggle}
-              className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent/60 text-muted-foreground transition-colors"
-              data-testid="button-sidebar-toggle"
-              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          </TooltipContent>
-        </Tooltip>
-      </div>
-      <SidebarBody
-        isCollapsed={isCollapsed}
-        location={location}
-        isAdmin={isAdmin}
-        support={support}
+      {/* Meadow tint layer behind icon rail */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, hsl(var(--accent)) 0%, hsl(var(--background)) 80%)",
+          opacity: "var(--orchard-sidebar-opacity, 0.50)",
+        }}
       />
+
+      <div className="relative z-10 flex flex-col flex-1">
+        <div className={`flex ${isCollapsed ? "justify-center" : "justify-end"} px-2 pt-3 pb-1 shrink-0`}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={toggle}
+                className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent/60 text-muted-foreground transition-colors"
+                data-testid="button-sidebar-toggle"
+                aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              >
+                {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <SidebarBody
+          isCollapsed={isCollapsed}
+          location={location}
+          isAdmin={isAdmin}
+          support={support}
+        />
+      </div>
     </aside>
   );
 }

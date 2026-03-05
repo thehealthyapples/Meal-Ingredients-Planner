@@ -55,6 +55,10 @@
   --space-4: 16px;
   --space-6: 24px;
   --space-8: 32px;
+
+  --orchard-opacity: 0.35;
+  --orchard-sidebar-opacity: 0.50;
+  --orchard-parallax-strength: 10px;
 }
 
 .dark {
@@ -96,6 +100,10 @@
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent:      120 10% 16%;
   --sidebar-accent-foreground: 40 20% 93%;
+
+  --orchard-opacity: 0.18;
+  --orchard-sidebar-opacity: 0.28;
+  --orchard-parallax-strength: 6px;
 }
 
 @layer base {
