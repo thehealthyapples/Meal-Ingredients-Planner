@@ -12,7 +12,7 @@ import {
   MoreHorizontal, Mail, Archive, Sliders,
 } from "lucide-react";
 import { api } from "@shared/routes";
-import longLogoUrl from "@assets/hte_healthy_apples_long_logo_1772702298025.png";
+import longLogoUrl from "@assets/Screenshot_2026-03-05_at_10.02.26_1772705114667.png";
 
 const NAV_ITEMS = [
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
@@ -71,7 +71,7 @@ export function NavBar() {
             <img
               src={longLogoUrl}
               alt="The Healthy Apples"
-              className="w-full h-auto object-fill block"
+              className="w-full h-28 sm:h-36 md:h-44 object-cover object-center block"
               data-testid="img-brand-logo"
             />
           </Link>
