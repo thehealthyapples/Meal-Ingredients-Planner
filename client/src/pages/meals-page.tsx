@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useBasket } from "@/hooks/use-basket";
 import { useLocation } from "wouter";
 import { MealWatermark, getWatermarkType } from "@/components/meal-watermark";
-import { default as AppleRating } from "@/components/AppleRating";
+import ScoreBadge from "@/components/ui/score-badge";
 import { Switch } from "@/components/ui/switch";
 import { shouldExcludeRecipe } from "@/lib/dietRules";
 import { useUser } from "@/hooks/use-user";
@@ -2490,7 +2490,7 @@ export default function MealsPage() {
                                 )}
                               </div>
                               <div className="mt-2" data-testid={`rating-product-${productKey}`}>
-                                <AppleRating rating={smpRating} hasCape={hasCape} size="small" />
+                                <ScoreBadge score={smpRating} size={16} />
                               </div>
                               {product.nutriments?.calories && (
                                 <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2" data-testid={`nutrition-product-${productKey}`}>

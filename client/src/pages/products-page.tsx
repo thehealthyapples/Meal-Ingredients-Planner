@@ -25,7 +25,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@shared/routes";
-import AppleRating from "@/components/AppleRating";
+import ScoreBadge from "@/components/ui/score-badge";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { useSoundEffects } from "@/hooks/use-sound-effects";
 import HealthTrendChart from "@/components/HealthTrendChart";
@@ -1186,7 +1186,7 @@ export default function ProductsPage() {
                             <span className="text-xs text-muted-foreground truncate">{item.brand}</span>
                           )}
                           {item.smpRating !== null && (
-                            <AppleRating rating={item.smpRating} size="small" />
+                            <ScoreBadge score={item.smpRating} size={16} />
                           )}
                           {novaConfig && (
                             <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${novaConfig.bg} ${novaConfig.color}`}>
@@ -1283,7 +1283,7 @@ export default function ProductsPage() {
                               </div>
                               {product.upfAnalysis && (
                                 <div className="mt-1.5">
-                                  <AppleRating rating={product.upfAnalysis.smpRating} size="small" />
+                                  <ScoreBadge score={product.upfAnalysis.smpRating} size={16} />
                                 </div>
                               )}
                             </div>
@@ -1400,7 +1400,7 @@ export default function ProductsPage() {
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">SMP Rating</p>
-                          <AppleRating rating={selectedProduct.upfAnalysis.smpRating} size="large" hasCape={selectedProduct.upfAnalysis.hasCape} />
+                          <ScoreBadge score={selectedProduct.upfAnalysis.smpRating} size={28} />
                         </div>
                         {selectedProduct.analysis && (
                           <div className="flex items-center gap-2">
@@ -1569,7 +1569,7 @@ export default function ProductsPage() {
                             <p className="text-sm font-medium leading-tight truncate">{alt.product_name}</p>
                             <div className="flex items-center gap-1 mt-0.5">
                               {alt.analysis && <NovaGroupBadge group={alt.analysis.novaGroup} />}
-                              {alt.upfAnalysis && <AppleRating rating={alt.upfAnalysis.smpRating} size="small" />}
+                              {alt.upfAnalysis && <ScoreBadge score={alt.upfAnalysis.smpRating} size={16} />}
                               {!alt.upfAnalysis && alt.analysis && (
                                 <Badge variant="secondary" className="text-[10px]">
                                   Score: {alt.analysis.healthScore}
@@ -1644,7 +1644,7 @@ export default function ProductsPage() {
                 <tbody>
                   <CompareRow label="SMP Rating" products={compareProducts} render={(p) => {
                     if (!p.upfAnalysis) return <span className="text-muted-foreground">N/A</span>;
-                    return <AppleRating rating={p.upfAnalysis.smpRating} size="small" />;
+                    return <ScoreBadge score={p.upfAnalysis.smpRating} size={16} />;
                   }} highlightBest={(products) => {
                     const ratings = products.map(p => p.upfAnalysis?.smpRating ?? -1);
                     return ratings.indexOf(Math.max(...ratings));
