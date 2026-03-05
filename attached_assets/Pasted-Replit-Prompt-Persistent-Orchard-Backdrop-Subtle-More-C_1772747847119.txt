@@ -1,0 +1,138 @@
+Replit Prompt — Persistent Orchard Backdrop (Subtle, More Colour)
+Objective
+
+Extend the Calm Orchard “meadow/fields” visual so it appears site-wide (or at least across core pages) behind:
+
+the collapsed icon sidebar
+
+key panels like Planner / Basket / Pantry list containers
+
+Keep it subtle and non-distracting: more colour than now, but still premium and readable. No logic changes.
+
+T012: Add a reusable Orchard Background Layer (global, non-intrusive)
+Implementation
+
+Create a reusable component:
+
+File
+
+client/src/components/layout/orchard-backdrop.tsx
+
+Purpose
+Renders a soft illustrated meadow/fields background with more colour, but with controlled opacity and blur.
+
+Rules
+
+Must not interfere with text readability.
+
+Must not add layout width/height.
+
+Must not break scrolling.
+
+Must use token colours (HSL) only — no hex.
+
+Suggested structure
+
+A fixed background layer
+
+Two soft hill shapes
+
+One faint path/road curve
+
+Optional tree silhouettes
+
+Use opacity: 0.25–0.45 (tune)
+
+Add blur-sm for softness
+
+Example layer approach:
+
+Backdrop base: hsl(var(--background))
+
+Meadow accents: hsl(var(--accent))
+
+Richer green tint: hsl(var(--primary) / 0.25)
+
+Sun glow: hsl(var(--secondary) / 0.12) behind hills
+
+T013: Apply Orchard Backdrop to Layout (so it appears on every page)
+Where
+
+In your top-level layout wrapper (likely in client/src/App.tsx or layout component used by all pages), wrap <main> and sidebar with:
+
+<div className="relative">
+  <OrchardBackdrop />
+  <div className="relative z-10">
+    {/* existing TopBar + Sidebar + Main */}
+  </div>
+</div>
+
+Important:
+
+Backdrop should be absolute inset-0 or fixed inset-0
+
+Content should be relative z-10 so it sits above
+
+T014: Add More Colour Behind the Sidebar Icons (without clutter)
+Goal
+
+When sidebar is collapsed (icon-only), add a more colourful “meadow strip” behind the icon rail.
+
+Implementation
+
+In Sidebar component (nav-bar.tsx or sidebar section):
+
+Add a sidebar background gradient
+
+Add a soft orchard illustration positioned behind the icons
+
+Keep opacity higher than the main background (e.g. 0.35–0.55)
+
+Suggested CSS:
+
+Base: bg-[hsl(var(--card))]
+
+Overlay: linear-gradient(180deg, hsl(var(--accent)) 0%, hsl(var(--background)) 80%)
+
+Bottom meadow: orchard SVG at bottom with more green
+
+This gives the effect:
+
+✅ icons are still readable
+✅ the rail feels branded
+✅ no extra space lost
+
+T015: Keep Panel Areas Clean (brand in edges, workspace remains dominant)
+Rule
+
+Only apply the stronger meadow colour to:
+
+sidebar background
+
+page background behind cards
+
+Do NOT add it inside tables/grids (Planner/Basket), so the data remains clean.
+
+Cards remain white.
+
+Acceptance Criteria
+
+The meadow/fields style appears on all pages, not only Dashboard.
+
+The sidebar (collapsed and expanded) has a more colourful orchard feel behind icons.
+
+The Planner and Basket tables remain highly readable (no visual noise behind rows).
+
+No change to business logic, routing, or data behaviour.
+
+Mobile remains clean: background is present but at lower opacity.
+
+Optional (if you want it extra premium)
+
+Add a setting in tokens:
+
+--orchard-opacity: 0.35;
+
+--orchard-sidebar-opacity: 0.50;
+
+So you can tune intensity without rewriting components.

@@ -1,0 +1,328 @@
+Objective
+
+Add a persistent, subtle orchard/meadow backdrop across all pages of The Healthy Apples, matching the logo palette (including the sun yellow glow), and increase brand richness behind the sidebar icon rail—without affecting readability or reducing workspace.
+
+Must include:
+
+Reusable OrchardBackdrop SVG layer (fixed, behind all content)
+
+Applied site-wide for authenticated pages via ProtectedRoute shell
+
+Applied to public pages (login/signup/create account) via an OrchardShell
+
+Sidebar meadow tint layer behind icon rail
+
+Two CSS opacity tokens for tuning intensity
+
+No hex colors (HSL tokens only)
+
+No changes to business logic, data flows, or table layouts
+
+Bonus polish (very subtle):
+
+Add gentle parallax movement to the orchard backdrop on scroll (minimal, non-janky, can be disabled)
+
+Hard Safety Constraints
+
+Do NOT change any API calls, DB logic, basket totals, planner logic, exports, or routing structure (only wrap existing route elements).
+
+Do NOT change table structures or columns.
+
+Keep cards and tables fully readable (cards remain solid bg-card).
+
+All colors must use hsl(var(--token) / alpha) or token-only HSL triplets.
+
+Ensure performance: backdrop is lightweight SVG, pointer-events-none, and does not trigger layout shifts.
+
+T012: Add orchard opacity tokens + utilities
+File
+
+client/src/index.css
+
+Add to :root
+:root {
+  /* Orchard backdrop intensity */
+  --orchard-opacity: 0.35;
+  --orchard-sidebar-opacity: 0.50;
+
+  /* Parallax (very subtle). Can tune or set to 0 to disable. */
+  --orchard-parallax-strength: 10px; /* overall max shift */
+}
+Add to .dark
+.dark {
+  --orchard-opacity: 0.18;
+  --orchard-sidebar-opacity: 0.28;
+  --orchard-parallax-strength: 6px;
+}
+Add a reusable safe-area utility for pages with bottom nav (mobile)
+.main-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 80px);
+}
+@media (min-width: 768px) {
+  .main-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+Add (or keep) focus ring token-only (if not already present)
+*:focus-visible {
+  outline: 2px solid hsl(var(--primary) / 0.35);
+  outline-offset: 2px;
+}
+
+Acceptance
+
+Tokens exist and changing them adjusts intensity
+
+No layout shifts
+
+Mobile content never hides behind bottom nav
+
+T013: Create OrchardBackdrop component (SVG + token-only sunrise glow)
+File
+
+client/src/components/layout/orchard-backdrop.tsx
+
+Requirements
+
+fixed inset-0 pointer-events-none overflow-hidden z-0
+
+SVG anchored to bottom:
+
+viewBox="0 0 1440 200"
+
+preserveAspectRatio="xMidYMax slice"
+
+Use only tokens:
+
+--background, --accent, --primary, --secondary
+
+Include:
+
+soft sunrise glow using --secondary (logo yellow)
+
+two rolling hills (accent + primary/alpha)
+
+two tree clusters (primary/alpha)
+
+faint road/path curve stroke (background/alpha)
+
+Entire SVG:
+
+opacity: var(--orchard-opacity)
+
+filter: blur(0.6px)
+
+Add parallax layers:
+
+split into “far hills” and “near hills” groups
+
+apply transform using CSS variables set by scroll
+
+Implementation guidance (high level)
+
+Use <defs> for gradients:
+
+radial sunrise glow:
+
+hsl(var(--secondary) / 0.16) → transparent
+
+sky wash:
+
+hsl(var(--secondary) / 0.08) at top → hsl(var(--background)) lower
+
+Use two <g> groups:
+
+data-layer="far" (moves least)
+
+data-layer="near" (moves slightly more)
+
+Set transforms inline using CSS custom props:
+
+translateY(var(--orchard-far-y, 0px))
+
+translateY(var(--orchard-near-y, 0px))
+
+Acceptance
+
+Backdrop renders behind everything
+
+Uses only HSL tokens
+
+Sunrise glow is present but subtle (not a visible sun circle)
+
+T014: Apply OrchardBackdrop site-wide for authenticated pages (ProtectedRoute shell)
+File
+
+client/src/App.tsx
+
+Wrap your existing authenticated layout (inside ProtectedRoute return)
+
+Use:
+
+<div className="relative min-h-[100dvh]">
+  <OrchardBackdrop />
+  <div className="relative z-10 flex flex-col min-h-[100dvh]">
+    {/* existing TopBar */}
+    <div className="flex flex-1 overflow-hidden">
+      {/* existing Sidebar */}
+      <main className="flex-1 overflow-y-auto main-safe bg-background/80">
+        {/* existing routes/pages */}
+      </main>
+    </div>
+    {/* existing MobileNav if present */}
+  </div>
+</div>
+
+Notes:
+
+Keep cards as bg-card (solid).
+
+bg-background/80 lets the meadow bleed through softly but remains calm.
+
+Acceptance
+
+Meadow visible behind all authenticated pages (Dashboard, Planner, Basket, Pantry, etc.)
+
+No readability issues
+
+T015: Sidebar meadow tint behind icon rail (more color behind icons)
+File
+
+client/src/components/nav-bar.tsx (Desktop sidebar)
+
+Add inside <aside> as the first child:
+
+<div
+  aria-hidden
+  className="absolute inset-0 pointer-events-none"
+  style={{
+    background:
+      "linear-gradient(180deg, hsl(var(--accent)) 0%, hsl(var(--background)) 80%)",
+    opacity: "var(--orchard-sidebar-opacity)",
+  }}
+/>
+
+Ensure <aside> is relative and the real sidebar content is wrapped in:
+
+<div className="relative z-10">
+  {/* sidebar items */}
+</div>
+
+Acceptance
+
+More colour behind icons even outside Dashboard
+
+Icons remain crisp; no width/padding changes
+
+T016: Apply OrchardBackdrop to public auth pages (login/signup/create account)
+Create a shared wrapper
+
+File: client/src/components/layout/orchard-shell.tsx
+
+Structure:
+
+<div className="relative min-h-[100dvh]">
+  <OrchardBackdrop />
+  <div className="relative z-10 min-h-[100dvh] flex items-center justify-center p-6 bg-background/70">
+    {children}
+  </div>
+</div>
+
+Important:
+
+Auth form card stays solid:
+
+bg-card border border-border
+
+Do NOT make the form card transparent.
+
+Apply wrapper to public routes
+
+In App.tsx routing, wrap your unauthenticated pages:
+
+/login
+
+/signup or /register or /create-account
+
+any public landing route if it exists
+
+Example:
+
+<Route path="/login" element={<OrchardShell><LoginPage /></OrchardShell>} />
+
+Acceptance
+
+Orchard backdrop visible on account creation/login page too
+
+Forms remain readable
+
+T017: Subtle parallax polish (optional but recommended, should not feel “animated”)
+Goal
+
+On scroll, the meadow layers shift by only a few pixels, creating a premium feel.
+
+Implementation (lightweight)
+
+In OrchardBackdrop, add a useEffect that listens to scroll on the nearest scroll container.
+
+For simplicity, listen to window scroll AND also support the main scroll container (main) if your app scrolls inside <main>.
+
+Use requestAnimationFrame to avoid jank.
+
+Compute:
+
+nearY = clamp(scrollTop * 0.02, 0, var(--orchard-parallax-strength))
+
+farY = clamp(scrollTop * 0.01, 0, var(--orchard-parallax-strength) / 2)
+
+Set CSS variables on the backdrop root element:
+
+--orchard-near-y: ${nearY}px
+
+--orchard-far-y: ${farY}px
+
+If this adds complexity, it’s acceptable to:
+
+implement parallax only for window scrolling
+
+or to skip parallax entirely by setting --orchard-parallax-strength: 0px
+
+Acceptance
+
+Effect is extremely subtle
+
+No performance regression
+
+Works on desktop + mobile (or gracefully no-ops)
+
+Final QA Checklist
+
+Verify on:
+
+Dashboard
+
+Planner
+
+Basket
+
+Pantry
+
+My Meals
+
+Login/Create account
+
+Confirm:
+
+Meadow visible behind all pages, not only dashboard hero
+
+Sidebar has meadow tint behind icon rail
+
+Sunrise warmth is present (logo yellow) but subtle
+
+Tables/cards remain readable and clean
+
+No hex colors introduced
+
+No routing/logic changes beyond wrapping route elements
+
+Mobile safe-area works; content not hidden behind bottom nav
