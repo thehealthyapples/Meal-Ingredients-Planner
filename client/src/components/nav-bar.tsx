@@ -223,8 +223,8 @@ export function TopBar() {
         >
           <Menu className="h-5 w-5" />
         </button>
-        <Link href="/" className="hidden md:flex items-center justify-center" data-testid="link-logo">
-          <img src="/favicon.png" alt="THA" className="h-8 w-8 rounded-md object-cover" />
+        <Link href="/" className="hidden md:flex items-center" data-testid="link-logo">
+          <img src="/logo-long.png" alt="The Healthy Apples" className="h-8 w-auto max-w-[180px] object-contain" />
         </Link>
 
         <div className="flex-1 flex items-center gap-1 max-w-sm ml-2">
