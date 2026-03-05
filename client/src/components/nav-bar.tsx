@@ -80,31 +80,31 @@ function SidebarNavItem({
   href: string; label: string; icon: React.ComponentType<{ className?: string }>;
   isCollapsed: boolean; isActive: boolean; onClick?: () => void;
 }) {
-  const btn = (
-    <Link href={href} onClick={onClick}>
-      <button
-        className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${
-          isActive
-            ? "bg-accent text-primary font-medium"
-            : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-        } ${isCollapsed ? "justify-center" : ""}`}
-        data-testid={`sidebar-nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
-      >
-        <Icon className="h-4 w-4 shrink-0" />
-        {!isCollapsed && <span>{label}</span>}
-      </button>
+  const linkEl = (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm transition-colors ${
+        isActive
+          ? "bg-accent text-primary font-medium"
+          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+      } ${isCollapsed ? "justify-center" : ""}`}
+      data-testid={`sidebar-nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      {!isCollapsed && <span>{label}</span>}
     </Link>
   );
 
   if (isCollapsed) {
     return (
       <Tooltip>
-        <TooltipTrigger asChild>{btn}</TooltipTrigger>
+        <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
         <TooltipContent side="right">{label}</TooltipContent>
       </Tooltip>
     );
   }
-  return btn;
+  return linkEl;
 }
 
 function SidebarBody({
@@ -250,21 +250,23 @@ export function TopBar() {
         </div>
 
         <div className="flex items-center gap-1 ml-auto">
-          <Link href="/analyse-basket">
-            <button
-              className="relative flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
-              data-testid="button-basket-top"
-              aria-label="Basket"
-            >
-              <ShoppingCart className="h-4 w-4" />
-              {itemCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5">
-                  {itemCount}
-                </span>
-              )}
-            </button>
+          <Link
+            href="/analyse-basket"
+            className="relative flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
+            data-testid="button-basket-top"
+            aria-label="Basket"
+          >
+            <ShoppingCart className="h-4 w-4" />
+            {itemCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5">
+                {itemCount}
+              </span>
+            )}
           </Link>
-          <Link href="/profile" onClick={() => sessionStorage.setItem("profileReturnPath", window.location.pathname + window.location.search)}>
+          <Link
+            href="/profile"
+            onClick={() => sessionStorage.setItem("profileReturnPath", window.location.pathname + window.location.search)}
+          >
             <Avatar className="h-8 w-8 cursor-pointer" data-testid="avatar-user">
               <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                 {userInitial}
@@ -376,16 +378,16 @@ export function MobileNav() {
             const isActive = location === item.href;
             const Icon = item.icon;
             return (
-              <Link key={item.href} href={item.href}>
-                <button
-                  className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[56px] ${
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  }`}
-                  data-testid={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                >
-                  <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
-                  <span className="text-[10px] font-medium leading-tight">{item.label}</span>
-                </button>
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[56px] ${
+                  isActive ? "text-primary" : "text-muted-foreground"
+                }`}
+                data-testid={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+              >
+                <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
+                <span className="text-[10px] font-medium leading-tight">{item.label}</span>
               </Link>
             );
           })}
@@ -406,23 +408,23 @@ export function MobileNav() {
             <SheetTitle className="text-left">More</SheetTitle>
           </SheetHeader>
           <div className="flex flex-col gap-1">
-            <Link href="/" onClick={() => setMoreOpen(false)}>
-              <button
-                className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/" ? "text-primary font-medium" : ""}`}
-                data-testid="more-link-dashboard"
-              >
-                <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
-                <span className="font-medium">Dashboard</span>
-              </button>
+            <Link
+              href="/"
+              onClick={() => setMoreOpen(false)}
+              className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/" ? "text-primary font-medium" : ""}`}
+              data-testid="more-link-dashboard"
+            >
+              <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
+              <span className="font-medium">Dashboard</span>
             </Link>
-            <Link href="/products" onClick={() => setMoreOpen(false)}>
-              <button
-                className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/products" ? "text-primary font-medium" : ""}`}
-                data-testid="more-link-products"
-              >
-                <Archive className="h-5 w-5 text-muted-foreground" />
-                <span className="font-medium">Products</span>
-              </button>
+            <Link
+              href="/products"
+              onClick={() => setMoreOpen(false)}
+              className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/products" ? "text-primary font-medium" : ""}`}
+              data-testid="more-link-products"
+            >
+              <Archive className="h-5 w-5 text-muted-foreground" />
+              <span className="font-medium">Products</span>
             </Link>
 
             {isAdmin && (
@@ -432,14 +434,15 @@ export function MobileNav() {
                 {ADMIN_ITEMS.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <Link key={item.href} href={item.href} onClick={() => setMoreOpen(false)}>
-                      <button
-                        className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === item.href ? "text-primary font-medium" : ""}`}
-                        data-testid={`more-link-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                      >
-                        <Icon className="h-5 w-5 text-muted-foreground" />
-                        <span className="font-medium">{item.label}</span>
-                      </button>
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setMoreOpen(false)}
+                      className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === item.href ? "text-primary font-medium" : ""}`}
+                      data-testid={`more-link-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
+                    >
+                      <Icon className="h-5 w-5 text-muted-foreground" />
+                      <span className="font-medium">{item.label}</span>
                     </Link>
                   );
                 })}
