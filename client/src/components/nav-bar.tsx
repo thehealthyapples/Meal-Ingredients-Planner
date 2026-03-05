@@ -65,21 +65,15 @@ export function NavBar() {
   return (
     <>
       <header className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur-xl border-b border-border" data-testid="top-nav-bar">
-        <div className="flex h-14 items-center px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto">
-          <Link href="/" className="flex items-center shrink-0" data-testid="link-logo">
+        <div className="flex h-20 items-center px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto">
+          <Link href="/" className="flex items-center flex-1" data-testid="link-logo">
             <img
               src={longLogoUrl}
               alt="The Healthy Apples"
-              className="h-10 w-auto object-contain"
+              className="h-16 w-auto object-contain"
               data-testid="img-brand-logo"
             />
           </Link>
-
-          <div className="flex-1 flex justify-center">
-            <h1 className="text-sm font-semibold text-foreground tracking-tight" data-testid="text-page-title">
-              {pageTitle}
-            </h1>
-          </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <Link href="/analyse-basket">
