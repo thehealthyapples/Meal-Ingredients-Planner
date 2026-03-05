@@ -119,6 +119,9 @@ const KEEP_PLURAL_COMPOUNDS = new Set([
   'mixed seeds',
   'capers',
   'cornflakes',
+  'petits pois',
+  'mange tout',
+  'mangetout',
 ]);
 
 const PLURAL_MAP: Record<string, string> = {
@@ -179,23 +182,25 @@ const DESCRIPTOR_WORDS = new Set([
   'large', 'medium', 'small', 'big', 'fresh', 'frozen', 'dried', 'chopped',
   'diced', 'minced', 'sliced', 'grated', 'shredded', 'peeled', 'crushed',
   'ground', 'whole', 'halved', 'quartered', 'thin', 'thick', 'fine', 'coarse',
-  'ripe', 'raw', 'cooked', 'boneless', 'skinless', 'organic', 'free-range', 'closed', 'cup',
+  'ripe', 'raw', 'cooked', 'uncooked', 'boneless', 'skinless', 'organic', 'free-range',
   'extra', 'virgin', 'unsalted', 'salted', 'plain', 'natural', 'tinned',
   'canned', 'packed', 'loosely', 'firmly', 'roughly', 'finely', 'of',
   'to', 'taste', 'optional', 'garnish', 'serving', 'about', 'approximately',
   'handful', 'generous', 'heaped', 'level', 'rounded', 'total', 'each',
   'warm', 'cold', 'room', 'temperature', 'softened', 'melted', 'beaten',
   'sifted', 'toasted', 'roasted', 'smoked', 'trimmed', 'deseeded',
-  'seeded', 'pitted', 'cored', 'washed', 'drained', 'rinsed',
+  'seeded', 'pitted', 'stoned', 'cored', 'washed', 'drained', 'rinsed',
+  'defrosted', 'thawed',
   'lengthway', 'lengthways', 'lengthwise', 'crosswise', 'crossways',
   'widthwise', 'widthways', 'diagonally',
   ...Array.from(TRAILING_ADJECTIVES),
 ]);
 
 const STRIP_PHRASES = [
+  /\([^)]*\d+[^)]*\)/gi,
   /\bcut\s+into\s+\w+/gi,
-  /\bthumb[- ]?size\b/gi,
-  /\bfinger[- ]?size\b/gi,
+  /\bthumb[- ]?size[d]?\b/gi,
+  /\bfinger[- ]?size[d]?\b/gi,
   /\bto\s+serve\b/gi,
   /\bfor\s+serving\b/gi,
   /\bfor\s+garnish\b/gi,
@@ -203,7 +208,9 @@ const STRIP_PHRASES = [
   /\bzest(?:ed)?\s+(?:and\s+)?(?:juice(?:d)?\s+)?(?:of\s+)?/gi,
   /\bjuice(?:d)?\s+(?:and\s+)?(?:zest(?:ed)?\s+)?(?:of\s+)?/gi,
   /\bin\s+total\b/gi,
+  /\bin\s+(?:brine|spring\s*water|springwater|oil|vinegar|juice|syrup|sauce|alcohol)\b/gi,
   /\babout\b/gi,
+  /\bapprox\.?\b/gi,
   /\bapproximately?\b/gi,
   /\bhandful\s+of\b/gi,
   /\ba\s+handful\b/gi,
@@ -244,6 +251,8 @@ const STRIP_PHRASES = [
   /\s+and\s*$/gi,
   /\s+or\s*$/gi,
   /\bjuiced\b/gi,
+  /\bwith\s+a\b.*$/gi,
+  /\binto\b.*$/gi,
 ];
 
 const INGREDIENT_CATEGORIES: Record<string, string[]> = {
@@ -476,6 +485,10 @@ export function normalizeName(name: string): string {
   cleaned = cleaned.replace(/[,()]/g, ' ');
   cleaned = cleaned.replace(/\d+\/\d+/g, ' ');
   cleaned = cleaned.replace(/\/\d+/g, ' ');
+  // strip Unicode fraction characters that can appear mid-name after parsing
+  cleaned = cleaned.replace(/[\u00BC\u00BD\u00BE\u2153\u2154\u2155\u2156\u2157\u2158\u2159\u215A\u215B\u215C\u215D\u215E]/g, ' ');
+  // strip orphaned unit abbreviations (e.g. "lb" left after slash-notation parsing)
+  cleaned = cleaned.replace(/\b(?:lb|lbs|oz|kg)\b/gi, ' ');
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
 
   const words = cleaned.split(' ').filter(w => !DESCRIPTOR_WORDS.has(w));
