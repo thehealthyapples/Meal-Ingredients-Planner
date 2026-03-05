@@ -67,11 +67,11 @@ export function NavBar() {
       <header className="sticky top-0 z-50 w-full border-b border-border" data-testid="top-nav-bar">
         {/* Full-width logo banner */}
         <div className="relative w-full overflow-hidden bg-white">
-          <Link href="/" data-testid="link-logo" className="block">
+          <Link href="/" data-testid="link-logo" className="flex justify-center items-center py-2">
             <img
               src={longLogoUrl}
               alt="The Healthy Apples"
-              className="w-full h-28 sm:h-36 md:h-44 object-cover object-center block"
+              className="max-h-36 sm:max-h-44 md:max-h-52 w-auto max-w-full object-contain"
               data-testid="img-brand-logo"
             />
           </Link>
