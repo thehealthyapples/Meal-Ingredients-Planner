@@ -12,7 +12,7 @@ import {
   MoreHorizontal, Mail, Archive, Sliders,
 } from "lucide-react";
 import { api } from "@shared/routes";
-import FiveApplesLogo from "@/components/FiveApplesLogo";
+import longLogoUrl from "@assets/hte_healthy_apples_long_logo_1772702298025.png";
 
 const NAV_ITEMS = [
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
@@ -66,11 +66,13 @@ export function NavBar() {
     <>
       <header className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur-xl border-b border-border" data-testid="top-nav-bar">
         <div className="flex h-14 items-center px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto">
-          <Link href="/" className="flex items-center gap-2.5 shrink-0" data-testid="link-logo">
-            <FiveApplesLogo size={20} />
-            <span className="hidden sm:inline font-semibold text-base tracking-tight" data-testid="text-brand">
-              The Healthy Apples
-            </span>
+          <Link href="/" className="flex items-center shrink-0" data-testid="link-logo">
+            <img
+              src={longLogoUrl}
+              alt="The Healthy Apples"
+              className="h-10 w-auto object-contain"
+              data-testid="img-brand-logo"
+            />
           </Link>
 
           <div className="flex-1 flex justify-center">
