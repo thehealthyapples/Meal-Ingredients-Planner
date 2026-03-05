@@ -290,7 +290,7 @@ export function TopBar() {
     <>
       <div className="sticky top-0 z-50 shrink-0" data-testid="top-nav-bar">
         {/* Main bar */}
-        <header className="h-14 w-full bg-card border-b border-border">
+        <header className="h-14 w-full bg-card/85 backdrop-blur-sm border-b border-border">
           {/* Desktop: 3-column grid — search | logo | actions */}
           <div className="hidden md:grid grid-cols-[1fr_auto_1fr] items-center h-full px-4 gap-3">
             <div className="flex items-center max-w-sm w-full">
@@ -382,7 +382,7 @@ export function DesktopSidebar() {
 
   return (
     <aside
-      className={`hidden md:flex flex-col relative flex-shrink-0 bg-card border-r border-border transition-all duration-200 overflow-x-hidden overflow-y-auto ${
+      className={`hidden md:flex flex-col relative flex-shrink-0 bg-card/80 backdrop-blur-sm border-r border-border transition-all duration-200 overflow-x-hidden overflow-y-auto ${
         isCollapsed ? "w-16" : "w-[220px]"
       }`}
       data-testid="desktop-sidebar"

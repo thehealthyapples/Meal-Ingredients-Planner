@@ -42,6 +42,28 @@ export default function OrchardBackdrop() {
     };
   }, []);
 
+  const farTrees: { x: number; by: number }[] = [
+    { x: 155, by: 312 },
+    { x: 300, by: 295 },
+    { x: 460, by: 304 },
+    { x: 650, by: 292 },
+    { x: 840, by: 308 },
+    { x: 1020, by: 296 },
+    { x: 1220, by: 305 },
+  ];
+
+  const leftTrees: { x: number; by: number }[] = [
+    { x: 45,  by: 570 },
+    { x: 110, by: 558 },
+    { x: 175, by: 578 },
+  ];
+
+  const rightTrees: { x: number; by: number }[] = [
+    { x: 1280, by: 562 },
+    { x: 1350, by: 548 },
+    { x: 1415, by: 570 },
+  ];
+
   return (
     <div
       ref={wrapperRef}
@@ -58,129 +80,150 @@ export default function OrchardBackdrop() {
           inset: 0,
           width: "100%",
           height: "100%",
-          opacity: "var(--orchard-opacity, 0.65)",
+          opacity: "var(--orchard-opacity, 0.72)",
         }}
       >
         <defs>
+          {/* Blur filters for organic tree softness */}
+          <filter id="orchBlur4" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="4" />
+          </filter>
+          <filter id="orchBlur7" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="7" />
+          </filter>
+          <filter id="orchBlur12" x="-80%" y="-80%" width="260%" height="260%">
+            <feGaussianBlur stdDeviation="12" />
+          </filter>
+
+          {/* Sky: pale blue-cream top → warm golden horizon → sage lower */}
           <linearGradient id="orchardSky" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="hsl(42,30%,90%)" />
-            <stop offset="55%"  stopColor="hsl(185,18%,82%)" />
-            <stop offset="100%" stopColor="hsl(132,18%,75%)" />
+            <stop offset="0%"   stopColor="hsl(200,22%,93%)" />
+            <stop offset="40%"  stopColor="hsl(48,75%,88%)" />
+            <stop offset="75%"  stopColor="hsl(140,20%,80%)" />
+            <stop offset="100%" stopColor="hsl(130,28%,72%)" />
           </linearGradient>
 
-          <radialGradient id="orchardSunGlow" cx="76%" cy="16%" r="18%" gradientUnits="objectBoundingBox">
-            <stop offset="0%"   stopColor="hsl(42,89%,72%)" stopOpacity="0.55" />
-            <stop offset="50%"  stopColor="hsl(42,89%,72%)" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="hsl(42,89%,72%)" stopOpacity="0" />
+          {/* Sunrise glow: large diffuse golden radial on the left */}
+          <radialGradient id="orchardSunGlow" cx="18%" cy="65%" r="52%" gradientUnits="objectBoundingBox">
+            <stop offset="0%"   stopColor="hsl(50,95%,85%)" stopOpacity="0.80" />
+            <stop offset="35%"  stopColor="hsl(48,88%,82%)" stopOpacity="0.45" />
+            <stop offset="65%"  stopColor="hsl(46,70%,80%)" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="hsl(44,55%,78%)" stopOpacity="0" />
           </radialGradient>
 
-          <radialGradient id="orchardSunDisc" cx="50%" cy="50%" r="50%">
-            <stop offset="0%"   stopColor="hsl(48,95%,80%)" />
-            <stop offset="60%"  stopColor="hsl(42,89%,68%)" />
-            <stop offset="100%" stopColor="hsl(36,80%,58%)" />
-          </radialGradient>
+          {/* Hill gradients */}
+          <linearGradient id="hillFar" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="hsl(140,18%,74%)" />
+            <stop offset="100%" stopColor="hsl(140,14%,65%)" />
+          </linearGradient>
+          <linearGradient id="hillMid" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="hsl(130,28%,63%)" />
+            <stop offset="100%" stopColor="hsl(130,24%,54%)" />
+          </linearGradient>
+          <linearGradient id="hillNearA" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="hsl(125,36%,55%)" />
+            <stop offset="100%" stopColor="hsl(125,32%,46%)" />
+          </linearGradient>
+          <linearGradient id="hillNearB" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="hsl(120,40%,50%)" />
+            <stop offset="100%" stopColor="hsl(118,38%,40%)" />
+          </linearGradient>
+
+          {/* Fog dissolve: bottom of image fades to white mist */}
+          <linearGradient id="orchardFog" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="hsl(0,0%,100%)" stopOpacity="0" />
+            <stop offset="55%"  stopColor="hsl(0,0%,100%)" stopOpacity="0" />
+            <stop offset="80%"  stopColor="hsl(0,0%,100%)" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="hsl(0,0%,100%)" stopOpacity="0.62" />
+          </linearGradient>
         </defs>
 
-        {/* ── SKY ── */}
+        {/* ── 1. SKY ── */}
         <rect width="1440" height="810" fill="url(#orchardSky)" />
 
-        {/* ── SUN GLOW ── */}
-        <ellipse cx="1096" cy="148" rx="220" ry="200" fill="url(#orchardSunGlow)" />
+        {/* ── 2. SUNRISE GLOW (large diffuse, left-centre) ── */}
+        <ellipse cx="260" cy="528" rx="520" ry="440" fill="url(#orchardSunGlow)" />
 
-        {/* ── SUN DISC ── */}
-        <circle cx="1096" cy="148" r="58" fill="url(#orchardSunDisc)" />
+        {/* ── 3. SUN DISC (soft bloomy circle near left horizon) ── */}
+        <circle cx="248" cy="484" r="42" fill="hsl(52,100%,90%)" filter="url(#orchBlur12)" opacity="0.92" />
 
-        {/* ── SUN RAYS ── */}
-        {[0, 35, 70, 105, 140, 175, 210, 245, 280, 315].map((deg, i) => {
-          const rad = (deg * Math.PI) / 180;
-          const x1 = 1096 + Math.cos(rad) * 68;
-          const y1 = 148 + Math.sin(rad) * 68;
-          const x2 = 1096 + Math.cos(rad) * (i % 2 === 0 ? 100 : 88);
-          const y2 = 148 + Math.sin(rad) * (i % 2 === 0 ? 100 : 88);
-          return (
-            <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2}
-              stroke="hsl(48,95%,82%)" strokeWidth="3" strokeLinecap="round" opacity="0.55" />
-          );
-        })}
-
-        {/* ── FAR HILLS ── */}
-        <path
-          d="M0 400 Q180 310 360 350 Q540 390 720 320 Q900 250 1080 300 Q1260 350 1440 290 L1440 810 L0 810Z"
-          fill="hsl(132,12%,67%)"
-        />
-        <path
-          d="M0 450 Q200 390 400 420 Q600 450 800 400 Q1000 350 1200 390 Q1350 420 1440 395 L1440 810 L0 810Z"
-          fill="hsl(132,15%,59%)"
-        />
-
-        {/* ── FAR TREES (slow parallax) ── */}
+        {/* ── 4. FAR HILL ── */}
         <g style={{ transform: "translateY(var(--orchard-far-y, 0px))" }}>
-          {([55, 190, 350, 530, 700, 875, 1065, 1250, 1395] as const).map((x, i) => {
-            const cx = x;
-            const baseY = 432 + (i % 3) * 4;
-            const ry = 30 + (i % 3) * 4;
-            const rx = 26 + (i % 2) * 3;
-            return (
-              <g key={x}>
-                <rect x={cx - 3} y={baseY} width={6} height={26} rx={2}
-                  fill="hsl(28,35%,38%)" opacity="0.85" />
-                <ellipse cx={cx} cy={baseY - ry * 0.7} rx={rx} ry={ry}
-                  fill="hsl(132,20%,40%)" opacity="0.80" />
-                <circle cx={cx - 10} cy={baseY - ry * 0.9} r={4}
-                  fill="hsl(5,65%,50%)" opacity="0.75" />
-                <circle cx={cx + 9}  cy={baseY - ry * 1.05} r={3.5}
-                  fill="hsl(42,89%,55%)" opacity="0.75" />
-              </g>
-            );
-          })}
-        </g>
+          <path
+            d="M0 390 C220 300 440 340 660 310 C880 280 1100 320 1300 300 C1380 292 1420 308 1440 300 L1440 810 L0 810Z"
+            fill="url(#hillFar)"
+          />
 
-        {/* ── MID GROUND ── */}
-        <path
-          d="M0 530 Q180 505 360 520 Q540 535 720 508 Q900 482 1100 518 Q1280 545 1440 518 L1440 810 L0 810Z"
-          fill="hsl(132,22%,52%)"
-        />
-
-        {/* ── NEAR TREES (near parallax) ── */}
-        <g style={{ transform: "translateY(var(--orchard-near-y, 0px))" }}>
-          {([
-            { x: 88,   baseY: 598, rx: 60, ry: 70 },
-            { x: 268,  baseY: 602, rx: 66, ry: 76 },
-            { x: 458,  baseY: 596, rx: 58, ry: 68 },
-            { x: 648,  baseY: 604, rx: 70, ry: 80 },
-            { x: 838,  baseY: 600, rx: 63, ry: 73 },
-            { x: 1026, baseY: 602, rx: 67, ry: 77 },
-            { x: 1215, baseY: 596, rx: 61, ry: 71 },
-            { x: 1378, baseY: 594, rx: 55, ry: 64 },
-          ]).map(({ x, baseY, rx, ry }) => (
-            <g key={x}>
-              <rect x={x - 7} y={baseY} width={14} height={88} rx={4}
-                fill="hsl(28,38%,38%)" />
-              <ellipse cx={x} cy={baseY - ry * 0.72} rx={rx} ry={ry}
-                fill="hsl(132,22%,33%)" />
-              <circle cx={x - 22} cy={baseY - ry * 0.85} r={9}
-                fill="hsl(5,68%,50%)" opacity="0.88" />
-              <circle cx={x + 18} cy={baseY - ry * 0.98} r={8.5}
-                fill="hsl(42,89%,53%)" opacity="0.88" />
-              <circle cx={x - 5}  cy={baseY - ry * 0.60} r={9}
-                fill="hsl(5,68%,50%)" opacity="0.88" />
-              <circle cx={x + 28} cy={baseY - ry * 0.72} r={7.5}
-                fill="hsl(5,68%,50%)" opacity="0.80" />
+          {/* ── 5. FAR TREE SILHOUETTES (blurred organic blobs on far hill crest) ── */}
+          {farTrees.map(({ x, by }) => (
+            <g key={x} filter="url(#orchBlur4)" fill="hsl(130,22%,38%)" opacity="0.72">
+              <ellipse cx={x}      cy={by - 46} rx={32} ry={38} />
+              <ellipse cx={x - 20} cy={by - 30} rx={22} ry={26} />
+              <ellipse cx={x + 18} cy={by - 24} rx={19} ry={23} />
+              <ellipse cx={x + 4}  cy={by - 62} rx={18} ry={22} />
+              <rect x={x - 4} y={by - 8} width={8} height={22} rx={2} />
             </g>
           ))}
         </g>
 
-        {/* ── NEAR MEADOW ── */}
+        {/* ── 6. MID HILL ── */}
         <path
-          d="M0 685 Q360 660 720 674 Q1080 688 1440 665 L1440 810 L0 810Z"
-          fill="hsl(118,25%,72%)"
+          d="M0 460 C180 420 380 445 580 428 C780 412 980 448 1180 432 C1340 420 1400 438 1440 432 L1440 810 L0 810Z"
+          fill="url(#hillMid)"
         />
 
-        {/* ── GRASS SHIMMER (subtle highlight on meadow edge) ── */}
+        {/* ── 7. NEAR HILL A ── */}
         <path
-          d="M0 685 Q360 660 720 674 Q1080 688 1440 665"
-          stroke="hsl(118,30%,82%)" strokeWidth="3" fill="none" opacity="0.45"
+          d="M0 560 C160 530 340 548 560 535 C780 522 1000 545 1200 532 C1340 522 1400 538 1440 532 L1440 810 L0 810Z"
+          fill="url(#hillNearA)"
         />
+
+        {/* ── 8. WINDING PATH ── */}
+        <g style={{ transform: "translateY(var(--orchard-near-y, 0px))" }}>
+          {/* Shadow stroke */}
+          <path
+            d="M720 810 C660 730 560 668 430 608 C320 554 268 510 252 484"
+            stroke="hsl(44,28%,60%)" strokeWidth="34" fill="none" opacity="0.28"
+            strokeLinecap="round"
+          />
+          {/* Highlight stroke */}
+          <path
+            d="M720 810 C660 730 560 668 430 608 C320 554 268 510 252 484"
+            stroke="hsl(44,42%,86%)" strokeWidth="20" fill="none" opacity="0.50"
+            strokeLinecap="round"
+          />
+
+          {/* ── 9. LEFT TREE CLUSTER (near side) ── */}
+          {leftTrees.map(({ x, by }) => (
+            <g key={x} filter="url(#orchBlur7)" fill="hsl(128,28%,33%)" opacity="0.80">
+              <ellipse cx={x}      cy={by - 60} rx={40} ry={50} />
+              <ellipse cx={x - 26} cy={by - 42} rx={28} ry={34} />
+              <ellipse cx={x + 22} cy={by - 36} rx={24} ry={30} />
+              <ellipse cx={x - 8}  cy={by - 80} rx={22} ry={28} />
+              <rect x={x - 5} y={by - 10} width={10} height={24} rx={3} />
+            </g>
+          ))}
+
+          {/* ── 10. RIGHT TREE CLUSTER (near side) ── */}
+          {rightTrees.map(({ x, by }) => (
+            <g key={x} filter="url(#orchBlur7)" fill="hsl(128,28%,33%)" opacity="0.80">
+              <ellipse cx={x}      cy={by - 58} rx={38} ry={48} />
+              <ellipse cx={x - 24} cy={by - 40} rx={26} ry={32} />
+              <ellipse cx={x + 20} cy={by - 34} rx={22} ry={28} />
+              <ellipse cx={x + 6}  cy={by - 76} rx={20} ry={26} />
+              <rect x={x - 5} y={by - 10} width={10} height={22} rx={3} />
+            </g>
+          ))}
+        </g>
+
+        {/* ── 11. NEAR HILL B (foreground) ── */}
+        <path
+          d="M0 648 C200 622 440 638 720 628 C980 618 1220 635 1440 624 L1440 810 L0 810Z"
+          fill="url(#hillNearB)"
+        />
+
+        {/* ── 12. FOG DISSOLVE (bottom mist) ── */}
+        <rect width="1440" height="810" fill="url(#orchardFog)" />
       </svg>
     </div>
   );
