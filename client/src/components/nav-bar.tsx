@@ -64,21 +64,22 @@ export function NavBar() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full bg-card/95 backdrop-blur-xl border-b border-border" data-testid="top-nav-bar">
-        <div className="flex h-20 items-center px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto">
-          <Link href="/" className="flex items-center flex-1" data-testid="link-logo">
+      <header className="sticky top-0 z-50 w-full border-b border-border" data-testid="top-nav-bar">
+        {/* Full-width logo banner */}
+        <div className="relative w-full overflow-hidden bg-white">
+          <Link href="/" data-testid="link-logo" className="block">
             <img
               src={longLogoUrl}
               alt="The Healthy Apples"
-              className="h-16 w-auto object-contain"
+              className="w-full h-32 sm:h-40 md:h-48 object-cover object-center"
               data-testid="img-brand-logo"
             />
           </Link>
-
-          <div className="flex items-center gap-2 shrink-0">
+          {/* User controls overlaid on top-right of banner */}
+          <div className="absolute top-3 right-4 flex items-center gap-2">
             <Link href="/analyse-basket">
-              <Button variant="ghost" size="icon" className="relative" data-testid="button-basket-top">
-                <ShoppingCart className="h-4.5 w-4.5" />
+              <Button variant="ghost" size="icon" className="relative bg-white/70 hover:bg-white/90 backdrop-blur-sm" data-testid="button-basket-top">
+                <ShoppingCart className="h-4 w-4" />
                 {itemCount > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
                     {itemCount}
@@ -86,28 +87,27 @@ export function NavBar() {
                 )}
               </Button>
             </Link>
-            <div className="flex items-center gap-2">
-              <Link href="/profile" onClick={() => sessionStorage.setItem("profileReturnPath", window.location.pathname + window.location.search)}>
-                <Avatar className="h-8 w-8 cursor-pointer" data-testid="avatar-user">
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
-                    {userInitial}
-                  </AvatarFallback>
-                </Avatar>
-              </Link>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => logout()}
-                title="Logout"
-                data-testid="button-logout"
-              >
-                <LogOut className="h-4 w-4 text-muted-foreground" />
-              </Button>
-            </div>
+            <Link href="/profile" onClick={() => sessionStorage.setItem("profileReturnPath", window.location.pathname + window.location.search)}>
+              <Avatar className="h-8 w-8 cursor-pointer ring-2 ring-white/60" data-testid="avatar-user">
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+                  {userInitial}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => logout()}
+              title="Logout"
+              className="bg-white/70 hover:bg-white/90 backdrop-blur-sm"
+              data-testid="button-logout"
+            >
+              <LogOut className="h-4 w-4 text-muted-foreground" />
+            </Button>
           </div>
         </div>
 
-        <nav className="hidden md:flex items-center gap-1 px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto pb-2" data-testid="desktop-nav">
+        <nav className="hidden md:flex items-center gap-1 px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto pt-1 pb-2 bg-card/95 backdrop-blur-xl" data-testid="desktop-nav">
           {NAV_ITEMS.map((item) => {
             const isActive = location === item.href;
             const Icon = item.icon;
