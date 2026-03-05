@@ -1,0 +1,268 @@
+Phase 0 — Identify current styling architecture (no changes yet)
+
+Locate where global styles live (e.g. tailwind.config, globals.css, theme.css, shadcn/ui theme, CSS variables, etc.).
+
+Identify the main layout component(s) that wrap pages (e.g. AppLayout, DashboardLayout, Shell, etc.).
+
+Identify navigation components for:
+
+top nav / tabs
+
+sidebar (if any)
+
+mobile nav (if present)
+
+Then proceed.
+
+Phase 1 — Introduce design tokens (single source of truth)
+
+Create a theme token file and/or CSS variables (prefer CSS variables in globals.css or a theme file). Add the “Calm Orchard” token set:
+
+Color tokens
+:root {
+  --bg-main: #F6F3EC;          /* warm cream */
+  --bg-soft: #EEF4ED;          /* light sage wash */
+  --card-bg: #FFFFFF;
+  --border-soft: #E6E0D6;      /* warm taupe border */
+  --text: #1F2A1F;             /* deep green-black */
+  --muted-text: #556055;
+
+  --primary: #5F7F66;          /* calm sage */
+  --primary-strong: #4E8F5C;   /* slightly stronger */
+  --accent-apple: #8FBF74;
+  --accent-sun: #F4B942;
+
+  --row-alt: #FAF8F3;
+  --focus: rgba(95, 127, 102, 0.35);
+}
+Radius + shadows
+
+Prefer borders over heavy shadows
+
+Use consistent rounding:
+
+--radius-card: 12px
+
+--radius-pill: 999px
+
+Spacing scale (lightweight)
+
+Standardize spacing to: 4, 8, 12, 16, 24, 32.
+
+Acceptance criteria
+
+No pages visually break.
+
+Tokens are defined once and used by new styles going forward.
+
+Phase 2 — Typography system (DM Sans + Inter)
+
+Add fonts via Google Fonts (or existing setup):
+
+Headings: DM Sans
+
+Body/UI/data: Inter
+
+Typography hierarchy
+
+Implement as CSS utility classes or Tailwind theme:
+
+Page Title (H1)
+
+DM Sans, 600, 32px, lh 38px, letter -0.02em
+
+Section Title (H2)
+
+DM Sans, 600, 22px, lh 28px
+
+Card Title (H3)
+
+DM Sans, 500, 16px, lh 22px
+
+Body
+
+Inter, 400, 14px, lh 20px
+
+Table
+
+Inter, 400, 13px, lh 18px
+
+Numeric emphasis (prices)
+
+Inter, 600, 18px
+
+Acceptance criteria
+
+Typography applied consistently across all pages.
+
+Tables remain highly readable.
+
+Phase 3 — Layout restructure (reduce clutter, preserve workspace)
+3A) Consolidate navigation: remove duplicated nav rows
+
+Goal: avoid having navigation in two places.
+
+Desktop / Tablet
+
+Implement a compact sidebar with icons + labels.
+
+Sidebar should support:
+
+Collapsed mode (approx 64px wide) with icons only
+
+Expanded mode (approx 220px) on toggle (not hover-only)
+
+Replace top tab navigation with the sidebar as the single primary nav.
+
+Top bar
+
+Create a slim top bar (56px height):
+
+Left: small square logo + app name (optional in expanded)
+
+Center: search input
+
+Right: notifications, basket icon with count, profile
+
+Mobile
+
+Keep existing mobile bottom nav unchanged if already present.
+
+Ensure sidebar becomes a drawer on mobile.
+
+Acceptance criteria
+
+There is only ONE primary navigation system on desktop/tablet.
+
+Planner and Basket pages gain horizontal space vs the previous concept.
+
+Phase 4 — Component “warmth” restyle (cards, tables, controls)
+Cards
+
+Use warm borders rather than heavy shadows:
+
+border: 1px solid var(--border-soft)
+
+border-radius: 12px
+
+Add subtle hover:
+
+background tint --bg-soft
+
+Tables
+
+Alternating row tint:
+
+odd: white
+
+even: --row-alt
+
+Row hover: --bg-soft
+
+Buttons
+
+Primary:
+
+bg --primary, text white, radius 10–12px, clear hover
+
+Secondary:
+
+transparent background, border --border-soft
+
+Focus states:
+
+consistent visible outline using --focus
+
+Phase 5 — Page-by-page application (don’t change logic)
+
+Apply the new layout + styling to these pages, without changing functionality:
+
+Dashboard
+
+Replace any banner image with a CSS gradient hero strip:
+
+linear-gradient(180deg, #DCE8DD 0%, var(--bg-main) 100%)
+
+Add a gentle wave divider at bottom (SVG or CSS mask).
+
+Keep all dashboard cards, just restyle.
+
+Planner
+
+Prioritize workspace:
+
+Ensure planner grid uses max width
+
+Reduce padding around container
+
+Make sidebar collapsible so planner can be nearly full width
+
+Use typography + clean borders
+
+Use apple rating icons inline if already supported (no scoring logic change)
+
+Basket (Analyse Basket)
+
+Convert “filter buttons” into compact controls:
+
+Store dropdown
+
+Quality segmented or dropdown
+
+Units dropdown
+
+Make “Cheapest” visually clear with a soft highlight:
+
+background --bg-soft
+
+small badge “Cheapest”
+
+Keep existing actions: Match Products, Export, etc.
+
+My Meals
+
+Apply typography + card style + table style
+
+Keep existing CRUD and filters
+
+Products / Pantry / Admin / THA Picks
+
+Apply theme consistently
+
+Do not change workflows
+
+Phase 6 — Responsiveness & QA
+
+Breakpoints:
+
+Desktop: ≥ 1200px
+
+Tablet: 768–1199px (sidebar collapsed by default)
+
+Mobile: < 768px (sidebar becomes drawer; keep bottom nav)
+
+QA checklist:
+
+No broken routes
+
+Basket totals/export unchanged
+
+Planner interactions unchanged
+
+Keyboard navigation works
+
+Focus rings visible
+
+Contrast acceptable
+
+Deliverables
+
+A theme token file / CSS variables implemented and used.
+
+DM Sans + Inter installed and applied with the defined hierarchy.
+
+Single primary navigation system on desktop/tablet (sidebar + slim top bar).
+
+Updated component styles across all pages.
+
+Screenshot comparison set for: Dashboard, Planner, Analyse Basket, My Meals.
