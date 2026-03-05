@@ -71,7 +71,7 @@ export function NavBar() {
             <img
               src={longLogoUrl}
               alt="The Healthy Apples"
-              className="w-full h-32 sm:h-40 md:h-48 object-cover object-center"
+              className="w-full h-auto object-fill block"
               data-testid="img-brand-logo"
             />
           </Link>
