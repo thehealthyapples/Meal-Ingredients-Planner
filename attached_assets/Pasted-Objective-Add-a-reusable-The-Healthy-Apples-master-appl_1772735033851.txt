@@ -1,0 +1,141 @@
+Objective
+
+Add a reusable The Healthy Apples master apple icon system to the project.
+
+The icon should be used for:
+
+the THA logo
+
+rating apples (1–5)
+
+future UI icon usage
+
+The SVG file itself will be uploaded manually by the developer.
+
+The implementation must be lightweight, reusable, and compatible with the existing React / Tailwind UI.
+
+Tasks
+T001 — Create icon asset folder
+
+Create folder:
+
+client/src/assets/icons
+
+The developer will manually upload the master apple icon file here:
+
+tha-apple.svg
+
+Do not generate or overwrite this file.
+
+T002 — Create reusable Apple Icon component
+
+Create file:
+
+client/src/components/icons/ThaAppleIcon.tsx
+
+Add the following component:
+
+import React from "react";
+
+type Props = {
+  size?: number;
+  className?: string;
+};
+
+export default function ThaAppleIcon({ size = 24, className = "" }: Props) {
+  return (
+    <img
+      src="/src/assets/icons/tha-apple.svg"
+      width={size}
+      height={size}
+      className={className}
+      alt="Healthy Apple"
+      draggable="false"
+    />
+  );
+}
+
+Purpose:
+
+renders the master apple icon
+
+supports size overrides
+
+works anywhere in the UI
+
+T003 — Create Apple Rating component
+
+Create file:
+
+client/src/components/ui/apple-rating.tsx
+
+Add component:
+
+import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
+
+type Props = {
+  rating: number;
+  size?: number;
+};
+
+export default function AppleRating({ rating, size = 20 }: Props) {
+  return (
+    <div className="flex items-center gap-1">
+      {Array.from({ length: rating }).map((_, i) => (
+        <ThaAppleIcon key={i} size={size} />
+      ))}
+    </div>
+  );
+}
+
+This component will render:
+
+🍏
+🍏🍏
+🍏🍏🍏
+🍏🍏🍏🍏
+🍏🍏🍏🍏🍏
+
+using the master icon.
+
+T004 — Example usage
+
+Use inside any page or component.
+
+Example:
+
+import AppleRating from "@/components/ui/apple-rating";
+
+<AppleRating rating={4} />
+
+or
+
+import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
+
+<ThaAppleIcon size={40} />
+Expected Result
+
+The UI now supports:
+
+Master icon
+<ThaAppleIcon />
+Ratings
+<AppleRating rating={1} />
+<AppleRating rating={2} />
+<AppleRating rating={3} />
+<AppleRating rating={4} />
+<AppleRating rating={5} />
+
+All using the same THA apple icon uploaded manually.
+
+Final Folder Structure
+client/src
+
+assets/icons
+   tha-apple.svg   (uploaded manually)
+
+components/icons
+   ThaAppleIcon.tsx
+
+components/ui
+   apple-rating.tsx
