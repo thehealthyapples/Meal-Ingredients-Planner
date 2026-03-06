@@ -23,6 +23,7 @@ import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreeze
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
 import { sanitizeUser } from "./lib/sanitizeUser";
 import { isAdmin, hasPremiumAccess, assertAdmin } from "./lib/access";
+import { getHouseholdForUser } from "./lib/household";
 
 function ingredientMatchesMeal(consolidatedName: string, mealIngredients: string[]): boolean {
   const target = consolidatedName.toLowerCase().trim();
@@ -3599,7 +3600,8 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const week = await storage.getPlannerWeek(Number(req.params.weekId));
-      if (!week || week.userId !== req.user!.id) {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) {
         return res.status(404).json({ message: "Week not found" });
       }
       const days = await storage.getPlannerDays(week.id);
@@ -3614,7 +3616,8 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const week = await storage.getPlannerWeek(Number(req.params.weekId));
-      if (!week || week.userId !== req.user!.id) {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) {
         return res.status(404).json({ message: "Week not found" });
       }
       const { updatePlannerWeekSchema } = await import("@shared/schema");
@@ -3639,7 +3642,8 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Day not found" });
       }
       const week = await storage.getPlannerWeek(day.weekId);
-      if (!week || week.userId !== req.user!.id) {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) {
         return res.status(404).json({ message: "Day not found" });
       }
       const { upsertPlannerEntrySchema } = await import("@shared/schema");
@@ -3679,7 +3683,8 @@ export async function registerRoutes(
         return res.status(404).json({ message: "Day not found" });
       }
       const week = await storage.getPlannerWeek(day.weekId);
-      if (!week || week.userId !== req.user!.id) {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) {
         return res.status(404).json({ message: "Day not found" });
       }
       const entries = await storage.getPlannerEntriesForDay(day.id);
@@ -3696,7 +3701,8 @@ export async function registerRoutes(
       const day = await storage.getPlannerDay(Number(req.params.dayId));
       if (!day) return res.status(404).json({ message: "Day not found" });
       const week = await storage.getPlannerWeek(day.weekId);
-      if (!week || week.userId !== req.user!.id) return res.status(404).json({ message: "Day not found" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Day not found" });
 
       const bodySchema = z.object({
         mealSlot: z.enum(["breakfast", "lunch", "dinner", "snacks"]),
@@ -3741,7 +3747,8 @@ export async function registerRoutes(
       const day = await storage.getPlannerDay(entry.dayId);
       if (!day) return res.status(404).json({ message: "Entry not found" });
       const week = await storage.getPlannerWeek(day.weekId);
-      if (!week || week.userId !== req.user!.id) return res.status(404).json({ message: "Entry not found" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Entry not found" });
       await storage.deletePlannerEntry(entryId);
       res.json({ success: true });
     } catch (err) {
@@ -3759,7 +3766,8 @@ export async function registerRoutes(
       const day = await storage.getPlannerDay(entry.dayId);
       if (!day) return res.status(404).json({ message: "Entry not found" });
       const week = await storage.getPlannerWeek(day.weekId);
-      if (!week || week.userId !== req.user!.id) return res.status(404).json({ message: "Entry not found" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Entry not found" });
       const { position } = z.object({ position: z.number().int() }).parse(req.body);
       const updated = await storage.updatePlannerEntryPosition(entryId, position);
       res.json(updated);
@@ -4191,7 +4199,12 @@ export async function registerRoutes(
   app.patch("/api/freezer/:id/use-portion", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const result = await storage.useFreezerMealPortion(parseInt(req.params.id));
+      const id = parseInt(req.params.id);
+      const existing = await storage.getFreezerMeal(id);
+      if (!existing) return res.status(404).json({ message: "Freezer meal not found or empty" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (existing.householdId !== householdId) return res.status(403).json({ message: "Access denied" });
+      const result = await storage.useFreezerMealPortion(id);
       if (!result) return res.status(404).json({ message: "Freezer meal not found or empty" });
       res.json(result);
     } catch (err) {
@@ -4203,8 +4216,13 @@ export async function registerRoutes(
   app.patch("/api/freezer/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
+      const id = parseInt(req.params.id);
+      const existing = await storage.getFreezerMeal(id);
+      if (!existing) return res.status(404).json({ message: "Freezer meal not found" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (existing.householdId !== householdId) return res.status(403).json({ message: "Access denied" });
       const { remainingPortions } = req.body;
-      const result = await storage.updateFreezerMealPortions(parseInt(req.params.id), remainingPortions);
+      const result = await storage.updateFreezerMealPortions(id, remainingPortions);
       if (!result) return res.status(404).json({ message: "Freezer meal not found" });
       res.json(result);
     } catch (err) {
@@ -4216,7 +4234,12 @@ export async function registerRoutes(
   app.delete("/api/freezer/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      await storage.deleteFreezerMeal(parseInt(req.params.id));
+      const id = parseInt(req.params.id);
+      const existing = await storage.getFreezerMeal(id);
+      if (!existing) return res.status(404).json({ message: "Freezer meal not found" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (existing.householdId !== householdId) return res.status(403).json({ message: "Access denied" });
+      await storage.deleteFreezerMeal(id);
       res.json({ success: true });
     } catch (err) {
       console.error("Error deleting freezer meal:", err);

@@ -2,6 +2,7 @@ import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, Shoppin
 import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
 import { eq, and, ilike, sql, inArray, isNull, isNotNull } from "drizzle-orm";
+import { getHouseholdForUser } from "./lib/household";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -347,19 +348,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getShoppingListItems(userId: number): Promise<ShoppingListItem[]> {
-    return await db.select().from(shoppingList).where(eq(shoppingList.userId, userId));
+    const householdId = await getHouseholdForUser(userId);
+    return await db.select().from(shoppingList).where(eq(shoppingList.householdId, householdId));
   }
 
   async addShoppingListItem(userId: number, item: InsertShoppingListItem): Promise<ShoppingListItem> {
-    const [result] = await db.insert(shoppingList).values({ ...item, userId }).returning();
+    const householdId = await getHouseholdForUser(userId);
+    const [result] = await db.insert(shoppingList).values({ ...item, userId, householdId }).returning();
     return result;
   }
 
   async addOrConsolidateShoppingListItem(userId: number, item: InsertShoppingListItem): Promise<ShoppingListItem> {
+    const householdId = await getHouseholdForUser(userId);
     if (item.normalizedName && item.unit) {
       const existing = await db.select().from(shoppingList).where(
         and(
-          eq(shoppingList.userId, userId),
+          eq(shoppingList.householdId, householdId),
           eq(shoppingList.normalizedName, item.normalizedName),
           eq(shoppingList.unit, item.unit)
         )
@@ -377,7 +381,7 @@ export class DatabaseStorage implements IStorage {
         return result;
       }
     }
-    const [result] = await db.insert(shoppingList).values({ ...item, userId }).returning();
+    const [result] = await db.insert(shoppingList).values({ ...item, userId, householdId }).returning();
     return result;
   }
 
@@ -398,9 +402,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async clearShoppingList(userId: number): Promise<void> {
+    const householdId = await getHouseholdForUser(userId);
     await this.clearAllIngredientSourcesForUser(userId);
     await this.clearAllProductMatchesForUser(userId);
-    await db.delete(shoppingList).where(eq(shoppingList.userId, userId));
+    await db.delete(shoppingList).where(eq(shoppingList.householdId, householdId));
   }
 
   async getMealPlans(userId: number): Promise<MealPlan[]> {
@@ -507,7 +512,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async clearAllProductMatchesForUser(userId: number): Promise<void> {
-    const items = await db.select().from(shoppingList).where(eq(shoppingList.userId, userId));
+    const householdId = await getHouseholdForUser(userId);
+    const items = await db.select().from(shoppingList).where(eq(shoppingList.householdId, householdId));
     for (const item of items) {
       await db.delete(productMatches).where(eq(productMatches.shoppingListItemId, item.id));
     }
@@ -556,7 +562,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async clearAllIngredientSourcesForUser(userId: number): Promise<void> {
-    const items = await db.select().from(shoppingList).where(eq(shoppingList.userId, userId));
+    const householdId = await getHouseholdForUser(userId);
+    const items = await db.select().from(shoppingList).where(eq(shoppingList.householdId, householdId));
     for (const item of items) {
       await db.delete(ingredientSources).where(eq(ingredientSources.shoppingListItemId, item.id));
     }
@@ -759,7 +766,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPlannerWeeks(userId: number): Promise<PlannerWeek[]> {
-    return await db.select().from(plannerWeeks).where(eq(plannerWeeks.userId, userId)).orderBy(plannerWeeks.weekNumber);
+    const householdId = await getHouseholdForUser(userId);
+    return await db.select().from(plannerWeeks).where(eq(plannerWeeks.householdId, householdId)).orderBy(plannerWeeks.weekNumber);
   }
 
   async getPlannerWeek(id: number): Promise<PlannerWeek | undefined> {
@@ -768,7 +776,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createPlannerWeeks(userId: number): Promise<PlannerWeek[]> {
-    const existing = await this.getPlannerWeeks(userId);
+    const householdId = await getHouseholdForUser(userId);
+    const existing = await db.select().from(plannerWeeks).where(eq(plannerWeeks.householdId, householdId)).orderBy(plannerWeeks.weekNumber);
     if (existing.length > 0) return existing;
 
     try {
@@ -777,6 +786,7 @@ export class DatabaseStorage implements IStorage {
         for (let w = 1; w <= 6; w++) {
           const [week] = await tx.insert(plannerWeeks).values({
             userId,
+            householdId,
             weekNumber: w,
             weekName: `Week ${w}`,
           }).returning();
@@ -792,7 +802,7 @@ export class DatabaseStorage implements IStorage {
       return weeks;
     } catch (err: any) {
       if (err?.code === '23505') {
-        const retried = await this.getPlannerWeeks(userId);
+        const retried = await db.select().from(plannerWeeks).where(eq(plannerWeeks.householdId, householdId)).orderBy(plannerWeeks.weekNumber);
         if (retried.length > 0) return retried;
       }
       throw err;
@@ -805,11 +815,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deletePlannerWeeks(userId: number): Promise<void> {
-    const userWeeks = await db.select().from(plannerWeeks).where(eq(plannerWeeks.userId, userId));
-    for (const week of userWeeks) {
+    const householdId = await getHouseholdForUser(userId);
+    const hhWeeks = await db.select().from(plannerWeeks).where(eq(plannerWeeks.householdId, householdId));
+    for (const week of hhWeeks) {
       await db.delete(plannerDays).where(eq(plannerDays.weekId, week.id));
     }
-    await db.delete(plannerWeeks).where(eq(plannerWeeks.userId, userId));
+    await db.delete(plannerWeeks).where(eq(plannerWeeks.householdId, householdId));
   }
 
   async getPlannerDays(weekId: number): Promise<PlannerDay[]> {
@@ -984,8 +995,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFreezerMeals(userId: number): Promise<FreezerMeal[]> {
+    const householdId = await getHouseholdForUser(userId);
     return await db.select().from(freezerMeals)
-      .where(eq(freezerMeals.userId, userId))
+      .where(eq(freezerMeals.householdId, householdId))
       .orderBy(sql`${freezerMeals.frozenDate} DESC`);
   }
 
@@ -995,12 +1007,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getFreezerMealsByMealId(userId: number, mealId: number): Promise<FreezerMeal[]> {
+    const householdId = await getHouseholdForUser(userId);
     return await db.select().from(freezerMeals)
-      .where(and(eq(freezerMeals.userId, userId), eq(freezerMeals.mealId, mealId)));
+      .where(and(eq(freezerMeals.householdId, householdId), eq(freezerMeals.mealId, mealId)));
   }
 
   async addFreezerMeal(userId: number, data: InsertFreezerMeal): Promise<FreezerMeal> {
-    const [result] = await db.insert(freezerMeals).values({ ...data, userId }).returning();
+    const householdId = await getHouseholdForUser(userId);
+    const [result] = await db.insert(freezerMeals).values({ ...data, userId, householdId }).returning();
     return result;
   }
 
@@ -1553,19 +1567,22 @@ export class DatabaseStorage implements IStorage {
 
   // ── Pantry Staples ──────────────────────────────────────────────────────────
   async getPantryItems(userId: number): Promise<UserPantryItem[]> {
+    const householdId = await getHouseholdForUser(userId);
     return db
       .select()
       .from(userPantryItems)
-      .where(and(eq(userPantryItems.userId, userId), eq(userPantryItems.isDeleted, false)))
+      .where(and(eq(userPantryItems.householdId, householdId), eq(userPantryItems.isDeleted, false)))
       .orderBy(userPantryItems.sortOrder, userPantryItems.createdAt);
   }
 
   async addPantryItem(userId: number, ingredient: string, category: string, notes?: string, displayName?: string, isDefault?: boolean): Promise<UserPantryItem> {
+    const householdId = await getHouseholdForUser(userId);
     const ingredientKey = normalizeIngredientKey(ingredient);
     const [item] = await db
       .insert(userPantryItems)
       .values({
         userId,
+        householdId,
         ingredientKey,
         displayName: displayName ?? ingredient,
         category,
@@ -1578,10 +1595,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deletePantryItem(userId: number, id: number): Promise<void> {
+    const householdId = await getHouseholdForUser(userId);
     const [existing] = await db
       .select()
       .from(userPantryItems)
-      .where(and(eq(userPantryItems.id, id), eq(userPantryItems.userId, userId)))
+      .where(and(eq(userPantryItems.id, id), eq(userPantryItems.householdId, householdId)))
       .limit(1);
     if (!existing) return;
     if (existing.isDefault) {
@@ -1727,25 +1745,28 @@ export class DatabaseStorage implements IStorage {
 
   // ── Shopping List Extras ──────────────────────────────────────────────────
   async getShoppingListExtras(userId: number): Promise<ShoppingListExtra[]> {
+    const householdId = await getHouseholdForUser(userId);
     return db
       .select()
       .from(shoppingListExtras)
-      .where(eq(shoppingListExtras.userId, userId))
+      .where(eq(shoppingListExtras.householdId, householdId))
       .orderBy(shoppingListExtras.createdAt);
   }
 
   async addShoppingListExtra(userId: number, name: string, category = "household"): Promise<ShoppingListExtra> {
+    const householdId = await getHouseholdForUser(userId);
     const [item] = await db
       .insert(shoppingListExtras)
-      .values({ userId, name, category })
+      .values({ userId, householdId, name, category })
       .returning();
     return item;
   }
 
   async deleteShoppingListExtra(userId: number, id: number): Promise<void> {
+    const householdId = await getHouseholdForUser(userId);
     await db
       .delete(shoppingListExtras)
-      .where(and(eq(shoppingListExtras.id, id), eq(shoppingListExtras.userId, userId)));
+      .where(and(eq(shoppingListExtras.id, id), eq(shoppingListExtras.householdId, householdId)));
   }
 
   // ── Meal Pairings ─────────────────────────────────────────────────────────
