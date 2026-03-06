@@ -5174,5 +5174,119 @@ export async function registerRoutes(
     }
   });
 
+  // ── Household Management API ─────────────────────────────────────────────────
+
+  app.get("/api/household", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const userId = req.user!.id;
+      const householdId = await getHouseholdForUser(userId);
+      const { household, members } = await storage.getHouseholdWithMembers(householdId);
+      const myMembership = members.find(m => m.member.userId === userId);
+      res.json({
+        id: household.id,
+        name: household.name,
+        inviteCode: household.inviteCode,
+        myRole: myMembership?.member.role ?? "member",
+        members: members.map(({ member, user }) => ({
+          userId: member.userId,
+          displayName: user.displayName || user.username,
+          role: member.role,
+          status: member.status,
+        })),
+      });
+    } catch (err) {
+      console.error("[Household] GET error:", err);
+      res.status(500).json({ message: "Failed to fetch household" });
+    }
+  });
+
+  app.post("/api/household", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { name } = z.object({ name: z.string().min(1).max(100) }).parse(req.body);
+      const existing = await storage.getHouseholdByUser(req.user!.id);
+      if (existing) {
+        return res.status(400).json({ message: "You already have an active household." });
+      }
+      const household = await storage.createHouseholdForUser(req.user!.id, name);
+      res.status(201).json(household);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      console.error("[Household] POST error:", err);
+      res.status(500).json({ message: "Failed to create household" });
+    }
+  });
+
+  app.post("/api/household/join", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { inviteCode } = z.object({ inviteCode: z.string().min(1) }).parse(req.body);
+      const result = await storage.joinHousehold(req.user!.id, inviteCode);
+      res.json({
+        id: result.household.id,
+        name: result.household.name,
+        inviteCode: result.household.inviteCode,
+        myRole: result.role,
+      });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      if (err?.message === "INVALID_CODE") return res.status(400).json({ message: "Invalid invite code. Please check and try again." });
+      if (err?.message === "ALREADY_IN_HOUSEHOLD") return res.status(400).json({ message: "You are already a member of this household." });
+      console.error("[Household] JOIN error:", err);
+      res.status(500).json({ message: "Failed to join household" });
+    }
+  });
+
+  app.post("/api/household/leave", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const newHousehold = await storage.leaveHousehold(req.user!.id);
+      res.json({ id: newHousehold.id, name: newHousehold.name, inviteCode: newHousehold.inviteCode });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      if (err?.message === "OWNER_HAS_MEMBERS") return res.status(403).json({ message: "You are the owner of a multi-member household. Transfer ownership or remove other members before leaving." });
+      if (err?.message === "NO_ACTIVE_HOUSEHOLD") return res.status(400).json({ message: "No active household found." });
+      console.error("[Household] LEAVE error:", err);
+      res.status(500).json({ message: "Failed to leave household" });
+    }
+  });
+
+  app.patch("/api/household", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { name } = z.object({ name: z.string().min(1).max(100) }).parse(req.body);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const updated = await storage.renameHousehold(req.user!.id, householdId, name);
+      res.json(updated);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      if (err?.message === "NOT_OWNER") return res.status(403).json({ message: "Only the household owner can rename it." });
+      console.error("[Household] RENAME error:", err);
+      res.status(500).json({ message: "Failed to rename household" });
+    }
+  });
+
+  app.delete("/api/household/members/:userId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const targetUserId = parseInt(req.params.userId);
+      if (isNaN(targetUserId)) return res.status(400).json({ message: "Invalid user ID" });
+      const members = await storage.removeHouseholdMember(req.user!.id, targetUserId);
+      res.json(members.map(({ member, user }) => ({
+        userId: member.userId,
+        displayName: user.displayName || user.username,
+        role: member.role,
+        status: member.status,
+      })));
+    } catch (err: any) {
+      if (err?.message === "NOT_OWNER") return res.status(403).json({ message: "Only the household owner can remove members." });
+      if (err?.message === "CANNOT_REMOVE_SELF") return res.status(400).json({ message: "You cannot remove yourself. Use the leave option instead." });
+      if (err?.message === "MEMBER_NOT_FOUND") return res.status(404).json({ message: "Member not found in your household." });
+      console.error("[Household] REMOVE MEMBER error:", err);
+      res.status(500).json({ message: "Failed to remove member" });
+    }
+  });
+
   return httpServer;
 }

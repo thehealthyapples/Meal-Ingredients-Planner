@@ -220,6 +220,13 @@ export interface IStorage {
   // ── Household System ────────────────────────────────────────────────────────
   getHouseholdByUser(userId: number): Promise<{ household: Household; members: HouseholdMember[] } | null>;
   getUserHouseholdRole(userId: number): Promise<string | null>;
+  createHouseholdForUser(userId: number, name: string): Promise<Household>;
+  getHouseholdWithMembers(householdId: number): Promise<{ household: Household; members: { member: HouseholdMember; user: { id: number; displayName: string | null; username: string } }[] }>;
+  findHouseholdByInviteCode(inviteCode: string): Promise<Household | null>;
+  joinHousehold(userId: number, inviteCode: string): Promise<{ household: Household; role: string }>;
+  leaveHousehold(userId: number): Promise<Household>;
+  renameHousehold(userId: number, householdId: number, name: string): Promise<Household>;
+  removeHouseholdMember(actorUserId: number, targetUserId: number): Promise<{ member: HouseholdMember; user: { id: number; displayName: string | null; username: string } }[]>;
 
   sessionStore: session.Store;
 }
@@ -1869,6 +1876,268 @@ export class DatabaseStorage implements IStorage {
       ),
     });
     return member?.role ?? null;
+  }
+
+  private async generateUniqueInviteCode(): Promise<string> {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    for (let attempt = 0; attempt < 20; attempt++) {
+      let code = "";
+      for (let i = 0; i < 8; i++) {
+        code += chars[Math.floor(Math.random() * chars.length)];
+      }
+      const existing = await db.query.households.findFirst({
+        where: eq(households.inviteCode, code),
+      });
+      if (!existing) return code;
+    }
+    throw new Error("Failed to generate unique invite code after 20 attempts");
+  }
+
+  async createHouseholdForUser(userId: number, name: string): Promise<Household> {
+    const inviteCode = await this.generateUniqueInviteCode();
+    let createdHousehold: Household;
+    await db.transaction(async (tx) => {
+      const [hh] = await tx.insert(households).values({
+        name,
+        inviteCode,
+        createdByUserId: userId,
+      }).returning();
+      createdHousehold = hh;
+      await tx.insert(householdMembers).values({
+        householdId: hh.id,
+        userId,
+        role: "owner",
+        status: "active",
+        joinedAt: new Date(),
+      });
+    });
+    return createdHousehold!;
+  }
+
+  async getHouseholdWithMembers(householdId: number): Promise<{
+    household: Household;
+    members: { member: HouseholdMember; user: { id: number; displayName: string | null; username: string } }[];
+  }> {
+    const household = await db.query.households.findFirst({
+      where: eq(households.id, householdId),
+    });
+    if (!household) throw new Error("Household not found");
+
+    const activeMembers = await db.query.householdMembers.findMany({
+      where: and(
+        eq(householdMembers.householdId, householdId),
+        eq(householdMembers.status, "active")
+      ),
+    });
+
+    const members = await Promise.all(
+      activeMembers.map(async (member) => {
+        const fullUser = await db.query.users.findFirst({
+          where: eq(users.id, member.userId),
+        });
+        const user = {
+          id: fullUser!.id,
+          displayName: fullUser!.displayName ?? null,
+          username: fullUser!.username,
+        };
+        return { member, user };
+      })
+    );
+
+    return { household, members };
+  }
+
+  async findHouseholdByInviteCode(inviteCode: string): Promise<Household | null> {
+    const code = inviteCode.trim().toUpperCase();
+    const household = await db.query.households.findFirst({
+      where: eq(households.inviteCode, code),
+    });
+    return household ?? null;
+  }
+
+  async joinHousehold(userId: number, inviteCode: string): Promise<{ household: Household; role: string }> {
+    const target = await this.findHouseholdByInviteCode(inviteCode);
+    if (!target) throw new Error("INVALID_CODE");
+
+    let result: { household: Household; role: string };
+
+    await db.transaction(async (tx) => {
+      const currentActive = await tx.query.householdMembers.findFirst({
+        where: and(
+          eq(householdMembers.userId, userId),
+          eq(householdMembers.status, "active")
+        ),
+      });
+
+      if (currentActive && currentActive.householdId === target.id) {
+        throw new Error("ALREADY_IN_HOUSEHOLD");
+      }
+
+      if (currentActive) {
+        await tx.update(householdMembers)
+          .set({ status: "left", leftAt: new Date() })
+          .where(eq(householdMembers.id, currentActive.id));
+      }
+
+      const existingRow = await tx.query.householdMembers.findFirst({
+        where: and(
+          eq(householdMembers.householdId, target.id),
+          eq(householdMembers.userId, userId)
+        ),
+      });
+
+      if (existingRow) {
+        await tx.update(householdMembers)
+          .set({ status: "active", role: "member", leftAt: null, joinedAt: new Date() })
+          .where(eq(householdMembers.id, existingRow.id));
+      } else {
+        await tx.insert(householdMembers).values({
+          householdId: target.id,
+          userId,
+          role: "member",
+          status: "active",
+          joinedAt: new Date(),
+        });
+      }
+
+      result = { household: target, role: "member" };
+    });
+
+    return result!;
+  }
+
+  async leaveHousehold(userId: number): Promise<Household> {
+    let newHousehold: Household;
+
+    await db.transaction(async (tx) => {
+      const currentMembership = await tx.query.householdMembers.findFirst({
+        where: and(
+          eq(householdMembers.userId, userId),
+          eq(householdMembers.status, "active")
+        ),
+      });
+      if (!currentMembership) throw new Error("NO_ACTIVE_HOUSEHOLD");
+
+      if (currentMembership.role === "owner") {
+        const otherActives = await tx.query.householdMembers.findMany({
+          where: and(
+            eq(householdMembers.householdId, currentMembership.householdId),
+            eq(householdMembers.status, "active")
+          ),
+        });
+        const others = otherActives.filter(m => m.userId !== userId);
+        if (others.length > 0) {
+          throw new Error("OWNER_HAS_MEMBERS");
+        }
+      }
+
+      await tx.update(householdMembers)
+        .set({ status: "left", leftAt: new Date() })
+        .where(eq(householdMembers.id, currentMembership.id));
+
+      const inviteCode = await this.generateUniqueInviteCode();
+      const [hh] = await tx.insert(households).values({
+        name: "My Household",
+        inviteCode,
+        createdByUserId: userId,
+      }).returning();
+      newHousehold = hh;
+
+      const existingRow = await tx.query.householdMembers.findFirst({
+        where: and(
+          eq(householdMembers.householdId, hh.id),
+          eq(householdMembers.userId, userId)
+        ),
+      });
+
+      if (existingRow) {
+        await tx.update(householdMembers)
+          .set({ status: "active", role: "owner", leftAt: null, joinedAt: new Date() })
+          .where(eq(householdMembers.id, existingRow.id));
+      } else {
+        await tx.insert(householdMembers).values({
+          householdId: hh.id,
+          userId,
+          role: "owner",
+          status: "active",
+          joinedAt: new Date(),
+        });
+      }
+    });
+
+    return newHousehold!;
+  }
+
+  async renameHousehold(userId: number, householdId: number, name: string): Promise<Household> {
+    const membership = await db.query.householdMembers.findFirst({
+      where: and(
+        eq(householdMembers.userId, userId),
+        eq(householdMembers.householdId, householdId),
+        eq(householdMembers.status, "active")
+      ),
+    });
+    if (!membership || membership.role !== "owner") {
+      throw new Error("NOT_OWNER");
+    }
+    const [updated] = await db.update(households)
+      .set({ name, updatedAt: new Date() })
+      .where(eq(households.id, householdId))
+      .returning();
+    return updated;
+  }
+
+  async removeHouseholdMember(actorUserId: number, targetUserId: number): Promise<{
+    member: HouseholdMember; user: { id: number; displayName: string | null; username: string; email: string };
+  }[]> {
+    let householdId: number;
+
+    await db.transaction(async (tx) => {
+      const actorMembership = await tx.query.householdMembers.findFirst({
+        where: and(
+          eq(householdMembers.userId, actorUserId),
+          eq(householdMembers.status, "active")
+        ),
+      });
+      if (!actorMembership || actorMembership.role !== "owner") {
+        throw new Error("NOT_OWNER");
+      }
+      if (actorUserId === targetUserId) {
+        throw new Error("CANNOT_REMOVE_SELF");
+      }
+
+      const targetMembership = await tx.query.householdMembers.findFirst({
+        where: and(
+          eq(householdMembers.userId, targetUserId),
+          eq(householdMembers.householdId, actorMembership.householdId),
+          eq(householdMembers.status, "active")
+        ),
+      });
+      if (!targetMembership) throw new Error("MEMBER_NOT_FOUND");
+
+      await tx.update(householdMembers)
+        .set({ status: "removed", leftAt: new Date() })
+        .where(eq(householdMembers.id, targetMembership.id));
+
+      const inviteCode = await this.generateUniqueInviteCode();
+      const [newHh] = await tx.insert(households).values({
+        name: "My Household",
+        inviteCode,
+        createdByUserId: targetUserId,
+      }).returning();
+
+      await tx.insert(householdMembers).values({
+        householdId: newHh.id,
+        userId: targetUserId,
+        role: "owner",
+        status: "active",
+        joinedAt: new Date(),
+      });
+
+      householdId = actorMembership.householdId;
+    });
+
+    const result = await this.getHouseholdWithMembers(householdId!);
+    return result.members;
   }
 }
 

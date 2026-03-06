@@ -17,7 +17,8 @@ import {
   Plus, Minus, Save, Activity, Scale, Ruler,
   Baby, PersonStanding, Users, Apple, TrendingUp,
   Volume2, Scan, Loader2, ArrowLeft, Check, Store,
-  PiggyBank, ShieldAlert, Sparkles, Ban, Mail, Trash2
+  PiggyBank, ShieldAlert, Sparkles, Ban, Mail, Trash2,
+  Copy, LogOut, UserMinus, Pencil, X
 } from "lucide-react";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
@@ -187,6 +188,8 @@ export default function ProfilePage() {
         household={profile.household}
         onSave={(prefs) => savePreferences(prefs)}
       />
+
+      <HouseholdManagementSection currentUserId={profile.id} />
 
       <CalorieSettings
         profile={profile}
@@ -404,6 +407,226 @@ function CounterRow({ icon, label, value, onMinus, onPlus, testId }: {
         </Button>
       </div>
     </div>
+  );
+}
+
+interface HouseholdData {
+  id: number;
+  name: string;
+  inviteCode: string;
+  myRole: string;
+  members: { userId: number; displayName: string; role: string; status: string }[];
+}
+
+function HouseholdManagementSection({ currentUserId }: { currentUserId: number }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [joinCode, setJoinCode] = useState("");
+  const [showJoin, setShowJoin] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [newName, setNewName] = useState("");
+
+  const { data: household, isLoading } = useQuery<HouseholdData>({
+    queryKey: ["/api/household"],
+  });
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["/api/household"] });
+
+  const joinMutation = useMutation({
+    mutationFn: (inviteCode: string) => apiRequest("POST", "/api/household/join", { inviteCode }),
+    onSuccess: () => { toast({ title: "Joined household", description: "You have joined the household." }); setJoinCode(""); setShowJoin(false); invalidate(); },
+    onError: (err: any) => toast({ variant: "destructive", title: "Could not join", description: err?.message || "Invalid invite code." }),
+  });
+
+  const leaveMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/household/leave"),
+    onSuccess: () => { toast({ title: "Left household", description: "You now have your own household." }); setShowLeaveConfirm(false); invalidate(); },
+    onError: (err: any) => toast({ variant: "destructive", title: "Could not leave", description: err?.message || "Failed to leave household." }),
+  });
+
+  const renameMutation = useMutation({
+    mutationFn: (name: string) => apiRequest("PATCH", "/api/household", { name }),
+    onSuccess: () => { toast({ title: "Household renamed" }); setEditingName(false); invalidate(); },
+    onError: (err: any) => toast({ variant: "destructive", title: "Could not rename", description: err?.message || "Failed to rename household." }),
+  });
+
+  const removeMemberMutation = useMutation({
+    mutationFn: (userId: number) => apiRequest("DELETE", `/api/household/members/${userId}`),
+    onSuccess: () => { toast({ title: "Member removed" }); invalidate(); },
+    onError: (err: any) => toast({ variant: "destructive", title: "Could not remove member", description: err?.message || "Failed to remove member." }),
+  });
+
+  const copyInviteCode = () => {
+    if (!household) return;
+    navigator.clipboard.writeText(household.inviteCode).then(() => {
+      toast({ title: "Invite code copied", description: household.inviteCode });
+    });
+  };
+
+  const isOwner = household?.myRole === "owner";
+
+  if (isLoading) {
+    return (
+      <Card className="p-5">
+        <Skeleton className="h-4 w-40 mb-4" />
+        <Skeleton className="h-4 w-full mb-2" />
+        <Skeleton className="h-4 w-3/4" />
+      </Card>
+    );
+  }
+
+  if (!household) return null;
+
+  return (
+    <Card className="p-5 space-y-5" data-testid="card-household-management">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <Users className="h-4 w-4 text-muted-foreground" />
+        <h3 className="font-semibold text-sm">Household Management</h3>
+        <Badge variant="secondary" className="ml-auto text-xs capitalize" data-testid="badge-my-role">{household.myRole}</Badge>
+      </div>
+
+      {/* Household Name */}
+      <div>
+        {editingName && isOwner ? (
+          <div className="flex gap-2 items-center">
+            <Input
+              value={newName}
+              onChange={e => setNewName(e.target.value)}
+              className="h-8 text-sm"
+              placeholder="Household name"
+              data-testid="input-household-name"
+              onKeyDown={e => { if (e.key === "Enter") renameMutation.mutate(newName.trim()); if (e.key === "Escape") setEditingName(false); }}
+            />
+            <Button size="sm" onClick={() => renameMutation.mutate(newName.trim())} disabled={renameMutation.isPending || !newName.trim()} data-testid="button-rename-confirm">
+              {renameMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setEditingName(false)} data-testid="button-rename-cancel"><X className="h-3.5 w-3.5" /></Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium" data-testid="text-household-name">{household.name}</span>
+            {isOwner && (
+              <button
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => { setNewName(household.name); setEditingName(true); }}
+                data-testid="button-rename-household"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Invite Code */}
+      <div className="space-y-1">
+        <p className="text-xs text-muted-foreground">Invite code — share this to invite someone to your household</p>
+        <div className="flex items-center gap-2">
+          <code className="bg-muted px-3 py-1.5 rounded text-sm font-mono tracking-wider" data-testid="text-invite-code">{household.inviteCode}</code>
+          <Button size="sm" variant="outline" onClick={copyInviteCode} data-testid="button-copy-invite-code">
+            <Copy className="h-3.5 w-3.5 mr-1" /> Copy
+          </Button>
+        </div>
+      </div>
+
+      {/* Members */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Members</p>
+        {household.members.map(member => (
+          <div key={member.userId} className="flex items-center gap-3" data-testid={`row-member-${member.userId}`}>
+            <Avatar className="h-7 w-7">
+              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                {(member.displayName || "?").charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate" data-testid={`text-member-name-${member.userId}`}>{member.displayName}</p>
+            </div>
+            <Badge variant={member.role === "owner" ? "default" : "secondary"} className="text-xs capitalize shrink-0">{member.role}</Badge>
+            {isOwner && member.userId !== currentUserId && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
+                onClick={() => removeMemberMutation.mutate(member.userId)}
+                disabled={removeMemberMutation.isPending}
+                data-testid={`button-remove-member-${member.userId}`}
+              >
+                <UserMinus className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Shared vs Private info */}
+      <div className="grid grid-cols-2 gap-3 rounded-lg bg-muted/40 px-4 py-3 text-xs">
+        <div>
+          <p className="font-semibold text-foreground mb-1">Shared with household</p>
+          <ul className="text-muted-foreground space-y-0.5">
+            <li>Planner</li>
+            <li>Shopping basket</li>
+            <li>Pantry</li>
+            <li>Freezer meals</li>
+          </ul>
+        </div>
+        <div>
+          <p className="font-semibold text-foreground mb-1">Stays private</p>
+          <ul className="text-muted-foreground space-y-0.5">
+            <li>Goals</li>
+            <li>Preferences</li>
+            <li>Health data</li>
+          </ul>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Join household */}
+      {!showJoin ? (
+        <Button variant="outline" size="sm" className="w-full" onClick={() => setShowJoin(true)} data-testid="button-show-join">
+          Join a different household
+        </Button>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">Enter an invite code to join another household. Your current household data will remain behind.</p>
+          <div className="flex gap-2">
+            <Input
+              value={joinCode}
+              onChange={e => setJoinCode(e.target.value.toUpperCase())}
+              placeholder="INVITE CODE"
+              className="h-8 text-sm font-mono tracking-wider uppercase"
+              data-testid="input-join-code"
+              onKeyDown={e => { if (e.key === "Enter") joinMutation.mutate(joinCode.trim()); if (e.key === "Escape") setShowJoin(false); }}
+            />
+            <Button size="sm" onClick={() => joinMutation.mutate(joinCode.trim())} disabled={joinMutation.isPending || !joinCode.trim()} data-testid="button-join-household">
+              {joinMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Join"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowJoin(false)} data-testid="button-cancel-join"><X className="h-3.5 w-3.5" /></Button>
+          </div>
+        </div>
+      )}
+
+      {/* Leave household */}
+      {!showLeaveConfirm ? (
+        <Button variant="ghost" size="sm" className="w-full text-destructive hover:text-destructive" onClick={() => setShowLeaveConfirm(true)} data-testid="button-leave-household">
+          <LogOut className="h-3.5 w-3.5 mr-1.5" /> Leave household
+        </Button>
+      ) : (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
+          <p className="text-sm text-destructive font-medium">Leave this household?</p>
+          <p className="text-xs text-muted-foreground">You'll be moved to a new solo household. Your personal data stays with you; shared household data stays here.</p>
+          <div className="flex gap-2">
+            <Button size="sm" variant="destructive" onClick={() => leaveMutation.mutate()} disabled={leaveMutation.isPending} data-testid="button-confirm-leave">
+              {leaveMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Confirm leave"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowLeaveConfirm(false)} data-testid="button-cancel-leave">Cancel</Button>
+          </div>
+        </div>
+      )}
+    </Card>
   );
 }
 
