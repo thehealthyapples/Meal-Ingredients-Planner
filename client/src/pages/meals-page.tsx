@@ -1623,16 +1623,6 @@ export default function MealsPage() {
             data-testid="input-scan-file"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleScanFile(f); }}
           />
-          <Button
-            variant="outline"
-            onClick={() => setCameraModalOpen(true)}
-            disabled={scanLoading}
-            data-testid="button-scan-recipe"
-          >
-            {scanLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Camera className="h-4 w-4 mr-1.5" />}
-            {scanLoading ? "Reading…" : "Scan Recipe"}
-          </Button>
-          <ImportRecipeDialog />
           <AddMealGatewayDialog onScan={() => setCameraModalOpen(true)} />
           {(!importStatus || importStatus.totalImported === 0) && (
             <Button
