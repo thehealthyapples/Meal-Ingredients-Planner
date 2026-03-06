@@ -9,18 +9,24 @@ import {
   LayoutDashboard, Utensils, CalendarDays, ShoppingBasket,
   Package, User, LogOut, ShieldCheck, Star,
   Mail, Sliders, Search, Menu, ChevronLeft, ChevronRight,
-  MoreHorizontal, Archive,
+  MoreHorizontal, Archive, ScanLine,
 } from "lucide-react";
 import { api } from "@shared/routes";
 
-const NAV_ITEMS = [
+const NAV_ITEMS_TOP = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
+];
+
+const NAV_ITEMS_MAIN = [
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
   { href: "/meals", label: "My Meals", icon: Utensils },
   { href: "/pantry", label: "Pantry", icon: Package },
   { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
+  { href: "/products", label: "Products", icon: ScanLine },
   { href: "/profile", label: "Profile", icon: User },
 ];
+
+const NAV_ITEMS = [...NAV_ITEMS_TOP, ...NAV_ITEMS_MAIN];
 
 const ADMIN_ITEMS = [
   { href: "/admin/users", label: "Users", icon: ShieldCheck },
@@ -162,6 +168,20 @@ function SidebarBody({
     <div className="flex flex-col h-full py-3">
       {/* Main nav */}
       <nav className="flex flex-col gap-0.5 px-2 flex-1 overflow-y-auto">
+        {/* Dashboard — always first */}
+        {NAV_ITEMS_TOP.map((item) => (
+          <SidebarNavItem
+            key={item.href}
+            href={item.href}
+            label={item.label}
+            icon={item.icon}
+            isCollapsed={isCollapsed}
+            isActive={location === item.href}
+            onClick={onClose}
+          />
+        ))}
+
+        {/* Search — sits directly under Dashboard */}
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>{searchBtn}</TooltipTrigger>
@@ -171,7 +191,8 @@ function SidebarBody({
 
         <div className="my-1 border-t border-border/40" />
 
-        {NAV_ITEMS.map((item) => (
+        {/* Remaining nav items */}
+        {NAV_ITEMS_MAIN.map((item) => (
           <SidebarNavItem
             key={item.href}
             href={item.href}
