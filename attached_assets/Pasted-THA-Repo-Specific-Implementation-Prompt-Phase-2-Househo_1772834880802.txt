@@ -1,0 +1,694 @@
+THA Repo-Specific Implementation Prompt — Phase 2 Household Management
+Objective
+
+Implement Phase 2 Household Management for The Healthy Apples.
+
+Users must be able to manage household membership from the profile page:
+
+view current household
+
+copy invite code
+
+join by invite code
+
+leave household
+
+rename household (owner only)
+
+remove members (owner only)
+
+Each user must always have exactly one active household membership.
+
+If a user leaves a household or is removed, they must automatically receive a new solo household.
+
+Do not implement:
+
+Household Engine
+
+supermarket integrations
+
+ghost/child profiles
+
+multiple active households
+
+ownership transfer
+
+Codebase Context
+
+Profile page: client/src/pages/profile-page.tsx
+
+already contains a HouseholdSettings card for meal-planning counts
+
+add a new HouseholdManagementSection directly beneath that card
+
+Existing schema:
+
+households
+
+household_members
+
+Existing helpers already available:
+
+getHouseholdByUser(userId)
+
+getUserHouseholdRole(userId)
+
+getHouseholdForUser(userId)
+
+Unique constraint already exists on:
+
+(householdId, userId) in household_members
+
+Rejoining a previously joined household must update the existing row, not insert a duplicate
+
+Invite codes:
+
+8-char uppercase alphanumeric
+
+exclude ambiguous characters if current helper supports that
+
+must be unique in DB
+
+Membership statuses:
+
+active
+
+left
+
+removed
+
+Product Rules
+1. One active household per user
+
+At all times, every user must have exactly one household_members row with status = 'active'.
+
+2. Accounts are never merged
+
+Joining a household does not merge accounts.
+
+3. Shared data
+
+Shared with household:
+
+planner
+
+shopping basket
+
+shopping extras
+
+pantry
+
+freezer meals
+
+4. Private data
+
+Private to the user:
+
+goals
+
+preferences
+
+health data
+
+personal history
+
+future diary entries
+
+5. Join behaviour
+
+When a user joins another household:
+
+their current active membership becomes left
+
+they become member in the target household
+
+do not merge old household data into the new household
+
+6. Leave behaviour
+
+When a user leaves:
+
+current active membership becomes left
+
+create a new solo household
+
+create/update active owner membership for that new household
+
+7. Remove member behaviour
+
+When an owner removes a member:
+
+target membership becomes removed
+
+target receives a new solo household
+
+actor cannot remove themselves via remove-member endpoint
+
+8. Owner restriction
+
+If the current user is the owner and other active members exist:
+
+block leave with a clear error message
+
+Use the safer MVP rule:
+
+owner cannot leave a multi-member household
+
+Tasks
+T202 — Storage methods for household management
+
+File: server/storage.ts
+
+Add a private helper:
+
+generateUniqueInviteCode(): Promise<string>
+
+Requirements:
+
+8-character uppercase alphanumeric
+
+unique against households.inviteCode
+
+retry safely until unique
+
+Add to IStorage and DatabaseStorage:
+
+1. createHouseholdForUser(userId: number, name: string)
+
+Transaction:
+
+create household with unique invite code
+
+create owner membership with status = 'active'
+
+return created household
+
+2. getHouseholdWithMembers(householdId: number)
+
+Return:
+
+{
+  household,
+  members: Array<{
+    member,
+    user
+  }>
+}
+
+Include enough user fields for display:
+
+id
+
+displayName if available
+
+username
+
+email
+
+Prefer active members only unless historical rows are explicitly needed.
+
+3. findHouseholdByInviteCode(inviteCode: string)
+
+Return:
+
+matching household
+
+or null
+
+Normalize code input if appropriate (trim + uppercase).
+
+4. joinHousehold(userId: number, inviteCode: string)
+
+Transaction:
+
+validate invite code
+
+find target household
+
+get current active membership
+
+fail if already active in target household
+
+mark current active membership as left
+
+if a historical row already exists for (targetHouseholdId, userId), update it to:
+
+status = 'active'
+
+role = 'member'
+
+leftAt = null
+
+joinedAt = now()
+
+otherwise insert new membership as member
+
+return:
+
+{ household, role: 'member' }
+
+Important:
+
+this must respect the unique (householdId, userId) constraint
+
+do not insert duplicates
+
+5. leaveHousehold(userId: number)
+
+Transaction:
+
+get current active membership
+
+get all other active members in same household
+
+if current user is owner and others exist, block
+
+mark current membership as left
+
+create new solo household
+
+create or reactivate owner membership for that new household
+
+return new household
+
+6. renameHousehold(userId: number, householdId: number, name: string)
+
+Requirements:
+
+verify user is active owner of that household
+
+update name
+
+return updated household
+
+7. removeHouseholdMember(actorUserId: number, targetUserId: number)
+
+Transaction:
+
+get actor active membership
+
+verify actor is owner
+
+verify target is active member of same household
+
+fail if target is actor
+
+mark target membership as removed
+
+create new solo household for target
+
+create owner membership for target in new household
+
+return updated active members list for original household
+
+Acceptance
+
+all methods compile
+
+all membership-changing flows are transactional
+
+unique constraint is respected
+
+no user can end with zero or multiple active households
+
+T203 — Household API endpoints
+
+File: server/routes.ts
+
+Add authenticated routes:
+
+GET /api/household
+
+Returns current user’s active household with members.
+
+Response shape:
+
+{
+  "id": 1,
+  "name": "The Smith Household",
+  "inviteCode": "ABCD2345",
+  "myRole": "owner",
+  "members": [
+    {
+      "userId": 12,
+      "displayName": "Alice",
+      "email": "alice@example.com",
+      "role": "owner",
+      "status": "active"
+    }
+  ]
+}
+POST /api/household
+
+Edge-case safety only.
+
+Input:
+
+{ "name": "The Smith Household" }
+
+Behaviour:
+
+if user already has an active household, either:
+
+return current household, or
+
+reject with clear 400
+
+do not allow multiple active households
+
+POST /api/household/join
+
+Input:
+
+{ "inviteCode": "ABCD2345" }
+
+Behaviour:
+
+validate code
+
+join via storage method
+
+return joined household summary
+
+Error cases:
+
+invalid invite code
+
+already in this household
+
+join failure
+
+POST /api/household/leave
+
+Behaviour:
+
+leave current household
+
+auto-create solo household
+
+block owner if other active members exist
+
+PATCH /api/household
+
+Input:
+
+{ "name": "New Household Name" }
+
+Owner only.
+
+DELETE /api/household/members/:userId
+
+Owner only.
+
+Behaviour:
+
+remove target member
+
+target gets new solo household
+
+actor cannot remove self through this endpoint
+
+Error handling
+
+Use correct status codes:
+
+400 invalid request / invalid invite code / already in household
+
+403 forbidden / owner-only restriction
+
+404 household or member not found where appropriate
+
+500 only for unexpected server errors
+
+Do not expose raw DB errors.
+
+Acceptance
+
+all routes work
+
+response shapes are stable and frontend-friendly
+
+owner-only enforcement happens inside storage and/or route validation
+
+T204 — Profile page HouseholdManagement section
+
+File: client/src/pages/profile-page.tsx
+
+Add a new component:
+
+HouseholdManagementSection
+
+Place it directly after the existing:
+
+<HouseholdSettings ... />
+
+Do not redesign the rest of the page.
+
+Data fetching
+
+Use:
+
+useQuery({ queryKey: ['/api/household'] })
+
+Use mutations for:
+
+join
+
+leave
+
+rename
+
+remove member
+
+After success:
+
+invalidate ['/api/household']
+
+Display requirements
+
+Show:
+
+household name
+
+invite code
+
+copy button
+
+current user role badge
+
+member list
+
+role badges for each member
+
+Owner-only:
+
+inline rename household
+
+remove member buttons
+
+General actions:
+
+join household via invite code input
+
+leave household button with confirmation
+
+Member list
+
+For each member show:
+
+name (prefer displayName, fallback to username/email)
+
+role badge
+
+remove button if current user is owner and target is not self
+
+Disable/remove self-removal through this UI.
+
+Shared/private explanation box
+
+Add a clear info box with two sections:
+
+Shared with household
+
+planner
+
+shopping basket
+
+pantry
+
+freezer meals
+
+Stays private
+
+goals
+
+preferences
+
+health data
+
+Use calm, trust-building copy.
+
+UI components
+
+Reuse existing components and patterns already present in the repo:
+
+Card
+
+Button
+
+Input
+
+Badge
+
+Avatar
+
+useToast
+
+Do not introduce a new visual system.
+
+Testing hooks
+
+Add data-testid attributes to all interactive elements, including:
+
+household name edit input
+
+rename confirm button
+
+invite code copy button
+
+join code input
+
+join button
+
+leave button
+
+remove member buttons
+
+Acceptance
+
+section renders beneath HouseholdSettings
+
+all actions work end-to-end
+
+toasts display success/error feedback
+
+no unrelated profile UI is broken
+
+T205 — Verification
+
+After implementation:
+
+1. Restart app
+
+Confirm app starts cleanly with no compile/runtime errors.
+
+2. SQL invariants
+
+Run:
+
+SELECT user_id, COUNT(*)
+FROM household_members
+WHERE status = 'active'
+GROUP BY user_id
+HAVING COUNT(*) <> 1;
+
+Expected: 0 rows
+
+SELECT household_id, user_id, COUNT(*)
+FROM household_members
+GROUP BY household_id, user_id
+HAVING COUNT(*) > 1;
+
+Expected: 0 rows
+
+3. Manual end-to-end checks
+
+Using test accounts:
+
+login
+
+open profile
+
+verify household section loads
+
+copy invite code
+
+try invalid invite code → expect error
+
+join valid invite code from another account
+
+verify joined household displays correctly
+
+try leave as non-owner/member
+
+verify new solo household is created
+
+try owner leave while other members exist → expect block
+
+remove member as owner
+
+verify removed user gets new solo household
+
+4. Regression check
+
+Confirm existing shared household flows still work after membership changes:
+
+planner
+
+shopping list
+
+pantry
+
+freezer meals
+
+Deliverables
+
+At the end, provide:
+
+list of edited files
+
+list of new/updated storage methods
+
+list of new API endpoints
+
+summary of profile page changes
+
+exact join/leave/remove rules implemented
+
+verification SQL results
+
+any repo-specific deviations needed
+
+Definition of done
+
+Phase 2 Household Management is complete only when:
+
+users can view their household on profile
+
+invite code is visible and copyable
+
+users can join by invite code
+
+users can leave safely
+
+owner can rename household
+
+owner can remove members
+
+leaving/removed users receive a new solo household
+
+every user still has exactly one active household
+
+no duplicate (householdId, userId) rows exist
+
+app starts cleanly
+
+existing shared household flows continue working
+
+Important implementation note
+
+Because household_members has a unique constraint on (householdId, userId), rejoining a previously joined household must update the existing row instead of inserting a new one.
+
+Do not work around this by deleting historical rows.
+
+If you want, I can also write the Phase 3 prompt for the scan / search / import meal entry flow next, which sounds like a very strong THA feature.
