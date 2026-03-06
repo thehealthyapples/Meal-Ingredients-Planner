@@ -780,50 +780,60 @@ export default function WeeklyPlannerPage() {
                         </>
                       );
                     })}
+
+                    {/* ── Summary row — same grid, aligned under day columns ── */}
+                    {sortedDays.length > 0 && (
+                      <>
+                        {/* Summary label cell */}
+                        <div
+                          className="flex items-center gap-1.5 px-2 py-2.5 bg-muted/30 border-t-2 border-border"
+                          data-testid="weekly-summary-strip"
+                        >
+                          <span className="text-xs font-medium text-muted-foreground">Summary</span>
+                        </div>
+
+                        {/* Per-day summary cells */}
+                        {sortedDays.map((day) => {
+                          const dayCalories = day.entries.reduce(
+                            (sum, e) => sum + (nutritionMap.get(e.mealId) || 0),
+                            0
+                          );
+                          const dayMealCount = day.entries.length;
+                          return (
+                            <div
+                              key={day.id}
+                              className="bg-muted/30 border-t-2 border-l border-border px-2 py-2.5 text-center"
+                              data-testid={`summary-day-${day.dayOfWeek}`}
+                            >
+                              {dayCalories > 0 ? (
+                                <div className="flex items-center justify-center gap-0.5 mb-0.5">
+                                  <Flame className="h-2.5 w-2.5 text-orange-400 flex-shrink-0" />
+                                  <span
+                                    className="text-xs font-medium text-foreground"
+                                    data-testid={`text-summary-cal-${day.dayOfWeek}`}
+                                  >
+                                    {dayCalories >= 1000
+                                      ? `${(dayCalories / 1000).toFixed(1)}k`
+                                      : dayCalories}
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="h-4" />
+                              )}
+                              <p className="text-[10px] text-muted-foreground/60">
+                                {dayMealCount > 0
+                                  ? `${dayMealCount} meal${dayMealCount !== 1 ? 's' : ''}`
+                                  : '—'}
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </>
+                    )}
                   </div>
                 </Card>
               </div>
             </div>
-
-            {/* ── Weekly Summary Strip ── */}
-            {sortedDays.length > 0 && (
-              <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-4" data-testid="weekly-summary-strip">
-                <div style={{ minWidth: "960px" }}>
-                  <div className="grid grid-cols-7 gap-2">
-                    {sortedDays.map((day) => {
-                      const dayCalories = day.entries.reduce((sum, e) => sum + (nutritionMap.get(e.mealId) || 0), 0);
-                      const dayMealCount = day.entries.length;
-                      return (
-                        <Card
-                          key={day.id}
-                          className="bg-muted/30 border-border/60"
-                          data-testid={`summary-day-${day.dayOfWeek}`}
-                        >
-                          <CardContent className="p-2.5 text-center">
-                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-                              {DAY_SHORT[day.dayOfWeek]}
-                            </p>
-                            {dayCalories > 0 ? (
-                              <div className="flex items-center justify-center gap-0.5 mb-0.5">
-                                <Flame className="h-2.5 w-2.5 text-orange-400 flex-shrink-0" />
-                                <span className="text-xs font-medium text-foreground" data-testid={`text-summary-cal-${day.dayOfWeek}`}>
-                                  {dayCalories >= 1000 ? `${(dayCalories / 1000).toFixed(1)}k` : dayCalories}
-                                </span>
-                              </div>
-                            ) : (
-                              <div className="h-4" />
-                            )}
-                            <p className="text-[10px] text-muted-foreground/60">
-                              {dayMealCount > 0 ? `${dayMealCount} meal${dayMealCount !== 1 ? 's' : ''}` : '—'}
-                            </p>
-                          </CardContent>
-                        </Card>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
 
           </TabsContent>
         ))}
