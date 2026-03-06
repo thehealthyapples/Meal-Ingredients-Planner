@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback, type RefObject } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useMeals } from "@/hooks/use-meals";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera } from "lucide-react";
 import { ScanConfirmDialog } from "@/components/scan-confirm-dialog";
+import { CameraModal } from "@/components/camera-modal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -1178,6 +1179,7 @@ export default function MealsPage() {
   const [scanLoading, setScanLoading] = useState(false);
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
   const [scanData, setScanData] = useState<{ rawText: string; parsed: any } | null>(null);
+  const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const scanFileRef = useRef<HTMLInputElement>(null);
   const [webImportingIds, setWebImportingIds] = useState<Set<string>>(new Set());
   const [webImportCategoryMap, setWebImportCategoryMap] = useState<Record<string, number | undefined>>({});
@@ -1623,7 +1625,7 @@ export default function MealsPage() {
           />
           <Button
             variant="outline"
-            onClick={() => scanFileRef.current?.click()}
+            onClick={() => setCameraModalOpen(true)}
             disabled={scanLoading}
             data-testid="button-scan-recipe"
           >
@@ -1631,7 +1633,7 @@ export default function MealsPage() {
             {scanLoading ? "Reading…" : "Scan Recipe"}
           </Button>
           <ImportRecipeDialog />
-          <AddMealGatewayDialog scanFileRef={scanFileRef} />
+          <AddMealGatewayDialog onScan={() => setCameraModalOpen(true)} />
           {(!importStatus || importStatus.totalImported === 0) && (
             <Button
               variant="outline"
@@ -3011,6 +3013,13 @@ export default function MealsPage() {
         </DialogContent>
       </Dialog>
 
+      <CameraModal
+        open={cameraModalOpen}
+        onOpenChange={setCameraModalOpen}
+        onCapture={handleScanFile}
+        onUploadInstead={() => scanFileRef.current?.click()}
+      />
+
       <ScanConfirmDialog
         open={scanDialogOpen}
         onOpenChange={setScanDialogOpen}
@@ -3029,7 +3038,7 @@ interface ImportPreview {
   servings?: number;
 }
 
-function AddMealGatewayDialog({ scanFileRef }: { scanFileRef: RefObject<HTMLInputElement> }) {
+function AddMealGatewayDialog({ onScan }: { onScan: () => void }) {
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
@@ -3037,7 +3046,7 @@ function AddMealGatewayDialog({ scanFileRef }: { scanFileRef: RefObject<HTMLInpu
   const handleOption = (option: "import" | "scan" | "manual") => {
     setOpen(false);
     if (option === "import") setImportOpen(true);
-    else if (option === "scan") setTimeout(() => scanFileRef.current?.click(), 100);
+    else if (option === "scan") setTimeout(() => onScan(), 100);
     else setCreateOpen(true);
   };
 
