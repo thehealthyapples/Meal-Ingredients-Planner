@@ -445,7 +445,7 @@ export function DesktopSidebar() {
   return (
     <>
       <aside
-        className={`hidden md:flex flex-col relative flex-shrink-0 bg-card/60 backdrop-blur-md border-r border-border transition-all duration-200 overflow-x-hidden overflow-y-hidden ${
+        className={`hidden md:flex flex-col relative flex-shrink-0 h-full bg-card/60 backdrop-blur-md border-r border-border transition-all duration-200 overflow-x-hidden overflow-y-hidden ${
           isCollapsed ? "w-16" : "w-[220px]"
         }`}
         data-testid="desktop-sidebar"

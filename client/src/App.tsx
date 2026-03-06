@@ -45,7 +45,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   return (
     <div className="relative min-h-[100dvh]">
       <OrchardBackdrop />
-      <div className="relative z-10 flex flex-col min-h-[100dvh]">
+      <div className="relative z-10 flex flex-col h-[100dvh]">
         <TopBar />
         <div className="flex flex-1 overflow-hidden">
           <DesktopSidebar />
