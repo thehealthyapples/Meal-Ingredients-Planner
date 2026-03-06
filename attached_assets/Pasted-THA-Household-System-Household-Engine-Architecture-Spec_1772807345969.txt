@@ -1,0 +1,619 @@
+THA Household System + Household Engine
+Architecture Specification — Approved v2
+
+This document defines the household architecture for The Healthy Apples (THA) and the phased introduction of the THA Household Engine.
+
+No implementation should begin until this architecture is accepted.
+
+Section 1 — Executive Recommendation
+
+THA should adopt a household-first architecture by introducing a Household container that owns shared food decisions.
+
+This is implemented as an additive layer, not a rewrite.
+
+The architecture rule is:
+
+Shared decisions → householdId
+Personal data → userId
+
+This allows THA to support:
+
+shared meal planning
+
+shared grocery baskets
+
+shared pantry tracking
+
+collaborative planning
+
+individual goals and food diaries
+
+Accounts are never merged.
+
+Users remain independent accounts that belong to a household.
+
+MVP Recommendation
+
+Phase 1 introduces:
+
+households
+
+household members
+
+planner ownership by household
+
+basket ownership by household
+
+pantry ownership by household
+
+The Household Engine will be introduced only after shared ownership is stable.
+
+Section 2 — Domain Model
+
+The system is structured around five primary objects.
+
+User
+ └── HouseholdMember
+        └── Household
+              ├── Planner
+              ├── Shopping Basket
+              ├── Pantry
+              └── Future: Favourite Meals
+
+Meals remain independent.
+
+Meals
+ ├── System meals (global)
+ └── User meals (personal)
+
+Planner entries reference meals but may later store snapshots for stability.
+
+Core Principles
+Shared decisions
+
+Owned by household:
+
+weekly planner
+
+grocery basket
+
+pantry inventory
+
+freezer meals
+
+shared favourites (future)
+
+Personal data
+
+Owned by user:
+
+goals
+
+nutrition targets
+
+allergies
+
+diet preferences
+
+food diaries
+
+health tracking
+
+scan history
+
+personal meal library
+
+Household membership rule
+
+For MVP:
+
+A user may belong to one household at a time.
+
+If they leave:
+
+a new solo household is automatically created.
+
+Section 3 — Database Schema
+households
+id                serial PRIMARY KEY
+name              text NOT NULL
+inviteCode        text UNIQUE NOT NULL
+createdAt         timestamp
+updatedAt         timestamp
+createdByUserId   integer
+household_members
+id              serial PRIMARY KEY
+householdId     integer NOT NULL
+userId          integer NOT NULL
+role            text DEFAULT 'member'
+status          text DEFAULT 'active'
+joinedAt        timestamp
+invitedByUserId integer
+leftAt          timestamp
+
+UNIQUE (householdId, userId)
+
+Roles:
+
+owner
+admin
+member
+New attribution columns
+
+Shared tables must include attribution fields.
+
+Example fields:
+
+createdByUserId
+updatedByUserId
+addedByUserId
+Tables gaining householdId
+
+These tables shift from user ownership to household ownership.
+
+Table	Old owner	New owner
+planner_weeks	userId	householdId
+shopping_list	userId	householdId
+shopping_list_extras	userId	householdId
+user_pantry_items	householdId	householdId
+freezer_meals	householdId	householdId
+
+Rename:
+
+user_pantry_items → household_pantry_items
+Tables remaining user-owned
+
+These remain unchanged.
+
+Table	Reason
+user_preferences	personal health data
+user_streaks	personal progress
+user_health_trends	personal metrics
+product_history	personal scans
+meals (user-owned)	personal recipes
+nutrition	attached to meals
+Section 4 — Data Ownership Rules
+Household-owned
+
+Shared resources:
+
+planner
+
+grocery basket
+
+pantry
+
+freezer meals
+
+future shared preferences
+
+future household favourites
+
+Reason:
+
+Food planning is a shared decision problem.
+
+User-owned
+
+Personal resources:
+
+health metrics
+
+calorie targets
+
+goals
+
+dietary rules
+
+food diaries
+
+personal recipes
+
+Reason:
+
+These are personal and sometimes sensitive.
+
+Future Phase 2 split
+
+Current userPreferences mixes both.
+
+Later migration will extract:
+
+adultsCount
+childrenCount
+babiesCount
+preferredStores
+budgetLevel
+
+Into:
+
+household_settings
+Section 5 — Permissions Model
+Owner
+
+Full household control.
+
+Can:
+
+rename household
+
+remove members
+
+delete household
+
+transfer ownership (future)
+
+manage planner/basket/pantry
+
+Admin
+
+Can:
+
+manage planner
+
+manage pantry
+
+manage basket
+
+invite members
+
+Cannot:
+
+delete household
+
+remove owner
+
+Member
+
+Can:
+
+view planner
+
+add planner entries
+
+add basket items
+
+check basket items
+
+edit pantry items they created
+
+Cannot:
+
+remove members
+
+rename household
+
+Enforcement
+
+Permissions enforced server-side via middleware.
+
+Example helper:
+
+requireHouseholdRole(minRole)
+Section 6 — THA Household Engine
+
+The Household Engine selects meals using a filter + scoring pipeline.
+
+Engine rules must be planner-slot aware.
+
+Example:
+
+Dinner slot → strict shared rules
+Future personal lunch → personal rules
+
+Stage A — Hard Rule Filtering
+
+Remove meals violating any member restriction.
+
+Examples:
+
+peanut allergy
+
+vegetarian restriction
+
+vegan restriction
+
+Union all restrictions across household.
+
+Stage B — Preference Scoring
+
+Rank remaining meals.
+
+Example scoring:
+
++2 cuisine match
++1 quick meal
++1 household favourite
+-1 dislike match
+-2 repetition penalty
+Stage C — Pantry Boost
+
+Meals gain score if pantry ingredients exist.
+
++0.5 per matching ingredient
+max +3
+
+This reduces food waste.
+
+Stage D — Nutrition Fit (Phase 2)
+
+Future feature:
+
+Adjust portions or swaps.
+
+Example:
+
+Alice → tofu swap
+Bob → reduced carbs
+Child → smaller portion
+Stage E — Basket Optimisation
+
+After meals selected:
+
+gather all meal ingredients
+
+normalise ingredients
+
+merge duplicates
+
+subtract pantry stock
+
+generate final basket
+
+Basket merge safety rule
+
+Only merge ingredients if:
+
+ingredient normalization confidence high
+
+unit conversion supported
+
+Otherwise keep separate.
+
+Example:
+
+2 onions + 500g onions → uncertain → do not merge
+Section 7 — Migration Strategy
+
+Migration uses deterministic user mapping.
+
+Do not join households by name.
+
+Step 1 — Create households
+
+Each existing user gets a default household.
+
+INSERT INTO households (name, inviteCode, createdByUserId)
+SELECT
+  username || '''s Household',
+  substr(md5(random()::text),1,8),
+  id
+FROM users
+Step 2 — Create memberships
+INSERT INTO household_members
+(householdId, userId, role)
+
+SELECT
+  households.id,
+  users.id,
+  'owner'
+FROM users
+JOIN households
+ON households.createdByUserId = users.id
+Step 3 — Add householdId columns
+
+Add to shared tables.
+
+Backfill using household_members.
+
+Step 4 — Keep userId columns
+
+Do not drop immediately.
+
+Run both fields in parallel during transition.
+
+Section 8 — MVP Build Plan
+Phase 1A — Schema + Migration
+
+Add:
+
+households
+household_members
+
+Add householdId columns.
+
+Populate via migration.
+
+No route changes yet.
+
+Phase 1B — Route Ownership Swap
+
+Update queries:
+
+planner
+basket
+pantry
+freezer meals
+
+Lookup householdId using helper.
+
+Phase 2 — Household UI
+
+Profile page additions:
+
+household name
+
+invite code
+
+member list
+
+join household
+
+leave household
+
+rename household
+
+Phase 3 — Household Engine v1
+
+Implement:
+
+hard-rule filtering
+
+pantry scoring
+
+preference scoring
+
+Used for meal suggestions.
+
+Phase 4 — Basket Optimisation
+
+Add:
+
+ingredient merge
+
+pantry subtraction
+
+meal attribution
+
+Phase 5 — Member Profiles
+
+Add:
+
+household_member_profiles
+planner_entry_notes
+household_settings
+
+Support:
+
+dependants
+
+dietary rules per member
+
+personalised meal notes
+
+Section 9 — Risks and Mitigation
+Risk	Mitigation
+migration errors	keep userId columns
+incorrect household join	preview household before joining
+invite code abuse	add invite table in future
+pantry subtraction errors	floor quantities at zero
+duplicate basket items	merge using normalizedIngredients
+owner deletion	block deletion if members exist
+Meal ownership risk
+
+Meals remain user-owned.
+
+If a user leaves the household:
+
+Planner entries referencing their meals remain valid because:
+
+Planner entries may store a snapshot reference.
+
+Section 10 — Next Step
+
+Implement Phase 1A only.
+
+This introduces:
+
+households
+household_members
+householdId fields
+
+No UI change.
+No behaviour change.
+
+Once stable:
+
+Proceed to Phase 1B.
+
+Implementation Tasks
+T001 — Schema
+
+Add:
+
+households
+household_members
+
+File:
+
+shared/schema.ts
+T002 — Migration
+
+Create households for existing users.
+
+Add householdId to:
+
+planner_weeks
+shopping_list
+shopping_list_extras
+user_pantry_items
+freezer_meals
+
+Backfill data.
+
+T003 — Household Adapter
+
+Create helper:
+
+getHouseholdForUser(userId)
+T004 — Route Updates
+
+Change planner/basket/pantry queries to use householdId.
+
+T005 — Household API
+
+Endpoints:
+
+POST /api/household
+POST /api/household/join
+GET  /api/household
+PATCH /api/household
+POST /api/household/leave
+DELETE /api/household/members/:userId
+T006 — Household Engine v1
+
+Create:
+
+server/lib/household-engine.ts
+
+Functions:
+
+filterMealsByHouseholdRules()
+scoreMealsForHousehold()
+T007 — Permission Middleware
+
+Implement role checks.
+
+T008 — Leave Household Flow
+
+User leaving triggers new solo household creation.
+
+T009 — Migration Verification
+
+Check:
+
+every user has a household
+
+all shared tables have householdId
+
+no orphan rows
+
+T010 — Basket Merge Safety
+
+Implement safe merge logic.
+
+Final Instruction
+
+Replit should treat this document as the source of truth for the household architecture.
+
+Begin implementation only with Phase 1A.
+
+If you'd like, I can also show you something extremely powerful for THA next:
+
+A Meal Intelligence Layer that sits above the Household Engine and can automatically:
+
+• prevent ultra-processed meal plans
+• improve nutritional balance over the week
+• optimise grocery cost
+
+This would turn THA from a planner into a food decision engine 🍏.

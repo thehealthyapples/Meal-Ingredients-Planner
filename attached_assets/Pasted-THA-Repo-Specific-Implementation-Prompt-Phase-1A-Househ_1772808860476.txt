@@ -1,0 +1,390 @@
+THA Repo-Specific Implementation Prompt — Phase 1A Household Foundation
+
+Objective
+
+Implement Phase 1A of the THA Household System in the current repository only.
+
+This is a data-foundation task only:
+
+schema changes
+
+migration/backfill
+
+helper scaffolding
+
+verification
+
+Do not make:
+
+UI changes
+
+route/query ownership swaps
+
+behaviour changes
+
+This repo already uses a central Drizzle schema in shared/schema.ts, a DatabaseStorage implementation in server/storage.ts, and db:push via the package scripts, so Phase 1A should be implemented in that structure. The five target shared tables already exist in the repo and are currently user-owned: planner_weeks, shopping_list, shopping_list_extras, user_pantry_items, and freezer_meals. Leave the older meal_plans table out of scope for this phase.
+
+Scope for this session
+
+Implement only:
+
+households table
+
+household_members table
+
+nullable householdId columns on:
+
+planner_weeks
+
+shopping_list
+
+shopping_list_extras
+
+user_pantry_items
+
+freezer_meals
+
+migration/backfill for existing users and rows
+
+verification queries
+
+helper scaffolding in server/lib/household.ts
+
+storage interface additions in server/storage.ts
+
+Do not:
+
+update routes to query by householdId
+
+update UI
+
+remove or alter existing userId ownership fields
+
+touch meal_plans
+
+Important repo notes
+
+Use shared/schema.ts as the source of truth for Drizzle schema updates.
+
+Add storage methods to the existing IStorage / DatabaseStorage pattern in server/storage.ts.
+
+The repo’s package scripts already support schema syncing with Drizzle push. Use the existing db push workflow rather than inventing a new migration framework.
+
+I did not find a repo-native executeSql helper in the public code reviewed, so if none exists locally in Replit, run backfill SQL using the repo’s DB connection layer in a temporary script or admin task. server/db.ts exposes the pool/db layer.
+
+Tasks
+
+T001 — Schema updates in shared/schema.ts
+
+Add a new households table:
+
+id serial primary key
+
+name text not null
+
+inviteCode text unique not null
+
+createdAt timestamp with time zone
+
+updatedAt timestamp with time zone
+
+createdByUserId integer referencing users.id or matching existing schema style if other nullable user refs are plain integers
+
+Add a new household_members table:
+
+id serial primary key
+
+householdId integer not null referencing households.id with cascade delete
+
+userId integer not null referencing users.id with cascade delete
+
+role text not null default 'member'
+
+status text not null default 'active'
+
+joinedAt timestamp with time zone
+
+invitedByUserId integer nullable
+
+leftAt timestamp with time zone nullable
+
+unique constraint on (householdId, userId)
+
+Add insert schemas and TS types consistent with the style already used in this repo. Be table-specific with .omit(...); do not blindly omit createdAt/updatedAt from tables that do not have those fields.
+
+Add nullable householdId integer columns to these existing tables only:
+
+planner_weeks
+
+shopping_list
+
+shopping_list_extras
+
+user_pantry_items
+
+freezer_meals
+
+Keep every existing userId column unchanged.
+
+Acceptance:
+
+shared/schema.ts compiles
+
+new types are exported cleanly
+
+schema remains stylistically consistent with the repo
+
+T002 — Push schema
+
+Run the repo’s existing schema sync command.
+
+Use:
+
+npm run db:push --force
+
+Acceptance:
+
+push succeeds
+
+new tables exist in DB
+
+the five new nullable householdId columns exist
+
+T003 — Data backfill / migration
+
+After schema push, run data backfill.
+
+If a reusable executeSql helper already exists in the Replit environment, use it.
+If not, use the existing DB connection in server/db.ts and execute raw SQL safely from a one-off script or protected admin runner.
+
+Migration steps:
+
+Step 1 — create one household per existing user, deterministically
+
+Use:
+
+INSERT INTO households (name, invite_code, created_by_user_id, created_at, updated_at)
+SELECT
+  username || '''s Household',
+  substr(md5(random()::text), 1, 8),
+  id,
+  now(),
+  now()
+FROM users
+ON CONFLICT DO NOTHING;
+
+Step 2 — create owner memberships using deterministic created_by_user_id
+
+Use:
+
+INSERT INTO household_members (household_id, user_id, role, status, joined_at)
+SELECT h.id, u.id, 'owner', 'active', now()
+FROM users u
+JOIN households h ON h.created_by_user_id = u.id
+ON CONFLICT DO NOTHING;
+
+Step 3 — backfill household_id on the five shared tables
+
+Use:
+
+UPDATE planner_weeks pw
+SET household_id = hm.household_id
+FROM household_members hm
+WHERE hm.user_id = pw.user_id
+  AND hm.role = 'owner'
+  AND pw.household_id IS NULL;
+
+UPDATE shopping_list sl
+SET household_id = hm.household_id
+FROM household_members hm
+WHERE hm.user_id = sl.user_id
+  AND hm.role = 'owner'
+  AND sl.household_id IS NULL;
+
+UPDATE shopping_list_extras sle
+SET household_id = hm.household_id
+FROM household_members hm
+WHERE hm.user_id = sle.user_id
+  AND hm.role = 'owner'
+  AND sle.household_id IS NULL;
+
+UPDATE user_pantry_items upi
+SET household_id = hm.household_id
+FROM household_members hm
+WHERE hm.user_id = upi.user_id
+  AND hm.role = 'owner'
+  AND upi.household_id IS NULL;
+
+UPDATE freezer_meals fm
+SET household_id = hm.household_id
+FROM household_members hm
+WHERE hm.user_id = fm.user_id
+  AND hm.role = 'owner'
+  AND fm.household_id IS NULL;
+
+Important rules:
+
+never join households by household name
+
+do not remove any userId columns
+
+do not change route logic in this phase
+
+Acceptance:
+
+every existing user has exactly one active owner membership
+
+all existing rows in the five shared tables have non-null household_id
+
+T004 — Helper scaffolding in server/lib/household.ts
+
+Create a new file:
+
+server/lib/household.ts
+
+Add:
+
+getHouseholdForUser(userId: number): Promise<number>
+
+queries household_members
+
+returns active household id for the user
+
+throws a clear error if not found
+
+requireHouseholdRole(minRole: 'member' | 'admin' | 'owner')
+
+middleware factory placeholder only
+
+do not wire into routes yet
+
+should compile cleanly and be ready for Phase 1B/2
+
+Keep implementation compatible with the current auth/storage patterns used by this repo.
+
+Acceptance:
+
+helper compiles
+
+can be imported without affecting existing behaviour
+
+T005 — Add storage methods in server/storage.ts
+
+Extend IStorage and DatabaseStorage with:
+
+getHouseholdByUser(userId: number)
+
+returns household row plus member list
+
+getUserHouseholdRole(userId: number)
+
+returns role string or null
+
+Add only the storage methods and implementation.
+Do not update route handlers yet.
+
+Acceptance:
+
+server/storage.ts compiles
+
+methods query the new tables correctly
+
+no existing storage methods regress
+
+T006 — Verification
+
+Run verification queries after migration.
+
+All should return 0:
+
+SELECT COUNT(*) AS users_without_household
+FROM users u
+LEFT JOIN household_members hm
+  ON hm.user_id = u.id
+ AND hm.status = 'active'
+WHERE hm.id IS NULL;
+
+SELECT COUNT(*) AS planner_weeks_null_household
+FROM planner_weeks
+WHERE household_id IS NULL;
+
+SELECT COUNT(*) AS shopping_list_null_household
+FROM shopping_list
+WHERE household_id IS NULL;
+
+SELECT COUNT(*) AS shopping_list_extras_null_household
+FROM shopping_list_extras
+WHERE household_id IS NULL;
+
+SELECT COUNT(*) AS user_pantry_items_null_household
+FROM user_pantry_items
+WHERE household_id IS NULL;
+
+SELECT COUNT(*) AS freezer_meals_null_household
+FROM freezer_meals
+WHERE household_id IS NULL;
+
+SELECT COUNT(*) AS orphan_household_members
+FROM household_members hm
+LEFT JOIN households h ON h.id = hm.household_id
+WHERE h.id IS NULL;
+
+Also verify:
+
+every user has exactly one owner membership for their default household
+
+there are no duplicate (household_id, user_id) pairs
+
+Deliverables
+
+At the end of the task, provide:
+
+list of edited files
+
+concise summary of schema changes
+
+exact command run for schema push
+
+exact method used to execute backfill SQL
+
+verification query results
+
+any repo-specific deviations needed to make the implementation fit the current codebase
+
+Constraints
+
+No route changes
+
+No UI changes
+
+No behavioural changes
+
+No dropping old columns
+
+No touching meal_plans
+
+Keep code style consistent with the current repo structure
+
+Minimise risk and keep this phase fully reversible
+
+Definition of done
+
+Phase 1A is complete only when:
+
+schema is updated
+
+DB is pushed successfully
+
+households and household_members exist
+
+the five shared tables have nullable householdId columns
+
+backfill is completed
+
+all verification queries pass
+
+helper/storage scaffolding compiles
+
+no existing app behaviour is changed
+
+If the repo structure differs slightly from expectations while implementing, adapt to the existing architecture rather than forcing a generic solution, but stay within Phase 1A only.

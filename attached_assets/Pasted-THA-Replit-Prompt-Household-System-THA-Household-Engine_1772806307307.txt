@@ -1,0 +1,596 @@
+THA Replit Prompt — Household System + THA Household Engine (Planning Only)
+Objective
+
+Design and plan a new Household-first architecture for The Healthy Apples (THA) so the product supports shared meal planning, pantry management, basket optimisation, and future personal food diaries without merging user accounts.
+
+This is a planning and architecture task only.
+Do not implement yet.
+
+The goal is to produce a clear build plan for introducing:
+
+Households
+
+Household members and roles
+
+Shared planner / pantry / basket
+
+Individual user goals and future food diaries
+
+THA Household Engine v1
+
+dietary conflict filtering
+
+pantry-aware meal scoring
+
+basket optimisation
+
+A phased implementation plan that avoids major refactoring later
+
+Current Product Context
+
+THA is a meal planning and shopping assistant.
+
+The product already conceptually revolves around:
+
+meal planning
+
+baskets
+
+food decisions
+
+nutrition direction
+
+future diary / tracking potential
+
+The product should no longer assume a single isolated user.
+Instead, it should assume food decisions happen at the household level, while still preserving individual user needs.
+
+Examples:
+
+a family shares dinners
+
+two partners share a basket and pantry
+
+users may still log individual lunches later
+
+members may have different allergies, goals, dislikes, and nutrition needs
+
+Critical Product Rule
+
+Do not merge accounts.
+
+Users must remain independent accounts.
+
+Instead, create a Household container that users belong to.
+
+Use this principle throughout the plan:
+
+shared data belongs to household_id
+
+personal data belongs to user_id
+
+Strategic Goal
+
+Position THA not as just a meal planner, but as a household food operating system that can eventually:
+
+resolve dietary conflicts
+
+balance nutrition across multiple people
+
+optimise shopping baskets
+
+reduce waste using pantry data
+
+support collaborative planning
+
+support premium household subscriptions later
+
+Required Output
+
+Produce a structured planning response with the following sections:
+
+Recommended architecture overview
+
+Data ownership model
+
+Database/schema design
+
+Roles and permissions
+
+Planner / pantry / basket behaviour
+
+THA Household Engine design
+
+Phased implementation plan
+
+Likely edge cases
+
+Risks and migration concerns
+
+Suggested MVP scope
+
+Future opportunities after MVP
+
+Do not give vague advice.
+Be concrete and system-oriented.
+
+Architecture Requirements
+1. Household Model
+
+Design THA around a Household entity.
+
+The household should act as the shared container for:
+
+planner
+
+pantry
+
+basket
+
+favourite meals
+
+shared settings later
+
+Each household can have multiple members.
+
+Each member remains an independent user account.
+
+Users must be able to:
+
+create a household
+
+join a household
+
+leave a household
+
+have a role within a household
+
+2. Data Ownership Rules
+
+The plan must clearly separate:
+
+Shared household data
+
+These should generally belong to household_id:
+
+meal planner
+
+basket
+
+pantry
+
+household favourite meals
+
+possible later budget settings
+
+shared routine meals
+
+Personal user data
+
+These should generally belong to user_id:
+
+personal goals
+
+allergies
+
+dislikes
+
+dietary rules
+
+personal nutrition targets
+
+personal diary entries
+
+personal out-of-home lunches
+
+personal weight or progress logs if added later
+
+The response must explain why this separation matters.
+
+3. Required Database / Schema Planning
+
+Ask Replit to propose a clean schema plan for at least the following entities:
+
+households
+
+household_members
+
+user_profiles or equivalent profile extension
+
+household_pantry_items
+
+household_planner
+
+household_basket
+
+meals
+
+meal_ingredients
+
+meal_nutrition_cache or equivalent
+
+support for allergies / preferences / diet rules
+
+The response should identify:
+
+primary keys
+
+important foreign keys
+
+where household_id is required
+
+where user_id is required
+
+whether any many-to-many relationships are needed
+
+The response should also recommend whether meals remain globally reusable or can be household-specific.
+
+Roles and Permissions Requirements
+
+The architecture must include household roles.
+
+At minimum plan for:
+
+Owner
+
+creates household
+
+can manage members
+
+can remove members
+
+can handle billing later
+
+Admin
+
+can manage planner
+
+can manage pantry
+
+can manage basket
+
+can manage household meal planning settings
+
+Member
+
+can contribute to basket
+
+can add meals
+
+can log personal data
+
+can interact with planner based on permissions
+
+Optional:
+
+Child / restricted member
+
+limited planner visibility or interaction
+
+useful later, not required for MVP
+
+The output should recommend an MVP role system and explain what can wait.
+
+Planner Behaviour Requirements
+
+The planning response must explain how the planner should behave under a household model.
+
+The planner should support:
+
+shared household dinners
+
+potentially shared breakfasts
+
+future support for personal lunches
+
+one meal entry with multiple member notes rather than duplicating meals per person
+
+Example concept:
+
+Dinner: Stir Fry
+
+Alice: tofu swap
+
+Bob: reduced rice
+
+Child: no chilli
+
+This should be explicitly discussed as a product pattern.
+
+Pantry Requirements
+
+The pantry should be a shared household pantry.
+
+The planning response should address:
+
+pantry data ownership
+
+item quantity tracking
+
+whether pantry items are manually added, consumed, inferred, or some combination
+
+how pantry availability can influence meal selection
+
+The planning response should recommend a simple MVP pantry approach first.
+
+Basket Requirements
+
+The basket should be household-shared.
+
+The planning response should explain how the system could eventually:
+
+merge repeated ingredients across meals
+
+subtract pantry availability
+
+avoid duplicate purchases
+
+support source attribution later if needed
+
+remain easy to understand in the UI
+
+This should be part of the THA Household Engine planning.
+
+THA Household Engine Requirements
+
+Ask Replit to design a v1 planning model for the THA Household Engine.
+
+This is a decision layer that helps choose and optimise meals.
+
+The engine should be described as stages, not just as a vague concept.
+
+Required Engine Stages
+Stage A — Hard-rule conflict filtering
+
+Meals that violate allergies or non-negotiable restrictions are removed.
+
+Examples:
+
+peanut allergy
+
+vegetarian requirement
+
+vegan rule
+
+medically excluded ingredients later
+
+Stage B — Soft preference scoring
+
+Meals are ranked higher or lower based on:
+
+dislikes
+
+cuisine preferences
+
+ease
+
+repetition avoidance later
+
+family suitability later
+
+Stage C — Pantry boost
+
+Meals should score higher if they use ingredients already in the pantry.
+
+Stage D — Nutrition fit
+
+The system should support the idea that one shared meal can generate different per-person instructions or swaps.
+
+Examples:
+
+tofu for vegetarian
+
+lower-carb portion for weight loss
+
+smaller portion for child
+
+Stage E — Basket optimisation
+
+Once meals are selected:
+
+merge overlapping ingredients
+
+reduce duplicate line items
+
+account for pantry stock where possible
+
+Scoring Logic Requirements
+
+Ask Replit to propose a simple meal scoring model such as:
+
+score =
+  pantryMatch
+  + preferenceFit
+  + nutritionFit
+  - conflictPenalty
+  - dislikePenalty
+  - costPenalty
+  - repetitionPenalty
+
+The response should explain which parts are suitable for MVP and which parts can come later.
+
+MVP Constraints
+
+This is important.
+
+Replit should recommend a realistic MVP that is small enough to build without destabilising the app.
+
+Suggested MVP scope
+
+The plan should evaluate and likely recommend something close to:
+
+household creation
+
+household membership
+
+household roles: owner/admin/member
+
+shared planner
+
+shared basket
+
+shared pantry
+
+user-level allergies / diet rules / preferences
+
+hard-rule filtering for meals
+
+pantry-aware meal ranking
+
+basic basket merge logic
+
+Explicitly not required for MVP
+
+These can be planned but deferred:
+
+advanced nutrition balancing
+
+automated full weekly planning
+
+budget optimisation
+
+billing/subscription model
+
+child account controls
+
+ghost profiles
+
+divorce/split-household tooling
+
+sophisticated pantry depletion automation
+
+full personal food diary system
+
+UX / Product Questions Replit Must Address
+
+Ask Replit to include recommendations for the following questions:
+
+Should a user be allowed in more than one household?
+
+What happens when a user leaves a household?
+
+What happens to their personal data versus household data?
+
+Should household meals be global or copy-on-add?
+
+How should planner entries display per-person meal notes?
+
+How should allergies and dietary rules be stored for reliability?
+
+What is the cleanest path from single-user THA to household THA with minimal migration pain?
+
+Migration Planning Requirements
+
+This section is critical.
+
+The response must explain how to evolve THA from the current likely single-user assumption into a household-first architecture.
+
+Replit should identify:
+
+which existing features likely need to move from user_id to household_id
+
+which tables should remain personal
+
+where adapter logic may be needed temporarily
+
+whether a default household should be auto-created for existing users
+
+how to reduce migration risk
+
+The response should explicitly discuss a recommended migration strategy such as:
+
+existing user gets a default household automatically
+
+current planner/basket/pantry data migrates into that household
+
+user remains the owner of the household
+
+Edge Cases Replit Must Cover
+
+Ask Replit to comment on at least these edge cases:
+
+one-person household
+
+two adults sharing meals but different lunches
+
+allergy conflict
+
+vegetarian + omnivore in same household
+
+member leaving household
+
+deleting household
+
+owner transfer later
+
+households with children later
+
+future ghost profiles for non-login dependants
+
+duplicate pantry items / unit inconsistencies
+
+Deliverable Format Replit Should Use
+
+Tell Replit to respond in the following format:
+
+Section 1 — Executive recommendation
+
+A clear summary of the best architectural direction.
+
+Section 2 — Recommended domain model
+
+A clean explanation of the main objects and how they relate.
+
+Section 3 — Proposed schema
+
+Table-by-table recommendations.
+
+Section 4 — Data ownership rules
+
+What belongs to household vs user.
+
+Section 5 — Permissions model
+
+Role definitions and MVP recommendation.
+
+Section 6 — Engine design
+
+Household Engine v1 stages and logic.
+
+Section 7 — Migration strategy
+
+How to move from current THA safely.
+
+Section 8 — MVP build plan
+
+A phased sequence of implementation.
+
+Section 9 — Risks / tradeoffs
+
+What could go wrong and how to avoid it.
+
+Section 10 — Recommended next step
+
+What should be built first after planning.
+
+Final Instruction to Replit
+
+Please act as a senior product architect + senior full-stack systems designer.
+
+Do not write code yet.
+
+Do not provide a generic answer.
+
+Produce a specific planning document for THA that is practical for implementation and avoids unnecessary future refactoring.
+
+Optimise for:
+
+clean architecture
+
+low migration pain
+
+strong future extensibility
+
+product differentiation
+
+realistic MVP delivery
