@@ -1,13 +1,13 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, useRef, createContext, useContext } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/hooks/use-user";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   LayoutDashboard, Utensils, CalendarDays, ShoppingBasket,
-  Package, User, LogOut, ShoppingCart, ShieldCheck, Star,
+  Package, User, LogOut, ShieldCheck, Star,
   Mail, Sliders, Search, Menu, ChevronLeft, ChevronRight,
   MoreHorizontal, Archive,
 } from "lucide-react";
@@ -75,16 +75,16 @@ function useNavData() {
 }
 
 function SidebarNavItem({
-  href, label, icon: Icon, isCollapsed, isActive, onClick,
+  href, label, icon: Icon, isCollapsed, isActive, onClick, badge,
 }: {
   href: string; label: string; icon: React.ComponentType<{ className?: string }>;
-  isCollapsed: boolean; isActive: boolean; onClick?: () => void;
+  isCollapsed: boolean; isActive: boolean; onClick?: () => void; badge?: number;
 }) {
   const linkEl = (
     <Link
       href={href}
       onClick={onClick}
-      className={`flex items-center gap-3 w-full rounded-lg text-sm transition-colors ${
+      className={`relative flex items-center gap-3 w-full rounded-lg text-sm transition-colors ${
         isCollapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"
       } ${
         isActive
@@ -93,8 +93,13 @@ function SidebarNavItem({
       }`}
       data-testid={`sidebar-nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
     >
-      <span className="flex items-center justify-center min-w-[24px] flex-shrink-0">
+      <span className="relative flex items-center justify-center min-w-[24px] flex-shrink-0">
         <Icon className="h-4 w-4" />
+        {badge != null && badge > 0 && (
+          <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        )}
       </span>
       {!isCollapsed && <span className="truncate">{label}</span>}
     </Link>
@@ -104,7 +109,9 @@ function SidebarNavItem({
     return (
       <Tooltip>
         <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
-        <TooltipContent side="right">{label}</TooltipContent>
+        <TooltipContent side="right">
+          {label}{badge != null && badge > 0 ? ` (${badge})` : ""}
+        </TooltipContent>
       </Tooltip>
     );
   }
@@ -112,14 +119,58 @@ function SidebarNavItem({
 }
 
 function SidebarBody({
-  isCollapsed, location, isAdmin, support, onClose,
+  isCollapsed, location, isAdmin, support, onClose, onSearchOpen, itemCount, logout,
 }: {
   isCollapsed: boolean; location: string; isAdmin: boolean;
   support: string; onClose?: () => void;
+  onSearchOpen: () => void; itemCount: number;
+  logout: () => void;
 }) {
+  const searchBtn = (
+    <button
+      onClick={() => { onClose?.(); onSearchOpen(); }}
+      className={`flex items-center gap-3 w-full rounded-lg text-sm transition-colors text-muted-foreground hover:bg-accent/60 hover:text-foreground ${
+        isCollapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"
+      }`}
+      data-testid="sidebar-button-search"
+      aria-label="Search meals"
+    >
+      <span className="flex items-center justify-center min-w-[24px] flex-shrink-0">
+        <Search className="h-4 w-4" />
+      </span>
+      {!isCollapsed && <span className="truncate">Search</span>}
+    </button>
+  );
+
+  const logoutBtn = (
+    <button
+      onClick={() => { onClose?.(); logout(); }}
+      className={`flex items-center gap-3 w-full rounded-lg text-sm transition-colors text-muted-foreground hover:bg-destructive/10 hover:text-destructive ${
+        isCollapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"
+      }`}
+      data-testid="sidebar-button-logout"
+      aria-label="Log out"
+    >
+      <span className="flex items-center justify-center min-w-[24px] flex-shrink-0">
+        <LogOut className="h-4 w-4" />
+      </span>
+      {!isCollapsed && <span className="truncate">Log out</span>}
+    </button>
+  );
+
   return (
-    <div className="flex flex-col h-full py-3 overflow-y-auto">
-      <nav className="flex flex-col gap-0.5 px-2 flex-1">
+    <div className="flex flex-col h-full py-3">
+      {/* Main nav */}
+      <nav className="flex flex-col gap-0.5 px-2 flex-1 overflow-y-auto">
+        {isCollapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>{searchBtn}</TooltipTrigger>
+            <TooltipContent side="right">Search meals</TooltipContent>
+          </Tooltip>
+        ) : searchBtn}
+
+        <div className="my-1 border-t border-border/40" />
+
         {NAV_ITEMS.map((item) => (
           <SidebarNavItem
             key={item.href}
@@ -129,8 +180,10 @@ function SidebarBody({
             isCollapsed={isCollapsed}
             isActive={location === item.href}
             onClick={onClose}
+            badge={item.href === "/analyse-basket" ? itemCount : undefined}
           />
         ))}
+
         {isAdmin && (
           <>
             <div className="my-2 border-t border-border" />
@@ -153,7 +206,10 @@ function SidebarBody({
           </>
         )}
       </nav>
-      <div className="px-2 pt-2 border-t border-border">
+
+      {/* Bottom section: support + logout */}
+      <div className="px-2 pt-2 border-t border-border flex flex-col gap-0.5">
+        {/* Support */}
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -177,138 +233,119 @@ function SidebarBody({
             <span className="truncate">{support}</span>
           </a>
         )}
+
+        {/* Logout — pinned to very bottom */}
+        {isCollapsed ? (
+          <Tooltip>
+            <TooltipTrigger asChild>{logoutBtn}</TooltipTrigger>
+            <TooltipContent side="right">Log out</TooltipContent>
+          </Tooltip>
+        ) : logoutBtn}
       </div>
     </div>
   );
 }
 
-export function TopBar() {
-  const [location, navigate] = useLocation();
-  const searchStr = useSearch();
-  const { user, logout, itemCount, userInitial } = useNavData();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState(() => {
-    const params = new URLSearchParams(searchStr);
-    return params.get("q") || "";
-  });
+/* ── Search Modal ── */
+function SearchModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const [, navigate] = useLocation();
+  const [value, setValue] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(searchStr);
-    setSearchValue(params.get("q") || "");
-  }, [searchStr]);
+    if (open) {
+      setValue("");
+      setTimeout(() => inputRef.current?.focus(), 50);
+    }
+  }, [open]);
 
+  const submit = () => {
+    if (value.trim()) {
+      navigate(`/meals?q=${encodeURIComponent(value.trim())}`);
+      onClose();
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent
+        className="max-w-md bg-[hsl(var(--background))] border-border p-6"
+        style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
+        data-testid="dialog-search"
+      >
+        <DialogTitle className="text-base font-semibold mb-3">Search meals</DialogTitle>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Type a meal name…"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submit();
+              if (e.key === "Escape") onClose();
+            }}
+            className="w-full h-10 pl-9 pr-3 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            data-testid="input-search-modal"
+          />
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-2">
+          Press <kbd className="font-mono bg-muted px-1 py-0.5 rounded text-[10px]">Enter</kbd> to search or{" "}
+          <kbd className="font-mono bg-muted px-1 py-0.5 rounded text-[10px]">Esc</kbd> to cancel
+        </p>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ── TopBar — logo only on desktop, hamburger + logo + search on mobile ── */
+export function TopBar() {
+  const [location] = useLocation();
+  const { user } = useUser();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const [, navigate] = useLocation();
   const { data: config } = useQuery<{ supportEmail?: string }>({
     queryKey: ["/api/config"],
     enabled: !!user,
   });
+  const { data: shoppingListItems = [] } = useQuery<any[]>({
+    queryKey: [api.shoppingList.list.path],
+    enabled: !!user,
+  });
+  const itemCount = shoppingListItems.length;
   const support = config?.supportEmail || "support@thehealthyapples.com";
+  const { logout } = useUser();
   const isAdmin = (user as any)?.role === "admin";
 
   if (!user) return null;
 
-  const handleSearch = () => {
+  const handleMobileSearch = () => {
     if (searchValue.trim()) {
       navigate(`/meals?q=${encodeURIComponent(searchValue.trim())}`);
       setMobileSearchOpen(false);
+      setSearchValue("");
     }
   };
-  const handleSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") handleSearch();
-    if (e.key === "Escape") setMobileSearchOpen(false);
-  };
-
-  const searchInput = (
-    <div className="relative flex-1">
-      <input
-        type="text"
-        placeholder="Search meals…"
-        value={searchValue}
-        onChange={(e) => setSearchValue(e.target.value)}
-        onKeyDown={handleSearchKey}
-        className="w-full h-8 pl-3 pr-8 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-        data-testid="input-search"
-      />
-      <button
-        onClick={handleSearch}
-        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-        data-testid="button-search"
-        aria-label="Search"
-      >
-        <Search className="h-3.5 w-3.5" />
-      </button>
-    </div>
-  );
-
-  const actions = (
-    <div className="flex items-center gap-1">
-      {/* Mobile search toggle */}
-      <button
-        className="md:hidden flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
-        onClick={() => setMobileSearchOpen((v) => !v)}
-        data-testid="button-mobile-search"
-        aria-label="Search"
-      >
-        <Search className="h-4 w-4" />
-      </button>
-      <Link
-        href="/analyse-basket"
-        className="relative flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
-        data-testid="button-basket-top"
-        aria-label="Basket"
-      >
-        <ShoppingCart className="h-4 w-4" />
-        {itemCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[16px] h-4 flex items-center justify-center px-0.5">
-            {itemCount}
-          </span>
-        )}
-      </Link>
-      <Link
-        href="/profile"
-        onClick={() => sessionStorage.setItem("profileReturnPath", window.location.pathname + window.location.search)}
-      >
-        <Avatar className="h-8 w-8 cursor-pointer" data-testid="avatar-user">
-          <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
-            {userInitial}
-          </AvatarFallback>
-        </Avatar>
-      </Link>
-      <button
-        className="hidden md:flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
-        onClick={() => logout()}
-        title="Logout"
-        data-testid="button-logout"
-        aria-label="Logout"
-      >
-        <LogOut className="h-4 w-4" />
-      </button>
-    </div>
-  );
 
   return (
     <>
       <div className="sticky top-0 z-50 shrink-0" data-testid="top-nav-bar">
-        {/* Main bar */}
-        <header className="h-14 w-full bg-card/72 backdrop-blur-md border-b border-border">
-          {/* Desktop: 3-column grid — search | logo | actions */}
-          <div className="hidden md:grid grid-cols-[1fr_auto_1fr] items-center h-full px-4 gap-3">
-            <div className="flex items-center max-w-sm w-full">
-              {searchInput}
-            </div>
-            <Link href="/" data-testid="link-logo" className="flex justify-center items-center">
+        {/* Desktop: pure logo bar */}
+        <header className="h-12 w-full bg-card/60 backdrop-blur-md border-b border-border">
+          <div className="hidden md:flex items-center justify-center h-full px-4">
+            <Link href="/" data-testid="link-logo" className="flex items-center">
               <img
                 src="/logo-long.png"
                 alt="The Healthy Apples"
-                className="h-9 w-auto max-w-[200px] object-contain"
+                className="h-8 w-auto max-w-[220px] object-contain"
               />
             </Link>
-            <div className="flex items-center justify-end">
-              {actions}
-            </div>
           </div>
 
-          {/* Mobile: hamburger | logo | actions */}
+          {/* Mobile: hamburger | logo | search toggle */}
           <div className="md:hidden grid grid-cols-[auto_1fr_auto] items-center h-full px-2 gap-2">
             <button
               className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
@@ -325,16 +362,42 @@ export function TopBar() {
                 className="h-7 w-auto max-w-[140px] object-contain"
               />
             </Link>
-            <div className="flex items-center justify-end">
-              {actions}
-            </div>
+            <button
+              className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
+              onClick={() => setMobileSearchOpen((v) => !v)}
+              data-testid="button-mobile-search"
+              aria-label="Search"
+            >
+              <Search className="h-4 w-4" />
+            </button>
           </div>
         </header>
 
-        {/* Mobile search panel — slides in below header */}
+        {/* Mobile search panel */}
         {mobileSearchOpen && (
-          <div className="md:hidden bg-card/72 backdrop-blur-md border-b border-border px-3 py-2 flex items-center gap-2">
-            {searchInput}
+          <div className="md:hidden bg-card/80 backdrop-blur-md border-b border-border px-3 py-2 flex items-center gap-2">
+            <div className="relative flex-1">
+              <input
+                type="text"
+                placeholder="Search meals…"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleMobileSearch();
+                  if (e.key === "Escape") setMobileSearchOpen(false);
+                }}
+                autoFocus
+                className="w-full h-8 pl-3 pr-8 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                data-testid="input-search"
+              />
+              <button
+                onClick={handleMobileSearch}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Search"
+              >
+                <Search className="h-3.5 w-3.5" />
+              </button>
+            </div>
             <button
               className="text-muted-foreground hover:text-foreground text-sm shrink-0"
               onClick={() => setMobileSearchOpen(false)}
@@ -360,6 +423,9 @@ export function TopBar() {
             isAdmin={isAdmin}
             support={support}
             onClose={() => setMobileOpen(false)}
+            onSearchOpen={() => {}}
+            itemCount={itemCount}
+            logout={logout}
           />
         </SheetContent>
       </Sheet>
@@ -367,66 +433,72 @@ export function TopBar() {
   );
 }
 
+/* ── Desktop Sidebar ── */
 export function DesktopSidebar() {
   const [location] = useLocation();
-  const { user } = useUser();
   const { isCollapsed, toggle } = useSidebarState();
-  const { data: config } = useQuery<{ supportEmail?: string }>({
-    queryKey: ["/api/config"],
-    enabled: !!user,
-  });
-  const support = config?.supportEmail || "support@thehealthyapples.com";
-  const isAdmin = (user as any)?.role === "admin";
+  const { user, logout, itemCount, support, isAdmin } = useNavData();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   if (!user) return null;
 
   return (
-    <aside
-      className={`hidden md:flex flex-col relative flex-shrink-0 bg-card/68 backdrop-blur-md border-r border-border transition-all duration-200 overflow-x-hidden overflow-y-auto ${
-        isCollapsed ? "w-16" : "w-[220px]"
-      }`}
-      data-testid="desktop-sidebar"
-    >
-      {/* Meadow tint layer behind icon rail */}
-      <div
-        aria-hidden
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(180deg, hsl(var(--accent)) 0%, hsl(var(--background)) 80%)",
-          opacity: "var(--orchard-sidebar-opacity, 0.50)",
-        }}
-      />
-
-      <div className="relative z-10 flex flex-col flex-1">
-        <div className={`flex ${isCollapsed ? "justify-center" : "justify-end"} px-2 pt-3 pb-1 shrink-0`}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={toggle}
-                className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent/60 text-muted-foreground transition-colors"
-                data-testid="button-sidebar-toggle"
-                aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              >
-                {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="right">
-              {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            </TooltipContent>
-          </Tooltip>
-        </div>
-        <SidebarBody
-          isCollapsed={isCollapsed}
-          location={location}
-          isAdmin={isAdmin}
-          support={support}
+    <>
+      <aside
+        className={`hidden md:flex flex-col relative flex-shrink-0 bg-card/60 backdrop-blur-md border-r border-border transition-all duration-200 overflow-x-hidden overflow-y-hidden ${
+          isCollapsed ? "w-16" : "w-[220px]"
+        }`}
+        data-testid="desktop-sidebar"
+      >
+        {/* Subtle gradient tint layer */}
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(180deg, hsl(var(--accent)) 0%, hsl(var(--background)) 80%)",
+            opacity: "var(--orchard-sidebar-opacity, 0.40)",
+          }}
         />
-      </div>
-    </aside>
+
+        <div className="relative z-10 flex flex-col flex-1 h-full overflow-hidden">
+          {/* Collapse toggle */}
+          <div className={`flex ${isCollapsed ? "justify-center" : "justify-end"} px-2 pt-3 pb-1 shrink-0`}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={toggle}
+                  className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent/60 text-muted-foreground transition-colors"
+                  data-testid="button-sidebar-toggle"
+                  aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                >
+                  {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+
+          <SidebarBody
+            isCollapsed={isCollapsed}
+            location={location}
+            isAdmin={isAdmin}
+            support={support}
+            onSearchOpen={() => setSearchOpen(true)}
+            itemCount={itemCount}
+            logout={logout}
+          />
+        </div>
+      </aside>
+
+      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+    </>
   );
 }
 
+/* ── Mobile Bottom Nav ── */
 export function MobileNav() {
   const [location] = useLocation();
   const { user, logout } = useUser();
@@ -523,7 +595,11 @@ export function MobileNav() {
             )}
 
             <div className="border-t border-border my-1" />
-            <a href={`mailto:${support}`} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm hover:bg-muted transition-colors" data-testid="more-link-support">
+            <a
+              href={`mailto:${support}`}
+              className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm hover:bg-muted transition-colors"
+              data-testid="more-link-support"
+            >
               <Mail className="h-5 w-5 text-muted-foreground" />
               <span className="text-muted-foreground">{support}</span>
             </a>
