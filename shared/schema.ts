@@ -124,6 +124,7 @@ export const groceryProducts = pgTable("grocery_products", {
 export const shoppingList = pgTable("shopping_list", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
+  householdId: integer("household_id"),
   productName: text("product_name").notNull(),
   normalizedName: text("normalized_name"),
   quantityValue: real("quantity_value"),
@@ -318,6 +319,7 @@ export const mealPlanEntries = pgTable("meal_plan_entries", {
 export const plannerWeeks = pgTable("planner_weeks", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
+  householdId: integer("household_id"),
   weekNumber: integer("week_number").notNull(),
   weekName: text("week_name").notNull(),
 }, (table) => [
@@ -650,6 +652,7 @@ export type InsertProductHistory = z.infer<typeof insertProductHistorySchema>;
 export const freezerMeals = pgTable("freezer_meals", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
+  householdId: integer("household_id"),
   mealId: integer("meal_id").notNull(),
   totalPortions: integer("total_portions").notNull().default(1),
   remainingPortions: integer("remaining_portions").notNull().default(1),
@@ -788,6 +791,7 @@ export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
 export const userPantryItems = pgTable("user_pantry_items", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  householdId: integer("household_id"),
   ingredientKey: text("ingredient_key").notNull(),
   displayName: text("display_name"),
   category: text("category").notNull().default("larder"),
@@ -810,6 +814,7 @@ export type InsertUserPantryItem = z.infer<typeof insertUserPantryItemSchema>;
 export const shoppingListExtras = pgTable("shopping_list_extras", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  householdId: integer("household_id"),
   name: text("name").notNull(),
   category: text("category").notNull().default("household"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -898,3 +903,42 @@ export const insertRecipeSourceAuditLogSchema = createInsertSchema(recipeSourceA
 
 export type RecipeSourceAuditLog = typeof recipeSourceAuditLog.$inferSelect;
 export type InsertRecipeSourceAuditLog = z.infer<typeof insertRecipeSourceAuditLogSchema>;
+
+// ─── Household System ─────────────────────────────────────────────────────────
+
+export const households = pgTable("households", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  inviteCode: text("invite_code").notNull().unique(),
+  createdByUserId: integer("created_by_user_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const householdMembers = pgTable("household_members", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: text("role").notNull().default("member"),
+  status: text("status").notNull().default("active"),
+  joinedAt: timestamp("joined_at", { withTimezone: true }),
+  invitedByUserId: integer("invited_by_user_id"),
+  leftAt: timestamp("left_at", { withTimezone: true }),
+}, (table) => [
+  unique("household_members_household_user_unique").on(table.householdId, table.userId),
+]);
+
+export const insertHouseholdSchema = createInsertSchema(households).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertHouseholdMemberSchema = createInsertSchema(householdMembers).omit({
+  id: true,
+});
+
+export type Household = typeof households.$inferSelect;
+export type InsertHousehold = z.infer<typeof insertHouseholdSchema>;
+export type HouseholdMember = typeof householdMembers.$inferSelect;
+export type InsertHouseholdMember = z.infer<typeof insertHouseholdMemberSchema>;
