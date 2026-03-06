@@ -1,0 +1,535 @@
+THA Repo-Specific Implementation Prompt — Phase 1B Household Ownership Swap
+
+Objective
+
+Implement Phase 1B of the THA Household System in the current repository.
+
+Phase 1A is already complete:
+
+households exists
+
+household_members exists
+
+household_id exists on the 5 shared tables
+
+legacy users have been backfilled into solo households
+
+server/lib/household.ts exists with getHouseholdForUser()
+
+server/storage.ts has household storage helpers
+
+This phase must switch shared data ownership at the route/storage level from userId to householdId, while preserving current app behaviour.
+
+Because every existing user currently has a household of one, the app should behave identically after this phase.
+
+Scope for this session
+
+Implement only:
+
+planner ownership swap
+
+shopping list ownership swap
+
+shopping list extras ownership swap
+
+pantry ownership swap
+
+freezer meals ownership swap
+
+ensure all new writes set both:
+
+existing userId
+
+new householdId
+
+Do not implement:
+
+household management UI
+
+leave/join household flow
+
+Household Engine
+
+permission middleware wiring beyond what is strictly needed
+
+basket merge logic
+
+any schema changes unless absolutely necessary for compilation
+
+Critical rules
+
+No UI changes
+
+No product behaviour changes
+
+No query should assume multi-household membership
+
+Do not remove userId from any table
+
+For all shared records, continue to preserve attribution via userId
+
+Shared ownership now means:
+
+reads by householdId
+
+writes must populate householdId
+
+Use getHouseholdForUser(userId) as the source of truth
+
+If an existing route/storage method is used by current screens, update it rather than creating parallel duplicate logic
+
+Shared ownership targets
+
+Switch these domains from userId-owned access to householdId-owned access:
+
+planner_weeks
+
+planner day / entry flows that hang off planner weeks
+
+shopping_list
+
+shopping_list_extras
+
+user_pantry_items
+
+freezer_meals
+
+Do not touch:
+
+user_preferences
+
+user_streaks
+
+user_health_trends
+
+product_history
+
+personal meals library
+
+old meal_plans table
+
+Repo-specific intent
+
+This repo already uses:
+
+shared/schema.ts
+
+server/storage.ts
+
+route handlers in server/routes.ts
+
+household helpers in server/lib/household.ts
+
+Adapt to the existing structure rather than inventing a new architecture.
+
+Prefer:
+
+minimal changes
+
+ownership-key swap
+
+preserving current response shapes
+
+keeping existing screens working with no front-end changes
+
+Tasks
+T101 — Audit and identify all read/write paths for the 5 shared domains
+
+Before editing, inspect and list all storage methods and route handlers that currently access:
+
+planner weeks / planner entries / planner days
+
+shopping list
+
+shopping list extras
+
+pantry items
+
+freezer meals
+
+For each path, classify:
+
+read/list
+
+create
+
+update
+
+delete
+
+Acceptance:
+
+you have a concrete checklist of every method/route to update
+
+no shared write path is missed
+
+T102 — Planner ownership swap
+
+Update planner-related storage and route logic so planner data is loaded by householdId, not userId.
+
+Required behaviour
+
+when fetching planner weeks for a user:
+
+resolve householdId = await getHouseholdForUser(userId)
+
+query planner weeks by householdId
+
+when creating a planner week:
+
+preserve userId
+
+also set householdId
+
+when creating planner entries or related planner objects:
+
+ensure they remain attached to planner weeks that now belong to the household
+
+when updating/deleting planner weeks:
+
+use household-scoped lookups where appropriate
+
+do not let one user accidentally access another household’s planner data
+
+Important
+
+If planner day/entry records do not directly contain householdId, it is acceptable in Phase 1B to enforce household scope through the parent planner week relationship.
+
+Acceptance:
+
+planner reads still return the same data for current solo-household users
+
+newly created planner weeks persist householdId
+
+existing planner UX remains unchanged
+
+T103 — Shopping list ownership swap
+
+Update shopping list access to use householdId.
+
+Required behaviour
+
+list shopping items by householdId
+
+create shopping items with both:
+
+userId
+
+householdId
+
+update/delete items within the user’s household scope
+
+Be careful not to change response shape or sort order.
+
+Acceptance:
+
+shopping list reads are household-scoped
+
+new shopping items persist householdId
+
+existing users see no behaviour difference
+
+T104 — Shopping list extras ownership swap
+
+Update shopping_list_extras access exactly the same way.
+
+Required behaviour
+
+list by householdId
+
+create with both userId and householdId
+
+update/delete within household scope
+
+Acceptance:
+
+extras are household-scoped
+
+no UI behaviour changes
+
+existing extras remain visible because of Phase 1A backfill
+
+T105 — Pantry ownership swap
+
+Update pantry access to use householdId.
+
+Required behaviour
+
+list pantry items by householdId
+
+create pantry items with:
+
+userId
+
+householdId
+
+update/delete pantry items within household scope
+
+Important:
+
+preserve any existing normalization or pantry-specific logic
+
+do not redesign pantry behaviour
+
+Acceptance:
+
+pantry loads identically for current users
+
+all new pantry items persist householdId
+
+T106 — Freezer meals ownership swap
+
+Update freezer meal access to use householdId.
+
+Required behaviour
+
+list freezer meals by householdId
+
+create freezer meals with:
+
+userId
+
+householdId
+
+update/delete freezer meals within household scope
+
+Acceptance:
+
+freezer meals are household-scoped
+
+no visible behaviour change for existing users
+
+T107 — Ensure all create/write paths populate householdId
+
+This is critical.
+
+For every shared-table write path updated in T102–T106:
+
+resolve householdId from getHouseholdForUser(userId)
+
+write both:
+
+userId
+
+householdId
+
+Do not rely on old route code that only inserts userId.
+
+Acceptance:
+
+no new shared rows are created with null householdId
+
+all create flows continue working
+
+T108 — Storage-layer consistency
+
+Where possible, centralise the ownership swap in server/storage.ts rather than scattering raw household lookups throughout route handlers.
+
+Preferred pattern:
+
+route passes userId
+
+storage resolves householdId or accepts already-resolved householdId
+
+storage queries by household
+
+If the current repo structure makes route-level household resolution cleaner, keep it minimal and consistent.
+
+Acceptance:
+
+changes are easy to reason about
+
+ownership logic is not duplicated excessively
+
+T109 — Add defensive checks for cross-household access
+
+Where update/delete/fetch-by-id operations exist for shared resources, ensure the operation is scoped to the current user’s household.
+
+Examples:
+
+updating a shopping item by id should not succeed if that item belongs to another household
+
+deleting a pantry item by id should be household-scoped
+
+editing a planner week should verify household ownership
+
+Do not build a full permission system yet.
+Just make household scoping safe.
+
+Acceptance:
+
+shared-resource mutations cannot cross household boundaries
+
+no current UI flow breaks
+
+T110 — Verification and regression testing
+
+After implementation, verify all current core flows still work:
+
+Planner
+
+load planner
+
+create/update planner week if applicable
+
+confirm no missing data
+
+Shopping list
+
+load items
+
+add item
+
+edit item
+
+remove item
+
+Shopping extras
+
+load extras
+
+add extra
+
+remove extra
+
+Pantry
+
+load pantry
+
+add pantry item
+
+edit pantry item
+
+remove pantry item
+
+Freezer meals
+
+load freezer meals
+
+add freezer meal
+
+update/freezer action if supported
+
+remove freezer meal
+
+Database verification
+
+Run SQL checks confirming all newly created rows in the session have non-null household_id.
+
+At minimum verify:
+
+SELECT COUNT(*) FROM planner_weeks WHERE household_id IS NULL;
+SELECT COUNT(*) FROM shopping_list WHERE household_id IS NULL;
+SELECT COUNT(*) FROM shopping_list_extras WHERE household_id IS NULL;
+SELECT COUNT(*) FROM user_pantry_items WHERE household_id IS NULL;
+SELECT COUNT(*) FROM freezer_meals WHERE household_id IS NULL;
+
+Acceptance:
+
+all counts remain 0
+
+current app behaviour is unchanged for solo-household users
+
+Implementation guidance
+Use existing household helper
+
+Use:
+
+getHouseholdForUser(userId: number)
+
+If repeated calls become noisy, it is acceptable to:
+
+resolve once in route layer and pass down
+
+or add a small helper in storage layer
+
+But keep changes minimal.
+
+Write pattern example
+
+For any shared create flow, the intended pattern is:
+
+const householdId = await getHouseholdForUser(userId);
+
+await db.insert(shoppingList).values({
+  userId,
+  householdId,
+  ...rest
+});
+
+For any shared read flow:
+
+const householdId = await getHouseholdForUser(userId);
+
+return db.query.shoppingList.findMany({
+  where: eq(shoppingList.householdId, householdId)
+});
+
+For update/delete by id, scope by household ownership.
+
+Planner note
+
+If planner child tables do not contain householdId, do not expand schema in this phase unless truly necessary.
+Prefer household scope through:
+
+fetching the household’s planner week first
+
+then operating on its child records
+
+This phase should remain an ownership swap, not a schema redesign.
+
+Keep API response compatibility
+
+Do not change:
+
+route paths
+
+response shapes
+
+field names returned to the frontend
+
+ordering unless required for correctness
+
+The front end should not need any changes.
+
+Deliverables
+
+At the end of the task, provide:
+
+list of edited files
+
+list of updated storage methods
+
+list of updated route handlers
+
+short summary of how each shared domain was switched to household ownership
+
+confirmation that all create flows now populate householdId
+
+verification SQL results
+
+note of any repo-specific deviations needed to fit the current codebase
+
+Definition of done
+
+Phase 1B is complete only when:
+
+planner reads/writes are household-scoped
+
+shopping list reads/writes are household-scoped
+
+shopping extras reads/writes are household-scoped
+
+pantry reads/writes are household-scoped
+
+freezer meals reads/writes are household-scoped
+
+all new shared rows persist householdId
+
+current solo-household behaviour remains unchanged
+
+no UI changes were required
+
+verification confirms no null household_id rows remain
+
+If any route is ambiguous, prefer the smallest safe ownership swap that preserves current behaviour.
