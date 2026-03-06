@@ -1,0 +1,448 @@
+THA Feature Plan — Scan Recipes & Meal Plans
+Objective
+
+Implement a Scan feature allowing users to photograph or upload an image of:
+
+handwritten meal plans
+
+printed recipes
+
+cookbook pages
+
+shopping lists
+
+The system should:
+
+extract text using OCR
+
+parse the text into structured data
+
+allow the user to confirm/edit before saving
+
+The scan feature must integrate with existing THA features:
+
+planner
+
+meals/recipes
+
+shopping list
+
+Feature Entry Points
+
+Add a new option wherever meals or planner entries can be created.
+
+Example UI flow:
+
+Add Meal
+────────────
+Search meals
+Import recipe
+Scan recipe
+Create manually
+
+The scan option opens a camera or image upload.
+
+Phase S1 Scope (MVP)
+
+Implement scanning for:
+
+Recipe scans
+
+Weekly meal plan scans
+
+Do not yet support:
+
+grocery receipt scanning
+
+fridge scanning
+
+nutrition extraction
+
+supermarket product matching
+
+Technical Architecture
+Image upload
+      ↓
+OCR (text extraction)
+      ↓
+AI parsing
+      ↓
+Structured data
+      ↓
+User confirmation
+      ↓
+Save to THA
+Recommended Tools
+
+OCR layer
+
+Option A (preferred)
+
+Google Vision API
+
+Reason:
+
+strong handwriting support
+
+good accuracy
+
+Option B
+
+Tesseract OCR
+
+Reason:
+
+open source
+
+no API cost
+
+lower accuracy
+
+AI parsing
+
+Use an LLM to convert OCR text into structured objects.
+
+Example providers:
+
+OpenAI
+
+Anthropic
+
+Gemini
+
+Data Flow
+
+User uploads image
+
+POST /api/scan
+
+Server:
+
+extract text
+parse content
+return structured result
+
+Response example:
+
+{
+ type: "recipe",
+ title: "Chicken curry",
+ ingredients: [...],
+ steps: [...],
+ servings: 4
+}
+
+User then confirms and saves.
+
+Tasks
+T201 — Add scan endpoint
+
+Create new route:
+
+POST /api/scan
+
+File:
+
+server/routes.ts
+
+Accept:
+
+multipart/form-data
+image file
+
+Store temporarily in memory or temp directory.
+
+Acceptance:
+
+Endpoint accepts images and returns OCR text.
+
+T202 — Implement OCR service
+
+Create file:
+
+server/services/ocr.ts
+
+Function:
+
+extractTextFromImage(imageBuffer): Promise<string>
+
+If using Google Vision:
+
+visionClient.textDetection()
+
+If using Tesseract:
+
+tesseract.recognize()
+
+Return plain text.
+
+Example output:
+
+Chicken Curry
+Serves 4
+
+Ingredients
+2 chicken breasts
+1 onion
+2 tbsp curry paste
+
+Method
+1 fry onion
+2 add chicken
+3 simmer
+
+Acceptance:
+
+OCR service returns extracted text.
+
+T203 — Create AI parsing service
+
+Create:
+
+server/services/recipeParser.ts
+
+Function:
+
+parseRecipeFromText(text)
+
+Prompt example:
+
+Extract recipe information from this text.
+
+Return JSON:
+
+{
+ type: "recipe",
+ title: "",
+ servings: number,
+ ingredients: [],
+ steps: []
+}
+
+Also detect meal plans:
+
+Mon pasta
+Tue soup
+Wed chicken
+Thu curry
+Fri pizza
+
+Return:
+
+{
+ type: "meal_plan",
+ days: [...]
+}
+
+Acceptance:
+
+Text is converted into structured data.
+
+T204 — Build scan pipeline
+
+Update /api/scan route:
+
+1 receive image
+2 run OCR
+3 run parser
+4 return structured result
+
+Response:
+
+{
+ rawText: "...",
+ parsed: {...}
+}
+
+Acceptance:
+
+Uploading an image returns structured recipe or planner.
+
+T205 — Frontend scan UI
+
+Add button:
+
+Scan Recipe
+
+Locations:
+
+planner add meal
+
+recipe creation page
+
+File likely:
+
+client/src/pages/planner.tsx
+client/src/pages/recipes.tsx
+
+Implement:
+
+file input
+camera capture (mobile)
+
+Send image to:
+
+POST /api/scan
+
+Acceptance:
+
+User can upload a photo.
+
+T206 — Confirmation screen
+
+Do NOT automatically save parsed data.
+
+Show preview screen:
+
+Detected Recipe
+────────────
+
+Title
+Ingredients
+Steps
+Servings
+
+User can edit fields.
+
+Buttons:
+
+Save recipe
+Cancel
+
+Acceptance:
+
+User reviews scan result before saving.
+
+T207 — Save scanned recipe
+
+When user confirms:
+
+Use existing recipe creation flow.
+
+Save to:
+
+meals table
+ingredients table
+
+Or equivalent THA schema.
+
+Acceptance:
+
+Scanned recipes behave like normal recipes.
+
+T208 — Save scanned meal plan
+
+If parser detects:
+
+type: meal_plan
+
+Offer:
+
+Import to planner
+
+Map days:
+
+Mon → planner slot
+Tue → planner slot
+
+Acceptance:
+
+Scanned planner populates weekly planner.
+
+T209 — Error handling
+
+Handle common issues:
+
+OCR fails
+
+Return:
+
+Could not read text from image.
+Try a clearer photo.
+
+Parser fails
+
+Return raw text and allow manual editing.
+
+Acceptance:
+
+Scan errors do not break UX.
+
+Security considerations
+
+Limit:
+
+image size
+image types
+
+Accept:
+
+jpg
+png
+webp
+
+Reject:
+
+>10MB
+unsupported formats
+Future Enhancements (not in this phase)
+
+Fridge scan:
+
+photo → ingredients detected
+
+Auto meal planning.
+
+Shopping list scan
+
+scan handwritten list → basket
+
+Supermarket product detection
+
+scan Tesco recipe card → auto ingredient match
+
+Nutrition extraction
+
+parse calories from recipe
+Definition of Done
+
+Feature is complete when:
+
+users can upload a recipe image
+
+OCR extracts text
+
+AI parses structured data
+
+preview screen allows editing
+
+confirmed scans save to THA
+
+planner scans populate planner
+
+existing functionality remains unchanged
+
+Estimated complexity
+
+Backend: medium
+Frontend: medium
+AI integration: medium
+
+Approx effort:
+
+2–4 development days
+Strategic note
+
+This feature aligns perfectly with THA’s goal:
+
+making real household food planning easier than paper.
+
+Competitors focus on recipe discovery.
+
+This feature focuses on digitising real life food planning, which is a strong differentiator.
+
+If you'd like, I can also show you a very powerful extension of this feature:
+
+Scan your weekly menu → auto-generate a full shopping basket.
+
+That would integrate beautifully with the Household Engine you just built.

@@ -1,0 +1,717 @@
+THA Repo-Specific Implementation Prompt — Scan Recipes & Meal Plans
+Objective
+
+Implement the Scan Recipes & Meal Plans feature in the current THA repository.
+
+Users can photograph or upload an image of a handwritten or printed:
+
+recipe
+
+weekly meal plan
+
+The system must:
+
+run OCR on the uploaded image
+
+parse the extracted text into structured data
+
+show a confirmation screen for editing
+
+save using existing THA flows:
+
+POST /api/meals for recipes
+
+existing planner mutations for meal plans
+
+Parsing strategy:
+
+default: regex / heuristic parser, no API key required
+
+enhancement: if OPENAI_API_KEY exists in env, automatically upgrade parsing to gpt-4o-mini
+
+if OpenAI parsing fails, always fall back to the regex parser
+
+This feature should be implemented without breaking any existing meal or planner flows.
+
+Scope for this session
+
+Implement only:
+
+package installation
+
+OCR service
+
+scan parser service
+
+POST /api/scan
+
+meals page scan entry point
+
+scan confirmation UI
+
+recipe save flow
+
+meal-plan import flow
+
+verification
+
+Do not implement:
+
+shopping list scan
+
+fridge scan
+
+nutrition extraction
+
+supermarket product matching
+
+OCR history
+
+image storage in DB
+
+drag-and-drop redesigns outside the minimum needed UI
+
+Repo-specific implementation rules
+
+use the existing Express route structure in server/routes.ts
+
+use existing meal creation flow via POST /api/meals
+
+use existing planner mutation/query invalidation patterns
+
+keep API response shapes simple and explicit
+
+keep the UI change isolated to the Meals page and any small helper component
+
+do not refactor unrelated meal/planner logic
+
+prefer small, composable services under server/services/
+
+Tasks
+T301 — Install packages
+
+Install:
+
+multer
+
+@types/multer
+
+tesseract.js
+
+openai
+
+Use the package manager only.
+Do not edit package.json manually.
+
+Acceptance:
+
+all packages import cleanly in TypeScript
+
+app still boots
+
+T302 — OCR service
+
+Create:
+
+server/services/ocr.ts
+
+Export:
+
+extractTextFromImage(buffer: Buffer): Promise<string>
+
+Implementation requirements:
+
+use tesseract.js
+
+language: English
+
+input: image buffer
+
+output: plain extracted text
+
+trim whitespace
+
+if OCR returns no usable text, return empty string or throw a typed error depending on calling pattern
+
+Create typed error:
+
+class OcrError extends Error {
+  code: 'OCR_FAILED' | 'OCR_EMPTY' | 'OCR_UNSUPPORTED';
+}
+
+Behaviour:
+
+clear printed image should return readable text
+
+errors should be caught and turned into user-friendly API responses later
+
+Acceptance:
+
+OCR service works from a clear printed sample image
+
+service compiles with no TS errors
+
+T303 — Recipe / Meal-plan parser service
+
+Create:
+
+server/services/recipeParser.ts
+
+Export:
+
+type ScanResult =
+  | {
+      type: 'recipe';
+      title: string;
+      servings: number;
+      ingredients: string[];
+      steps: string[];
+      confidence: 'high' | 'low';
+    }
+  | {
+      type: 'meal_plan';
+      days: { day: string; meals: string[] }[];
+      confidence: 'high' | 'low';
+    }
+  | {
+      type: 'unknown';
+      rawText: string;
+    };
+
+parseScannedText(text: string): Promise<ScanResult>
+Base parser: regex / heuristics
+
+This must always work without API keys.
+
+Recipe detection
+
+Treat as recipe if:
+
+no clear day-name structure is found
+
+text looks like title + ingredient/method content
+
+Heuristics:
+
+first non-empty line = title
+
+detect headings like:
+
+ingredients
+
+method
+
+steps
+
+directions
+
+bullet / dash / numbered lines become ingredients or steps depending on section
+
+if no headings exist, infer:
+
+short ingredient-like lines before longer imperative lines = ingredients
+
+numbered lines / imperative lines = steps
+
+Servings:
+
+detect from text like:
+
+serves 4
+
+servings: 2
+
+makes 6
+
+fallback to 1
+
+Confidence:
+
+high if title + at least 2 ingredients or steps found
+
+otherwise low
+
+Meal plan detection
+
+Treat as meal plan if text contains day names like:
+
+Mon / Monday
+
+Tue / Tuesday
+
+Wed / Wednesday
+
+Thu / Thursday
+
+Fri / Friday
+
+Sat / Saturday
+
+Sun / Sunday
+
+Heuristics:
+
+split by line
+
+detect line starting with day name
+
+extract meal text after colon, dash, or whitespace
+
+if a day line contains multiple items, split on commas or |
+
+Example:
+
+Mon: Pasta
+Tue: Soup, Salad
+Wed Chicken Curry
+
+Should become:
+
+{
+  type: 'meal_plan',
+  days: [
+    { day: 'Monday', meals: ['Pasta'] },
+    { day: 'Tuesday', meals: ['Soup', 'Salad'] },
+    { day: 'Wednesday', meals: ['Chicken Curry'] }
+  ],
+  confidence: 'high'
+}
+OpenAI enhancement
+
+If process.env.OPENAI_API_KEY exists:
+
+create an OpenAI client
+
+use gpt-4o-mini
+
+send OCR text and request strict JSON matching ScanResult
+
+validate returned JSON before using it
+
+if OpenAI fails for any reason, fall back to regex parser automatically
+
+Do not make OpenAI a hard dependency for successful scanning.
+
+Acceptance:
+
+simple recipe text parses correctly
+
+simple meal-plan text parses correctly
+
+no key required for baseline functionality
+
+OpenAI path enhances accuracy if available
+
+T304 — POST /api/scan endpoint
+
+Update:
+
+server/routes.ts
+
+Add authenticated endpoint:
+
+POST /api/scan
+
+Use:
+
+multer
+
+memory storage only
+
+no disk writes
+
+Accept:
+
+multipart/form-data
+
+field name: image
+
+Validation:
+
+file required
+
+max size: 10 MB
+
+allowed mime types:
+
+image/jpeg
+
+image/png
+
+image/webp
+
+Pipeline:
+
+validate upload
+
+read image buffer
+
+call extractTextFromImage(buffer)
+
+if no text:
+
+return 422
+
+payload:
+
+{ "rawText": "", "error": "OCR_FAILED" }
+
+call parseScannedText(rawText)
+
+return:
+
+{
+  "rawText": "...",
+  "parsed": { ...ScanResult }
+}
+
+Rules:
+
+return 400 for missing file / bad type / too large
+
+return 200 even if parser result is type: 'unknown'
+
+auth required, same pattern as existing protected routes
+
+Acceptance:
+
+curl / browser upload returns expected JSON
+
+bad input returns friendly errors
+
+endpoint does not write files to disk
+
+T305 — Frontend scan entry point on Meals page
+
+Update:
+
+client/src/pages/meals-page.tsx
+
+Add a new button in the top toolbar near the existing import controls:
+
+Scan Recipe
+
+Requirements:
+
+use data-testid="button-scan-recipe"
+
+add hidden file input:
+
+data-testid="input-scan-file"
+
+type="file"
+
+accept="image/*"
+
+capture="environment"
+
+Behaviour:
+
+click button → trigger hidden file input
+
+on file select:
+
+show loading state / overlay: Reading image…
+
+submit FormData to POST /api/scan
+
+on success:
+
+open confirmation dialog
+
+on failure:
+
+show toast with friendly message
+
+Keep this isolated and minimal.
+
+Acceptance:
+
+button appears
+
+selecting an image calls /api/scan
+
+loading state displays correctly
+
+T306 — Scan confirmation dialog: recipe path
+
+Create ScanConfirmDialog.
+
+This can live:
+
+inside meals-page.tsx if still manageable, or
+
+as a new component, for example:
+
+client/src/components/scan-confirm-dialog.tsx
+
+Only show this recipe form if:
+
+parsed.type === 'recipe'
+
+Editable fields:
+
+title
+
+servings
+
+ingredients list
+
+steps list
+
+Requirements:
+
+pre-fill from parsed result
+
+ingredients: one editable text input per row
+
+steps: one editable textarea per row
+
+allow adding/removing rows
+
+show collapsible Raw OCR text panel
+
+if parsed.confidence === 'low', show a yellow info banner:
+
+The scan quality was low — please review and correct the fields below.
+
+Buttons:
+
+Save Recipe
+
+Cancel
+
+Save flow:
+
+use the existing meal creation flow
+
+call existing POST /api/meals path or existing mutation wrapper already used in the page
+
+on success:
+
+show toast
+
+close dialog
+
+refresh meals list / invalidate queries as needed
+
+Add data-testid values to main fields and save button.
+
+Acceptance:
+
+dialog opens with pre-filled values
+
+editing works
+
+save creates a real meal in My Meals
+
+T307 — Scan confirmation: meal-plan path + planner import
+
+When:
+
+parsed.type === 'meal_plan'
+
+Show a meal-plan confirmation view.
+
+UI requirements:
+
+display table or list:
+
+Day | Meals
+
+each day’s meals must be editable before import
+
+add planner week selector:
+
+Week 1 to Week 6 or based on current planner model in repo
+
+Import button:
+
+Import to Planner
+Import logic
+
+For each parsed day:
+
+resolve the planner day for the selected week
+
+for each meal string:
+
+search existing meals using current meal search path, such as:
+
+GET /api/meals?search=<mealName>
+
+if a close/exact match exists, use that meal id
+
+if not found, create a minimal meal using existing POST /api/meals
+
+minimum viable payload should fit current meal schema with as little fabrication as possible
+
+add meal to planner using existing planner mutation flow
+
+Important:
+
+do not invent a new planner persistence API if one already exists
+
+follow existing query invalidation / refresh pattern
+
+show progress state because multiple meal creations/imports may happen
+
+On success:
+
+toast:
+
+Planner updated for Week X
+
+close dialog
+
+If:
+
+parsed.type === 'unknown'
+
+Show:
+
+raw OCR text in editable or selectable textarea
+
+message:
+
+We couldn't parse this — you can copy the text manually.
+
+Acceptance:
+
+day-list scan imports to selected planner week
+
+missing meals are created minimally and then linked
+
+no front-end crash if some days are partial
+
+T308 — Verification
+
+After implementation:
+
+restart app
+
+confirm clean startup
+
+run manual test flow:
+
+Recipe scan test
+
+log in
+
+open My Meals
+
+click Scan Recipe
+
+upload a sample recipe image
+
+verify confirmation dialog opens
+
+edit title
+
+save recipe
+
+verify recipe appears in My Meals
+
+Error test
+
+upload unreadable / blank image
+
+verify friendly toast or clear error state
+
+Meal-plan test
+
+upload simple weekly plan image
+
+verify meal-plan confirmation UI opens
+
+choose week
+
+import
+
+verify planner updated
+
+Technical checks
+
+no console errors
+
+no server crash
+
+no disk writes for uploads
+
+OpenAI parser optional path does not break app when key missing
+
+Acceptance:
+
+all flows work cleanly
+
+existing meals and planner features still behave normally
+
+Implementation notes
+Suggested server files
+
+server/services/ocr.ts
+
+server/services/recipeParser.ts
+
+Suggested UI files
+
+client/src/pages/meals-page.tsx
+
+optional extracted dialog component if needed
+
+Error handling expectations
+
+Use friendly language like:
+
+We couldn't read that image clearly. Try a brighter, sharper photo.
+
+That file type isn't supported. Please upload a JPG, PNG, or WEBP image.
+
+Keep the feature reversible
+
+Do not deeply entangle scan logic into unrelated meal/planner code.
+Keep it modular so it can be improved later.
+
+Deliverables
+
+At the end, provide:
+
+list of installed packages
+
+list of files created/edited
+
+API contract for /api/scan
+
+parser strategy summary:
+
+regex fallback
+
+OpenAI enhancement
+
+confirmation of recipe save flow
+
+confirmation of planner import flow
+
+manual verification results
+
+any repo-specific deviations needed to fit the current THA codebase
+
+Definition of done
+
+This feature is complete only when:
+
+users can upload or photograph a recipe image
+
+OCR extracts text
+
+parser returns structured recipe / meal-plan / unknown
+
+recipe scans can be reviewed and saved into My Meals
+
+meal-plan scans can be reviewed and imported into planner
+
+OpenAI enhancement is optional and safe
+
+no existing meal/planner functionality is broken
+
+If the current repo structure differs slightly from these assumptions, adapt to the existing architecture while preserving the same user-facing outcome and keeping the implementation small, modular, and safe.
