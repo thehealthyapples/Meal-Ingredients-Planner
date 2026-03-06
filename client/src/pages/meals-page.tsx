@@ -22,7 +22,7 @@ import { buildUrl, api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useBasket } from "@/hooks/use-basket";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { MealWatermark, getWatermarkType } from "@/components/meal-watermark";
 import ScoreBadge from "@/components/ui/score-badge";
 import { Switch } from "@/components/ui/switch";
@@ -1151,8 +1151,12 @@ function getMealDisplayCategory(meal: Meal): string {
 export default function MealsPage() {
   const { meals, isLoading, deleteMeal, createMeal } = useMeals();
   const [, navigate] = useLocation();
+  const searchStr = useSearch();
   const { toast } = useToast();
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(() => {
+    const params = new URLSearchParams(searchStr);
+    return params.get("q") || "";
+  });
   const [searchSource, setSearchSource] = useState<"all" | "recipes" | "products">("all");
   const [viewMode, setViewMode] = useViewPreference();
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -1197,6 +1201,12 @@ export default function MealsPage() {
   const [freezerPortions, setFreezerPortions] = useState(4);
   const [freezerLabel, setFreezerLabel] = useState("");
   const [freezerNotes, setFreezerNotes] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchStr);
+    const q = params.get("q") || "";
+    if (q) setSearchTerm(q);
+  }, [searchStr]);
 
   const allMealIds = useMemo(() => (meals || []).map(m => m.id), [meals]);
   const { data: bulkNutritionData = [] } = useQuery<Nutrition[]>({
