@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, type RefObject } from "react";
 import { useMeals } from "@/hooks/use-meals";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1631,7 +1631,7 @@ export default function MealsPage() {
             {scanLoading ? "Reading…" : "Scan Recipe"}
           </Button>
           <ImportRecipeDialog />
-          <CreateMealDialog />
+          <AddMealGatewayDialog scanFileRef={scanFileRef} />
           {(!importStatus || importStatus.totalImported === 0) && (
             <Button
               variant="outline"
@@ -3029,8 +3029,83 @@ interface ImportPreview {
   servings?: number;
 }
 
-function ImportRecipeDialog() {
+function AddMealGatewayDialog({ scanFileRef }: { scanFileRef: RefObject<HTMLInputElement> }) {
   const [open, setOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const handleOption = (option: "import" | "scan" | "manual") => {
+    setOpen(false);
+    if (option === "import") setImportOpen(true);
+    else if (option === "scan") setTimeout(() => scanFileRef.current?.click(), 100);
+    else setCreateOpen(true);
+  };
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button data-testid="button-add-meal">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Meal
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add a Meal</DialogTitle>
+            <DialogDescription>Choose how you'd like to add your meal.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 pt-1">
+            <button
+              onClick={() => handleOption("import")}
+              className="w-full flex items-center gap-4 rounded-lg border border-border p-4 text-left hover:bg-accent transition-colors"
+              data-testid="button-gateway-import"
+            >
+              <Globe className="h-5 w-5 text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Import from URL</p>
+                <p className="text-xs text-muted-foreground">Paste a recipe link to import automatically</p>
+              </div>
+            </button>
+            <button
+              onClick={() => handleOption("scan")}
+              className="w-full flex items-center gap-4 rounded-lg border border-border p-4 text-left hover:bg-accent transition-colors"
+              data-testid="button-gateway-scan"
+            >
+              <Camera className="h-5 w-5 text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Scan Image</p>
+                <p className="text-xs text-muted-foreground">Photograph or upload a recipe or meal plan</p>
+              </div>
+            </button>
+            <button
+              onClick={() => handleOption("manual")}
+              className="w-full flex items-center gap-4 rounded-lg border border-border p-4 text-left hover:bg-accent transition-colors"
+              data-testid="button-gateway-manual"
+            >
+              <Pencil className="h-5 w-5 text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Input manually</p>
+                <p className="text-xs text-muted-foreground">Type in a recipe from scratch</p>
+              </div>
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <ImportRecipeDialog externalOpen={importOpen} onExternalOpenChange={setImportOpen} />
+      <CreateMealDialog externalOpen={createOpen} onExternalOpenChange={setCreateOpen} />
+    </>
+  );
+}
+
+function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOpen?: boolean; onExternalOpenChange?: (v: boolean) => void } = {}) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = (v: boolean) => {
+    setInternalOpen(v);
+    onExternalOpenChange?.(v);
+  };
   const [url, setUrl] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -3136,12 +3211,14 @@ function ImportRecipeDialog() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button variant="outline" data-testid="button-import-recipe">
-          <Download className="mr-2 h-4 w-4" />
-          Import Recipe
-        </Button>
-      </DialogTrigger>
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button variant="outline" data-testid="button-import-recipe">
+            <Download className="mr-2 h-4 w-4" />
+            Import Recipe
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -3276,10 +3353,15 @@ function ImportRecipeDialog() {
   );
 }
 
-function CreateMealDialog() {
+function CreateMealDialog({ externalOpen, onExternalOpenChange }: { externalOpen?: boolean; onExternalOpenChange?: (v: boolean) => void } = {}) {
   const { createMeal } = useMeals();
   const queryClient = useQueryClient();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = externalOpen !== undefined ? externalOpen : internalOpen;
+  const setOpen = (v: boolean) => {
+    setInternalOpen(v);
+    onExternalOpenChange?.(v);
+  };
   const [selectedDiets, setSelectedDiets] = useState<number[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | undefined>(undefined);
   const { user } = useUser();
@@ -3351,12 +3433,14 @@ function CreateMealDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button data-testid="button-add-meal">
-          <Plus className="mr-2 h-4 w-4" />
-          Add Meal
-        </Button>
-      </DialogTrigger>
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button data-testid="button-add-meal-direct">
+            <Plus className="mr-2 h-4 w-4" />
+            Add Meal
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Add New Meal</DialogTitle>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -376,11 +376,11 @@ export function DayViewDrawer({
   const entries = day?.entries ?? [];
 
   return (
-    <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-        <SheetHeader className="pb-4 border-b">
-          <SheetTitle className="text-base" data-testid="text-day-view-label">{dayLabel}</SheetTitle>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-4 border-b">
+          <DialogTitle className="text-base" data-testid="text-day-view-label">{dayLabel}</DialogTitle>
+        </DialogHeader>
 
         <div className="py-4 space-y-6">
           {!day ? (
@@ -407,7 +407,7 @@ export function DayViewDrawer({
             })
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }
