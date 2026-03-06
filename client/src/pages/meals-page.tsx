@@ -1181,6 +1181,7 @@ export default function MealsPage() {
   const [scanData, setScanData] = useState<{ rawText: string; parsed: any } | null>(null);
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const scanFileRef = useRef<HTMLInputElement>(null);
+  const [visibleCount, setVisibleCount] = useState(48);
   const [webImportingIds, setWebImportingIds] = useState<Set<string>>(new Set());
   const [webImportCategoryMap, setWebImportCategoryMap] = useState<Record<string, number | undefined>>({});
   const [recentlyImportedIds, setRecentlyImportedIds] = useState<Set<string>>(new Set());
@@ -1215,24 +1216,9 @@ export default function MealsPage() {
     if (q) setSearchTerm(q);
   }, [searchStr]);
 
-  const allMealIds = useMemo(() => (meals || []).map(m => m.id), [meals]);
-  const { data: bulkNutritionData = [] } = useQuery<Nutrition[]>({
-    queryKey: ["/api/nutrition/bulk", allMealIds],
-    queryFn: async () => {
-      if (allMealIds.length === 0) return [];
-      const res = await apiRequest("POST", "/api/nutrition/bulk", { mealIds: allMealIds });
-      return res.json();
-    },
-    enabled: allMealIds.length > 0,
-    staleTime: 5 * 60 * 1000,
-  });
-  const nutritionMap = useMemo(() => {
-    const map = new Map<number, Nutrition>();
-    bulkNutritionData.forEach((n: Nutrition) => {
-      if (n.mealId) map.set(n.mealId, n);
-    });
-    return map;
-  }, [bulkNutritionData]);
+  useEffect(() => {
+    setVisibleCount(48);
+  }, [searchTerm, categoryFilter, mealTypeFilter, audienceFilter, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
 
   const addToFreezerMutation = useMutation({
     mutationFn: async (data: { mealId: number; totalPortions: number; batchLabel?: string; notes?: string }) => {
@@ -1569,7 +1555,7 @@ export default function MealsPage() {
   };
 
 
-  const filteredMeals = meals?.filter(meal => {
+  const filteredMeals = useMemo(() => meals?.filter(meal => {
     const matchesSearch = meal.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "all" || 
       (allCategories.find(c => c.name === categoryFilter)?.id === meal.categoryId);
@@ -1597,7 +1583,28 @@ export default function MealsPage() {
     const orderA = idxA === -1 ? MEAL_CATEGORY_ORDER.length : idxA;
     const orderB = idxB === -1 ? MEAL_CATEGORY_ORDER.length : idxB;
     return orderA - orderB;
+  }), [meals, searchTerm, categoryFilter, allCategories, mealTypeFilter, audienceFilter, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
+
+  const visibleMeals = useMemo(() => filteredMeals?.slice(0, visibleCount), [filteredMeals, visibleCount]);
+
+  const allMealIds = useMemo(() => (visibleMeals || []).map(m => m.id), [visibleMeals]);
+  const { data: bulkNutritionData = [] } = useQuery<Nutrition[]>({
+    queryKey: ["/api/nutrition/bulk", allMealIds],
+    queryFn: async () => {
+      if (allMealIds.length === 0) return [];
+      const res = await apiRequest("POST", "/api/nutrition/bulk", { mealIds: allMealIds });
+      return res.json();
+    },
+    enabled: allMealIds.length > 0,
+    staleTime: 5 * 60 * 1000,
   });
+  const nutritionMap = useMemo(() => {
+    const map = new Map<number, Nutrition>();
+    bulkNutritionData.forEach((n: Nutrition) => {
+      if (n.mealId) map.set(n.mealId, n);
+    });
+    return map;
+  }, [bulkNutritionData]);
 
   const advancedFilterCount =
     (matchMyProfile ? 1 : 0) +
@@ -2003,7 +2010,7 @@ export default function MealsPage() {
         <AnimatePresence>
           {viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredMeals?.map((meal, index) => (
+              {visibleMeals?.map((meal, index) => (
                 <motion.div
                   key={meal.id}
                   initial={{ opacity: 0, y: 12 }}
@@ -2243,7 +2250,7 @@ export default function MealsPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {filteredMeals?.map((meal, index) => (
+              {visibleMeals?.map((meal, index) => (
                 <motion.div
                   key={meal.id}
                   initial={{ opacity: 0, x: -12 }}
@@ -2433,6 +2440,18 @@ export default function MealsPage() {
             </div>
           )}
         </AnimatePresence>
+      )}
+
+      {!isLoading && filteredMeals && visibleCount < filteredMeals.length && (
+        <div className="flex flex-col items-center gap-1 py-6">
+          <Button
+            variant="outline"
+            onClick={() => setVisibleCount(c => c + 48)}
+            data-testid="button-load-more-meals"
+          >
+            Show more ({filteredMeals.length - visibleCount} remaining)
+          </Button>
+        </div>
       )}
 
       {!isLoading && filteredMeals?.length === 0 && !webSearchResults.length && !webIsSearching && !productResults.length && !productIsSearching && (
