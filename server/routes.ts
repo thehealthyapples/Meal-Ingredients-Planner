@@ -356,7 +356,15 @@ async function scrapeNutritionFromSource(meal: { id: number; sourceUrl?: string 
   return false;
 }
 
+const analyzedMealIds = new Set<number>();
+let activeAnalysisCount = 0;
+const MAX_CONCURRENT_ANALYSES = 3;
+
 async function autoAnalyzeMeal(mealId: number) {
+  if (analyzedMealIds.has(mealId)) return;
+  if (activeAnalysisCount >= MAX_CONCURRENT_ANALYSES) return;
+  analyzedMealIds.add(mealId);
+  activeAnalysisCount++;
   try {
     const meal = await storage.getMeal(mealId);
     if (!meal) return;
@@ -459,6 +467,8 @@ async function autoAnalyzeMeal(mealId: number) {
     console.log(`Auto-analysis complete for meal ${mealId}`);
   } catch (err) {
     console.error(`Auto-analysis failed for meal ${mealId}:`, err);
+  } finally {
+    activeAnalysisCount--;
   }
 }
 
