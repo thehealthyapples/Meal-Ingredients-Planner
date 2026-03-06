@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera } from "lucide-react";
+import { ScanConfirmDialog } from "@/components/scan-confirm-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -1174,6 +1175,10 @@ export default function MealsPage() {
   const [webCurrentPage, setWebCurrentPage] = useState(1);
   const [webIsSearching, setWebIsSearching] = useState(false);
   const [webSearchQuery, setWebSearchQuery] = useState("");
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
+  const [scanData, setScanData] = useState<{ rawText: string; parsed: any } | null>(null);
+  const scanFileRef = useRef<HTMLInputElement>(null);
   const [webImportingIds, setWebImportingIds] = useState<Set<string>>(new Set());
   const [webImportCategoryMap, setWebImportCategoryMap] = useState<Record<string, number | undefined>>({});
   const [recentlyImportedIds, setRecentlyImportedIds] = useState<Set<string>>(new Set());
@@ -1295,6 +1300,27 @@ export default function MealsPage() {
       toast({ title: "Import failed", description: "Could not import meals from OpenFoodFacts.", variant: "destructive" });
     },
   });
+
+  const handleScanFile = async (file: File) => {
+    setScanLoading(true);
+    const formData = new FormData();
+    formData.append("image", file);
+    try {
+      const res = await fetch("/api/scan", { method: "POST", body: formData, credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ variant: "destructive", title: "Scan failed", description: data.message || "Could not read image." });
+        return;
+      }
+      setScanData(data);
+      setScanDialogOpen(true);
+    } catch {
+      toast({ variant: "destructive", title: "Scan failed", description: "Could not connect to server. Please try again." });
+    } finally {
+      setScanLoading(false);
+      if (scanFileRef.current) scanFileRef.current.value = "";
+    }
+  };
 
   const { data: importStatus } = useQuery<{ totalImported: number; byCategory: Record<string, number> }>({
     queryKey: ['/api/admin/import-status'],
@@ -1586,6 +1612,24 @@ export default function MealsPage() {
           <p className="text-sm text-muted-foreground mt-1">Manage your recipes and ingredients</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <input
+            ref={scanFileRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            data-testid="input-scan-file"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleScanFile(f); }}
+          />
+          <Button
+            variant="outline"
+            onClick={() => scanFileRef.current?.click()}
+            disabled={scanLoading}
+            data-testid="button-scan-recipe"
+          >
+            {scanLoading ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Camera className="h-4 w-4 mr-1.5" />}
+            {scanLoading ? "Reading…" : "Scan Recipe"}
+          </Button>
           <ImportRecipeDialog />
           <CreateMealDialog />
           {(!importStatus || importStatus.totalImported === 0) && (
@@ -2966,6 +3010,12 @@ export default function MealsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ScanConfirmDialog
+        open={scanDialogOpen}
+        onOpenChange={setScanDialogOpen}
+        scanData={scanData}
+      />
     </div>
   );
 }

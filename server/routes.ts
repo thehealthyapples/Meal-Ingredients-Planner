@@ -24,6 +24,9 @@ import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer
 import { sanitizeUser } from "./lib/sanitizeUser";
 import { isAdmin, hasPremiumAccess, assertAdmin } from "./lib/access";
 import { getHouseholdForUser } from "./lib/household";
+import multer from "multer";
+import { extractTextFromImage, OcrError } from "./services/ocr";
+import { parseScannedText } from "./services/recipeParser";
 
 function ingredientMatchesMeal(consolidatedName: string, mealIngredients: string[]): boolean {
   const target = consolidatedName.toLowerCase().trim();
@@ -5171,6 +5174,60 @@ export async function registerRoutes(
     } catch (err) {
       console.error("[AdminRecipeSources] Audit log GET error:", err);
       res.status(500).json({ message: "Failed to load audit logs" });
+    }
+  });
+
+  // ── Scan (OCR + Parse) ───────────────────────────────────────────────────────
+
+  const scanUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+      const allowed = ["image/jpeg", "image/png", "image/webp"];
+      if (allowed.includes(file.mimetype)) cb(null, true);
+      else cb(new Error("INVALID_TYPE"));
+    },
+  });
+
+  app.post("/api/scan", (req, res, next) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    scanUpload.single("image")(req, res, (err) => {
+      if (err) {
+        if (err.message === "INVALID_TYPE") {
+          return res.status(400).json({ message: "That file type isn't supported. Please upload a JPG, PNG, or WEBP image." });
+        }
+        if (err.code === "LIMIT_FILE_SIZE") {
+          return res.status(400).json({ message: "Image is too large. Maximum size is 10 MB." });
+        }
+        return res.status(400).json({ message: "File upload failed." });
+      }
+      next();
+    });
+  }, async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided." });
+      }
+
+      let rawText: string;
+      try {
+        rawText = await extractTextFromImage(req.file.buffer);
+      } catch (err) {
+        if (err instanceof OcrError) {
+          return res.status(422).json({
+            rawText: "",
+            error: "OCR_FAILED",
+            message: "We couldn't read that image clearly. Try a brighter, sharper photo.",
+          });
+        }
+        throw err;
+      }
+
+      const parsed = await parseScannedText(rawText);
+      res.json({ rawText, parsed });
+    } catch (err) {
+      console.error("[Scan] Error:", err);
+      res.status(500).json({ message: "Scan failed unexpectedly. Please try again." });
     }
   });
 
