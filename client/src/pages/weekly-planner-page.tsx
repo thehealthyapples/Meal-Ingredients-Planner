@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -7,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TemplatesPanel } from "@/components/templates-panel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
@@ -126,6 +127,7 @@ export default function WeeklyPlannerPage() {
   const [mealDetail, setMealDetail] = useState<MealDetailState | null>(null);
   const [selectedDayId, setSelectedDayId] = useState<number | null>(null);
   const { user } = useUser();
+  const [, navigate] = useLocation();
 
   const { data: plannerSettings } = useQuery<{
     showCalories: boolean;
@@ -524,17 +526,6 @@ export default function WeeklyPlannerPage() {
     return sortedDays[0] ?? null;
   }, [selectedDayId, sortedDays]);
 
-  const selectedDayCalories = useMemo(() => {
-    if (!selectedDay) return 0;
-    return selectedDay.entries.reduce((sum, e) => sum + (nutritionMap.get(e.mealId) || 0), 0);
-  }, [selectedDay, nutritionMap]);
-
-  const selectedDayMealCount = useMemo(() => {
-    if (!selectedDay) return 0;
-    return selectedDay.entries.length;
-  }, [selectedDay]);
-
-  const selectedDayAvgSmp = null;
 
   if (isLoading) {
     return (
@@ -586,7 +577,10 @@ export default function WeeklyPlannerPage() {
       {/* ── Week Tabs ── */}
       <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full">
         <div className="flex items-center gap-2 mb-4 overflow-x-auto">
-          <TabsList className="flex-shrink-0" data-testid="tabs-weeks">
+          <TabsList
+            className="flex-shrink-0 bg-card border border-border shadow-sm h-auto p-1 gap-0.5"
+            data-testid="tabs-weeks"
+          >
             {fullPlanner
               .slice()
               .sort((a, b) => a.weekNumber - b.weekNumber)
@@ -594,10 +588,49 @@ export default function WeeklyPlannerPage() {
                 <TabsTrigger
                   key={week.id}
                   value={String(week.weekNumber)}
-                  className="gap-1.5"
+                  className="group relative gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow font-medium px-3 py-1.5"
                   data-testid={`tab-week-${week.weekNumber}`}
                 >
-                  {week.weekName}
+                  {renameWeekId === week.id ? (
+                    <input
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      className="bg-transparent border-none outline-none text-sm w-20 min-w-0 font-medium"
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === "Enter" && renameValue.trim()) {
+                          renameMutation.mutate({ weekId: week.id, weekName: renameValue.trim() });
+                        }
+                        if (e.key === "Escape") setRenameWeekId(null);
+                      }}
+                      onBlur={() => {
+                        if (renameValue.trim() && renameValue.trim() !== week.weekName) {
+                          renameMutation.mutate({ weekId: week.id, weekName: renameValue.trim() });
+                        } else {
+                          setRenameWeekId(null);
+                        }
+                      }}
+                      data-testid="input-rename-week"
+                    />
+                  ) : (
+                    <>
+                      <span>{week.weekName}</span>
+                      <button
+                        className="invisible group-hover:visible opacity-50 hover:opacity-100 transition-opacity flex-shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRenameWeekId(week.id);
+                          setRenameValue(week.weekName);
+                        }}
+                        title="Rename week"
+                        data-testid={`button-rename-week-${week.weekNumber}`}
+                      >
+                        <Pencil className="h-2.5 w-2.5" />
+                      </button>
+                    </>
+                  )}
                 </TabsTrigger>
               ))}
           </TabsList>
@@ -606,44 +639,8 @@ export default function WeeklyPlannerPage() {
         {fullPlanner.map((week) => (
           <TabsContent key={week.id} value={String(week.weekNumber)} className="mt-0">
 
-            {/* ── Week sub-header: inline title + slot basket buttons ── */}
+            {/* ── Week sub-header: slot basket buttons ── */}
             <div className="flex items-center gap-2 mb-4 flex-wrap">
-              {/* Inline title editing — click to rename, no separate button */}
-              {renameWeekId === week.id ? (
-                <Input
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  className="w-40 h-7 text-sm font-medium"
-                  placeholder="Week name"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && renameValue.trim()) {
-                      renameMutation.mutate({ weekId: week.id, weekName: renameValue.trim() });
-                    }
-                    if (e.key === "Escape") setRenameWeekId(null);
-                  }}
-                  onBlur={() => {
-                    if (renameValue.trim() && renameValue.trim() !== week.weekName) {
-                      renameMutation.mutate({ weekId: week.id, weekName: renameValue.trim() });
-                    } else {
-                      setRenameWeekId(null);
-                    }
-                  }}
-                  data-testid="input-rename-week"
-                />
-              ) : (
-                <button
-                  className="text-sm font-semibold text-foreground hover:text-primary transition-colors cursor-text px-1 py-0.5 rounded hover:bg-accent/40"
-                  onClick={() => { setRenameWeekId(week.id); setRenameValue(week.weekName); }}
-                  title="Click to rename"
-                  data-testid="button-rename-week"
-                >
-                  {week.weekName}
-                </button>
-              )}
-
-              <span className="text-muted-foreground/40 text-xs">·</span>
-
               {MEAL_TYPES.map((slot) => {
                 const SlotIcon = slot.icon;
                 return (
@@ -788,70 +785,44 @@ export default function WeeklyPlannerPage() {
               </div>
             </div>
 
-            {/* ── Daily Summary Panel ── */}
-            {selectedDay && (
-              <Card className="mb-6">
-                <CardContent className="py-4 px-5">
-                  <div className="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-0.5">Selected Day</p>
-                      <p className="text-base font-semibold text-foreground" data-testid="text-summary-day-name">
-                        {DAY_NAMES[selectedDay.dayOfWeek]}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-6">
-                      {selectedDayCalories > 0 && (
-                        <div className="text-center">
-                          <p className="text-xs text-muted-foreground mb-0.5">Total Calories</p>
-                          <div className="flex items-center gap-1">
-                            <Flame className="h-3.5 w-3.5 text-orange-400" />
-                            <span className="text-sm font-semibold text-foreground" data-testid="text-summary-calories">
-                              {selectedDayCalories.toLocaleString()} kcal
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      {selectedDayMealCount > 0 && (
-                        <div className="text-center">
-                          <p className="text-xs text-muted-foreground mb-0.5">Meals Planned</p>
-                          <p className="text-sm font-semibold text-foreground" data-testid="text-summary-meal-count">
-                            {selectedDayMealCount}
-                          </p>
-                        </div>
-                      )}
-                      {selectedDayAvgSmp != null && (
-                        <div className="text-center">
-                          <p className="text-xs text-muted-foreground mb-0.5">THA Day Score</p>
-                          <div className="flex items-center gap-0.5" data-testid="img-summary-smp-score">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <img
-                                key={i}
-                                src={`/apple-rating-${Math.max(1, Math.min(5, i < selectedDayAvgSmp ? selectedDayAvgSmp : 1))}.png`}
-                                alt=""
-                                className={`h-4 w-4 ${i < selectedDayAvgSmp ? "opacity-100" : "opacity-25"}`}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {selectedDayMealCount === 0 && (
-                        <p className="text-sm text-muted-foreground italic">No meals planned yet</p>
-                      )}
-                    </div>
-                    {/* Day basket shortcut */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => addDayToBasket(selectedDay)}
-                      disabled={addToBasketMutation.isPending}
-                      data-testid={`button-add-day-basket-summary`}
-                    >
-                      <ShoppingBasket className="h-3.5 w-3.5 mr-1.5" />
-                      Add Day to Basket
-                    </Button>
+            {/* ── Weekly Summary Strip ── */}
+            {sortedDays.length > 0 && (
+              <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-4" data-testid="weekly-summary-strip">
+                <div style={{ minWidth: "960px" }}>
+                  <div className="grid grid-cols-7 gap-2">
+                    {sortedDays.map((day) => {
+                      const dayCalories = day.entries.reduce((sum, e) => sum + (nutritionMap.get(e.mealId) || 0), 0);
+                      const dayMealCount = day.entries.length;
+                      return (
+                        <Card
+                          key={day.id}
+                          className="bg-muted/30 border-border/60"
+                          data-testid={`summary-day-${day.dayOfWeek}`}
+                        >
+                          <CardContent className="p-2.5 text-center">
+                            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
+                              {DAY_SHORT[day.dayOfWeek]}
+                            </p>
+                            {dayCalories > 0 ? (
+                              <div className="flex items-center justify-center gap-0.5 mb-0.5">
+                                <Flame className="h-2.5 w-2.5 text-orange-400 flex-shrink-0" />
+                                <span className="text-xs font-medium text-foreground" data-testid={`text-summary-cal-${day.dayOfWeek}`}>
+                                  {dayCalories >= 1000 ? `${(dayCalories / 1000).toFixed(1)}k` : dayCalories}
+                                </span>
+                              </div>
+                            ) : (
+                              <div className="h-4" />
+                            )}
+                            <p className="text-[10px] text-muted-foreground/60">
+                              {dayMealCount > 0 ? `${dayMealCount} meal${dayMealCount !== 1 ? 's' : ''}` : '—'}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
 
           </TabsContent>
@@ -872,7 +843,7 @@ export default function WeeklyPlannerPage() {
       {/* ── Meal Detail Modal ── */}
       <Dialog open={!!mealDetail} onOpenChange={(v) => !v && setMealDetail(null)}>
         <DialogContent
-          className="max-w-[600px] max-h-[80vh] overflow-y-auto bg-background backdrop-blur-none border-border"
+          className="max-w-[640px] max-h-[82vh] overflow-y-auto bg-[hsl(var(--background))] border-border p-0"
           style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
           data-testid="dialog-meal-detail"
         >
@@ -880,95 +851,175 @@ export default function WeeklyPlannerPage() {
             const { meal, entry, dayId, mealType, audience, isDrink, dayName, slotLabel } = mealDetail;
             const calories = nutritionMap.get(meal.id);
             const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
+            const instructions = meal.instructions || [];
 
             return (
-              <>
-                <DialogHeader>
-                  <p className="text-xs text-muted-foreground font-normal mb-0.5">{dayName} · {slotLabel}</p>
-                  <DialogTitle className="text-xl leading-snug">{meal.name}</DialogTitle>
-                </DialogHeader>
-
-                <div className="space-y-4 py-2">
-                  {/* Meal image */}
-                  {meal.imageUrl && (
+              <div className="flex flex-col">
+                {/* Visually hidden title for screen readers */}
+                <DialogTitle className="sr-only">{meal.name}</DialogTitle>
+                {/* Image hero */}
+                {meal.imageUrl ? (
+                  <div className="relative w-full h-44 flex-shrink-0">
                     <img
                       src={meal.imageUrl}
                       alt={meal.name}
-                      className="w-full h-40 object-cover rounded-lg border border-border"
+                      className="w-full h-full object-cover"
                     />
-                  )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  </div>
+                ) : (
+                  <div className="w-full h-28 bg-muted/60 flex items-center justify-center flex-shrink-0">
+                    <ChefHat className="h-10 w-10 text-muted-foreground/40" />
+                  </div>
+                )}
 
-                  {/* Badges row */}
+                {/* Content */}
+                <div className="px-6 py-4 space-y-4">
+                  {/* Context + title */}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">{dayName} · {slotLabel}</p>
+                    <h2 className="text-xl font-semibold leading-tight text-foreground" data-testid="text-meal-detail-name">
+                      {meal.name}
+                    </h2>
+                  </div>
+
+                  {/* Badges */}
                   <div className="flex items-center gap-2 flex-wrap">
+                    {meal.servings > 1 && (
+                      <Badge variant="outline" className="text-xs">{meal.servings} servings</Badge>
+                    )}
                     {meal.isReadyMeal && (
                       <Badge variant="outline" className="text-xs">
-                        <UtensilsCrossed className="h-3 w-3 mr-1" />
-                        Ready Meal
+                        <UtensilsCrossed className="h-3 w-3 mr-1" />Ready Meal
                       </Badge>
                     )}
                     {isFrozen && (
                       <Badge variant="outline" className="text-xs border-blue-400/40 text-blue-500">
-                        <Snowflake className="h-3 w-3 mr-1" />
-                        In Freezer
+                        <Snowflake className="h-3 w-3 mr-1" />In Freezer
                       </Badge>
                     )}
                     {meal.audience === "baby" && (
                       <Badge variant="outline" className="text-xs border-pink-400/60 text-pink-500">
-                        <Baby className="h-3 w-3 mr-1" /> Baby
+                        <Baby className="h-3 w-3 mr-1" />Baby
                       </Badge>
                     )}
                     {meal.audience === "child" && (
                       <Badge variant="outline" className="text-xs border-sky-400/60 text-sky-500">
-                        <PersonStanding className="h-3 w-3 mr-1" /> Child
+                        <PersonStanding className="h-3 w-3 mr-1" />Child
+                      </Badge>
+                    )}
+                    {calories != null && calories > 0 && (
+                      <Badge variant="secondary" className="text-xs gap-1">
+                        <Flame className="h-3 w-3 text-orange-400" />
+                        {calories} kcal
                       </Badge>
                     )}
                   </div>
 
-                  {/* Nutrition */}
-                  {calories != null && calories > 0 && (
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/40">
-                      <Flame className="h-4 w-4 text-orange-400 flex-shrink-0" />
-                      <span className="text-sm font-medium">{calories} kcal</span>
-                    </div>
-                  )}
+                  {/* Two-column layout: Ingredients + Instructions */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Ingredients */}
+                    {meal.ingredients && meal.ingredients.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold mb-2 text-foreground">Ingredients</h3>
+                        <ul className="space-y-1.5">
+                          {meal.ingredients.map((ing, idx) => (
+                            <li key={idx} className="text-sm flex items-start gap-2 text-foreground/80">
+                              <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
+                              {ing}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
 
+                    {/* Instructions */}
+                    {instructions.length > 0 && (
+                      <div>
+                        <h3 className="text-sm font-semibold mb-2 text-foreground">Instructions</h3>
+                        <ol className="space-y-2">
+                          {instructions.map((step, idx) => (
+                            <li key={idx} className="text-sm flex items-start gap-2 text-foreground/80">
+                              <span className="shrink-0 w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center mt-0.5">
+                                {idx + 1}
+                              </span>
+                              <span className="leading-relaxed">{step}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+
+                    {/* Source URL */}
+                    {meal.sourceUrl && (
+                      <div className="sm:col-span-2">
+                        <a
+                          href={meal.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                          data-testid="link-meal-source"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          View original recipe
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                <DialogFooter className="gap-2 flex-wrap sm:flex-nowrap">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                    onClick={() => {
-                      clearEntry({ dayId, mealType, audience, isDrink });
-                      setMealDetail(null);
-                    }}
-                    disabled={upsertEntryMutation.isPending}
-                    data-testid="button-meal-detail-remove"
-                  >
-                    <X className="h-3.5 w-3.5 mr-1.5" />
-                    Remove from plan
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setMealDetail(null);
-                      openPicker({ dayId, mealType, audience, isDrink });
-                    }}
-                    data-testid="button-meal-detail-replace"
-                  >
-                    Replace
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => setMealDetail(null)}
-                    data-testid="button-meal-detail-close"
-                  >
-                    Done
-                  </Button>
-                </DialogFooter>
-              </>
+                {/* Footer actions */}
+                <div className="flex items-center justify-between gap-2 px-6 py-4 border-t border-border flex-wrap bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                      onClick={() => {
+                        clearEntry({ dayId, mealType, audience, isDrink });
+                        setMealDetail(null);
+                      }}
+                      disabled={upsertEntryMutation.isPending}
+                      data-testid="button-meal-detail-remove"
+                    >
+                      <X className="h-3.5 w-3.5 mr-1.5" />
+                      Remove
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setMealDetail(null);
+                        openPicker({ dayId, mealType, audience, isDrink });
+                      }}
+                      data-testid="button-meal-detail-replace"
+                    >
+                      Replace
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setMealDetail(null);
+                        navigate(`/meals/${meal.id}`);
+                      }}
+                      data-testid="button-meal-detail-edit"
+                    >
+                      <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                      Edit Recipe
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => setMealDetail(null)}
+                      data-testid="button-meal-detail-close"
+                    >
+                      Done
+                    </Button>
+                  </div>
+                </div>
+              </div>
             );
           })()}
         </DialogContent>
