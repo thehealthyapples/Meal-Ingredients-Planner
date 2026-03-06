@@ -1,0 +1,245 @@
+Objective
+
+Refine the THA Planner UX to use a cleaner matrix layout and centered meal modal, while preserving all existing planner logic, routes, data flows, and actions. This is a presentation / interaction refactor only.
+
+Core UX rules
+
+1. The planner remains a matrix:
+   - full day names across the top: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday
+   - meal categories down the left: Breakfast, Lunch, Dinner, Snacks, Drinks, Kids, Baby
+
+2. Each planner cell should contain only:
+   - meal name(s)
+   - a small "+" control
+
+3. Do NOT show inside planner cells:
+   - THA score
+   - calories
+   - add to basket buttons
+   - replace/edit buttons
+   - extra action rows
+   - basket / modal / control buttons at the bottom of each cell
+
+4. Meal details should appear only when the user clicks a meal, via a centered modal dialog.
+
+5. The bottom panel on the planner page should show only daily summary for the selected day:
+   - total calories for that day
+   - overall THA score for that day
+   It must NOT show individual meal details.
+
+6. No functional logic changes.
+
+Tasks
+
+T009: Planner grid structure — matrix with full day names and meal rows
+
+Blocked By: []
+Details:
+Refactor the planner layout in client/src/pages/weekly-planner-page.tsx so it is clearly structured as:
+
+- top header row = full day names (Monday–Sunday)
+- left column = meal categories:
+  Breakfast
+  Lunch
+  Dinner
+  Snacks
+  Drinks
+  Kids
+  Baby
+
+The day labels should be visually strong and always readable.
+The meal labels should appear once on the left only, not repeated inside cells.
+
+Keep the existing week navigation controls and week title area.
+No logic changes to how planner data is loaded or stored.
+
+Acceptance:
+- Days are clearly visible across the top in full
+- Meal categories are clearly visible down the left
+- Grid is easier to scan than the current version
+
+T010: Planner cell content simplification
+
+Blocked By: [T009]
+Details:
+Update each planner cell so it only renders:
+
+- if empty:
+  "+"
+- if one meal:
+  meal name
+  "+"
+- if multiple meals:
+  stacked meal names
+  "+"
+
+Rules:
+- keep the plus control small and subtle, not a large dashed add button
+- do not render THA score or calories inside the grid
+- do not render action buttons inside the grid
+- meal names should be easy to scan
+- allow up to 2 visible meals comfortably; if more exist, either stack them or show a compact overflow such as "+1 more" only if needed, without breaking the layout
+
+The goal is for the planner to feel like a planning board, not a control panel.
+
+Acceptance:
+- Empty cells show only "+"
+- Populated cells show meal name(s) + "+"
+- No extra controls or metadata appear inside cells
+
+T011: Planner interaction model — direct cell interaction
+
+Blocked By: [T010]
+Details:
+Adjust planner interactions so the cell itself is the interaction surface.
+
+Behaviour:
+- click empty cell or "+" in empty cell → open meal selector / add flow
+- click "+" in populated cell → add another meal to that slot
+- click a meal name → open centered meal modal
+- no visible inline Edit / Replace / View buttons inside cells
+
+Do not remove any underlying existing actions; simply move them into the modal where appropriate.
+
+Acceptance:
+- Planner cells are button-light
+- Meal selection feels direct and intuitive
+- No extra inline action clutter
+
+T012: Centered planner meal modal (not side panel)
+
+Blocked By: [T011]
+Details:
+When a meal is clicked from the planner, open a centered modal dialog instead of a side panel.
+
+Use the existing dialog/modal system if one exists; otherwise implement using the current UI library.
+
+Modal requirements:
+- centered on screen
+- desktop width approx 560–680px
+- max-height 80vh with internal scrolling if needed
+- ESC closes modal
+- clicking outside closes modal
+- planner remains visible only outside the modal bounds
+
+Very important visual requirement:
+- the modal itself must be fully opaque; the user should NOT be able to see the planner through the modal body
+- only the area outside the modal shows the dimmed planner behind
+- use the same Calm Orchard look and feel as the rest of THA
+- same orchard-style background treatment already used elsewhere in the app
+- same foreground/card opacity feel already established in the redesign
+- border uses hsl(var(--border))
+- border radius uses var(--radius)
+- modal should feel like a THA window, not a generic popup
+
+Overlay requirements:
+- dim/soften the page outside the modal
+- keep the overlay subtle and calm, consistent with THA
+- no harsh black overlay
+
+Modal content may include:
+- meal name
+- THA score
+- calories
+- ingredients
+- recipe information
+- existing relevant actions such as replace / remove / view recipe if already supported
+
+But these details must remain inside the modal only, not on the planner grid and not in the bottom summary panel.
+
+Acceptance:
+- Meal modal opens centered
+- Modal body is opaque
+- Planner is visible only outside the modal
+- Visual style matches the Calm Orchard UI
+
+T013: Planner bottom summary panel — daily totals only
+
+Blocked By: [T009]
+Details:
+At the bottom of the planner page, add or refine a daily summary panel for the currently selected day.
+
+This panel should show only:
+- selected day name
+- total calories for that day
+- overall THA score for the whole day
+
+Do NOT show:
+- individual meal details
+- ingredients
+- per-meal actions
+- recipe content
+
+Example intent:
+Monday Summary
+Total Calories: 1,845 kcal
+THA Day Score: 🍏🍏🍏🍏
+
+This panel should be visually calm and secondary to the planner grid.
+
+Acceptance:
+- Bottom section shows daily totals only
+- No individual meal detail leakage into summary area
+
+T014: Planner title editing — remove Rename button
+
+Blocked By: [T009]
+Details:
+Remove the dedicated Rename button for the planner/week title if present.
+Make the title inline-editable instead.
+
+Behaviour:
+- user can click directly into “Week 1” (or current planner title)
+- type a new name
+- persist/save using existing title persistence logic if available
+- if explicit save is required by current logic, preserve it behind the scenes without adding visual clutter
+
+Acceptance:
+- No separate Rename button
+- Planner title can be overwritten directly
+- New title persists
+
+T015: Planner visual refinement — compact, readable, workspace-first
+
+Blocked By: [T009, T010, T012, T013, T014]
+Details:
+Refine spacing and styling so the planner stays clean and readable.
+
+Requirements:
+- preserve maximum horizontal workspace
+- cards/widgets in the planner should match the revised opacity feel already discussed (~slightly more solid than before)
+- ensure day names are prominent
+- ensure meal row labels are aligned and readable
+- avoid overlapping cards/content
+- avoid oversized add buttons
+- preserve responsive behaviour for laptop and iPad landscape
+- do not reduce planner usability by adding decorative clutter
+
+Acceptance:
+- Planner looks structured and calm
+- No overlap between meals and days
+- Easy to scan by day and meal type
+
+T016: Visual QA
+
+Blocked By: [T009, T010, T011, T012, T013, T014, T015]
+Details:
+Run visual QA on the planner page and verify:
+
+- full day names visible across top
+- meal categories visible down left
+- empty cells show "+"
+- populated cells show meal names + "+"
+- clicking meal opens centered opaque modal
+- planner only visible outside modal
+- bottom summary shows daily calories + THA day score only
+- title editable inline
+- no functional regressions to planner interactions
+- no overlap or clipping issues on desktop and iPad landscape widths
+
+Fix any visual regressions before marking complete.
+
+Acceptance:
+- Planner is clearer, less repetitive, and more intuitive
+- No logic changes
+- Modal and summary behaviour match specification

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,13 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Pencil, X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingCart, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, Sparkles, LayoutGrid, Share2, LayoutList } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TemplatesPanel } from "@/components/templates-panel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
 import { DayViewDrawer } from "@/components/day-view-drawer";
 import { useUser } from "@/hooks/use-user";
-import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@shared/routes";
@@ -35,14 +34,43 @@ interface EntryTarget {
   drinkType?: string | null;
 }
 
+interface MatrixRow {
+  id: string;
+  label: string;
+  mealType: string | undefined;
+  audience: string;
+  isDrink: boolean;
+  addMealType: string;
+  icon: React.ElementType;
+  iconColor: string;
+}
+
+interface MealDetailState {
+  entry: PlannerEntry;
+  meal: Meal;
+  dayId: number;
+  mealType: string;
+  audience: string;
+  isDrink: boolean;
+  dayName: string;
+  slotLabel: string;
+}
+
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONDAY_FIRST_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const MEAL_TYPES = [
   { key: "breakfast", label: "Breakfast", icon: Coffee, color: "text-amber-500" },
-  { key: "lunch", label: "Lunch", icon: Sun, color: "text-orange-500" },
-  { key: "dinner", label: "Dinner", icon: Moon, color: "text-indigo-500" },
-  { key: "snacks", label: "Snack", icon: Cookie, color: "text-green-500" },
+  { key: "lunch",     label: "Lunch",     icon: Sun,    color: "text-orange-500" },
+  { key: "dinner",    label: "Dinner",    icon: Moon,   color: "text-indigo-500" },
+  { key: "snacks",    label: "Snack",     icon: Cookie, color: "text-green-500" },
+];
+
+const BASE_MATRIX_ROWS: MatrixRow[] = [
+  { id: "breakfast", label: "Breakfast", mealType: "breakfast", audience: "adult", isDrink: false, addMealType: "breakfast", icon: Coffee, iconColor: "text-amber-500" },
+  { id: "lunch",     label: "Lunch",     mealType: "lunch",     audience: "adult", isDrink: false, addMealType: "lunch",      icon: Sun,    iconColor: "text-orange-500" },
+  { id: "dinner",    label: "Dinner",    mealType: "dinner",    audience: "adult", isDrink: false, addMealType: "dinner",     icon: Moon,   iconColor: "text-indigo-500" },
+  { id: "snacks",    label: "Snacks",    mealType: "snacks",    audience: "adult", isDrink: false, addMealType: "snacks",     icon: Cookie, iconColor: "text-green-500" },
 ];
 
 function findEntry(entries: PlannerEntry[], mealType: string, audience: string, isDrink: boolean = false): PlannerEntry | undefined {
@@ -58,6 +86,17 @@ function getSlotEntries(entries: PlannerEntry[], mealType: string, audience: str
 function getDrinkEntries(entries: PlannerEntry[]): PlannerEntry[] {
   return entries
     .filter(e => e.isDrink === true)
+    .sort((a, b) => a.position !== b.position ? a.position - b.position : a.id - b.id);
+}
+
+function getCellEntries(entries: PlannerEntry[], row: MatrixRow): PlannerEntry[] {
+  return entries
+    .filter(e => {
+      if (e.isDrink !== row.isDrink) return false;
+      if (row.mealType !== undefined && e.mealType !== row.mealType) return false;
+      if (e.audience !== row.audience) return false;
+      return true;
+    })
     .sort((a, b) => a.position !== b.position ? a.position - b.position : a.id - b.id);
 }
 
@@ -84,6 +123,8 @@ export default function WeeklyPlannerPage() {
   const [sharePlanOpen, setSharePlanOpen] = useState(false);
   const [expandedDayId, setExpandedDayId] = useState<number | null>(null);
   const [expandedDayLabel, setExpandedDayLabel] = useState("");
+  const [mealDetail, setMealDetail] = useState<MealDetailState | null>(null);
+  const [selectedDayId, setSelectedDayId] = useState<number | null>(null);
   const { user } = useUser();
 
   const { data: plannerSettings } = useQuery<{
@@ -129,11 +170,7 @@ export default function WeeklyPlannerPage() {
       });
     },
     onError: (err: Error) => {
-      toast({
-        title: "Failed to load plan",
-        description: err.message,
-        variant: "destructive",
-      });
+      toast({ title: "Failed to load plan", description: err.message, variant: "destructive" });
     },
   });
 
@@ -168,7 +205,7 @@ export default function WeeklyPlannerPage() {
       const res = await apiRequest("POST", "/api/nutrition/bulk", { mealIds: allMealIds });
       return res.json();
     },
-    enabled: allMealIds.length > 0 && (plannerSettings?.showCalories ?? true),
+    enabled: allMealIds.length > 0,
   });
 
   const nutritionMap = useMemo(() => {
@@ -248,7 +285,6 @@ export default function WeeklyPlannerPage() {
       toast({ title: "Added to basket", description: `${totalServings} meal serving${totalServings !== 1 ? 's' : ''} added to shopping list.` });
     },
     onError: (err) => {
-      console.error("Add to basket error:", err);
       toast({ title: "Failed to add to basket", variant: "destructive" });
     },
   });
@@ -409,27 +445,6 @@ export default function WeeklyPlannerPage() {
     });
   };
 
-  const activeWeekData = fullPlanner.find((w) => w.weekNumber === Number(activeWeek));
-  const sortedDays = activeWeekData?.days?.slice().sort((a, b) => {
-    const aIdx = MONDAY_FIRST_ORDER.indexOf(a.dayOfWeek);
-    const bIdx = MONDAY_FIRST_ORDER.indexOf(b.dayOfWeek);
-    return aIdx - bIdx;
-  }) || [];
-  const expandedDay = expandedDayId != null
-    ? fullPlanner.flatMap(w => w.days).find(d => d.id === expandedDayId) ?? null
-    : null;
-
-  const weekStats = useMemo(() => {
-    if (!sortedDays.length) return { filled: 0, total: sortedDays.length * MEAL_TYPES.length };
-    let filled = 0;
-    for (const day of sortedDays) {
-      for (const slot of MEAL_TYPES) {
-        if (findEntry(day.entries, slot.key, "adult")) filled++;
-      }
-    }
-    return { filled, total: sortedDays.length * MEAL_TYPES.length };
-  }, [sortedDays]);
-
   const collectMealSelections = (days: FullDay[], mealTypeFilter?: string): { mealId: number; count: number }[] => {
     const counts = new Map<number, number>();
     for (const day of days) {
@@ -468,6 +483,59 @@ export default function WeeklyPlannerPage() {
     addToBasketMutation.mutate(selections);
   };
 
+  const activeWeekData = fullPlanner.find((w) => w.weekNumber === Number(activeWeek));
+  const sortedDays = activeWeekData?.days?.slice().sort((a, b) => {
+    const aIdx = MONDAY_FIRST_ORDER.indexOf(a.dayOfWeek);
+    const bIdx = MONDAY_FIRST_ORDER.indexOf(b.dayOfWeek);
+    return aIdx - bIdx;
+  }) || [];
+
+  const expandedDay = expandedDayId != null
+    ? fullPlanner.flatMap(w => w.days).find(d => d.id === expandedDayId) ?? null
+    : null;
+
+  const visibleRows = useMemo((): MatrixRow[] => {
+    const rows: MatrixRow[] = [...BASE_MATRIX_ROWS];
+    if (plannerSettings?.enableDrinks) {
+      rows.push({ id: "drinks", label: "Drinks", mealType: undefined, audience: "adult", isDrink: true, addMealType: "snacks", icon: Wine, iconColor: "text-purple-400" });
+    }
+    if (plannerSettings?.enableChildMeals) {
+      rows.push({ id: "child", label: "Kids", mealType: undefined, audience: "child", isDrink: false, addMealType: "snacks", icon: PersonStanding, iconColor: "text-sky-500" });
+    }
+    if (plannerSettings?.enableBabyMeals) {
+      rows.push({ id: "baby", label: "Baby", mealType: undefined, audience: "baby", isDrink: false, addMealType: "snacks", icon: Baby, iconColor: "text-pink-500" });
+    }
+    return rows;
+  }, [plannerSettings]);
+
+  const weekStats = useMemo(() => {
+    if (!sortedDays.length) return { filled: 0, total: sortedDays.length * MEAL_TYPES.length };
+    let filled = 0;
+    for (const day of sortedDays) {
+      for (const slot of MEAL_TYPES) {
+        if (findEntry(day.entries, slot.key, "adult")) filled++;
+      }
+    }
+    return { filled, total: sortedDays.length * MEAL_TYPES.length };
+  }, [sortedDays]);
+
+  const selectedDay = useMemo(() => {
+    if (selectedDayId) return sortedDays.find(d => d.id === selectedDayId) ?? sortedDays[0] ?? null;
+    return sortedDays[0] ?? null;
+  }, [selectedDayId, sortedDays]);
+
+  const selectedDayCalories = useMemo(() => {
+    if (!selectedDay) return 0;
+    return selectedDay.entries.reduce((sum, e) => sum + (nutritionMap.get(e.mealId) || 0), 0);
+  }, [selectedDay, nutritionMap]);
+
+  const selectedDayMealCount = useMemo(() => {
+    if (!selectedDay) return 0;
+    return selectedDay.entries.length;
+  }, [selectedDay]);
+
+  const selectedDayAvgSmp = null;
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -478,6 +546,7 @@ export default function WeeklyPlannerPage() {
 
   return (
     <div className="w-full px-3 py-6">
+      {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight" data-testid="text-weekly-planner-title">
@@ -491,11 +560,7 @@ export default function WeeklyPlannerPage() {
           <Badge variant="outline" data-testid="badge-week-progress">
             {weekStats.filled} / {weekStats.total} meals planned
           </Badge>
-          <Button
-            size="sm"
-            onClick={() => setTemplatesOpen(true)}
-            data-testid="button-open-templates"
-          >
+          <Button size="sm" onClick={() => setTemplatesOpen(true)} data-testid="button-open-templates">
             <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
             Templates
           </Button>
@@ -518,6 +583,7 @@ export default function WeeklyPlannerPage() {
         </div>
       </div>
 
+      {/* ── Week Tabs ── */}
       <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full">
         <div className="flex items-center gap-2 mb-4 overflow-x-auto">
           <TabsList className="flex-shrink-0" data-testid="tabs-weeks">
@@ -539,107 +605,260 @@ export default function WeeklyPlannerPage() {
 
         {fullPlanner.map((week) => (
           <TabsContent key={week.id} value={String(week.weekNumber)} className="mt-0">
+
+            {/* ── Week sub-header: inline title + slot basket buttons ── */}
             <div className="flex items-center gap-2 mb-4 flex-wrap">
+              {/* Inline title editing — click to rename, no separate button */}
               {renameWeekId === week.id ? (
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    className="w-48"
-                    placeholder="Week name"
-                    autoFocus
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && renameValue.trim()) {
-                        renameMutation.mutate({ weekId: week.id, weekName: renameValue.trim() });
-                      }
-                      if (e.key === "Escape") {
-                        setRenameWeekId(null);
-                      }
-                    }}
-                    data-testid="input-rename-week"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      if (renameValue.trim()) {
-                        renameMutation.mutate({ weekId: week.id, weekName: renameValue.trim() });
-                      }
-                    }}
-                    disabled={!renameValue.trim() || renameMutation.isPending}
-                    data-testid="button-save-rename"
-                  >
-                    Save
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setRenameWeekId(null)}
-                    data-testid="button-cancel-rename"
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setRenameWeekId(week.id);
-                    setRenameValue(week.weekName);
+                <Input
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  className="w-40 h-7 text-sm font-medium"
+                  placeholder="Week name"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && renameValue.trim()) {
+                      renameMutation.mutate({ weekId: week.id, weekName: renameValue.trim() });
+                    }
+                    if (e.key === "Escape") setRenameWeekId(null);
                   }}
-                  className="gap-1.5 text-muted-foreground"
+                  onBlur={() => {
+                    if (renameValue.trim() && renameValue.trim() !== week.weekName) {
+                      renameMutation.mutate({ weekId: week.id, weekName: renameValue.trim() });
+                    } else {
+                      setRenameWeekId(null);
+                    }
+                  }}
+                  data-testid="input-rename-week"
+                />
+              ) : (
+                <button
+                  className="text-sm font-semibold text-foreground hover:text-primary transition-colors cursor-text px-1 py-0.5 rounded hover:bg-accent/40"
+                  onClick={() => { setRenameWeekId(week.id); setRenameValue(week.weekName); }}
+                  title="Click to rename"
                   data-testid="button-rename-week"
                 >
-                  <Pencil className="h-3.5 w-3.5" />
-                  Rename
-                </Button>
+                  {week.weekName}
+                </button>
               )}
+
+              <span className="text-muted-foreground/40 text-xs">·</span>
 
               {MEAL_TYPES.map((slot) => {
                 const SlotIcon = slot.icon;
                 return (
                   <Button
                     key={slot.key}
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
+                    className="h-7 text-xs text-muted-foreground"
                     onClick={() => addSlotToBasket(slot.key)}
                     disabled={addToBasketMutation.isPending}
                     data-testid={`button-add-slot-${slot.key}-basket`}
                   >
-                    <SlotIcon className={`h-3.5 w-3.5 mr-1 ${slot.color}`} />
-                    Add all {slot.label}
+                    <SlotIcon className={`h-3 w-3 mr-1 ${slot.color}`} />
+                    Add {slot.label}s
                   </Button>
                 );
               })}
             </div>
 
-            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-              <div className="grid grid-cols-7 gap-3" style={{ minWidth: "980px" }}>
-                {sortedDays.map((day) => (
-                  <DayColumn
-                    key={day.id}
-                    day={day}
-                    getMeal={getMeal}
-                    onAddMeal={openPicker}
-                    onClearEntry={clearEntry}
-                    onAddDayToBasket={addDayToBasket}
-                    onExpand={(d, label) => { setExpandedDayId(d.id); setExpandedDayLabel(label); }}
-                    isUpdating={upsertEntryMutation.isPending}
-                    isAddingToBasket={addToBasketMutation.isPending}
-                    freezerMeals={freezerMeals}
-                    enableBabyMeals={plannerSettings?.enableBabyMeals ?? false}
-                    enableChildMeals={plannerSettings?.enableChildMeals ?? false}
-                    enableDrinks={plannerSettings?.enableDrinks ?? false}
-                    showCalories={plannerSettings?.showCalories ?? true}
-                    nutritionMap={nutritionMap}
-                  />
-                ))}
+            {/* ── Matrix Grid ── */}
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-6">
+              <div style={{ minWidth: "960px" }}>
+                <Card className="overflow-hidden">
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "88px repeat(7, 1fr)",
+                    }}
+                  >
+                    {/* ── Header row: corner + day names ── */}
+                    <div className="bg-muted/40 border-b-2 border-border" />
+                    {sortedDays.map((day) => {
+                      const isSelected = selectedDay?.id === day.id;
+                      return (
+                        <button
+                          key={day.id}
+                          className={`bg-muted/40 border-b-2 border-l border-border px-2 py-2.5 text-center transition-colors ${
+                            isSelected ? "bg-primary/10" : "hover:bg-accent/30"
+                          }`}
+                          onClick={() => setSelectedDayId(day.id)}
+                          data-testid={`button-day-header-${day.dayOfWeek}`}
+                        >
+                          <div className={`text-xs font-semibold ${isSelected ? "text-primary" : "text-foreground"}`}>
+                            {DAY_NAMES[day.dayOfWeek]}
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    {/* ── Meal rows ── */}
+                    {visibleRows.map((row, rowIdx) => {
+                      const isLastRow = rowIdx === visibleRows.length - 1;
+                      const RowIcon = row.icon;
+                      return (
+                        <>
+                          {/* Row label */}
+                          <div
+                            key={row.id + "-label"}
+                            className={`flex items-center gap-1.5 px-2 py-2 bg-muted/15 border-r border-border ${!isLastRow ? "border-b border-border" : ""}`}
+                          >
+                            <RowIcon className={`h-3 w-3 flex-shrink-0 ${row.iconColor}`} />
+                            <span className="text-xs font-medium text-muted-foreground">{row.label}</span>
+                          </div>
+
+                          {/* Day cells for this row */}
+                          {sortedDays.map((day, dayIdx) => {
+                            const isLastCol = dayIdx === sortedDays.length - 1;
+                            const cellEntries = getCellEntries(day.entries, row);
+                            const isUpdating = upsertEntryMutation.isPending || addEntryMutation.isPending;
+
+                            return (
+                              <div
+                                key={day.id + row.id}
+                                className={`relative p-1.5 min-h-[56px] flex flex-col gap-0.5 border-l border-border ${!isLastRow ? "border-b border-border" : ""} ${!isLastCol ? "" : ""}`}
+                                data-testid={`cell-${row.id}-${day.dayOfWeek}`}
+                              >
+                                {/* Meal name pills */}
+                                {cellEntries.slice(0, 2).map((entry) => {
+                                  const meal = getMeal(entry.mealId);
+                                  if (!meal) return null;
+                                  const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
+                                  return (
+                                    <button
+                                      key={entry.id}
+                                      className="w-full text-left text-[11px] leading-snug text-foreground hover:text-primary transition-colors group flex items-start gap-0.5"
+                                      onClick={() => setMealDetail({
+                                        entry,
+                                        meal,
+                                        dayId: day.id,
+                                        mealType: row.mealType ?? row.addMealType,
+                                        audience: row.audience,
+                                        isDrink: row.isDrink,
+                                        dayName: DAY_NAMES[day.dayOfWeek],
+                                        slotLabel: row.label,
+                                      })}
+                                      data-testid={`button-meal-${row.id}-${day.dayOfWeek}-${entry.id}`}
+                                    >
+                                      <span className="flex-1 min-w-0 break-words leading-tight">{meal.name}</span>
+                                      {isFrozen && <Snowflake className="h-2.5 w-2.5 text-blue-400 flex-shrink-0 mt-0.5" />}
+                                    </button>
+                                  );
+                                })}
+                                {/* Overflow indicator */}
+                                {cellEntries.length > 2 && (
+                                  <span className="text-[10px] text-muted-foreground">+{cellEntries.length - 2} more</span>
+                                )}
+                                {/* Add button */}
+                                <button
+                                  className="mt-auto text-muted-foreground/40 hover:text-primary transition-colors self-start leading-none"
+                                  onClick={() => openPicker({
+                                    dayId: day.id,
+                                    mealType: row.addMealType,
+                                    audience: row.audience,
+                                    isDrink: row.isDrink,
+                                  })}
+                                  disabled={isUpdating}
+                                  data-testid={`button-add-${row.id}-${day.dayOfWeek}`}
+                                  title={`Add ${row.label}`}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </button>
+
+                                {/* Expand day button (top-right, subtle) */}
+                                {row.id === "breakfast" && (
+                                  <button
+                                    className="absolute top-1 right-1 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+                                    onClick={() => { setExpandedDayId(day.id); setExpandedDayLabel(DAY_NAMES[day.dayOfWeek]); }}
+                                    title="Expand day"
+                                    data-testid={`button-expand-day-${day.dayOfWeek}`}
+                                  >
+                                    <LayoutList className="h-3 w-3" />
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </>
+                      );
+                    })}
+                  </div>
+                </Card>
               </div>
             </div>
+
+            {/* ── Daily Summary Panel ── */}
+            {selectedDay && (
+              <Card className="mb-6">
+                <CardContent className="py-4 px-5">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-0.5">Selected Day</p>
+                      <p className="text-base font-semibold text-foreground" data-testid="text-summary-day-name">
+                        {DAY_NAMES[selectedDay.dayOfWeek]}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-6">
+                      {selectedDayCalories > 0 && (
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground mb-0.5">Total Calories</p>
+                          <div className="flex items-center gap-1">
+                            <Flame className="h-3.5 w-3.5 text-orange-400" />
+                            <span className="text-sm font-semibold text-foreground" data-testid="text-summary-calories">
+                              {selectedDayCalories.toLocaleString()} kcal
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      {selectedDayMealCount > 0 && (
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground mb-0.5">Meals Planned</p>
+                          <p className="text-sm font-semibold text-foreground" data-testid="text-summary-meal-count">
+                            {selectedDayMealCount}
+                          </p>
+                        </div>
+                      )}
+                      {selectedDayAvgSmp != null && (
+                        <div className="text-center">
+                          <p className="text-xs text-muted-foreground mb-0.5">THA Day Score</p>
+                          <div className="flex items-center gap-0.5" data-testid="img-summary-smp-score">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <img
+                                key={i}
+                                src={`/apple-rating-${Math.max(1, Math.min(5, i < selectedDayAvgSmp ? selectedDayAvgSmp : 1))}.png`}
+                                alt=""
+                                className={`h-4 w-4 ${i < selectedDayAvgSmp ? "opacity-100" : "opacity-25"}`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {selectedDayMealCount === 0 && (
+                        <p className="text-sm text-muted-foreground italic">No meals planned yet</p>
+                      )}
+                    </div>
+                    {/* Day basket shortcut */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addDayToBasket(selectedDay)}
+                      disabled={addToBasketMutation.isPending}
+                      data-testid={`button-add-day-basket-summary`}
+                    >
+                      <ShoppingBasket className="h-3.5 w-3.5 mr-1.5" />
+                      Add Day to Basket
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
           </TabsContent>
         ))}
       </Tabs>
 
+      {/* ── Day View Drawer ── */}
       <DayViewDrawer
         open={!!expandedDay}
         onClose={() => setExpandedDayId(null)}
@@ -650,6 +869,112 @@ export default function WeeklyPlannerPage() {
         onPlannerInvalidate={() => qc.invalidateQueries({ queryKey: ["/api/planner/full"] })}
       />
 
+      {/* ── Meal Detail Modal ── */}
+      <Dialog open={!!mealDetail} onOpenChange={(v) => !v && setMealDetail(null)}>
+        <DialogContent
+          className="max-w-[600px] max-h-[80vh] overflow-y-auto bg-background backdrop-blur-none border-border"
+          style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
+          data-testid="dialog-meal-detail"
+        >
+          {mealDetail && (() => {
+            const { meal, entry, dayId, mealType, audience, isDrink, dayName, slotLabel } = mealDetail;
+            const calories = nutritionMap.get(meal.id);
+            const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
+
+            return (
+              <>
+                <DialogHeader>
+                  <p className="text-xs text-muted-foreground font-normal mb-0.5">{dayName} · {slotLabel}</p>
+                  <DialogTitle className="text-xl leading-snug">{meal.name}</DialogTitle>
+                </DialogHeader>
+
+                <div className="space-y-4 py-2">
+                  {/* Meal image */}
+                  {meal.imageUrl && (
+                    <img
+                      src={meal.imageUrl}
+                      alt={meal.name}
+                      className="w-full h-40 object-cover rounded-lg border border-border"
+                    />
+                  )}
+
+                  {/* Badges row */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {meal.isReadyMeal && (
+                      <Badge variant="outline" className="text-xs">
+                        <UtensilsCrossed className="h-3 w-3 mr-1" />
+                        Ready Meal
+                      </Badge>
+                    )}
+                    {isFrozen && (
+                      <Badge variant="outline" className="text-xs border-blue-400/40 text-blue-500">
+                        <Snowflake className="h-3 w-3 mr-1" />
+                        In Freezer
+                      </Badge>
+                    )}
+                    {meal.audience === "baby" && (
+                      <Badge variant="outline" className="text-xs border-pink-400/60 text-pink-500">
+                        <Baby className="h-3 w-3 mr-1" /> Baby
+                      </Badge>
+                    )}
+                    {meal.audience === "child" && (
+                      <Badge variant="outline" className="text-xs border-sky-400/60 text-sky-500">
+                        <PersonStanding className="h-3 w-3 mr-1" /> Child
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Nutrition */}
+                  {calories != null && calories > 0 && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/40">
+                      <Flame className="h-4 w-4 text-orange-400 flex-shrink-0" />
+                      <span className="text-sm font-medium">{calories} kcal</span>
+                    </div>
+                  )}
+
+                </div>
+
+                <DialogFooter className="gap-2 flex-wrap sm:flex-nowrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                    onClick={() => {
+                      clearEntry({ dayId, mealType, audience, isDrink });
+                      setMealDetail(null);
+                    }}
+                    disabled={upsertEntryMutation.isPending}
+                    data-testid="button-meal-detail-remove"
+                  >
+                    <X className="h-3.5 w-3.5 mr-1.5" />
+                    Remove from plan
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setMealDetail(null);
+                      openPicker({ dayId, mealType, audience, isDrink });
+                    }}
+                    data-testid="button-meal-detail-replace"
+                  >
+                    Replace
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setMealDetail(null)}
+                    data-testid="button-meal-detail-close"
+                  >
+                    Done
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Meal Picker Dialog ── */}
       <Dialog open={mealPickerOpen} onOpenChange={setMealPickerOpen}>
         <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
           <DialogHeader>
@@ -701,11 +1026,7 @@ export default function WeeklyPlannerPage() {
                       <UtensilsCrossed className="h-5 w-5 text-green-500/40" />
                     </div>
                   ) : meal.imageUrl ? (
-                    <img
-                      src={meal.imageUrl}
-                      alt={meal.name}
-                      className="h-10 w-10 rounded-md object-cover flex-shrink-0"
-                    />
+                    <img src={meal.imageUrl} alt={meal.name} className="h-10 w-10 rounded-md object-cover flex-shrink-0" />
                   ) : (
                     <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
                       <ChefHat className="h-5 w-5 text-muted-foreground" />
@@ -714,11 +1035,7 @@ export default function WeeklyPlannerPage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{meal.name}</p>
                     <div className="flex items-center gap-1.5">
-                      {meal.isReadyMeal && (
-                        <Badge variant="outline" className="text-xs">
-                          Ready Meal
-                        </Badge>
-                      )}
+                      {meal.isReadyMeal && <Badge variant="outline" className="text-xs">Ready Meal</Badge>}
                       {meal.audience === "baby" && (
                         <Badge variant="outline" className="text-xs border-pink-400/60 text-pink-500">
                           <Baby className="h-3 w-3 mr-0.5" /> Baby
@@ -743,6 +1060,7 @@ export default function WeeklyPlannerPage() {
         </DialogContent>
       </Dialog>
 
+      {/* ── Bulk Assign Dialog ── */}
       <Dialog open={bulkAssignOpen} onOpenChange={(v) => { if (!v) resetBulkAssign(); }}>
         <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
           <DialogHeader>
@@ -787,9 +1105,7 @@ export default function WeeklyPlannerPage() {
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{meal.name}</p>
-                        {meal.isReadyMeal && (
-                          <Badge variant="outline" className="text-xs">Ready Meal</Badge>
-                        )}
+                        {meal.isReadyMeal && <Badge variant="outline" className="text-xs">Ready Meal</Badge>}
                       </div>
                     </button>
                   ))
@@ -799,11 +1115,7 @@ export default function WeeklyPlannerPage() {
           ) : (
             <div className="flex-1 overflow-y-auto space-y-4">
               <div className="flex items-center gap-3 p-3 rounded-md bg-muted/50">
-                {bulkMeal?.isReadyMeal ? (
-                  <div className="h-10 w-10 rounded-md bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                    <UtensilsCrossed className="h-5 w-5 text-green-500/40" />
-                  </div>
-                ) : bulkMeal?.imageUrl ? (
+                {bulkMeal?.imageUrl ? (
                   <img src={bulkMeal.imageUrl} alt={bulkMeal.name} className="h-10 w-10 rounded-md object-cover flex-shrink-0" />
                 ) : (
                   <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
@@ -907,6 +1219,7 @@ export default function WeeklyPlannerPage() {
         </DialogContent>
       </Dialog>
 
+      {/* ── Planner Settings Dialog ── */}
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
         <DialogContent className="sm:max-w-md" data-testid="dialog-planner-settings">
           <DialogHeader>
@@ -915,20 +1228,8 @@ export default function WeeklyPlannerPage() {
           <div className="space-y-6 py-4">
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
-                <span className="text-sm font-medium" data-testid="label-show-calories">Show Calories</span>
-                <p className="text-xs text-muted-foreground">Display calorie information on meal cards</p>
-              </div>
-              <Switch
-                checked={plannerSettings?.showCalories ?? true}
-                onCheckedChange={(v) => toggleSetting("showCalories", v)}
-                disabled={updateSettingsMutation.isPending}
-                data-testid="switch-show-calories"
-              />
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
                 <span className="text-sm font-medium" data-testid="label-enable-baby-meals">Baby Meals</span>
-                <p className="text-xs text-muted-foreground">Enable baby meal slots in weekly planner</p>
+                <p className="text-xs text-muted-foreground">Enable baby meal row in planner</p>
               </div>
               <Switch
                 checked={plannerSettings?.enableBabyMeals ?? false}
@@ -940,7 +1241,7 @@ export default function WeeklyPlannerPage() {
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <span className="text-sm font-medium" data-testid="label-enable-child-meals">Child Meals</span>
-                <p className="text-xs text-muted-foreground">Enable child meal slots in weekly planner</p>
+                <p className="text-xs text-muted-foreground">Enable kids meal row in planner</p>
               </div>
               <Switch
                 checked={plannerSettings?.enableChildMeals ?? false}
@@ -952,7 +1253,7 @@ export default function WeeklyPlannerPage() {
             <div className="flex items-center justify-between gap-4">
               <div className="space-y-0.5">
                 <span className="text-sm font-medium" data-testid="label-enable-drinks">Drinks</span>
-                <p className="text-xs text-muted-foreground">Enable drink slots in weekly planner</p>
+                <p className="text-xs text-muted-foreground">Enable drinks row in planner</p>
               </div>
               <Switch
                 checked={plannerSettings?.enableDrinks ?? false}
@@ -968,309 +1269,5 @@ export default function WeeklyPlannerPage() {
       <TemplatesPanel open={templatesOpen} onClose={() => setTemplatesOpen(false)} user={user} />
       <SharePlanDialog open={sharePlanOpen} onOpenChange={setSharePlanOpen} />
     </div>
-  );
-}
-
-function EntrySlotRow({
-  dayId,
-  dayOfWeek,
-  entry,
-  meal,
-  mealType,
-  audience,
-  isDrink,
-  label,
-  audienceIcon,
-  isIndented,
-  freezerMeals,
-  onAddMeal,
-  onClearEntry,
-  isUpdating,
-  calories,
-}: {
-  dayId: number;
-  dayOfWeek: number;
-  entry: PlannerEntry | undefined;
-  meal: Meal | undefined;
-  mealType: string;
-  audience: string;
-  isDrink: boolean;
-  label: string;
-  audienceIcon?: typeof Baby;
-  isIndented?: boolean;
-  freezerMeals: FreezerMeal[];
-  onAddMeal: (target: EntryTarget) => void;
-  onClearEntry: (target: EntryTarget) => void;
-  isUpdating: boolean;
-  calories?: number;
-}) {
-  const AudienceIcon = audienceIcon;
-  const slotId = `${mealType}-${audience}${isDrink ? "-drink" : ""}`;
-  const target: EntryTarget = { dayId, mealType, audience, isDrink };
-
-  return (
-    <div className={isIndented ? "ml-3 border-l-2 border-muted pl-2" : ""}>
-      {AudienceIcon && (
-        <div className="flex items-center gap-1 mb-0.5">
-          <AudienceIcon className="h-3 w-3 text-muted-foreground" />
-          <span className="text-[10px] font-medium text-muted-foreground">{label}</span>
-        </div>
-      )}
-      {meal ? (
-        <div className="group relative">
-          <div className="flex items-start gap-1.5 p-1.5 rounded-md bg-muted/50">
-            {meal.isReadyMeal ? (
-              <div className={`h-6 w-6 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                meal.audience === 'baby' ? 'bg-pink-500/10' :
-                meal.audience === 'child' ? 'bg-sky-500/10' :
-                'bg-green-500/10'
-              }`}>
-                {meal.audience === 'baby' ? (
-                  <Baby className="h-3 w-3 text-pink-500/40" />
-                ) : meal.audience === 'child' ? (
-                  <PersonStanding className="h-3 w-3 text-sky-500/40" />
-                ) : (
-                  <UtensilsCrossed className="h-3 w-3 text-green-500/40" />
-                )}
-              </div>
-            ) : meal.imageUrl ? (
-              <img
-                src={meal.imageUrl}
-                alt={meal.name}
-                className="h-6 w-6 rounded object-cover flex-shrink-0 mt-0.5"
-              />
-            ) : (
-              <div className={`h-6 w-6 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                meal.audience === 'baby' ? 'bg-pink-500/10' :
-                meal.audience === 'child' ? 'bg-sky-500/10' :
-                'bg-muted'
-              }`}>
-                {meal.audience === 'baby' ? (
-                  <Baby className="h-3 w-3 text-pink-400/60" />
-                ) : meal.audience === 'child' ? (
-                  <PersonStanding className="h-3 w-3 text-sky-400/60" />
-                ) : (
-                  <ChefHat className="h-3 w-3 text-muted-foreground" />
-                )}
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <span className="text-xs leading-tight break-words" data-testid={`text-meal-name-${slotId}-${dayOfWeek}`}>{meal.name}</span>
-              {calories && calories > 0 && (
-                <span className="text-[10px] text-orange-500 ml-1" data-testid={`text-calories-${slotId}-${dayOfWeek}`}>
-                  {calories} kcal
-                </span>
-              )}
-            </div>
-            {freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0) && (
-              <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0" data-testid={`icon-frozen-${slotId}-${dayOfWeek}`} />
-            )}
-          </div>
-          <button
-            className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center invisible group-hover:visible"
-            onClick={() => onClearEntry(target)}
-            data-testid={`button-clear-${slotId}-${dayOfWeek}`}
-          >
-            <X className="h-3 w-3" />
-          </button>
-        </div>
-      ) : (
-        <button
-          className="w-full p-1.5 rounded-md border border-dashed border-muted-foreground/30 hover-elevate flex items-center justify-center gap-1 text-xs text-muted-foreground"
-          onClick={() => onAddMeal(target)}
-          disabled={isUpdating}
-          data-testid={`button-add-${slotId}-${dayOfWeek}`}
-        >
-          <Plus className="h-3 w-3" />
-          Add
-        </button>
-      )}
-    </div>
-  );
-}
-
-function DayColumn({
-  day,
-  getMeal,
-  onAddMeal,
-  onClearEntry,
-  onAddDayToBasket,
-  onExpand,
-  isUpdating,
-  isAddingToBasket,
-  freezerMeals = [],
-  enableBabyMeals = false,
-  enableChildMeals = false,
-  enableDrinks = false,
-  showCalories = true,
-  nutritionMap = new Map(),
-}: {
-  day: FullDay;
-  getMeal: (id: number | null) => Meal | undefined;
-  onAddMeal: (target: EntryTarget) => void;
-  onClearEntry: (target: EntryTarget) => void;
-  onAddDayToBasket: (day: FullDay) => void;
-  onExpand: (day: FullDay, label: string) => void;
-  isUpdating: boolean;
-  isAddingToBasket: boolean;
-  freezerMeals?: FreezerMeal[];
-  enableBabyMeals?: boolean;
-  enableChildMeals?: boolean;
-  enableDrinks?: boolean;
-  showCalories?: boolean;
-  nutritionMap?: Map<number, number>;
-}) {
-  const dayCalories = useMemo(() => {
-    if (!showCalories) return 0;
-    let total = 0;
-    for (const entry of day.entries) {
-      if (entry.isDrink && !enableDrinks) continue;
-      if (entry.audience === "baby" && !enableBabyMeals) continue;
-      if (entry.audience === "child" && !enableChildMeals) continue;
-      total += nutritionMap.get(entry.mealId) || 0;
-    }
-    return total;
-  }, [day.entries, showCalories, nutritionMap, enableDrinks, enableBabyMeals, enableChildMeals]);
-
-  return (
-    <Card className="overflow-visible" data-testid={`card-day-${day.dayOfWeek}`}>
-      <div className="px-3 py-2 border-b flex items-center justify-between gap-1">
-        <div className="flex items-center gap-2 min-w-0">
-          <h3 className="font-semibold text-sm truncate">{DAY_NAMES[day.dayOfWeek]}</h3>
-          {showCalories && dayCalories > 0 && (
-            <span className="text-xs text-orange-500 font-medium flex-shrink-0" data-testid={`text-day-calories-${day.dayOfWeek}`}>
-              {dayCalories} kcal
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-0.5 flex-shrink-0">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => onExpand(day, DAY_NAMES[day.dayOfWeek])}
-            data-testid={`button-expand-day-${day.dayOfWeek}`}
-            title="Expand day view"
-          >
-            <LayoutList className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => onAddDayToBasket(day)}
-            disabled={isAddingToBasket}
-            data-testid={`button-add-day-basket-${day.dayOfWeek}`}
-            title="Add this day's meals to basket"
-          >
-            <ShoppingBasket className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
-      <CardContent className="p-2 space-y-2">
-        {MEAL_TYPES.map((slot) => {
-          const adultEntries = getSlotEntries(day.entries, slot.key, "adult", false);
-          const primaryAdultEntry = adultEntries[0];
-          const adultCount = adultEntries.length;
-          const babyEntry = findEntry(day.entries, slot.key, "baby");
-          const childEntry = findEntry(day.entries, slot.key, "child");
-          const SlotIcon = slot.icon;
-
-          return (
-            <div key={slot.key} className="space-y-1">
-              <div className="flex items-center gap-1">
-                <SlotIcon className={`h-3 w-3 ${slot.color}`} />
-                <span className="text-xs font-medium text-muted-foreground">
-                  {adultCount >= 2 ? `${slot.label} (${adultCount})` : slot.label}
-                </span>
-              </div>
-              <EntrySlotRow
-                dayId={day.id}
-                dayOfWeek={day.dayOfWeek}
-                entry={primaryAdultEntry}
-                meal={getMeal(primaryAdultEntry?.mealId ?? null)}
-                mealType={slot.key}
-                audience="adult"
-                isDrink={false}
-                label={slot.label}
-                freezerMeals={freezerMeals}
-                onAddMeal={onAddMeal}
-                onClearEntry={onClearEntry}
-                isUpdating={isUpdating}
-                calories={showCalories && primaryAdultEntry ? nutritionMap.get(primaryAdultEntry.mealId) : undefined}
-              />
-              {enableBabyMeals && (
-                <EntrySlotRow
-                  dayId={day.id}
-                  dayOfWeek={day.dayOfWeek}
-                  entry={babyEntry}
-                  meal={getMeal(babyEntry?.mealId ?? null)}
-                  mealType={slot.key}
-                  audience="baby"
-                  isDrink={false}
-                  label={`Baby ${slot.label}`}
-                  audienceIcon={Baby}
-                  isIndented
-                  freezerMeals={freezerMeals}
-                  onAddMeal={onAddMeal}
-                  onClearEntry={onClearEntry}
-                  isUpdating={isUpdating}
-                  calories={showCalories && babyEntry ? nutritionMap.get(babyEntry.mealId) : undefined}
-                />
-              )}
-              {enableChildMeals && (
-                <EntrySlotRow
-                  dayId={day.id}
-                  dayOfWeek={day.dayOfWeek}
-                  entry={childEntry}
-                  meal={getMeal(childEntry?.mealId ?? null)}
-                  mealType={slot.key}
-                  audience="child"
-                  isDrink={false}
-                  label={`Child ${slot.label}`}
-                  audienceIcon={PersonStanding}
-                  isIndented
-                  freezerMeals={freezerMeals}
-                  onAddMeal={onAddMeal}
-                  onClearEntry={onClearEntry}
-                  isUpdating={isUpdating}
-                  calories={showCalories && childEntry ? nutritionMap.get(childEntry.mealId) : undefined}
-                />
-              )}
-            </div>
-          );
-        })}
-        {enableDrinks && (() => {
-          const drinkEntries = getDrinkEntries(day.entries);
-          const drinkCount = drinkEntries.length;
-          const primaryDrinkEntry = drinkEntries[0];
-          return (
-            <div className="space-y-1">
-              <div className="flex items-center gap-1">
-                <Wine className="h-3 w-3 text-purple-400" />
-                <span className="text-xs font-medium text-muted-foreground">
-                  {drinkCount >= 2 ? `Drinks (${drinkCount})` : "Drinks"}
-                </span>
-              </div>
-              <EntrySlotRow
-                dayId={day.id}
-                dayOfWeek={day.dayOfWeek}
-                entry={primaryDrinkEntry}
-                meal={getMeal(primaryDrinkEntry?.mealId ?? null)}
-                mealType="snacks"
-                audience="adult"
-                isDrink={true}
-                label="Drinks"
-                freezerMeals={freezerMeals}
-                onAddMeal={onAddMeal}
-                onClearEntry={onClearEntry}
-                isUpdating={isUpdating}
-                calories={showCalories && primaryDrinkEntry ? nutritionMap.get(primaryDrinkEntry.mealId) : undefined}
-              />
-            </div>
-          );
-        })()}
-      </CardContent>
-    </Card>
   );
 }
