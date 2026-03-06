@@ -1,0 +1,204 @@
+Objective
+
+Refine the global THA app shell so it feels cleaner, more branded, and less cluttered. Update the header, sidebar, search, basket badge, logout location, and orchard background coverage/resizing — without changing any business logic, routes, or existing core functionality.
+
+Scope
+
+This task is app-shell / layout / styling only:
+- top header
+- left sidebar
+- search entry point
+- basket badge
+- logout placement
+- global orchard background coverage + scaling
+
+No changes to:
+- basket logic
+- profile/account logic
+- routing destinations
+- meal/planner logic
+- pantry logic
+- admin logic
+
+Tasks
+
+T017: Global orchard background — full app shell coverage
+
+Blocked By: []
+Details:
+Apply the Calm Orchard background to the full application shell so it spans continuously behind:
+- the top header
+- the left sidebar
+- the main content area
+
+Important:
+- the orchard background must feel like the single global environment for the whole site
+- it should NOT be limited to only the content area
+- top bar and sidebar should not sit on a separate flat background
+
+Implementation guidance:
+- apply the orchard background at the highest shared layout wrapper level in App.tsx or the main app shell container
+- use background-size / positioning so the image scales well across wide desktop screens and large tablets
+- avoid obvious stretching, tiling, or awkward cropping
+- use a single consistent background treatment across the full shell
+
+Suggested styling approach:
+- background-repeat: no-repeat
+- background-size: cover or a carefully chosen responsive size
+- background-position: center center
+- if the current orchard image needs better scaling, adjust with responsive background-size rules so it looks intentional across breakpoints
+
+Foreground surfaces must remain readable:
+- cards
+- tables
+- planner cells
+- modal windows
+should still sit above the orchard background with their existing Calm Orchard surface styling
+
+Acceptance:
+- orchard background visibly covers header, sidebar, and content area as one continuous environment
+- no isolated flat header/sidebar background
+- image scales cleanly across desktop and tablet widths
+
+T018: Header refinement — long THA logo only, remove duplicated controls
+
+Blocked By: [T017]
+Details:
+Refine the top header so it becomes simpler and more branded.
+
+Remove from the top header:
+- basket icon
+- profile/avatar
+- logout icon/button
+- full-width persistent search field
+
+Add / keep in the top header:
+- the company long logo prominently as the main brand anchor
+
+The header should feel:
+- shallow in height
+- calm
+- uncluttered
+- brand-led
+
+Implementation guidance:
+- use the long THA logo asset in the header
+- place it naturally in the header, aligned cleanly with the content shell
+- do not leave the logo tiny or stranded in the middle
+- the header should not feel like a utility bar anymore
+
+Acceptance:
+- header uses the long THA logo prominently
+- basket/profile/logout/search field are removed from top bar
+- header looks simpler and more intentional
+
+T019: Sidebar refinement — move basket/profile/search/logout into left panel
+
+Blocked By: [T018]
+Details:
+The left sidebar should become the single home for app utilities that were previously duplicated.
+
+Keep / add in sidebar:
+- navigation items
+- basket
+- profile
+- search icon
+- support
+- logout pinned to the bottom
+
+Specific requirements:
+1. Basket remains in the sidebar and should not appear in the top header.
+2. Profile remains in the sidebar and should not appear in the top header.
+3. Add a search icon to the sidebar.
+4. Move logout to the very bottom of the sidebar, pinned to the bottom of the screen/container.
+5. Support should remain in the lower section of the sidebar above logout.
+
+Layout guidance:
+- main navigation toward top/middle
+- support + secondary items lower down
+- logout visually anchored at the bottom
+- keep Calm Orchard styling throughout
+
+Acceptance:
+- sidebar contains basket, profile, search icon, support, logout
+- logout is pinned to bottom-left area of sidebar
+- no utility duplication between top bar and sidebar
+
+T020: Search redesign — sidebar icon opens centered search modal
+
+Blocked By: [T019]
+Details:
+Remove the persistent “Search meals...” top-bar field entirely.
+Search should instead be triggered from a search icon in the left sidebar.
+
+Behaviour:
+- clicking the sidebar search icon opens a centered modal input box
+- the search modal is for meal search
+- modal should use existing Calm Orchard dialog styling if available
+- search modal should feel like a utility overlay, not a page-level field
+
+Implementation guidance:
+- centered modal/dialog
+- input autofocus on open
+- ESC closes modal
+- clicking outside closes modal
+- preserve existing meal search behaviour / route integration where possible
+- no logic changes to actual search results flow unless necessary to trigger from modal
+
+Acceptance:
+- no persistent top-bar search field
+- sidebar search icon opens centered search modal
+- search feels cleaner and less intrusive
+
+T021: Sidebar basket badge — show basket item count on left icon
+
+Blocked By: [T019]
+Details:
+Add a numeric badge to the basket icon in the left sidebar showing the current number of items in the user's basket.
+
+Requirements:
+- badge appears on the basket icon in the sidebar
+- positioned at the top-right corner of the basket icon
+- updates automatically when basket contents change
+- hides when basket is empty (preferred), unless current logic expects zero display
+- use existing basket count source; do not duplicate basket logic
+
+Styling guidance:
+- background: hsl(var(--primary))
+- text: hsl(var(--primary-foreground))
+- circular badge
+- small but readable
+- slightly overlaps the icon corner
+- match Calm Orchard styling
+
+Acceptance:
+- basket count visible from the sidebar at a glance
+- badge updates correctly
+- no duplicate basket icon remains in top header
+
+T022: Sidebar / header visual QA and responsive shell pass
+
+Blocked By: [T017, T018, T019, T020, T021]
+Details:
+Run visual QA across desktop and tablet widths for the updated app shell.
+
+Check:
+- orchard background spans full shell
+- long logo is prominent in the header
+- no duplicated basket/profile/logout/search in top bar
+- sidebar search icon works and opens centered modal
+- basket badge appears correctly
+- logout is pinned at bottom of sidebar
+- sidebar still behaves correctly when collapsed/expanded if collapse already exists
+- background image scales cleanly without awkward cropping/stretching
+- all surfaces remain readable over the background
+- no route regressions
+- no functionality regressions
+
+Fix any visual regressions before completion.
+
+Acceptance:
+- shell feels cleaner, more branded, and less cluttered
+- background is continuous
+- utilities are located in the correct places
+- no functional regressions
