@@ -197,7 +197,7 @@ export function setupAuth(app: Express) {
       if (!isProduction && !user.isBetaUser) {
         return res.status(403).json({ message: "Private beta — your account does not have beta access. Request access to join." });
       }
-      if (isProduction && !user.emailVerified) {
+      if (isProduction && !user.emailVerified && user.role !== "admin") {
         return res.status(403).json({ message: "Please verify your email before logging in." });
       }
       req.login(user, (loginErr) => {
