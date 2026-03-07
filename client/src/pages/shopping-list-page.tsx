@@ -45,6 +45,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { formatItemDisplay } from "@/lib/unit-display";
 import ScoreBadge from "@/components/ui/score-badge";
+import AppleRating from "@/components/AppleRating";
 import BadAppleWarningModal from "@/components/BadAppleWarningModal";
 import type { ShoppingListItem, ProductMatch, IngredientSource, SupermarketLink, FreezerMeal, IngredientProduct } from "@shared/schema";
 

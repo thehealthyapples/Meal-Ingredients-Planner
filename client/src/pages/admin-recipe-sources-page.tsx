@@ -107,7 +107,7 @@ export default function AdminRecipeSourcesPage() {
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditPage, setAuditPage] = useState(1);
 
-  const { data: sources, isLoading } = useQuery<RecipeSource[]>({
+  const { data: sources, isLoading, isError } = useQuery<RecipeSource[]>({
     queryKey: ["/api/admin/recipe-sources"],
   });
 
@@ -160,6 +160,18 @@ export default function AdminRecipeSourcesPage() {
             <div key={i} className="h-12 bg-muted animate-pulse rounded-lg" />
           ))}
         </div>
+      ) : isError ? (
+        <Card data-testid="card-sources-error">
+          <CardContent className="flex items-start gap-3 py-5">
+            <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-sm">Could not load recipe sources</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                This usually means your session has expired or you are not recognised as an admin in this environment. Try logging out and back in. If the problem persists, check the server logs.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <>
           <Card data-testid="card-official-apis">
