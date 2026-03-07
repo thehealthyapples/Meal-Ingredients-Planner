@@ -1948,9 +1948,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async findHouseholdByInviteCode(inviteCode: string): Promise<Household | null> {
-    const code = inviteCode.trim().toUpperCase();
+    const code = inviteCode.trim().toLowerCase();
     const household = await db.query.households.findFirst({
-      where: eq(households.inviteCode, code),
+      where: sql`lower(${households.inviteCode}) = ${code}`,
     });
     return household ?? null;
   }
