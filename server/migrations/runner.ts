@@ -237,6 +237,108 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-04_recipe_source_settings",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS recipe_source_settings (
+        id SERIAL PRIMARY KEY,
+        source_key TEXT NOT NULL UNIQUE,
+        enabled BOOLEAN NOT NULL DEFAULT TRUE,
+        source_type TEXT NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        admin_updated_at TIMESTAMPTZ
+      )`,
+      `CREATE TABLE IF NOT EXISTS recipe_source_audit_log (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id),
+        action TEXT NOT NULL,
+        source_name TEXT NOT NULL,
+        url_or_query TEXT,
+        reason TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+    ],
+  },
+
+  {
+    id: "2026-03-04_households",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS households (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        invite_code TEXT NOT NULL UNIQUE,
+        created_by_user_id INTEGER,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS household_members (
+        id SERIAL PRIMARY KEY,
+        household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role TEXT NOT NULL DEFAULT 'member',
+        status TEXT NOT NULL DEFAULT 'active',
+        joined_at TIMESTAMPTZ,
+        invited_by_user_id INTEGER,
+        left_at TIMESTAMPTZ,
+        CONSTRAINT household_members_household_user_unique UNIQUE (household_id, user_id)
+      )`,
+    ],
+  },
+
+  {
+    id: "2026-03-04_household_id_columns",
+    statements: [
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS household_id INTEGER",
+      "ALTER TABLE planner_weeks ADD COLUMN IF NOT EXISTS household_id INTEGER",
+      "ALTER TABLE freezer_meals ADD COLUMN IF NOT EXISTS household_id INTEGER",
+      "ALTER TABLE user_pantry_items ADD COLUMN IF NOT EXISTS household_id INTEGER",
+      "ALTER TABLE shopping_list_extras ADD COLUMN IF NOT EXISTS household_id INTEGER",
+    ],
+  },
+
+  {
+    id: "2026-03-04_backfill_households",
+    statements: [
+      `INSERT INTO households (name, invite_code, created_by_user_id, created_at, updated_at)
+       SELECT
+         username || '''s Household',
+         upper(substr(md5(random()::text), 1, 8)),
+         id,
+         NOW(),
+         NOW()
+       FROM users
+       WHERE id NOT IN (
+         SELECT created_by_user_id FROM households WHERE created_by_user_id IS NOT NULL
+       )
+       ON CONFLICT DO NOTHING`,
+      `INSERT INTO household_members (household_id, user_id, role, status, joined_at)
+       SELECT h.id, u.id, 'owner', 'active', NOW()
+       FROM users u
+       JOIN households h ON h.created_by_user_id = u.id
+       ON CONFLICT ON CONSTRAINT household_members_household_user_unique DO NOTHING`,
+      `UPDATE shopping_list sl
+       SET household_id = h.id
+       FROM households h
+       WHERE h.created_by_user_id = sl.user_id AND sl.household_id IS NULL`,
+      `UPDATE planner_weeks pw
+       SET household_id = h.id
+       FROM households h
+       WHERE h.created_by_user_id = pw.user_id AND pw.household_id IS NULL`,
+      `UPDATE freezer_meals fm
+       SET household_id = h.id
+       FROM households h
+       WHERE h.created_by_user_id = fm.user_id AND fm.household_id IS NULL`,
+      `UPDATE user_pantry_items upi
+       SET household_id = h.id
+       FROM households h
+       WHERE h.created_by_user_id = upi.user_id AND upi.household_id IS NULL`,
+      `UPDATE shopping_list_extras sle
+       SET household_id = h.id
+       FROM households h
+       WHERE h.created_by_user_id = sle.user_id AND sle.household_id IS NULL`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
