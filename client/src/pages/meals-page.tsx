@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera } from "lucide-react";
 import { ScanConfirmDialog } from "@/components/scan-confirm-dialog";
+import { IngredientRow, buildIngredientString } from "@/components/ingredient-input";
 import { CameraModal } from "@/components/camera-modal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -3393,7 +3394,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange }: { externalOpen
   });
 
   const createMealFormSchema = insertMealSchema.extend({
-    ingredients: z.array(z.object({ value: z.string() })),
+    ingredients: z.array(z.object({ amount: z.string(), unit: z.string(), name: z.string() })),
   });
   type CreateMealFormValues = z.infer<typeof createMealFormSchema>;
 
@@ -3401,7 +3402,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange }: { externalOpen
     resolver: zodResolver(createMealFormSchema),
     defaultValues: {
       name: "",
-      ingredients: [{ value: "" }],
+      ingredients: [{ amount: "", unit: "", name: "" }],
       servings: 1,
       kind: "meal",
     }
@@ -3424,7 +3425,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange }: { externalOpen
     const audience = catName === "baby meal" ? "baby" : catName === "kids meal" ? "child" : "adult";
     const cleanData = {
       ...data,
-      ingredients: data.ingredients.map(i => i.value).filter(v => v.trim() !== ""),
+      ingredients: data.ingredients.map(i => buildIngredientString(i.amount, i.unit, i.name)).filter(v => v.trim() !== ""),
       categoryId: selectedCategory || null,
       audience,
       isDrink,
@@ -3576,31 +3577,35 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange }: { externalOpen
 
             <div className="space-y-3">
               <FormLabel>Ingredients</FormLabel>
+              <div className="text-xs text-muted-foreground -mt-1 mb-1 flex gap-2">
+                <span className="w-14 shrink-0 text-center">Qty</span>
+                <span className="w-[72px] shrink-0">Unit</span>
+                <span className="flex-1">Ingredient</span>
+              </div>
               <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
                 {fields.map((field, index) => (
-                  <div key={field.id} className="flex gap-2">
-                    <FormField
-                      control={form.control}
-                      name={`ingredients.${index}.value`}
-                      render={({ field }) => (
-                        <FormItem className="flex-1">
-                          <FormControl>
-                            <Input placeholder="Ingredient..." {...field} data-testid={`input-ingredient-${index}`} />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => remove(index)}
-                      disabled={fields.length === 1 && index === 0}
-                      data-testid={`button-remove-ingredient-${index}`}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <FormField
+                    key={field.id}
+                    control={form.control}
+                    name={`ingredients.${index}.name`}
+                    render={() => (
+                      <FormItem>
+                        <FormControl>
+                          <IngredientRow
+                            index={index}
+                            amount={form.watch(`ingredients.${index}.amount`)}
+                            unit={form.watch(`ingredients.${index}.unit`)}
+                            name={form.watch(`ingredients.${index}.name`)}
+                            onAmountChange={v => form.setValue(`ingredients.${index}.amount`, v)}
+                            onUnitChange={v => form.setValue(`ingredients.${index}.unit`, v)}
+                            onNameChange={v => form.setValue(`ingredients.${index}.name`, v)}
+                            onRemove={() => remove(index)}
+                            showRemove={!(fields.length === 1 && index === 0)}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
                 ))}
               </div>
               <Button
@@ -3608,7 +3613,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange }: { externalOpen
                 variant="outline"
                 size="sm"
                 className="w-full border-dashed"
-                onClick={() => append({ value: "" })}
+                onClick={() => append({ amount: "", unit: "", name: "" })}
                 data-testid="button-add-ingredient"
               >
                 <Plus className="mr-2 h-3 w-3" />

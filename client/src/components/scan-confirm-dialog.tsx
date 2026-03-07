@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
 import { Plus, X, ChevronDown, Loader2, AlertTriangle, Camera } from "lucide-react";
+import { IngredientRow, parseIngredientString, buildIngredientString } from "@/components/ingredient-input";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { api } from "@shared/routes";
@@ -43,7 +44,12 @@ function RecipeForm({ parsed, rawText, onClose }: {
   const { toast } = useToast();
   const [title, setTitle] = useState(parsed.title || "");
   const [servings, setServings] = useState(parsed.servings || 1);
-  const [ingredients, setIngredients] = useState<string[]>(parsed.ingredients.length ? parsed.ingredients : [""]);
+  type IngredientEntry = { amount: string; unit: string; name: string };
+  const [ingredients, setIngredients] = useState<IngredientEntry[]>(
+    parsed.ingredients.length
+      ? parsed.ingredients.map(parseIngredientString)
+      : [{ amount: "", unit: "", name: "" }]
+  );
   const [steps, setSteps] = useState<string[]>(parsed.steps.length ? parsed.steps : [""]);
   const [rawOpen, setRawOpen] = useState(false);
 
@@ -51,7 +57,7 @@ function RecipeForm({ parsed, rawText, onClose }: {
     mutationFn: async () => {
       const res = await apiRequest("POST", api.meals.create.path, {
         name: title.trim() || "Scanned Recipe",
-        ingredients: ingredients.filter(Boolean),
+        ingredients: ingredients.map(i => buildIngredientString(i.amount, i.unit, i.name)).filter(Boolean),
         instructions: steps.filter(Boolean).join("\n"),
         servings,
         audience: "adult",
@@ -69,9 +75,10 @@ function RecipeForm({ parsed, rawText, onClose }: {
     },
   });
 
-  const updateIngredient = (i: number, val: string) => setIngredients(prev => prev.map((x, idx) => idx === i ? val : x));
+  const updateIngredientField = (i: number, field: "amount" | "unit" | "name", val: string) =>
+    setIngredients(prev => prev.map((x, idx) => idx === i ? { ...x, [field]: val } : x));
   const removeIngredient = (i: number) => setIngredients(prev => prev.filter((_, idx) => idx !== i));
-  const addIngredient = () => setIngredients(prev => [...prev, ""]);
+  const addIngredient = () => setIngredients(prev => [...prev, { amount: "", unit: "", name: "" }]);
 
   const updateStep = (i: number, val: string) => setSteps(prev => prev.map((x, idx) => idx === i ? val : x));
   const removeStep = (i: number) => setSteps(prev => prev.filter((_, idx) => idx !== i));
@@ -116,20 +123,25 @@ function RecipeForm({ parsed, rawText, onClose }: {
             <Plus className="h-3.5 w-3.5 mr-1" /> Add
           </Button>
         </div>
+        <div className="text-xs text-muted-foreground flex gap-2 px-0.5">
+          <span className="w-14 shrink-0 text-center">Qty</span>
+          <span className="w-[72px] shrink-0">Unit</span>
+          <span className="flex-1">Ingredient</span>
+        </div>
         <div className="space-y-1.5">
           {ingredients.map((ing, i) => (
-            <div key={i} className="flex gap-2">
-              <Input
-                value={ing}
-                onChange={e => updateIngredient(i, e.target.value)}
-                placeholder={`Ingredient ${i + 1}`}
-                data-testid={`input-scan-ingredient-${i}`}
+            <div key={i}>
+              <IngredientRow
+                index={i}
+                amount={ing.amount}
+                unit={ing.unit}
+                name={ing.name}
+                onAmountChange={v => updateIngredientField(i, "amount", v)}
+                onUnitChange={v => updateIngredientField(i, "unit", v)}
+                onNameChange={v => updateIngredientField(i, "name", v)}
+                onRemove={() => removeIngredient(i)}
+                showRemove={ingredients.length > 1}
               />
-              {ingredients.length > 1 && (
-                <Button type="button" variant="ghost" size="icon" className="shrink-0 h-9 w-9" onClick={() => removeIngredient(i)} data-testid={`button-scan-remove-ingredient-${i}`}>
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              )}
             </div>
           ))}
         </div>
