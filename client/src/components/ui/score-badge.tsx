@@ -6,6 +6,6 @@ type Props = {
   className?: string;
 };
 
-export default function ScoreBadge({ score, size = 20, className = "" }: Props) {
+export default function ScoreBadge({ score, size = 25, className = "" }: Props) {
   return <AppleRating rating={score} size={size} className={className} />;
 }

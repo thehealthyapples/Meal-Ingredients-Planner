@@ -2545,7 +2545,7 @@ export default function MealsPage() {
                                 )}
                               </div>
                               <div className="mt-2" data-testid={`rating-product-${productKey}`}>
-                                <ScoreBadge score={smpRating} size={16} />
+                                <ScoreBadge score={smpRating} size={20} />
                               </div>
                               {product.nutriments?.calories && (
                                 <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2" data-testid={`nutrition-product-${productKey}`}>

@@ -5,7 +5,7 @@ type Props = {
   className?: string;
 };
 
-export default function ThaAppleIcon({ size = 24, className = "" }: Props) {
+export default function ThaAppleIcon({ size = 25, className = "" }: Props) {
   return (
     <img
       src={thaAppleUrl}

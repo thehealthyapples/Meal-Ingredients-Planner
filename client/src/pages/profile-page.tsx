@@ -282,7 +282,7 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
             {[1, 2, 3, 4, 5].map((i) => (
               <Apple
                 key={i}
-                className={`h-4 w-4 ${i <= 3 ? "text-green-500 fill-green-500" : "text-muted-foreground/30"}`}
+                className={`h-5 w-5 ${i <= 3 ? "text-green-500 fill-green-500" : "text-muted-foreground/30"}`}
               />
             ))}
           </div>

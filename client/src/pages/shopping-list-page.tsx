@@ -424,7 +424,7 @@ function ProductAnalyseModal({ open, onOpenChange, item }: { open: boolean; onOp
                         {product.brand && <p className="text-xs text-muted-foreground">{product.brand}</p>}
                       </div>
                       <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <ScoreBadge score={smpRating} size={20} />
+                        <ScoreBadge score={smpRating} size={25} />
                         <Button size="sm" onClick={() => handleSelectProduct(product)} data-testid={`button-select-product-${idx}`}>
                           <Check className="h-3 w-3 mr-1" />
                           Select

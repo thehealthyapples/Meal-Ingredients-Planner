@@ -33,7 +33,7 @@ export default function AppleRating({
   const rating = Math.max(1, Math.min(5, Math.round(rawRating || 1)));
   const label = RATING_LABELS[rating - 1];
 
-  const sizeMap = { small: 28, medium: 36, large: 56 };
+  const sizeMap = { small: 35, medium: 45, large: 70 };
   const imgHeight = sizeMap[size];
 
   const content = (
