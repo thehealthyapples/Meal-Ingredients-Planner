@@ -22,8 +22,8 @@ const NAV_ITEMS_MAIN = [
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PackageOpen },
   { href: "/products", label: "Products", icon: ScanLine },
-  { href: "/diary", label: "My Diary", icon: BookOpen },
   { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
+  { href: "/diary", label: "My Diary", icon: BookOpen },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
