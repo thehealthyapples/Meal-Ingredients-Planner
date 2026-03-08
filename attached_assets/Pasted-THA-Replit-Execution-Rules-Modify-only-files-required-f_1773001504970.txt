@@ -1,0 +1,170 @@
+THA Replit Execution Rules
+
+• Modify only files required for this task.
+• Do not redesign existing architecture.
+• Do not delete or truncate database tables.
+• Prefer additive schema changes only.
+• Do not generate large test suites.
+• Do not refactor unrelated files.
+• Run TypeScript compile check and start the dev server to confirm no runtime errors.
+• Keep changes minimal and cost-efficient.
+
+
+Objective
+
+Refine the existing **My Diary** page UX so it is more compact and usable on desktop and tablet while remaining mobile friendly.
+
+This is a UI refinement pass only.
+No schema changes should be made.
+
+
+Naming Rules
+
+Page name: My Diary
+
+Route:
+/diary
+
+Sidebar label:
+My Diary
+
+Page file:
+client/src/pages/my-diary-page.tsx
+
+
+Key Improvements
+
+
+1. Compact Header
+
+Reduce vertical height of the page header.
+
+Header should contain:
+
+Row 1
+My Diary title
+
+Row 2
+Daily Log / Progress toggle
+Date navigation
+Copy From Planner button
+Import Data button (placeholder if import not yet implemented)
+
+Goal:
+Diary content should start higher on the screen.
+
+
+2. Desktop Layout
+
+On laptop/tablet:
+
+Left column
+Diary meal sections
+
+Right column
+Wellbeing card
+
+Mobile remains stacked.
+
+
+3. Add Drinks Section
+
+Meal sections must be:
+
+Breakfast
+Lunch
+Dinner
+Snacks
+Drinks
+
+Each supports:
+add entry
+edit entry
+delete entry
+
+
+4. Wellbeing Section Always Visible
+
+Fields:
+
+Weight
+BMI (derived from weight + height if possible)
+Mood (THA apple score)
+Energy (THA apple score)
+Sleep hours
+Notes
+Stuck to Plan toggle
+
+
+5. Progress View Improvements
+
+Add selector:
+
+Week
+Month
+Year
+
+Charts update based on range.
+
+
+6. Encouraging Insight Text
+
+Add supportive messages above charts.
+
+Examples:
+
+"You logged consistently this week — great work."
+"Small steps add up. You're building a useful picture."
+
+Use simple rule-based logic.
+
+
+7. THA Apple Scoring
+
+Replace emoji apples with THA apple scoring visuals.
+
+Values remain integers 1–5 in database.
+
+
+8. Copy From Planner Modal
+
+Copy From Planner opens modal with options:
+
+Import All
+Breakfast Only
+Lunch Only
+Dinner Only
+Snacks Only
+Drinks Only
+Import From My Meals
+
+Imported entries remain editable.
+
+
+Files Likely Modified
+
+client/src/pages/my-diary-page.tsx
+sidebar component
+shared scoring component
+
+
+Acceptance Criteria
+
+Header is compact.
+Drinks section exists.
+Wellbeing always visible.
+Desktop layout shows diary + wellbeing together.
+Progress supports week/month/year.
+Encouraging insights visible.
+THA apple scoring used.
+No schema changes made.
+
+
+Deliverables
+
+Return:
+
+files changed
+layout summary
+confirmation THA apple scoring used
+confirmation My Diary route correct

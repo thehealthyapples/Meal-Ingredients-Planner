@@ -240,7 +240,7 @@ export interface IStorage {
   createFoodDiaryEntry(userId: number, date: string, data: InsertFoodDiaryEntry): Promise<FoodDiaryEntry>;
   updateFoodDiaryEntry(entryId: number, userId: number, data: Partial<Pick<FoodDiaryEntry, 'name' | 'notes' | 'mealSlot'>>): Promise<FoodDiaryEntry | undefined>;
   deleteFoodDiaryEntry(entryId: number, userId: number): Promise<void>;
-  copyPlannerToFoodDiary(userId: number, date: string): Promise<{ copied: number; skipped: number }>;
+  copyPlannerToFoodDiary(userId: number, date: string, slots?: string[]): Promise<{ copied: number; skipped: number }>;
   getFoodDiaryMetrics(userId: number, date: string): Promise<FoodDiaryMetrics | null>;
   upsertFoodDiaryMetrics(userId: number, date: string, data: Partial<InsertFoodDiaryMetrics>): Promise<FoodDiaryMetrics>;
   getFoodDiaryMetricsTrends(userId: number, days?: number): Promise<FoodDiaryMetrics[]>;
@@ -2297,7 +2297,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(foodDiaryEntries.id, entryId), eq(foodDiaryEntries.userId, userId)));
   }
 
-  async copyPlannerToFoodDiary(userId: number, date: string): Promise<{ copied: number; skipped: number }> {
+  async copyPlannerToFoodDiary(userId: number, date: string, slots?: string[]): Promise<{ copied: number; skipped: number }> {
     const targetDate = new Date(date);
     const jsDay = targetDate.getDay();
     const plannerDay = jsDay === 0 ? 7 : jsDay;
@@ -2329,6 +2329,7 @@ export class DatabaseStorage implements IStorage {
       if (existingPlannerIds.has(entry.id)) { skipped++; continue; }
       const mealName = entry.mealId ? (await db.select({ name: meals.name }).from(meals).where(eq(meals.id, entry.mealId)))[0]?.name ?? 'Planner meal' : 'Planner meal';
       const slot = entry.mealType === 'snacks' ? 'snack' : (entry.mealType ?? 'dinner');
+      if (slots && slots.length > 0 && !slots.includes(slot)) { skipped++; continue; }
       await db.insert(foodDiaryEntries).values({
         dayId: diaryDay.id,
         userId,

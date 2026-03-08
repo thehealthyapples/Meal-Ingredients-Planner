@@ -5390,8 +5390,11 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const { date } = req.params;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ message: "Invalid date format" });
+    const { slots } = z.object({
+      slots: z.array(z.string()).optional(),
+    }).parse(req.body);
     try {
-      const result = await storage.copyPlannerToFoodDiary(req.user!.id, date);
+      const result = await storage.copyPlannerToFoodDiary(req.user!.id, date, slots);
       res.json(result);
     } catch (err) {
       console.error("[Diary] copy-from-planner error:", err);
@@ -5405,7 +5408,7 @@ export async function registerRoutes(
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ message: "Invalid date format" });
     const { name, mealSlot, notes } = z.object({
       name: z.string().min(1),
-      mealSlot: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+      mealSlot: z.enum(['breakfast', 'lunch', 'dinner', 'snack', 'drink']),
       notes: z.string().optional(),
     }).parse(req.body);
     const entry = await storage.createFoodDiaryEntry(req.user!.id, date, {
@@ -5427,7 +5430,7 @@ export async function registerRoutes(
     const data = z.object({
       name: z.string().min(1).optional(),
       notes: z.string().nullable().optional(),
-      mealSlot: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).optional(),
+      mealSlot: z.enum(['breakfast', 'lunch', 'dinner', 'snack', 'drink']).optional(),
     }).parse(req.body);
     const updated = await storage.updateFoodDiaryEntry(entryId, req.user!.id, data);
     if (!updated) return res.status(404).json({ message: "Entry not found" });
