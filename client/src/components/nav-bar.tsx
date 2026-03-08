@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   LayoutDashboard, Utensils, CalendarDays, ShoppingBasket,
-  Package, User, LogOut, ShieldCheck, Star,
+  PackageOpen, User, LogOut, ShieldCheck, Star,
   Mail, Sliders, Search, Menu, ChevronLeft, ChevronRight,
   MoreHorizontal, Archive, ScanLine, BookOpen,
 } from "lucide-react";
@@ -18,12 +18,12 @@ const NAV_ITEMS_TOP = [
 ];
 
 const NAV_ITEMS_MAIN = [
-  { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
-  { href: "/diary", label: "My Diary", icon: BookOpen },
   { href: "/meals", label: "My Meals", icon: Utensils },
-  { href: "/pantry", label: "Pantry", icon: Package },
-  { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
+  { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
+  { href: "/pantry", label: "Pantry", icon: PackageOpen },
   { href: "/products", label: "Products", icon: ScanLine },
+  { href: "/diary", label: "My Diary", icon: BookOpen },
+  { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
   { href: "/profile", label: "Profile", icon: User },
 ];
 
@@ -38,7 +38,7 @@ const ADMIN_ITEMS = [
 const MOBILE_BOTTOM_ITEMS = [
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
   { href: "/meals", label: "My Meals", icon: Utensils },
-  { href: "/pantry", label: "Pantry", icon: Package },
+  { href: "/pantry", label: "Pantry", icon: PackageOpen },
   { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
   { href: "/profile", label: "Profile", icon: User },
 ];
