@@ -1,0 +1,196 @@
+Objective
+
+Diagnose and fix the production error:
+
+relation "shopping_list_extras" does not exist
+relation "household_members" does not exist
+
+This indicates the deployed application is querying tables that do not exist in the connected PostgreSQL database.
+
+We must determine whether:
+
+The application is connected to the wrong database
+
+The production database schema was never migrated
+
+The schema push failed partially
+
+Do NOT perform destructive resets.
+
+Step 1 — Log the database connection
+
+In server/db.ts, temporarily log the database identity when the app starts.
+
+Add:
+
+import { sql } from "drizzle-orm";
+
+async function logDatabaseInfo() {
+  const result = await db.execute(sql`
+    SELECT current_database(), current_schema();
+  `);
+  console.log("DB identity:", result.rows);
+}
+
+logDatabaseInfo();
+
+Restart the server.
+
+Expected output in logs:
+
+DB identity: [ { current_database: '...', current_schema: 'public' } ]
+
+This confirms which database the app is connected to.
+
+Step 2 — List existing tables in the database
+
+Create a temporary diagnostic query.
+
+Add in server/db.ts after the previous check:
+
+async function listTables() {
+  const result = await db.execute(sql`
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public'
+    ORDER BY table_name;
+  `);
+
+  console.log("Tables in DB:");
+  console.table(result.rows);
+}
+
+listTables();
+
+Restart the server and inspect logs.
+
+Step 3 — Check whether the critical THA tables exist
+
+Run a targeted check:
+
+async function checkThaTables() {
+  const result = await db.execute(sql`
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public'
+      AND table_name IN (
+        'households',
+        'household_members',
+        'shopping_list',
+        'shopping_list_extras',
+        'planner_weeks',
+        'user_pantry_items',
+        'freezer_meals'
+      )
+    ORDER BY table_name;
+  `);
+
+  console.log("Critical THA tables:");
+  console.table(result.rows);
+}
+
+checkThaTables();
+Step 4 — Interpret the result
+Case A — Only a few tables appear
+
+Example:
+
+users
+sessions
+
+This means:
+
+The app is connected to the wrong database.
+
+Fix:
+
+Check Render environment variable:
+
+DATABASE_URL
+
+Ensure it points to the correct THA database.
+
+Case B — Many THA tables missing
+
+Example:
+
+users
+meals
+planner_weeks
+
+But missing:
+
+shopping_list_extras
+household_members
+
+This means:
+
+The production database schema was never pushed.
+
+Fix:
+
+Run schema push against the production DB:
+
+npm run db:push --force
+
+Then redeploy.
+
+Case C — households exists but household_members does not
+
+This indicates a partial migration.
+
+Fix:
+
+Push schema again:
+
+npm run db:push --force
+
+Then rerun Phase 1A backfill.
+
+Step 5 — Verify schema after push
+
+Run verification queries:
+
+SELECT COUNT(*) FROM planner_weeks WHERE household_id IS NULL;
+SELECT COUNT(*) FROM shopping_list WHERE household_id IS NULL;
+SELECT COUNT(*) FROM shopping_list_extras WHERE household_id IS NULL;
+SELECT COUNT(*) FROM user_pantry_items WHERE household_id IS NULL;
+SELECT COUNT(*) FROM freezer_meals WHERE household_id IS NULL;
+
+Expected result:
+
+0
+0
+0
+0
+0
+Step 6 — Restart service
+
+Restart the server and verify:
+
+/api/shopping-list loads
+
+/api/freezer loads
+
+/api/planner loads
+
+Step 7 — Remove temporary diagnostics
+
+After confirming the issue is fixed, remove the temporary logging functions:
+
+logDatabaseInfo()
+listTables()
+checkThaTables()
+Acceptance Criteria
+
+The issue is resolved when:
+
+shopping_list_extras exists
+
+household_members exists
+
+all THA tables appear in information_schema.tables
+
+application starts without 42P01 errors
+
+shopping list, planner, pantry, and freezer APIs load normally

@@ -1,0 +1,867 @@
+THA Replit Prompt — Household Intelligence + Personal Food Diary
+Objective
+
+Implement the next THA product phase after Household Foundation and Household Management UI.
+
+This phase has two linked goals:
+
+A. Make the household system feel smart and visible
+
+Add Household Basket Intelligence and Planner-to-Basket traceability so users can clearly see:
+
+who added an item
+
+why an item is in the basket
+
+which planner meal caused it
+
+that basket / pantry / planner are shared household systems
+
+B. Add a Personal Food Diary
+
+Create a user-level Food Diary with a layout closely matching the existing planner UI.
+
+The food diary must:
+
+belong to the user, not the household
+
+allow the user to copy from planner for a day
+
+allow the user to override/edit copied meals
+
+support optional daily recording of:
+
+weight
+
+BMI
+
+mood
+
+sleep
+
+include graphs so users can track progress over time
+
+This phase should make THA feel like:
+
+a smart shared household food platform
+
+plus a personal health reflection tool
+
+Current State
+
+The repo already has:
+
+household schema foundation
+
+household ownership swap for planner / basket / pantry / freezer
+
+household management UI
+
+household shared data model
+
+existing planner UI and planner data structures
+
+basket/shopping list flows
+
+pantry/freezer flows
+
+This phase should build on that architecture, not replace it.
+
+Strategic Intent
+
+The household system is already functional, but it needs to feel useful and intelligent.
+
+The best next improvements are:
+
+1. Household-aware basket intelligence
+
+merge household needs cleanly
+
+show who added an item
+
+explain why the item exists
+
+reduce duplicate additions
+
+show shared context clearly
+
+2. Shared planner intelligence
+
+connect planner meals to basket items
+
+make basket generation more transparent
+
+show meal-to-basket attribution
+
+3. Household-aware dietary groundwork
+
+if one household member has a restriction, THA should be able to surface safer meal suggestions later
+
+for this phase, lay groundwork and expose useful household context where practical
+
+4. Personal food diary
+
+user-owned, not household-owned
+
+planner-like layout
+
+copy planner meals into diary for the day
+
+allow edits afterward
+
+support optional health/wellbeing tracking
+
+show trend graphs
+
+Required Output
+
+Implement this in phases, with small safe changes.
+
+Do not make unnecessary redesigns.
+
+At the end, report:
+
+files changed
+
+schema additions
+
+new routes
+
+UI surfaces updated
+
+how household basket attribution works
+
+how food diary copy-from-planner works
+
+what graph views were added
+
+any sensible product enhancements added beyond the brief
+
+Phase 3A — Household Basket Intelligence
+Goal
+
+Make shared household shopping behaviour visible and understandable.
+
+Users should be able to tell:
+
+this basket is shared
+
+who added an item
+
+whether the item came from a meal / planner / manual addition
+
+whether the item may already exist in pantry later
+
+why duplicate additions were avoided or merged
+
+Basket Intelligence Requirements
+1. Add item attribution
+
+For basket items, surface:
+
+addedByUserId
+
+display name of the member who added the item
+
+If an item was generated from a planner meal or ingredient source, also preserve/display:
+
+source type
+
+source meal name if available
+
+source day / planner context if available
+
+Example UI text:
+
+Added by Colin
+
+Needed for Tuesday dinner
+
+From Chicken Stir Fry
+
+Manual household item
+
+2. Improve duplicate handling
+
+When household members add overlapping items:
+
+use existing normalisation/consolidation logic where available
+
+avoid duplicate household basket lines where the same underlying item is being added
+
+preserve attribution as best as possible
+
+If the system consolidates items, do not lose useful context.
+
+Preferred behaviour:
+
+single basket row
+
+source metadata includes multiple contributing reasons if possible
+
+3. Add household context summary to Basket UI
+
+Add a compact summary panel or banner near the top of the basket page.
+
+Example:
+
+Household: The Clapson Family
+
+Members: 3
+
+Shared basket: active
+
+Shared pantry: active
+
+Keep this subtle and visually clean.
+
+4. Add “why is this here?” context
+
+Where practical, each basket item should show one or more of:
+
+added by member
+
+generated from planner
+
+ingredient source / meal source
+
+pantry-aware later if data exists
+
+This is one of the biggest perceived-smartness improvements.
+
+Suggested implementation approach
+Storage / data
+
+Use existing shared basket ownership by householdId.
+
+Where needed, expand basket item fetch logic to join:
+
+users
+
+meal/planner source data
+
+ingredient source records
+
+Do not redesign basket ownership.
+
+UI
+
+Update the basket/shopping list page to show:
+
+item attribution
+
+source explanation
+
+household context summary
+
+Keep response shapes stable where possible, but it is acceptable to expand DTOs returned to the basket page.
+
+Acceptance
+
+User A adds a basket item, User B sees it
+
+basket items show who added them where possible
+
+planner-generated basket items show why they exist
+
+duplicate household additions are cleaner and more understandable
+
+household context is visible on the basket page
+
+no regression to existing shopping list functionality
+
+Phase 3B — Planner to Basket Traceability
+Goal
+
+Make it obvious how planner meals influence the shopping basket.
+
+Users should be able to understand:
+
+which meals are contributing ingredients
+
+which day/meal slot they came from
+
+why a given ingredient is in the basket
+
+Requirements
+1. Meal-to-basket attribution
+
+Where basket items are planner-derived, show:
+
+meal name
+
+planner day
+
+meal slot if available
+
+Example:
+
+Needed for Tuesday dinner
+
+From Veg Chilli
+
+2. Planner UI context
+
+On the planner side, show a small indication when a meal contributes ingredients to the shopping list.
+
+Example:
+
+“Added to household basket”
+
+“3 ingredients linked”
+
+Do this only if it can be added cleanly without clutter.
+
+3. Preserve manual override behaviour
+
+If users manually edit basket items later, do not break the original planner source relationship unless necessary.
+
+If source links must be one-way only, document that clearly in the implementation summary.
+
+Acceptance
+
+at least one clear planner → basket link is visible in UI
+
+basket source explanations are understandable
+
+no current planner behaviour breaks
+
+Phase 3C — Household Dietary Conflict Groundwork
+Goal
+
+Lay the groundwork for household-aware food intelligence.
+
+This phase does not need a full recommendation engine yet, but should support future safer meal suggestions.
+
+Requirements
+1. Aggregate household dietary context
+
+Use existing user/household data to prepare a basic aggregated household profile where possible:
+
+diets
+
+allergens
+
+restrictions
+
+If this data already exists in user preferences or member data, use it.
+Do not overengineer.
+
+2. Expose useful context in planner or meal suggestion flows
+
+Where meal suggestions are already generated, add light groundwork for:
+
+household restriction awareness
+
+future filtering/scoring
+
+This can initially be backend scaffolding plus a light warning or eligibility flag.
+
+Example:
+
+“May conflict with household dietary preferences”
+
+“Suitable for all household members” later
+
+3. Do not block shipping on full intelligence
+
+This is groundwork, not a full recommendation engine.
+
+Acceptance
+
+household dietary context is not lost
+
+future meal filtering/scoring becomes easier
+
+current planner flow remains stable
+
+Phase 4 — Personal Food Diary
+Goal
+
+Create a Food Diary that is:
+
+user-specific
+
+visually very similar to the planner
+
+able to copy meals from the planner for a selected day
+
+editable after copying
+
+able to store optional wellbeing and body metrics
+
+able to show progress trends
+
+This is personal, not household-owned.
+
+Food Diary Core Rules
+Ownership
+
+Food diary data belongs to userId, never householdId.
+
+Layout
+
+The page should feel very similar to the planner:
+
+date-based rows/cards
+
+Breakfast / Lunch / Dinner / Snacks structure
+
+easy to scan and edit
+
+Copy from planner
+
+Users can choose:
+
+copy today’s planner meals into diary
+
+copy any selected day’s planner meals into diary
+
+Copied items become diary entries that can then be edited independently.
+
+This is crucial:
+
+planner = shared plan
+
+diary = what this user actually ate
+
+So after copying:
+
+user may edit meal names
+
+change quantities
+
+delete entries
+
+add totally different foods
+
+Food Diary Schema / Data Model
+
+Add user-owned diary tables.
+
+Recommended structure:
+
+food_diary_days
+
+Represents one user’s diary day.
+
+Suggested fields:
+
+id
+
+userId
+
+date
+
+optional daily notes
+
+optional daily summary fields
+
+food_diary_entries
+
+Represents individual diary items/meals.
+
+Suggested fields:
+
+id
+
+dayId
+
+userId
+
+mealSlot (breakfast, lunch, dinner, snack)
+
+name
+
+notes optional
+
+sourceType (manual, copied_from_planner)
+
+sourcePlannerEntryId nullable
+
+optional nutrition-related fields if easy to support later
+
+food_diary_metrics
+
+Optional daily health / wellbeing metrics.
+
+Suggested fields:
+
+id
+
+userId
+
+date
+
+weight
+
+bmi
+
+mood
+
+sleepHours
+
+optional sleepQuality
+
+optional energyLevel
+
+optional notes
+
+You may also choose to merge daily metrics into food_diary_days if that fits the repo better.
+Use the cleanest implementation for current architecture.
+
+Food Diary Features
+1. Planner-like diary layout
+
+Build a diary page that resembles the planner.
+
+Suggested structure:
+
+date selector / week navigation
+
+daily cards or rows
+
+meal slots:
+
+Breakfast
+
+Lunch
+
+Dinner
+
+Snacks
+
+2. Copy from planner
+
+Users can:
+
+copy all meals from planner for the selected date
+
+copy once without duplicating endlessly
+
+then edit diary independently
+
+Important:
+
+copied entries should not stay live-linked to planner forever
+
+they should become editable diary records
+
+keep source metadata for traceability
+
+3. Manual editing
+
+Users can:
+
+add diary items manually
+
+rename copied items
+
+remove copied items
+
+add notes
+
+reflect what they actually ate, not just what was planned
+
+4. Optional metrics
+
+On each diary day, allow optional recording of:
+
+weight
+
+BMI
+
+mood
+
+sleep
+
+Also strongly consider adding:
+
+energy level
+
+daily notes
+
+hunger/cravings marker
+
+adherence / “stuck to plan” toggle
+
+Add these only if they fit cleanly.
+
+These should be optional and unobtrusive.
+
+Phase 5 — Food Diary Progress Graphs
+Goal
+
+Add useful visual progress tracking for personal health reflection.
+
+Graphs should be user-level only.
+
+Required graphs
+1. Weight graph
+
+Track weight over time.
+
+2. BMI graph
+
+Track BMI over time.
+
+3. Goal progress graph or indicator
+
+If the user has goals set, show progress relative to:
+
+target weight
+
+target BMI
+
+or general direction of change if target exists
+
+If goal data already exists in user preferences, use it.
+
+Recommended additional graphs / insights
+
+If easy and sensible, also include:
+
+average sleep trend
+
+mood trend
+
+weight change over 7 / 30 days
+
+BMI change over 7 / 30 days
+
+consistency / diary completion rate
+
+planner vs diary adherence later
+
+Use judgement. Do not clutter the UI.
+
+Graph implementation rules
+
+Use existing charting approach in the repo if one exists
+
+keep visuals clean and consistent with THA styling
+
+mobile readability matters
+
+avoid overloading the user with too many charts at once
+
+A good first version:
+
+one summary card row
+
+one main graph
+
+one secondary graph
+
+small insight cards underneath
+
+Routes / API Requirements
+
+Add appropriate new routes for diary operations.
+
+Suggested route set:
+
+Diary day / entry routes
+
+GET /api/food-diary
+
+GET /api/food-diary/:date
+
+POST /api/food-diary/:date/copy-from-planner
+
+POST /api/food-diary/:date/entries
+
+PATCH /api/food-diary/entries/:entryId
+
+DELETE /api/food-diary/entries/:entryId
+
+Metrics routes
+
+PATCH /api/food-diary/:date/metrics
+
+GET /api/food-diary/metrics/trends
+
+Adapt naming to repo conventions if needed.
+
+UI Requirements
+Household context summary
+
+Add a subtle shared-context summary on:
+
+basket page, or
+
+planner page, or preferably both if clean
+
+Suggested contents:
+
+Household name
+
+member count
+
+shared basket active
+
+shared pantry active
+
+Basket item attribution UI
+
+For each item, where data exists, show:
+
+Added by [Name]
+
+Needed for [Day + meal]
+
+From [Meal name]
+
+Food Diary page
+
+Add a new page / section with:
+
+planner-like layout
+
+copy-from-planner action
+
+editable entries
+
+optional metrics
+
+chart view
+
+Keep it visually consistent with the current planner design language.
+
+End-to-End Behaviour Checks
+
+Before marking complete, verify these real-world flows:
+
+Household checks
+
+User A adds a basket item, User B sees it
+
+User A adds a pantry item, User B sees it
+
+User A changes planner, User B sees it
+
+User joins household and correctly switches shared data context
+
+User leaves household and safely gets a solo household
+
+Basket intelligence checks
+
+household basket item shows added-by attribution
+
+planner-derived basket item shows why it exists
+
+duplicate additions are merged or handled more cleanly
+
+Food diary checks
+
+user can open diary page
+
+user can copy meals from planner for a selected day
+
+copied entries can be edited independently
+
+metrics can be saved optionally
+
+graphs render correctly with real data
+
+diary remains user-owned and does not leak across household members
+
+Implementation Order
+
+Use this build order:
+
+P1
+
+Household-aware basket attribution
+
+P2
+
+Planner-to-basket traceability
+
+P3
+
+Household dietary groundwork
+
+P4
+
+Food diary schema + routes
+
+P5
+
+Food diary UI
+
+P6
+
+Food diary graphs and progress insights
+
+Keep changes incremental and safe.
+
+Constraints
+
+no destructive schema changes
+
+preserve current household architecture
+
+food diary must remain user-owned
+
+no breaking UI changes
+
+no unnecessary abstractions
+
+prefer small, understandable additions
+
+preserve current planner usability
+
+copied diary entries must be independently editable after copy
+
+Acceptance Criteria
+
+This phase is complete when:
+
+Household intelligence
+
+basket shows shared context
+
+basket shows attribution
+
+planner-to-basket relationships are understandable
+
+duplicate household additions are cleaner
+
+household shared behaviour feels visible
+
+Food diary
+
+diary page exists
+
+diary layout feels like planner
+
+copy-from-planner works
+
+copied entries are editable independently
+
+optional weight / BMI / mood / sleep can be recorded
+
+graphs show progress over time
+
+diary data is isolated per user
+
+Final deliverables
+
+At the end, provide:
+
+files changed
+
+schema additions
+
+new routes added
+
+household basket/planner intelligence summary
+
+food diary architecture summary
+
+chart/graph summary
+
+any sensible enhancements added beyond the brief
+
+any follow-up recommendations for Phase 6+

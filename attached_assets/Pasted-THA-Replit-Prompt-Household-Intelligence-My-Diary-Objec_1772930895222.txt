@@ -1,0 +1,443 @@
+THA Replit Prompt — Household Intelligence + My Diary
+Objective
+
+Implement the next THA platform phase combining:
+
+Phase 3A — Household Basket Intelligence
+Phase 3B — Planner-to-Basket Traceability
+Phase 3C — Household Dietary Context Groundwork
+Phase 4 — My Diary (Personal Food Diary)
+Phase 5 — My Diary Progress Graphs
+
+The goal is to make THA feel:
+
+• smart at the household level
+• personal at the individual level
+
+Households share:
+
+planner
+
+basket
+
+pantry
+
+freezer
+
+But My Diary is user-owned only and never shared with the household.
+
+Phase 3A — Household Basket Intelligence
+Goal
+
+Make shared household basket behaviour understandable.
+
+Users should see:
+
+• who added an item
+• why the item exists
+• which meal caused it
+• household context
+
+Schema Updates
+
+In shared/schema.ts
+
+Add to shopping_list table:
+
+addedByUserId: integer("added_by_user_id")
+
+Add snapshot planner context fields to ingredient_sources:
+
+weekNumber: integer("week_number")
+dayOfWeek: integer("day_of_week")
+mealSlot: text("meal_slot")
+
+These are snapshot metadata only and must not create tight coupling to planner edits later.
+
+Run:
+
+npm run db:push --force
+Basket Attribution Behaviour
+
+When items are created:
+
+Manual Add
+
+POST /api/shopping-list
+
+added_by_user_id = req.user.id
+Generate from Meals
+
+POST /api/shopping-list/from-meals
+
+added_by_user_id = req.user.id
+Generate from Planner
+
+POST /api/shopping-list/from-plan
+
+added_by_user_id = req.user.id
+
+Also record planner snapshot metadata in ingredient_sources:
+
+week_number
+day_of_week
+meal_slot
+meal_name
+Shopping List API Output
+
+Update GET /api/shopping-list
+
+Join:
+
+users
+
+ingredient_sources
+
+Return:
+
+{
+  id,
+  name,
+  addedByDisplayName,
+  sources: [
+    {
+      mealName,
+      weekNumber,
+      dayOfWeek,
+      mealSlot
+    }
+  ]
+}
+
+If attribution missing:
+
+UI should gracefully fall back to:
+
+Added manually
+Phase 3B — Planner-to-Basket Traceability
+Planner Indicator
+
+Add endpoint:
+
+GET /api/planner/basket-meal-ids
+
+Returns:
+
+[mealId, mealId]
+
+Derived from ingredient_sources.
+
+Planner UI
+
+In:
+
+client/src/pages/meal-planner-page.tsx
+
+Show small shopping bag icon if a planner meal contributed ingredients to the basket.
+
+Indicator rules:
+
+• subtle
+• no text
+• muted green
+• visible but non intrusive
+
+Phase 3C — Household Dietary Context
+
+Add endpoint:
+
+GET /api/household/dietary-context
+
+Aggregate across all members' user_preferences.
+
+Return:
+
+{
+  members: [
+    {
+      displayName,
+      dietTypes,
+      dietRestrictions,
+      excludedIngredients
+    }
+  ],
+  aggregated: {
+      unionDietTypes,
+      unionRestrictions,
+      unionExclusions
+  }
+}
+
+This is read-only groundwork for later meal intelligence.
+
+Phase 4 — My Diary (Personal Food Diary)
+Naming
+
+Sidebar label:
+
+My Diary
+
+Aligns with:
+
+My Meals
+
+My Diary belongs to userId only.
+
+Never query by householdId.
+
+Schema
+
+Add tables in shared/schema.ts.
+
+food_diary_days
+id serial PK
+userId integer FK users
+date text (YYYY-MM-DD)
+notes text
+createdAt timestamptz
+updatedAt timestamptz
+unique(userId, date)
+food_diary_entries
+id serial PK
+dayId integer FK food_diary_days
+userId integer FK users
+mealSlot text (breakfast | lunch | dinner | snack)
+name text
+notes text
+sourceType text default 'manual'
+sourcePlannerEntryId integer nullable
+createdAt timestamptz
+
+sourceType:
+
+manual
+copied_from_planner
+food_diary_metrics
+id serial PK
+userId integer FK users
+date text
+weightKg real
+bmi real (optional fallback)
+moodApples integer (1–5)
+sleepHours real
+energyApples integer (1–5)
+notes text
+stuckToPlan boolean
+createdAt timestamptz
+unique(userId, date)
+BMI Rule
+
+BMI should normally be derived:
+
+BMI = weightKg / height^2
+
+Use user_preferences.height where available.
+
+Persist bmi only if:
+
+height missing
+Apple Scoring System
+
+Mood and Energy use THA Apple scoring.
+
+1 🍏
+2 🍏🍏
+3 🍏🍏🍏
+4 🍏🍏🍏🍏
+5 🍏🍏🍏🍏🍏
+
+These correspond to:
+
+moodApples
+energyApples
+
+Validate range 1–5.
+
+Diary API Routes
+
+Add routes.
+
+Fetch Day
+GET /api/food-diary/:date
+
+Return:
+
+{
+ day,
+ entries,
+ metrics
+}
+Copy From Planner
+POST /api/food-diary/:date/copy-from-planner
+
+Behaviour:
+
+determine weekday from date
+
+load planner meals for that weekday
+
+create diary entries
+
+Must be idempotent.
+
+Skip entries where:
+
+sourcePlannerEntryId already exists for that user/date
+Entry Management
+POST /api/food-diary/:date/entries
+PATCH /api/food-diary/entries/:entryId
+DELETE /api/food-diary/entries/:entryId
+Metrics
+PATCH /api/food-diary/:date/metrics
+GET /api/food-diary/metrics/trends
+
+Return last 90 days ordered by date.
+
+Phase 5 — My Diary Progress Graphs
+
+Use recharts.
+
+Charts appear inside My Diary → Progress section.
+
+Charts
+Weight Trend
+LineChart
+weightKg
+last 30 days
+BMI Trend
+LineChart
+bmi
+last 30 days
+Mood Trend
+LineChart
+moodApples
+Sleep Trend
+LineChart
+sleepHours
+Summary Cards
+
+Show:
+
+• current weight
+• weight change (7 days)
+• current BMI
+• average sleep (7 days)
+
+Empty State
+
+If fewer than 2 data points:
+
+Start recording in My Diary to see trends
+UI Implementation
+
+Create:
+
+client/src/pages/my-diary-page.tsx
+
+Register route:
+
+/diary
+
+Sidebar:
+
+My Diary
+Layout
+
+Mirror planner layout.
+
+Sections:
+
+Breakfast
+Lunch
+Dinner
+Snacks
+
+Buttons:
+
+Add entry
+Copy from planner
+
+Metrics panel below meal slots.
+
+Basket UI Enhancements
+
+In:
+
+shopping-list-page.tsx
+
+Add small attribution text under item.
+
+Examples:
+
+Added by Colin
+Needed for Monday dinner
+From Veg Chilli
+Household Context Banner
+
+Display:
+
+Household: Clapson Family
+Members: 3
+Shared basket · Shared pantry
+End-to-End Behaviour Tests
+
+Verify:
+
+Household
+
+User A adds basket item → User B sees it
+User A edits planner → User B sees it
+User A adds pantry item → User B sees it
+
+Join household → shared context switches correctly
+Leave household → user receives solo household
+
+Basket Intelligence
+
+Items show attribution
+Planner meals show basket indicator
+Duplicate additions handled cleanly
+
+My Diary
+
+Diary visible only to owner
+Copy-from-planner works
+Copied entries editable
+Metrics saved
+Graphs render
+
+Acceptance Criteria
+
+Phase complete when:
+
+Household Intelligence
+
+• basket shows attribution
+• planner shows basket indicators
+• household context visible
+
+My Diary
+
+• diary page functional
+• planner copy works
+• apple scoring used for mood/energy
+• metrics stored per user
+• charts display progress
+
+Deliverables
+
+Return:
+
+files changed
+
+schema additions
+
+new routes
+
+basket intelligence summary
+
+diary architecture summary
+
+charts summary
+
+follow-up recommendations
