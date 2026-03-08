@@ -1,0 +1,171 @@
+THA Replit Execution Rules
+
+• Modify only files required for this task.
+• Do not redesign existing architecture.
+• Do not delete or truncate database tables.
+• Prefer additive schema changes only.
+• Do not generate large test suites.
+• Do not refactor unrelated files.
+• Run TypeScript compile check and start the dev server to confirm no runtime errors.
+• Keep changes minimal and cost-efficient.
+
+
+Objective
+
+Allow users to import **My Diary wellbeing and metric history** from CSV or TXT files.
+
+This allows users to migrate existing logs into THA.
+
+
+Supported File Types
+
+.csv
+.txt
+
+TXT files may use:
+
+comma
+tab
+pipe
+
+
+Example CSV
+
+date,weightKg,sleepHours,moodApples,energyApples,notes
+2026-03-01,87,7.5,3,4,Felt good
+2026-03-02,86.8,6.0,2,3,Tired
+
+
+Example TXT
+
+date|weightKg|sleepHours|moodApples|energyApples|notes
+2026-03-01|87|7.5|3|4|Felt good
+
+
+Import Flow
+
+
+1. Import Button
+
+Add **Import Data** button in My Diary header.
+
+
+2. Upload File
+
+User uploads CSV or TXT.
+
+
+3. Parse File
+
+Detect delimiter automatically.
+
+Supported delimiters:
+
+comma
+tab
+pipe
+
+
+4. Preview
+
+Show preview table of parsed rows.
+
+
+5. Column Mapping
+
+Allow user to map file columns to THA fields:
+
+date
+weightKg
+sleepHours
+moodApples
+energyApples
+notes
+stuckToPlan
+calories
+mealSlot (optional)
+
+
+6. Validation
+
+Check:
+
+date exists
+moodApples 1-5
+energyApples 1-5
+numbers valid
+
+
+7. Import Strategy
+
+User chooses:
+
+Skip duplicates
+Overwrite existing
+Merge
+
+
+Default:
+
+Skip duplicates.
+
+
+8. Import Result
+
+Return summary:
+
+rows parsed
+rows imported
+rows skipped
+rows failed
+
+
+Backend Routes
+
+
+POST /api/food-diary/import/preview
+
+Parses file and returns preview.
+
+
+POST /api/food-diary/import/confirm
+
+Imports validated rows.
+
+
+Storage
+
+Use existing diary tables:
+
+food_diary_days
+food_diary_entries
+food_diary_metrics
+
+No destructive schema changes.
+
+
+Validation Rules
+
+moodApples 1–5
+energyApples 1–5
+weight numeric
+sleep numeric
+
+
+Acceptance Criteria
+
+User can upload CSV or TXT.
+Preview shows parsed rows.
+User can map columns.
+Validation errors shown.
+Import succeeds for valid rows.
+Existing diary data remains safe.
+
+
+Deliverables
+
+files modified
+API endpoints added
+import flow summary
+validation logic summary
+confirmation no destructive schema changes
