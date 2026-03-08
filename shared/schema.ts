@@ -125,6 +125,7 @@ export const shoppingList = pgTable("shopping_list", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   householdId: integer("household_id"),
+  addedByUserId: integer("added_by_user_id"),
   productName: text("product_name").notNull(),
   normalizedName: text("normalized_name"),
   quantityValue: real("quantity_value"),
@@ -476,6 +477,9 @@ export const ingredientSources = pgTable("ingredient_sources", {
   mealId: integer("meal_id").notNull(),
   mealName: text("meal_name").notNull(),
   quantityMultiplier: integer("quantity_multiplier").notNull().default(1),
+  weekNumber: integer("week_number"),
+  dayOfWeek: integer("day_of_week"),
+  mealSlot: text("meal_slot"),
 });
 
 export const insertIngredientSourceSchema = createInsertSchema(ingredientSources).pick({
@@ -483,6 +487,9 @@ export const insertIngredientSourceSchema = createInsertSchema(ingredientSources
   mealId: true,
   mealName: true,
   quantityMultiplier: true,
+  weekNumber: true,
+  dayOfWeek: true,
+  mealSlot: true,
 });
 
 export type IngredientSource = typeof ingredientSources.$inferSelect;
@@ -942,3 +949,55 @@ export type Household = typeof households.$inferSelect;
 export type InsertHousehold = z.infer<typeof insertHouseholdSchema>;
 export type HouseholdMember = typeof householdMembers.$inferSelect;
 export type InsertHouseholdMember = z.infer<typeof insertHouseholdMemberSchema>;
+
+// ─── My Diary ─────────────────────────────────────────────────────────────────
+
+export const foodDiaryDays = pgTable("food_diary_days", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  date: text("date").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("food_diary_days_user_date_unique").on(table.userId, table.date),
+]);
+
+export const foodDiaryEntries = pgTable("food_diary_entries", {
+  id: serial("id").primaryKey(),
+  dayId: integer("day_id").notNull().references(() => foodDiaryDays.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  mealSlot: text("meal_slot").notNull(),
+  name: text("name").notNull(),
+  notes: text("notes"),
+  sourceType: text("source_type").notNull().default("manual"),
+  sourcePlannerEntryId: integer("source_planner_entry_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const foodDiaryMetrics = pgTable("food_diary_metrics", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  date: text("date").notNull(),
+  weightKg: real("weight_kg"),
+  bmi: real("bmi"),
+  moodApples: integer("mood_apples"),
+  sleepHours: real("sleep_hours"),
+  energyApples: integer("energy_apples"),
+  notes: text("notes"),
+  stuckToPlan: boolean("stuck_to_plan"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  unique("food_diary_metrics_user_date_unique").on(table.userId, table.date),
+]);
+
+export const insertFoodDiaryDaySchema = createInsertSchema(foodDiaryDays).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertFoodDiaryEntrySchema = createInsertSchema(foodDiaryEntries).omit({ id: true, createdAt: true });
+export const insertFoodDiaryMetricsSchema = createInsertSchema(foodDiaryMetrics).omit({ id: true, createdAt: true });
+
+export type FoodDiaryDay = typeof foodDiaryDays.$inferSelect;
+export type InsertFoodDiaryDay = z.infer<typeof insertFoodDiaryDaySchema>;
+export type FoodDiaryEntry = typeof foodDiaryEntries.$inferSelect;
+export type InsertFoodDiaryEntry = z.infer<typeof insertFoodDiaryEntrySchema>;
+export type FoodDiaryMetrics = typeof foodDiaryMetrics.$inferSelect;
+export type InsertFoodDiaryMetrics = z.infer<typeof insertFoodDiaryMetricsSchema>;

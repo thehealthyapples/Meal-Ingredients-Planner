@@ -1,4 +1,4 @@
-import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers } from "@shared/schema";
+import { User, InsertUser, Meal, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
 import { eq, and, ilike, sql, inArray, isNull, isNotNull } from "drizzle-orm";
@@ -228,8 +228,46 @@ export interface IStorage {
   renameHousehold(userId: number, householdId: number, name: string): Promise<Household>;
   removeHouseholdMember(actorUserId: number, targetUserId: number): Promise<{ member: HouseholdMember; user: { id: number; displayName: string | null; username: string } }[]>;
 
+  // ── Basket Attribution ───────────────────────────────────────────────────────
+  getShoppingListItemsWithAttribution(userId: number): Promise<ShoppingListItemWithAttribution[]>;
+  getBasketMealIds(userId: number): Promise<number[]>;
+  getHouseholdDietaryContext(userId: number): Promise<HouseholdDietaryContext>;
+
+  // ── My Diary ─────────────────────────────────────────────────────────────────
+  getFoodDiaryDay(userId: number, date: string): Promise<FoodDiaryDay | null>;
+  getOrCreateFoodDiaryDay(userId: number, date: string): Promise<FoodDiaryDay>;
+  getFoodDiaryEntries(userId: number, date: string): Promise<FoodDiaryEntry[]>;
+  createFoodDiaryEntry(userId: number, date: string, data: InsertFoodDiaryEntry): Promise<FoodDiaryEntry>;
+  updateFoodDiaryEntry(entryId: number, userId: number, data: Partial<Pick<FoodDiaryEntry, 'name' | 'notes' | 'mealSlot'>>): Promise<FoodDiaryEntry | undefined>;
+  deleteFoodDiaryEntry(entryId: number, userId: number): Promise<void>;
+  copyPlannerToFoodDiary(userId: number, date: string): Promise<{ copied: number; skipped: number }>;
+  getFoodDiaryMetrics(userId: number, date: string): Promise<FoodDiaryMetrics | null>;
+  upsertFoodDiaryMetrics(userId: number, date: string, data: Partial<InsertFoodDiaryMetrics>): Promise<FoodDiaryMetrics>;
+  getFoodDiaryMetricsTrends(userId: number, days?: number): Promise<FoodDiaryMetrics[]>;
+
   sessionStore: session.Store;
 }
+
+// ── Attribution Types ───────────────────────────────────────────────────────
+export type ShoppingListItemWithAttribution = ShoppingListItem & {
+  addedByDisplayName: string | null;
+  sources: Array<{ mealId: number; mealName: string; weekNumber: number | null; dayOfWeek: number | null; mealSlot: string | null }>;
+};
+
+export type HouseholdDietaryContext = {
+  members: Array<{
+    userId: number;
+    displayName: string;
+    dietTypes: string[];
+    dietRestrictions: string[];
+    excludedIngredients: string[];
+  }>;
+  aggregated: {
+    unionDietTypes: string[];
+    unionRestrictions: string[];
+    unionExclusions: string[];
+  };
+};
 
 export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
@@ -359,13 +397,13 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(shoppingList).where(eq(shoppingList.householdId, householdId));
   }
 
-  async addShoppingListItem(userId: number, item: InsertShoppingListItem): Promise<ShoppingListItem> {
+  async addShoppingListItem(userId: number, item: InsertShoppingListItem, addedByUserId?: number): Promise<ShoppingListItem> {
     const householdId = await getHouseholdForUser(userId);
-    const [result] = await db.insert(shoppingList).values({ ...item, userId, householdId }).returning();
+    const [result] = await db.insert(shoppingList).values({ ...item, userId, householdId, addedByUserId: addedByUserId ?? userId }).returning();
     return result;
   }
 
-  async addOrConsolidateShoppingListItem(userId: number, item: InsertShoppingListItem): Promise<ShoppingListItem> {
+  async addOrConsolidateShoppingListItem(userId: number, item: InsertShoppingListItem, addedByUserId?: number): Promise<ShoppingListItem> {
     const householdId = await getHouseholdForUser(userId);
     if (item.normalizedName && item.unit) {
       const existing = await db.select().from(shoppingList).where(
@@ -388,7 +426,7 @@ export class DatabaseStorage implements IStorage {
         return result;
       }
     }
-    const [result] = await db.insert(shoppingList).values({ ...item, userId, householdId }).returning();
+    const [result] = await db.insert(shoppingList).values({ ...item, userId, householdId, addedByUserId: addedByUserId ?? userId }).returning();
     return result;
   }
 
@@ -2138,6 +2176,198 @@ export class DatabaseStorage implements IStorage {
 
     const result = await this.getHouseholdWithMembers(householdId!);
     return result.members;
+  }
+
+  // ── Basket Attribution ───────────────────────────────────────────────────────
+
+  async getShoppingListItemsWithAttribution(userId: number): Promise<ShoppingListItemWithAttribution[]> {
+    const householdId = await getHouseholdForUser(userId);
+    const items = await db.select().from(shoppingList).where(eq(shoppingList.householdId, householdId));
+    if (items.length === 0) return [];
+
+    const allSources = await db.select().from(ingredientSources).where(
+      inArray(ingredientSources.shoppingListItemId, items.map(i => i.id))
+    );
+
+    const addedByIds = items.map(i => i.addedByUserId).filter((id): id is number => id != null);
+    const addedByUsers = addedByIds.length > 0
+      ? await db.select({ id: users.id, displayName: users.displayName, username: users.username })
+          .from(users).where(inArray(users.id, addedByIds))
+      : [];
+    const userMap = new Map(addedByUsers.map(u => [u.id, u.displayName || u.username]));
+
+    const sourcesByItem = new Map<number, typeof allSources>();
+    for (const src of allSources) {
+      if (!sourcesByItem.has(src.shoppingListItemId)) sourcesByItem.set(src.shoppingListItemId, []);
+      sourcesByItem.get(src.shoppingListItemId)!.push(src);
+    }
+
+    return items.map(item => ({
+      ...item,
+      addedByDisplayName: item.addedByUserId ? (userMap.get(item.addedByUserId) ?? null) : null,
+      sources: (sourcesByItem.get(item.id) ?? []).map(s => ({
+        mealId: s.mealId,
+        mealName: s.mealName,
+        weekNumber: s.weekNumber ?? null,
+        dayOfWeek: s.dayOfWeek ?? null,
+        mealSlot: s.mealSlot ?? null,
+      })),
+    }));
+  }
+
+  async getBasketMealIds(userId: number): Promise<number[]> {
+    const householdId = await getHouseholdForUser(userId);
+    const items = await db.select({ id: shoppingList.id }).from(shoppingList).where(eq(shoppingList.householdId, householdId));
+    if (items.length === 0) return [];
+    const sources = await db.select({ mealId: ingredientSources.mealId }).from(ingredientSources)
+      .where(inArray(ingredientSources.shoppingListItemId, items.map(i => i.id)));
+    return [...new Set(sources.map(s => s.mealId))];
+  }
+
+  async getHouseholdDietaryContext(userId: number): Promise<HouseholdDietaryContext> {
+    const householdId = await getHouseholdForUser(userId);
+    const members = await db.select({ member: householdMembers, user: { id: users.id, displayName: users.displayName, username: users.username } })
+      .from(householdMembers)
+      .innerJoin(users, eq(householdMembers.userId, users.id))
+      .where(and(eq(householdMembers.householdId, householdId), eq(householdMembers.status, 'active')));
+
+    const memberProfiles: HouseholdDietaryContext['members'] = [];
+    for (const { member, user } of members) {
+      const prefs = await db.select().from(userPreferences).where(eq(userPreferences.userId, member.userId));
+      const p = prefs[0];
+      memberProfiles.push({
+        userId: member.userId,
+        displayName: user.displayName || user.username,
+        dietTypes: p?.dietTypes ?? [],
+        dietRestrictions: [],
+        excludedIngredients: p?.excludedIngredients ?? [],
+      });
+    }
+
+    return {
+      members: memberProfiles,
+      aggregated: {
+        unionDietTypes: [...new Set(memberProfiles.flatMap(m => m.dietTypes))],
+        unionRestrictions: [...new Set(memberProfiles.flatMap(m => m.dietRestrictions))],
+        unionExclusions: [...new Set(memberProfiles.flatMap(m => m.excludedIngredients))],
+      },
+    };
+  }
+
+  // ── My Diary ─────────────────────────────────────────────────────────────────
+
+  async getFoodDiaryDay(userId: number, date: string): Promise<FoodDiaryDay | null> {
+    const [day] = await db.select().from(foodDiaryDays).where(
+      and(eq(foodDiaryDays.userId, userId), eq(foodDiaryDays.date, date))
+    );
+    return day ?? null;
+  }
+
+  async getOrCreateFoodDiaryDay(userId: number, date: string): Promise<FoodDiaryDay> {
+    const existing = await this.getFoodDiaryDay(userId, date);
+    if (existing) return existing;
+    const [created] = await db.insert(foodDiaryDays).values({ userId, date }).returning();
+    return created;
+  }
+
+  async getFoodDiaryEntries(userId: number, date: string): Promise<FoodDiaryEntry[]> {
+    const day = await this.getFoodDiaryDay(userId, date);
+    if (!day) return [];
+    return await db.select().from(foodDiaryEntries)
+      .where(and(eq(foodDiaryEntries.dayId, day.id), eq(foodDiaryEntries.userId, userId)))
+      .orderBy(foodDiaryEntries.createdAt);
+  }
+
+  async createFoodDiaryEntry(userId: number, date: string, data: InsertFoodDiaryEntry): Promise<FoodDiaryEntry> {
+    const day = await this.getOrCreateFoodDiaryDay(userId, date);
+    const [entry] = await db.insert(foodDiaryEntries).values({ ...data, userId, dayId: day.id }).returning();
+    return entry;
+  }
+
+  async updateFoodDiaryEntry(entryId: number, userId: number, data: Partial<Pick<FoodDiaryEntry, 'name' | 'notes' | 'mealSlot'>>): Promise<FoodDiaryEntry | undefined> {
+    const [result] = await db.update(foodDiaryEntries)
+      .set(data)
+      .where(and(eq(foodDiaryEntries.id, entryId), eq(foodDiaryEntries.userId, userId)))
+      .returning();
+    return result;
+  }
+
+  async deleteFoodDiaryEntry(entryId: number, userId: number): Promise<void> {
+    await db.delete(foodDiaryEntries)
+      .where(and(eq(foodDiaryEntries.id, entryId), eq(foodDiaryEntries.userId, userId)));
+  }
+
+  async copyPlannerToFoodDiary(userId: number, date: string): Promise<{ copied: number; skipped: number }> {
+    const targetDate = new Date(date);
+    const jsDay = targetDate.getDay();
+    const plannerDay = jsDay === 0 ? 7 : jsDay;
+
+    const weeks = await db.select().from(plannerWeeks)
+      .where(eq(plannerWeeks.userId, userId))
+      .orderBy(plannerWeeks.weekNumber)
+      .limit(1);
+    if (weeks.length === 0) return { copied: 0, skipped: 0 };
+
+    const week = weeks[0];
+    const days = await db.select().from(plannerDays)
+      .where(and(eq(plannerDays.weekId, week.id), eq(plannerDays.dayOfWeek, plannerDay)));
+    if (days.length === 0) return { copied: 0, skipped: 0 };
+
+    const day = days[0];
+    const entries = await db.select().from(plannerEntries).where(eq(plannerEntries.dayId, day.id));
+
+    const existingEntries = await this.getFoodDiaryEntries(userId, date);
+    const existingPlannerIds = new Set(
+      existingEntries.map(e => e.sourcePlannerEntryId).filter((id): id is number => id != null)
+    );
+
+    const diaryDay = await this.getOrCreateFoodDiaryDay(userId, date);
+    let copied = 0;
+    let skipped = 0;
+
+    for (const entry of entries) {
+      if (existingPlannerIds.has(entry.id)) { skipped++; continue; }
+      const mealName = entry.mealId ? (await db.select({ name: meals.name }).from(meals).where(eq(meals.id, entry.mealId)))[0]?.name ?? 'Planner meal' : 'Planner meal';
+      const slot = entry.mealType === 'snacks' ? 'snack' : (entry.mealType ?? 'dinner');
+      await db.insert(foodDiaryEntries).values({
+        dayId: diaryDay.id,
+        userId,
+        mealSlot: slot,
+        name: mealName,
+        sourceType: 'copied_from_planner',
+        sourcePlannerEntryId: entry.id,
+      });
+      copied++;
+    }
+    return { copied, skipped };
+  }
+
+  async getFoodDiaryMetrics(userId: number, date: string): Promise<FoodDiaryMetrics | null> {
+    const [metrics] = await db.select().from(foodDiaryMetrics)
+      .where(and(eq(foodDiaryMetrics.userId, userId), eq(foodDiaryMetrics.date, date)));
+    return metrics ?? null;
+  }
+
+  async upsertFoodDiaryMetrics(userId: number, date: string, data: Partial<InsertFoodDiaryMetrics>): Promise<FoodDiaryMetrics> {
+    const existing = await this.getFoodDiaryMetrics(userId, date);
+    if (existing) {
+      const [updated] = await db.update(foodDiaryMetrics)
+        .set(data)
+        .where(and(eq(foodDiaryMetrics.userId, userId), eq(foodDiaryMetrics.date, date)))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(foodDiaryMetrics).values({ userId, date, ...data }).returning();
+    return created;
+  }
+
+  async getFoodDiaryMetricsTrends(userId: number, days = 90): Promise<FoodDiaryMetrics[]> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    return await db.select().from(foodDiaryMetrics)
+      .where(and(eq(foodDiaryMetrics.userId, userId), sql`${foodDiaryMetrics.date} >= ${cutoffStr}`))
+      .orderBy(foodDiaryMetrics.date);
   }
 }
 

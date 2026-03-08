@@ -27,6 +27,7 @@ import AdminIngredientProductsPage from "@/pages/admin-ingredient-products-page"
 import AdminRecipeSourcesPage from "@/pages/admin-recipe-sources-page";
 import SharedPlanPage from "@/pages/shared-plan-page";
 import PantryPage from "@/pages/pantry-page";
+import FoodDiaryPage from "@/pages/food-diary-page";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
@@ -79,6 +80,7 @@ function Router() {
       <Route path="/admin/ingredient-products" component={() => <ProtectedRoute component={AdminIngredientProductsPage} />} />
       <Route path="/admin/recipe-sources" component={() => <ProtectedRoute component={AdminRecipeSourcesPage} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
+      <Route path="/diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
       <Route path="/shared/:token" component={SharedPlanPage} />
 
       <Route component={NotFound} />

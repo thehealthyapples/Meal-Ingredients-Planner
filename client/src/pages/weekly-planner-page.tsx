@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TemplatesPanel } from "@/components/templates-panel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
@@ -187,6 +187,11 @@ export default function WeeklyPlannerPage() {
   const { data: freezerMeals = [] } = useQuery<FreezerMeal[]>({
     queryKey: ["/api/freezer"],
   });
+
+  const { data: basketMealIds = [] } = useQuery<number[]>({
+    queryKey: ["/api/planner/basket-meal-ids"],
+  });
+  const basketMealIdSet = useMemo(() => new Set(basketMealIds), [basketMealIds]);
 
   const { data: categories = [] } = useQuery<MealCategory[]>({
     queryKey: ['/api/categories'],
@@ -740,6 +745,9 @@ export default function WeeklyPlannerPage() {
                                     >
                                       <span className="flex-1 min-w-0 break-words leading-tight">{meal.name}</span>
                                       {isFrozen && <Snowflake className="h-2.5 w-2.5 text-blue-400 flex-shrink-0 mt-0.5" />}
+                                      {basketMealIdSet.has(meal.id) && (
+                                        <ShoppingCart className="h-2.5 w-2.5 text-emerald-500/70 flex-shrink-0 mt-0.5" data-testid={`icon-in-basket-${meal.id}`} />
+                                      )}
                                     </button>
                                   );
                                 })}

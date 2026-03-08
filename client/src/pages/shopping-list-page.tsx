@@ -49,6 +49,28 @@ import AppleRating from "@/components/AppleRating";
 import BadAppleWarningModal from "@/components/BadAppleWarningModal";
 import type { ShoppingListItem, ProductMatch, IngredientSource, SupermarketLink, FreezerMeal, IngredientProduct } from "@shared/schema";
 
+type ShoppingListItemExtended = ShoppingListItem & {
+  addedByDisplayName?: string | null;
+  sources?: Array<{ mealId: number; mealName: string; weekNumber?: number | null; dayOfWeek?: number | null; mealSlot?: string | null }>;
+};
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function getItemAttributionText(item: ShoppingListItemExtended): string | null {
+  const parts: string[] = [];
+  if (item.addedByDisplayName) parts.push(`Added by ${item.addedByDisplayName}`);
+  const src = item.sources?.[0];
+  if (src) {
+    const mealPart = src.mealName ? `From ${src.mealName}` : null;
+    const dayPart = src.dayOfWeek != null && src.mealSlot
+      ? `Needed for ${DAY_NAMES[src.dayOfWeek]} ${src.mealSlot}`
+      : src.mealSlot ? `Needed for ${src.mealSlot}` : null;
+    if (dayPart) parts.push(dayPart);
+    else if (mealPart) parts.push(mealPart);
+  }
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 function capitalizeWords(str: string): string {
   return str.replace(/\b\w/g, c => c.toUpperCase());
 }
@@ -629,8 +651,12 @@ export default function ShoppingListPage() {
   const measurementPref = (user?.measurementPreference as 'metric' | 'imperial') || 'metric';
   const currentTier = (user?.preferredPriceTier as PriceTier) || 'standard';
 
-  const { data: savedItems = [], isLoading: loadingSaved } = useQuery<ShoppingListItem[]>({
+  const { data: savedItems = [], isLoading: loadingSaved } = useQuery<ShoppingListItemExtended[]>({
     queryKey: [api.shoppingList.list.path],
+  });
+
+  const { data: householdData } = useQuery<{ id: number; name: string; members?: unknown[] }>({
+    queryKey: ['/api/household'],
   });
 
   const { data: allPriceMatches = [] } = useQuery<ProductMatch[]>({
@@ -1256,6 +1282,14 @@ export default function ShoppingListPage() {
                   <p className="text-sm text-muted-foreground mt-1" data-testid="text-items-count">
                     {savedItems.length} items to buy
                   </p>
+                  {householdData && (
+                    <div className="flex items-center gap-1.5 mt-1.5" data-testid="banner-household">
+                      <Home className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">
+                        {householdData.name} · Shared basket
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-wrap">
@@ -1597,6 +1631,14 @@ export default function ShoppingListPage() {
                                   )}
                                 </div>
                               )}
+                              {(() => {
+                                const attr = getItemAttributionText(item as ShoppingListItemExtended);
+                                return attr ? (
+                                  <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight" data-testid={`text-attribution-${item.id}`}>
+                                    {attr}
+                                  </p>
+                                ) : null;
+                              })()}
                             </td>
                             <td className="px-2 py-1.5 text-right tabular-nums text-foreground">
                               {isEditing && editState?.field === 'quantityValue' ? (

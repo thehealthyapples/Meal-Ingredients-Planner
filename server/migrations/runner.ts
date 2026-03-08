@@ -339,6 +339,56 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-08_basket_attribution_columns",
+    statements: [
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS added_by_user_id INTEGER",
+      "ALTER TABLE ingredient_sources ADD COLUMN IF NOT EXISTS week_number INTEGER",
+      "ALTER TABLE ingredient_sources ADD COLUMN IF NOT EXISTS day_of_week INTEGER",
+      "ALTER TABLE ingredient_sources ADD COLUMN IF NOT EXISTS meal_slot TEXT",
+    ],
+  },
+
+  {
+    id: "2026-03-08_food_diary_tables",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS food_diary_days (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        date TEXT NOT NULL,
+        notes TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT food_diary_days_user_date_unique UNIQUE (user_id, date)
+      )`,
+      `CREATE TABLE IF NOT EXISTS food_diary_entries (
+        id SERIAL PRIMARY KEY,
+        day_id INTEGER NOT NULL REFERENCES food_diary_days(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        meal_slot TEXT NOT NULL,
+        name TEXT NOT NULL,
+        notes TEXT,
+        source_type TEXT NOT NULL DEFAULT 'manual',
+        source_planner_entry_id INTEGER,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE TABLE IF NOT EXISTS food_diary_metrics (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        date TEXT NOT NULL,
+        weight_kg REAL,
+        bmi REAL,
+        mood_apples INTEGER,
+        sleep_hours REAL,
+        energy_apples INTEGER,
+        notes TEXT,
+        stuck_to_plan BOOLEAN,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT food_diary_metrics_user_date_unique UNIQUE (user_id, date)
+      )`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

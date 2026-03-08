@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Utensils, CalendarDays, ShoppingBasket,
   Package, User, LogOut, ShieldCheck, Star,
   Mail, Sliders, Search, Menu, ChevronLeft, ChevronRight,
-  MoreHorizontal, Archive, ScanLine,
+  MoreHorizontal, Archive, ScanLine, BookOpen,
 } from "lucide-react";
 import { api } from "@shared/routes";
 
@@ -19,6 +19,7 @@ const NAV_ITEMS_TOP = [
 
 const NAV_ITEMS_MAIN = [
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
+  { href: "/diary", label: "My Diary", icon: BookOpen },
   { href: "/meals", label: "My Meals", icon: Utensils },
   { href: "/pantry", label: "Pantry", icon: Package },
   { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },

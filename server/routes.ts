@@ -2096,7 +2096,7 @@ export async function registerRoutes(
 
   app.get(api.shoppingList.list.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const items = await storage.getShoppingListItems(req.user!.id);
+    const items = await storage.getShoppingListItemsWithAttribution(req.user!.id);
     res.json(items);
   });
 
@@ -5353,6 +5353,123 @@ export async function registerRoutes(
       console.error("[Household] REMOVE MEMBER error:", err);
       res.status(500).json({ message: "Failed to remove member" });
     }
+  });
+
+  // ── Basket Attribution / Planner Intelligence ──────────────────────────────
+
+  app.get("/api/planner/basket-meal-ids", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const mealIds = await storage.getBasketMealIds(req.user!.id);
+    res.json(mealIds);
+  });
+
+  app.get("/api/household/dietary-context", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const context = await storage.getHouseholdDietaryContext(req.user!.id);
+      res.json(context);
+    } catch (err) {
+      console.error("[HouseholdDietary] error:", err);
+      res.status(500).json({ message: "Failed to fetch household dietary context" });
+    }
+  });
+
+  // ── My Diary ─────────────────────────────────────────────────────────────────
+
+  app.get("/api/food-diary/:date", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { date } = req.params;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ message: "Invalid date format" });
+    const day = await storage.getFoodDiaryDay(req.user!.id, date);
+    const entries = await storage.getFoodDiaryEntries(req.user!.id, date);
+    const metrics = await storage.getFoodDiaryMetrics(req.user!.id, date);
+    res.json({ day, entries, metrics });
+  });
+
+  app.post("/api/food-diary/:date/copy-from-planner", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { date } = req.params;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ message: "Invalid date format" });
+    try {
+      const result = await storage.copyPlannerToFoodDiary(req.user!.id, date);
+      res.json(result);
+    } catch (err) {
+      console.error("[Diary] copy-from-planner error:", err);
+      res.status(500).json({ message: "Failed to copy from planner" });
+    }
+  });
+
+  app.post("/api/food-diary/:date/entries", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { date } = req.params;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ message: "Invalid date format" });
+    const { name, mealSlot, notes } = z.object({
+      name: z.string().min(1),
+      mealSlot: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+      notes: z.string().optional(),
+    }).parse(req.body);
+    const entry = await storage.createFoodDiaryEntry(req.user!.id, date, {
+      dayId: 0,
+      userId: req.user!.id,
+      name,
+      mealSlot,
+      notes: notes ?? null,
+      sourceType: 'manual',
+      sourcePlannerEntryId: null,
+    });
+    res.status(201).json(entry);
+  });
+
+  app.patch("/api/food-diary/entries/:entryId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const entryId = Number(req.params.entryId);
+    if (isNaN(entryId)) return res.status(400).json({ message: "Invalid entry ID" });
+    const data = z.object({
+      name: z.string().min(1).optional(),
+      notes: z.string().nullable().optional(),
+      mealSlot: z.enum(['breakfast', 'lunch', 'dinner', 'snack']).optional(),
+    }).parse(req.body);
+    const updated = await storage.updateFoodDiaryEntry(entryId, req.user!.id, data);
+    if (!updated) return res.status(404).json({ message: "Entry not found" });
+    res.json(updated);
+  });
+
+  app.delete("/api/food-diary/entries/:entryId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const entryId = Number(req.params.entryId);
+    if (isNaN(entryId)) return res.status(400).json({ message: "Invalid entry ID" });
+    await storage.deleteFoodDiaryEntry(entryId, req.user!.id);
+    res.sendStatus(204);
+  });
+
+  app.patch("/api/food-diary/:date/metrics", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { date } = req.params;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ message: "Invalid date format" });
+    const data = z.object({
+      weightKg: z.number().positive().nullable().optional(),
+      moodApples: z.number().int().min(1).max(5).nullable().optional(),
+      sleepHours: z.number().min(0).max(24).nullable().optional(),
+      energyApples: z.number().int().min(1).max(5).nullable().optional(),
+      notes: z.string().nullable().optional(),
+      stuckToPlan: z.boolean().nullable().optional(),
+    }).parse(req.body);
+    const userId = req.user!.id;
+    const prefs = await storage.getUserPreferences(userId);
+    let bmi: number | null = null;
+    if (data.weightKg && prefs?.heightCm) {
+      const heightM = prefs.heightCm / 100;
+      bmi = Math.round((data.weightKg / (heightM * heightM)) * 10) / 10;
+    }
+    const metrics = await storage.upsertFoodDiaryMetrics(userId, date, { ...data, bmi });
+    res.json(metrics);
+  });
+
+  app.get("/api/food-diary/metrics/trends", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const days = req.query.days ? Number(req.query.days) : 90;
+    const trends = await storage.getFoodDiaryMetricsTrends(req.user!.id, days);
+    res.json(trends);
   });
 
   return httpServer;
