@@ -28,6 +28,11 @@ import AdminRecipeSourcesPage from "@/pages/admin-recipe-sources-page";
 import SharedPlanPage from "@/pages/shared-plan-page";
 import PantryPage from "@/pages/pantry-page";
 import FoodDiaryPage from "@/pages/food-diary-page";
+import DemoRoute from "@/components/demo-route";
+import DemoOverviewPage from "@/pages/demo-overview-page";
+import DemoPlannerPage from "@/pages/demo-planner-page";
+import DemoBasketPage from "@/pages/demo-basket-page";
+import DemoMealsPage from "@/pages/demo-meals-page";
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
@@ -82,6 +87,11 @@ function Router() {
       <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
       <Route path="/diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
       <Route path="/shared/:token" component={SharedPlanPage} />
+
+      <Route path="/demo" component={() => <DemoRoute component={DemoOverviewPage} />} />
+      <Route path="/demo/planner" component={() => <DemoRoute component={DemoPlannerPage} />} />
+      <Route path="/demo/basket" component={() => <DemoRoute component={DemoBasketPage} />} />
+      <Route path="/demo/meals" component={() => <DemoRoute component={DemoMealsPage} />} />
 
       <Route component={NotFound} />
     </Switch>

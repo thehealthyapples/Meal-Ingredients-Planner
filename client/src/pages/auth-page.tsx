@@ -569,6 +569,15 @@ export default function AuthPage() {
                   </p>
                 </div>
               )}
+              <div className="text-center pt-2">
+                <a
+                  href="/demo"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="link-explore-demo"
+                >
+                  Explore the demo →
+                </a>
+              </div>
             </>
           )}
         </div>
