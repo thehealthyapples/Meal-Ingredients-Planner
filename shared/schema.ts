@@ -146,6 +146,11 @@ export const shoppingList = pgTable("shopping_list", {
   needsReview: boolean("needs_review").notNull().default(false),
   validationNote: text("validation_note"),
   selectedStore: text("selected_store"),
+  itemType: text("item_type"),
+  variantSelections: text("variant_selections"),
+  attributePreferences: text("attribute_preferences"),
+  confidenceLevel: text("confidence_level"),
+  confidenceReason: text("confidence_reason"),
 });
 
 export const productMatches = pgTable("product_matches", {

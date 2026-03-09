@@ -48,6 +48,12 @@ import ScoreBadge from "@/components/ui/score-badge";
 import AppleRating from "@/components/AppleRating";
 import BadAppleWarningModal from "@/components/BadAppleWarningModal";
 import type { ShoppingListItem, ProductMatch, IngredientSource, SupermarketLink, FreezerMeal, IngredientProduct } from "@shared/schema";
+import { getIngredientDef } from "@/lib/ingredient-catalogue";
+import { isWholeFood } from "@/lib/basket-item-classifier";
+import { safeParseJsonObject, safeStringifyJsonObject } from "@/lib/json-utils";
+import { resolveBestMatch, type WholeFoodIntent } from "@/lib/whole-food-matcher";
+import { calcConfidence, CONFIDENCE_LABELS, type ConfidenceLevel } from "@/lib/food-confidence";
+import WholeFoodSelector from "@/components/whole-food-selector";
 
 type ShoppingListItemExtended = ShoppingListItem & {
   addedByDisplayName?: string | null;
@@ -638,6 +644,36 @@ export default function ShoppingListPage() {
   const [globalStore, setGlobalStore] = useState<string>('auto');
   const [analyseItem, setAnalyseItem] = useState<ShoppingListItem | null>(null);
 
+  const [selectedRetailers, setSelectedRetailers] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("tha-basket-retailers") || '["Tesco","Sainsbury\'s","Asda"]'); } catch { return ["Tesco", "Sainsbury's", "Asda"]; }
+  });
+  const [globalBasketTier, setGlobalBasketTier] = useState<PriceTier | "item">(() => {
+    return (localStorage.getItem("tha-basket-tier") as PriceTier | "item") || "item";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("tha-basket-retailers", JSON.stringify(selectedRetailers));
+  }, [selectedRetailers]);
+
+  useEffect(() => {
+    localStorage.setItem("tha-basket-tier", globalBasketTier);
+  }, [globalBasketTier]);
+
+  const toggleRetailer = (name: string) => {
+    setSelectedRetailers(prev => {
+      if (prev.includes(name)) {
+        if (prev.length <= 1) return prev;
+        return prev.filter(r => r !== name);
+      }
+      return [...prev, name];
+    });
+  };
+
+  const getEffectiveTier = (item: ShoppingListItem): PriceTier => {
+    if (globalBasketTier !== "item") return globalBasketTier as PriceTier;
+    return (item.selectedTier as PriceTier) || currentTier;
+  };
+
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isFullscreen) {
@@ -913,6 +949,23 @@ export default function ShoppingListPage() {
     },
     onError: () => {
       toast({ title: "Error", description: "Could not update store.", variant: "destructive" });
+    },
+  });
+
+  const updateWholeFoodIntent = useMutation({
+    mutationFn: async ({ id, fields }: { id: number; fields: Record<string, any> }) => {
+      const url = buildUrl(api.shoppingList.update.path, { id });
+      const res = await fetch(url, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fields),
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to update item intent');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
     },
   });
 
@@ -1413,6 +1466,88 @@ export default function ShoppingListPage() {
             </div>
           </CardHeader>
 
+          {savedItems.length > 0 && (
+            <div className="border-b border-border p-4 bg-muted/30">
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-start gap-6">
+                  <div>
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                      Shop at
+                    </p>
+                    <div
+                      className="flex flex-wrap gap-1.5"
+                      data-testid="basket-retailer-selector"
+                    >
+                      {SUPERMARKET_NAMES.map((name) => {
+                        const active = selectedRetailers.includes(name);
+                        return (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => toggleRetailer(name)}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
+                              active
+                                ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                                : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
+                            }`}
+                            data-testid={`retailer-chip-${name.toLowerCase().replace(/[\s'&]/g, "-")}`}
+                          >
+                            {name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/70 mt-1">
+                      THA will choose the best available products from the supermarkets you select.
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+                      Global Tier
+                    </p>
+                    <div
+                      className="flex flex-wrap gap-1.5"
+                      data-testid="basket-tier-selector"
+                    >
+                      {([
+                        { value: "budget", label: "Budget" },
+                        { value: "standard", label: "Standard" },
+                        { value: "premium", label: "Premium" },
+                        { value: "organic", label: "Organic" },
+                        { value: "item", label: "Per item" },
+                      ] as Array<{ value: PriceTier | "item"; label: string }>).map(({ value, label }) => {
+                        const active = globalBasketTier === value;
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setGlobalBasketTier(value)}
+                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
+                              active
+                                ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                                : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
+                            }`}
+                            data-testid={`tier-chip-${value}`}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <p
+                  className="text-[10px] text-muted-foreground/60 leading-relaxed"
+                  data-testid="basket-fulfilment-note"
+                >
+                  THA selects the best available products based on your preferences. Final items may vary depending on supermarket availability and substitutions.
+                </p>
+              </div>
+            </div>
+          )}
+
           {hasPrices && totalCostData && savedItems.length > 0 && (
             <div className="border-b border-border p-4 bg-muted/20">
               <div className="flex flex-col gap-3">
@@ -1638,6 +1773,56 @@ export default function ShoppingListPage() {
                                     {attr}
                                   </p>
                                 ) : null;
+                              })()}
+                              {(() => {
+                                if (!isWholeFood(item)) return null;
+                                const catalogueDef = getIngredientDef(item.normalizedName ?? item.productName);
+                                if (!catalogueDef) return null;
+                                const variantSelections = safeParseJsonObject(item.variantSelections);
+                                const attributePreferences = safeParseJsonObject(item.attributePreferences);
+                                const effectiveTier = getEffectiveTier(item);
+                                const itemCandidates = allPriceMatches.filter(m => m.shoppingListItemId === item.id);
+                                const intent: WholeFoodIntent = {
+                                  ingredientName: item.normalizedName ?? item.productName,
+                                  variantSelections,
+                                  attributePreferences,
+                                  tier: effectiveTier,
+                                  selectedRetailers,
+                                };
+                                const confidence = calcConfidence(intent, itemCandidates, selectedRetailers);
+                                const confLabel = CONFIDENCE_LABELS[confidence.level];
+
+                                const handleVariantChange = (key: string, value: string) => {
+                                  const next = { ...variantSelections, [key]: value };
+                                  if (!value) delete next[key];
+                                  updateWholeFoodIntent.mutate({ id: item.id, fields: { variantSelections: JSON.stringify(next) } });
+                                };
+                                const handleAttrChange = (key: string, value: boolean) => {
+                                  const next = { ...attributePreferences, [key]: value };
+                                  updateWholeFoodIntent.mutate({ id: item.id, fields: { attributePreferences: JSON.stringify(next) } });
+                                };
+
+                                return (
+                                  <div className="mt-1.5">
+                                    <WholeFoodSelector
+                                      item={item}
+                                      catalogueDef={catalogueDef}
+                                      variantSelections={variantSelections}
+                                      attributePreferences={attributePreferences}
+                                      onVariantChange={handleVariantChange}
+                                      onAttributeChange={handleAttrChange}
+                                    />
+                                    <div
+                                      className={`inline-flex items-center gap-1 mt-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded border ${confLabel.colorClass} ${confLabel.bgClass}`}
+                                      data-testid={`confidence-badge-${item.id}`}
+                                    >
+                                      {confLabel.label}
+                                      {confidence.reason && (
+                                        <span className="font-normal opacity-70 ml-0.5">· {confidence.reason}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
                               })()}
                             </td>
                             <td className="px-2 py-1.5 text-right tabular-nums text-foreground">

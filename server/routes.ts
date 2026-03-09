@@ -2193,6 +2193,21 @@ export async function registerRoutes(
     if (req.body.smpRating !== undefined) {
       updates.smpRating = req.body.smpRating === null ? null : Number(req.body.smpRating);
     }
+    if (req.body.itemType !== undefined) {
+      updates.itemType = req.body.itemType === null ? null : String(req.body.itemType).trim();
+    }
+    if (req.body.variantSelections !== undefined) {
+      updates.variantSelections = req.body.variantSelections === null ? null : String(req.body.variantSelections);
+    }
+    if (req.body.attributePreferences !== undefined) {
+      updates.attributePreferences = req.body.attributePreferences === null ? null : String(req.body.attributePreferences);
+    }
+    if (req.body.confidenceLevel !== undefined) {
+      updates.confidenceLevel = req.body.confidenceLevel === null ? null : String(req.body.confidenceLevel).trim();
+    }
+    if (req.body.confidenceReason !== undefined) {
+      updates.confidenceReason = req.body.confidenceReason === null ? null : String(req.body.confidenceReason).trim();
+    }
     if (updates.quantityValue !== undefined && updates.unit !== undefined) {
       const grams = convertToGrams(updates.quantityValue, updates.unit);
       if (grams !== null) updates.quantityInGrams = grams;
@@ -2365,6 +2380,7 @@ export async function registerRoutes(
         });
       }
 
+      const WHOLE_FOOD_CATS_SERVER = new Set(['produce', 'fruit', 'eggs']);
       const consolidated = consolidateAndNormalize(allIngredients);
       for (const c of consolidated) {
         const ingredient = await storage.getOrCreateNormalizedIngredient(
@@ -2382,6 +2398,11 @@ export async function registerRoutes(
           needsReview: c.needsReview || false,
           validationNote: c.validationNote || null,
         });
+        const inferredItemType = WHOLE_FOOD_CATS_SERVER.has((c.category || '').toLowerCase()) ? 'whole_food' : 'packaged';
+        if (!item.itemType) {
+          await storage.updateShoppingListItem(item.id, { itemType: inferredItemType });
+          item.itemType = inferredItemType;
+        }
         items.push(item);
 
         for (const mealInfo of mealMap) {
@@ -2475,6 +2496,7 @@ export async function registerRoutes(
         });
       }
 
+      const WHOLE_FOOD_CATS_SERVER2 = new Set(['produce', 'fruit', 'eggs']);
       const consolidated = consolidateAndNormalize(allIngredients);
       for (const c of consolidated) {
         const ingredient = await storage.getOrCreateNormalizedIngredient(
@@ -2492,6 +2514,11 @@ export async function registerRoutes(
           needsReview: c.needsReview || false,
           validationNote: c.validationNote || null,
         });
+        const inferredItemType2 = WHOLE_FOOD_CATS_SERVER2.has((c.category || '').toLowerCase()) ? 'whole_food' : 'packaged';
+        if (!item.itemType) {
+          await storage.updateShoppingListItem(item.id, { itemType: inferredItemType2 });
+          item.itemType = inferredItemType2;
+        }
         items.push(item);
 
         for (const mealInfo of mealMap) {
