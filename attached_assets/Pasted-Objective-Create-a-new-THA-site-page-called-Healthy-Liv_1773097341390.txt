@@ -1,0 +1,236 @@
+Objective
+Create a new THA site page called “Healthy Living Partners” that acts as a curated wellness partner directory. This page is designed to support reciprocal growth for The Healthy Apples by showcasing aligned partners such as yoga teachers, meditation coaches, nutritionists, wellness services, and healthy living resources. The page must feel premium, curated, and brand-aligned — not like a generic ad board.
+
+Design direction
+Think “curated wellness directory” rather than “affiliate listings page”.
+The result should feel like a trusted extension of The Healthy Apples brand:
+clean, warm, calm, lightly premium, and useful.
+
+High-Level Product Intent
+This is not a random affiliates page. It should feel like a trusted extension of the THA brand and support whole-person wellbeing beyond food and shopping.
+The tone should be warm, calm, clean, and editorial.
+The page should:
+- help users discover useful health and wellness services
+- create reciprocal backlink / promotional opportunities for THA
+- allow future featured / sponsored placements
+- be scalable with admin approval and curation
+- fit visually with THA branding and orchard aesthetic
+
+Page Naming
+Public-facing page title: “Healthy Living Partners”
+Optional supporting subtitle: “Trusted wellness resources to support your health beyond the basket”
+
+Route
+Create a new public route:
+- /partners
+
+Main Page Sections
+Build the page in this order:
+
+1. Hero Section
+Include:
+- headline: “Support your health beyond the basket”
+- subtext explaining users can discover trusted wellness partners and resources that complement their journey with THA
+- primary CTA button: “Explore Partners”
+- secondary CTA button: “Become a Partner”
+
+Design:
+- same visual family as THA
+- warm neutral background / orchard-friendly styling
+- generous spacing
+- rounded cards / soft shadows
+- premium but simple
+
+2. Category Filter Section
+Provide clickable category pills or tiles for:
+- Yoga & Movement
+- Meditation & Mindfulness
+- Nutritionists & Diet Support
+- Healthy Cooking & Food Education
+- Fitness & Recovery
+- Women’s Health
+- Family Wellness
+- Sleep & Stress Support
+- Natural Living
+- Local Wellness Services
+
+Requirements:
+- user can filter partner cards by category
+- include “All” as default
+- active state should be visually clear
+
+3. Search + Service Type Filter
+Above the partner grid add:
+- a search input with placeholder like “Search partners, services, or keywords”
+- a toggle or segmented control for:
+  - All
+  - Online
+  - Local
+  - Both
+
+Filtering should work client-side for now.
+
+4. Featured Partners Grid
+Create a responsive card grid for partner listings.
+Each card should support:
+- logo or image
+- partner name
+- short tagline
+- category
+- short description
+- optional badge(s):
+  - THA Recommended
+  - Local Partner
+  - Online Service
+  - Affiliate Link
+  - Featured
+  - New
+- “Why THA likes them” short note
+- button: “Visit Partner”
+
+Card design must feel curated and premium.
+Avoid clutter. Keep text concise.
+On hover, card should elevate subtly.
+
+5. Why We Share These Links Section
+Add a trust / transparency content block explaining that THA shares selected wellness resources because healthy living goes beyond food alone.
+Include gentle disclosure copy that:
+- some links may be affiliate links
+- some partners may receive featured placement
+- THA aims to feature only aligned and relevant services
+- users should do their own research when engaging professional services
+
+Tone should remain warm, not legalistic.
+
+6. Become a Partner CTA Section
+Add a clear section inviting aligned brands / professionals to apply.
+Include:
+- heading: “Partner with THA”
+- short supportive copy
+- CTA button: “Apply to Join”
+
+For now, button can open a modal or route to a simple application form page.
+
+Core UX Requirements
+- fully responsive
+- visually aligned with THA branding
+- not overly commercial
+- curated, calm, clean
+- accessible buttons / inputs / contrast
+- fast-loading
+- suitable for future CMS or admin-driven content
+
+Implementation Scope
+This should be additive and not disrupt existing site flows.
+
+Frontend Requirements
+Create:
+- new page component for /partners
+- reusable partner card component
+- reusable category filter component
+- search/filter toolbar component
+- reusable badge/tag component
+- optional application modal or dedicated form component
+
+Use existing THA design system and shared UI components where appropriate.
+Match current shell / nav / spacing patterns used on the public-facing site.
+
+Data Model
+For now, use seed data / local fixture data if there is no existing CMS or DB model.
+Structure each partner entry with fields like:
+- id
+- name
+- slug
+- category
+- tagline
+- shortDescription
+- fullDescription (optional)
+- websiteUrl
+- imageUrl
+- location
+- serviceType: “online” | “local” | “both”
+- badges: string[]
+- featured: boolean
+- affiliateType: “affiliate” | “reciprocal” | “sponsored” | “standard”
+- whyTHARecommends
+- isActive: boolean
+- displayOrder: number
+
+Seed 8–12 realistic example entries across different categories so the page feels alive.
+Examples can include placeholder businesses like:
+- Calm Orchard Yoga
+- Rooted Nutrition Studio
+- Still Morning Meditation
+- Family Table Nutrition
+- Sleep Well Collective
+- Gentle Strength Movement
+Use realistic but obviously safe placeholder data unless an existing partner list already exists.
+
+Future-Proofing
+Structure code so this can later move from fixture data to DB-backed content with minimal refactor.
+Keep data access isolated in a dedicated module.
+Example:
+- lib/partners.ts
+- data/partners.ts
+- types/partner.ts
+
+Admin / CMS Readiness
+Even if no admin is built now, code should anticipate:
+- approved vs pending partners
+- featured ordering
+- sponsored / affiliate flag
+- active / inactive visibility
+- search/filter compatibility
+
+Optional Stretch Features
+If straightforward, also add:
+- “Featured Partners” section above the main grid for 3 highlighted entries
+- “New this month” badge support
+- outbound click tracking hook placeholder
+- partner details modal or dedicated slug page
+- basic application form with:
+  - business name
+  - website
+  - category
+  - short description
+  - contact email
+  - social links
+  - reciprocal link yes/no
+  - why this fits THA
+
+Suggested File Structure
+Create/add files along these lines:
+- src/pages/partners.tsx or app/partners/page.tsx
+- src/components/partners/PartnerCard.tsx
+- src/components/partners/PartnerFilters.tsx
+- src/components/partners/PartnerHero.tsx
+- src/components/partners/PartnerCTA.tsx
+- src/components/partners/PartnerTrustSection.tsx
+- src/data/partners.ts
+- src/types/partner.ts
+Adjust to current project structure.
+
+Content Tone
+Copy should feel:
+- warm
+- encouraging
+- trustworthy
+- lightly premium
+- wellness-aligned
+Avoid corporate or salesy language.
+
+Acceptance Criteria
+- /partners route exists and is linked appropriately from public navigation or footer
+- hero section, filters, search, partner grid, trust section, and partner CTA are all implemented
+- filters and search work correctly
+- page is responsive on mobile and desktop
+- cards look polished and aligned with THA
+- data is easy to replace later with DB content
+- no regression to existing site pages
+
+Important Notes
+- This page must feel curated, not like a marketplace
+- keep the UI elegant and spacious
+- prioritize clarity and brand alignment over feature bloat
+- use placeholder partner data only if no live data source exists
+- do not overcomplicate backend on first pass

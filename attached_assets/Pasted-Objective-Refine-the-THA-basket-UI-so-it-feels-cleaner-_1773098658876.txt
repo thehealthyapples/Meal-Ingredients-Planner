@@ -1,0 +1,217 @@
+Objective
+
+Refine the THA basket UI so it feels cleaner, denser, and easier to scan. The current basket is too cluttered. Reduce vertical space, move duplicate actions out of the main toolbar, make supermarket totals react live to supermarket selection, and restructure whole-food controls into proper columns instead of stacking them inside the ingredient cell.
+
+Keep the new food-intent logic, but improve layout and usability.
+Do this as a targeted UI/UX refinement, not a rewrite.
+
+Key goals
+
+1. Reduce clutter in the basket header and shopping summary
+2. Make supermarket totals/cards more compact
+3. Make supermarket selection behave like a true live filter for totals
+4. Remove duplicate actions from the main toolbar
+5. Remove “Added by ...” metadata from shopping list rows
+6. Move whole-food selectors into dedicated table columns
+7. Reduce row height and improve scanability
+
+Changes required
+
+T001: Compact the supermarket totals / shopping summary
+
+Files:
+- client/src/pages/shopping-list-page.tsx
+- any related summary/totals component if split out
+
+Changes:
+- Reduce the height of supermarket total cards significantly
+- Remove excess white space/padding inside each card
+- Make cards feel like compact summary tiles, not large content blocks
+- Keep:
+  - supermarket name
+  - total price
+  - cheapest/best indicator where relevant
+- Reduce vertical spacing between rows of cards
+- Ensure more cards fit on screen without pushing the basket table too far down
+- Prefer tighter grid with smaller cards and lighter padding
+
+Acceptance:
+- totals area takes up much less vertical space
+- user can see more of the basket table without scrolling
+- summary still readable
+
+T002: Make supermarket chips update totals in real time
+
+Files:
+- client/src/pages/shopping-list-page.tsx
+- any basket summary calculation helper
+
+Changes:
+- The “Shop at” supermarket chips must act like live active filters for basket totals
+- When user selects/deselects supermarkets, the totals summary updates immediately
+- Behaviour should mirror the current responsiveness of Budget / Standard / Premium / Organic
+- If only one supermarket is selected, show totals only for that supermarket
+- If multiple supermarkets are selected, show totals only for those selected supermarkets
+- If the current summary logic ranks all supermarkets, it must now rank/filter only selected supermarkets
+- Keep minimum one retailer selected
+
+Acceptance:
+- clicking supermarket chips updates totals instantly
+- totals only show selected supermarkets
+- no page refresh required
+
+T003: Clean up top action bar
+
+Files:
+- client/src/pages/shopping-list-page.tsx
+- export modal component if separate
+
+Changes:
+- Remove the standalone Copy button from the main toolbar
+- Move copy functionality into the Export modal
+- Keep Export in the main toolbar
+- Export modal should contain:
+  - export option(s)
+  - copy option(s)
+- Review toolbar spacing so primary actions remain:
+  - supermarket selection / tier / metric / match / send / export
+- Make toolbar feel less crowded
+
+Acceptance:
+- Copy button no longer appears in main toolbar
+- Copy option is available inside Export modal
+- toolbar is visibly cleaner
+
+T004: Remove “Added by” row metadata
+
+Files:
+- client/src/pages/shopping-list-page.tsx
+
+Changes:
+- Remove “Added by ...” text from shopping list rows
+- Remove user email/name metadata from the ingredient cell
+- Keep meal/source context only if still useful and compact
+- If meal/source remains, make it smaller and secondary
+- Do not show personal identifier in basket rows
+
+Acceptance:
+- rows no longer display “Added by colinclapson...”
+- ingredient column is cleaner and less noisy
+
+T005: Move whole-food controls into dedicated columns
+
+Files:
+- client/src/pages/shopping-list-page.tsx
+- client/src/components/whole-food-selector.tsx
+- table column definitions if separate
+
+Changes:
+- Do not stack whole-food selectors under the ingredient name anymore
+- Move selector UI into dedicated columns
+
+Required columns to support:
+- Type / Variant
+- Attribute(s) such as Organic
+- Size where relevant
+- Confidence
+
+Examples:
+- tomatoes:
+  - Type column = Plum / Cherry / Vine / Beefsteak
+  - Organic column = toggle/chip/checkbox
+- eggs:
+  - Size column = Medium / Large
+  - Organic column if supported
+- pistachios:
+  - Type/Variant column = Salted / Unsalted
+  - Secondary attribute column = Shell on / Shelled
+
+Implementation guidance:
+- use category-aware rendering based on ingredient catalogue
+- only show controls relevant to that row/item
+- packaged rows should show blank or simple placeholder in those columns, not expanded controls
+- keep controls compact, inline, and table-friendly
+
+Acceptance:
+- type/match/organic/size are not stacked inside ingredient cell
+- rows become shorter
+- table is easier to scan left to right
+
+T006: Tighten basket row density
+
+Files:
+- client/src/pages/shopping-list-page.tsx
+- related row/cell components
+- CSS/Tailwind classes as needed
+
+Changes:
+- Reduce row height significantly
+- Reduce padding inside cells
+- Keep important information visible without large stacked blocks
+- Ingredient cell should mainly contain:
+  - ingredient name
+  - optional small meal/source note if needed
+- Selector chips should be smaller and inline-friendly
+- Confidence badge should sit in its own column or compact cell
+- Avoid multi-line selector stacks wherever possible
+
+Acceptance:
+- more rows visible on screen
+- basket feels like a structured shopping table, not a card list
+- controls remain clickable but compact
+
+T007: Table structure cleanup
+
+Files:
+- client/src/pages/shopping-list-page.tsx
+
+Update the table layout so the basket reads more cleanly.
+
+Preferred column direction:
+- Ingredient
+- Type / Variant
+- Organic / Attributes
+- Size
+- Qty
+- Unit
+- Matched Product
+- Category
+- Tier
+- Meal
+- Price
+- Shop
+- Confidence
+- Actions / Change
+
+Notes:
+- exact final order can be adjusted to fit available width
+- only show columns that matter
+- avoid repeating the same information in multiple places
+- if some columns are only relevant for whole foods, leave cells blank for packaged foods rather than expanding rows
+
+Acceptance:
+- table is more structured
+- whole-food controls are column-based
+- ingredient column no longer overloaded
+
+T008: Preserve behaviour, improve presentation
+
+Files:
+- relevant basket components only
+
+Constraints:
+- do not break packaged-food matching
+- do not remove food-intent logic
+- do not remove supermarket multi-select
+- do not remove global tier control
+- this is primarily a presentation and interaction cleanup
+- keep code modular and avoid giant rewrites
+
+Deliverables
+
+When done, provide:
+1. files changed
+2. summary of UI/layout changes
+3. confirmation that supermarket totals now update live from selected supermarket chips
+4. confirmation that copy moved into export modal
+5. confirmation that row density improved and “Added by” was removed
