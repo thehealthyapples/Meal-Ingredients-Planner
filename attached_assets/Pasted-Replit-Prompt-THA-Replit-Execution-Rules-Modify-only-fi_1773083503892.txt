@@ -1,0 +1,275 @@
+Replit Prompt
+THA Replit Execution Rules
+
+Modify only files required for this task.
+
+Keep changes minimal and additive.
+
+Do not redesign architecture.
+
+Do not delete or truncate database tables.
+
+Prefer additive schema changes only if absolutely required.
+
+Do not refactor unrelated files.
+
+Reuse existing food diary patterns where possible.
+
+Run a TypeScript compile check at the end.
+
+Do not start the dev server unless necessary.
+
+Objective
+
+Add a CSV/TXT import feature for My Diary wellbeing metrics.
+
+UI change required:
+
+Add a “+ CSV” button in the Wellbeing table header on the My Diary page.
+
+When clicked:
+
+Open an Import Diary modal
+
+First screen shows instructions explaining how to use the import feature
+
+User can then upload a CSV or TXT file
+
+Parsed rows are previewed
+
+User maps file columns to THA fields
+
+Validation runs
+
+User imports valid rows
+
+Imported data should populate existing diary tables.
+
+No destructive schema changes.
+
+Supported File Types
+
+Accept:
+
+.csv
+.txt
+
+TXT delimiters supported:
+
+comma
+
+tab
+
+pipe
+
+Delimiter detection:
+
+Detect automatically from the first line.
+
+Supported THA Fields
+
+Allow mapping to:
+
+date
+weightKg
+sleepHours
+moodApples
+energyApples
+notes
+stuckToPlan
+calories
+mealSlot
+entryName
+ignore
+Validation Rules
+
+date required
+
+moodApples must be 1–5
+
+energyApples must be 1–5
+
+weightKg numeric if present
+
+sleepHours numeric if present
+
+calories numeric if present
+
+Return row-level validation errors.
+
+Import Strategies
+
+User selects:
+
+Default: Skip duplicates
+
+Options:
+
+Skip duplicates
+
+Overwrite existing
+
+Merge
+
+Safety rules:
+
+Overwrite must only affect rows matching:
+
+userId
+date
+mealSlot
+entryName
+
+Do not delete broader diary data.
+
+Merge should preserve existing non-null values and only fill missing fields.
+
+Backend Work
+File
+
+server/storage.ts
+
+Add helper methods:
+
+bulkUpsertFoodDiaryMetrics(userId, rows, strategy)
+bulkCreateFoodDiaryEntries(userId, rows, strategy)
+
+Reuse existing storage methods internally.
+
+File
+
+server/routes.ts
+
+Add authenticated endpoints near existing diary routes.
+
+POST /api/food-diary/import/preview
+
+Purpose:
+
+Validate mapped rows and return
+
+validRows
+invalidRows
+errors
+POST /api/food-diary/import/confirm
+
+Purpose:
+
+Execute import using chosen strategy and return
+
+imported
+skipped
+failed
+Frontend Work
+Create component
+client/src/components/import-diary-modal.tsx
+
+Use existing dialog/modal UI pattern (shadcn Dialog).
+
+Modal Flow
+Step 1 — Instructions
+
+Explain:
+
+supported file types
+
+supported columns
+
+process steps
+
+Include Continue button.
+
+Step 2 — Upload
+
+Allow file upload.
+
+Read file client-side.
+
+Auto-detect delimiter.
+
+Parse into headers + rows.
+
+Step 3 — Preview
+
+Show first 5 rows.
+
+Render column mapping dropdown for each column.
+
+Auto-map exact matches.
+
+Step 4 — Import Strategy
+
+Radio buttons:
+
+Skip duplicates (default)
+Overwrite existing
+Merge
+Step 5 — Validation
+
+Call:
+
+POST /api/food-diary/import/preview
+
+Display:
+
+valid rows
+
+invalid rows with errors
+
+Step 6 — Import
+
+Call:
+
+POST /api/food-diary/import/confirm
+
+Display result summary:
+
+X imported
+Y skipped
+Z failed
+
+Invalidate diary query cache afterwards.
+
+UI Integration
+File
+client/src/pages/food-diary-page.tsx
+
+Add “+ CSV” button in the Wellbeing table header.
+
+Clicking it opens the ImportDiaryModal.
+
+Ensure existing diary features remain unchanged.
+
+Acceptance Criteria
+
+"+ CSV" button visible in Wellbeing header
+
+Clicking opens instructions modal
+
+CSV/TXT parsing works
+
+Delimiter auto-detection works
+
+Column mapping works
+
+Validation errors shown
+
+Import summary returned
+
+Existing diary data remains safe
+
+TypeScript compiles successfully
+
+Deliverables
+
+Return:
+
+files modified
+
+API endpoints added
+
+import flow summary
+
+validation logic summary
+
+confirmation no destructive schema changes
