@@ -166,7 +166,7 @@ function SidebarBody({
   );
 
   return (
-    <div className="flex flex-col h-full py-3">
+    <div className="flex flex-col flex-1 min-h-0 py-3">
       {/* Main nav */}
       <nav className="flex flex-col gap-0.5 px-2 flex-1 overflow-y-auto">
         {/* Dashboard — always first */}
