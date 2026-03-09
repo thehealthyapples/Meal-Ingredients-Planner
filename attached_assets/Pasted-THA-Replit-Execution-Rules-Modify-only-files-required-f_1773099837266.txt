@@ -1,0 +1,194 @@
+THA Replit Execution Rules
+
+• Modify only files required for this task
+• Do not redesign existing architecture
+• Do not delete or truncate database tables
+• Do not generate test suites
+• Run TypeScript compile check and start dev server
+
+
+Objective
+
+Perform a **visual refinement of the Partners page**.
+
+Goals:
+• reduce hero height
+• slightly reduce headline size
+• increase partner card opacity
+• strengthen card shadow
+• improve card text legibility
+
+This is **purely a UI refinement**.  
+Do NOT change layout structure, routing, or page architecture.
+
+
+Target File
+
+client/src/pages/partners-page.tsx
+
+
+Implementation Steps
+
+
+STEP 1 — Compact the hero section
+
+Locate the hero container (around line ~392).
+
+Change:
+
+py-12 sm:py-16
+→
+py-7 sm:py-10
+
+Change:
+
+space-y-5
+→
+space-y-3
+
+
+STEP 2 — Reduce headline scale
+
+Locate the headline element (around line ~397).
+
+Change:
+
+text-3xl sm:text-4xl lg:text-5xl
+→
+text-2xl sm:text-3xl lg:text-4xl
+
+Change:
+
+leading-tight
+→
+leading-snug
+
+
+STEP 3 — Tighten description text
+
+Locate the description paragraph (around line ~400).
+
+Change:
+
+text-base sm:text-lg
+→
+text-sm sm:text-base
+
+Reduce max width to:
+
+max-w-xl
+
+
+STEP 4 — Tighten CTA spacing
+
+Locate the CTA container (around line ~403).
+
+Change:
+
+pt-2
+→
+pt-1
+
+Reduce button size:
+
+size="lg"
+→
+size="default"
+
+(or remove the lg size if default already applies).
+
+
+STEP 5 — Increase partner card opacity
+
+Locate the PartnerCard component (around line ~82).
+
+Change background:
+
+bg-card
+→
+bg-white/82 dark:bg-card/85
+
+Add baseline shadow:
+
+shadow-sm
+
+Change hover shadow:
+
+hover:shadow-md
+→
+hover:shadow-lg
+
+
+STEP 6 — Update FeaturedCard styling
+
+Locate FeaturedCard component (around line ~142).
+
+Change background:
+
+bg-card
+→
+bg-white/82 dark:bg-card/85
+
+Add baseline shadow:
+
+shadow-sm
+
+Keep:
+
+hover:shadow-lg
+
+
+STEP 7 — Improve card text legibility
+
+PartnerCard text:
+
+Title
+keep:
+text-foreground
+
+Description
+change:
+text-muted-foreground
+→
+text-foreground/70
+
+
+FeaturedCard text:
+
+Name
+keep:
+text-foreground
+
+Short description
+change to:
+text-foreground/70
+
+
+Expected Result
+
+• hero section is noticeably shorter
+• featured partner cards appear higher on the page
+• cards are ~80% opaque and readable over the orchard background
+• cards have slightly stronger elevation
+• typography feels tighter and cleaner
+• no layout or architecture changes
+
+
+Validation
+
+After completing changes:
+
+1. Run TypeScript compile check
+2. Start dev server
+3. Confirm the page loads without errors
+4. Confirm Partners page layout renders correctly on desktop and mobile
+
+
+Agent Output
+
+When finished, report:
+
+• files modified
+• lines changed
+• confirmation that TypeScript compiled successfully
+• confirmation that the dev server runs without errors

@@ -1,0 +1,144 @@
+THA Replit Execution Rules
+
+• Modify only files required for this task
+• Do not redesign existing architecture
+• Do not delete or truncate database tables
+• Do not generate test suites
+• Run TypeScript compile check and start dev server
+
+
+Task: UI Refinement – Healthy Living Partners Page
+
+The hero section currently takes up too much vertical space and the partner cards are blending into the orchard background. Adjust spacing and card opacity to improve readability and bring partner content higher on the page.
+
+This is a **visual refinement only**. Do not change the page structure or architecture.
+
+The goal is to:
+• reduce excessive hero space  
+• allow users to see partner cards earlier  
+• improve readability of partner cards over the background artwork  
+
+
+Required Changes
+
+
+1. Reduce Hero Section Height
+
+The hero area currently consumes too much vertical space.
+
+Adjust the hero container so that:
+
+• max height is approximately **420–480px**
+• reduce vertical padding (py values) by **~35–40%**
+• tighten spacing between:
+  - the “Curated Wellness Partners” badge
+  - the main headline
+  - the description text
+  - the CTA buttons
+
+Recommended spacing adjustments:
+
+• headline margin-top → reduce by **~30%**  
+• description margin-top → reduce by **~20%**  
+• CTA container margin-top → reduce by **~25%**
+
+Goal:
+Users should begin seeing **Featured Partner cards above the fold on most desktop screens.**
+
+
+2. Slightly Reduce Headline Size
+
+The headline is visually dominant.
+
+Adjust:
+
+• reduce font size by **~10–15%**
+• tighten line-height slightly
+
+Example guidance:
+
+If currently using `text-5xl` or `text-6xl`
+→ reduce to `text-4xl` or `text-5xl` equivalent.
+
+
+3. Increase Partner Card Opacity
+
+The orchard background artwork is visually strong and the partner cards currently feel semi-transparent.
+
+Improve readability by increasing card opacity.
+
+Update partner card styling:
+
+• card background opacity **~75–85% opaque**
+• example Tailwind classes:
+  - `bg-white/80`
+  - or `bg-white/85`
+
+Maintain:
+
+• rounded corners  
+• subtle blur if currently used  
+• soft shadow
+
+
+4. Strengthen Card Shadow
+
+Slightly increase elevation so cards stand above the background.
+
+Example adjustment:
+
+`shadow-md` → `shadow-lg`
+
+
+5. Improve Card Text Legibility
+
+Ensure text contrast is strong.
+
+Adjust if necessary:
+
+• card title colour slightly darker  
+• description text slightly darker  
+• maintain badge readability
+
+
+6. Preserve Background Artwork
+
+Do NOT remove or replace the orchard background.
+
+The background is part of the THA visual identity.
+
+Only ensure:
+
+• cards sit clearly above the background  
+• text remains readable  
+• background remains visible but not interfering with content
+
+
+7. Maintain Existing Page Architecture
+
+Do NOT change page structure.
+
+Keep existing sections:
+
+• hero section  
+• featured partners section  
+• partner card layout  
+• filtering/search controls
+
+Only modify:
+
+• spacing  
+• headline scale  
+• card opacity  
+• card shadow  
+
+
+Acceptance Criteria
+
+• hero section is visibly shorter  
+• featured partner cards appear higher on the page  
+• cards are clearly readable over the background  
+• cards appear approximately **75–85% opaque**  
+• page still feels calm, premium, and aligned with THA design  
+• mobile and tablet layouts remain intact  
+• no regressions elsewhere in the application
