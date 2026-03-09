@@ -1086,6 +1086,35 @@ export default function ShoppingListPage() {
   const hasPrices = allPriceMatches.length > 0;
   const hasItemOverrides = savedItems.some(i => i.selectedTier !== null);
 
+  const filteredSupermarketTotals = useMemo(() => {
+    if (!totalCostData) return [];
+    return totalCostData.supermarketTotals.filter(st =>
+      selectedRetailers.includes(st.supermarket)
+    );
+  }, [totalCostData, selectedRetailers]);
+
+  const clientBestTotal = useMemo(() => {
+    if (!hasPrices || savedItems.length === 0) return null;
+    let total = 0;
+    for (const item of savedItems) {
+      const tier: PriceTier =
+        globalBasketTier !== "item"
+          ? (globalBasketTier as PriceTier)
+          : ((item.selectedTier as PriceTier) || currentTier);
+      let best: number | null = null;
+      for (const retailer of selectedRetailers) {
+        const match = allPriceMatches.find(
+          m => m.shoppingListItemId === item.id && m.supermarket === retailer && m.tier === tier
+        );
+        if (match?.price !== null && match?.price !== undefined) {
+          if (best === null || match.price < best) best = match.price;
+        }
+      }
+      if (best !== null) total += best;
+    }
+    return total;
+  }, [hasPrices, savedItems, allPriceMatches, selectedRetailers, globalBasketTier, currentTier]);
+
   useEffect(() => {
     if (!hasPrices || savedItems.length === 0 || Object.keys(thaPicks).length > 0) return;
     const rawKeys = savedItems
@@ -1440,9 +1469,6 @@ export default function ShoppingListPage() {
                     </Button>
                   </>
                 )}
-                <Button variant="outline" size="icon" onClick={copyToClipboard} disabled={savedItems.length === 0} data-testid="button-copy">
-                  <Copy className="h-4 w-4" />
-                </Button>
                 {savedItems.length > 0 && (
                   <Button
                     variant="outline"
@@ -1549,83 +1575,48 @@ export default function ShoppingListPage() {
           )}
 
           {hasPrices && totalCostData && savedItems.length > 0 && (
-            <div className="border-b border-border p-4 bg-muted/20">
-              <div className="flex flex-col gap-3">
+            <div className="border-b border-border px-4 py-2.5 bg-muted/20">
+              <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <PoundSterling className="h-5 w-5 text-primary" />
-                  <h3 className="font-semibold text-lg" data-testid="text-total-cost-title">Shopping Summary</h3>
-                  <Badge variant="secondary" className="text-xs" data-testid="text-total-items">{savedItems.length} items</Badge>
-                  <Badge variant="outline" className="text-xs" data-testid="text-current-tier">
-                    {TIER_LABELS[currentTier]?.label || 'Standard'} default
-                  </Badge>
+                  <PoundSterling className="h-4 w-4 text-primary" />
+                  <span className="font-semibold text-sm" data-testid="text-total-cost-title">Shopping Summary</span>
+                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5" data-testid="text-total-items">{savedItems.length} items</Badge>
                   {hasItemOverrides && (
-                    <Badge variant="outline" className="text-xs border-amber-400 text-amber-600 dark:text-amber-400">
-                      Custom tiers active
+                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-amber-400 text-amber-600 dark:text-amber-400">
+                      Custom tiers
                     </Badge>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {totalCostData.supermarketTotals.map((st, idx) => {
+                <div className="flex flex-wrap gap-1.5" data-testid="supermarket-totals-grid">
+                  {filteredSupermarketTotals.map((st, idx) => {
                     const isCheapest = idx === 0;
                     return (
                       <div
                         key={st.supermarket}
-                        className={`rounded-md p-3 border ${isCheapest ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20' : 'border-border bg-card'}`}
+                        className={`flex items-center gap-2 rounded border px-2.5 py-1 ${isCheapest ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20' : 'border-border bg-card'}`}
                         data-testid={`card-total-${st.supermarket.replace(/'/g, '')}`}
                       >
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          {isCheapest && <TrendingDown className="h-3 w-3 text-green-600 dark:text-green-400" />}
-                          {st.supermarket}
-                        </p>
-                        <p className={`text-xl font-bold tabular-nums ${isCheapest ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}>
+                        {isCheapest && <TrendingDown className="h-3 w-3 text-green-600 dark:text-green-400 flex-shrink-0" />}
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">{st.supermarket}</span>
+                        <span className={`text-sm font-bold tabular-nums ${isCheapest ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}>
                           {"\u00A3"}{st.total.toFixed(2)}
-                        </p>
-                        {isCheapest && (
-                          <p className="text-[10px] text-green-600 dark:text-green-400 font-medium mt-0.5">CHEAPEST</p>
-                        )}
+                        </span>
+                        {isCheapest && <span className="text-[9px] text-green-600 dark:text-green-400 font-semibold">BEST</span>}
                       </div>
                     );
                   })}
+                  {filteredSupermarketTotals.length === 0 && (
+                    <span className="text-xs text-muted-foreground">Select retailers above to see totals</span>
+                  )}
                 </div>
 
-                {totalCostData.tierTotals && (
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-border/50">
-                    {Object.entries(totalCostData.tierTotals).map(([tier, total]) => {
-                      const tierInfo = TIER_LABELS[tier];
-                      if (!tierInfo) return null;
-                      const TierIcon = tierInfo.icon;
-                      const isActive = tier === currentTier;
-                      return (
-                        <div
-                          key={tier}
-                          className={`rounded-md p-2 text-center cursor-pointer border transition-colors ${isActive ? 'border-primary bg-primary/5' : 'border-border bg-card'}`}
-                          onClick={() => changeTier.mutate(tier as PriceTier)}
-                          data-testid={`tier-total-${tier}`}
-                        >
-                          <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
-                            <TierIcon className="h-3 w-3" />
-                            {tierInfo.label}
-                          </p>
-                          <p className={`text-sm font-bold tabular-nums ${isActive ? 'text-primary' : 'text-foreground'}`}>
-                            {"\u00A3"}{(total as number).toFixed(2)}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center pt-2 border-t border-border/50">
-                  <span className="text-sm text-muted-foreground">
-                    {globalStore !== 'auto'
-                      ? `${globalStore} basket total:`
-                      : hasItemOverrides
-                        ? 'Custom mix total (cheapest per item):'
-                        : 'Best possible total (cheapest per item):'}
+                <div className="flex justify-between items-center pt-1 border-t border-border/40">
+                  <span className="text-xs text-muted-foreground">
+                    Best from selected shops:
                   </span>
-                  <span className="text-lg font-bold text-green-600 dark:text-green-400 tabular-nums" data-testid="text-cheapest-total">
-                    {"\u00A3"}{(hasItemOverrides || globalStore !== 'auto' ? totalCostData.customTotal : totalCostData.totalCheapest).toFixed(2)}
+                  <span className="text-sm font-bold text-green-600 dark:text-green-400 tabular-nums" data-testid="text-cheapest-total">
+                    {clientBestTotal !== null ? `\u00A3${clientBestTotal.toFixed(2)}` : '—'}
                   </span>
                 </div>
               </div>
@@ -1650,10 +1641,12 @@ export default function ShoppingListPage() {
                 <table className="w-full text-xs calm-table" data-testid="table-analyse-basket">
                   <thead>
                     <tr className="border-b border-border bg-muted/20">
-                      <th className="px-2 py-2 w-8">
+                      <th className="px-2 py-1.5 w-8">
                         <span className="sr-only">Purchased</span>
                       </th>
                       <SortableHeader column="ingredient" label="Ingredient" className="text-left" />
+                      <th className="px-2 py-1.5 text-left font-medium text-muted-foreground text-xs whitespace-nowrap">Variant</th>
+                      <th className="px-2 py-1.5 text-left font-medium text-muted-foreground text-xs whitespace-nowrap">Attributes</th>
                       <SortableHeader column="qty" label="Qty" className="text-right" />
                       <SortableHeader column="unit" label="Unit" className="text-left" />
                       {hasPrices && (
@@ -1671,7 +1664,8 @@ export default function ShoppingListPage() {
                           <SortableHeader column="smp" label="SMP" className="text-center" />
                         </>
                       )}
-                      <th className="px-2 py-2 w-12"></th>
+                      <th className="px-2 py-1.5 text-left font-medium text-muted-foreground text-xs whitespace-nowrap">Conf.</th>
+                      <th className="px-2 py-1.5 w-12"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1688,6 +1682,28 @@ export default function ShoppingListPage() {
                         const itemTier = getItemTier(item);
                         const tierInfo = TIER_LABELS[itemTier] || TIER_LABELS.standard;
                         const isOverridden = item.selectedTier !== null;
+
+                        const wfDef = getIngredientDef(item.normalizedName ?? item.productName);
+                        const isWF = isWholeFood(item) && !!wfDef;
+                        const rowVariantSelections = isWF ? safeParseJsonObject(item.variantSelections) : {};
+                        const rowAttrPreferences = isWF ? safeParseJsonObject(item.attributePreferences) : {};
+                        let wfConfLabel: typeof CONFIDENCE_LABELS[keyof typeof CONFIDENCE_LABELS] | null = null;
+                        if (isWF && wfDef) {
+                          const effectiveTier = getEffectiveTier(item);
+                          const itemCandidates = allPriceMatches.filter(m => m.shoppingListItemId === item.id);
+                          const intent: WholeFoodIntent = { ingredientName: item.normalizedName ?? item.productName, variantSelections: rowVariantSelections, attributePreferences: rowAttrPreferences, tier: effectiveTier, selectedRetailers };
+                          const conf = calcConfidence(intent, itemCandidates, selectedRetailers);
+                          wfConfLabel = CONFIDENCE_LABELS[conf.level];
+                        }
+                        const handleVariantChange = (key: string, value: string) => {
+                          const next = { ...rowVariantSelections, [key]: value };
+                          if (!value) delete next[key];
+                          updateWholeFoodIntent.mutate({ id: item.id, fields: { variantSelections: JSON.stringify(next) } });
+                        };
+                        const handleAttrChange = (key: string, value: boolean) => {
+                          const next = { ...rowAttrPreferences, [key]: value };
+                          updateWholeFoodIntent.mutate({ id: item.id, fields: { attributePreferences: JSON.stringify(next) } });
+                        };
 
                         return (
                           <motion.tr
@@ -1706,28 +1722,28 @@ export default function ShoppingListPage() {
                                 data-testid={`checkbox-item-${item.id}`}
                               />
                             </td>
-                            <td className="px-2 py-1.5">
+                            <td className="px-2 py-1">
                               {isEditing && editState?.field === 'productName' ? (
                                 <div className="flex items-center gap-1">
                                   <Input
                                     value={editState.value}
                                     onChange={(e) => setEditState({ ...editState, value: e.target.value })}
                                     onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
-                                    className="h-7 text-xs"
+                                    className="h-6 text-xs"
                                     autoFocus
                                     data-testid={`input-edit-name-${item.id}`}
                                   />
-                                  <Button size="icon" variant="ghost" onClick={saveEdit} data-testid={`button-save-edit-${item.id}`}>
+                                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit} data-testid={`button-save-edit-${item.id}`}>
                                     <Check className="h-3 w-3" />
                                   </Button>
-                                  <Button size="icon" variant="ghost" onClick={cancelEdit}>
+                                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}>
                                     <X className="h-3 w-3" />
                                   </Button>
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-2 flex-wrap">
+                                <div className="flex items-center gap-1.5 flex-wrap">
                                   <span
-                                    className="font-bold text-foreground cursor-pointer"
+                                    className="font-medium text-foreground cursor-pointer"
                                     onClick={() => startEdit(item.id, 'productName', item.productName)}
                                     data-testid={`text-item-name-${item.id}`}
                                   >
@@ -1743,7 +1759,7 @@ export default function ShoppingListPage() {
                                       <TooltipTrigger asChild>
                                         <Badge variant="outline" className="text-[10px] text-blue-500 dark:text-blue-400 border-blue-300 dark:border-blue-600 gap-0.5" data-testid={`badge-frozen-source-${item.id}`}>
                                           <Snowflake className="h-2.5 w-2.5" />
-                                          In Freezer
+                                          Frozen
                                         </Badge>
                                       </TooltipTrigger>
                                       <TooltipContent>
@@ -1766,64 +1782,60 @@ export default function ShoppingListPage() {
                                   )}
                                 </div>
                               )}
-                              {(() => {
-                                const attr = getItemAttributionText(item as ShoppingListItemExtended);
-                                return attr ? (
-                                  <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight" data-testid={`text-attribution-${item.id}`}>
-                                    {attr}
-                                  </p>
-                                ) : null;
-                              })()}
-                              {(() => {
-                                if (!isWholeFood(item)) return null;
-                                const catalogueDef = getIngredientDef(item.normalizedName ?? item.productName);
-                                if (!catalogueDef) return null;
-                                const variantSelections = safeParseJsonObject(item.variantSelections);
-                                const attributePreferences = safeParseJsonObject(item.attributePreferences);
-                                const effectiveTier = getEffectiveTier(item);
-                                const itemCandidates = allPriceMatches.filter(m => m.shoppingListItemId === item.id);
-                                const intent: WholeFoodIntent = {
-                                  ingredientName: item.normalizedName ?? item.productName,
-                                  variantSelections,
-                                  attributePreferences,
-                                  tier: effectiveTier,
-                                  selectedRetailers,
-                                };
-                                const confidence = calcConfidence(intent, itemCandidates, selectedRetailers);
-                                const confLabel = CONFIDENCE_LABELS[confidence.level];
-
-                                const handleVariantChange = (key: string, value: string) => {
-                                  const next = { ...variantSelections, [key]: value };
-                                  if (!value) delete next[key];
-                                  updateWholeFoodIntent.mutate({ id: item.id, fields: { variantSelections: JSON.stringify(next) } });
-                                };
-                                const handleAttrChange = (key: string, value: boolean) => {
-                                  const next = { ...attributePreferences, [key]: value };
-                                  updateWholeFoodIntent.mutate({ id: item.id, fields: { attributePreferences: JSON.stringify(next) } });
-                                };
-
-                                return (
-                                  <div className="mt-1.5">
-                                    <WholeFoodSelector
-                                      item={item}
-                                      catalogueDef={catalogueDef}
-                                      variantSelections={variantSelections}
-                                      attributePreferences={attributePreferences}
-                                      onVariantChange={handleVariantChange}
-                                      onAttributeChange={handleAttrChange}
-                                    />
-                                    <div
-                                      className={`inline-flex items-center gap-1 mt-1.5 text-[10px] font-medium px-1.5 py-0.5 rounded border ${confLabel.colorClass} ${confLabel.bgClass}`}
-                                      data-testid={`confidence-badge-${item.id}`}
-                                    >
-                                      {confLabel.label}
-                                      {confidence.reason && (
-                                        <span className="font-normal opacity-70 ml-0.5">· {confidence.reason}</span>
-                                      )}
+                            </td>
+                            {/* Variant column */}
+                            <td className="px-2 py-1 align-top">
+                              {isWF && wfDef ? (
+                                <div className="flex flex-col gap-0.5">
+                                  {wfDef.selectorSchema.map((selector) => (
+                                    <div key={selector.key} className="flex flex-wrap gap-0.5">
+                                      {selector.options.map((option) => {
+                                        const isSel = rowVariantSelections[selector.key] === option;
+                                        return (
+                                          <button
+                                            key={option}
+                                            type="button"
+                                            onClick={() => handleVariantChange(selector.key, isSel ? "" : option)}
+                                            className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isSel ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`}
+                                            data-testid={`variant-chip-${item.id}-${selector.key}-${option.replace(/\s+/g, "-").toLowerCase()}`}
+                                          >
+                                            {option}
+                                          </button>
+                                        );
+                                      })}
                                     </div>
-                                  </div>
-                                );
-                              })()}
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                            {/* Attributes column */}
+                            <td className="px-2 py-1 align-top">
+                              {isWF && wfDef && wfDef.relevantAttributes.length > 0 ? (
+                                <div className="flex flex-col gap-0.5">
+                                  {wfDef.relevantAttributes.map((attr) => {
+                                    const aid = `attr-${item.id}-${attr}`;
+                                    const alabel = attr.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                                    return (
+                                      <div key={attr} className="flex items-center gap-1">
+                                        <Checkbox
+                                          id={aid}
+                                          checked={!!rowAttrPreferences[attr]}
+                                          onCheckedChange={(checked) => handleAttrChange(attr, !!checked)}
+                                          className="h-3 w-3"
+                                          data-testid={`attr-checkbox-${item.id}-${attr}`}
+                                        />
+                                        <Label htmlFor={aid} className="text-[10px] text-muted-foreground cursor-pointer select-none">
+                                          {alabel}
+                                        </Label>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
                             </td>
                             <td className="px-2 py-1.5 text-right tabular-nums text-foreground">
                               {isEditing && editState?.field === 'quantityValue' ? (
@@ -2161,7 +2173,7 @@ export default function ShoppingListPage() {
                                       );
                                     })()}
                                   </td>
-                                  <td className="px-2 py-1.5 text-center" data-testid={`text-smp-${item.id}`}>
+                                  <td className="px-2 py-1 text-center" data-testid={`text-smp-${item.id}`}>
                                     {(() => {
                                       const smp = getItemSmpRating(item.id, item);
                                       if (smp === 0) return <span className="text-muted-foreground text-xs">-</span>;
@@ -2171,7 +2183,17 @@ export default function ShoppingListPage() {
                                 </>
                               );
                             })()}
-                            <td className="px-2 py-1.5">
+                            {/* Confidence column */}
+                            <td className="px-2 py-1 align-top" data-testid={`confidence-badge-${item.id}`}>
+                              {isWF && wfConfLabel ? (
+                                <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border ${wfConfLabel.colorClass} ${wfConfLabel.bgClass}`}>
+                                  {wfConfLabel.label}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                            <td className="px-2 py-1">
                               <div className="flex items-center gap-0">
                                 <Button
                                   variant="ghost"
@@ -2242,8 +2264,8 @@ export default function ShoppingListPage() {
                             className="border-b border-border/30 bg-muted/5"
                             data-testid={`row-staple-${item.id}`}
                           >
-                            <td className="px-2 py-1.5" />
-                            <td className="px-2 py-1.5">
+                            <td className="px-2 py-1" />
+                            <td className="px-2 py-1">
                               <div className="flex items-center gap-1.5">
                                 <CatIcon className="h-3 w-3 text-muted-foreground" />
                                 <span className="text-xs text-muted-foreground line-through">{item.productName}</span>
@@ -2256,20 +2278,23 @@ export default function ShoppingListPage() {
                                 </button>
                               </div>
                             </td>
-                            <td className="px-2 py-1.5 text-right text-xs text-muted-foreground">{qty}</td>
-                            <td className="px-2 py-1.5 text-xs text-muted-foreground">{unitLabel}</td>
-                            {hasPrices && <td className="px-2 py-1.5" />}
-                            <td className="px-2 py-1.5">
+                            <td className="px-2 py-1" />
+                            <td className="px-2 py-1" />
+                            <td className="px-2 py-1 text-right text-xs text-muted-foreground">{qty}</td>
+                            <td className="px-2 py-1 text-xs text-muted-foreground">{unitLabel}</td>
+                            {hasPrices && <td className="px-2 py-1" />}
+                            <td className="px-2 py-1">
                               <Badge variant="outline" className={`text-[10px] ${catColor}`}>{cat}</Badge>
                             </td>
-                            {hasPrices && <td className="px-2 py-1.5" />}
-                            <td className="px-2 py-1.5 text-center">
+                            {hasPrices && <td className="px-2 py-1" />}
+                            <td className="px-2 py-1 text-center">
                               {sources.length > 0 && (
                                 <span className="text-[10px] text-muted-foreground">{sources.length}M</span>
                               )}
                             </td>
                             {hasPrices && <><td /><td /><td /></>}
-                            <td className="px-2 py-1.5" />
+                            <td className="px-2 py-1" />
+                            <td className="px-2 py-1" />
                           </motion.tr>
                         );
                       })}
@@ -2572,7 +2597,11 @@ export default function ShoppingListPage() {
               Export your {savedItems.length} items as a formatted text file, or open product search pages directly.
             </p>
           </div>
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 flex-wrap">
+            <Button variant="outline" onClick={copyToClipboard} className="gap-1" data-testid="button-copy-clipboard">
+              <Copy className="h-4 w-4" />
+              Copy to Clipboard
+            </Button>
             <Button variant="outline" onClick={() => handleExport('list')} className="gap-1" data-testid="button-export-text">
               <Download className="h-4 w-4" />
               Download List
