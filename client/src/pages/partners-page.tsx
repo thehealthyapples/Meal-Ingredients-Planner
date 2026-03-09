@@ -79,7 +79,7 @@ function PartnerBadgeList({ badges }: { badges: Partner["badges"] }) {
 function PartnerCard({ partner }: { partner: Partner }) {
   return (
     <div
-      className="group bg-card border border-border rounded-2xl p-5 flex flex-col gap-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 hover:border-primary/20"
+      className="group bg-white/82 dark:bg-card/85 shadow-sm border border-border rounded-2xl p-5 flex flex-col gap-3 transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5 hover:border-primary/20"
       data-testid={`partner-card-${partner.id}`}
     >
       <div className="flex items-start gap-3">
@@ -107,7 +107,7 @@ function PartnerCard({ partner }: { partner: Partner }) {
 
       <PartnerBadgeList badges={partner.badges} />
 
-      <p className="text-sm text-muted-foreground leading-relaxed">
+      <p className="text-sm text-foreground/70 leading-relaxed">
         {partner.shortDescription}
       </p>
 
@@ -139,7 +139,7 @@ function PartnerCard({ partner }: { partner: Partner }) {
 function FeaturedCard({ partner }: { partner: Partner }) {
   return (
     <div
-      className="group relative bg-card border border-border rounded-2xl p-6 flex flex-col gap-3 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-primary/20 overflow-hidden"
+      className="group relative bg-white/82 dark:bg-card/85 shadow-sm border border-border rounded-2xl p-6 flex flex-col gap-3 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 hover:border-primary/20 overflow-hidden"
       data-testid={`featured-card-${partner.id}`}
     >
       <div
@@ -161,7 +161,7 @@ function FeaturedCard({ partner }: { partner: Partner }) {
 
       <PartnerBadgeList badges={partner.badges} />
 
-      <p className="text-sm text-muted-foreground leading-relaxed">
+      <p className="text-sm text-foreground/70 leading-relaxed">
         {partner.shortDescription}
       </p>
 
@@ -389,20 +389,19 @@ export default function PartnersPage() {
     <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-14">
 
       {/* Hero */}
-      <section className="rounded-3xl bg-gradient-to-br from-primary/8 via-background to-primary/4 border border-border px-6 sm:px-12 py-12 sm:py-16 text-center space-y-5" data-testid="partners-hero">
+      <section className="rounded-3xl bg-gradient-to-br from-primary/8 via-background to-primary/4 border border-border px-6 sm:px-12 py-7 sm:py-10 text-center space-y-3" data-testid="partners-hero">
         <div className="inline-flex items-center gap-2 bg-primary/10 text-primary text-xs font-medium px-3 py-1 rounded-full border border-primary/20">
           <Leaf className="h-3.5 w-3.5" />
           Curated Wellness Partners
         </div>
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground leading-tight" data-testid="partners-hero-heading">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground leading-snug" data-testid="partners-hero-heading">
           Support your health<br className="hidden sm:block" /> beyond the basket
         </h1>
-        <p className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+        <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
           Discover trusted wellness partners and resources that complement your journey with THA — from yoga teachers and nutritionists to mindfulness coaches and healthy cooking guides.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-1">
           <Button
-            size="lg"
             className="gap-2"
             onClick={() => {
               document.getElementById("partners-grid")?.scrollIntoView({ behavior: "smooth" });
@@ -414,7 +413,6 @@ export default function PartnersPage() {
           </Button>
           <Button
             variant="outline"
-            size="lg"
             className="gap-2"
             onClick={() => setApplyModalOpen(true)}
             data-testid="button-become-partner"
