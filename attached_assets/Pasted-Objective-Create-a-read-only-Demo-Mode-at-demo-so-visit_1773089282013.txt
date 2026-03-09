@@ -1,0 +1,253 @@
+Objective
+Create a read-only Demo Mode at /demo so visitors can explore THA without creating an account.
+
+Demo mode must:
+- use client-side static fixture data only
+- require no backend or database changes
+- be visually consistent with the main app shell
+- allow browsing planner, basket, and meals pages
+- block all write actions with a read-only modal
+- include a sticky demo banner with Reset Demo and Create Account actions
+
+Architecture
+- Build demo as standalone lightweight pages under /demo/*.
+- Do NOT wrap or reuse the existing complex planner/basket/meals pages unless a small presentational component can be safely reused.
+- Demo data must live in client fixtures, not the DB.
+- Add a DemoContext that exposes:
+  - isDemoMode: boolean
+  - resetKey: number
+  - reset: () => void
+- Add a useDemoMode() hook for nested components.
+- Add a DemoRoute wrapper similar to ProtectedRoute that:
+  - renders the normal shell
+  - does not require authentication
+  - inserts a sticky demo banner above the TopBar
+- Reset Demo should increment resetKey so demo pages remount fresh.
+
+Tasks
+
+T001: Demo Fixtures + Context
+Files
+- client/src/lib/demo-data.ts
+- client/src/contexts/demo-context.tsx
+
+Requirements
+Create typed fixture exports in demo-data.ts:
+- DEMO_HOUSEHOLD
+  - Sarah (parent)
+  - Mark (parent)
+  - Lily (child)
+  - Jack (child)
+
+- DEMO_MEALS
+  7 meals total:
+  - Chicken stir fry
+  - Spaghetti bolognese
+  - Salmon & vegetables
+  - Veggie curry
+  - Homemade pizza
+  - Burgers
+  - Roast chicken
+
+Each meal should include:
+- id
+- name
+- category
+- ingredients: 5 to 8 items
+
+- DEMO_PLANNER
+  A 7-day Mon-Sun plan using breakfast/lunch/dinner slots.
+  Use the demo meals across the week.
+  Empty slots are allowed.
+
+- DEMO_BASKET
+  A deduplicated ingredient list derived from the planner meals.
+  Around 20 items.
+  Each item should include:
+  - id
+  - name
+  - quantity
+  - category (produce, meat, dairy, pantry)
+
+Create DemoContext in demo-context.tsx:
+- isDemoMode always true when mounted in demo routes
+- resetKey state
+- reset() increments resetKey
+- export DemoProvider
+- export useDemoMode()
+
+Acceptance
+- Types compile cleanly
+- Fixtures are imported without runtime errors
+- useDemoMode() returns isDemoMode, resetKey, and reset()
+
+T002: Demo Layout + Read-Only Guard
+Files
+- client/src/components/demo-banner.tsx
+- client/src/components/demo-readonly-modal.tsx
+- client/src/components/demo-route.tsx
+
+Requirements
+
+1. DemoBanner
+Create a sticky banner rendered above TopBar.
+Style:
+- bg-amber-50
+- border-b border-amber-200
+- text-amber-900
+
+Text:
+"You are viewing the THA demo. Create an account to start your own planner."
+
+Actions:
+- Create Account -> link to /auth
+- Reset Demo -> calls reset()
+
+Add:
+- data-testid="demo-banner"
+
+2. DemoReadOnlyModal
+Create a shadcn Dialog component.
+
+Title:
+"Demo Mode — Read Only"
+
+Body:
+"You're exploring THA in demo mode. Create a free account to save meals, build your planner, and track your progress."
+
+Buttons:
+- Create Account -> /auth
+- Continue Browsing -> close modal
+
+Also export useDemoWriteGuard() hook:
+- returns { guard, modal }
+- guard() opens modal if isDemoMode is true
+
+3. DemoRoute
+Create a wrapper component that:
+- wraps page content in DemoProvider
+- renders OrchardBackdrop
+- renders DemoBanner above TopBar
+- renders TopBar, DesktopSidebar, MobileNav, and main content area
+- does not perform auth checks
+- remounts page content when resetKey changes
+
+Acceptance
+- Demo banner is visible above TopBar
+- Modal opens/closes correctly
+- DemoRoute renders full shell without auth
+- Reset Demo causes demo content to remount
+
+T003: Demo Pages
+Files
+- client/src/pages/demo-overview-page.tsx
+- client/src/pages/demo-planner-page.tsx
+- client/src/pages/demo-basket-page.tsx
+- client/src/pages/demo-meals-page.tsx
+
+Requirements
+
+1. DemoOverviewPage
+- Hero title: "Welcome to The Healthy Apples"
+- Short explainer about exploring the platform in demo mode
+- Household card grid showing 4 members with role badges
+- "This Week's Plan" summary showing the 7 meals as chips/badges
+- 3 navigation cards linking to:
+  - /demo/planner
+  - /demo/basket
+  - /demo/meals
+- Bottom note:
+  "Product analysis and meal analysis require a free account."
+  Include link to /auth
+
+2. DemoPlannerPage
+- Title: "Demo Planner — Week 1"
+- Lock icon + Read-only badge
+- Read-only planner grid:
+  - columns: Mon-Sun
+  - rows: Breakfast/Lunch/Dinner
+- Use DEMO_PLANNER fixture data
+- Empty cells display "–"
+- Include at least one visible write-style action such as:
+  - Add meal
+  - Edit
+  These must call guard()
+- data-testid="demo-planner-grid"
+
+3. DemoBasketPage
+- Title: "Demo Shopping Basket"
+- Badge showing total item count
+- Group DEMO_BASKET by category:
+  - produce
+  - meat
+  - dairy
+  - pantry
+- Each item shows:
+  - name
+  - quantity
+  - category chip
+- Buttons:
+  - Generate Shopping List
+  - Export
+  Both call guard()
+- data-testid="demo-basket-list"
+
+4. DemoMealsPage
+- Title: "Demo Meals"
+- Badge showing 7 items
+- Card grid of DEMO_MEALS
+- Each card shows:
+  - meal name
+  - ingredient count
+  - category badge
+- Buttons:
+  - Add to planner
+  - Edit
+  Both call guard()
+- data-testid="demo-meals-grid"
+
+Acceptance
+- All pages render using static fixtures only
+- Navigation between demo pages works
+- Any write-style action opens the read-only modal
+
+T004: Route Registration + Auth Link
+Files
+- client/src/App.tsx
+- client/src/pages/auth-page.tsx
+
+Requirements
+
+1. Register routes in App.tsx before the NotFound route:
+- /demo
+- /demo/planner
+- /demo/basket
+- /demo/meals
+
+Use:
+- <DemoRoute component={DemoOverviewPage} />
+- <DemoRoute component={DemoPlannerPage} />
+- <DemoRoute component={DemoBasketPage} />
+- <DemoRoute component={DemoMealsPage} />
+
+2. Update auth-page.tsx
+Add a subtle text link near the sign-in form:
+"Explore the demo →"
+Link to /demo
+
+Acceptance
+- /demo loads without auth
+- demo subroutes work
+- banner is always visible in demo
+- Create Account links to /auth
+- Reset Demo refreshes demo state
+- write actions open the read-only modal
+
+Important Constraints
+- No backend changes
+- No database changes
+- No API changes required
+- No write persistence
+- Keep implementation lightweight and isolated from the main authenticated flows
+- Reuse shell/layout components where safe, but keep demo pages intentionally simple
+- Ensure responsive behaviour for desktop and mobile nav
