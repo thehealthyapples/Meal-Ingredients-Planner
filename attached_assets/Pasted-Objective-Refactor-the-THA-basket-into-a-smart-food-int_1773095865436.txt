@@ -1,0 +1,360 @@
+Objective
+
+Refactor the THA basket into a smart food-intent system. Treat whole foods and packaged foods differently. Add multi-supermarket selection, a global basket tier, a client-side ingredient catalogue, whole-food variant selectors, a score-based matcher + fallback chain, and a per-row Food Confidence Indicator. Keep existing packaged-food flows intact. Implementation is additive: new lib/modules + targeted changes to schema, routes, and shopping-list-page.tsx.
+
+Core product framing
+
+THA optimises food choices and basket intent internally.
+Supermarkets fulfil the closest available products based on availability and substitutions.
+
+Do not regress packaged-food behaviour.
+Do not do a giant rewrite.
+Keep changes modular and config-driven where practical.
+
+Architecture notes
+
+- shopping-list-page.tsx already has:
+  - PriceTier
+  - TIER_LABELS
+  - SUPERMARKET_NAMES
+  - per-item selectedTier
+  - exportSupermarket (single)
+  - globalStore
+- Add basket-level state:
+  - selectedRetailers: string[] (multi-select, persisted in localStorage)
+  - globalBasketTier: PriceTier | "item" (persisted in localStorage)
+- Use stable retailer ids in state, not display labels
+- Add nullable schema columns to shoppingList:
+  - itemType
+  - variantSelections
+  - attributePreferences
+  - confidenceLevel
+  - confidenceReason
+- Confidence is derived state and should be recomputed client-side when selectors, selected retailers, or effective tier change
+- All new logic should live in new client lib files where possible
+- Existing PATCH route at api.shoppingList.update.path must accept the new fields
+- Shopping-list generation routes should stamp itemType using a simple heuristic
+- Packaged-food flows must continue working as they do today
+
+Tasks
+
+T001: Ingredient Catalogue + Classifier
+
+Files:
+- client/src/lib/ingredient-catalogue.ts
+- client/src/lib/basket-item-classifier.ts
+
+Implement ingredient-catalogue.ts:
+- Define:
+  - SelectorDef
+  - IngredientDef
+- IngredientDef fields:
+  - id
+  - displayName
+  - aliases?: string[]
+  - category
+  - itemType
+  - selectorSchema: { key, label, options }[]
+  - relevantAttributes: string[]
+  - fallbackRuleHints: string[]
+- Add initial INGREDIENT_CATALOGUE entries:
+
+1) apples
+- itemType = whole_food
+- selectors:
+  - variety: Braeburn, Pink Lady, Golden Delicious, Granny Smith
+- relevantAttributes: organic
+- aliases should allow apple/apples resolution
+
+2) tomatoes
+- itemType = whole_food
+- selectors:
+  - type: Plum, Cherry, Vine, Beefsteak
+- relevantAttributes: organic
+
+3) pistachios
+- itemType = whole_food
+- selectors:
+  - saltState: Salted, Unsalted
+  - shellState: Shell on, Shelled
+- relevantAttributes: unsalted, shell_on
+
+4) eggs
+- itemType = whole_food
+- selectors:
+  - size: Medium, Large
+- relevantAttributes: organic, free_range
+
+Export:
+- INGREDIENT_CATALOGUE
+- getIngredientDef(normalizedName: string): IngredientDef | undefined
+
+Lookup strategy:
+1. exact normalized id/displayName
+2. alias match
+3. lightweight fuzzy fallback only if needed
+
+Implement basket-item-classifier.ts:
+- Export classifyItem(item): "whole_food" | "packaged"
+- Export isWholeFood(item): boolean
+- Logic:
+  1. trust item.itemType if present
+  2. else check ingredient catalogue
+  3. else fallback heuristic:
+     - produce / fruit / eggs => whole_food
+     - otherwise packaged
+
+Acceptance:
+- types compile
+- getIngredientDef("apple") resolves apples
+- classifyItem works for explicit and inferred types
+
+T002: Schema Additions + Backend
+
+Files:
+- shared/schema.ts
+- server/routes.ts
+
+Add nullable columns to shoppingList pgTable:
+- itemType: text("item_type")
+- variantSelections: text("variant_selections")
+- attributePreferences: text("attribute_preferences")
+- confidenceLevel: text("confidence_level")
+- confidenceReason: text("confidence_reason")
+
+Expected values:
+- itemType: "whole_food" | "packaged"
+- variantSelections: JSON string, e.g. {"variety":"Pink Lady"}
+- attributePreferences: JSON string, e.g. {"organic":true}
+- confidenceLevel: "exact" | "close" | "substitution"
+- confidenceReason: short text string
+
+Update PATCH route at api.shoppingList.update.path:
+- accept and persist all 5 new fields
+
+Update shopping-list generation routes:
+- POST /api/shopping-list/generate-from-plan
+- POST /api/shopping-list/generate-from-meals
+
+After item creation, stamp itemType using a simple heuristic:
+- produce / fruit / eggs => whole_food
+- otherwise packaged
+
+Do not try to infer selector values at generation time.
+
+Run:
+- npm run db:push
+
+Acceptance:
+- db push succeeds
+- PATCH accepts new fields
+- generation routes stamp itemType
+
+T003: Whole-Food Logic Modules
+
+Files:
+- client/src/lib/whole-food-matcher.ts
+- client/src/lib/whole-food-fallback.ts
+- client/src/lib/food-confidence.ts
+
+Implement whole-food-matcher.ts:
+- Define WholeFoodIntent:
+  - ingredientName
+  - variantSelections
+  - attributePreferences
+  - tier
+  - selectedRetailers
+- Export:
+  - scoreCandidate(candidate, intent, tier, selectedRetailers): number
+  - resolveBestMatch(candidates, intent, tier, selectedRetailers): ProductMatch | null
+- Logic:
+  - hard filter out candidates not in selectedRetailers
+  - score variant match positively
+  - score requested attribute match positively
+  - score tier alignment positively, especially organic tier
+  - penalise price-tier mismatch
+- Keep scoring weights as constants at the top of the file for easy tuning
+
+Implement whole-food-fallback.ts:
+- Export buildFallbackChain(intent: WholeFoodIntent): string[]
+- Example for organic Pink Lady apples:
+  - "organic pink lady apples"
+  - "organic apples"
+  - "pink lady apples"
+  - "apples"
+- Logic:
+  - start with full intent
+  - relax attribute
+  - relax variant
+  - fall back to bare ingredient
+
+Implement food-confidence.ts:
+- Define ConfidenceLevel = "exact" | "close" | "substitution"
+- Export:
+  - calcConfidence(intent, candidates, selectedRetailers): { level, reason }
+  - CONFIDENCE_LABELS
+- User-facing labels:
+  - exact => "Exact match likely"
+  - close => "Close match likely"
+  - substitution => "Substitution likely"
+- Rules:
+  - exact: 2+ viable candidates and top match satisfies key variant + requested attribute
+  - close: at least 1 viable candidate or broader retailer pool gives a near match
+  - substitution: only weak/fallback candidate exists
+
+Acceptance:
+- modules compile
+- better matches score higher
+- confidence results are sensible
+
+T004: Basket-Level State + Supermarket Multi-Select + Global Tier UI
+
+File:
+- client/src/pages/shopping-list-page.tsx
+
+Add basket-level state:
+- selectedRetailers: string[]
+  - load from localStorage("tha-basket-retailers")
+  - default to stable ids for Tesco, Sainsbury’s, Asda
+  - persist on change
+- globalBasketTier: PriceTier | "item"
+  - load from localStorage("tha-basket-tier")
+  - default "item"
+  - persist on change
+
+Add supermarket multi-select UI near top of page:
+- label: "Shop at"
+- helper text:
+  - "THA will choose the best available products from the supermarkets you select."
+- use existing supermarket constants for labels, but store stable ids internally
+- selected chips = filled
+- unselected chips = outline
+- enforce minimum of 1 selected
+- data-testid="basket-retailer-selector"
+
+Add global basket tier selector:
+- Budget
+- Standard
+- Premium
+- Organic
+- Per item
+- "Per item" preserves existing per-item tier behaviour
+- global tier overrides per-item tier only at runtime, do not overwrite stored row tier
+- data-testid="basket-tier-selector"
+
+Add muted fulfilment note below controls:
+- "THA selects the best available products based on your preferences. Final items may vary depending on supermarket availability and substitutions."
+- data-testid="basket-fulfilment-note"
+
+Pass selected retailers and effective tier into row-level logic.
+
+Acceptance:
+- retailer chips persist
+- at least one retailer always stays selected
+- global tier overrides effective display/logic without destroying per-item tier state
+- fulfilment note is visible
+
+T005: Whole-Food Row Controls + Confidence Indicator
+
+Files:
+- client/src/pages/shopping-list-page.tsx
+- client/src/components/whole-food-selector.tsx
+
+Create whole-food-selector.tsx:
+Props:
+- item
+- catalogueDef
+- onVariantChange
+- onAttributeChange
+
+Behaviour:
+- render selector controls from catalogueDef.selectorSchema
+- use small toggle chips for selector options
+- render attribute toggles/checks for relevantAttributes where appropriate
+- only render if catalogueDef exists
+- data-testid="whole-food-selector-{item.id}"
+
+In basket rows:
+- after ingredient name, if isWholeFood(item), render:
+  - WholeFoodSelector
+  - confidence badge + reason text
+
+Confidence badge:
+- use CONFIDENCE_LABELS[item.confidenceLevel]
+- default to close if missing
+- show short reason text below
+- data-testid="confidence-badge-{item.id}"
+
+On selector/attribute change:
+- PATCH variantSelections / attributePreferences
+- recompute confidence client-side
+- PATCH confidenceLevel / confidenceReason only if values changed
+
+Packaged rows:
+- do not change current UI/behaviour
+
+Acceptance:
+- apples, tomatoes, pistachios, eggs show selector UI
+- whole-food confidence badge is visible
+- changes persist via PATCH
+- packaged rows unchanged
+
+T006: Basket Matching Integration + Safe JSON Helpers
+
+Files:
+- client/src/pages/shopping-list-page.tsx
+- client/src/lib/json-utils.ts
+
+Create json-utils.ts:
+- safeParseJsonObject(value): Record<string, any>
+- safeStringifyJsonObject(value): string | null
+
+In shopping-list-page.tsx:
+- compute effectiveTier per row:
+  - if globalBasketTier !== "item", use global tier
+  - else use existing per-item tier
+- for whole-food rows:
+  - build WholeFoodIntent from:
+    - ingredient name
+    - parsed variantSelections
+    - parsed attributePreferences
+    - effective tier
+    - selectedRetailers
+  - when product candidates are available:
+    - call resolveBestMatch(...)
+    - call calcConfidence(...)
+  - PATCH only changed derived fields:
+    - confidenceLevel
+    - confidenceReason
+- Keep packaged-food matching flow as-is
+
+Guardrails:
+- malformed JSON should safely fall back to {}
+- if no catalogue entry exists, do not render selector
+- if no candidates exist, show substitution confidence with safe reason
+- avoid PATCH spam by only PATCHing changed values
+
+Acceptance:
+- whole-food rows reflect selected retailers + effective tier in confidence
+- changing selected retailers can change confidence
+- malformed JSON does not break page
+- packaged-food behaviour remains intact
+
+General implementation constraints
+
+- keep implementation additive and modular
+- do not do a giant one-file rewrite
+- keep weights/constants easy to tune
+- preserve existing packaged-food flows
+- avoid brittle hardcoding scattered across the page
+- use the ingredient catalogue as the central source for whole-food selector definitions
+- store retailer ids in state, not display labels
+- only make targeted schema and route updates
+
+Deliverables
+
+When done, provide:
+1. files changed
+2. short summary of how the basket now works
+3. confirmation that packaged-food flows were preserved
+4. any follow-up recommendations for next safe phase

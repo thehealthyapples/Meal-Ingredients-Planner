@@ -1,0 +1,680 @@
+THA Basket Refactor — Food Intent, Whole-Food Matching, Multi-Supermarket Selection, Ingredient Catalogue, and Food Confidence
+
+Objective
+
+Refactor the THA basket so it behaves like a smart food-intent system rather than a fragile exact-product matcher.
+
+The basket must:
+
+treat packaged foods and whole foods differently
+
+store food intent, not just retailer product/SKU dependence
+
+allow users to select one or more supermarkets
+
+resolve products only from the supermarkets the user selected
+
+support category-specific whole-food variant selection
+
+support a global basket tier:
+
+Budget
+
+Standard
+
+Premium
+
+Organic
+
+use score-based matching and fallback logic for whole foods
+
+show a Food Confidence Indicator per basket row
+
+remain modular, extensible, and safe for existing basket flows
+
+This should reflect the core THA product philosophy:
+
+THA optimises food choices and basket intent internally.
+Supermarkets fulfil the closest available products based on availability and substitutions.
+
+Key Product Rules
+
+Basket rows must store food intent, not depend only on retailer SKU/product ids.
+
+Packaged foods should keep existing product-match behaviour wherever possible.
+
+Whole foods must not use packaged-food exact-match behaviour.
+
+Whole foods must be selected using:
+
+ingredient
+
+variant/selector choice
+
+relevant attributes
+
+basket tier
+
+selected supermarkets
+
+score-based ranking
+
+fallback rules
+
+Users must be able to select one or more supermarkets globally for the basket.
+
+THA must only resolve products from the supermarkets the user selected.
+
+Whole-food rows should use category-specific selectors, not generic match-product behaviour.
+
+Whole-food matching must be score-based, not exact-only.
+
+THA must show a per-row Food Confidence Indicator:
+
+Exact match likely
+
+Close match likely
+
+Substitution likely
+
+THA must communicate that final supermarket fulfilment may vary.
+
+Implementation Scope
+A. Basket Data Model Refactor
+
+Refactor basket item state to support a food-intent model.
+
+Add or adapt basket item shape to support:
+
+ingredientId
+
+ingredientDisplayName
+
+itemType = "whole_food" or "packaged"
+
+variantSelections or similar object for category-specific selectors
+
+attributePreferences or similar object for quality flags/preferences
+
+quantity
+
+quantityUnit
+
+basketTier
+
+matchedProductId
+
+matchedRetailerId
+
+confidenceLevel
+
+confidenceReason
+
+Basket-level state must support:
+
+selectedRetailers: string[]
+
+basketTier: "budget" | "standard" | "premium" | "organic"
+
+Do this in an additive, safe way that does not unnecessarily break current basket behaviour.
+
+B. User Supermarket Selection
+
+Replace any primary-retailer assumption with a basket-level multi-select supermarket selector.
+
+Users must be able to choose one or more supermarkets from the supported list.
+
+Example supported retailers:
+
+Asda
+
+Tesco
+
+Sainsbury’s
+
+Waitrose
+
+Ocado
+
+Morrisons
+
+Behaviour:
+
+if 1 supermarket is selected, THA resolves all items only from that retailer
+
+if multiple supermarkets are selected, THA may resolve each item from the best match across those retailers
+
+THA must never choose a retailer the user has not selected
+
+Add basket helper text:
+
+“THA will choose the best available products from the supermarkets you select.”
+
+Store selected retailers in basket state and use them throughout matching/confidence logic.
+
+C. Global Basket Tier
+
+Add a basket-level selector for:
+
+Budget
+
+Standard
+
+Premium
+
+Organic
+
+This should be visible and easy to change.
+
+It must influence whole-food product resolution globally.
+
+Tier meaning:
+
+Budget
+
+cheapest acceptable match
+
+own-brand/basic lines allowed
+
+non-organic acceptable unless hard-required by logic
+
+Standard
+
+balanced price/quality choice
+
+mainstream option
+
+Premium
+
+better quality/premium lines/provenance where possible
+
+Organic
+
+organic-first ranking
+
+if exact organic candidate unavailable, use fallback logic
+
+Preserve flexibility so weights and tier logic can be tuned later.
+
+D. Distinguish Whole Foods vs Packaged Foods
+
+Add a clean, centralised way to classify basket items as:
+
+whole_food
+
+packaged
+
+Do not scatter hardcoded checks across the UI.
+
+This should come from a shared config/module and be reusable by:
+
+basket row UI
+
+matching engine
+
+fallback logic
+
+confidence logic
+
+E. Ingredient Catalogue
+
+Create a lightweight shared ingredientCatalogue config/module to centralise THA food definitions.
+
+This is the foundation of the whole-food system and should drive:
+
+whole-food vs packaged classification
+
+row selector rendering
+
+relevant attributes
+
+fallback logic hints
+
+confidence sensitivity hints where useful
+
+Each ingredient definition should support something like:
+
+id
+
+displayName
+
+category
+
+itemType
+
+selectorSchema
+
+relevantAttributes
+
+fallbackRuleHints
+
+optional confidence/flexibility hint if useful
+
+Initial catalogue entries must include at least:
+
+apples
+
+tomatoes
+
+pistachios
+
+eggs
+
+Structure should be easy to extend later without rewriting basket logic.
+
+F. Whole-Food Variant / Selector Controls
+
+For supported whole-food categories, render category-specific controls using the ingredient catalogue instead of normal match-product behaviour.
+
+Initial category support:
+
+Apples
+
+Braeburn
+
+Pink Lady
+
+Golden Delicious
+
+Granny Smith
+
+Tomatoes
+
+Plum
+
+Cherry
+
+Vine
+
+Beefsteak
+
+Pistachios
+
+Salted / Unsalted
+
+Shell on / Shelled
+
+Eggs
+
+Medium / Large
+
+Important:
+
+drive this from config where possible
+
+make selectors category-aware and extensible
+
+do not build a hardcoded one-off UI per ingredient
+
+only show these controls for whole-food rows that support them
+
+G. Packaged Food Behaviour
+
+Preserve current packaged-food basket behaviour as much as possible.
+
+For packaged foods, continue using normal product-match logic.
+
+Do not regress current UX for:
+
+branded products
+
+drinks
+
+snacks
+
+sauces
+
+ready meals
+
+other packaged items
+
+Whole-food refactor should not break packaged-food flows.
+
+H. Whole-Food Matching Engine
+
+Create a score-based resolver for whole foods.
+
+This resolver must:
+
+only consider products from selectedRetailers
+
+filter by ingredient
+
+consider variant/selector choices
+
+consider relevant attributes/preferences
+
+apply basket-tier weighting
+
+consider retailer/product suitability
+
+rank candidates and choose the best result
+
+Scoring should consider:
+
+ingredient match
+
+variant match
+
+relevant attribute match
+
+basket tier alignment
+
+selected retailer availability
+
+price or price-per-kg
+
+pack-size closeness if relevant
+
+closeness of fallback candidate
+
+Keep weights easy to tune and logic modular.
+
+Do not over-engineer with a huge rules engine; keep it practical and readable.
+
+I. Fallback Logic
+
+Implement fallback chains for whole foods so basket rows can still resolve when exact intent is unavailable.
+
+Example:
+Organic Pink Lady apples
+→ Organic Pink Lady apples
+→ Organic apples, suitable alternative variety
+→ Pink Lady apples, non-organic
+→ best acceptable apple candidate
+
+Fallback should be:
+
+ingredient-preserving first
+
+attribute-aware
+
+category-aware where needed
+
+reusable, not hardcoded in many places
+
+The system should prefer preserving, in rough order:
+
+ingredient
+
+critical user-selected qualifiers
+
+important attributes
+
+variant
+
+tier preference
+
+price optimisation
+
+This can vary slightly by category, but keep implementation simple and understandable.
+
+J. Food Confidence Indicator
+
+Add a per-row Food Confidence Indicator that tells the user how closely THA expects the resolved product to reflect their intended choice.
+
+User-facing confidence levels:
+
+Exact match likely
+
+Close match likely
+
+Substitution likely
+
+Also include a short reason below or near the label.
+
+Example reasons:
+
+“Several matching options available.”
+
+“Exact variety may vary.”
+
+“Limited availability may require substitution.”
+
+Confidence should consider:
+
+ingredient certainty
+
+variant certainty
+
+attribute certainty
+
+number of acceptable candidates
+
+fallback strength
+
+retailer breadth from selected supermarkets
+
+likely fragility/scarcity of the request
+
+Important:
+Selecting more supermarkets can increase confidence if it increases valid candidate depth.
+
+Example:
+
+Asda only → Close match likely
+
+Asda + Waitrose → Exact match likely
+
+Keep the user-facing output simple even if the internal score is numeric.
+
+K. Basket Messaging / User Trust
+
+Add a subtle basket note that reflects THA’s role honestly.
+
+Use copy along these lines:
+
+“THA selects the best available products based on your preferences. Final items may vary depending on supermarket availability and substitutions.”
+
+This should be visible but unobtrusive.
+
+L. UI / UX Expectations
+
+Keep the UI clean, calm, and lightweight.
+
+The basket should feel smarter, not heavier.
+
+Expected UI additions:
+
+supermarket multi-select control
+
+basket tier selector
+
+whole-food row selector controls where relevant
+
+resolved retailer display where relevant
+
+confidence label + short reason
+
+subtle basket note on fulfilment variability
+
+Avoid clutter and large visual rewrites unless required.
+
+M. Architecture / Code Quality
+
+Requirements:
+
+modular implementation
+
+config-driven where practical
+
+avoid giant one-file rewrites
+
+preserve current packaged-food behaviour
+
+avoid regressions to existing basket flows
+
+add clear helper functions for:
+
+item classification
+
+ingredient catalogue lookup
+
+whole-food scoring
+
+fallback resolution
+
+confidence calculation
+
+keep comments focused and useful
+
+keep weights/constants easy to tune later
+
+Do not build this as a brittle temporary patch.
+
+Suggested Implementation Shape
+
+You do not have to follow this exact file structure, but keep concerns separated.
+
+Potential modules:
+
+ingredientCatalogue.ts
+
+basketItemClassifier.ts
+
+wholeFoodMatcher.ts
+
+wholeFoodFallback.ts
+
+foodConfidence.ts
+
+basket UI component updates
+
+basket state/model updates
+
+Initial Ingredient Catalogue Definitions
+
+Create initial ingredient catalogue support for at least:
+
+apples
+
+type: whole food
+
+selectors:
+
+variety/type: Braeburn, Pink Lady, Golden Delicious, Granny Smith
+
+relevant attributes:
+
+organic
+
+tomatoes
+
+type: whole food
+
+selectors:
+
+type: Plum, Cherry, Vine, Beefsteak
+
+relevant attributes:
+
+organic
+
+pistachios
+
+type: whole food
+
+selectors:
+
+salted state: Salted, Unsalted
+
+shell state: Shell on, Shelled
+
+relevant attributes:
+
+unsalted
+
+shell_on
+
+eggs
+
+type: whole food
+
+selectors:
+
+size: Medium, Large
+
+relevant attributes:
+
+organic
+
+free_range
+
+Make adding more ingredients later straightforward.
+
+Important Behaviour Summary
+Packaged foods
+
+continue current product-match behaviour
+
+no unnecessary changes
+
+Whole foods
+
+use ingredient-led intent model
+
+use selector schema from ingredient catalogue
+
+resolve only from user-selected supermarkets
+
+rank candidates with score-based logic
+
+fall back intelligently if exact fit unavailable
+
+show confidence label and reason
+
+Deliverables
+
+Please complete the work and provide:
+
+Updated basket data model/state changes
+
+Supermarket multi-select UI
+
+Global basket tier UI
+
+Ingredient catalogue module
+
+Whole-food vs packaged classification helper
+
+Whole-food row selector UI for supported categories
+
+Whole-food score-based matcher
+
+Whole-food fallback resolver
+
+Food Confidence calculation + UI
+
+Final basket fulfilment note
+
+Brief summary of files changed
+
+Brief explanation of how the new logic works
+
+Important Product Framing
+
+Do not design this as if THA can guarantee exact final fulfilment.
+
+The correct model is:
+
+the basket stores user food intent
+
+THA resolves the best match from the supermarkets the user selected
+
+supermarkets ultimately fulfil the closest available items
+
+The code and UI should reflect that throughout.
+
+Constraints
+
+keep the implementation practical
+
+avoid unnecessary backend complexity if current basket is mainly frontend-driven
+
+prefer additive refactor over destructive rewrite
+
+do not remove working packaged-food flows
+
+do not hardcode every ingredient in UI logic
+
+keep future extensibility in mind
