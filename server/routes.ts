@@ -5475,5 +5475,109 @@ export async function registerRoutes(
     res.json(trends);
   });
 
+  app.post("/api/food-diary/import/preview", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const rowSchema = z.object({
+      date: z.string(),
+      weightKg: z.number().optional(),
+      sleepHours: z.number().optional(),
+      moodApples: z.number().optional(),
+      energyApples: z.number().optional(),
+      notes: z.string().optional(),
+      stuckToPlan: z.boolean().optional(),
+      calories: z.number().optional(),
+      mealSlot: z.string().optional(),
+      entryName: z.string().optional(),
+    });
+    const bodySchema = z.object({ rows: z.array(z.record(z.unknown())) });
+    const { rows } = bodySchema.parse(req.body);
+    const validRows: object[] = [];
+    const invalidRows: { row: object; errors: string[] }[] = [];
+    for (const raw of rows) {
+      const errors: string[] = [];
+      const r = raw as Record<string, unknown>;
+      if (!r.date || typeof r.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(r.date)) {
+        errors.push("date is required and must be YYYY-MM-DD");
+      }
+      if (r.moodApples !== undefined) {
+        const v = Number(r.moodApples);
+        if (isNaN(v) || v < 1 || v > 5) errors.push("moodApples must be 1–5");
+      }
+      if (r.energyApples !== undefined) {
+        const v = Number(r.energyApples);
+        if (isNaN(v) || v < 1 || v > 5) errors.push("energyApples must be 1–5");
+      }
+      if (r.weightKg !== undefined && isNaN(Number(r.weightKg))) errors.push("weightKg must be numeric");
+      if (r.sleepHours !== undefined && isNaN(Number(r.sleepHours))) errors.push("sleepHours must be numeric");
+      if (r.calories !== undefined && isNaN(Number(r.calories))) errors.push("calories must be numeric");
+      if (errors.length > 0) {
+        invalidRows.push({ row: raw as object, errors });
+      } else {
+        const parsed = rowSchema.safeParse({
+          ...r,
+          weightKg: r.weightKg !== undefined ? Number(r.weightKg) : undefined,
+          sleepHours: r.sleepHours !== undefined ? Number(r.sleepHours) : undefined,
+          moodApples: r.moodApples !== undefined ? Number(r.moodApples) : undefined,
+          energyApples: r.energyApples !== undefined ? Number(r.energyApples) : undefined,
+          calories: r.calories !== undefined ? Number(r.calories) : undefined,
+        });
+        validRows.push(parsed.success ? parsed.data : (raw as object));
+      }
+    }
+    res.json({ validRows, invalidRows });
+  });
+
+  app.post("/api/food-diary/import/confirm", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const bodySchema = z.object({
+      rows: z.array(z.record(z.unknown())),
+      strategy: z.enum(["skip", "overwrite", "merge"]).default("skip"),
+    });
+    const { rows, strategy } = bodySchema.parse(req.body);
+    const userId = req.user!.id;
+    const metricRows: Array<Partial<{ weightKg: number; sleepHours: number; moodApples: number; energyApples: number; notes: string; stuckToPlan: boolean }> & { date: string }> = [];
+    const entryRows: Array<{ date: string; mealSlot: string; name: string; notes?: string | null }> = [];
+    for (const raw of rows) {
+      const r = raw as Record<string, unknown>;
+      const date = String(r.date);
+      const hasMetricData = r.weightKg !== undefined || r.sleepHours !== undefined || r.moodApples !== undefined || r.energyApples !== undefined || r.notes !== undefined || r.stuckToPlan !== undefined;
+      const hasEntryData = r.mealSlot !== undefined && r.entryName !== undefined;
+      if (hasMetricData) {
+        const row: typeof metricRows[number] = { date };
+        if (r.weightKg !== undefined) row.weightKg = Number(r.weightKg);
+        if (r.sleepHours !== undefined) row.sleepHours = Number(r.sleepHours);
+        if (r.moodApples !== undefined) row.moodApples = Number(r.moodApples);
+        if (r.energyApples !== undefined) row.energyApples = Number(r.energyApples);
+        if (r.notes !== undefined) row.notes = String(r.notes);
+        if (r.stuckToPlan !== undefined) row.stuckToPlan = Boolean(r.stuckToPlan);
+        metricRows.push(row);
+      }
+      if (hasEntryData) {
+        entryRows.push({
+          date,
+          mealSlot: String(r.mealSlot),
+          name: String(r.entryName),
+          notes: r.notes !== undefined ? String(r.notes) : null,
+        });
+      }
+    }
+    try {
+      const metricsResult = metricRows.length > 0
+        ? await storage.bulkUpsertFoodDiaryMetrics(userId, metricRows, strategy)
+        : { imported: 0, skipped: 0, failed: 0 };
+      const entriesResult = entryRows.length > 0
+        ? await storage.bulkCreateFoodDiaryEntries(userId, entryRows, strategy)
+        : { imported: 0, skipped: 0, failed: 0 };
+      res.json({
+        imported: metricsResult.imported + entriesResult.imported,
+        skipped: metricsResult.skipped + entriesResult.skipped,
+        failed: metricsResult.failed + entriesResult.failed,
+      });
+    } catch (err) {
+      console.error("[DiaryImport] confirm error:", err);
+      res.status(500).json({ message: "Import failed" });
+    }
+  });
+
   return httpServer;
 }

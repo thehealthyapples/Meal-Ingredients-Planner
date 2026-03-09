@@ -2370,6 +2370,74 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(foodDiaryMetrics.userId, userId), sql`${foodDiaryMetrics.date} >= ${cutoffStr}`))
       .orderBy(foodDiaryMetrics.date);
   }
+
+  async bulkUpsertFoodDiaryMetrics(
+    userId: number,
+    rows: Array<Partial<InsertFoodDiaryMetrics> & { date: string }>,
+    strategy: "skip" | "overwrite" | "merge",
+  ): Promise<{ imported: number; skipped: number; failed: number }> {
+    let imported = 0, skipped = 0, failed = 0;
+    for (const row of rows) {
+      try {
+        const existing = await this.getFoodDiaryMetrics(userId, row.date);
+        if (strategy === "skip" && existing) { skipped++; continue; }
+        if (strategy === "merge" && existing) {
+          const merged: Partial<InsertFoodDiaryMetrics> = {};
+          if (existing.weightKg == null && row.weightKg != null) merged.weightKg = row.weightKg;
+          if (existing.sleepHours == null && row.sleepHours != null) merged.sleepHours = row.sleepHours;
+          if (existing.moodApples == null && row.moodApples != null) merged.moodApples = row.moodApples;
+          if (existing.energyApples == null && row.energyApples != null) merged.energyApples = row.energyApples;
+          if (existing.notes == null && row.notes != null) merged.notes = row.notes;
+          if (existing.stuckToPlan == null && row.stuckToPlan != null) merged.stuckToPlan = row.stuckToPlan;
+          if (Object.keys(merged).length > 0) {
+            await this.upsertFoodDiaryMetrics(userId, row.date, merged);
+          }
+          imported++;
+          continue;
+        }
+        const { date, ...data } = row;
+        await this.upsertFoodDiaryMetrics(userId, date, data);
+        imported++;
+      } catch {
+        failed++;
+      }
+    }
+    return { imported, skipped, failed };
+  }
+
+  async bulkCreateFoodDiaryEntries(
+    userId: number,
+    rows: Array<{ date: string; mealSlot: string; name: string; notes?: string | null }>,
+    strategy: "skip" | "overwrite" | "merge",
+  ): Promise<{ imported: number; skipped: number; failed: number }> {
+    let imported = 0, skipped = 0, failed = 0;
+    for (const row of rows) {
+      try {
+        const existing = await this.getFoodDiaryEntries(userId, row.date);
+        const match = existing.find(
+          (e) => e.mealSlot === row.mealSlot && e.name.toLowerCase() === row.name.toLowerCase(),
+        );
+        if (strategy === "skip" && match) { skipped++; continue; }
+        if (strategy === "merge" && match) { skipped++; continue; }
+        if (strategy === "overwrite" && match) {
+          await this.deleteFoodDiaryEntry(match.id, userId);
+        }
+        await this.createFoodDiaryEntry(userId, row.date, {
+          dayId: 0,
+          userId,
+          mealSlot: row.mealSlot,
+          name: row.name,
+          notes: row.notes ?? null,
+          sourceType: "imported",
+          sourcePlannerEntryId: null,
+        });
+        imported++;
+      } catch {
+        failed++;
+      }
+    }
+    return { imported, skipped, failed };
+  }
 }
 
 export const storage = new DatabaseStorage();

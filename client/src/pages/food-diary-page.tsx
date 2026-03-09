@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { ImportDiaryModal } from "@/components/import-diary-modal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
@@ -246,10 +247,12 @@ function WellbeingPanel({
   metrics,
   date,
   onSaved,
+  onCsvClick,
 }: {
   metrics: DiaryMetrics | null;
   date: string;
   onSaved: () => void;
+  onCsvClick?: () => void;
 }) {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -311,9 +314,22 @@ function WellbeingPanel({
           <Weight className="h-4 w-4 text-muted-foreground" />
           Wellbeing
         </CardTitle>
-        {dirty && (
-          <span className="text-[10px] text-muted-foreground">Unsaved changes</span>
-        )}
+        <div className="flex items-center gap-2">
+          {dirty && (
+            <span className="text-[10px] text-muted-foreground">Unsaved changes</span>
+          )}
+          {onCsvClick && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-[10px] px-2"
+              onClick={onCsvClick}
+              data-testid="button-import-csv"
+            >
+              + CSV
+            </Button>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="px-4 pb-4 pt-0 space-y-3" data-testid="metrics-form">
         {/* Weight + Sleep */}
@@ -421,6 +437,7 @@ export default function FoodDiaryPage() {
   const [addingName, setAddingName] = useState("");
   const [editingEntry, setEditingEntry] = useState<{ id: number; name: string } | null>(null);
   const [copyModalOpen, setCopyModalOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const diaryKey = ["/api/food-diary", date];
 
@@ -730,6 +747,7 @@ export default function FoodDiaryPage() {
                 metrics={diary?.metrics ?? null}
                 date={date}
                 onSaved={() => {}}
+                onCsvClick={() => setImportModalOpen(true)}
               />
             </div>
           </div>
@@ -859,6 +877,12 @@ export default function FoodDiaryPage() {
         onClose={() => setCopyModalOpen(false)}
         onConfirm={(slots) => copyFromPlannerMut.mutate(slots)}
         isPending={copyFromPlannerMut.isPending}
+      />
+
+      {/* Import diary modal */}
+      <ImportDiaryModal
+        open={importModalOpen}
+        onOpenChange={setImportModalOpen}
       />
     </div>
   );
