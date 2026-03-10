@@ -165,6 +165,36 @@ const TIER_LABELS: Record<string, { label: string; icon: typeof Tag; short: stri
   organic: { label: 'Organic', icon: Sprout, short: 'Org' },
 };
 
+const EXTENDED_TIER_LABELS: Record<string, { label: string; short: string }> = {
+  budget: { label: 'Budget', short: 'Bdgt' },
+  standard: { label: 'Standard', short: 'Std' },
+  premium: { label: 'Premium', short: 'Prem' },
+  organic: { label: 'Organic', short: 'Org' },
+  bovaer_free: { label: 'Bovaer Free', short: 'BFr' },
+  grass_finished: { label: 'Grass Finished', short: 'GFn' },
+  pasture_raised: { label: 'Pasture Raised', short: 'PR' },
+  sourdough: { label: 'Sourdough', short: 'Sdgh' },
+  free_range: { label: 'Free Range', short: 'FR' },
+};
+
+const CATEGORY_TIER_OPTIONS: Record<string, string[]> = {
+  meat: ['budget', 'standard', 'premium', 'organic', 'grass_finished', 'pasture_raised'],
+  fish: ['budget', 'standard', 'premium', 'organic', 'grass_finished', 'pasture_raised'],
+  dairy: ['budget', 'standard', 'premium', 'organic', 'bovaer_free'],
+  eggs: ['budget', 'standard', 'premium', 'organic', 'free_range'],
+  bakery: ['budget', 'standard', 'premium', 'organic', 'sourdough'],
+  produce: ['budget', 'standard', 'premium', 'organic'],
+  fruit: ['budget', 'standard', 'premium', 'organic'],
+  grains: ['budget', 'standard', 'premium', 'organic'],
+  herbs: ['budget', 'standard', 'premium', 'organic'],
+  oils: ['budget', 'standard', 'premium', 'organic'],
+  condiments: ['budget', 'standard', 'premium', 'organic'],
+  nuts: ['budget', 'standard', 'premium', 'organic'],
+  legumes: ['budget', 'standard', 'premium', 'organic'],
+  tinned: ['budget', 'standard', 'premium', 'organic'],
+  other: ['budget', 'standard', 'premium', 'organic'],
+};
+
 type SortColumn = 'ingredient' | 'product' | 'category' | 'qty' | 'unit' | 'tier' | 'price' | 'shop' | 'smp' | 'meal';
 type SortDirection = 'asc' | 'desc';
 type PriceTier = 'budget' | 'standard' | 'premium' | 'organic';
@@ -651,6 +681,10 @@ export default function ShoppingListPage() {
     return (localStorage.getItem("tha-basket-tier") as PriceTier | "item") || "item";
   });
 
+  const [categoryDefaults, setCategoryDefaultsState] = useState<Record<string, { supermarket: string; tier: string }>>(() => {
+    try { return JSON.parse(localStorage.getItem("tha-basket-category-defaults") || '{}'); } catch { return {}; }
+  });
+
   useEffect(() => {
     localStorage.setItem("tha-basket-retailers", JSON.stringify(selectedRetailers));
   }, [selectedRetailers]);
@@ -658,6 +692,10 @@ export default function ShoppingListPage() {
   useEffect(() => {
     localStorage.setItem("tha-basket-tier", globalBasketTier);
   }, [globalBasketTier]);
+
+  useEffect(() => {
+    localStorage.setItem("tha-basket-category-defaults", JSON.stringify(categoryDefaults));
+  }, [categoryDefaults]);
 
   const toggleRetailer = (name: string) => {
     setSelectedRetailers(prev => {
@@ -668,6 +706,22 @@ export default function ShoppingListPage() {
       return [...prev, name];
     });
   };
+
+  const getCategoryDefault = useCallback((cat: string): { supermarket: string; tier: string } => {
+    const saved = categoryDefaults[cat];
+    const defaultTier = globalBasketTier !== "item" ? globalBasketTier : "standard";
+    return {
+      supermarket: saved?.supermarket ?? '',
+      tier: saved?.tier ?? defaultTier,
+    };
+  }, [categoryDefaults, globalBasketTier]);
+
+  const setCategoryDefault = useCallback((cat: string, field: 'supermarket' | 'tier', value: string) => {
+    setCategoryDefaultsState(prev => {
+      const current = prev[cat] ?? { supermarket: '', tier: globalBasketTier !== "item" ? globalBasketTier : "standard" };
+      return { ...prev, [cat]: { ...current, [field]: value } };
+    });
+  }, [globalBasketTier]);
 
   const getEffectiveTier = (item: ShoppingListItem): PriceTier => {
     if (globalBasketTier !== "item") return globalBasketTier as PriceTier;
@@ -1114,6 +1168,81 @@ export default function ShoppingListPage() {
     }
     return total;
   }, [hasPrices, savedItems, allPriceMatches, selectedRetailers, globalBasketTier, currentTier]);
+
+  const avgSmpRating = useMemo(() => {
+    const rated = savedItems.filter(i => i.smpRating !== null && i.smpRating !== undefined && (i.smpRating as number) > 0);
+    if (rated.length === 0) return null;
+    return rated.reduce((sum, i) => sum + (i.smpRating as number), 0) / rated.length;
+  }, [savedItems]);
+
+  const overallConfidence = useMemo((): 'high' | 'medium' | 'low' | null => {
+    const wfItems = savedItems.filter(item => {
+      const wfDef = getIngredientDef(item.normalizedName ?? item.productName);
+      return isWholeFood(item) && !!wfDef;
+    });
+    if (wfItems.length === 0) return null;
+    let highCount = 0, medCount = 0;
+    for (const item of wfItems) {
+      const wfDef = getIngredientDef(item.normalizedName ?? item.productName);
+      if (!wfDef) continue;
+      const rowVariantSelections = safeParseJsonObject(item.variantSelections);
+      const rowAttrPreferences = safeParseJsonObject(item.attributePreferences);
+      const effectiveTier = getEffectiveTier(item);
+      const itemCandidates = allPriceMatches.filter(m => m.shoppingListItemId === item.id);
+      const intent: WholeFoodIntent = { ingredientName: item.normalizedName ?? item.productName, variantSelections: rowVariantSelections, attributePreferences: rowAttrPreferences, tier: effectiveTier, selectedRetailers };
+      const conf = calcConfidence(intent, itemCandidates, selectedRetailers);
+      if (conf.level === 'high') highCount++;
+      else if (conf.level === 'medium') medCount++;
+    }
+    const score = (highCount * 2 + medCount) / (wfItems.length * 2);
+    if (score >= 0.7) return 'high';
+    if (score >= 0.4) return 'medium';
+    return 'low';
+  }, [savedItems, allPriceMatches, selectedRetailers]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const comparisonMatrix = useMemo(() => {
+    if (!hasPrices || savedItems.length === 0) return {} as Record<string, Record<string, number>>;
+    const tiers = ['budget', 'standard', 'premium', 'organic'];
+    const result: Record<string, Record<string, number>> = {};
+    for (const retailer of selectedRetailers) {
+      result[retailer] = {};
+      for (const tier of tiers) {
+        let total = 0;
+        for (const item of savedItems) {
+          const match = allPriceMatches.find(m => m.shoppingListItemId === item.id && m.supermarket === retailer && m.tier === tier);
+          if (match?.price !== null && match?.price !== undefined) total += match.price;
+        }
+        result[retailer][tier] = total;
+      }
+    }
+    return result;
+  }, [hasPrices, savedItems, allPriceMatches, selectedRetailers]);
+
+  const currentByRetailer = useMemo(() => {
+    if (!hasPrices) return {} as Record<string, number>;
+    const result: Record<string, number> = {};
+    for (const retailer of selectedRetailers) {
+      let total = 0;
+      for (const item of savedItems) {
+        const itemPrices = pricesByItem.get(item.id);
+        if (item.selectedStore) {
+          if (item.selectedStore === retailer) {
+            const price = itemPrices?.get(retailer)?.price;
+            if (price !== null && price !== undefined) total += price;
+          }
+        } else {
+          const cheapest = getCheapestForItem(item.id);
+          if (cheapest?.supermarket === retailer) total += cheapest.price;
+        }
+      }
+      result[retailer] = total;
+    }
+    return result;
+  }, [hasPrices, savedItems, pricesByItem, selectedRetailers, getCheapestForItem]);
+
+  const currentTotal = useMemo(() => {
+    return Object.values(currentByRetailer).reduce((sum, v) => sum + v, 0);
+  }, [currentByRetailer]);
 
   useEffect(() => {
     if (!hasPrices || savedItems.length === 0 || Object.keys(thaPicks).length > 0) return;
@@ -1637,670 +1766,376 @@ export default function ShoppingListPage() {
                 </div>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs calm-table" data-testid="table-analyse-basket">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/20">
-                      <th className="px-2 py-1.5 w-8">
-                        <span className="sr-only">Purchased</span>
-                      </th>
-                      <SortableHeader column="ingredient" label="Ingredient" className="text-left" />
-                      <th className="px-2 py-1.5 text-left font-medium text-muted-foreground text-xs whitespace-nowrap">Variant</th>
-                      <th className="px-2 py-1.5 text-left font-medium text-muted-foreground text-xs whitespace-nowrap">Attributes</th>
-                      <SortableHeader column="qty" label="Qty" className="text-right" />
-                      <SortableHeader column="unit" label="Unit" className="text-left" />
-                      {hasPrices && (
-                        <SortableHeader column="product" label="Matched Product" className="text-left" />
-                      )}
-                      <SortableHeader column="category" label="Cat." className="text-left" />
-                      {hasPrices && (
-                        <SortableHeader column="tier" label="Tier" className="text-left" />
-                      )}
-                      <SortableHeader column="meal" label="Meal" className="text-center" />
-                      {hasPrices && (
-                        <>
-                          <SortableHeader column="price" label="Price" className="text-right" />
-                          <SortableHeader column="shop" label="Shop" className="text-left" />
-                          <SortableHeader column="smp" label="SMP" className="text-center" />
-                        </>
-                      )}
-                      <th className="px-2 py-1.5 text-left font-medium text-muted-foreground text-xs whitespace-nowrap">Conf.</th>
-                      <th className="px-2 py-1.5 w-12"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <AnimatePresence>
-                      {sortedItems.filter(i => !isStaple(i)).map((item) => {
-                        const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
-                        const itemPrices = pricesByItem.get(item.id);
-                        const cheapest = getCheapestForItem(item.id);
-                        const cat = item.category || 'other';
-                        const catColor = CATEGORY_COLORS[cat] || CATEGORY_COLORS.other;
-                        const CatIcon = CATEGORY_ICONS[cat] || CircleDot;
-                        const isEditing = editState?.itemId === item.id;
-                        const sources = sourcesByItem.get(item.id) || [];
-                        const itemTier = getItemTier(item);
-                        const tierInfo = TIER_LABELS[itemTier] || TIER_LABELS.standard;
-                        const isOverridden = item.selectedTier !== null;
+              <div>
+                {ALL_CATEGORIES.map(cat => {
+                  const catItems = sortedItems.filter(i => !isStaple(i) && (i.category || 'other') === cat);
+                  if (catItems.length === 0) return null;
+                  const catDefault = getCategoryDefault(cat);
+                  const isMixed = catItems.some(i => i.selectedTier !== null && i.selectedTier !== catDefault.tier);
+                  const CatIcon = CATEGORY_ICONS[cat] || CircleDot;
+                  const tierOptions = CATEGORY_TIER_OPTIONS[cat] || CATEGORY_TIER_OPTIONS.other;
 
-                        const wfDef = getIngredientDef(item.normalizedName ?? item.productName);
-                        const isWF = isWholeFood(item) && !!wfDef;
-                        const rowVariantSelections = isWF ? safeParseJsonObject(item.variantSelections) : {};
-                        const rowAttrPreferences = isWF ? safeParseJsonObject(item.attributePreferences) : {};
-                        let wfConfLabel: typeof CONFIDENCE_LABELS[keyof typeof CONFIDENCE_LABELS] | null = null;
-                        if (isWF && wfDef) {
-                          const effectiveTier = getEffectiveTier(item);
-                          const itemCandidates = allPriceMatches.filter(m => m.shoppingListItemId === item.id);
-                          const intent: WholeFoodIntent = { ingredientName: item.normalizedName ?? item.productName, variantSelections: rowVariantSelections, attributePreferences: rowAttrPreferences, tier: effectiveTier, selectedRetailers };
-                          const conf = calcConfidence(intent, itemCandidates, selectedRetailers);
-                          wfConfLabel = CONFIDENCE_LABELS[conf.level];
-                        }
-                        const handleVariantChange = (key: string, value: string) => {
-                          const next = { ...rowVariantSelections, [key]: value };
-                          if (!value) delete next[key];
-                          updateWholeFoodIntent.mutate({ id: item.id, fields: { variantSelections: JSON.stringify(next) } });
-                        };
-                        const handleAttrChange = (key: string, value: boolean) => {
-                          const next = { ...rowAttrPreferences, [key]: value };
-                          updateWholeFoodIntent.mutate({ id: item.id, fields: { attributePreferences: JSON.stringify(next) } });
-                        };
+                  return (
+                    <div key={cat}>
+                      {/* Sticky category header */}
+                      <div className="sticky top-0 z-10 flex items-center gap-3 py-1.5 px-3 bg-muted/80 border-y border-border text-xs backdrop-blur-sm" data-testid={`category-header-${cat}`}>
+                        <div className="flex items-center gap-1.5 font-semibold min-w-[90px]">
+                          <CatIcon className="h-3 w-3" />
+                          <span>{capitalizeWords(cat)}</span>
+                        </div>
+                        <select
+                          className="h-6 text-[11px] border border-border rounded px-1.5 bg-background cursor-pointer"
+                          value={catDefault.supermarket}
+                          onChange={e => setCategoryDefault(cat, 'supermarket', e.target.value)}
+                          data-testid={`select-cat-supermarket-${cat}`}
+                        >
+                          <option value="">Auto</option>
+                          {SUPERMARKET_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <div className="ml-auto text-[11px]">
+                          {isMixed
+                            ? <span className="text-amber-600 dark:text-amber-400 font-medium">Mixed</span>
+                            : <span className="text-muted-foreground">{EXTENDED_TIER_LABELS[catDefault.tier]?.label || catDefault.tier}</span>
+                          }
+                        </div>
+                      </div>
 
-                        return (
-                          <motion.tr
-                            key={item.id}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className={`border-b border-border/50 ${item.checked ? 'opacity-50' : ''}`}
-                            data-testid={`shopping-item-${item.id}`}
-                          >
-                            <td className="px-2 py-1.5">
-                              <Checkbox
-                                checked={item.checked || false}
-                                onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })}
-                                className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                                data-testid={`checkbox-item-${item.id}`}
-                              />
-                            </td>
-                            <td className="px-2 py-1">
-                              {isEditing && editState?.field === 'productName' ? (
-                                <div className="flex items-center gap-1">
-                                  <Input
-                                    value={editState.value}
-                                    onChange={(e) => setEditState({ ...editState, value: e.target.value })}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
-                                    className="h-6 text-xs"
-                                    autoFocus
-                                    data-testid={`input-edit-name-${item.id}`}
-                                  />
-                                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit} data-testid={`button-save-edit-${item.id}`}>
-                                    <Check className="h-3 w-3" />
-                                  </Button>
-                                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}>
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span
-                                    className="font-medium text-foreground cursor-pointer"
-                                    onClick={() => startEdit(item.id, 'productName', item.productName)}
-                                    data-testid={`text-item-name-${item.id}`}
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs" data-testid={`table-category-${cat}`}>
+                          <thead>
+                            <tr className="border-b border-border/40 bg-muted/10">
+                              <th className="px-2 py-1 w-7" />
+                              <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Ingredient</th>
+                              <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Variant</th>
+                              <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Tier</th>
+                              <th className="px-2 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Qty</th>
+                              {hasPrices && <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Match</th>}
+                              {hasPrices && <th className="px-2 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Price</th>}
+                              <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Conf.</th>
+                              {hasPrices && <th className="px-2 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">THA Rating</th>}
+                              <th className="px-2 py-1 w-24" />
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <AnimatePresence>
+                              {catItems.map(item => {
+                                const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
+                                const itemPrices = pricesByItem.get(item.id);
+                                const cheapest = getCheapestForItem(item.id);
+                                const isEditing = editState?.itemId === item.id;
+                                const sources = sourcesByItem.get(item.id) || [];
+                                const catDef = getCategoryDefault(cat);
+                                const itemTier = (item.selectedTier || catDef.tier) as PriceTier;
+                                const isOverridden = item.selectedTier !== null && item.selectedTier !== catDef.tier;
+
+                                const wfDef = getIngredientDef(item.normalizedName ?? item.productName);
+                                const isWF = isWholeFood(item) && !!wfDef;
+                                const rowVariantSelections = isWF ? safeParseJsonObject(item.variantSelections) : {};
+                                const rowAttrPreferences = isWF ? safeParseJsonObject(item.attributePreferences) : {};
+                                let wfConfLabel: typeof CONFIDENCE_LABELS[keyof typeof CONFIDENCE_LABELS] | null = null;
+                                if (isWF && wfDef) {
+                                  const effectiveTier = getEffectiveTier(item);
+                                  const itemCandidates = allPriceMatches.filter(m => m.shoppingListItemId === item.id);
+                                  const intent: WholeFoodIntent = { ingredientName: item.normalizedName ?? item.productName, variantSelections: rowVariantSelections, attributePreferences: rowAttrPreferences, tier: effectiveTier, selectedRetailers };
+                                  const conf = calcConfidence(intent, itemCandidates, selectedRetailers);
+                                  wfConfLabel = CONFIDENCE_LABELS[conf.level];
+                                }
+                                const handleVariantChange = (key: string, value: string) => {
+                                  const next = { ...rowVariantSelections, [key]: value };
+                                  if (!value) delete next[key];
+                                  updateWholeFoodIntent.mutate({ id: item.id, fields: { variantSelections: JSON.stringify(next) } });
+                                };
+                                const handleAttrChange = (key: string, value: boolean) => {
+                                  const next = { ...rowAttrPreferences, [key]: value };
+                                  updateWholeFoodIntent.mutate({ id: item.id, fields: { attributePreferences: JSON.stringify(next) } });
+                                };
+
+                                const selectedStore = item.selectedStore || catDef.supermarket || cheapest?.supermarket || '';
+                                const selectedMatch = selectedStore ? itemPrices?.get(selectedStore) : null;
+                                const selectedPrice = selectedMatch?.price;
+                                const isBestPrice = !!(cheapest && selectedStore === cheapest.supermarket);
+
+                                const itemKey = normalizeIngredientKey((item as any).ingredientName ?? (item as any).name ?? item.normalizedName ?? item.productName ?? '');
+                                const topPick = (thaPicks[itemKey] ?? [])[0];
+                                const showHint = topPick && topPick.productName !== selectedMatch?.productName;
+
+                                const availableStores = SUPERMARKET_NAMES.filter(store => itemPrices?.has(store));
+                                const knownStores: string[] = (() => { try { return item.availableStores ? JSON.parse(item.availableStores) : []; } catch { return []; } })();
+                                const isBranded = !!item.matchedProductId;
+
+                                return (
+                                  <motion.tr
+                                    key={item.id}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className={`border-b border-border/40 ${item.checked ? 'opacity-50' : ''}`}
+                                    data-testid={`shopping-item-${item.id}`}
                                   >
-                                    {capitalizeWords(item.productName)}
-                                  </span>
-                                  {item.quantity > 1 && (
-                                    <Badge variant="secondary" className="text-[10px]" data-testid={`badge-quantity-${item.id}`}>
-                                      x{item.quantity}
-                                    </Badge>
-                                  )}
-                                  {sources.some(s => frozenMealIds.has(s.mealId)) && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Badge variant="outline" className="text-[10px] text-blue-500 dark:text-blue-400 border-blue-300 dark:border-blue-600 gap-0.5" data-testid={`badge-frozen-source-${item.id}`}>
-                                          <Snowflake className="h-2.5 w-2.5" />
-                                          Frozen
-                                        </Badge>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p className="text-xs">You have frozen portions of a meal that uses this ingredient</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                  {item.needsReview && (
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Badge variant="outline" className="text-[10px] text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 gap-0.5" data-testid={`badge-review-${item.id}`}>
-                                          <AlertTriangle className="h-2.5 w-2.5" />
-                                          Review
-                                        </Badge>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p className="text-xs">{item.validationNote || 'This item may need manual review'}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  )}
-                                </div>
-                              )}
-                            </td>
-                            {/* Variant column */}
-                            <td className="px-2 py-1 align-top">
-                              {isWF && wfDef ? (
-                                <div className="flex flex-col gap-0.5">
-                                  {wfDef.selectorSchema.map((selector) => (
-                                    <div key={selector.key} className="flex flex-wrap gap-0.5">
-                                      {selector.options.map((option) => {
-                                        const isSel = rowVariantSelections[selector.key] === option;
-                                        return (
-                                          <button
-                                            key={option}
-                                            type="button"
-                                            onClick={() => handleVariantChange(selector.key, isSel ? "" : option)}
-                                            className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isSel ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`}
-                                            data-testid={`variant-chip-${item.id}-${selector.key}-${option.replace(/\s+/g, "-").toLowerCase()}`}
-                                          >
-                                            {option}
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </td>
-                            {/* Attributes column */}
-                            <td className="px-2 py-1 align-top">
-                              {isWF && wfDef && wfDef.relevantAttributes.length > 0 ? (
-                                <div className="flex flex-col gap-0.5">
-                                  {wfDef.relevantAttributes.map((attr) => {
-                                    const aid = `attr-${item.id}-${attr}`;
-                                    const alabel = attr.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-                                    return (
-                                      <div key={attr} className="flex items-center gap-1">
-                                        <Checkbox
-                                          id={aid}
-                                          checked={!!rowAttrPreferences[attr]}
-                                          onCheckedChange={(checked) => handleAttrChange(attr, !!checked)}
-                                          className="h-3 w-3"
-                                          data-testid={`attr-checkbox-${item.id}-${attr}`}
-                                        />
-                                        <Label htmlFor={aid} className="text-[10px] text-muted-foreground cursor-pointer select-none">
-                                          {alabel}
-                                        </Label>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </td>
-                            <td className="px-2 py-1.5 text-right tabular-nums text-foreground">
-                              {isEditing && editState?.field === 'quantityValue' ? (
-                                <div className="flex items-center gap-1 justify-end">
-                                  <Input
-                                    type="number"
-                                    value={editState.value}
-                                    onChange={(e) => setEditState({ ...editState, value: e.target.value })}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }}
-                                    className="h-7 text-xs w-20 text-right"
-                                    autoFocus
-                                    data-testid={`input-edit-qty-${item.id}`}
-                                  />
-                                  <Button size="icon" variant="ghost" onClick={saveEdit}>
-                                    <Check className="h-3 w-3" />
-                                  </Button>
-                                  <Button size="icon" variant="ghost" onClick={cancelEdit}>
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <span
-                                  className="cursor-pointer"
-                                  onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue || 0))}
-                                  data-testid={`text-item-qty-${item.id}`}
-                                >
-                                  {qty}
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-2 py-1.5 text-muted-foreground">
-                              {isEditing && editState?.field === 'unit' ? (
-                                <div className="flex items-center gap-1">
-                                  <Select
-                                    value={editState.value}
-                                    onValueChange={(val) => {
-                                      updateItem.mutate({ id: item.id, fields: { unit: val } });
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-7 text-xs w-20" data-testid={`select-edit-unit-${item.id}`}>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="g">g</SelectItem>
-                                      <SelectItem value="kg">kg</SelectItem>
-                                      <SelectItem value="ml">ml</SelectItem>
-                                      <SelectItem value="L">L</SelectItem>
-                                      <SelectItem value="unit">unit</SelectItem>
-                                      <SelectItem value="tbsp">tbsp</SelectItem>
-                                      <SelectItem value="tsp">tsp</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <Button size="icon" variant="ghost" onClick={cancelEdit}>
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <span
-                                  className="cursor-pointer"
-                                  onClick={() => startEdit(item.id, 'unit', item.unit || 'unit')}
-                                  data-testid={`text-item-unit-${item.id}`}
-                                >
-                                  {unitLabel}
-                                </span>
-                              )}
-                            </td>
-                            {hasPrices && (() => {
-                              const activeStore = item.selectedStore || cheapest?.supermarket;
-                              const activeMatch = activeStore ? itemPrices?.get(activeStore) : (itemPrices?.values().next().value as ProductMatch | undefined);
-                              const displayMatch = item.selectedStore ? activeMatch : (activeMatch || (itemPrices?.values().next().value as ProductMatch | undefined));
-                              const itemKey = normalizeIngredientKey((item as any).ingredientName ?? (item as any).name ?? item.normalizedName ?? item.productName ?? '');
-                              const topPick = (thaPicks[itemKey] ?? [])[0];
-                              const showHint = topPick && topPick.productName !== displayMatch?.productName;
-                              return (
-                                <td className="px-2 py-1.5">
-                                  {displayMatch ? (
-                                    <div className="flex items-center gap-2 max-w-[180px]">
-                                      {displayMatch.imageUrl && (
-                                        <img
-                                          src={displayMatch.imageUrl}
-                                          alt={displayMatch.productName}
-                                          className="w-8 h-8 rounded object-cover flex-shrink-0"
-                                          onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                          data-testid={`img-product-${item.id}`}
-                                        />
-                                      )}
-                                      <div className="min-w-0">
-                                        <p className="text-xs text-foreground break-words" data-testid={`text-product-name-${item.id}`}>
-                                          {displayMatch.productName}
-                                        </p>
-                                        {displayMatch.productWeight && (
-                                          <p className="text-[10px] text-muted-foreground">{displayMatch.productWeight}</p>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ) : item.selectedStore ? (
-                                    <span className="text-amber-500 text-xs flex items-center gap-1">
-                                      <AlertTriangle className="h-3 w-3" />
-                                      No match
-                                    </span>
-                                  ) : (
-                                    <span className="text-muted-foreground text-xs">-</span>
-                                  )}
-                                  {showHint && (
-                                    <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                                      {topPick.notes ? (
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <span
-                                              className="text-[10px] text-amber-600 dark:text-amber-400 cursor-default"
-                                              data-testid={`text-tha-pick-${item.id}`}
-                                            >
-                                              ⭐ THA Pick: {topPick.productName} ({topPick.retailer})
-                                            </span>
-                                          </TooltipTrigger>
-                                          <TooltipContent side="bottom" className="max-w-[200px]">
-                                            {topPick.notes}
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      ) : (
-                                        <span
-                                          className="text-[10px] text-amber-600 dark:text-amber-400"
-                                          data-testid={`text-tha-pick-${item.id}`}
-                                        >
-                                          ⭐ THA Pick: {topPick.productName} ({topPick.retailer})
-                                        </span>
-                                      )}
-                                      <button
-                                        className="text-[10px] text-primary hover:underline font-medium"
-                                        onClick={() => updateItem.mutate({ id: item.id, fields: { matchedStore: topPick.retailer, matchedProductId: null, matchedPrice: null } })}
-                                        data-testid={`button-use-tha-pick-${item.id}`}
-                                      >
-                                        [Use]
-                                      </button>
-                                    </div>
-                                  )}
-                                </td>
-                              );
-                            })()}
-                            <td className="px-2 py-1.5">
-                              {isEditing && editState?.field === 'category' ? (
-                                <div className="flex items-center gap-1">
-                                  <Select
-                                    value={editState.value}
-                                    onValueChange={(val) => {
-                                      updateItem.mutate({ id: item.id, fields: { category: val } });
-                                    }}
-                                  >
-                                    <SelectTrigger className="h-7 text-xs w-24" data-testid={`select-edit-category-${item.id}`}>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {ALL_CATEGORIES.map(c => (
-                                        <SelectItem key={c} value={c}>{capitalizeWords(c)}</SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                  <Button size="icon" variant="ghost" onClick={cancelEdit}>
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Badge
-                                  variant="outline"
-                                  className={`text-[10px] px-1.5 py-0 cursor-pointer ${catColor}`}
-                                  onClick={() => startEdit(item.id, 'category', cat)}
-                                  data-testid={`badge-category-${item.id}`}
-                                >
-                                  <CatIcon className="h-3 w-3 mr-1" />
-                                  {capitalizeWords(cat)}
-                                </Badge>
-                              )}
-                            </td>
-                            {hasPrices && (
-                              <td className="px-2 py-1.5">
-                                <Select
-                                  value={itemTier}
-                                  onValueChange={(val) => {
-                                    const newTier = val === currentTier ? null : val;
-                                    changeItemTier.mutate({ id: item.id, tier: newTier });
-                                  }}
-                                >
-                                  <SelectTrigger
-                                    className={`h-7 w-[80px] text-xs ${isOverridden ? 'border-amber-400' : ''}`}
-                                    data-testid={`select-item-tier-${item.id}`}
-                                  >
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {Object.entries(TIER_LABELS).map(([key, { label, icon: TIcon }]) => (
-                                      <SelectItem key={key} value={key}>
-                                        <span className="flex items-center gap-1">
-                                          <TIcon className="h-3 w-3" />
-                                          {label}
-                                        </span>
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </td>
-                            )}
-                            <td className="px-2 py-1.5 text-center">
-                              {sources.length > 0 ? (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="gap-1 text-xs h-7 px-2"
-                                      data-testid={`button-meal-source-${item.id}`}
-                                    >
-                                      <UtensilsCrossed className="h-3 w-3" />
-                                      {sources.length}
-                                    </Button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side="bottom" className="max-w-[220px]">
-                                    <p className="text-xs font-medium mb-1">Used in:</p>
-                                    {sources.map((s, idx) => (
-                                      <p key={idx} className="text-xs text-muted-foreground">
-                                        {s.mealName}{s.quantityMultiplier > 1 ? ` (x${s.quantityMultiplier})` : ''}
-                                      </p>
-                                    ))}
-                                  </TooltipContent>
-                                </Tooltip>
-                              ) : (
-                                <span className="text-muted-foreground text-xs">-</span>
-                              )}
-                            </td>
-                            {hasPrices && (() => {
-                              const selectedStore = item.selectedStore || cheapest?.supermarket || '';
-                              const selectedMatch = selectedStore ? itemPrices?.get(selectedStore) : null;
-                              const selectedPrice = selectedMatch?.price;
-                              const isBestPrice = cheapest && selectedStore === cheapest.supermarket;
-                              return (
-                                <>
-                                  <td className={`px-2 py-1.5 text-right tabular-nums${isBestPrice ? ' bg-secondary/15' : ''}`} data-testid={`text-price-${item.id}`}>
-                                    {selectedPrice !== null && selectedPrice !== undefined ? (
-                                      <span
-                                        className={`cursor-pointer ${isBestPrice ? 'text-primary font-semibold' : 'text-foreground'}`}
-                                        onClick={() => setComparisonItem(item)}
-                                      >
-                                        {"\u00A3"}{selectedPrice.toFixed(2)}
-                                      </span>
-                                    ) : item.selectedStore && !selectedMatch ? (
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <span className="text-amber-500 cursor-pointer inline-flex items-center gap-0.5" onClick={() => setComparisonItem(item)}>
-                                            <AlertTriangle className="h-3 w-3" />
-                                            <span className="text-[10px]">N/A</span>
-                                          </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p className="text-xs">Not available at {item.selectedStore}</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    ) : (
-                                      <span className="text-muted-foreground cursor-pointer" onClick={() => setComparisonItem(item)}>-</span>
-                                    )}
-                                  </td>
-                                  <td className={`px-2 py-1.5${isBestPrice ? ' bg-secondary/15' : ''}`}>
-                                    {(() => {
-                                      const availableStores = SUPERMARKET_NAMES.filter(store => itemPrices?.has(store));
-                                      const knownStores: string[] = (() => {
-                                        try {
-                                          return item.availableStores ? JSON.parse(item.availableStores) : [];
-                                        } catch { return []; }
-                                      })();
-                                      const isBranded = !!item.matchedProductId;
-                                      return (
+                                    <td className="px-2 py-1">
+                                      <Checkbox
+                                        checked={item.checked || false}
+                                        onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })}
+                                        className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                                        data-testid={`checkbox-item-${item.id}`}
+                                      />
+                                    </td>
+
+                                    <td className="px-2 py-1 min-w-[120px]">
+                                      {isEditing && editState?.field === 'productName' ? (
                                         <div className="flex items-center gap-1">
-                                          {isBestPrice && (
-                                            <span className="inline-flex items-center shrink-0 bg-secondary text-secondary-foreground text-[10px] font-semibold px-1 py-0.5 rounded leading-none">
-                                              ✓ Best
-                                            </span>
+                                          <Input value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-6 text-xs" autoFocus data-testid={`input-edit-name-${item.id}`} />
+                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit} data-testid={`button-save-edit-${item.id}`}><Check className="h-3 w-3" /></Button>
+                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center gap-1 flex-wrap">
+                                          <span className="font-medium text-foreground cursor-pointer" onClick={() => startEdit(item.id, 'productName', item.productName)} data-testid={`text-item-name-${item.id}`}>{capitalizeWords(item.productName)}</span>
+                                          {item.quantity > 1 && <Badge variant="secondary" className="text-[10px]" data-testid={`badge-quantity-${item.id}`}>x{item.quantity}</Badge>}
+                                          {sources.length > 0 && (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className="text-muted-foreground cursor-default text-[11px]" data-testid={`badge-meal-${item.id}`}>🍽 {sources.length}</span>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="bottom" className="max-w-[220px]">
+                                                <p className="text-xs font-medium mb-1">Used in:</p>
+                                                {sources.map((s, idx) => <p key={idx} className="text-xs text-muted-foreground">{s.mealName}{s.quantityMultiplier > 1 ? ` (x${s.quantityMultiplier})` : ''}</p>)}
+                                              </TooltipContent>
+                                            </Tooltip>
                                           )}
-                                          <Select
-                                            value={item.selectedStore || 'auto'}
-                                            onValueChange={(val) => {
-                                              updateItem.mutate({ id: item.id, fields: { selectedStore: val === 'auto' ? null : val } });
-                                              setGlobalStore('auto');
-                                            }}
-                                          >
-                                            <SelectTrigger className={`h-7 w-[100px] text-xs ${item.selectedStore ? 'border-amber-400' : ''}`} data-testid={`select-store-${item.id}`}>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="auto">
-                                                <span className="flex items-center gap-1">
-                                                  <TrendingDown className="h-3 w-3" />
-                                                  {isBranded ? 'Choose store' : 'Auto'}
-                                                </span>
-                                              </SelectItem>
-                                              {availableStores.map(store => {
-                                                const storeMatch = itemPrices?.get(store);
-                                                const isKnownStock = knownStores.includes(store);
+                                          {sources.some(s => frozenMealIds.has(s.mealId)) && (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Badge variant="outline" className="text-[10px] text-blue-500 dark:text-blue-400 border-blue-300 dark:border-blue-600 gap-0.5" data-testid={`badge-frozen-source-${item.id}`}><Snowflake className="h-2.5 w-2.5" />Frozen</Badge>
+                                              </TooltipTrigger>
+                                              <TooltipContent><p className="text-xs">You have frozen portions of a meal that uses this ingredient</p></TooltipContent>
+                                            </Tooltip>
+                                          )}
+                                          {item.needsReview && (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Badge variant="outline" className="text-[10px] text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 gap-0.5" data-testid={`badge-review-${item.id}`}><AlertTriangle className="h-2.5 w-2.5" />Review</Badge>
+                                              </TooltipTrigger>
+                                              <TooltipContent><p className="text-xs">{item.validationNote || 'This item may need manual review'}</p></TooltipContent>
+                                            </Tooltip>
+                                          )}
+                                        </div>
+                                      )}
+                                    </td>
+
+                                    <td className="px-2 py-1 align-top max-w-[150px]">
+                                      {isWF && wfDef ? (
+                                        <div className="flex flex-col gap-0.5">
+                                          {wfDef.selectorSchema.map((selector) => (
+                                            <div key={selector.key} className="flex flex-wrap gap-0.5">
+                                              {selector.options.map((option) => {
+                                                const isSel = rowVariantSelections[selector.key] === option;
                                                 return (
-                                                  <SelectItem key={store} value={store}>
-                                                    <span className="flex items-center gap-1">
-                                                      {isBranded && isKnownStock && <Check className="h-3 w-3 text-green-500 flex-shrink-0" />}
-                                                      {store}
-                                                      {storeMatch?.price ? ` \u00A3${storeMatch.price.toFixed(2)}` : ''}
-                                                      {isBranded && isKnownStock && <span className="text-[9px] text-green-600 dark:text-green-400">Stocked</span>}
-                                                    </span>
-                                                  </SelectItem>
+                                                  <button key={option} type="button" onClick={() => handleVariantChange(selector.key, isSel ? "" : option)} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isSel ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`} data-testid={`variant-chip-${item.id}-${selector.key}-${option.replace(/\s+/g, "-").toLowerCase()}`}>{option}</button>
                                                 );
                                               })}
-                                              {availableStores.length === 0 && (
-                                                <SelectItem value="_none" disabled>
-                                                  <span className="text-muted-foreground">No stores matched</span>
-                                                </SelectItem>
-                                              )}
-                                            </SelectContent>
-                                          </Select>
-                                          {isBranded && item.selectedStore && (() => {
-                                            const storeMatch = itemPrices?.get(item.selectedStore);
-                                            return storeMatch?.productUrl ? (
-                                              <a href={storeMatch.productUrl} target="_blank" rel="noopener noreferrer">
-                                                <Button variant="ghost" size="icon" className="h-7 w-7" data-testid={`button-store-link-${item.id}`}>
-                                                  <ExternalLink className="h-3 w-3" />
-                                                </Button>
-                                              </a>
-                                            ) : null;
-                                          })()}
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="text-xs gap-1 text-muted-foreground"
-                                            onClick={() => setAnalyseItem(item)}
-                                            data-testid={`button-change-product-${item.id}`}
-                                          >
-                                            <Microscope className="h-3 w-3" />
-                                            Change
-                                          </Button>
+                                            </div>
+                                          ))}
+                                          {wfDef.relevantAttributes.length > 0 && (
+                                            <div className="flex flex-wrap gap-0.5">
+                                              {wfDef.relevantAttributes.map((attr) => {
+                                                const isActive = !!rowAttrPreferences[attr];
+                                                const alabel = attr.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                                                return (
+                                                  <button key={attr} type="button" onClick={() => handleAttrChange(attr, !isActive)} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isActive ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`} data-testid={`attr-chip-${item.id}-${attr}`}>{alabel}</button>
+                                                );
+                                              })}
+                                            </div>
+                                          )}
                                         </div>
-                                      );
-                                    })()}
-                                  </td>
-                                  <td className="px-2 py-1 text-center" data-testid={`text-smp-${item.id}`}>
-                                    {(() => {
-                                      const smp = getItemSmpRating(item.id, item);
-                                      if (smp === 0) return <span className="text-muted-foreground text-xs">-</span>;
-                                      return <AppleRating rating={smp} size="small" hasCape={smp === 5} />;
-                                    })()}
-                                  </td>
-                                </>
-                              );
-                            })()}
-                            {/* Confidence column */}
-                            <td className="px-2 py-1 align-top" data-testid={`confidence-badge-${item.id}`}>
-                              {isWF && wfConfLabel ? (
-                                <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border ${wfConfLabel.colorClass} ${wfConfLabel.bgClass}`}>
-                                  {wfConfLabel.label}
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground">—</span>
-                              )}
-                            </td>
-                            <td className="px-2 py-1">
-                              <div className="flex items-center gap-0">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setAnalyseItem(item)}
-                                  className="text-muted-foreground"
-                                  data-testid={`button-analyse-${item.id}`}
-                                >
-                                  <Microscope className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => startEdit(item.id, 'productName', item.productName)}
-                                  className="text-muted-foreground"
-                                  data-testid={`button-edit-${item.id}`}
-                                >
-                                  <Pencil className="h-3 w-3" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => removeItem.mutate(item.id)}
-                                  className="text-muted-foreground"
-                                  data-testid={`button-remove-${item.id}`}
-                                >
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </td>
-                          </motion.tr>
-                        );
-                      })}
+                                      ) : <span className="text-muted-foreground">—</span>}
+                                    </td>
 
-                      {/* Staples section */}
-                      {sortedItems.some(i => isStaple(i)) && (
-                        <tr>
-                          <td colSpan={99} className="pt-2 pb-0 px-2">
-                            <button
-                              className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left"
-                              onClick={() => setStaplesOpen(o => !o)}
-                              data-testid="button-toggle-staples"
-                            >
-                              {staplesOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                              Staples — usually in stock ({sortedItems.filter(i => isStaple(i)).length})
-                            </button>
-                          </td>
-                        </tr>
-                      )}
+                                    <td className="px-2 py-1">
+                                      <Select value={itemTier} onValueChange={(val) => { const newTier = val === catDef.tier ? null : val; changeItemTier.mutate({ id: item.id, tier: newTier }); }}>
+                                        <SelectTrigger className={`h-7 w-[95px] text-xs ${isOverridden ? 'border-amber-400' : ''}`} data-testid={`select-item-tier-${item.id}`}>
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {tierOptions.map(key => <SelectItem key={key} value={key}>{EXTENDED_TIER_LABELS[key]?.label || key}</SelectItem>)}
+                                        </SelectContent>
+                                      </Select>
+                                    </td>
 
-                      {staplesOpen && sortedItems.filter(i => isStaple(i)).map((item) => {
-                        const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
-                        const itemPrices = pricesByItem.get(item.id);
-                        const cheapest = getCheapestForItem(item.id);
-                        const cat = item.category || 'other';
-                        const catColor = CATEGORY_COLORS[cat] || CATEGORY_COLORS.other;
-                        const CatIcon = CATEGORY_ICONS[cat] || CircleDot;
-                        const sources = sourcesByItem.get(item.id) || [];
-                        const itemTier = getItemTier(item);
-                        const tierInfo = TIER_LABELS[itemTier] || TIER_LABELS.standard;
+                                    <td className="px-2 py-1 text-right tabular-nums text-muted-foreground whitespace-nowrap">
+                                      {isEditing && editState?.field === 'quantityValue' ? (
+                                        <div className="flex items-center gap-1 justify-end">
+                                          <Input type="number" value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-7 text-xs w-16 text-right" autoFocus data-testid={`input-edit-qty-${item.id}`} />
+                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit}><Check className="h-3 w-3" /></Button>
+                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
+                                        </div>
+                                      ) : (
+                                        <span className="cursor-pointer" onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue || 0))} data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
+                                      )}
+                                    </td>
 
-                        return (
-                          <motion.tr
-                            key={`staple-${item.id}`}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 0.6 }}
-                            exit={{ opacity: 0 }}
-                            className="border-b border-border/30 bg-muted/5"
-                            data-testid={`row-staple-${item.id}`}
-                          >
-                            <td className="px-2 py-1" />
-                            <td className="px-2 py-1">
-                              <div className="flex items-center gap-1.5">
-                                <CatIcon className="h-3 w-3 text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground line-through">{item.productName}</span>
-                                <button
-                                  className="ml-2 text-[10px] text-primary hover:underline whitespace-nowrap"
-                                  onClick={() => toggleNeededThisWeek(item.id)}
-                                  data-testid={`button-need-this-week-${item.id}`}
-                                >
-                                  Need this week ↑
-                                </button>
-                              </div>
-                            </td>
-                            <td className="px-2 py-1" />
-                            <td className="px-2 py-1" />
-                            <td className="px-2 py-1 text-right text-xs text-muted-foreground">{qty}</td>
-                            <td className="px-2 py-1 text-xs text-muted-foreground">{unitLabel}</td>
-                            {hasPrices && <td className="px-2 py-1" />}
-                            <td className="px-2 py-1">
-                              <Badge variant="outline" className={`text-[10px] ${catColor}`}>{cat}</Badge>
-                            </td>
-                            {hasPrices && <td className="px-2 py-1" />}
-                            <td className="px-2 py-1 text-center">
-                              {sources.length > 0 && (
-                                <span className="text-[10px] text-muted-foreground">{sources.length}M</span>
-                              )}
-                            </td>
-                            {hasPrices && <><td /><td /><td /></>}
-                            <td className="px-2 py-1" />
-                            <td className="px-2 py-1" />
-                          </motion.tr>
-                        );
-                      })}
-                    </AnimatePresence>
-                  </tbody>
-                </table>
+                                    {hasPrices && (
+                                      <td className="px-2 py-1">
+                                        {selectedMatch ? (
+                                          <div className="flex items-center gap-1.5 max-w-[160px]">
+                                            {selectedMatch.imageUrl && <img src={selectedMatch.imageUrl} alt={selectedMatch.productName} className="w-7 h-7 rounded object-cover flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} data-testid={`img-product-${item.id}`} />}
+                                            <div className="min-w-0">
+                                              <p className="text-xs text-foreground break-words line-clamp-2" data-testid={`text-product-name-${item.id}`}>{selectedMatch.productName}</p>
+                                              {selectedMatch.productWeight && <p className="text-[10px] text-muted-foreground">{selectedMatch.productWeight}</p>}
+                                            </div>
+                                          </div>
+                                        ) : <span className="text-muted-foreground">—</span>}
+                                        {showHint && (
+                                          <div className="flex items-center gap-1 mt-0.5">
+                                            <span className="text-[10px] text-amber-600 dark:text-amber-400" data-testid={`text-tha-pick-${item.id}`}>⭐ {topPick.productName}</span>
+                                            <button className="text-[10px] text-primary hover:underline font-medium" onClick={() => updateItem.mutate({ id: item.id, fields: { matchedStore: topPick.retailer, matchedProductId: null, matchedPrice: null } })} data-testid={`button-use-tha-pick-${item.id}`}>[Use]</button>
+                                          </div>
+                                        )}
+                                      </td>
+                                    )}
+
+                                    {hasPrices && (
+                                      <td className="px-2 py-1" data-testid={`text-price-${item.id}`}>
+                                        <div className="flex flex-col gap-1">
+                                          <div className="flex items-center gap-1">
+                                            {selectedPrice !== null && selectedPrice !== undefined ? (
+                                              <span className={`tabular-nums cursor-pointer ${isBestPrice ? 'text-primary font-semibold' : 'text-foreground'}`} onClick={() => setComparisonItem(item)}>£{selectedPrice.toFixed(2)}</span>
+                                            ) : (
+                                              <span className="text-muted-foreground cursor-pointer" onClick={() => setComparisonItem(item)}>—</span>
+                                            )}
+                                            {isBestPrice && <span className="text-[9px] bg-secondary text-secondary-foreground px-1 py-0.5 rounded font-semibold">Best</span>}
+                                          </div>
+                                          <div className="flex items-center gap-1">
+                                            <Select value={item.selectedStore || 'auto'} onValueChange={(val) => { updateItem.mutate({ id: item.id, fields: { selectedStore: val === 'auto' ? null : val } }); setGlobalStore('auto'); }}>
+                                              <SelectTrigger className={`h-6 w-[90px] text-[11px] ${item.selectedStore ? 'border-amber-400' : ''}`} data-testid={`select-store-${item.id}`}>
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="auto"><span className="flex items-center gap-1"><TrendingDown className="h-3 w-3" />{isBranded ? 'Choose' : 'Auto'}</span></SelectItem>
+                                                {availableStores.map(store => {
+                                                  const storeMatch = itemPrices?.get(store);
+                                                  const isKnown = knownStores.includes(store);
+                                                  return (
+                                                    <SelectItem key={store} value={store}>
+                                                      <span className="flex items-center gap-1">
+                                                        {isBranded && isKnown && <Check className="h-3 w-3 text-green-500 flex-shrink-0" />}
+                                                        {store}{storeMatch?.price ? ` £${storeMatch.price.toFixed(2)}` : ''}
+                                                      </span>
+                                                    </SelectItem>
+                                                  );
+                                                })}
+                                              </SelectContent>
+                                            </Select>
+                                            {isBranded && item.selectedStore && (() => {
+                                              const storeMatch = itemPrices?.get(item.selectedStore);
+                                              return storeMatch?.productUrl ? (
+                                                <a href={storeMatch.productUrl} target="_blank" rel="noopener noreferrer">
+                                                  <Button variant="ghost" size="icon" className="h-6 w-6" data-testid={`button-store-link-${item.id}`}><ExternalLink className="h-3 w-3" /></Button>
+                                                </a>
+                                              ) : null;
+                                            })()}
+                                            <Button variant="ghost" size="sm" className="text-xs gap-1 text-muted-foreground h-6 px-1" onClick={() => setAnalyseItem(item)} data-testid={`button-change-product-${item.id}`}><Microscope className="h-3 w-3" /></Button>
+                                          </div>
+                                        </div>
+                                      </td>
+                                    )}
+
+                                    <td className="px-2 py-1" data-testid={`confidence-badge-${item.id}`}>
+                                      {isWF && wfConfLabel ? (
+                                        <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border ${wfConfLabel.colorClass} ${wfConfLabel.bgClass}`}>{wfConfLabel.label}</span>
+                                      ) : <span className="text-muted-foreground">—</span>}
+                                    </td>
+
+                                    {hasPrices && (
+                                      <td className="px-2 py-1 text-center" data-testid={`text-smp-${item.id}`}>
+                                        {(() => {
+                                          const smp = getItemSmpRating(item.id, item);
+                                          if (smp === 0) return <span className="text-muted-foreground">—</span>;
+                                          return <AppleRating rating={smp} size="small" hasCape={smp === 5} />;
+                                        })()}
+                                      </td>
+                                    )}
+
+                                    <td className="px-2 py-1">
+                                      <div className="flex items-center">
+                                        <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => startEdit(item.id, 'productName', item.productName)} className="text-muted-foreground h-7 w-7" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                      </div>
+                                    </td>
+                                  </motion.tr>
+                                );
+                              })}
+                            </AnimatePresence>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Staples */}
+                {sortedItems.some(i => isStaple(i)) && (
+                  <div className="mt-1 border-t border-border/40">
+                    <button className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left px-3 py-2" onClick={() => setStaplesOpen(o => !o)} data-testid="button-toggle-staples">
+                      {staplesOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                      Staples — usually in stock ({sortedItems.filter(i => isStaple(i)).length})
+                    </button>
+                    {staplesOpen && (
+                      <table className="w-full text-xs">
+                        <tbody>
+                          {sortedItems.filter(i => isStaple(i)).map(item => {
+                            const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
+                            const cat = item.category || 'other';
+                            const CatIcon = CATEGORY_ICONS[cat] || CircleDot;
+                            const sources = sourcesByItem.get(item.id) || [];
+                            return (
+                              <tr key={`staple-${item.id}`} className="border-b border-border/30 bg-muted/5 opacity-60" data-testid={`row-staple-${item.id}`}>
+                                <td className="px-2 py-1 w-7" />
+                                <td className="px-2 py-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <CatIcon className="h-3 w-3 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground line-through">{item.productName}</span>
+                                    {sources.length > 0 && <span className="text-[10px] text-muted-foreground">🍽 {sources.length}</span>}
+                                    <button className="ml-2 text-[10px] text-primary hover:underline whitespace-nowrap" onClick={() => toggleNeededThisWeek(item.id)} data-testid={`button-need-this-week-${item.id}`}>Need this week ↑</button>
+                                  </div>
+                                </td>
+                                <td className="px-2 py-1 text-right text-muted-foreground tabular-nums">{qty} {unitLabel}</td>
+                                <td colSpan={99} />
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Basket Totals */}
+            {savedItems.length > 0 && (
+              <div className="border-t border-border px-4 py-3 bg-muted/10" data-testid="section-basket-totals">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Basket Totals</p>
+                <div className="flex flex-wrap gap-6">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-muted-foreground">Total Price</span>
+                    <span className="text-sm font-bold tabular-nums" data-testid="text-basket-total-price">{clientBestTotal !== null ? `£${clientBestTotal.toFixed(2)}` : '—'}</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-muted-foreground">Avg THA Rating</span>
+                    <span className="text-sm font-bold tabular-nums" data-testid="text-basket-avg-smp">{avgSmpRating !== null ? `${avgSmpRating.toFixed(1)} / 5` : '—'}</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] text-muted-foreground">Overall Confidence</span>
+                    <span data-testid="text-basket-confidence">
+                      {overallConfidence === null ? <span className="text-xs text-muted-foreground">N/A</span>
+                        : overallConfidence === 'high' ? <span className="text-xs font-medium text-green-600 dark:text-green-400">High</span>
+                        : overallConfidence === 'medium' ? <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">Medium</span>
+                        : <span className="text-xs font-medium text-red-500 dark:text-red-400">Low</span>}
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
@@ -2312,8 +2147,62 @@ export default function ShoppingListPage() {
               </p>
             </div>
           )}
+
+          {/* Comparison Strip */}
+          {hasPrices && selectedRetailers.length > 0 && savedItems.length > 0 && (
+            <div className="border-t border-border px-4 py-4 bg-muted/5" data-testid="section-comparison-strip">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">Comparison Strip</p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border border-border rounded-md" data-testid="table-comparison-strip">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/30">
+                      <th className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">Shop</th>
+                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Budget</th>
+                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Standard</th>
+                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Premium</th>
+                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Organic</th>
+                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Current</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedRetailers.map(retailer => (
+                      <tr key={retailer} className="border-b border-border/50" data-testid={`row-comparison-${retailer.replace(/[\s']/g, '-').toLowerCase()}`}>
+                        <td className="px-3 py-2 font-medium text-foreground">{retailer}</td>
+                        {(['budget', 'standard', 'premium', 'organic'] as const).map(tier => {
+                          const val = comparisonMatrix[retailer]?.[tier] ?? 0;
+                          return <td key={tier} className="px-3 py-2 text-right tabular-nums text-foreground">{val > 0 ? `£${val.toFixed(2)}` : '—'}</td>;
+                        })}
+                        <td className="px-3 py-2 text-right tabular-nums font-medium text-foreground">{(currentByRetailer[retailer] ?? 0) > 0 ? `£${(currentByRetailer[retailer] ?? 0).toFixed(2)}` : '—'}</td>
+                      </tr>
+                    ))}
+                    <tr className="border-b border-border/50 bg-muted/20" data-testid="row-comparison-difference">
+                      <td className="px-3 py-2 font-medium text-muted-foreground">Difference vs Current</td>
+                      {(['budget', 'standard', 'premium', 'organic'] as const).map(tier => {
+                        const minVal = Math.min(...selectedRetailers.map(r => comparisonMatrix[r]?.[tier] ?? 0).filter(v => v > 0));
+                        if (!isFinite(minVal)) return <td key={tier} className="px-3 py-2 text-right tabular-nums text-muted-foreground">—</td>;
+                        const diff = minVal - currentTotal;
+                        const isPositive = diff > 0;
+                        return (
+                          <td key={tier} className={`px-3 py-2 text-right tabular-nums font-medium ${isPositive ? 'text-red-500 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                            {isPositive ? '+' : ''}{diff.toFixed(2)}
+                          </td>
+                        );
+                      })}
+                      <td className="px-3 py-2 text-right tabular-nums font-bold">{currentTotal > 0 ? `£${currentTotal.toFixed(2)}` : '—'}</td>
+                    </tr>
+                    <tr data-testid="row-comparison-current-total">
+                      <td className="px-3 py-2 font-medium text-muted-foreground">Current Total</td>
+                      <td colSpan={4} className="px-3 py-2 text-muted-foreground text-center">—</td>
+                      <td className="px-3 py-2 text-right tabular-nums font-bold">{currentTotal > 0 ? `£${currentTotal.toFixed(2)}` : '—'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </Card>
       </div>
+
 
       {shoppingExtras.length > 0 && (
         <div className="px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto mt-4">
