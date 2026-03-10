@@ -1,0 +1,198 @@
+Objective
+
+Refine the THA basket page (shopping-list-page.tsx) into the new category-based layout spec:
+
+Replace the single flat table with category-grouped tables, each with a sticky single-line header
+Category headers show: Category Name | Default Supermarket | Default Tier (or "Mixed" if any row has explicit override ≠ category default)
+Rows inherit category default supermarket/tier unless overridden per-row
+Column spec: Ingredient | Variant | Tier | Qty | Match | Price | Confidence | THA Rating
+After all category tables: Basket Totals section (Total Price, Avg THA Rating, Overall Confidence)
+Below that: Comparison Strip table (Shop × Budget/Standard/Premium/Organic/Current)
+"Difference vs Current" = min(tier column across retailers) − Current Total
+"Current Total" = sum of Current column (actual spend per retailer)
+Pantry section: render using same category layout but NO new pantry logic
+No backend changes; no pantry merge/recommend logic
+
+Tasks
+
+T001: Category Tier Options & Category Defaults State
+
+Blocked By: []
+Details:
+Add CATEGORY_TIER_OPTIONS: Record<string, string[]> constant — maps category to available tier options:
+produce/fruit/grains/herbs/oils/condiments/nuts/legumes/tinned/other: ['budget','standard','premium','organic']
+dairy: ['budget','standard','premium','organic','bovaer_free']
+meat/fish: ['budget','standard','premium','organic','grass_finished','pasture_raised']
+bakery: ['budget','standard','premium','organic','sourdough']
+eggs: ['budget','standard','premium','organic','free_range']
+
+Add extended tier labels to a new EXTENDED_TIER_LABELS map covering all tier keys including:
+bovaer_free → "Bovaer Free"
+grass_finished → "Grass Finished"
+pasture_raised → "Pasture Raised"
+sourdough → "Sourdough"
+free_range → "Free Range"
+plus the four base tiers
+
+Add state:
+categoryDefaults: Record<string, { supermarket: string; tier: string }>
+Persist to localStorage key tha-basket-category-defaults
+
+Initialise category default tier as:
+- globalBasketTier, if globalBasketTier !== "item"
+- otherwise "standard"
+
+Default supermarket = '' (auto)
+
+Add helpers:
+getCategoryDefault(cat) returns { supermarket, tier }
+setCategoryDefault(cat, field, value) updates state + localStorage
+
+"Auto" supermarket label:
+when supermarket === '' it is always displayed as "Auto" in headers and selectors — never blank
+
+Files:
+client/src/pages/shopping-list-page.tsx
+
+Acceptance:
+State initialises from localStorage, persists on change, extended tiers have labels, blank supermarket shows as "Auto"
+
+T002: Category-Grouped Table Rendering (main body)
+
+Blocked By: [T001]
+Details:
+Replace the single flat <table> block with category-grouped rendering
+Group non-staple items by item.category || 'other' in ALL_CATEGORIES order, skip empty categories
+
+For each non-empty category group, render:
+
+Sticky category header — a full-width bar (position: sticky; top: 0; z-index: 10) with:
+Left: CategoryIcon + Category name (capitalised, category colour)
+Middle: compact <select> for default supermarket (options: "Auto" value='' + SUPERMARKET_NAMES), wired to setCategoryDefault(cat, 'supermarket', val). Display value "Auto" when ''
+Right: tier display — Mixed logic: if ANY row in this category has item.selectedTier !== null && item.selectedTier !== categoryDefault.tier → show "Mixed" in amber text; otherwise show the categoryDefault.tier label from EXTENDED_TIER_LABELS
+
+Very compact:
+single line, py-1 px-3 text-xs, bg-muted/40 border-y border-border, sticky while scrolling
+
+Column header row (once per category block):
+Ingredient | Variant | Tier | Qty | Match | Price | Confidence | THA Rating | (actions col)
+
+Item rows — one per item in this category
+
+Column changes from current:
+REMOVE: explicit Cat. column
+REMOVE: Attributes column — merge boolean attribute checkboxes into the Variant column area
+REMOVE: Shop as its own column — keep store <select> inline in the Price cell
+REMOVE: Meal column header — keep meal source as a tooltip on the ingredient name (small 🍽 icon showing meal count when sources > 0)
+KEEP: Checkbox (purchased), action buttons (Analyse, Edit, Remove)
+
+COLUMN ORDER:
+Checkbox | Ingredient | Variant | Tier | Qty | Match | Price | Confidence | THA Rating | Actions
+
+Row tier dropdown:
+always visible, uses CATEGORY_TIER_OPTIONS[cat] for options, labelled by EXTENDED_TIER_LABELS
+if row has no explicit override it defaults to categoryDefault.tier
+if override ≠ category default, highlight trigger with amber border
+
+Mixed logic (authoritative definition):
+isMixed = rows.some(i => i.selectedTier !== null && i.selectedTier !== categoryDefault.tier)
+
+If isMixed → header shows "Mixed" in amber
+Else → header shows EXTENDED_TIER_LABELS[categoryDefault.tier]?.label
+
+Variant column should remain compact.
+Show variant text/chips first, then any boolean attribute chips beneath only when relevant.
+Do not let this reintroduce tall multi-line rows for most items.
+If no variant/attributes apply, show "—".
+
+Staples section:
+retain toggle, but render staples in a simplified flat section below all categories, keeping existing strikethrough style
+
+Files:
+client/src/pages/shopping-list-page.tsx
+
+Acceptance:
+One table section per non-empty category, sticky single-line header, Mixed shows correctly, "Auto" shown explicitly, category-specific tier options in row dropdown
+
+T003: Basket Totals Section
+
+Blocked By: [T002]
+Details:
+Add a new section after all category tables, before CardContent closes
+
+Compact horizontal strip labelled "Basket Totals"
+
+Total Price:
+clientBestTotal formatted as £XX.XX, or "—" if null
+
+Average THA Rating:
+avgSmp = mean(item.smpRating for items where smpRating > 0), shown as X.X / 5; or "—"
+
+Overall Confidence:
+for whole-food items (isWF), compute proportion at ≥ medium confidence → "High / Medium / Low" badge with colour; or "N/A" if no whole-food items
+
+Layout:
+three metric tiles in a horizontal row, compact text-xs, similar density to the supermarket totals strip
+
+Files:
+client/src/pages/shopping-list-page.tsx
+
+Acceptance:
+Three metrics render correctly; Total Price matches clientBestTotal
+
+T004: Comparison Strip (Holistic Basket Totals)
+
+Blocked By: [T003]
+Details:
+Add below Basket Totals, inside or directly after the Card
+Only render if hasPrices && selectedRetailers.length > 0
+
+comparisonMatrix useMemo:
+for each retailer in selectedRetailers × each tier in ['budget','standard','premium','organic']:
+total = sum over savedItems of:
+allPriceMatches.find(m => m.shoppingListItemId === item.id && m.supermarket === retailer && m.tier === tier)?.price ?? 0
+
+currentByRetailer useMemo:
+for each retailer → sum the price of each item attributed to that retailer using this priority:
+
+Explicit assignment first:
+if item.selectedStore === retailer, use pricesByItem.get(item.id)?.get(retailer)?.price
+
+Auto fallback only:
+if item.selectedStore is null, attribute the item to the retailer currently chosen by existing auto-match logic for that row.
+Do not attribute by theoretical cheapest price unless that is the row’s actual current auto-selected retailer.
+
+Items with an explicit selectedStore set to a different retailer are NOT counted here, even if a price exists
+Items with no price for their attributed retailer contribute 0
+
+currentTotal = sum of currentByRetailer values across selected retailers
+
+Table structure:
+Header: Shop | Budget | Standard | Premium | Organic | Current
+
+Data rows:
+one per selected retailer — tier totals + currentByRetailer[retailer] in Current cell
+
+"Difference vs Current" row:
+For each tier column:
+min(comparisonMatrix[retailer][tier] for all retailers) - currentTotal
+
+Show as +£X.XX (red, more expensive) or -£X.XX (green, cheaper)
+Current cell shows currentTotal
+
+"Current Total" row:
+single row, Current cell = currentTotal, tier cells = "—"
+
+Table styling:
+text-xs, border border-border rounded-md, numbers right-aligned with tabular-nums, compact row padding
+
+Section heading:
+"Comparison Strip" in small caps above table
+
+Files:
+client/src/pages/shopping-list-page.tsx
+
+Acceptance:
+Table renders with correct retailer rows and tier columns
+Difference row uses min(column) - currentTotal logic
+Current Total = sum of Current column

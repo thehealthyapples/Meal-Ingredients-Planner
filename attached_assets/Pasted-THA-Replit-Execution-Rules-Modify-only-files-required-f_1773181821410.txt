@@ -1,0 +1,175 @@
+THA Replit Execution Rules
+• Modify only files required for this task
+• Do not redesign existing architecture
+• Do not delete or truncate database tables
+• Do not generate test suites
+• Run TypeScript compile check and start dev server
+
+Objective
+Refine the THA basket into a compact category-based table with inheritance. Each category renders once with a sticky single-line header showing:
+
+Category   Default Supermarket   Default Tier
+
+Rows inherit those defaults unless overridden at ingredient level. If any row tier override exists in a category, the category header displays “Mixed”.
+
+This is a layout/interaction refinement only, not a rewrite.
+
+Scope restriction
+Do NOT implement pantry-specific logic yet. Pantry should only display using the same category layout for visual consistency.
+
+Core Behaviour
+
+1. Category header format example:
+   Produce   Tesco   Budget
+   Dairy     Waitrose   Bovaer Free
+
+2. Header fields
+   • category name
+   • default supermarket
+   • default tier (or Mixed)
+
+3. Rows inherit category supermarket and tier unless overridden.
+
+4. Each row includes a Tier dropdown column.
+
+5. Header tier behaviour
+   • if all rows match category default → show tier
+   • if any row tier differs → show Mixed
+
+6. Header must be compact, single-line and sticky during scroll.
+
+Table Columns
+Ingredient | Variant | Tier | Qty | Match | Price | Confidence | THA Rating
+
+Keep rows compact and scan-friendly.
+
+Tier Options by Category
+
+Produce
+Budget | Standard | Premium | Organic
+
+Dairy
+Budget | Standard | Premium | Organic | Bovaer Free
+
+Meat
+Budget | Standard | Premium | Organic | Grass Finished | Pasture Raised
+
+Bakery
+Budget | Standard | Premium | Organic | Sourdough
+
+Pantry
+Use current behaviour only (no new tier logic yet).
+
+Implementation Areas
+Likely files:
+• client/src/pages/shopping-list-page.tsx
+• category table components
+• sticky category header component
+• basket state helpers
+
+Implementation Tasks
+
+T1: Sticky category headers
+• Render category header once per category
+• Format: category + supermarket + tier
+• Minimal padding
+• Sticky while scrolling
+• Remove large panels/cards
+
+T2: Category default inheritance
+• Store category default supermarket and tier
+• Rows inherit unless overridden
+
+T3: Row tier override
+• Tier dropdown per row
+• Options depend on category
+
+T4: Mixed header logic
+• If any row tier ≠ category default → header shows “Mixed”
+
+T5: Table structure
+Columns:
+Ingredient | Variant | Tier | Qty | Match | Price | Confidence | THA Rating
+
+T6: Preserve behaviour
+• Keep existing matching logic
+• Keep analyser logic
+• Keep packaged-food behaviour
+• Avoid adding extra UI clutter
+
+Basket Totals Section
+
+After all categories render:
+
+Basket Totals
+• Total Price
+• Average THA Rating
+• Overall Confidence
+
+Comparison Strip (Holistic Basket Totals)
+
+Render below Basket Totals.
+
+Table format:
+
+Shop | Budget | Standard | Premium | Organic | Current
+
+Example:
+
+Tesco     £72.10   £81.40   £94.80   £108.30   £15
+Asda      £69.20   £78.30   £91.50   £105.10   £40
+Waitrose  £84.50   £92.60   £106.20   £121.40   £30
+
+Current column logic
+• Represents actual spend distribution across shops from the user's built basket
+• Sum of all category subtotals for that retailer
+
+Below the shop rows add two summary rows:
+
+Difference vs Current
+For each tier column:
+Tier Total − Current Basket Total
+
+Example row:
+
+Difference vs Current
+Budget   -£15.80
+Standard -£6.70
+Premium  +£8.50
+Organic  +£22.40
+
+Current Total row
+
+Displays total of Current column.
+
+Example:
+
+Current Total | £85.00
+
+Purpose
+• Shows where current basket spend is distributed
+• Shows how the current basket compares against holistic tier baskets
+
+Pantry restriction (important)
+
+Do NOT implement yet:
+• pantry merge between pantry screen and recipe items
+• pantry recommendation engine
+• pantry analyser-driven matching
+• pantry-specific columns
+• pantry filter logic
+
+Pantry should only render using the same category table structure.
+
+Acceptance
+
+• Category headers are single-line and sticky
+• Rows inherit category supermarket/tier
+• Tier dropdown works per row
+• Header switches to Mixed when overrides exist
+• Page height reduced and layout compact
+• Basket totals calculated correctly
+• Comparison strip renders with Current column
+• Difference vs Current row calculated correctly
+• Current Total row equals sum of Current column
+• Pantry displays but uses existing logic only
