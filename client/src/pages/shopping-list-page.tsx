@@ -153,13 +153,41 @@ const CATEGORY_COLORS: Record<string, string> = {
 const CATEGORY_ICONS: Record<string, typeof Beef> = {
   meat: Beef, fish: Fish, dairy: Milk, eggs: Egg, produce: Leaf, fruit: Apple,
   grains: Wheat, herbs: Flower2, oils: Droplets, condiments: FlaskConical,
-  nuts: Nut, legumes: Bean, bakery: Croissant, tinned: Package, other: CircleDot,
+  nuts: Nut, legumes: Bean, bakery: Croissant, tinned: Package, pantry: Package, other: CircleDot,
 };
 
-const ALL_CATEGORIES = [
-  'meat', 'fish', 'dairy', 'eggs', 'produce', 'fruit', 'grains',
-  'herbs', 'oils', 'condiments', 'nuts', 'legumes', 'bakery', 'tinned', 'other',
+const BASKET_DISPLAY_CATEGORIES = [
+  'produce', 'dairy', 'eggs', 'meat', 'fish', 'bakery', 'pantry', 'other',
 ];
+
+const BASKET_CATEGORY_MAP: Record<string, string> = {
+  produce: 'produce',
+  fruit: 'produce',
+  dairy: 'dairy',
+  eggs: 'eggs',
+  meat: 'meat',
+  fish: 'fish',
+  bakery: 'bakery',
+  grains: 'pantry',
+  oils: 'pantry',
+  condiments: 'pantry',
+  nuts: 'pantry',
+  legumes: 'pantry',
+  tinned: 'pantry',
+};
+
+const FRESH_HERB_NAMES = new Set([
+  'coriander', 'basil', 'parsley', 'mint', 'dill',
+]);
+
+function getBasketCategory(item: { category?: string | null; productName: string; normalizedName?: string | null }): string {
+  const raw = (item.category || 'other').toLowerCase();
+  if (raw === 'herbs') {
+    const name = (item.normalizedName ?? item.productName).toLowerCase();
+    return FRESH_HERB_NAMES.has(name) ? 'produce' : 'pantry';
+  }
+  return BASKET_CATEGORY_MAP[raw] ?? 'other';
+}
 
 const SUPERMARKET_NAMES = ['Tesco', "Sainsbury's", 'Asda', 'Morrisons', 'Aldi', 'Lidl', 'Waitrose', 'Marks & Spencer', 'Ocado'];
 
@@ -197,6 +225,7 @@ const CATEGORY_TIER_OPTIONS: Record<string, string[]> = {
   nuts: ['budget', 'standard', 'premium', 'organic'],
   legumes: ['budget', 'standard', 'premium', 'organic'],
   tinned: ['budget', 'standard', 'premium', 'organic'],
+  pantry: ['budget', 'standard', 'premium', 'organic'],
   other: ['budget', 'standard', 'premium', 'organic'],
 };
 
@@ -1598,8 +1627,8 @@ export default function ShoppingListPage() {
               </div>
             ) : (
               <div>
-                {ALL_CATEGORIES.map(cat => {
-                  const catItems = sortedItems.filter(i => !isStaple(i) && (i.category || 'other') === cat);
+                {BASKET_DISPLAY_CATEGORIES.map(cat => {
+                  const catItems = sortedItems.filter(i => !isStaple(i) && getBasketCategory(i) === cat);
                   if (catItems.length === 0) return null;
                   const catDefault = getCategoryDefault(cat);
                   const isMixed = catItems.some(i => i.selectedTier !== null && i.selectedTier !== catDefault.tier);
