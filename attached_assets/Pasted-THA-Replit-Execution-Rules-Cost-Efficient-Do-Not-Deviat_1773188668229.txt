@@ -1,0 +1,190 @@
+THA Replit Execution Rules — Cost Efficient / Do Not Deviate
+
+• Follow the plan exactly
+• Do not deviate from the requested scope
+• Modify only the minimum files required
+• Do not redesign architecture
+• Do not refactor unrelated code
+• Do not remove underlying state/helpers unless clearly unused
+• Do not generate test suites
+• Do not run automated tests
+• Do not perform exploratory refactors
+• Only run a TypeScript compile check
+• Start the dev server when finished
+• I will perform the visual/UI verification manually
+
+Objective
+
+Refine the basket page UI without changing the current basket architecture.
+
+This pass has two goals only:
+
+1. Restore the missing working columns in the basket table
+2. Restore the Meal column behaviour using the knife-and-fork icon plus recipe count
+
+Do not change the category layout, sticky headers, Basket Totals, or Comparison Strip.
+Do not redesign the basket again.
+This is a column restoration/refinement only.
+
+Required visible columns
+
+Restore and render these visible columns in the basket table:
+
+• Ingredient
+• Qty
+• Unit
+• Matched Product
+• Tier
+• Shop
+• Meal
+• Price
+• Confidence
+• THA Rating
+• Analyse
+• Edit
+
+Requirements
+
+T001: Restore missing basket columns
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Changes:
+- Restore these columns in the basket table UI:
+  • Ingredient
+  • Qty
+  • Unit
+  • Matched Product
+  • Tier
+  • Shop
+  • Meal
+  • Price
+  • Confidence
+  • THA Rating
+  • Analyse
+  • Edit
+
+- Keep the current category-grouped layout and sticky headers
+- Do not remove Basket Totals
+- Do not remove Comparison Strip
+
+Column guidance:
+- Ingredient should remain prominent
+- Qty and Unit should be narrow columns
+- Matched Product can take the most width
+- Tier and Shop should be visible working columns
+- Meal should be compact
+- Price should remain clearly visible
+- Confidence and THA Rating should be compact
+- Analyse and Edit should be narrow action columns
+
+Important:
+- Shop must be restored as a visible column
+- Meal must be restored as a visible column
+- Do not hide these only inside other cells or tooltips
+
+Acceptance:
+- Missing working columns are restored
+- Table remains readable and compact
+- Category layout still works
+
+T002: Rename SMP to THA Rating
+
+Files:
+- client/src/pages/shopping-list-page.tsx
+- any directly related visible basket table/header component if split out
+
+Changes:
+- Rename "SMP" to "THA Rating" everywhere in the visible basket UI for this table/page
+- Do not change backend naming unless absolutely required for display
+
+Acceptance:
+- User only sees "THA Rating" in the basket UI
+- No visible "SMP" label remains in the basket table
+
+T003: Restore Meal column behaviour
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Changes:
+- Restore the Meal column with the prior THA behaviour
+- Display a knife-and-fork icon plus recipe count:
+  Examples:
+  🍽 1
+  🍽 3
+
+Rules:
+- If the ingredient is linked to recipes, show 🍽 plus the number of recipes
+- If the ingredient is not linked to any recipe, show "—"
+- Keep the Meal column compact and centered
+- Reuse the current recipe-linking/source data already available for each item
+- Do not remove or rewrite existing recipe-source logic unnecessarily
+
+Important:
+- This Meal column must remain visible because it will be useful later for pantry review
+- Do not reduce it to a tooltip-only pattern in this pass
+
+Acceptance:
+- Meal column is visible
+- Recipe-linked rows show knife-and-fork icon plus count
+- Non-recipe rows show "—"
+
+T004: Analyse and Edit action columns
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Changes:
+- Keep Analyse and Edit as clear visible action columns
+- Use compact buttons or icons if already supported
+- Keep them easy to use and aligned consistently
+- Do not create large button blocks that increase row height unnecessarily
+
+Acceptance:
+- Analyse column is visible and usable
+- Edit column is visible and usable
+- Row height remains reasonably compact
+
+T005: Preserve current page structure and logic
+
+Files:
+- only files directly required
+
+Do NOT change:
+- category sticky header logic
+- category supermarket/tier inheritance logic
+- Mixed header logic
+- Basket Totals
+- Comparison Strip
+- pantry-specific logic
+
+Do NOT implement:
+- draggable columns in this pass
+- pantry merge logic
+- pantry recommendation engine
+- additional redesign work
+
+If simple and low-risk, you may prepare the table structure for future draggable columns, but do not spend meaningful time implementing drag-and-drop now.
+
+Acceptance:
+- Current basket logic still works
+- This pass only restores/refines columns and labels
+
+T006: Minimal verification only
+
+Steps:
+- Run TypeScript compile check only
+- Start dev server
+- Do not run automated tests
+- Do not generate test files
+
+Final acceptance:
+- Table shows required columns
+- "THA Rating" label is used
+- Meal column shows 🍽 count correctly
+- Shop and Meal are visible as real columns
+- Analyse and Edit remain usable
+- Category layout, Basket Totals, and Comparison Strip remain intact
+- No TypeScript compile errors
