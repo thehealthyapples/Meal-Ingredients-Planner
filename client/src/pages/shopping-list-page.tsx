@@ -2067,17 +2067,49 @@ export default function ShoppingListPage() {
                                     )}
 
                                     <td className="px-1.5 py-1 text-center" data-testid={`meal-count-${item.id}`}>
-                                      {sources.length > 0 ? (
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <span className="cursor-default text-[11px] text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🍽 {sources.length}</span>
-                                          </TooltipTrigger>
-                                          <TooltipContent side="bottom" className="max-w-[220px]">
-                                            <p className="text-xs font-medium mb-1">Used in:</p>
-                                            {sources.map((s, idx) => <p key={idx} className="text-xs text-muted-foreground">{s.mealName}{s.quantityMultiplier > 1 ? ` (x${s.quantityMultiplier})` : ''}</p>)}
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      ) : <span className="text-muted-foreground">—</span>}
+                                      {(() => {
+                                        const hasPantry = isPantry;
+                                        const hasRecipes = sources.length > 0;
+                                        if (hasPantry && hasRecipes) {
+                                          return (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className="cursor-default text-[11px] text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🏠 + 🍽 {sources.length}</span>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="bottom" className="max-w-[220px]">
+                                                <p className="text-xs font-medium mb-1">Pantry item also used in {sources.length} recipe(s):</p>
+                                                {sources.map((s, idx) => <p key={idx} className="text-xs text-muted-foreground">{s.mealName}{s.quantityMultiplier > 1 ? ` (x${s.quantityMultiplier})` : ''}</p>)}
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          );
+                                        }
+                                        if (hasPantry && !hasRecipes) {
+                                          return (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className="cursor-default text-[11px] text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🏠</span>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="bottom">
+                                                <p className="text-xs">Added from pantry</p>
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          );
+                                        }
+                                        if (!hasPantry && hasRecipes) {
+                                          return (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className="cursor-default text-[11px] text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🍽 {sources.length}</span>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="bottom" className="max-w-[220px]">
+                                                <p className="text-xs font-medium mb-1">Used in {sources.length} recipe(s):</p>
+                                                {sources.map((s, idx) => <p key={idx} className="text-xs text-muted-foreground">{s.mealName}{s.quantityMultiplier > 1 ? ` (x${s.quantityMultiplier})` : ''}</p>)}
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          );
+                                        }
+                                        return <span className="text-muted-foreground">—</span>;
+                                      })()}
                                     </td>
 
                                     <td className="px-1.5 py-1">
