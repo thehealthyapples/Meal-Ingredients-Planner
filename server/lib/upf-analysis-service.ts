@@ -161,8 +161,9 @@ export function analyzeProductUPF(
   additiveDb: Additive[],
   healthScore: number,
   productContext?: ProductContext,
+  preParseIngredients?: ParsedIngredient[],
 ): UPFAnalysisResult {
-  const ingredients = parseProductIngredients(ingredientsText);
+  const ingredients = preParseIngredients ?? parseProductIngredients(ingredientsText);
   const additiveMatches = detectAdditives(ingredientsText, additiveDb);
   const processingIndicators = detectProcessingIndicators(ingredientsText);
   const upfScore = calculateUPFScore(ingredients, additiveMatches, processingIndicators);

@@ -1,0 +1,171 @@
+THA Replit Execution Rules — Scoring Inspection + Small Performance Fix / Do Not Deviate
+
+• Follow this plan exactly
+• Modify only the minimum code required
+• Do NOT redesign architecture
+• Do NOT change database schema
+• Do NOT implement a new scoring system yet
+• Do NOT refactor unrelated code
+• Do NOT generate automated tests
+• Do NOT run test frameworks
+• Only run a TypeScript compile check
+• Start dev server when finished
+• I will manually review the report and outputs
+
+Objective
+
+Do two things only:
+
+1. Inspect and simulate the current THA scoring engine against representative products so we can decide how to improve scoring in a controlled way
+2. Fix the duplicate ingredient parsing in the analyser pipeline to improve compute efficiency and speed
+
+Important product direction for the inspection:
+• THA rating should reflect ingredient purity / formulation quality (Option A), not nutrition
+• Only truly elite whole foods should reach 5 apples
+• Half-apples may be appropriate in the future
+• Example intended direction:
+  - only organic whole food = 5 apples
+  - grass finished = 4.5 apples
+  - free range = 4 apples
+  - processed products should score lower than they do now
+  - E-numbers, acidity regulators, and UPF ready meals should be marked down more meaningfully
+  - some cleaner prepared meals (example: "Cook"-style better-quality ready meals) may deserve higher than generic UPF ready meals
+
+Do NOT implement these scoring changes yet.
+This pass is:
+• scoring inspection / simulation
+• one small compute fix (remove duplicate parsing)
+
+--------------------------------------------------
+T001 — Simulate current scoring on representative products
+
+Files to inspect:
+• server/lib/product-analysis.ts
+• server/lib/upf-analysis-service.ts
+• server/lib/smp-rating-service.ts
+
+Create a concise report using the current live scoring logic for at least these representative examples:
+
+1. Passata — ingredients: tomatoes
+2. Passata — ingredients: tomatoes, acidity regulator
+3. Organic whole milk
+4. Free range eggs
+5. Grass finished beef mince
+6. Olive oil
+7. Extra virgin olive oil
+8. Generic UPF ready meal with multiple additives
+9. Cleaner ready meal with short ingredient list (Cook-style quality example)
+10. Diet Coke / artificially sweetened drink
+
+For each example, report:
+• inferred/used NOVA
+• detected additives / processing indicators
+• strict SMP score (0–100)
+• current apple rating
+• short reason summary
+
+Output format:
+Product | Score | Apples | Key penalties / bonuses | Notes
+
+Goal:
+Show how the current engine behaves today before we change anything.
+
+--------------------------------------------------
+T002 — Compare current behaviour against intended THA direction
+
+Using the same examples, provide a concise assessment of where the current scoring fails relative to the intended THA direction.
+
+Specifically assess:
+• acidity regulator penalty too weak?
+• UPF ready meals too generous?
+• organic whole foods properly rewarded?
+• free range / grass finished not represented strongly enough?
+• cleaner prepared meals distinguishable from generic UPF ready meals?
+• should half-apples be considered in future?
+• does Option A (ingredient purity only, not nutrition-led) still make sense?
+
+Important:
+This is inspection/recommendation only.
+Do NOT change scoring rules in this pass.
+
+Expected output:
+• “Working well”
+• “Under-penalised”
+• “Over-rewarded”
+• “Needs new rule”
+for each major scoring area
+
+--------------------------------------------------
+T003 — Identify the minimum scoring changes likely needed later
+
+Based on the simulation results, propose the smallest possible set of future scoring changes to better match THA direction.
+
+Do NOT implement them yet.
+
+Examples of the type of recommendation expected:
+• acidity regulator penalty likely needs increasing from X to around Y
+• emulsifier penalty may need increasing
+• organic whole-food bonus may need tightening so only elite products hit 5 apples
+• free range / grass finished may need explicit bonuses or product-context-aware handling
+• consider half-apple display thresholds instead of only whole integers
+
+Return this as a short proposed-change list only.
+
+--------------------------------------------------
+T004 — Fix duplicate ingredient parsing now
+
+Files:
+• server/lib/product-analysis.ts
+• server/lib/upf-analysis-service.ts
+• any minimal shared type/helper only if clearly required
+
+Current issue:
+Ingredient parsing currently happens twice in the analysis pipeline.
+
+Implement a small performance improvement so parseProductIngredients is performed once and the parsed result is reused downstream where practical.
+
+Requirements:
+• keep current scoring behaviour identical
+• do not change outputs intentionally
+• do not redesign the analyser architecture
+• keep this as a small, local refactor only
+• if parsed ingredients need to be passed forward, do so in the lightest way possible
+
+Acceptance:
+• no duplicate parsing in the normal analysis flow
+• current scoring output remains functionally unchanged
+• compile passes
+
+--------------------------------------------------
+T005 — Report the final scoring pipeline after the compute fix
+
+After T004, provide the updated flow in plain English, for example:
+
+ingredient text
+→ parseProductIngredients (once)
+→ detect additives / UPF / indicators
+→ calculate strict SMP score
+→ convert to apples
+
+Keep it concise.
+
+--------------------------------------------------
+T006 — Minimal verification only
+
+Steps:
+• Run npx tsc --noEmit
+• Start dev server
+• Do NOT generate tests
+• Do NOT run automated testing
+
+--------------------------------------------------
+Final deliverables
+
+Return:
+
+1. The 10-product scoring simulation table
+2. A short assessment of where current THA scoring is too weak/too strong
+3. A short proposed-change list for a future scoring pass
+4. Confirmation that duplicate parsing was removed
+5. A short description of the updated scoring pipeline
+6. Any compile issues, if any

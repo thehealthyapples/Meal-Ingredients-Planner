@@ -1809,7 +1809,7 @@ export async function registerRoutes(
             productName: p.product_name || p.product_name_en || '',
             categoriesTags: p.categories_tags || [],
             novaGroup: p.nova_group || null,
-          }) : null;
+          }, analysis.ingredients) : null;
           const altCountries: string[] = p.countries_tags || [];
           const altIsUK = altCountries.some((c: string) => c === 'en:united-kingdom' || c === 'en:uk');
 
@@ -2272,7 +2272,7 @@ export async function registerRoutes(
               productName: bestProduct.product_name || '',
               categoriesTags: bestProduct.categories_tags || [],
               novaGroup: bestProduct.nova_group || null,
-            });
+            }, analysis.ingredients);
             if (upfResult && upfResult.smpRating > 0) {
               await storage.updateShoppingListItem(item.id, { smpRating: upfResult.smpRating });
               updated.push({ id: item.id, smpRating: upfResult.smpRating });
@@ -3870,7 +3870,7 @@ export async function registerRoutes(
         productName: p.product_name || p.product_name_en || '',
         categoriesTags: p.categories_tags || [],
         novaGroup: p.nova_group || null,
-      }) : null;
+      }, analysis.ingredients) : null;
 
       const countriesTags: string[] = p.countries_tags || [];
       const isUK = countriesTags.some((c: string) => c === 'en:united-kingdom' || c === 'en:uk');
