@@ -8,6 +8,13 @@ const DAIRY_MEAT_KEYWORDS = [
 
 const ORGANIC_KEYWORDS = ["organic", "bio", "biologique"];
 
+const FREE_RANGE_KEYWORDS = ["free range", "free-range"];
+
+const GRASS_FED_KEYWORDS = [
+  "grass fed", "grass-fed", "grass finished", "grass-finished",
+  "pasture raised", "pasture-raised", "pasture fed", "pasture-fed",
+];
+
 const SUPERFOODS = [
   "quinoa", "chia", "flaxseed", "linseed", "turmeric", "ginger",
   "blueberry", "blueberries", "acai", "spinach", "kale", "broccoli",
@@ -40,6 +47,8 @@ export interface SMPRatingResult {
   };
   bonuses: {
     organic: number;
+    freeRange: number;
+    grassFed: number;
     superfoods: number;
     simplicity: number;
   };
@@ -55,6 +64,16 @@ function isDairyOrMeat(productName: string, categoriesTags: string[]): boolean {
 function isOrganic(productName: string, ingredientsText: string, categoriesTags: string[]): boolean {
   const combined = `${productName} ${ingredientsText} ${categoriesTags.join(" ")}`.toLowerCase();
   return ORGANIC_KEYWORDS.some(kw => combined.includes(kw));
+}
+
+function isFreeRange(productName: string, categoriesTags: string[]): boolean {
+  const combined = `${productName} ${categoriesTags.join(" ")}`.toLowerCase();
+  return FREE_RANGE_KEYWORDS.some(kw => combined.includes(kw));
+}
+
+function isGrassFed(productName: string, categoriesTags: string[]): boolean {
+  const combined = `${productName} ${categoriesTags.join(" ")}`.toLowerCase();
+  return GRASS_FED_KEYWORDS.some(kw => combined.includes(kw));
 }
 
 function countSuperfoods(ingredientsText: string): number {
@@ -88,16 +107,18 @@ export function calculateStrictSMPRating(input: SMPRatingInput): SMPRatingResult
 
   const highRiskPenalty = highRiskCount * 8;
   const emulsifierPenalty = emulsifierCount * 6;
-  const acidityPenalty = acidityRegulatorCount * 3;
+  const acidityPenalty = acidityRegulatorCount * 13;
   score -= highRiskPenalty;
   score -= emulsifierPenalty;
   score -= acidityPenalty;
 
   const organic = isOrganic(input.productName, input.ingredientsText, input.categoriesTags);
   const dairyMeat = isDairyOrMeat(input.productName, input.categoriesTags);
+  const freeRange = !organic && isFreeRange(input.productName, input.categoriesTags);
+  const grassFed = !organic && isGrassFed(input.productName, input.categoriesTags);
 
   let bovaerPenalty = 0;
-  if (dairyMeat && !organic) {
+  if (dairyMeat && !organic && !freeRange && !grassFed) {
     bovaerPenalty = 10;
     score -= bovaerPenalty;
   }
@@ -108,8 +129,21 @@ export function calculateStrictSMPRating(input: SMPRatingInput): SMPRatingResult
     score += organicBonus;
   }
 
+  let grassFedBonus = 0;
+  if (grassFed) {
+    grassFedBonus = 13;
+    score += grassFedBonus;
+  }
+
+  let freeRangeBonus = 0;
+  if (freeRange) {
+    freeRangeBonus = 8;
+    score += freeRangeBonus;
+  }
+
   const superfoodCount = countSuperfoods(input.ingredientsText);
-  const superfoodBonus = superfoodCount * 5;
+  const superfoodBonusPerItem = input.novaGroup <= 1 ? 5 : 2;
+  const superfoodBonus = superfoodCount * superfoodBonusPerItem;
   score += superfoodBonus;
 
   let simplicityBonus = 0;
@@ -121,6 +155,8 @@ export function calculateStrictSMPRating(input: SMPRatingInput): SMPRatingResult
 
   if (score > 100) score = 100;
   if (score < 0) score = 0;
+
+  if (input.novaGroup === 4 && score > 55) score = 55;
 
   let smpRating: number;
   if (score >= 90) smpRating = 5;
@@ -144,6 +180,8 @@ export function calculateStrictSMPRating(input: SMPRatingInput): SMPRatingResult
     },
     bonuses: {
       organic: organicBonus,
+      freeRange: freeRangeBonus,
+      grassFed: grassFedBonus,
       superfoods: superfoodBonus,
       simplicity: simplicityBonus,
     },

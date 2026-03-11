@@ -1,0 +1,262 @@
+THA Replit Execution Rules — Scoring Refinement Pass / Cost Controlled / Do Not Deviate
+
+• Follow this plan exactly
+• Modify only the minimum code required
+• Do NOT redesign architecture
+• Do NOT change database schema
+• Do NOT create a second scoring engine
+• Do NOT refactor unrelated code
+• Do NOT change Basket, Pantry, or Product Analyser UI in this pass
+• Do NOT change backend routes unless absolutely required by the scoring function signature
+• Preserve calculateStrictSMPRating as the single source of truth
+• Do NOT generate automated tests
+• Do NOT run test frameworks
+• Only run a TypeScript compile check
+• Start dev server when finished
+• I will manually review the results
+
+Objective
+
+Refine the existing THA scoring engine so ratings better reflect THA’s intended product philosophy.
+
+This is a scoring-engine adjustment pass only.
+
+Current direction to align with:
+• THA rating should reflect ingredient purity / formulation quality
+• It should NOT become nutrition-led
+• Pure, organic whole foods should be able to achieve 5 apples
+• Grass finished / pasture raised should score below organic but above standard
+• Free range should score below grass finished / organic
+• Products with acidity regulators, emulsifiers, and obvious UPF behaviour should score lower than they do today
+• Cleaner prepared meals should score better than generic UPF meals, but should not be over-rewarded to 5 apples too easily
+• NOVA 4 products should not be able to score unrealistically high
+
+Do NOT implement half-apples in this pass.
+Do NOT redesign the UI.
+Do NOT alter the apple display components yet.
+
+--------------------------------------------------
+Files to modify
+
+Primary target:
+• server/lib/smp-rating-service.ts
+
+Inspect only if needed:
+• server/lib/product-analysis.ts
+• server/lib/upf-analysis-service.ts
+
+Important:
+Keep calculateStrictSMPRating as the authoritative engine.
+
+--------------------------------------------------
+T001 — Increase acidity regulator penalty
+
+File:
+server/lib/smp-rating-service.ts
+
+Current issue:
+A product with a single acidity regulator is under-penalised and still often receives 5 apples.
+
+Required change:
+Increase the acidity regulator penalty from the current value to a materially stronger value.
+
+Target direction:
+• pure passata made only from tomatoes should remain 5 apples
+• passata with acidity regulator should drop meaningfully below that (target around 4 apples)
+
+Implement a penalty strong enough to visibly separate these cases.
+
+Do not guess wildly — use the inspection results as guidance.
+A reasonable target range is approximately:
+• acidity regulator penalty ≈ -12 to -15 per match
+
+Acceptance:
+• passata + acidity regulator no longer scores the same as pure passata
+
+--------------------------------------------------
+T002 — Add free range bonus
+
+File:
+server/lib/smp-rating-service.ts
+
+Current issue:
+Free range is not recognised and scores identically to standard/factory-farmed equivalents.
+
+Required change:
+Add a small, explicit bonus for “free range” / “free-range”.
+
+Scope:
+• apply where product name and/or relevant category tags indicate free range
+• keep this bonus below organic
+• this should improve eggs/poultry meaningfully but not push everything to 5 apples
+
+Target direction:
+• free range should sit meaningfully above standard
+• but below grass finished / pasture raised / organic
+
+Suggested target magnitude:
+• around +8
+
+Acceptance:
+• free range products score higher than standard equivalents
+• but still lower than organic equivalents
+
+--------------------------------------------------
+T003 — Add grass finished / pasture raised bonus
+
+File:
+server/lib/smp-rating-service.ts
+
+Current issue:
+Grass finished / pasture raised are not recognised at all.
+
+Required change:
+Add explicit detection and bonus for:
+• grass fed
+• grass finished
+• pasture raised
+• pasture-raised
+• pasture fed / pasture-fed if easy and safe
+
+Scope:
+• use product name and/or category tags if available in the current function inputs
+• keep this below organic or approximately just below organic
+• stronger than free range
+
+Suggested target magnitude:
+• around +12 to +15
+
+Acceptance:
+• grass finished / pasture raised products score higher than standard equivalents
+• bonus is visible in score outcome
+
+--------------------------------------------------
+T004 — Constrain over-rewarding of prepared meals
+
+File:
+server/lib/smp-rating-service.ts
+
+Current issue:
+Cleaner prepared meals can currently be pushed too high by simplicity and superfood bonuses.
+
+Required change:
+Constrain bonuses so prepared meals do not reach 5 apples too easily just because they contain ingredients like garlic or olive oil.
+
+Important:
+Do NOT remove the simplicity/superfood ideas entirely.
+Do NOT redesign the whole engine.
+Make the smallest possible change that fixes over-rewarding.
+
+Acceptable low-risk approaches include one of the following:
+• apply superfood bonus only when NOVA <= 1
+• reduce superfood bonus value when product is a prepared meal / NOVA 2+
+• restrict simplicity bonus in prepared-meal contexts
+• or another equally small, local rule that achieves the same effect
+
+Target direction:
+• a cleaner Cook-style prepared meal may deserve around 4 apples
+• it should not easily hit 5 apples just because it includes garlic and olive oil
+
+Acceptance:
+• cleaner prepared meals are still rewarded relative to generic UPF meals
+• but do not over-score into elite territory too easily
+
+--------------------------------------------------
+T005 — Add NOVA 4 hard cap
+
+File:
+server/lib/smp-rating-service.ts
+
+Required change:
+Add a hard maximum rating cap for NOVA 4 products.
+
+Target rule:
+• NOVA 4 products must not exceed 3 apples
+
+Implementation guidance:
+You may implement this as either:
+• a max score cap before apple conversion
+or
+• a direct max-rating cap after score calculation
+
+Keep it simple and local.
+
+Acceptance:
+• no NOVA 4 product can resolve above 3 apples
+• this applies regardless of bonuses
+
+--------------------------------------------------
+T006 — Preserve Option A (ingredient purity, not nutrition-led)
+
+Important:
+Do NOT introduce nutrition-based changes into calculateStrictSMPRating in this pass.
+
+Do NOT pull in:
+• sugar
+• salt
+• saturated fat
+• protein
+• fibre
+
+Those remain outside the strict THA rating for now.
+
+This pass should keep THA aligned with Option A:
+• ingredient purity / formulation quality scoring
+
+Acceptance:
+• strict THA rating remains non-nutrition-led
+
+--------------------------------------------------
+T007 — Keep one scoring engine only
+
+Important:
+Do NOT modify or revive legacy scoring paths.
+Do NOT create alternate scoring functions.
+
+If legacy/unused scoring helpers are present, leave them alone in this pass unless they directly block the change.
+This pass is for refinement, not cleanup.
+
+Acceptance:
+• calculateStrictSMPRating remains the single authoritative engine
+
+--------------------------------------------------
+T008 — Provide before/after scoring examples
+
+After implementing the changes, provide a concise report for these representative examples using the updated live logic:
+
+1. Passata — tomatoes only
+2. Passata — tomatoes + acidity regulator
+3. Standard eggs
+4. Free range eggs
+5. Standard beef mince
+6. Grass finished beef mince
+7. Generic UPF ready meal
+8. Cleaner prepared meal (Cook-style quality)
+9. Diet Coke / artificially sweetened drink
+
+For each, return:
+• score
+• apples
+• short reason summary
+
+Goal:
+Show the effect of the scoring refinement clearly.
+
+--------------------------------------------------
+T009 — Minimal verification only
+
+Steps:
+• Run npx tsc --noEmit
+• Start dev server
+• Do NOT generate tests
+• Do NOT run automated testing
+
+--------------------------------------------------
+Final deliverables
+
+Return:
+1. Exact scoring changes made
+2. Updated penalties/bonuses introduced
+3. Before/after-style representative product outcomes using the updated live logic
+4. Confirmation that calculateStrictSMPRating remains the single source of truth
+5. Any TypeScript issues, if any
