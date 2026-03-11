@@ -724,8 +724,8 @@ export default function ShoppingListPage() {
   }, [globalBasketTier]);
 
   const getEffectiveTier = (item: ShoppingListItem): PriceTier => {
-    if (globalBasketTier !== "item") return globalBasketTier as PriceTier;
-    return (item.selectedTier as PriceTier) || currentTier;
+    const catTier = getCategoryDefault(item.category || 'other').tier;
+    return (item.selectedTier as PriceTier) || (catTier as PriceTier) || currentTier;
   };
 
   useEffect(() => {
@@ -857,8 +857,9 @@ export default function ShoppingListPage() {
   }, [loadingSaved, itemCount, missingSmpCount, queryClient]);
 
   const getItemTier = useCallback((item: ShoppingListItem): PriceTier => {
-    return (item.selectedTier as PriceTier) || currentTier;
-  }, [currentTier]);
+    const catTier = getCategoryDefault(item.category || 'other').tier;
+    return (item.selectedTier as PriceTier) || (catTier as PriceTier) || currentTier;
+  }, [getCategoryDefault, currentTier]);
 
   const priceMatchesForItem = useCallback((itemId: number, tier: PriceTier) => {
     return allPriceMatches.filter(m => m.shoppingListItemId === itemId && m.tier === tier);
@@ -1152,9 +1153,9 @@ export default function ShoppingListPage() {
     let total = 0;
     for (const item of savedItems) {
       const tier: PriceTier =
-        globalBasketTier !== "item"
-          ? (globalBasketTier as PriceTier)
-          : ((item.selectedTier as PriceTier) || currentTier);
+        (item.selectedTier as PriceTier) ||
+        (getCategoryDefault(item.category || 'other').tier as PriceTier) ||
+        currentTier;
       let best: number | null = null;
       for (const retailer of selectedRetailers) {
         const match = allPriceMatches.find(
@@ -1167,7 +1168,7 @@ export default function ShoppingListPage() {
       if (best !== null) total += best;
     }
     return total;
-  }, [hasPrices, savedItems, allPriceMatches, selectedRetailers, globalBasketTier, currentTier]);
+  }, [hasPrices, savedItems, allPriceMatches, selectedRetailers, getCategoryDefault, currentTier]);
 
   const avgSmpRating = useMemo(() => {
     const rated = savedItems.filter(i => i.smpRating !== null && i.smpRating !== undefined && (i.smpRating as number) > 0);
@@ -1617,11 +1618,18 @@ export default function ShoppingListPage() {
                           <option value="">Auto</option>
                           {SUPERMARKET_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
                         </select>
-                        <div className="ml-auto text-[11px]">
-                          {isMixed
-                            ? <span className="text-amber-600 dark:text-amber-400 font-medium">Mixed</span>
-                            : <span className="text-muted-foreground">{EXTENDED_TIER_LABELS[catDefault.tier]?.label || catDefault.tier}</span>
-                          }
+                        <div className="ml-auto flex items-center gap-1.5 text-[11px]">
+                          {isMixed && <span className="text-amber-600 dark:text-amber-400 font-medium">Mixed</span>}
+                          <select
+                            className="h-6 text-[11px] border border-border rounded px-1.5 bg-background cursor-pointer"
+                            value={catDefault.tier}
+                            onChange={e => setCategoryDefault(cat, 'tier', e.target.value)}
+                            data-testid={`select-cat-tier-${cat}`}
+                          >
+                            {(CATEGORY_TIER_OPTIONS[cat] || CATEGORY_TIER_OPTIONS.other).map(key => (
+                              <option key={key} value={key}>{EXTENDED_TIER_LABELS[key]?.label || key}</option>
+                            ))}
+                          </select>
                         </div>
                       </div>
 
