@@ -1,0 +1,188 @@
+THA Replit Execution Rules — Cost Efficient / Do Not Deviate
+
+• Follow this plan exactly
+• Modify only the minimum code required
+• Do not redesign architecture
+• Do not refactor unrelated logic
+• Do not remove state unless clearly unused
+• Do not generate automated tests
+• Do not run test frameworks
+• Only run a TypeScript compile check
+• Start dev server when finished
+• I will manually verify behaviour
+
+Objective
+
+Fix the category-level tier control bug in shopping-list-page.tsx.
+
+Two gaps must be fixed:
+
+1. Add a real tier picker (native <select>) to each sticky category header
+2. Wire categoryDefaults[cat].tier into all effective-tier calculations so category tier actually affects:
+   • row pricing
+   • matching
+   • Basket Totals
+
+Important:
+Global basket tier is no longer part of the basket logic.
+Do not use globalBasketTier in the effective tier cascade.
+This is a targeted fix only. No redesign.
+
+--------------------------------------------------
+Required Behaviour
+
+Each category header must control:
+• default supermarket
+• default tier
+
+Rows inherit category defaults unless a row override exists.
+
+Tier hierarchy must now be:
+
+1. item.selectedTier
+2. categoryDefaults[cat].tier
+3. currentTier
+
+Changing category tier must update all non-overridden rows in that category.
+
+Changing a row tier must NOT change the category default.
+
+If any row override differs from the category default:
+• show a small amber “Mixed” indicator in the category header
+• but keep categoryDefaults[cat].tier unchanged
+• the category tier select must still show the real category default tier
+
+--------------------------------------------------
+T001 — Add category tier picker to sticky category header
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Current state:
+The sticky category header shows tier as read-only text.
+
+Replace that display-only tier text with a native <select>:
+• options = CATEGORY_TIER_OPTIONS[cat]
+• value = catDefault.tier
+• onChange = setCategoryDefault(cat, 'tier', value)
+
+Keep the select compact:
+• same visual density as the supermarket select
+• h-6 text-[11px] or equivalent
+
+Mixed display:
+• if any item in the category has item.selectedTier !== null AND item.selectedTier !== catDefault.tier
+• show a small amber “Mixed” badge/label alongside the select
+• Mixed is display-only, not state mutation
+
+Acceptance:
+• category header now has a working tier picker
+• changing category tier updates categoryDefaults
+• Mixed still appears when rows deviate
+
+--------------------------------------------------
+T002 — Wire category tier into getEffectiveTier
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Locate getEffectiveTier (or equivalent effective tier resolver).
+
+Update it so the tier cascade becomes:
+
+const getEffectiveTier = (item: ShoppingListItem): PriceTier => {
+  const catTier = getCategoryDefault(item.category || 'other').tier;
+  return (item.selectedTier as PriceTier) || (catTier as PriceTier) || currentTier;
+};
+
+Important:
+• Remove globalBasketTier from this cascade entirely
+• Do not use globalBasketTier in category-table tier resolution
+
+Acceptance:
+• effective tier used for row price selection/confidence now respects category default tier
+
+--------------------------------------------------
+T003 — Wire category tier into getItemTier
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Update getItemTier so it also uses category default tier:
+
+const getItemTier = useCallback((item: ShoppingListItem): PriceTier => {
+  const catTier = getCategoryDefault(item.category || 'other').tier;
+  return (item.selectedTier as PriceTier) || (catTier as PriceTier) || currentTier;
+}, [getCategoryDefault, currentTier]);
+
+This function is used by sorting, comparison dialog, and cheapest-price selection, so it must respect category defaults.
+
+Acceptance:
+• row tier display/selection logic now respects category default tier
+• sorting/comparison behaviour uses category tier correctly
+
+--------------------------------------------------
+T004 — Wire category tier into Basket Totals calculation
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Locate the tier selection logic inside clientBestTotal (or equivalent Basket Totals useMemo).
+
+Update it so tier resolution becomes:
+
+const tier: PriceTier =
+  (item.selectedTier as PriceTier) ||
+  (getCategoryDefault(item.category || 'other').tier as PriceTier) ||
+  currentTier;
+
+Also add getCategoryDefault to the dependency array if needed.
+
+Important:
+• Do not use globalBasketTier here
+• Do not change comparisonMatrix scenario columns (budget/standard/premium/organic) — those are intentionally separate and should stay as they are
+
+Acceptance:
+• Basket Totals now reflect category tier defaults correctly
+
+--------------------------------------------------
+T005 — Preserve row override behaviour
+
+Rules:
+• item.selectedTier is row override only
+• categoryDefaults[cat].tier is the category source of truth
+• changing a row override must not mutate categoryDefaults[cat].tier
+
+Mixed logic:
+const isMixed = rows.some(
+  i => i.selectedTier !== null && i.selectedTier !== categoryDefaults[cat].tier
+);
+
+If isMixed:
+• show Mixed in header as display state only
+
+Acceptance:
+• changing a row tier does not change category default
+• category header only shows Mixed when row overrides differ
+
+--------------------------------------------------
+T006 — Minimal verification only
+
+Steps:
+• Run npx tsc --noEmit
+• Start dev server
+• Do not generate tests
+• Do not run automated testing
+
+Manual verification will be performed by the user.
+
+--------------------------------------------------
+Final acceptance
+
+• category header has a working tier picker
+• category tier affects rows without overrides
+• row override does not change category default
+• header shows Mixed when overrides differ
+• Basket Totals update when category tier changes
+• no globalBasketTier influence remains in category-tier resolution
+• no TypeScript errors

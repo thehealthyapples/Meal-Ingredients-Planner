@@ -1,0 +1,39 @@
+Category list (in render order)
+meat · fish · dairy · eggs · produce · fruit · grains · herbs · oils · condiments · nuts · legumes · bakery · tinned · other
+
+Items without a category value fall into other. Staple items are rendered separately below all categories.
+
+How category defaults work (and what's broken)
+Shop picker — works as intended
+Each sticky category header has a native <select> showing "Auto" or a named supermarket. When changed, it writes categoryDefaults[cat].supermarket to localStorage (tha-basket-category-defaults). Each row then reads catDef.supermarket when computing selectedStore.
+
+Tier — display only, not a picker
+This is likely the issue you're seeing. The sticky header shows the tier as a read-only label, not an interactive control:
+
+{isMixed
+  ? <span>Mixed</span>                           ← just text
+  : <span>{EXTENDED_TIER_LABELS[catDefault.tier]?.label}</span>  ← just text
+}
+There is no <select> or button to set the tier for the whole category from the header.
+
+Tier inheritance gap
+Even when catDef.tier is set (via row-level overrides), the functions that actually drive price calculations — getEffectiveTier and clientBestTotal — do not consult category defaults. The actual tier cascade is:
+
+Priority	Source	What it does
+1st	globalBasketTier (if not "item")	Overrides everything
+2nd	item.selectedTier	Row-level override
+3rd	currentTier (user account preference)	Final fallback
+The category default tier (catDef.tier) is only used for:
+
+Seeding the initial value of each row's Tier dropdown
+Driving the "Mixed" indicator in the header
+The display label in the header
+It does not flow through to price matching or comparison calculations.
+
+Summary of what's missing
+Feature	Status
+Category supermarket picker	✅ Works — native <select> in header, persisted to localStorage
+Category tier picker	❌ Missing — header shows a label only, no control to set tier for whole category
+Category tier → price calculations	❌ Not wired — getEffectiveTier ignores catDef.tier
+Row tier dropdown seeded from category default	✅ Works — itemTier = item.selectedTier || catDef.tier
+Would you like me to put together a plan to fix these — adding a tier picker to the category header and wiring catDef.tier into the effective tier calculation?
