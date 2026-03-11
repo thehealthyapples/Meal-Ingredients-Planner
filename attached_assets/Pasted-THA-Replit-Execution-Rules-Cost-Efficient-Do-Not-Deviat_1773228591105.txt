@@ -1,0 +1,140 @@
+THA Replit Execution Rules — Cost Efficient / Do Not Deviate
+
+• Follow this plan exactly
+• Modify only the minimum code required
+• Do not redesign basket architecture
+• Do not change backend schemas
+• Do not alter basket totals, matching logic, or comparison strip
+• Do not generate automated tests
+• Only run TypeScript compile check
+• Start dev server when finished
+• I will manually verify behaviour
+
+Objective
+
+Simplify the basket category structure by consolidating internal ingredient categories into a smaller set of shopping categories.
+
+This improves basket readability and reduces the number of category headers.
+
+No logic changes to basket matching, pricing, or totals.
+
+This is a classification and rendering change only.
+
+--------------------------------------------------
+
+New basket categories
+
+Visible basket sections should be limited to:
+
+Produce
+Dairy
+Eggs
+Meat
+Fish
+Bakery
+Pantry
+Other
+
+--------------------------------------------------
+
+Category mapping rules
+
+Existing ingredient categories must be mapped to the new basket categories.
+
+Mapping:
+
+fruit → produce
+vegetables → produce
+produce → produce
+herbs (fresh) → produce
+
+grains → pantry
+oils → pantry
+condiments → pantry
+nuts → pantry
+legumes → pantry
+tinned → pantry
+herbs (dried) → pantry
+spices → pantry
+
+dairy → dairy
+eggs → eggs
+meat → meat
+fish → fish
+bakery → bakery
+
+any uncategorised → other
+
+--------------------------------------------------
+
+Special rule: herbs
+
+Herbs must be split by freshness.
+
+Fresh herbs (produce):
+• coriander
+• basil
+• parsley
+• mint
+• dill
+
+Dried herbs and spices (pantry):
+• dried oregano
+• cumin
+• paprika
+• chilli flakes
+• dried coriander
+
+If freshness cannot be determined, default to pantry.
+
+--------------------------------------------------
+
+Implementation
+
+File likely involved:
+client/src/pages/shopping-list-page.tsx
+
+Update category grouping logic where items are grouped by item.category.
+
+Before rendering the basket sections, map each item.category through the new category map.
+
+Example:
+
+fruit → produce
+herbs → produce OR pantry depending on freshness
+grains → pantry
+
+Then group items by the mapped category before rendering tables.
+
+Do not change the underlying item.category value stored in the database.
+Only change the grouping used for basket display.
+
+--------------------------------------------------
+
+Ordering
+
+Render categories in this order:
+
+1. Produce
+2. Dairy
+3. Eggs
+4. Meat
+5. Fish
+6. Bakery
+7. Pantry
+8. Other
+
+Only render categories that contain items.
+
+--------------------------------------------------
+
+Acceptance
+
+• Basket displays no more than the new category list
+• Fruit and vegetables appear together under Produce
+• Fresh herbs appear under Produce
+• Dried herbs and spices appear under Pantry
+• Pantry contains grains, oils, condiments, nuts, legumes, and tinned foods
+• Basket totals and comparison strip remain unchanged
+• Category headers remain sticky and functional
+• No TypeScript errors
