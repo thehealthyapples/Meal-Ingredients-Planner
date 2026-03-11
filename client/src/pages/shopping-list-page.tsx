@@ -1634,21 +1634,39 @@ export default function ShoppingListPage() {
                       </div>
 
                       <div className="overflow-x-auto">
-                        <table className="w-full text-xs" data-testid={`table-category-${cat}`}>
+                        <table className="w-full text-xs table-fixed" data-testid={`table-category-${cat}`}>
+                          <colgroup>
+                            <col style={{ width: 28 }} />
+                            <col style={{ width: 220 }} />
+                            <col style={{ width: 170 }} />
+                            <col style={{ width: 140 }} />
+                            {hasPrices && <col style={{ width: 120 }} />}
+                            {hasPrices && <col style={{ width: 240 }} />}
+                            <col style={{ width: 80 }} />
+                            {hasPrices && <col style={{ width: 100 }} />}
+                            <col style={{ width: 140 }} />
+                            {hasPrices && <col style={{ width: 120 }} />}
+                            <col style={{ width: 90 }} />
+                            <col style={{ width: 70 }} />
+                            <col style={{ width: 70 }} />
+                            <col style={{ width: 70 }} />
+                          </colgroup>
                           <thead>
                             <tr className="border-b border-border/40 bg-muted/10">
-                              <th className="px-2 py-1 w-7" />
+                              <th className="px-2 py-1" />
                               <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Ingredient</th>
-                              <th className="px-2 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">Meal</th>
                               <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Variant</th>
                               <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Tier</th>
-                              <th className="px-2 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Qty</th>
                               {hasPrices && <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Shop</th>}
                               {hasPrices && <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Match</th>}
+                              <th className="px-2 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Qty</th>
                               {hasPrices && <th className="px-2 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Price</th>}
-                              <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Conf.</th>
+                              <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Confidence</th>
                               {hasPrices && <th className="px-2 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">THA Rating</th>}
-                              <th className="px-2 py-1 w-24" />
+                              <th className="px-2 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">Meal</th>
+                              <th className="px-2 py-1" />
+                              <th className="px-2 py-1" />
+                              <th className="px-2 py-1" />
                             </tr>
                           </thead>
                           <tbody>
@@ -1716,7 +1734,7 @@ export default function ShoppingListPage() {
                                       />
                                     </td>
 
-                                    <td className="px-2 py-1 min-w-[120px]">
+                                    <td className="px-2 py-1">
                                       {isEditing && editState?.field === 'productName' ? (
                                         <div className="flex items-center gap-1">
                                           <Input value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-6 text-xs" autoFocus data-testid={`input-edit-name-${item.id}`} />
@@ -1747,21 +1765,7 @@ export default function ShoppingListPage() {
                                       )}
                                     </td>
 
-                                    <td className="px-2 py-1 text-center" data-testid={`meal-count-${item.id}`}>
-                                      {sources.length > 0 ? (
-                                        <Tooltip>
-                                          <TooltipTrigger asChild>
-                                            <span className="cursor-default text-[11px] text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🍽 {sources.length}</span>
-                                          </TooltipTrigger>
-                                          <TooltipContent side="bottom" className="max-w-[220px]">
-                                            <p className="text-xs font-medium mb-1">Used in:</p>
-                                            {sources.map((s, idx) => <p key={idx} className="text-xs text-muted-foreground">{s.mealName}{s.quantityMultiplier > 1 ? ` (x${s.quantityMultiplier})` : ''}</p>)}
-                                          </TooltipContent>
-                                        </Tooltip>
-                                      ) : <span className="text-muted-foreground">—</span>}
-                                    </td>
-
-                                    <td className="px-2 py-1 align-top max-w-[150px]">
+                                    <td className="px-2 py-1 align-top">
                                       {isWF && wfDef ? (
                                         <div className="flex flex-col gap-0.5">
                                           {wfDef.selectorSchema.map((selector) => (
@@ -1798,18 +1802,6 @@ export default function ShoppingListPage() {
                                           {tierOptions.map(key => <SelectItem key={key} value={key}>{EXTENDED_TIER_LABELS[key]?.label || key}</SelectItem>)}
                                         </SelectContent>
                                       </Select>
-                                    </td>
-
-                                    <td className="px-2 py-1 text-right tabular-nums text-muted-foreground whitespace-nowrap">
-                                      {isEditing && editState?.field === 'quantityValue' ? (
-                                        <div className="flex items-center gap-1 justify-end">
-                                          <Input type="number" value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-7 text-xs w-16 text-right" autoFocus data-testid={`input-edit-qty-${item.id}`} />
-                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit}><Check className="h-3 w-3" /></Button>
-                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
-                                        </div>
-                                      ) : (
-                                        <span className="cursor-pointer" onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue || 0))} data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
-                                      )}
                                     </td>
 
                                     {hasPrices && (
@@ -1850,10 +1842,10 @@ export default function ShoppingListPage() {
                                     {hasPrices && (
                                       <td className="px-2 py-1">
                                         {selectedMatch ? (
-                                          <div className="flex items-center gap-1.5 max-w-[160px]">
+                                          <div className="flex items-center gap-1.5">
                                             {selectedMatch.imageUrl && <img src={selectedMatch.imageUrl} alt={selectedMatch.productName} className="w-7 h-7 rounded object-cover flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} data-testid={`img-product-${item.id}`} />}
                                             <div className="min-w-0">
-                                              <p className="text-xs text-foreground break-words line-clamp-2" data-testid={`text-product-name-${item.id}`}>{selectedMatch.productName}</p>
+                                              <p className="text-xs text-foreground overflow-hidden text-ellipsis whitespace-nowrap" data-testid={`text-product-name-${item.id}`}>{selectedMatch.productName}</p>
                                               {selectedMatch.productWeight && <p className="text-[10px] text-muted-foreground">{selectedMatch.productWeight}</p>}
                                             </div>
                                           </div>
@@ -1866,6 +1858,18 @@ export default function ShoppingListPage() {
                                         )}
                                       </td>
                                     )}
+
+                                    <td className="px-2 py-1 text-right tabular-nums text-muted-foreground whitespace-nowrap">
+                                      {isEditing && editState?.field === 'quantityValue' ? (
+                                        <div className="flex items-center gap-1 justify-end">
+                                          <Input type="number" value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-7 text-xs w-16 text-right" autoFocus data-testid={`input-edit-qty-${item.id}`} />
+                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit}><Check className="h-3 w-3" /></Button>
+                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
+                                        </div>
+                                      ) : (
+                                        <span className="cursor-pointer" onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue || 0))} data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
+                                      )}
+                                    </td>
 
                                     {hasPrices && (
                                       <td className="px-2 py-1 text-right" data-testid={`text-price-${item.id}`}>
@@ -1896,12 +1900,28 @@ export default function ShoppingListPage() {
                                       </td>
                                     )}
 
+                                    <td className="px-2 py-1 text-center" data-testid={`meal-count-${item.id}`}>
+                                      {sources.length > 0 ? (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className="cursor-default text-[11px] text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🍽 {sources.length}</span>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="bottom" className="max-w-[220px]">
+                                            <p className="text-xs font-medium mb-1">Used in:</p>
+                                            {sources.map((s, idx) => <p key={idx} className="text-xs text-muted-foreground">{s.mealName}{s.quantityMultiplier > 1 ? ` (x${s.quantityMultiplier})` : ''}</p>)}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      ) : <span className="text-muted-foreground">—</span>}
+                                    </td>
+
                                     <td className="px-2 py-1">
-                                      <div className="flex items-center">
-                                        <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => startEdit(item.id, 'productName', item.productName)} className="text-muted-foreground h-7 w-7" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
-                                      </div>
+                                      <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
+                                    </td>
+                                    <td className="px-2 py-1">
+                                      <Button variant="ghost" size="icon" onClick={() => startEdit(item.id, 'productName', item.productName)} className="text-muted-foreground h-7 w-7" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
+                                    </td>
+                                    <td className="px-2 py-1">
+                                      <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
                                     </td>
                                   </motion.tr>
                                 );
