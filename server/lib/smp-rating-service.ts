@@ -148,7 +148,7 @@ export function calculateStrictSMPRating(input: SMPRatingInput): SMPRatingResult
 
   let simplicityBonus = 0;
   const totalAdditiveCount = input.additiveMatches.length;
-  if (input.ingredientCount <= 3 && totalAdditiveCount === 0) {
+  if (input.novaGroup <= 1 && input.ingredientCount <= 3 && totalAdditiveCount === 0) {
     simplicityBonus = 20;
     score += simplicityBonus;
   }
