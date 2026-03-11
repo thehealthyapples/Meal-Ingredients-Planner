@@ -1489,7 +1489,7 @@ export default function ShoppingListPage() {
             <div className="flex justify-between items-center gap-1 flex-wrap">
               <div className="flex items-center gap-4">
                 <div>
-                  <CardTitle className="text-[28px] font-semibold tracking-tight" data-testid="text-analyse-basket-title">Analyse Basket</CardTitle>
+                  <CardTitle className="text-[28px] font-semibold tracking-tight" data-testid="text-analyse-basket-title">Basket</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1" data-testid="text-items-count">
                     {savedItems.length} items to buy
                   </p>
@@ -1504,50 +1504,6 @@ export default function ShoppingListPage() {
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-wrap">
-                {hasPrices && (
-                  <>
-                    <Select
-                      value={globalStore}
-                      onValueChange={(val) => updateGlobalStore.mutate(val)}
-                    >
-                      <SelectTrigger className="h-8 w-[140px] text-xs" data-testid="select-global-store">
-                        <Store className="h-3 w-3 mr-1 flex-shrink-0" />
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="auto">
-                          <span className="flex items-center gap-1">
-                            <TrendingDown className="h-3 w-3" />
-                            Auto (Cheapest)
-                          </span>
-                        </SelectItem>
-                        {SUPERMARKET_NAMES.map(store => (
-                          <SelectItem key={store} value={store}>
-                            {store}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select
-                      value={currentTier}
-                      onValueChange={(val) => changeTier.mutate(val as PriceTier)}
-                    >
-                      <SelectTrigger className="h-8 w-[130px] text-xs" data-testid="select-price-tier">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.entries(TIER_LABELS).map(([key, { label, icon: TierIcon }]) => (
-                          <SelectItem key={key} value={key}>
-                            <span className="flex items-center gap-1">
-                              <TierIcon className="h-3 w-3" />
-                              {label}
-                            </span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </>
-                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -1620,137 +1576,6 @@ export default function ShoppingListPage() {
               </div>
             </div>
           </CardHeader>
-
-          {savedItems.length > 0 && (
-            <div className="border-b border-border p-4 bg-muted/30">
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap items-start gap-6">
-                  <div>
-                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                      Shop at
-                    </p>
-                    <div
-                      className="flex flex-wrap gap-1.5"
-                      data-testid="basket-retailer-selector"
-                    >
-                      {SUPERMARKET_NAMES.map((name) => {
-                        const active = selectedRetailers.includes(name);
-                        return (
-                          <button
-                            key={name}
-                            type="button"
-                            onClick={() => toggleRetailer(name)}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
-                              active
-                                ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                                : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
-                            }`}
-                            data-testid={`retailer-chip-${name.toLowerCase().replace(/[\s'&]/g, "-")}`}
-                          >
-                            {name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground/70 mt-1">
-                      THA will choose the best available products from the supermarkets you select.
-                    </p>
-                  </div>
-
-                  <div>
-                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-                      Global Tier
-                    </p>
-                    <div
-                      className="flex flex-wrap gap-1.5"
-                      data-testid="basket-tier-selector"
-                    >
-                      {([
-                        { value: "budget", label: "Budget" },
-                        { value: "standard", label: "Standard" },
-                        { value: "premium", label: "Premium" },
-                        { value: "organic", label: "Organic" },
-                        { value: "item", label: "Per item" },
-                      ] as Array<{ value: PriceTier | "item"; label: string }>).map(({ value, label }) => {
-                        const active = globalBasketTier === value;
-                        return (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => setGlobalBasketTier(value)}
-                            className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
-                              active
-                                ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                                : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
-                            }`}
-                            data-testid={`tier-chip-${value}`}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                <p
-                  className="text-[10px] text-muted-foreground/60 leading-relaxed"
-                  data-testid="basket-fulfilment-note"
-                >
-                  THA selects the best available products based on your preferences. Final items may vary depending on supermarket availability and substitutions.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {hasPrices && totalCostData && savedItems.length > 0 && (
-            <div className="border-b border-border px-4 py-2.5 bg-muted/20">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <PoundSterling className="h-4 w-4 text-primary" />
-                  <span className="font-semibold text-sm" data-testid="text-total-cost-title">Shopping Summary</span>
-                  <Badge variant="secondary" className="text-[10px] h-4 px-1.5" data-testid="text-total-items">{savedItems.length} items</Badge>
-                  {hasItemOverrides && (
-                    <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-amber-400 text-amber-600 dark:text-amber-400">
-                      Custom tiers
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-1.5" data-testid="supermarket-totals-grid">
-                  {filteredSupermarketTotals.map((st, idx) => {
-                    const isCheapest = idx === 0;
-                    return (
-                      <div
-                        key={st.supermarket}
-                        className={`flex items-center gap-2 rounded border px-2.5 py-1 ${isCheapest ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-900/20' : 'border-border bg-card'}`}
-                        data-testid={`card-total-${st.supermarket.replace(/'/g, '')}`}
-                      >
-                        {isCheapest && <TrendingDown className="h-3 w-3 text-green-600 dark:text-green-400 flex-shrink-0" />}
-                        <span className="text-xs text-muted-foreground whitespace-nowrap">{st.supermarket}</span>
-                        <span className={`text-sm font-bold tabular-nums ${isCheapest ? 'text-green-600 dark:text-green-400' : 'text-foreground'}`}>
-                          {"\u00A3"}{st.total.toFixed(2)}
-                        </span>
-                        {isCheapest && <span className="text-[9px] text-green-600 dark:text-green-400 font-semibold">BEST</span>}
-                      </div>
-                    );
-                  })}
-                  {filteredSupermarketTotals.length === 0 && (
-                    <span className="text-xs text-muted-foreground">Select retailers above to see totals</span>
-                  )}
-                </div>
-
-                <div className="flex justify-between items-center pt-1 border-t border-border/40">
-                  <span className="text-xs text-muted-foreground">
-                    Best from selected shops:
-                  </span>
-                  <span className="text-sm font-bold text-green-600 dark:text-green-400 tabular-nums" data-testid="text-cheapest-total">
-                    {clientBestTotal !== null ? `\u00A3${clientBestTotal.toFixed(2)}` : '—'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
 
           <CardContent className="flex-1 overflow-y-auto p-0">
             {loadingSaved ? (
