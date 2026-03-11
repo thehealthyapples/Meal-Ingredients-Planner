@@ -1672,29 +1672,29 @@ export default function ShoppingListPage() {
                           <colgroup>
                             <col style={{ width: 28 }} />
                             <col style={{ width: 220 }} />
-                            <col style={{ width: 240 }} />
-                            {hasPrices && <col style={{ width: 260 }} />}
+                            <col style={{ width: 180 }} />
+                            {hasPrices && <col style={{ width: 200 }} />}
                             <col style={{ width: 80 }} />
                             {hasPrices && <col style={{ width: 100 }} />}
                             {hasPrices && <col style={{ width: 120 }} />}
                             <col style={{ width: 90 }} />
-                            <col style={{ width: 70 }} />
-                            <col style={{ width: 70 }} />
-                            <col style={{ width: 70 }} />
+                            <col style={{ width: 40 }} />
+                            <col style={{ width: 40 }} />
+                            <col style={{ width: 40 }} />
                           </colgroup>
                           <thead>
                             <tr className="border-b border-border/40 bg-muted/10">
-                              <th className="px-2 py-1" />
-                              <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Ingredient</th>
-                              <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Choice</th>
-                              {hasPrices && <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Match</th>}
-                              <th className="px-2 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Qty</th>
-                              {hasPrices && <th className="px-2 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Price</th>}
-                              {hasPrices && <th className="px-2 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">THA Rating</th>}
-                              <th className="px-2 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">Meal</th>
-                              <th className="px-2 py-1" />
-                              <th className="px-2 py-1" />
-                              <th className="px-2 py-1" />
+                              <th className="px-1.5 py-1" />
+                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Ingredient</th>
+                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Choice</th>
+                              {hasPrices && <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Match</th>}
+                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Qty</th>
+                              {hasPrices && <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Price</th>}
+                              {hasPrices && <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">THA Rating</th>}
+                              <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">Meal</th>
+                              <th className="px-1.5 py-1" />
+                              <th className="px-1.5 py-1" />
+                              <th className="px-1.5 py-1" />
                             </tr>
                           </thead>
                           <tbody>
@@ -1763,7 +1763,7 @@ export default function ShoppingListPage() {
                                     className={`border-b border-border/40 ${item.checked ? 'opacity-50' : ''}`}
                                     data-testid={`shopping-item-${item.id}`}
                                   >
-                                    <td className="px-2 py-1">
+                                    <td className="px-1.5 py-1">
                                       <Checkbox
                                         checked={item.checked || false}
                                         onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })}
@@ -1772,7 +1772,7 @@ export default function ShoppingListPage() {
                                       />
                                     </td>
 
-                                    <td className="px-2 py-1">
+                                    <td className="px-1.5 py-1">
                                       {isEditing && editState?.field === 'productName' ? (
                                         <div className="flex items-center gap-1">
                                           <Input value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-6 text-xs" autoFocus data-testid={`input-edit-name-${item.id}`} />
@@ -1803,7 +1803,7 @@ export default function ShoppingListPage() {
                                       )}
                                     </td>
 
-                                    <td className="px-2 py-1" data-testid={`choice-cell-${item.id}`}>
+                                    <td className="px-1.5 py-1" data-testid={`choice-cell-${item.id}`}>
                                       <Popover>
                                         <PopoverTrigger asChild>
                                           <button className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground text-left w-full" data-testid={`choice-summary-${item.id}`}>
@@ -1884,7 +1884,7 @@ export default function ShoppingListPage() {
                                     </td>
 
                                     {hasPrices && (
-                                      <td className="px-2 py-1">
+                                      <td className="px-1.5 py-1">
                                         {selectedMatch ? (
                                           <div className="flex items-start gap-1.5">
                                             {selectedMatch.imageUrl && <img src={selectedMatch.imageUrl} alt={selectedMatch.productName} className="w-7 h-7 rounded object-cover flex-shrink-0 mt-0.5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} data-testid={`img-product-${item.id}`} />}
@@ -1933,7 +1933,7 @@ export default function ShoppingListPage() {
                                       </td>
                                     )}
 
-                                    <td className="px-2 py-1 text-right tabular-nums text-muted-foreground whitespace-nowrap">
+                                    <td className="px-1.5 py-1 text-right tabular-nums text-muted-foreground whitespace-nowrap">
                                       {isEditing && editState?.field === 'quantityValue' ? (
                                         <div className="flex items-center gap-1 justify-end">
                                           <Input type="number" value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-7 text-xs w-16 text-right" autoFocus data-testid={`input-edit-qty-${item.id}`} />
@@ -1946,7 +1946,7 @@ export default function ShoppingListPage() {
                                     </td>
 
                                     {hasPrices && (
-                                      <td className="px-2 py-1 text-right" data-testid={`text-price-${item.id}`}>
+                                      <td className="px-1.5 py-1 text-right" data-testid={`text-price-${item.id}`}>
                                         <div className="flex items-center gap-1 justify-end">
                                           {selectedPrice !== null && selectedPrice !== undefined ? (
                                             <span className={`tabular-nums cursor-pointer ${isBestPrice ? 'text-primary font-semibold' : 'text-foreground'}`} onClick={() => setComparisonItem(item)}>£{selectedPrice.toFixed(2)}</span>
@@ -1959,7 +1959,7 @@ export default function ShoppingListPage() {
                                     )}
 
                                     {hasPrices && (
-                                      <td className="px-2 py-1 text-center" data-testid={`text-smp-${item.id}`}>
+                                      <td className="px-1.5 py-1 text-center" data-testid={`text-smp-${item.id}`}>
                                         {(() => {
                                           const smp = getItemSmpRating(item.id, item);
                                           if (smp === 0) return <span className="text-muted-foreground">—</span>;
@@ -1968,7 +1968,7 @@ export default function ShoppingListPage() {
                                       </td>
                                     )}
 
-                                    <td className="px-2 py-1 text-center" data-testid={`meal-count-${item.id}`}>
+                                    <td className="px-1.5 py-1 text-center" data-testid={`meal-count-${item.id}`}>
                                       {sources.length > 0 ? (
                                         <Tooltip>
                                           <TooltipTrigger asChild>
@@ -1982,13 +1982,13 @@ export default function ShoppingListPage() {
                                       ) : <span className="text-muted-foreground">—</span>}
                                     </td>
 
-                                    <td className="px-2 py-1">
+                                    <td className="px-1.5 py-1">
                                       <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
                                     </td>
-                                    <td className="px-2 py-1">
+                                    <td className="px-1.5 py-1">
                                       <Button variant="ghost" size="icon" onClick={() => startEdit(item.id, 'productName', item.productName)} className="text-muted-foreground h-7 w-7" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
                                     </td>
-                                    <td className="px-2 py-1">
+                                    <td className="px-1.5 py-1">
                                       <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
                                     </td>
                                   </motion.tr>
