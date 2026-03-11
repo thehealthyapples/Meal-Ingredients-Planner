@@ -1,0 +1,129 @@
+THA Replit Execution Rules — Inspection Only / Do Not Deviate
+
+• Do NOT modify any files
+• Do NOT refactor code
+• Do NOT apply changes
+• Only inspect and report
+• I will review the findings before any implementation
+
+Objective
+
+Inspect the current Product Analyser scoring system so we can understand how THA rating currently works and decide how to reuse it for Basket and Pantry without duplicating logic.
+
+We want a clear picture of:
+1. how products are currently scored
+2. where the code lives
+3. what inputs/penalties are already used
+4. how apple ratings are derived
+5. what can be reused for Pantry/Basket
+6. where the current gaps are
+
+Important:
+This is inspection only.
+Do NOT change scoring logic in this pass.
+
+--------------------------------------------------
+T001 — Locate all product scoring / rating code
+
+Search the codebase for the current Product Analyser scoring logic.
+
+Please identify:
+• files/modules/functions responsible for scoring
+• files/modules/functions responsible for converting numeric results into apple ratings
+• any additive / UPF / ingredient classification helpers used by scoring
+• any existing explanations/reason strings shown to users
+
+Report back with:
+• file path
+• function name
+• what that function appears to do
+
+--------------------------------------------------
+T002 — Describe the current scoring flow
+
+Trace the end-to-end flow for a product in the current Product Analyser.
+
+Explain:
+• what raw inputs the scorer receives
+• whether it uses ingredient lists, additives, UPF flags, nutritional data, or keyword rules
+• whether scoring is rule-based, weighted, threshold-based, or hybrid
+• whether there is a numeric score before apples are shown
+• how the final apple score is assigned
+
+Provide the actual logic if identifiable, or the closest accurate summary if distributed across multiple helpers.
+
+--------------------------------------------------
+T003 — Extract current penalties / weights / rules
+
+Inspect the current scoring implementation and list the meaningful rule categories already present.
+
+Examples of things to look for:
+• additive penalties
+• UPF penalties
+• acidity regulator handling
+• emulsifier handling
+• sweetener handling
+• preservative handling
+• positive whole-food bonuses
+• ingredient-count penalties
+• keyword matching / flags
+
+For each identified rule category, report:
+• where it is defined
+• what effect it has
+• whether the effect is numeric, categorical, or boolean
+
+If exact weights/penalties are visible in code, include them.
+
+--------------------------------------------------
+T004 — Explain current apple conversion
+
+Inspect how the current analyser converts its result into apple score / rating.
+
+Report:
+• whether apples are stored directly or derived from a numeric score
+• what thresholds or ranges are used
+• whether apples can be fractional
+• where the apple UI component gets its data from
+
+--------------------------------------------------
+T005 — Reuse assessment for Basket / Pantry
+
+Based on the current implementation, provide an engineering assessment:
+
+1. What parts of the Product Analyser scoring can be reused directly for Pantry/Basket?
+2. What parts would likely need adaptation?
+3. Is there a single core scoring engine already, or is logic scattered?
+4. What would cause duplication if we implemented Pantry/Basket scoring separately today?
+
+Do not propose code changes yet — just assess reuse opportunities and risks.
+
+--------------------------------------------------
+T006 — Gaps relative to THA product direction
+
+Compare the current analyser scoring to the intended THA direction:
+
+Examples:
+• Lidl passata made only from tomatoes should be 5 apples
+• Tesco passata with acidity regulator should score lower
+• User filters should affect recommendation, not the intrinsic THA rating
+
+Report:
+• whether the current scoring already supports this direction
+• where it falls short
+• whether acidity regulator / additives / processing seem to be penalised strongly enough
+• whether the current implementation looks stable enough to become the single THA scoring source of truth
+
+--------------------------------------------------
+Expected output format
+
+Please return a concise structured report with these sections:
+
+1. Scoring code locations
+2. Current scoring flow
+3. Current penalties / weights / rules
+4. Apple conversion logic
+5. Reuse opportunities for Pantry/Basket
+6. Gaps and recommended direction (inspection only, no implementation)
+
+Do not modify code in this step.
