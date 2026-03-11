@@ -26,6 +26,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   ShoppingCart, Copy, Trash2, RefreshCw, Scale,
   Search, ExternalLink, PoundSterling, TrendingDown, Loader2,
   ArrowUpDown, ArrowUp, ArrowDown, Pencil, Check, X,
@@ -1638,13 +1643,10 @@ export default function ShoppingListPage() {
                           <colgroup>
                             <col style={{ width: 28 }} />
                             <col style={{ width: 220 }} />
-                            <col style={{ width: 170 }} />
-                            <col style={{ width: 140 }} />
-                            {hasPrices && <col style={{ width: 120 }} />}
-                            {hasPrices && <col style={{ width: 240 }} />}
+                            <col style={{ width: 240 }} />
+                            {hasPrices && <col style={{ width: 260 }} />}
                             <col style={{ width: 80 }} />
                             {hasPrices && <col style={{ width: 100 }} />}
-                            <col style={{ width: 140 }} />
                             {hasPrices && <col style={{ width: 120 }} />}
                             <col style={{ width: 90 }} />
                             <col style={{ width: 70 }} />
@@ -1655,13 +1657,10 @@ export default function ShoppingListPage() {
                             <tr className="border-b border-border/40 bg-muted/10">
                               <th className="px-2 py-1" />
                               <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Ingredient</th>
-                              <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Variant</th>
-                              <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Tier</th>
-                              {hasPrices && <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Shop</th>}
+                              <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Choice</th>
                               {hasPrices && <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Match</th>}
                               <th className="px-2 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Qty</th>
                               {hasPrices && <th className="px-2 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Price</th>}
-                              <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Confidence</th>
                               {hasPrices && <th className="px-2 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">THA Rating</th>}
                               <th className="px-2 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">Meal</th>
                               <th className="px-2 py-1" />
@@ -1686,12 +1685,14 @@ export default function ShoppingListPage() {
                                 const rowVariantSelections = isWF ? safeParseJsonObject(item.variantSelections) : {};
                                 const rowAttrPreferences = isWF ? safeParseJsonObject(item.attributePreferences) : {};
                                 let wfConfLabel: typeof CONFIDENCE_LABELS[keyof typeof CONFIDENCE_LABELS] | null = null;
+                                let wfConfLevel: string | null = null;
                                 if (isWF && wfDef) {
                                   const effectiveTier = getEffectiveTier(item);
                                   const itemCandidates = allPriceMatches.filter(m => m.shoppingListItemId === item.id);
                                   const intent: WholeFoodIntent = { ingredientName: item.normalizedName ?? item.productName, variantSelections: rowVariantSelections, attributePreferences: rowAttrPreferences, tier: effectiveTier, selectedRetailers };
                                   const conf = calcConfidence(intent, itemCandidates, selectedRetailers);
                                   wfConfLabel = CONFIDENCE_LABELS[conf.level];
+                                  wfConfLevel = conf.level;
                                 }
                                 const handleVariantChange = (key: string, value: string) => {
                                   const next = { ...rowVariantSelections, [key]: value };
@@ -1715,6 +1716,14 @@ export default function ShoppingListPage() {
                                 const availableStores = SUPERMARKET_NAMES.filter(store => itemPrices?.has(store));
                                 const knownStores: string[] = (() => { try { return item.availableStores ? JSON.parse(item.availableStores) : []; } catch { return []; } })();
                                 const isBranded = !!item.matchedProductId;
+
+                                const confShortLabel: Record<string, string> = { high: 'Exact', medium: 'Close', low: 'Sub.' };
+                                const variantSummary = (isWF && wfDef && Object.keys(rowVariantSelections).length > 0)
+                                  ? Object.values(rowVariantSelections).filter(Boolean).join(' · ')
+                                  : '—';
+                                const tierShort = EXTENDED_TIER_LABELS[itemTier]?.short || itemTier;
+                                const shopDisplay = item.selectedStore || catDef.supermarket || 'Auto';
+                                const choiceSummary = `${variantSummary} · ${tierShort} · ${shopDisplay}`;
 
                                 return (
                                   <motion.tr
@@ -1765,91 +1774,127 @@ export default function ShoppingListPage() {
                                       )}
                                     </td>
 
-                                    <td className="px-2 py-1 align-top">
-                                      {isWF && wfDef ? (
-                                        <div className="flex flex-col gap-0.5">
-                                          {wfDef.selectorSchema.map((selector) => (
-                                            <div key={selector.key} className="flex flex-wrap gap-0.5">
-                                              {selector.options.map((option) => {
-                                                const isSel = rowVariantSelections[selector.key] === option;
-                                                return (
-                                                  <button key={option} type="button" onClick={() => handleVariantChange(selector.key, isSel ? "" : option)} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isSel ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`} data-testid={`variant-chip-${item.id}-${selector.key}-${option.replace(/\s+/g, "-").toLowerCase()}`}>{option}</button>
-                                                );
-                                              })}
-                                            </div>
-                                          ))}
-                                          {wfDef.relevantAttributes.length > 0 && (
-                                            <div className="flex flex-wrap gap-0.5">
-                                              {wfDef.relevantAttributes.map((attr) => {
-                                                const isActive = !!rowAttrPreferences[attr];
-                                                const alabel = attr.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-                                                return (
-                                                  <button key={attr} type="button" onClick={() => handleAttrChange(attr, !isActive)} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isActive ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`} data-testid={`attr-chip-${item.id}-${attr}`}>{alabel}</button>
-                                                );
-                                              })}
-                                            </div>
-                                          )}
-                                        </div>
-                                      ) : <span className="text-muted-foreground">—</span>}
+                                    <td className="px-2 py-1" data-testid={`choice-cell-${item.id}`}>
+                                      <Popover>
+                                        <PopoverTrigger asChild>
+                                          <button className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground text-left w-full" data-testid={`choice-summary-${item.id}`}>
+                                            <span className="truncate">{choiceSummary}</span>
+                                            <ChevronDown className="h-3 w-3 flex-shrink-0 opacity-50" />
+                                          </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-64 p-3" align="start">
+                                          <div className="flex flex-col gap-2">
+                                            {isWF && wfDef && (
+                                              <div className="flex flex-col gap-0.5">
+                                                {wfDef.selectorSchema.map((selector) => (
+                                                  <div key={selector.key} className="flex flex-wrap gap-0.5">
+                                                    {selector.options.map((option) => {
+                                                      const isSel = rowVariantSelections[selector.key] === option;
+                                                      return (
+                                                        <button key={option} type="button" onClick={() => handleVariantChange(selector.key, isSel ? "" : option)} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isSel ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`} data-testid={`variant-chip-${item.id}-${selector.key}-${option.replace(/\s+/g, "-").toLowerCase()}`}>{option}</button>
+                                                      );
+                                                    })}
+                                                  </div>
+                                                ))}
+                                                {wfDef.relevantAttributes.length > 0 && (
+                                                  <div className="flex flex-wrap gap-0.5">
+                                                    {wfDef.relevantAttributes.map((attr) => {
+                                                      const isActive = !!rowAttrPreferences[attr];
+                                                      const alabel = attr.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                                                      return (
+                                                        <button key={attr} type="button" onClick={() => handleAttrChange(attr, !isActive)} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isActive ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`} data-testid={`attr-chip-${item.id}-${attr}`}>{alabel}</button>
+                                                      );
+                                                    })}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            )}
+                                            <Select value={itemTier} onValueChange={(val) => { const newTier = val === catDef.tier ? null : val; changeItemTier.mutate({ id: item.id, tier: newTier }); }}>
+                                              <SelectTrigger className={`h-7 text-xs ${isOverridden ? 'border-amber-400' : ''}`} data-testid={`select-item-tier-${item.id}`}>
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {tierOptions.map(key => <SelectItem key={key} value={key}>{EXTENDED_TIER_LABELS[key]?.label || key}</SelectItem>)}
+                                              </SelectContent>
+                                            </Select>
+                                            {hasPrices && (
+                                              <div className="flex items-center gap-1" data-testid={`select-shop-${item.id}`}>
+                                                <Select value={item.selectedStore || 'auto'} onValueChange={(val) => { updateItem.mutate({ id: item.id, fields: { selectedStore: val === 'auto' ? null : val } }); setGlobalStore('auto'); }}>
+                                                  <SelectTrigger className={`h-6 text-[11px] ${item.selectedStore ? 'border-amber-400' : ''}`} data-testid={`select-store-${item.id}`}>
+                                                    <SelectValue />
+                                                  </SelectTrigger>
+                                                  <SelectContent>
+                                                    <SelectItem value="auto"><span className="flex items-center gap-1"><TrendingDown className="h-3 w-3" />{isBranded ? 'Choose' : 'Auto'}</span></SelectItem>
+                                                    {availableStores.map(store => {
+                                                      const storeMatch = itemPrices?.get(store);
+                                                      const isKnown = knownStores.includes(store);
+                                                      return (
+                                                        <SelectItem key={store} value={store}>
+                                                          <span className="flex items-center gap-1">
+                                                            {isBranded && isKnown && <Check className="h-3 w-3 text-green-500 flex-shrink-0" />}
+                                                            {store}{storeMatch?.price ? ` £${storeMatch.price.toFixed(2)}` : ''}
+                                                          </span>
+                                                        </SelectItem>
+                                                      );
+                                                    })}
+                                                  </SelectContent>
+                                                </Select>
+                                                {isBranded && item.selectedStore && (() => {
+                                                  const storeMatch = itemPrices?.get(item.selectedStore);
+                                                  return storeMatch?.productUrl ? (
+                                                    <a href={storeMatch.productUrl} target="_blank" rel="noopener noreferrer">
+                                                      <Button variant="ghost" size="icon" className="h-6 w-6" data-testid={`button-store-link-${item.id}`}><ExternalLink className="h-3 w-3" /></Button>
+                                                    </a>
+                                                  ) : null;
+                                                })()}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
                                     </td>
-
-                                    <td className="px-2 py-1">
-                                      <Select value={itemTier} onValueChange={(val) => { const newTier = val === catDef.tier ? null : val; changeItemTier.mutate({ id: item.id, tier: newTier }); }}>
-                                        <SelectTrigger className={`h-7 w-[95px] text-xs ${isOverridden ? 'border-amber-400' : ''}`} data-testid={`select-item-tier-${item.id}`}>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {tierOptions.map(key => <SelectItem key={key} value={key}>{EXTENDED_TIER_LABELS[key]?.label || key}</SelectItem>)}
-                                        </SelectContent>
-                                      </Select>
-                                    </td>
-
-                                    {hasPrices && (
-                                      <td className="px-2 py-1" data-testid={`select-shop-${item.id}`}>
-                                        <div className="flex items-center gap-1">
-                                          <Select value={item.selectedStore || 'auto'} onValueChange={(val) => { updateItem.mutate({ id: item.id, fields: { selectedStore: val === 'auto' ? null : val } }); setGlobalStore('auto'); }}>
-                                            <SelectTrigger className={`h-6 w-[90px] text-[11px] ${item.selectedStore ? 'border-amber-400' : ''}`} data-testid={`select-store-${item.id}`}>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="auto"><span className="flex items-center gap-1"><TrendingDown className="h-3 w-3" />{isBranded ? 'Choose' : 'Auto'}</span></SelectItem>
-                                              {availableStores.map(store => {
-                                                const storeMatch = itemPrices?.get(store);
-                                                const isKnown = knownStores.includes(store);
-                                                return (
-                                                  <SelectItem key={store} value={store}>
-                                                    <span className="flex items-center gap-1">
-                                                      {isBranded && isKnown && <Check className="h-3 w-3 text-green-500 flex-shrink-0" />}
-                                                      {store}{storeMatch?.price ? ` £${storeMatch.price.toFixed(2)}` : ''}
-                                                    </span>
-                                                  </SelectItem>
-                                                );
-                                              })}
-                                            </SelectContent>
-                                          </Select>
-                                          {isBranded && item.selectedStore && (() => {
-                                            const storeMatch = itemPrices?.get(item.selectedStore);
-                                            return storeMatch?.productUrl ? (
-                                              <a href={storeMatch.productUrl} target="_blank" rel="noopener noreferrer">
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" data-testid={`button-store-link-${item.id}`}><ExternalLink className="h-3 w-3" /></Button>
-                                              </a>
-                                            ) : null;
-                                          })()}
-                                        </div>
-                                      </td>
-                                    )}
 
                                     {hasPrices && (
                                       <td className="px-2 py-1">
                                         {selectedMatch ? (
-                                          <div className="flex items-center gap-1.5">
-                                            {selectedMatch.imageUrl && <img src={selectedMatch.imageUrl} alt={selectedMatch.productName} className="w-7 h-7 rounded object-cover flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} data-testid={`img-product-${item.id}`} />}
+                                          <div className="flex items-start gap-1.5">
+                                            {selectedMatch.imageUrl && <img src={selectedMatch.imageUrl} alt={selectedMatch.productName} className="w-7 h-7 rounded object-cover flex-shrink-0 mt-0.5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} data-testid={`img-product-${item.id}`} />}
                                             <div className="min-w-0">
-                                              <p className="text-xs text-foreground overflow-hidden text-ellipsis whitespace-nowrap" data-testid={`text-product-name-${item.id}`}>{selectedMatch.productName}</p>
+                                              <div className="flex items-center gap-1.5 flex-wrap">
+                                                <p className="text-xs text-foreground overflow-hidden text-ellipsis whitespace-nowrap" data-testid={`text-product-name-${item.id}`}>{selectedMatch.productName}</p>
+                                                {isWF && wfConfLabel && (
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <span className={`inline-flex items-center text-[10px] font-medium px-1 py-0.5 rounded border cursor-default flex-shrink-0 ${wfConfLabel.colorClass} ${wfConfLabel.bgClass}`} data-testid={`confidence-badge-${item.id}`}>
+                                                        {confShortLabel[wfConfLevel ?? ''] ?? wfConfLabel.label}
+                                                      </span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                      <p className="text-xs">{wfConfLabel.label}</p>
+                                                    </TooltipContent>
+                                                  </Tooltip>
+                                                )}
+                                              </div>
                                               {selectedMatch.productWeight && <p className="text-[10px] text-muted-foreground">{selectedMatch.productWeight}</p>}
                                             </div>
                                           </div>
-                                        ) : <span className="text-muted-foreground">—</span>}
+                                        ) : (
+                                          <div className="flex items-center gap-1.5">
+                                            <span className="text-muted-foreground">—</span>
+                                            {isWF && wfConfLabel && (
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className={`inline-flex items-center text-[10px] font-medium px-1 py-0.5 rounded border cursor-default ${wfConfLabel.colorClass} ${wfConfLabel.bgClass}`} data-testid={`confidence-badge-${item.id}`}>
+                                                    {confShortLabel[wfConfLevel ?? ''] ?? wfConfLabel.label}
+                                                  </span>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                  <p className="text-xs">{wfConfLabel.label}</p>
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            )}
+                                          </div>
+                                        )}
                                         {showHint && (
                                           <div className="flex items-center gap-1 mt-0.5">
                                             <span className="text-[10px] text-amber-600 dark:text-amber-400" data-testid={`text-tha-pick-${item.id}`}>⭐ {topPick.productName}</span>
@@ -1883,12 +1928,6 @@ export default function ShoppingListPage() {
                                         </div>
                                       </td>
                                     )}
-
-                                    <td className="px-2 py-1" data-testid={`confidence-badge-${item.id}`}>
-                                      {isWF && wfConfLabel ? (
-                                        <span className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border ${wfConfLabel.colorClass} ${wfConfLabel.bgClass}`}>{wfConfLabel.label}</span>
-                                      ) : <span className="text-muted-foreground">—</span>}
-                                    </td>
 
                                     {hasPrices && (
                                       <td className="px-2 py-1 text-center" data-testid={`text-smp-${item.id}`}>
