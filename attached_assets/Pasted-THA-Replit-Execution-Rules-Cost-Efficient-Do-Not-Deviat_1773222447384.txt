@@ -1,0 +1,172 @@
+THA Replit Execution Rules — Cost Efficient / Do Not Deviate
+
+• Follow this plan exactly
+• Modify only the minimum code required
+• Do not redesign architecture
+• Do not refactor unrelated logic
+• Do not remove state unless clearly unused
+• Do not generate automated tests
+• Do not run test frameworks
+• Only run a TypeScript compile check
+• Start dev server when finished
+• I will manually verify behaviour and save-point this version
+
+Objective
+
+Create a low-risk save point by:
+1. Reordering the basket table columns into the desired working order
+2. Applying fixed column widths so the table is more readable and columns do not collapse awkwardly
+
+No logic redesign.
+No category redesign.
+No Choice refactor yet.
+This is a UI/table-structure refinement only.
+
+Required final column order
+
+Ingredient | Variant | Tier | Shop | Match | Qty | Price | Confidence | THA Rating | Meal | Analyse | Edit | Delete
+
+Notes:
+• This order reflects the selection flow that produces Match
+• Keep current category layout, sticky headers, Basket Totals, and Comparison Strip unchanged
+• Do not merge Variant/Tier/Shop yet
+• Do not change pantry logic
+
+Files likely involved
+
+• client/src/pages/shopping-list-page.tsx
+• any local table/header/cell helper component if already split out
+
+--------------------------------------------------
+T001 — Reorder visible basket columns
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Reorder both the table headers and row cells to this exact order:
+
+1. Ingredient
+2. Variant
+3. Tier
+4. Shop
+5. Match
+6. Qty
+7. Price
+8. Confidence
+9. THA Rating
+10. Meal
+11. Analyse
+12. Edit
+13. Delete
+
+Requirements:
+• Shop must remain a visible standalone column
+• Meal must remain a visible standalone column
+• THA Rating must remain the visible label (not SMP)
+• Analyse / Edit / Delete should remain compact action columns
+• Do not remove any existing working behaviour while reordering
+
+Acceptance:
+• Column order matches exactly
+• Table still renders correctly inside category sections
+• Basket Totals and Comparison Strip still appear below the tables
+
+--------------------------------------------------
+T002 — Apply fixed table layout and fixed column widths
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Apply a fixed table layout so columns do not collapse unpredictably.
+
+Use:
+• table-layout: fixed
+
+Set sensible fixed widths for the basket table columns.
+Target widths:
+
+• Ingredient: 220px
+• Variant: 170px
+• Tier: 140px
+• Shop: 120px
+• Match: 240px
+• Qty: 80px
+• Price: 100px
+• Confidence: 140px
+• THA Rating: 120px
+• Meal: 90px
+• Analyse: 70px
+• Edit: 70px
+• Delete: 70px
+
+Implementation guidance:
+• Use colgroup if easy in current structure, otherwise apply width classes consistently to headers/cells
+• Preserve compact density
+• Avoid making rows taller
+• Match should have the most room
+• Ingredient should be prominent
+• Qty / Analyse / Edit / Delete should stay narrow
+
+Acceptance:
+• Narrow columns no longer collapse badly
+• Egg / similar short ingredient rows remain readable
+• Match and Ingredient have enough width
+• Table is visually more stable
+
+--------------------------------------------------
+T003 — Keep Meal behaviour intact
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Preserve current Meal column behaviour:
+• show knife-and-fork icon plus count for recipe-linked items
+• show — when no recipe links exist
+• keep tooltip behaviour if already present
+
+Acceptance:
+• Meal column still works after reordering
+
+--------------------------------------------------
+T004 — Keep current controls and logic intact
+
+Important:
+This pass must NOT change:
+• category supermarket/tier logic
+• row override logic
+• Mixed header logic
+• matching logic
+• confidence logic
+• Basket Totals logic
+• Comparison Strip logic
+
+This is only:
+• column order
+• width stabilisation
+• minor header/cell cleanup required to support that
+
+Acceptance:
+• No behaviour regressions introduced by the table reorder
+
+--------------------------------------------------
+T005 — Minimal verification only
+
+Steps:
+• Run npx tsc --noEmit
+• Start dev server
+• Do not generate tests
+• Do not run automated UI testing
+
+Manual verification will be performed by the user.
+
+--------------------------------------------------
+Final acceptance
+
+• Basket table columns appear in this exact order:
+  Ingredient | Variant | Tier | Shop | Match | Qty | Price | Confidence | THA Rating | Meal | Analyse | Edit | Delete
+
+• Fixed widths are applied
+• Table is easier to read
+• Columns no longer collapse awkwardly
+• Current basket/category logic still works
+• No TypeScript errors
