@@ -658,7 +658,7 @@ export default function ShoppingListPage() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    document.title = "SMP \u2013 Analyse Basket";
+    document.title = "Basket \u2013 The Healthy Apples";
     return () => { document.title = "The Healthy Apples"; };
   }, []);
 
@@ -1631,9 +1631,11 @@ export default function ShoppingListPage() {
                             <tr className="border-b border-border/40 bg-muted/10">
                               <th className="px-2 py-1 w-7" />
                               <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Ingredient</th>
+                              <th className="px-2 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">Meal</th>
                               <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Variant</th>
                               <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Tier</th>
                               <th className="px-2 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Qty</th>
+                              {hasPrices && <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Shop</th>}
                               {hasPrices && <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Match</th>}
                               {hasPrices && <th className="px-2 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Price</th>}
                               <th className="px-2 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Conf.</th>
@@ -1717,17 +1719,6 @@ export default function ShoppingListPage() {
                                         <div className="flex items-center gap-1 flex-wrap">
                                           <span className="font-medium text-foreground cursor-pointer" onClick={() => startEdit(item.id, 'productName', item.productName)} data-testid={`text-item-name-${item.id}`}>{capitalizeWords(item.productName)}</span>
                                           {item.quantity > 1 && <Badge variant="secondary" className="text-[10px]" data-testid={`badge-quantity-${item.id}`}>x{item.quantity}</Badge>}
-                                          {sources.length > 0 && (
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <span className="text-muted-foreground cursor-default text-[11px]" data-testid={`badge-meal-${item.id}`}>🍽 {sources.length}</span>
-                                              </TooltipTrigger>
-                                              <TooltipContent side="bottom" className="max-w-[220px]">
-                                                <p className="text-xs font-medium mb-1">Used in:</p>
-                                                {sources.map((s, idx) => <p key={idx} className="text-xs text-muted-foreground">{s.mealName}{s.quantityMultiplier > 1 ? ` (x${s.quantityMultiplier})` : ''}</p>)}
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          )}
                                           {sources.some(s => frozenMealIds.has(s.mealId)) && (
                                             <Tooltip>
                                               <TooltipTrigger asChild>
@@ -1746,6 +1737,20 @@ export default function ShoppingListPage() {
                                           )}
                                         </div>
                                       )}
+                                    </td>
+
+                                    <td className="px-2 py-1 text-center" data-testid={`meal-count-${item.id}`}>
+                                      {sources.length > 0 ? (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <span className="cursor-default text-[11px] text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🍽 {sources.length}</span>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="bottom" className="max-w-[220px]">
+                                            <p className="text-xs font-medium mb-1">Used in:</p>
+                                            {sources.map((s, idx) => <p key={idx} className="text-xs text-muted-foreground">{s.mealName}{s.quantityMultiplier > 1 ? ` (x${s.quantityMultiplier})` : ''}</p>)}
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      ) : <span className="text-muted-foreground">—</span>}
                                     </td>
 
                                     <td className="px-2 py-1 align-top max-w-[150px]">
@@ -1800,6 +1805,41 @@ export default function ShoppingListPage() {
                                     </td>
 
                                     {hasPrices && (
+                                      <td className="px-2 py-1" data-testid={`select-shop-${item.id}`}>
+                                        <div className="flex items-center gap-1">
+                                          <Select value={item.selectedStore || 'auto'} onValueChange={(val) => { updateItem.mutate({ id: item.id, fields: { selectedStore: val === 'auto' ? null : val } }); setGlobalStore('auto'); }}>
+                                            <SelectTrigger className={`h-6 w-[90px] text-[11px] ${item.selectedStore ? 'border-amber-400' : ''}`} data-testid={`select-store-${item.id}`}>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="auto"><span className="flex items-center gap-1"><TrendingDown className="h-3 w-3" />{isBranded ? 'Choose' : 'Auto'}</span></SelectItem>
+                                              {availableStores.map(store => {
+                                                const storeMatch = itemPrices?.get(store);
+                                                const isKnown = knownStores.includes(store);
+                                                return (
+                                                  <SelectItem key={store} value={store}>
+                                                    <span className="flex items-center gap-1">
+                                                      {isBranded && isKnown && <Check className="h-3 w-3 text-green-500 flex-shrink-0" />}
+                                                      {store}{storeMatch?.price ? ` £${storeMatch.price.toFixed(2)}` : ''}
+                                                    </span>
+                                                  </SelectItem>
+                                                );
+                                              })}
+                                            </SelectContent>
+                                          </Select>
+                                          {isBranded && item.selectedStore && (() => {
+                                            const storeMatch = itemPrices?.get(item.selectedStore);
+                                            return storeMatch?.productUrl ? (
+                                              <a href={storeMatch.productUrl} target="_blank" rel="noopener noreferrer">
+                                                <Button variant="ghost" size="icon" className="h-6 w-6" data-testid={`button-store-link-${item.id}`}><ExternalLink className="h-3 w-3" /></Button>
+                                              </a>
+                                            ) : null;
+                                          })()}
+                                        </div>
+                                      </td>
+                                    )}
+
+                                    {hasPrices && (
                                       <td className="px-2 py-1">
                                         {selectedMatch ? (
                                           <div className="flex items-center gap-1.5 max-w-[160px]">
@@ -1820,47 +1860,14 @@ export default function ShoppingListPage() {
                                     )}
 
                                     {hasPrices && (
-                                      <td className="px-2 py-1" data-testid={`text-price-${item.id}`}>
-                                        <div className="flex flex-col gap-1">
-                                          <div className="flex items-center gap-1">
-                                            {selectedPrice !== null && selectedPrice !== undefined ? (
-                                              <span className={`tabular-nums cursor-pointer ${isBestPrice ? 'text-primary font-semibold' : 'text-foreground'}`} onClick={() => setComparisonItem(item)}>£{selectedPrice.toFixed(2)}</span>
-                                            ) : (
-                                              <span className="text-muted-foreground cursor-pointer" onClick={() => setComparisonItem(item)}>—</span>
-                                            )}
-                                            {isBestPrice && <span className="text-[9px] bg-secondary text-secondary-foreground px-1 py-0.5 rounded font-semibold">Best</span>}
-                                          </div>
-                                          <div className="flex items-center gap-1">
-                                            <Select value={item.selectedStore || 'auto'} onValueChange={(val) => { updateItem.mutate({ id: item.id, fields: { selectedStore: val === 'auto' ? null : val } }); setGlobalStore('auto'); }}>
-                                              <SelectTrigger className={`h-6 w-[90px] text-[11px] ${item.selectedStore ? 'border-amber-400' : ''}`} data-testid={`select-store-${item.id}`}>
-                                                <SelectValue />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                <SelectItem value="auto"><span className="flex items-center gap-1"><TrendingDown className="h-3 w-3" />{isBranded ? 'Choose' : 'Auto'}</span></SelectItem>
-                                                {availableStores.map(store => {
-                                                  const storeMatch = itemPrices?.get(store);
-                                                  const isKnown = knownStores.includes(store);
-                                                  return (
-                                                    <SelectItem key={store} value={store}>
-                                                      <span className="flex items-center gap-1">
-                                                        {isBranded && isKnown && <Check className="h-3 w-3 text-green-500 flex-shrink-0" />}
-                                                        {store}{storeMatch?.price ? ` £${storeMatch.price.toFixed(2)}` : ''}
-                                                      </span>
-                                                    </SelectItem>
-                                                  );
-                                                })}
-                                              </SelectContent>
-                                            </Select>
-                                            {isBranded && item.selectedStore && (() => {
-                                              const storeMatch = itemPrices?.get(item.selectedStore);
-                                              return storeMatch?.productUrl ? (
-                                                <a href={storeMatch.productUrl} target="_blank" rel="noopener noreferrer">
-                                                  <Button variant="ghost" size="icon" className="h-6 w-6" data-testid={`button-store-link-${item.id}`}><ExternalLink className="h-3 w-3" /></Button>
-                                                </a>
-                                              ) : null;
-                                            })()}
-                                            <Button variant="ghost" size="sm" className="text-xs gap-1 text-muted-foreground h-6 px-1" onClick={() => setAnalyseItem(item)} data-testid={`button-change-product-${item.id}`}><Microscope className="h-3 w-3" /></Button>
-                                          </div>
+                                      <td className="px-2 py-1 text-right" data-testid={`text-price-${item.id}`}>
+                                        <div className="flex items-center gap-1 justify-end">
+                                          {selectedPrice !== null && selectedPrice !== undefined ? (
+                                            <span className={`tabular-nums cursor-pointer ${isBestPrice ? 'text-primary font-semibold' : 'text-foreground'}`} onClick={() => setComparisonItem(item)}>£{selectedPrice.toFixed(2)}</span>
+                                          ) : (
+                                            <span className="text-muted-foreground cursor-pointer" onClick={() => setComparisonItem(item)}>—</span>
+                                          )}
+                                          {isBestPrice && <span className="text-[9px] bg-secondary text-secondary-foreground px-1 py-0.5 rounded font-semibold">Best</span>}
                                         </div>
                                       </td>
                                     )}
