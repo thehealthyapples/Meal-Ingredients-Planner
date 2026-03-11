@@ -1,0 +1,269 @@
+THA Replit Execution Rules — Pantry Phase 1 / Cost Efficient / Do Not Deviate
+
+• Follow this plan exactly
+• Modify only the minimum code required
+• Do NOT redesign basket architecture
+• Do NOT change backend logic
+• Do NOT modify database schema
+• Do NOT alter basket totals logic
+• Do NOT alter comparison strip logic
+• Do NOT alter analyser logic
+• Do NOT alter price matching logic
+• Do NOT refactor unrelated code
+• Prefer additive UI/rendering changes over deeper rewrites
+• Do NOT generate automated tests
+• Do NOT run test frameworks
+• Only run a TypeScript compile check
+• Start dev server when finished
+• I will manually verify behaviour
+
+Objective
+
+Implement Pantry Phase 1 in the Basket page.
+
+Pantry Phase 1 goals:
+1. Display pantry items using the same basket/table style as the other categories
+2. Consolidate pantry display categories into a single visible "Pantry" section
+3. Add a new visible column before Choice:
+   UPF / Nasties
+4. Begin pantry source unification in the basket display:
+   pantry-screen items + recipe-derived pantry items should appear as one pantry list
+5. Apply simple merge behaviour for compatible pantry items
+
+Important:
+This phase is display/rendering + simple merge behaviour only.
+Do NOT build the pantry recommendation engine yet.
+Do NOT change analyser logic yet.
+
+--------------------------------------------------
+Scope constraints
+
+Do NOT implement in this phase:
+• pantry recommendation engine
+• pantry analyser-driven matching
+• pantry-specific price engine logic
+• pantry-specific filter engine logic
+• backend schema changes
+• pantry merge persistence in DB
+
+Do implement only:
+• display grouping
+• row merge rules at basket-display level
+• UPF / Nasties column
+• pantry visual consistency with other basket categories
+
+--------------------------------------------------
+Visible basket category structure
+
+Use the current basket category style and keep Pantry as a single visible basket section.
+
+Pantry should visually behave like the other categories:
+• same sticky header style
+• same table style
+• same row rhythm
+• same Basket Totals and Comparison Strip below
+
+--------------------------------------------------
+Pantry source unification
+
+Pantry items can come from:
+1. Pantry screen
+2. Recipe ingredients
+
+In the Basket display, pantry items from both sources should appear together in one Pantry section.
+
+Important:
+This is basket-display unification only.
+Do NOT redesign source data models.
+
+--------------------------------------------------
+Pantry merge rules
+
+Apply simple, low-risk merge behaviour in the basket display only.
+
+Merge when:
+• same pantry product family
+• compatible variant/type
+
+Do NOT merge when:
+• format or subtype materially changes
+
+Examples:
+• olive oil + olive oil = merge
+• olive oil + olive oil spray = do NOT merge
+• chopped tomatoes + tinned chopped tomatoes = merge if your current normalisation already treats these as same base pantry item
+• tomato puree + chopped tomatoes = do NOT merge
+
+Implementation guidance:
+Use a simple merge key based on normalized pantry item name.
+Strip harmless packaging/container words if already easy to do.
+Do NOT over-engineer fuzzy merging in this phase.
+
+--------------------------------------------------
+Required pantry table columns
+
+Pantry must use this visible column order:
+
+Checkbox | Ingredient | UPF / Nasties | Choice | Match | Qty | Price | THA Rating | Meal | Analyse | Edit | Delete
+
+Important:
+• Pantry should still look and feel like the shopping list for the other categories
+• This applies to both food pantry and household pantry items
+• Do NOT redesign Pantry into a separate UI style
+
+--------------------------------------------------
+T001 — Add pantry display grouping
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Add/update a helper so the following raw categories render under the visible basket category "Pantry":
+
+• grains
+• oils
+• condiments
+• nuts
+• legumes
+• tinned
+• dried herbs
+• spices
+
+Fresh herbs should remain under Produce, not Pantry.
+
+Important:
+This is display grouping only.
+Do NOT change item.category in the DB.
+
+Acceptance:
+• Basket renders one Pantry section
+• pantry-type raw categories appear under Pantry in the Basket UI
+
+--------------------------------------------------
+T002 — Add pantry source unification in basket display
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Within the Basket display only:
+• pantry-screen pantry items
+• recipe-derived pantry items
+
+must appear in one Pantry list.
+
+Do not redesign the underlying source models.
+Do not change backend persistence.
+
+Acceptance:
+• Pantry list includes pantry items from both sources together
+
+--------------------------------------------------
+T003 — Add simple pantry merge behaviour in Basket display
+
+File:
+client/src/pages/shopping-list-page.tsx
+(and small helper file only if needed)
+
+Implement simple merge behaviour for pantry display rows only.
+
+Merge compatible items such as:
+• olive oil + olive oil
+
+Do not merge incompatible format/subtype variants such as:
+• olive oil + olive oil spray
+
+Rules:
+• keep implementation simple and conservative
+• do not attempt broad fuzzy logic
+• if uncertain, keep rows separate
+
+Merged rows should:
+• combine quantity where sensible
+• preserve meal count information
+• preserve display context sufficiently for the basket row
+
+Acceptance:
+• compatible pantry duplicates merge in basket display
+• incompatible pantry variants remain separate
+
+--------------------------------------------------
+T004 — Add UPF / Nasties column before Choice
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Add a visible column:
+UPF / Nasties
+
+Place it before Choice in Pantry rows.
+
+Phase 1 behaviour:
+• show a compact default summary badge/value
+• default display can be something like:
+  THA Safe
+
+Important:
+Do NOT implement the full filter engine in this phase.
+This is a presentation placeholder / first visible control only.
+
+Keep Pantry visually aligned with the other basket rows.
+
+Acceptance:
+• UPF / Nasties column appears before Choice in Pantry
+• Pantry still looks like part of the same basket system
+
+--------------------------------------------------
+T005 — Preserve Meal behaviour
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Keep Meal column behaviour for Pantry rows:
+• recipe-linked pantry rows show 🍽 count
+• non-recipe pantry rows show —
+
+If tooltip behaviour already exists for meal/source context, keep it.
+
+Acceptance:
+• Meal column still works for Pantry rows
+
+--------------------------------------------------
+T006 — Preserve current basket behaviour outside Pantry
+
+Important:
+Do NOT change:
+• category sticky header logic
+• category supermarket/tier inheritance logic
+• row override logic
+• Basket Totals logic
+• Comparison Strip logic
+• analyser logic
+• current matching engine
+• non-pantry category rendering beyond what is necessary for Pantry grouping
+
+Acceptance:
+• non-pantry basket behaviour remains intact
+
+--------------------------------------------------
+T007 — Minimal verification only
+
+Steps:
+• Run npx tsc --noEmit
+• Start dev server
+• Do NOT generate tests
+• Do NOT run automated testing
+
+Manual verification will be performed by the user.
+
+--------------------------------------------------
+Final acceptance
+
+• Pantry displays as one visible basket section
+• Pantry items from recipe + pantry screen appear together
+• Simple pantry merge works for clearly compatible items
+• olive oil and olive oil spray remain separate
+• UPF / Nasties column appears before Choice
+• Pantry rows visually match the rest of the basket style
+• Meal counts still appear
+• Basket Totals still render
+• Comparison Strip still renders
+• No TypeScript errors

@@ -174,6 +174,7 @@ const BASKET_CATEGORY_MAP: Record<string, string> = {
   nuts: 'pantry',
   legumes: 'pantry',
   tinned: 'pantry',
+  spices: 'pantry',
 };
 
 const FRESH_HERB_NAMES = new Set([
@@ -187,6 +188,45 @@ function getBasketCategory(item: { category?: string | null; productName: string
     return FRESH_HERB_NAMES.has(name) ? 'produce' : 'pantry';
   }
   return BASKET_CATEGORY_MAP[raw] ?? 'other';
+}
+
+type PantryDisplayRow<T> = {
+  primary: T;
+  combinedSources: import('@shared/schema').IngredientSource[];
+  combinedQtyValue: number | null;
+  mergedCount: number;
+};
+
+function computePantryMergedRows<T extends { id: number; normalizedName?: string | null; productName: string; unit?: string | null; quantityValue?: number | null }>(
+  items: T[],
+  sourcesByItem: Map<number, import('@shared/schema').IngredientSource[]>,
+): PantryDisplayRow<T>[] {
+  const groups = new Map<string, PantryDisplayRow<T>>();
+  for (const item of items) {
+    const key = normalizeIngredientKey(item.normalizedName ?? item.productName);
+    if (!groups.has(key)) {
+      groups.set(key, {
+        primary: item,
+        combinedSources: [...(sourcesByItem.get(item.id) ?? [])],
+        combinedQtyValue: item.quantityValue ?? null,
+        mergedCount: 1,
+      });
+    } else {
+      const row = groups.get(key)!;
+      row.mergedCount++;
+      const seenMealIds = new Set(row.combinedSources.map(s => s.mealId));
+      for (const s of sourcesByItem.get(item.id) ?? []) {
+        if (!seenMealIds.has(s.mealId)) {
+          row.combinedSources.push(s);
+          seenMealIds.add(s.mealId);
+        }
+      }
+      if (item.unit === row.primary.unit && item.quantityValue != null && row.combinedQtyValue != null) {
+        row.combinedQtyValue = row.combinedQtyValue + item.quantityValue;
+      }
+    }
+  }
+  return Array.from(groups.values());
 }
 
 const SUPERMARKET_NAMES = ['Tesco', "Sainsbury's", 'Asda', 'Morrisons', 'Aldi', 'Lidl', 'Waitrose', 'Marks & Spencer', 'Ocado'];
@@ -1630,6 +1670,10 @@ export default function ShoppingListPage() {
                 {BASKET_DISPLAY_CATEGORIES.map(cat => {
                   const catItems = sortedItems.filter(i => !isStaple(i) && getBasketCategory(i) === cat);
                   if (catItems.length === 0) return null;
+                  const isPantry = cat === 'pantry';
+                  const displayRows = isPantry
+                    ? computePantryMergedRows(catItems, sourcesByItem)
+                    : catItems.map(i => ({ primary: i, combinedSources: sourcesByItem.get(i.id) ?? [], combinedQtyValue: i.quantityValue ?? null, mergedCount: 1 }));
                   const catDefault = getCategoryDefault(cat);
                   const isMixed = catItems.some(i => i.selectedTier !== null && i.selectedTier !== catDefault.tier);
                   const CatIcon = CATEGORY_ICONS[cat] || CircleDot;
@@ -1672,6 +1716,7 @@ export default function ShoppingListPage() {
                           <colgroup>
                             <col style={{ width: 28 }} />
                             <col style={{ width: 220 }} />
+                            {isPantry && <col style={{ width: 90 }} />}
                             <col style={{ width: 180 }} />
                             {hasPrices && <col style={{ width: 200 }} />}
                             <col style={{ width: 80 }} />
@@ -1686,6 +1731,7 @@ export default function ShoppingListPage() {
                             <tr className="border-b border-border/40 bg-muted/10">
                               <th className="px-1.5 py-1" />
                               <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Ingredient</th>
+                              {isPantry && <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">UPF / Nasties</th>}
                               <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Choice</th>
                               {hasPrices && <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Match</th>}
                               <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Qty</th>
@@ -1699,12 +1745,12 @@ export default function ShoppingListPage() {
                           </thead>
                           <tbody>
                             <AnimatePresence>
-                              {catItems.map(item => {
-                                const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
+                              {displayRows.map(({ primary: item, combinedSources, combinedQtyValue, mergedCount }) => {
+                                const { qty, unitLabel } = formatQty(combinedQtyValue ?? item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
                                 const itemPrices = pricesByItem.get(item.id);
                                 const cheapest = getCheapestForItem(item.id);
                                 const isEditing = editState?.itemId === item.id;
-                                const sources = sourcesByItem.get(item.id) || [];
+                                const sources = combinedSources;
                                 const catDef = getCategoryDefault(cat);
                                 const itemTier = (item.selectedTier || catDef.tier) as PriceTier;
                                 const isOverridden = item.selectedTier !== null && item.selectedTier !== catDef.tier;
@@ -1783,6 +1829,7 @@ export default function ShoppingListPage() {
                                         <div className="flex items-center gap-1 flex-wrap">
                                           <span className="font-medium text-foreground cursor-pointer" onClick={() => startEdit(item.id, 'productName', item.productName)} data-testid={`text-item-name-${item.id}`}>{capitalizeWords(item.productName)}</span>
                                           {item.quantity > 1 && <Badge variant="secondary" className="text-[10px]" data-testid={`badge-quantity-${item.id}`}>x{item.quantity}</Badge>}
+                                          {mergedCount > 1 && <Badge variant="outline" className="text-[10px] text-blue-500 dark:text-blue-400 border-blue-300 dark:border-blue-600" data-testid={`badge-merged-${item.id}`}>×{mergedCount}</Badge>}
                                           {sources.some(s => frozenMealIds.has(s.mealId)) && (
                                             <Tooltip>
                                               <TooltipTrigger asChild>
@@ -1803,6 +1850,11 @@ export default function ShoppingListPage() {
                                       )}
                                     </td>
 
+                                    {isPantry && (
+                                      <td className="px-1.5 py-1" data-testid={`upf-cell-${item.id}`}>
+                                        <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800 whitespace-nowrap">THA Safe</span>
+                                      </td>
+                                    )}
                                     <td className="px-1.5 py-1" data-testid={`choice-cell-${item.id}`}>
                                       <Popover>
                                         <PopoverTrigger asChild>
