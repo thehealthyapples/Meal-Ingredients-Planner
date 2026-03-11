@@ -1,0 +1,99 @@
+THA Replit Execution Rules — Cost Efficient / Do Not Deviate
+
+• Follow this plan exactly
+• Modify only the minimum code required
+• Do not redesign architecture
+• Do not refactor unrelated logic
+• Do not change backend or DB
+• Do not generate tests
+• Do not run automated tests
+• Only run TypeScript compile check
+• Start dev server when finished
+• I will manually verify behaviour
+
+Objective
+
+Reduce basket table width in a low-risk way using the inspection results.
+Do not change logic or structure.
+Only tighten the widest safe columns and slightly reduce horizontal cell padding.
+
+Tasks
+
+T001 — Update colgroup widths
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Update the basket table colgroup widths as follows:
+
+• Checkbox: 28
+• Ingredient: 220
+• Choice: 180
+• Match: 200
+• Qty: 80
+• Price: 100
+• THA Rating: 120
+• Meal: 90
+• Analyse: 40
+• Edit: 40
+• Delete: 40
+
+Important:
+• Keep hasPrices gating exactly aligned between thead, tbody, and colgroup
+• Do not change column order
+• Do not change table logic
+
+Acceptance:
+• table width is reduced
+• Choice and Match are narrower
+• action columns are narrower
+• Ingredient width remains unchanged
+
+T002 — Reduce horizontal cell padding slightly
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Reduce horizontal table cell padding slightly where safe:
+
+• change px-2 to px-1.5 for basket table th/td cells
+• keep py-1 unchanged
+
+Important:
+• do not remove truncation / ellipsis classes
+• do not change row logic
+• do not increase row height
+
+Acceptance:
+• table becomes slightly narrower
+• readability remains good
+
+T003 — Preserve truncation behaviour
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Keep existing truncation behaviour intact:
+
+• Choice summary must keep truncate
+• Match product name must keep overflow-hidden text-ellipsis whitespace-nowrap
+• Do not add truncation to Ingredient in this pass
+
+Acceptance:
+• Choice and Match still truncate cleanly
+• Ingredient still wraps as it does today
+
+T004 — Minimal verification only
+
+Steps:
+• Run npx tsc --noEmit
+• Start dev server
+• Do not generate tests
+• Do not run automated testing
+
+Final acceptance
+
+• full table width is reduced materially
+• less horizontal scrolling is needed in landscape
+• no logic changes
+• no TypeScript errors
