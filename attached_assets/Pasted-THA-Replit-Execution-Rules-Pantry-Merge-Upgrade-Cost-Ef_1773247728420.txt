@@ -1,0 +1,250 @@
+THA Replit Execution Rules — Pantry Merge Upgrade / Cost Efficient / Do Not Deviate
+
+• Follow this plan exactly
+• Modify only the minimum code required
+• Do NOT redesign basket architecture
+• Do NOT change backend logic
+• Do NOT modify database schema
+• Do NOT alter basket totals logic
+• Do NOT alter comparison strip logic
+• Do NOT alter analyser logic
+• Do NOT alter price matching logic
+• Do NOT refactor unrelated code
+• Prefer additive helper logic over broad rewrites
+• Do NOT generate automated tests
+• Do NOT run test frameworks
+• Only run a TypeScript compile check
+• Start dev server when finished
+• I will manually verify behaviour
+
+Objective
+
+Improve Pantry merge behaviour in the Basket by replacing the current raw-name-only merge key with a smarter, low-risk pantry merge profile.
+
+This upgrade should reduce obvious duplicate pantry rows such as:
+• flour + plain flour → merge
+
+while still keeping materially different pantry items separate:
+• olive oil + olive oil spray → do NOT merge
+• plain flour + self raising flour → do NOT merge
+• chopped tomatoes + tomato puree → do NOT merge
+
+Important:
+This is a Pantry merge helper upgrade only.
+Do NOT redesign Pantry UI.
+Do NOT change analyser or recommendation logic.
+Do NOT change any backend persistence.
+
+--------------------------------------------------
+Implementation goal
+
+Replace the simple pantry merge key logic with a structured merge profile based on:
+
+1. pantry family
+2. blocking modifiers
+3. ignorable packaging modifiers
+
+Merge only when:
+• pantry family matches
+• blocking modifiers match
+
+Ignore packaging/container words that should not prevent a merge.
+
+--------------------------------------------------
+T001 — Add pantry merge helper constants
+
+File:
+Use the existing pantry merge helper location if one already exists.
+If not, add a small helper section in:
+client/src/pages/shopping-list-page.tsx
+or a small basket helper file only if clearly cleaner and low-risk.
+
+Add three small constants:
+
+1. PANTRY_FAMILY_MAP
+A conservative mapping from common pantry phrases to pantry families.
+
+Initial safe set:
+
+{
+  "flour": "flour",
+  "plain flour": "flour",
+  "all purpose flour": "flour",
+  "bread flour": "flour",
+  "self raising flour": "flour",
+
+  "sugar": "sugar",
+  "caster sugar": "sugar",
+  "granulated sugar": "sugar",
+  "white sugar": "sugar",
+  "brown sugar": "sugar",
+  "icing sugar": "sugar",
+
+  "olive oil": "olive_oil",
+  "extra virgin olive oil": "olive_oil",
+  "olive oil spray": "olive_oil",
+
+  "chopped tomatoes": "chopped_tomatoes",
+  "tinned chopped tomatoes": "chopped_tomatoes",
+  "can chopped tomatoes": "chopped_tomatoes",
+
+  "tomato puree": "tomato_puree",
+  "cumin": "cumin",
+  "paprika": "paprika",
+  "soy sauce": "soy_sauce",
+  "pasta": "pasta",
+  "rice": "rice"
+}
+
+2. BLOCKING_MODIFIERS
+Words/phrases that should prevent merge when different:
+
+[
+  "self raising",
+  "bread",
+  "icing",
+  "brown",
+  "spray",
+  "paste",
+  "puree",
+  "powder",
+  "flakes",
+  "extra virgin"
+]
+
+3. IGNORABLE_MODIFIERS
+Words/phrases that should not prevent merge:
+
+[
+  "can",
+  "tinned",
+  "jar",
+  "pack"
+]
+
+Important:
+• Keep this list intentionally small and conservative
+• Do not add broad fuzzy logic
+• If uncertain, keep items separate
+
+Acceptance:
+• helper constants exist
+• scope remains small and safe
+
+--------------------------------------------------
+T002 — Build a pantry merge profile helper
+
+File:
+Same helper location as T001
+
+Add a helper like:
+
+type PantryMergeProfile = {
+  family: string;
+  blockingModifiers: string[];
+};
+
+Implement a helper function:
+
+getPantryMergeProfile(name: string): PantryMergeProfile
+
+Behaviour:
+1. normalize the pantry item name to lowercase trimmed text
+2. determine family:
+   • first use PANTRY_FAMILY_MAP exact match if available
+   • otherwise fall back to existing normalized key behaviour
+3. detect blocking modifiers present in the name
+4. ignore ignorable packaging words for family comparison purposes
+
+Important:
+• Do not implement fuzzy matching
+• Do not attempt NLP
+• Keep logic deterministic and small
+
+Acceptance:
+• pantry item names can be converted into a structured merge profile
+
+--------------------------------------------------
+T003 — Use merge profile instead of raw merge key
+
+File:
+Where computePantryMergedRows() currently builds/uses the pantry merge key
+
+Replace the current merge-key-only comparison with:
+
+Two pantry items merge when:
+• profile.family matches
+• sorted profile.blockingModifiers match exactly
+
+Meaning:
+• flour + plain flour should merge
+• plain flour + self raising flour should not merge
+• olive oil + olive oil spray should not merge
+• chopped tomatoes + tinned chopped tomatoes should merge
+• chopped tomatoes + tomato puree should not merge
+
+If the helper is uncertain, preserve the safer behaviour by keeping rows separate.
+
+Acceptance:
+• obvious pantry synonym duplicates merge better
+• materially different pantry variants remain separate
+
+--------------------------------------------------
+T004 — Keep current quantity and meal behaviour
+
+File:
+Where merged pantry rows are constructed
+
+Do not redesign merged-row aggregation in this pass.
+
+Keep current behaviour:
+• quantities combine only when units match
+• meal sources deduplicate by mealId
+• merged row still shows ×N badge if already implemented
+
+Acceptance:
+• merge profile upgrade does not break current Pantry row rendering
+
+--------------------------------------------------
+T005 — Preserve all non-Pantry behaviour
+
+Important:
+Do NOT change:
+• non-Pantry categories
+• category sticky headers
+• category supermarket/tier inheritance
+• Basket Totals
+• Comparison Strip
+• analyser logic
+• matching logic
+• Pantry UI column structure
+
+This pass is only:
+• Pantry merge intelligence improvement
+
+Acceptance:
+• only Pantry merge behaviour changes
+
+--------------------------------------------------
+T006 — Minimal verification only
+
+Steps:
+• Run npx tsc --noEmit
+• Start dev server
+• Do NOT generate tests
+• Do NOT run automated testing
+
+Manual verification will be performed by the user.
+
+--------------------------------------------------
+Final acceptance
+
+• flour and plain flour merge
+• caster sugar and sugar can merge if mapped to same family
+• olive oil and olive oil spray remain separate
+• plain flour and self raising flour remain separate
+• chopped tomatoes and tinned chopped tomatoes merge
+• tomato puree and chopped tomatoes remain separate
+• current Pantry UI remains intact
+• non-Pantry basket behaviour remains unchanged
+• no TypeScript errors

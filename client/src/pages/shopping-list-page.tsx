@@ -190,6 +190,51 @@ function getBasketCategory(item: { category?: string | null; productName: string
   return BASKET_CATEGORY_MAP[raw] ?? 'other';
 }
 
+const PANTRY_FAMILY_MAP: Record<string, string> = {
+  'flour': 'flour',
+  'plain flour': 'flour',
+  'all purpose flour': 'flour',
+  'bread flour': 'flour',
+  'self raising flour': 'flour',
+  'sugar': 'sugar',
+  'caster sugar': 'sugar',
+  'granulated sugar': 'sugar',
+  'white sugar': 'sugar',
+  'brown sugar': 'sugar',
+  'icing sugar': 'sugar',
+  'olive oil': 'olive_oil',
+  'extra virgin olive oil': 'olive_oil',
+  'olive oil spray': 'olive_oil',
+  'chopped tomatoes': 'chopped_tomatoes',
+  'tinned chopped tomatoes': 'chopped_tomatoes',
+  'can chopped tomatoes': 'chopped_tomatoes',
+  'tomato puree': 'tomato_puree',
+  'cumin': 'cumin',
+  'paprika': 'paprika',
+  'soy sauce': 'soy_sauce',
+  'pasta': 'pasta',
+  'rice': 'rice',
+};
+
+const BLOCKING_MODIFIERS = [
+  'self raising', 'bread', 'icing', 'brown', 'spray', 'paste', 'puree', 'powder', 'flakes', 'extra virgin',
+];
+
+const IGNORABLE_MODIFIERS = ['can', 'tinned', 'jar', 'pack'];
+
+type PantryMergeProfile = { family: string; blockingModifiers: string[] };
+
+function getPantryMergeProfile(name: string): PantryMergeProfile {
+  const lower = name.toLowerCase().trim();
+  let stripped = lower;
+  for (const word of IGNORABLE_MODIFIERS) {
+    stripped = stripped.replace(new RegExp(`\\b${word}\\b`, 'g'), '').replace(/\s+/g, ' ').trim();
+  }
+  const family = PANTRY_FAMILY_MAP[stripped] ?? PANTRY_FAMILY_MAP[lower] ?? normalizeIngredientKey(lower);
+  const blockingModifiers = BLOCKING_MODIFIERS.filter(m => lower.includes(m)).sort();
+  return { family, blockingModifiers };
+}
+
 type PantryDisplayRow<T> = {
   primary: T;
   combinedSources: import('@shared/schema').IngredientSource[];
@@ -203,7 +248,8 @@ function computePantryMergedRows<T extends { id: number; normalizedName?: string
 ): PantryDisplayRow<T>[] {
   const groups = new Map<string, PantryDisplayRow<T>>();
   for (const item of items) {
-    const key = normalizeIngredientKey(item.normalizedName ?? item.productName);
+    const { family, blockingModifiers } = getPantryMergeProfile(item.normalizedName ?? item.productName);
+    const key = `${family}|${blockingModifiers.join(',')}`;
     if (!groups.has(key)) {
       groups.set(key, {
         primary: item,
