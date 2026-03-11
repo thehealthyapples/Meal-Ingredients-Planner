@@ -1,0 +1,72 @@
+Refinement: remove obsolete global basket controls and simplify page header
+
+The basket now uses category-level supermarket/tier defaults plus row-level overrides. Because of this, the old global basket pickers and summary blocks are now obsolete in the UI and should be removed from view.
+
+Important:
+Remove obsolete UI controls, but do NOT blindly remove underlying logic/state/helpers if they are still used by category headers, row pickers, matching logic, or comparison calculations.
+
+Required changes
+
+1. Page title / top action bar
+- Rename page title from:
+  Analyse Basket
+  to:
+  Basket
+
+- Move the following actions onto the same line as the page title, right aligned:
+  - Metric
+  - Match Products
+  - Send to Supermarket
+  - Export
+  - Delete
+  - Full screen
+
+- Keep this top row compact and balanced.
+
+2. Remove obsolete top pickers from visible UI
+Remove these visible controls from the page:
+- top Tesco picker
+- top Premium picker
+
+These are now obsolete because supermarket and tier are handled at category/row level.
+
+3. Remove obsolete sections below header
+Remove these sections from visible UI:
+- Shop At
+- Global Tier
+- Shopping Summary
+
+These are now obsolete because:
+- category headers control supermarket/tier defaults
+- the bottom comparison table provides the holistic basket comparison
+- basket totals section replaces the need for the old summary block
+
+4. Preserve underlying logic carefully
+- Before deleting any state/helpers related to old pickers, confirm whether they are still used by:
+  - category supermarket defaults
+  - row-level store pickers
+  - row-level tier overrides
+  - matching logic
+  - basket totals
+  - comparison strip calculations
+
+- If old state is still needed internally, keep it but remove the obsolete UI only.
+- Only remove state/helpers if clearly unused after refactor.
+
+5. Resulting page structure
+The page should now read in this order:
+
+- Basket (title) + actions on same top row
+- Category tables with sticky headers
+- Basket Totals
+- Comparison Strip
+
+6. Acceptance
+- “Analyse Basket” is renamed to “Basket”
+- Metric / Match Products / Send to Supermarket / Export / Delete / Full screen appear on the same line as the title
+- top Tesco/Premium pickers are removed from view
+- Shop At section is removed
+- Global Tier section is removed
+- Shopping Summary section is removed
+- category and row-level supermarket/tier behaviour still works
+- comparison table at bottom remains the main holistic basket view

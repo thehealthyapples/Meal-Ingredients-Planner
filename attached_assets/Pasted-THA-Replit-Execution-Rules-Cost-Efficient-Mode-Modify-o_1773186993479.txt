@@ -1,0 +1,167 @@
+THA Replit Execution Rules (Cost Efficient Mode)
+
+• Modify only the minimum code required
+• Do NOT redesign architecture
+• Do NOT refactor unrelated code
+• Do NOT remove underlying state unless clearly unused
+• Do NOT generate test suites
+• Do NOT run automated UI tests
+• Do NOT perform exploratory refactors
+• Only run a TypeScript compile check
+• Start the dev server when finished
+• I will manually verify the UI visually
+
+Objective
+
+Simplify the basket page (/analyse-basket → shopping-list-page.tsx) by removing obsolete UI controls introduced before the new category-based basket system.
+
+The basket now uses category-level supermarket and tier defaults plus row-level overrides. Because of this, several global controls and summary sections are obsolete and should be removed from the visible UI.
+
+Important: This is a UI cleanup only. Existing basket logic must remain intact.
+
+Required page structure after change
+
+Basket (title + actions)
+↓
+Category tables
+↓
+Basket Totals
+↓
+Comparison Strip
+
+Tasks
+
+T001 — Rename title and simplify header
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Changes:
+
+Rename page title:
+"Analyse Basket" → "Basket"
+
+Keep the following layout:
+
+LEFT side
+• Basket
+• subtitle ("N items to buy")
+• household banner
+
+RIGHT side
+• Metric
+• Match Products
+• Send to Supermarket
+• Export
+• Delete
+• Full screen
+
+All controls should appear on the same header row where possible.
+
+Remove from the header UI:
+• Global store picker (Tesco selector)
+• Global tier picker (Premium selector)
+
+These controls are now obsolete because supermarket and tier are handled at category and row level.
+
+Important:
+Remove only the visible UI components.
+Do NOT remove state or helpers (globalStore, currentTier) unless clearly unused elsewhere.
+
+Acceptance:
+• Title reads "Basket"
+• No Tesco / Premium picker visible in header
+• All six actions remain visible
+
+---
+
+T002 — Remove "Shop At" and "Global Tier" section
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Remove the UI section that renders:
+
+• Shop At retailer chip panel
+• Global Tier chip panel
+• fulfilment note under those chips
+
+Important:
+Do NOT delete these states or helpers:
+
+• selectedRetailers
+• toggleRetailer
+• globalBasketTier
+
+These may still be used by:
+
+• comparison strip calculations
+• category defaults
+• basket matching logic
+
+Acceptance:
+• No "Shop At" section visible
+• No "Global Tier" section visible
+• Comparison Strip still works
+
+---
+
+T003 — Remove "Shopping Summary" block
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Remove the UI block containing:
+
+• Shopping Summary heading
+• supermarket totals grid
+• "Best from selected shops"
+
+This summary is now obsolete because the page already includes:
+
+• Basket Totals section
+• Comparison Strip at the bottom
+
+Important:
+Do NOT remove clientBestTotal or related calculations if used elsewhere.
+
+Acceptance:
+• No "Shopping Summary" visible
+• Basket Totals still render
+• Comparison Strip still renders
+
+---
+
+T004 — Minimal verification (no automated tests)
+
+Steps:
+
+1. Run TypeScript compile check
+2. Start dev server
+
+Do NOT generate tests or run UI test frameworks.
+
+Manual verification will be performed by the user.
+
+---
+
+Final page order must be:
+
+Basket (title + actions)
+Category tables
+Basket Totals
+Comparison Strip
+
+Acceptance checklist
+
+• "Analyse Basket" renamed to "Basket"
+• Header contains only title + actions
+• Global store picker removed
+• Global tier picker removed
+• "Shop At" section removed
+• "Global Tier" section removed
+• "Shopping Summary" section removed
+• Category tables still render correctly
+• Basket Totals still render
+• Comparison Strip still renders
+• No TypeScript compile errors

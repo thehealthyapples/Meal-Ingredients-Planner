@@ -1,0 +1,98 @@
+Objective
+
+Refine the basket page (/analyse-basket, shopping-list-page.tsx) to:
+
+- Rename title "Analyse Basket" → "Basket"
+- Collapse title/subtitle/banner + actions into a compact top header
+- Remove obsolete global store picker and global tier picker from the header UI
+- Remove the "Shop At" / "Global Tier" section
+- Remove the "Shopping Summary" section
+- Preserve underlying state/logic because selectedRetailers, globalBasketTier, globalStore, currentTier may still be used internally by matching, category defaults, and comparison strip logic
+
+Tasks
+
+T001: Rename title, compact header, remove obsolete global pickers
+
+Blocked By: []
+Details:
+File: client/src/pages/shopping-list-page.tsx
+
+- Rename CardTitle text from "Analyse Basket" to "Basket"
+- Keep title + subtitle ("N items to buy") + household banner on the left
+- Keep actions on the right:
+  - Metric
+  - Match Products
+  - Send to Supermarket
+  - Export
+  - Delete
+  - Full screen
+- Make header compact and clean
+- On desktop, keep this as one row where possible; allow graceful wrap if needed on smaller widths
+- Remove the visible UI block containing the global store picker and global tier picker
+- Do not delete related state/helpers unless confirmed unused elsewhere
+
+Acceptance:
+- Title reads "Basket"
+- No Tesco/Premium picker visible in header
+- All 6 actions still present
+
+T002: Remove "Shop At" + "Global Tier" section from visible UI
+
+Blocked By: [T001]
+Details:
+File: client/src/pages/shopping-list-page.tsx
+
+- Remove the visible UI block that renders:
+  - Shop At chip panel
+  - Global Tier chip panel
+  - fulfilment note in that section
+- Do NOT remove:
+  - selectedRetailers state
+  - toggleRetailer helper
+  - globalBasketTier state
+- These may still be used by comparison strip calculations and category defaults
+
+Acceptance:
+- No "Shop At" section visible
+- No "Global Tier" section visible
+- Comparison strip still renders correctly
+
+T003: Remove "Shopping Summary" section from visible UI
+
+Blocked By: [T002]
+Details:
+File: client/src/pages/shopping-list-page.tsx
+
+- Remove the visible UI block containing:
+  - Shopping Summary heading
+  - supermarket totals grid
+  - "Best from selected shops" row
+- Keep any internal values/useMemo still needed elsewhere, especially clientBestTotal
+
+Acceptance:
+- No "Shopping Summary" section visible between header and category tables
+- Basket Totals section still renders
+- Comparison Strip still renders
+
+T004: Verify final page structure and clean build
+
+Blocked By: [T003]
+Details:
+- Run TypeScript/build check
+- Start dev server
+- Confirm page order is now:
+
+  Basket (title + actions)
+  → Category tables
+  → Basket Totals
+  → Comparison Strip
+
+- Confirm category supermarket defaults still work
+- Confirm row tier overrides still work
+- Confirm comparison strip still renders with retailer columns
+
+Acceptance:
+- No build/type errors
+- Page is visually simpler
+- No obsolete global controls remain visible
+- Core basket logic still works
