@@ -5,6 +5,7 @@ interface AppleRatingProps {
   rating: number;
   hasCape?: boolean;
   size?: "small" | "medium" | "large";
+  sizePx?: number;
   showTooltip?: boolean;
   animate?: boolean;
 }
@@ -31,6 +32,7 @@ const OVERLAP = 0.38;
 export default function AppleRating({
   rating: rawRating,
   size = "medium",
+  sizePx: sizePxProp,
   showTooltip = true,
   animate = true,
 }: AppleRatingProps) {
@@ -39,7 +41,7 @@ export default function AppleRating({
   const hasHalf = clamped % 1 >= 0.5;
   const labelIndex = Math.min(4, Math.max(0, Math.round(clamped) - 1));
   const label = RATING_LABELS[labelIndex];
-  const px = sizeMap[size] ?? 20;
+  const px = sizePxProp ?? sizeMap[size] ?? 20;
   const overlap = Math.round(px * OVERLAP);
 
   const content = (

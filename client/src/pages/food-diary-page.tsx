@@ -139,7 +139,7 @@ function ThaAppleScorePicker({
 
 function ThaAppleScoreDisplay({ value }: { value: number | null; max?: number }) {
   if (value === null) return <span className="text-muted-foreground text-xs">—</span>;
-  return <AppleRating rating={value} size="small" showTooltip={false} animate={false} />;
+  return <AppleRating rating={value} sizePx={52} showTooltip={false} animate={false} />;
 }
 
 // ── Metric stat card ────────────────────────────────────────────────────────
