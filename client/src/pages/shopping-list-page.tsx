@@ -1033,7 +1033,7 @@ export default function ShoppingListPage() {
   const [thaPicks, setThaPicks] = useState<Record<string, IngredientProduct[]>>({});
   const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
   const [addItemInput, setAddItemInput] = useState('');
-  const [alwaysAddModal, setAlwaysAddModal] = useState<{ extraId: number; currentValue: boolean } | null>(null);
+  const [alwaysAddModal, setAlwaysAddModal] = useState<{ extraId: number; extraName: string } | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const collapsedInitRef = useRef(false);
   const prevExtrasLenRef = useRef(0);
@@ -2389,12 +2389,15 @@ export default function ShoppingListPage() {
                                 <td className="px-1.5 py-1.5" colSpan={2}>
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="font-medium text-foreground/80" data-testid={`text-extra-name-${extra.id}`}>{capitalizeWords(extra.name)}</span>
-                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border border-primary/40 text-primary bg-primary/10" data-testid={`chip-always-${extra.id}`}>Always in Basket</span>
+                                    <button
+                                      className={`inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`}
+                                      onClick={() => extra.alwaysAdd ? setAlwaysAddModal({ extraId: extra.id, extraName: extra.name }) : updateExtraMutation.mutate({ id: extra.id, alwaysAdd: true })}
+                                      data-testid={`pill-always-${extra.id}`}
+                                    >Always in Basket</button>
                                   </div>
                                 </td>
                                 <td colSpan={99} className="px-1.5 py-1.5 text-right">
                                   <div className="flex items-center justify-end gap-1">
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => setAlwaysAddModal({ extraId: extra.id, currentValue: extra.alwaysAdd })} title="Toggle Always in Basket" data-testid={`button-always-extra-${extra.id}`}><RefreshCw className="h-3 w-3" /></Button>
                                     <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
                                   </div>
                                 </td>
@@ -2497,12 +2500,15 @@ export default function ShoppingListPage() {
                                     <td className="px-1.5 py-1.5" colSpan={2}>
                                       <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className="font-medium text-foreground/80">{capitalizeWords(extra.name)}</span>
-                                        <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border border-primary/40 text-primary bg-primary/10" data-testid={`chip-always-hh-${extra.id}`}>Always in Basket</span>
+                                        <button
+                                          className={`inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`}
+                                          onClick={() => extra.alwaysAdd ? setAlwaysAddModal({ extraId: extra.id, extraName: extra.name }) : updateExtraMutation.mutate({ id: extra.id, alwaysAdd: true })}
+                                          data-testid={`pill-always-hh-${extra.id}`}
+                                        >Always in Basket</button>
                                       </div>
                                     </td>
                                     <td className="px-1.5 py-1.5 text-right">
                                       <div className="flex items-center justify-end gap-1">
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => setAlwaysAddModal({ extraId: extra.id, currentValue: extra.alwaysAdd })} title="Toggle Always in Basket" data-testid={`button-always-hh-extra-${extra.id}`}><RefreshCw className="h-3 w-3" /></Button>
                                         <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-hh-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
                                       </div>
                                     </td>
@@ -2671,26 +2677,23 @@ export default function ShoppingListPage() {
       <Dialog open={!!alwaysAddModal} onOpenChange={(open) => { if (!open) setAlwaysAddModal(null); }}>
         <DialogContent className="max-w-sm" data-testid="dialog-always-add">
           <DialogHeader>
-            <DialogTitle>
-              {alwaysAddModal?.currentValue ? 'Stop automatically adding this item?' : 'Always add this item to your basket?'}
-            </DialogTitle>
+            <DialogTitle>Remove from basket?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            {alwaysAddModal?.currentValue
-              ? 'This item will no longer be added to future baskets.'
-              : 'This item will automatically appear in future baskets until you remove it.'}
+            Do you want to remove <span className="font-medium text-foreground">{alwaysAddModal ? capitalizeWords(alwaysAddModal.extraName) : ''}</span> from your basket?
           </p>
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setAlwaysAddModal(null)} data-testid="button-always-cancel">Cancel</Button>
+            <Button variant="outline" onClick={() => setAlwaysAddModal(null)} data-testid="button-always-no">No, keep it</Button>
             <Button
+              variant="destructive"
               onClick={() => {
                 if (!alwaysAddModal) return;
-                updateExtraMutation.mutate({ id: alwaysAddModal.extraId, alwaysAdd: !alwaysAddModal.currentValue });
+                updateExtraMutation.mutate({ id: alwaysAddModal.extraId, alwaysAdd: false, inBasket: false });
                 setAlwaysAddModal(null);
               }}
-              data-testid="button-always-confirm"
+              data-testid="button-always-yes"
             >
-              {alwaysAddModal?.currentValue ? 'Remove Auto Add' : 'Always Add'}
+              Yes, remove
             </Button>
           </DialogFooter>
         </DialogContent>
