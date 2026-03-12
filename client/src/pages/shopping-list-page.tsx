@@ -1356,6 +1356,7 @@ export default function ShoppingListPage() {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
+      queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] });
       toast({ title: "Cleared", description: "Basket has been cleared." });
     },
   });

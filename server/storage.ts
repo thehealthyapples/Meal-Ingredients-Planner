@@ -452,6 +452,16 @@ export class DatabaseStorage implements IStorage {
     await this.clearAllIngredientSourcesForUser(userId);
     await this.clearAllProductMatchesForUser(userId);
     await db.delete(shoppingList).where(eq(shoppingList.householdId, householdId));
+    // Also clear session-only extras (inBasket=true, alwaysAdd=false)
+    await db
+      .delete(shoppingListExtras)
+      .where(
+        and(
+          eq(shoppingListExtras.householdId, householdId),
+          eq(shoppingListExtras.inBasket, true),
+          eq(shoppingListExtras.alwaysAdd, false)
+        )
+      );
   }
 
   async getMealPlans(userId: number): Promise<MealPlan[]> {
