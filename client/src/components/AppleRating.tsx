@@ -27,10 +27,38 @@ const RATING_COLORS = [
 
 const sizeMap: Record<string, number> = { small: 35, medium: 50, large: 70 };
 
+const SCALE = 1.5;
+
+function AppleIcon({ px }: { px: number }) {
+  const rendered = px * SCALE;
+  const offset = -((rendered - px) / 2);
+  return (
+    <div style={{ width: px, height: px, overflow: "hidden", flexShrink: 0, display: "inline-block" }}>
+      <img
+        src={thaAppleUrl}
+        width={rendered}
+        height={rendered}
+        alt=""
+        draggable={false}
+        style={{ display: "block", marginLeft: offset, marginTop: offset }}
+      />
+    </div>
+  );
+}
+
 function HalfApple({ px }: { px: number }) {
+  const rendered = px * SCALE;
+  const offset = -((rendered - px) / 2);
   return (
     <div style={{ width: px / 2, height: px, overflow: "hidden", flexShrink: 0, display: "inline-block" }}>
-      <img src={thaAppleUrl} width={px} height={px} alt="" draggable={false} style={{ display: "block" }} />
+      <img
+        src={thaAppleUrl}
+        width={rendered}
+        height={rendered}
+        alt=""
+        draggable={false}
+        style={{ display: "block", marginLeft: offset, marginTop: offset }}
+      />
     </div>
   );
 }
@@ -51,11 +79,11 @@ export default function AppleRating({
   const content = (
     <div
       className="inline-flex items-center"
-      style={{ gap: -14, ...(animate ? { animation: "appleBounce 0.4s ease-out both" } : {}) }}
+      style={{ gap: 0, ...(animate ? { animation: "appleBounce 0.4s ease-out both" } : {}) }}
       data-testid={`apple-rating-${Math.round(clamped)}`}
     >
       {Array.from({ length: fullCount }).map((_, i) => (
-        <img key={i} src={thaAppleUrl} width={px} height={px} alt="" draggable={false} style={{ display: "block", flexShrink: 0 }} />
+        <AppleIcon key={i} px={px} />
       ))}
       {hasHalf && <HalfApple px={px} />}
     </div>
