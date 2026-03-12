@@ -1978,15 +1978,15 @@ export default function ShoppingListPage() {
                           </colgroup>
                           <thead>
                             <tr className="border-b border-border/40 bg-muted/10">
-                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Ingredient</th>
-                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Optimizer</th>
-                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Choice</th>
-                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Match</th>
-                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Qty</th>
-                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Price</th>
-                              <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">THA Rating</th>
-                              <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">Meal</th>
-                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Actions</th>
+                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle sticky left-0 z-10 bg-background">Ingredient</th>
+                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle">Optimizer</th>
+                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle">Choice</th>
+                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle">Match</th>
+                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap align-middle">Qty</th>
+                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap align-middle">Price</th>
+                              <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap align-middle">THA Rating</th>
+                              <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap align-middle">Meal</th>
+                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap align-middle sticky right-0 z-10 bg-background">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2056,7 +2056,7 @@ export default function ShoppingListPage() {
                                     className={`group border-b border-border/40 ${item.checked ? 'opacity-50' : ''}`}
                                     data-testid={`shopping-item-${item.id}`}
                                   >
-                                    <td className="px-1.5 py-1">
+                                    <td className="px-1.5 py-1 sticky left-0 z-10 bg-background">
                                       {isEditing && editState?.field === 'productName' ? (
                                         <div className="flex items-center gap-1">
                                           <Input value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-6 text-xs" autoFocus data-testid={`input-edit-name-${item.id}`} />
@@ -2364,7 +2364,7 @@ export default function ShoppingListPage() {
                                       })()}
                                     </td>
 
-                                    <td className="px-1.5 py-1">
+                                    <td className="px-1.5 py-1 sticky right-0 z-10 bg-background">
                                       <div className={`flex items-center justify-end gap-0.5 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100${item.checked ? ' md:opacity-100' : ''}`}>
                                         <Checkbox
                                           checked={item.checked || false}
@@ -2384,7 +2384,7 @@ export default function ShoppingListPage() {
                             {/* Extras rows for this category */}
                             {catExtras.map(extra => (
                               <tr key={`extra-${extra.id}`} className={`border-b border-border/30 ${extra.alwaysAdd ? 'bg-primary/3' : ''}`} data-testid={`row-extra-${extra.id}`}>
-                                <td className="px-1.5 py-1.5">
+                                <td className="px-1.5 py-1.5 sticky left-0 z-10 bg-background">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="font-medium text-foreground/80" data-testid={`text-extra-name-${extra.id}`}>{capitalizeWords(extra.name)}</span>
                                     <button
@@ -2401,7 +2401,7 @@ export default function ShoppingListPage() {
                                 <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                 <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                 <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                <td className="px-1.5 py-1.5">
+                                <td className="px-1.5 py-1.5 sticky right-0 z-10 bg-background">
                                   <div className="flex items-center justify-end gap-0.5">
                                     <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" data-testid={`checkbox-extra-${extra.id}`} />
                                     <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
@@ -2429,7 +2429,7 @@ export default function ShoppingListPage() {
                               const totalCount = catItems.length + catExtras.length;
                               return (
                                 <tr className="border-t border-border/60 bg-muted/20 font-medium">
-                                  <td colSpan={4} className="px-1.5 py-1 text-right text-[10px] text-muted-foreground">
+                                  <td colSpan={4} className="px-1.5 py-1 text-right text-[10px] text-muted-foreground sticky left-0 z-10 bg-muted/20">
                                     {totalCount} {totalCount === 1 ? 'item' : 'items'}
                                   </td>
                                   <td className="px-1.5 py-1" />
@@ -2439,7 +2439,7 @@ export default function ShoppingListPage() {
                                   <td className="px-1.5 py-1 text-center">
                                     {catAvgRating !== null ? <AppleRating rating={catAvgRating} size="small" showTooltip={false} /> : <span className="text-muted-foreground font-normal">—</span>}
                                   </td>
-                                  <td colSpan={2} />
+                                  <td colSpan={2} className="sticky right-0 z-10 bg-muted/20" />
                                 </tr>
                               );
                             })()}
@@ -2523,7 +2523,7 @@ export default function ShoppingListPage() {
                                   const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
                                   return (
                                     <tr key={`hh-saved-${item.id}`} className={`border-b border-border/30 ${item.checked ? 'opacity-50' : ''}`} data-testid={`row-household-${item.id}`}>
-                                      <td className="px-1.5 py-1.5">
+                                      <td className="px-1.5 py-1.5 sticky left-0 z-10 bg-background">
                                         <span className={`font-medium ${item.checked ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{capitalizeWords(item.productName)}</span>
                                         {item.quantity > 1 && <Badge variant="secondary" className="text-[10px] ml-1">x{item.quantity}</Badge>}
                                       </td>
@@ -2534,7 +2534,7 @@ export default function ShoppingListPage() {
                                       <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                       <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                       <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                      <td className="px-1.5 py-1.5">
+                                      <td className="px-1.5 py-1.5 sticky right-0 z-10 bg-background">
                                         <div className="flex items-center justify-end gap-0.5">
                                           <Checkbox checked={item.checked || false} onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })} className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" data-testid={`checkbox-household-${item.id}`} />
                                           <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-remove-household-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
@@ -2545,7 +2545,7 @@ export default function ShoppingListPage() {
                                 })}
                                 {subcatExtras.map(extra => (
                                   <tr key={`hh-extra-${extra.id}`} className="border-b border-border/30" data-testid={`row-hh-extra-${extra.id}`}>
-                                    <td className="px-1.5 py-1.5">
+                                    <td className="px-1.5 py-1.5 sticky left-0 z-10 bg-background">
                                       <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className="font-medium text-foreground/80">{capitalizeWords(extra.name)}</span>
                                         <button
@@ -2562,7 +2562,7 @@ export default function ShoppingListPage() {
                                     <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                     <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                     <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                    <td className="px-1.5 py-1.5">
+                                    <td className="px-1.5 py-1.5 sticky right-0 z-10 bg-background">
                                       <div className="flex items-center justify-end gap-0.5">
                                         <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" />
                                         <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-hh-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
@@ -2655,7 +2655,7 @@ export default function ShoppingListPage() {
                   </colgroup>
                   <tbody>
                     <tr className="bg-muted/30 font-semibold">
-                      <td colSpan={4} className="px-1.5 py-1.5 text-right text-xs font-semibold text-muted-foreground">
+                      <td colSpan={4} className="px-1.5 py-1.5 text-right text-xs font-semibold text-muted-foreground sticky left-0 z-10 bg-muted/30">
                         Basket total · {savedItems.length} {savedItems.length === 1 ? 'item' : 'items'}
                         {overallConfidence !== null && (
                           <span className={`ml-2 font-normal ${overallConfidence === 'high' ? 'text-green-600 dark:text-green-400' : overallConfidence === 'medium' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}`}>
@@ -2670,7 +2670,7 @@ export default function ShoppingListPage() {
                       <td className="px-1.5 py-1.5 text-center" data-testid="text-basket-avg-smp">
                         {avgSmpRating !== null ? <AppleRating rating={avgSmpRating} size="small" showTooltip={false} /> : <span className="text-muted-foreground font-normal">—</span>}
                       </td>
-                      <td colSpan={2} />
+                      <td colSpan={2} className="sticky right-0 z-10 bg-muted/30" />
                     </tr>
                   </tbody>
                 </table>

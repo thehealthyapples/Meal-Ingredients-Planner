@@ -1,0 +1,247 @@
+Replit Prompt — Stage 2 Basket Final Polish (Sticky Columns + Middle-Aligned Headers)
+Implementation Guardrails
+
+Work in a cost-controlled, efficient way.
+
+This is a small final polish pass only.
+Do not refactor the basket architecture.
+Do not alter basket logic, pricing logic, matching logic, quantity logic, totals logic, or selection logic.
+Do not redesign the Stage 1 layout unless strictly required to support the polish below.
+
+Stay tightly on task.
+Do not stray beyond this prompt.
+Do not add unrelated UX ideas, animations, abstractions, or speculative refactors.
+
+Use the least invasive implementation that achieves the requested polish.
+
+Do not run automated tests. I will review visually.
+
+Objective
+
+Add the final professional-feel polish to the Basket table by implementing:
+
+Sticky Ingredient column
+
+Sticky Actions column
+
+Middle-aligned column headers
+
+This should make the Basket page feel more like a professional operational tool and less like a standard scrolling table.
+
+Part 1 — Sticky Ingredient Column
+
+Make the Ingredient column sticky on the left during horizontal scroll.
+
+Required behaviour
+
+Ingredient remains visible while horizontally scrolling the basket table
+
+This should apply consistently across food and household rows
+
+Sticky behaviour must not break row alignment or totals alignment
+
+Implementation direction
+
+Use a low-cost CSS / Tailwind approach only.
+
+Example direction:
+
+sticky left-0 z-10 bg-background
+
+If needed, header cells for Ingredient should also use matching sticky positioning.
+
+Important requirements
+
+sticky cell must have an explicit background
+
+no bleed-through from underlying cells
+
+no row overlap glitches
+
+preserve current column width
+
+Part 2 — Sticky Actions Column
+
+Make the Actions column sticky on the right during horizontal scroll.
+
+Required behaviour
+
+Actions remains visible while horizontally scrolling
+
+This should apply consistently across food rows, household rows, and totals rows where applicable
+
+Existing Stage 1.5 row action reveal behaviour must continue to work correctly
+
+Implementation direction
+
+Use a low-cost CSS / Tailwind approach only.
+
+Example direction:
+
+sticky right-0 z-10 bg-background
+
+If needed, header cells for Actions should also use matching sticky positioning.
+
+Important requirements
+
+sticky cell must have explicit background
+
+no bleed-through
+
+no layering issues with hovered rows, selected rows, or revealed action controls
+
+preserve current Actions column width
+
+do not break selector visibility logic
+
+Part 3 — Middle-Align Column Headers
+
+Adjust the basket table column headers so they are vertically and visually middle-aligned.
+
+The goal is a neater, more deliberate table header row.
+
+Required behaviour
+
+header labels should sit centrally within the header row
+
+alignment should look consistent across short and long labels
+
+applies to all basket table headers, including food and household sections where relevant
+
+Implementation direction
+
+Use simple alignment classes only.
+
+Preferred direction:
+
+align-middle
+
+and where needed:
+
+text-center
+
+or a flex wrapper such as:
+
+flex items-center justify-center
+
+Use whichever approach best matches the current header structure with the least code change.
+
+Important note
+
+Do not force all header text to be horizontally centered if that makes the table harder to scan.
+
+The requirement is primarily that headers feel middle-aligned and visually tidy.
+Where a header is better left horizontally left-aligned for readability, keep it left-aligned but ensure vertical centering is correct.
+
+So:
+
+vertical middle alignment is required
+
+horizontal centering is optional and should be used where it improves polish
+
+Part 4 — Preserve Existing Layout Decisions
+
+Do not alter:
+
+shared column grid
+
+selector-in-actions placement
+
+household alignment
+
+totals row structure
+
+action reveal behaviour
+
+qty reveal behaviour
+
+measured-qty safeguard
+
+column widths
+
+This pass is polish only.
+
+Part 5 — Background / Layering Safeguards
+
+Because sticky columns can create rendering issues, ensure:
+
+sticky Ingredient and sticky Actions cells have explicit background
+
+selected rows still look correct
+
+hovered rows still look correct
+
+revealed actions still render above the cell correctly
+
+no dark/light overlay seams appear between sticky and scrolling cells
+
+Use the minimum z-index necessary to keep layering stable.
+
+Do not introduce complex stacking logic unless strictly required.
+
+Part 6 — Scope Control
+
+Only implement sticky columns if it can be done cleanly with CSS / Tailwind and minimal code changes.
+
+Do not refactor the table structure to force sticky behaviour.
+
+If a small adjustment is needed for header/background consistency, that is fine.
+Do not drift into wider layout changes.
+
+Done When
+
+The Basket page should now have the final polished feel.
+
+Success criteria:
+
+Ingredient stays visible during horizontal scroll
+
+Actions stays visible during horizontal scroll
+
+no bleed-through or overlap glitches appear
+
+Actions reveal still works correctly
+
+headers feel vertically middle-aligned and tidier
+
+overall basket feels more like a premium professional tool
+
+no unrelated redesign or refactor is introduced
+
+Manual Visual Review Checklist
+
+I will manually verify:
+
+Sticky Ingredient
+
+horizontal scroll keeps Ingredient visible
+
+row alignment remains correct
+
+no overlap or background bleed appears
+
+Sticky Actions
+
+horizontal scroll keeps Actions visible
+
+selector / analyse / edit / remove still behave correctly
+
+reveal behaviour still works
+
+selected rows still render correctly
+
+Headers
+
+column headers look vertically centered
+
+header row feels tidier and more deliberate
+
+no awkward misalignment between headers
+
+Overall polish
+
+basket feels more stable during horizontal scroll
+
+page feels more premium and intentional
+
+no Stage 1 behaviours were broken
