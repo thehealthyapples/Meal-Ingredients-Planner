@@ -1,0 +1,159 @@
+THA Replit Execution Rules — Household Items in Basket / Cost Efficient / Do Not Deviate
+
+• Follow this plan exactly
+• Modify only the minimum code required
+• Do NOT redesign basket architecture
+• Do NOT change backend schema
+• Do NOT alter food basket scoring logic
+• Do NOT alter THA Rating logic
+• Do NOT alter pantry optimizer logic
+• Do NOT alter basket totals/comparison calculations for food items
+• Do NOT refactor unrelated code
+• Do NOT generate automated tests
+• Do NOT run test frameworks
+• Only run a TypeScript compile check
+• Start dev server when finished
+• I will manually verify behaviour
+
+Objective
+
+Add household items into the Basket so the page feels like one unified shopping list, while keeping household items excluded from current shopping totals/comparison logic.
+
+This pass should do only these things:
+
+1. Include household items in the Basket UI
+2. Group household items into household subcategories
+3. Make it clear in the Household section that these items are not currently included in shopping totals
+
+Important:
+This is a visual/list-structure change only.
+Do NOT include household items in current Basket Totals or Comparison Strip calculations in this pass.
+
+--------------------------------------------------
+Required behaviour
+
+The Basket should continue to look like one shopping list.
+
+Household items should appear in the same overall Basket page, using the same general category/table style as food items.
+
+But household items must be grouped into their own subcategories.
+
+Recommended household display groups:
+
+• Personal Care
+  examples: toothpaste, toothbrushes, soap, shampoo
+
+• Cleaning
+  examples: bin bags, dishwasher tablets, washing-up liquid, sprays, sponges
+
+• Paper & Home Essentials
+  examples: toilet roll, kitchen roll, tissues
+
+• Laundry
+  examples: detergent, softener, stain remover
+
+• Miscellaneous Household
+  examples: batteries, foil, cling film, storage bags
+
+Use conservative grouping. If uncertain, place item in Miscellaneous Household.
+
+--------------------------------------------------
+T001 — Add household items into the Basket display
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Update the Basket display grouping so household items appear on the Basket page as part of the unified shopping list.
+
+Important:
+• keep the existing food category sections intact
+• add household sections in the same overall list structure
+• do not redesign the page into separate food/household screens
+• keep sticky headers / table rhythm consistent where possible
+
+Acceptance:
+• household items appear in the Basket page
+• Basket still feels like one shopping list
+
+--------------------------------------------------
+T002 — Group household items into subcategories
+
+File:
+client/src/pages/shopping-list-page.tsx
+(and a tiny local helper only if clearly cleaner)
+
+Add lightweight household display grouping with these visible sections:
+
+• Personal Care
+• Cleaning
+• Paper & Home Essentials
+• Laundry
+• Miscellaneous Household
+
+Implementation guidance:
+• use simple keyword/category mapping
+• keep logic conservative
+• if uncertain, place in Miscellaneous Household
+• do not over-engineer ontology in this pass
+
+Acceptance:
+• household items are grouped into sensible household sections
+• not all household items appear in one undifferentiated block
+
+--------------------------------------------------
+T003 — Add household totals disclaimer text
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+On the household category/header area, add a small note making it clear that household items are currently not included in shopping totals.
+
+Preferred wording:
+• Household items are currently excluded from basket totals.
+
+Alternative if needed:
+• Household items are shown here but are not yet included in basket totals.
+
+Requirements:
+• keep the text small, muted, and friendly
+• place it near the household section header so the meaning is clear
+• do not make it look like an error/warning banner
+
+Acceptance:
+• user can clearly see household items are not counted in current totals
+
+--------------------------------------------------
+T004 — Preserve food totals and comparison logic
+
+Important:
+Do NOT change:
+• Basket Totals calculation
+• Comparison Strip calculation
+• food item totals
+• pantry merge logic
+• THA Optimizer behaviour
+• THA Rating logic
+
+Household items must remain excluded from current totals in this pass.
+
+Acceptance:
+• food basket totals still behave as before
+• household items do not distort current totals/comparison
+
+--------------------------------------------------
+T005 — Minimal verification only
+
+Steps:
+• Run npx tsc --noEmit
+• Start dev server
+• Do NOT generate tests
+• Do NOT run automated testing
+
+--------------------------------------------------
+Final acceptance
+
+• household items appear in the Basket page
+• household items are grouped into sensible household subcategories
+• a small note explains they are not currently included in basket totals
+• food basket totals/comparison remain unchanged
+• no TypeScript errors

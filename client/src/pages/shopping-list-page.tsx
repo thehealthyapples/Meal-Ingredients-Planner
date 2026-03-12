@@ -160,6 +160,29 @@ const BASKET_DISPLAY_CATEGORIES = [
   'produce', 'dairy', 'eggs', 'meat', 'fish', 'bakery', 'pantry', 'other',
 ];
 
+const HOUSEHOLD_SUBCATEGORIES: Array<{ key: string; label: string; keywords: string[] }> = [
+  { key: 'personal_care', label: 'Personal Care', keywords: ['toothpaste', 'toothbrush', 'soap', 'shampoo', 'conditioner', 'deodorant', 'moisturiser', 'moisturizer', 'body wash', 'face wash', 'razor', 'cotton', 'tampon', 'sanitary', 'mouthwash', 'floss', 'sunscreen', 'lotion', 'shower gel', 'bubble bath', 'nail', 'lip balm', 'hand wash'] },
+  { key: 'paper', label: 'Paper & Home Essentials', keywords: ['toilet roll', 'toilet paper', 'kitchen roll', 'kitchen towel', 'tissue', 'loo roll', 'paper towel', 'foil', 'cling film', 'baking paper', 'parchment', 'kitchen paper', 'bin bag', 'bin liner', 'sandwich bag', 'freezer bag'] },
+  { key: 'laundry', label: 'Laundry', keywords: ['laundry', 'washing powder', 'washing liquid', 'washing tablet', 'fabric softener', 'fabric conditioner', 'stain remover', 'tumble dryer', 'dryer sheet', 'dryer ball', 'colour catcher'] },
+  { key: 'cleaning', label: 'Cleaning', keywords: ['bleach', 'spray', 'wipes', 'sponge', 'cloth', 'scrubber', 'dishwasher', 'washing up', 'washing-up', 'detergent', 'duster', 'mop', 'brush', 'cleaner', 'disinfect', 'descal', 'toilet cleaner', 'flash', 'fairy', 'anti-bac', 'antibacterial'] },
+];
+
+const HOUSEHOLD_SUBCATEGORY_LABELS: Record<string, string> = {
+  personal_care: 'Personal Care',
+  paper: 'Paper & Home Essentials',
+  laundry: 'Laundry',
+  cleaning: 'Cleaning',
+  misc_household: 'Miscellaneous Household',
+};
+
+function getHouseholdSubcategory(productName: string): string {
+  const lower = (productName || '').toLowerCase();
+  for (const { key, keywords } of HOUSEHOLD_SUBCATEGORIES) {
+    if (keywords.some(kw => lower.includes(kw))) return key;
+  }
+  return 'misc_household';
+}
+
 const BASKET_CATEGORY_MAP: Record<string, string> = {
   produce: 'produce',
   fruit: 'produce',
@@ -988,6 +1011,8 @@ export default function ShoppingListPage() {
     return pantryKeySet.has(key) && !neededThisWeek.has(item.id);
   };
 
+  const isHousehold = (item: ShoppingListItem) => (item.category || '').toLowerCase() === 'household';
+
   const frozenMealIds = useMemo(() => {
     const ids = new Set<number>();
     for (const f of freezerMeals) {
@@ -1787,7 +1812,7 @@ export default function ShoppingListPage() {
             ) : (
               <div>
                 {BASKET_DISPLAY_CATEGORIES.map(cat => {
-                  const catItems = sortedItems.filter(i => !isStaple(i) && getBasketCategory(i) === cat);
+                  const catItems = sortedItems.filter(i => !isStaple(i) && !isHousehold(i) && getBasketCategory(i) === cat);
                   if (catItems.length === 0) return null;
                   const isPantry = cat === 'pantry';
                   const displayRows = isPantry
@@ -2254,6 +2279,61 @@ export default function ShoppingListPage() {
                     </div>
                   );
                 })}
+
+                {/* Household items */}
+                {(() => {
+                  const householdItems = sortedItems.filter(i => !isStaple(i) && isHousehold(i));
+                  if (householdItems.length === 0) return null;
+                  const subcatKeys = ['personal_care', 'paper', 'laundry', 'cleaning', 'misc_household'];
+                  return (
+                    <div className="mt-1 border-t border-border/40">
+                      <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 border-b border-border/40">
+                        <Home className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Household Items</span>
+                        <span className="text-[10px] text-muted-foreground ml-auto">Not included in basket totals</span>
+                      </div>
+                      {subcatKeys.map(subcat => {
+                        const subcatItems = householdItems.filter(i => getHouseholdSubcategory(i.normalizedName ?? i.productName) === subcat);
+                        if (subcatItems.length === 0) return null;
+                        return (
+                          <div key={subcat}>
+                            <div className="flex items-center gap-2 px-3 py-1 bg-muted/15 border-b border-border/30">
+                              <span className="text-[10px] font-medium text-muted-foreground">{HOUSEHOLD_SUBCATEGORY_LABELS[subcat]}</span>
+                              <span className="text-[10px] text-muted-foreground/60">({subcatItems.length})</span>
+                            </div>
+                            <table className="w-full text-xs">
+                              <tbody>
+                                {subcatItems.map(item => {
+                                  const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
+                                  return (
+                                    <tr key={`household-${item.id}`} className={`border-b border-border/30 ${item.checked ? 'opacity-50' : ''}`} data-testid={`row-household-${item.id}`}>
+                                      <td className="px-1.5 py-1.5 w-7">
+                                        <Checkbox
+                                          checked={item.checked || false}
+                                          onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })}
+                                          className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                                          data-testid={`checkbox-household-${item.id}`}
+                                        />
+                                      </td>
+                                      <td className="px-1.5 py-1.5">
+                                        <span className={`font-medium ${item.checked ? 'line-through text-muted-foreground' : 'text-foreground'}`} data-testid={`text-household-name-${item.id}`}>{capitalizeWords(item.productName)}</span>
+                                        {item.quantity > 1 && <Badge variant="secondary" className="text-[10px] ml-1">x{item.quantity}</Badge>}
+                                      </td>
+                                      <td className="px-1.5 py-1.5 text-right text-muted-foreground tabular-nums whitespace-nowrap">{qty} {unitLabel}</td>
+                                      <td className="px-1.5 py-1.5 text-right">
+                                        <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-remove-household-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
 
                 {/* Staples */}
                 {sortedItems.some(i => isStaple(i)) && (
