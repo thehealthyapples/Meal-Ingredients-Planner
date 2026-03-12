@@ -51,7 +51,7 @@ export default function AppleRating({
   const content = (
     <div
       className="inline-flex items-center"
-      style={{ gap: 2, ...(animate ? { animation: "appleBounce 0.4s ease-out both" } : {}) }}
+      style={{ gap: -4, ...(animate ? { animation: "appleBounce 0.4s ease-out both" } : {}) }}
       data-testid={`apple-rating-${Math.round(clamped)}`}
     >
       {Array.from({ length: fullCount }).map((_, i) => (
