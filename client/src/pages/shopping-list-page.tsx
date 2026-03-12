@@ -2470,8 +2470,8 @@ export default function ShoppingListPage() {
           <Card className="overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <Home className="h-4 w-4 text-primary" />
-                <span className="font-semibold text-sm">Household (Selected)</span>
+                <Package className="h-4 w-4 text-primary" />
+                <span className="font-semibold text-sm">Pantry Selections</span>
                 <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{shoppingExtras.length}</Badge>
               </div>
               <span className="text-xs text-muted-foreground">Added from My Pantry</span>
