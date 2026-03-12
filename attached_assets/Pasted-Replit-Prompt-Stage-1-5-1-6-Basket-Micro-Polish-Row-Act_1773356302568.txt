@@ -1,0 +1,317 @@
+Replit Prompt — Stage 1.5 / 1.6 Basket Micro-Polish (Row Action Reveal + Qty Stepper Reveal)
+Implementation Guardrails
+
+Work in a cost-controlled, efficient way.
+
+This is a small UI polish pass only.
+Do not refactor the basket architecture.
+Do not redesign row structure, table logic, quantity logic, selection logic, pricing logic, or matching logic.
+Do not change the Stage 1 layout decisions unless strictly required to support the reveal behaviour below.
+
+Stay tightly on task.
+Do not stray beyond this prompt.
+Do not add unrelated UX improvements, animations, abstractions, or speculative clean-up.
+
+Use the least invasive implementation that achieves the behaviour.
+
+Do not run automated tests. I will review visually.
+
+Objective
+
+Add two lightweight professional-feel micro-interactions to the Basket table:
+
+Row Actions auto-reveal
+
+Qty stepper auto-reveal
+
+The goal is to make the basket feel calmer, cleaner, and more premium by hiding controls until they are needed, while preserving the existing grid and behaviour.
+
+This should feel like a polished operational tool, not a noisy spreadsheet.
+
+Part 1 — Row Actions Auto-Reveal
+
+Keep the Actions column present at all times so the table grid does not shift.
+
+However, the controls inside the Actions cell should be visually hidden by default on desktop and revealed when the user interacts with the row.
+
+Required behaviour
+
+On desktop:
+
+default row state: actions hidden
+
+row hover: actions reveal
+
+selected row: actions remain visible even when not hovered
+
+focused row / focused control: actions remain visible
+
+The Actions column should still occupy its full width at all times.
+Only the controls inside it should fade/show.
+
+Actions included
+
+The Actions cell currently contains:
+
+[selector] [analyse] [edit] [remove]
+
+Keep this structure unchanged.
+
+Implementation direction
+
+Use row-level group hover/focus state rather than mounting/unmounting controls.
+
+Example direction:
+
+<tr className="group">
+
+and inside Actions:
+
+<div className="row-actions opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
+
+Also ensure selected rows force visibility.
+
+Important requirements
+
+no layout shift
+
+no column width shift
+
+no change to selection logic
+
+no change to analyse / edit / remove behaviour
+
+controls must remain keyboard accessible
+
+if a child control receives focus, the actions must stay visible
+
+Mobile / touch behaviour
+
+Hover does not exist on touch devices.
+
+For mobile / touch, keep Actions visible by default unless there is already an existing low-cost reveal pattern.
+Do not create a large mobile interaction redesign.
+
+Preferred low-cost behaviour:
+
+desktop: reveal on hover/focus/selected
+
+mobile: always visible
+
+Part 2 — Qty Stepper Auto-Reveal
+
+Make the Qty cell calmer by hiding stepper controls until interaction.
+
+Required behaviour
+
+On desktop:
+
+default row state: show compact qty value only
+
+row hover: reveal minus / plus controls within the Qty cell
+
+qty cell focus / focus within: reveal controls
+
+selected row: optional to reveal controls if easy, but not required
+
+if the qty is actively being edited, controls remain visible
+
+On mobile / touch:
+
+keep qty controls visible by default if hover is not available
+
+do not invent a complex tap-to-reveal interaction
+
+Desired visual pattern
+
+Default:
+
+2
+
+Hover/focus:
+
+[-] 2 [+]
+Important requirements
+
+keep the Qty column width fixed
+
+do not allow layout shift when controls appear
+
+keep quantity centred and readable
+
+use opacity / visibility transitions rather than changing table structure
+
+preserve current quantity logic and handlers
+
+preserve direct edit/input behaviour if it already exists
+
+Implementation direction
+
+Use the same row hover / focus pattern as Actions where practical.
+
+Example approach:
+
+keep a qty wrapper with reserved space
+
+keep value always rendered
+
+reveal stepper buttons with opacity transition
+
+avoid changing the cell width or table layout
+
+If needed, use an inner flex wrapper such as:
+
+<div className="flex items-center justify-center gap-1">
+
+with controls faded in on hover/focus.
+
+Guardrail
+
+This is a presentation polish only.
+Do not redesign quantity state, data flow, validation, or update logic.
+
+Part 3 — Visual Style
+
+The reveal should feel subtle and professional.
+
+Use:
+
+simple opacity transition
+
+no bouncing
+
+no oversized animation
+
+no layout movement
+
+Preferred feel:
+
+calm
+
+fast
+
+precise
+
+low-noise
+
+If a transition is used, keep it short and understated.
+
+Part 4 — Keep Grid Stable
+
+Do not alter:
+
+column widths
+
+shared grid structure
+
+totals rows
+
+selector placement
+
+household alignment
+
+actions ordering
+
+This pass is only about control visibility polish within the existing Stage 1 structure.
+
+Part 5 — Accessibility / Usability
+
+Ensure:
+
+keyboard users can still reach actions and qty controls
+
+focus makes controls visible
+
+selected rows keep actions visible
+
+touch users are not blocked by hover-only behaviour
+
+No accessibility regression should be introduced.
+
+Done When
+
+The Basket table should now feel calmer and more premium.
+
+Success criteria:
+
+Actions column stays in place, but controls are hidden by default on desktop
+
+actions reveal on row hover
+
+actions remain visible for selected rows and focused rows/controls
+
+Qty cell shows a simple value by default
+
+minus / plus controls reveal on row hover or qty focus
+
+no layout shift occurs
+
+no existing basket behaviour is broken
+
+mobile / touch still works sensibly
+
+Manual Visual Review Checklist
+
+I will manually check the following:
+
+Actions reveal
+
+on desktop, actions are hidden by default
+
+hovering a row reveals selector / analyse / edit / remove
+
+selecting a row keeps actions visible
+
+tabbing into a row/control keeps actions visible
+
+no column jump occurs
+
+Qty reveal
+
+default qty cell looks clean and simple
+
+hovering the row reveals minus / plus controls
+
+focusing qty/input reveals controls
+
+qty column width does not change
+
+no row height jump occurs
+
+Mobile / touch
+
+actions remain usable
+
+qty controls remain usable
+
+no hover-only trap exists
+
+Overall feel
+
+page looks calmer
+
+rows feel less noisy
+
+interactions feel more professional and deliberate
+
+no unintended redesign or scope creep was introduced
+
+Scope Reminder
+
+This is a micro-polish pass only.
+
+Do not:
+
+add sticky columns yet
+
+redesign actions
+
+redesign quantity logic
+
+alter totals
+
+change table architecture
+
+change business logic
+
+Implement only the reveal behaviour above, efficiently and with minimal code changes.

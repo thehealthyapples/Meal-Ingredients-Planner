@@ -2052,7 +2052,7 @@ export default function ShoppingListPage() {
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0, height: 0 }}
-                                    className={`border-b border-border/40 ${item.checked ? 'opacity-50' : ''}`}
+                                    className={`group border-b border-border/40 ${item.checked ? 'opacity-50' : ''}`}
                                     data-testid={`shopping-item-${item.id}`}
                                   >
                                     <td className="px-1.5 py-1">
@@ -2272,7 +2272,7 @@ export default function ShoppingListPage() {
                                       )}
                                     </td>
 
-                                    <td className="px-1.5 py-1 text-right tabular-nums text-muted-foreground whitespace-nowrap">
+                                    <td className="px-1.5 py-1 tabular-nums text-muted-foreground">
                                       {isEditing && editState?.field === 'quantityValue' ? (
                                         <div className="flex items-center gap-1 justify-end">
                                           <Input type="number" value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-7 text-xs w-16 text-right" autoFocus data-testid={`input-edit-qty-${item.id}`} />
@@ -2280,7 +2280,19 @@ export default function ShoppingListPage() {
                                           <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
                                         </div>
                                       ) : (
-                                        <span className="cursor-pointer" onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue || 0))} data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
+                                        <div className="flex items-center justify-center gap-0.5">
+                                          <button
+                                            onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: Math.max(0, (combinedQtyValue ?? item.quantityValue ?? 0) - 1) } })}
+                                            className="h-4 w-4 flex-shrink-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                                            data-testid={`button-qty-minus-${item.id}`}
+                                          ><Minus className="h-2.5 w-2.5" /></button>
+                                          <span className="cursor-pointer tabular-nums whitespace-nowrap px-0.5" onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue || 0))} data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
+                                          <button
+                                            onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: (combinedQtyValue ?? item.quantityValue ?? 0) + 1 } })}
+                                            className="h-4 w-4 flex-shrink-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                                            data-testid={`button-qty-plus-${item.id}`}
+                                          ><Plus className="h-2.5 w-2.5" /></button>
+                                        </div>
                                       )}
                                     </td>
 
@@ -2352,7 +2364,7 @@ export default function ShoppingListPage() {
                                     </td>
 
                                     <td className="px-1.5 py-1">
-                                      <div className="flex items-center justify-end gap-0.5">
+                                      <div className={`flex items-center justify-end gap-0.5 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100${item.checked ? ' md:opacity-100' : ''}`}>
                                         <Checkbox
                                           checked={item.checked || false}
                                           onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })}
