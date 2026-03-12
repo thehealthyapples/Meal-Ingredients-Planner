@@ -325,6 +325,78 @@ interface EditState {
   value: string;
 }
 
+const OPTIMIZER_OPTIONS: Record<string, { label: string; short: string }> = {
+  no_upf: { label: 'No UPF', short: 'No UPF' },
+  no_acidity_reg: { label: 'No Acidity Regulator', short: 'No Acid Reg' },
+  no_emulsifiers: { label: 'No Emulsifiers', short: 'No Emuls' },
+  no_high_risk: { label: 'No High-Risk Additives', short: 'No Hi-Risk' },
+  bovaer_free: { label: 'Bovaer Free', short: 'Bovaer Free' },
+  free_range: { label: 'Free Range', short: 'Free Range' },
+  organic: { label: 'Organic', short: 'Organic' },
+  grass_finished: { label: 'Grass Finished', short: 'Grass Fin' },
+  pasture_raised: { label: 'Pasture Raised', short: 'Past Raised' },
+};
+
+const ADDITIVE_OPTION_KEYS = ['no_upf', 'no_acidity_reg', 'no_emulsifiers', 'no_high_risk'];
+
+const PRODUCT_FAMILY_OPTIMIZER: Record<string, string[]> = {
+  tomato: ['no_upf', 'no_acidity_reg', 'no_emulsifiers', 'no_high_risk'],
+  passata: ['no_upf', 'no_acidity_reg', 'no_emulsifiers', 'no_high_risk'],
+  chopped_tomatoes: ['no_upf', 'no_acidity_reg', 'no_emulsifiers', 'no_high_risk'],
+  tomato_puree: ['no_upf', 'no_acidity_reg', 'no_high_risk'],
+  sauce: ['no_upf', 'no_acidity_reg', 'no_emulsifiers', 'no_high_risk'],
+  ketchup: ['no_upf', 'no_acidity_reg', 'no_emulsifiers', 'no_high_risk'],
+  mayo: ['no_upf', 'no_emulsifiers', 'no_high_risk'],
+  mayonnaise: ['no_upf', 'no_emulsifiers', 'no_high_risk'],
+  mustard: ['no_upf', 'no_acidity_reg', 'no_high_risk'],
+  soy_sauce: ['no_upf', 'no_high_risk'],
+  stock: ['no_upf', 'no_high_risk'],
+  broth: ['no_upf', 'no_high_risk'],
+  milk: ['bovaer_free', 'no_high_risk'],
+  cheese: ['bovaer_free', 'no_high_risk'],
+  yoghurt: ['bovaer_free', 'no_high_risk'],
+  yogurt: ['bovaer_free', 'no_high_risk'],
+  cream: ['bovaer_free', 'no_high_risk'],
+  butter: ['bovaer_free', 'no_high_risk'],
+  egg: ['free_range', 'organic'],
+  eggs: ['free_range', 'organic'],
+  beef: ['grass_finished', 'pasture_raised', 'organic'],
+  mince: ['grass_finished', 'pasture_raised', 'organic'],
+  steak: ['grass_finished', 'pasture_raised', 'organic'],
+  lamb: ['grass_finished', 'pasture_raised', 'organic'],
+  chicken: ['free_range', 'organic'],
+  pork: ['pasture_raised', 'organic'],
+};
+
+const CATEGORY_OPTIMIZER_FALLBACK: Record<string, string[]> = {
+  dairy: ['bovaer_free', 'no_high_risk'],
+  eggs: ['free_range', 'organic'],
+  meat: ['grass_finished', 'pasture_raised', 'organic'],
+  condiments: ['no_upf', 'no_acidity_reg', 'no_emulsifiers', 'no_high_risk'],
+  tinned: ['no_upf', 'no_acidity_reg', 'no_high_risk'],
+};
+
+const PRODUCT_FAMILY_KEYS_BY_SPECIFICITY = Object.keys(PRODUCT_FAMILY_OPTIMIZER)
+  .sort((a, b) => b.length - a.length);
+
+function getOptimizerOptions(normalizedName: string, category: string): string[] {
+  const lower = normalizedName.toLowerCase().trim();
+  const spaced = lower.replace(/_/g, ' ');
+  for (const keyword of PRODUCT_FAMILY_KEYS_BY_SPECIFICITY) {
+    const kw = keyword.replace(/_/g, ' ');
+    if (spaced.includes(kw) || lower.includes(keyword)) return PRODUCT_FAMILY_OPTIMIZER[keyword];
+  }
+  return CATEGORY_OPTIMIZER_FALLBACK[category] || [];
+}
+
+function getOptimizerTriggerLabel(selections: string[]): string {
+  if (selections.length === 0) return 'THA Safe';
+  if (selections.length === 1) return OPTIMIZER_OPTIONS[selections[0]]?.short || selections[0];
+  const allAdditive = selections.every(s => ADDITIVE_OPTION_KEYS.includes(s));
+  if (allAdditive && selections.length >= 2) return 'No Additives';
+  return `${selections.length} rules`;
+}
+
 const BOVAER_CATEGORIES = ['dairy', 'milk', 'cheese', 'yoghurt', 'yogurt', 'cream', 'butter', 'beef', 'meat', 'steak', 'mince', 'burger'];
 
 function isBovaerRisk(product: any): boolean {
@@ -793,6 +865,7 @@ export default function ShoppingListPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [globalStore, setGlobalStore] = useState<string>('auto');
   const [analyseItem, setAnalyseItem] = useState<ShoppingListItem | null>(null);
+  const [optimizerSelections, setOptimizerSelections] = useState<Record<number, string[]>>({});
 
   const [selectedRetailers, setSelectedRetailers] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("tha-basket-retailers") || '["Tesco","Sainsbury\'s","Asda"]'); } catch { return ["Tesco", "Sainsbury's", "Asda"]; }
@@ -1777,7 +1850,7 @@ export default function ShoppingListPage() {
                             <tr className="border-b border-border/40 bg-muted/10">
                               <th className="px-1.5 py-1" />
                               <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Ingredient</th>
-                              {isPantry && <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">UPF / Nasties</th>}
+                              {isPantry && <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">THA Optimizer</th>}
                               <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Choice</th>
                               {hasPrices && <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Match</th>}
                               <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Qty</th>
@@ -1896,11 +1969,61 @@ export default function ShoppingListPage() {
                                       )}
                                     </td>
 
-                                    {isPantry && (
-                                      <td className="px-1.5 py-1" data-testid={`upf-cell-${item.id}`}>
-                                        <span className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800 whitespace-nowrap">THA Safe</span>
-                                      </td>
-                                    )}
+                                    {isPantry && (() => {
+                                      const optName = item.normalizedName ?? item.productName;
+                                      const optCategory = (item.category || 'other').toLowerCase();
+                                      const optKeys = getOptimizerOptions(optName, optCategory);
+                                      const itemSel = optimizerSelections[item.id] || [];
+                                      const triggerLabel = getOptimizerTriggerLabel(itemSel);
+                                      const hasSelections = itemSel.length > 0;
+                                      const toggleOpt = (key: string) => {
+                                        setOptimizerSelections(prev => {
+                                          const current = prev[item.id] || [];
+                                          const next = current.includes(key) ? current.filter(k => k !== key) : [...current, key];
+                                          return { ...prev, [item.id]: next };
+                                        });
+                                      };
+                                      if (optKeys.length === 0) {
+                                        return (
+                                          <td className="px-1.5 py-1" data-testid={`optimizer-cell-${item.id}`}>
+                                            <span className="text-[10px] text-muted-foreground">—</span>
+                                          </td>
+                                        );
+                                      }
+                                      return (
+                                        <td className="px-1.5 py-1" data-testid={`optimizer-cell-${item.id}`}>
+                                          <Popover>
+                                            <PopoverTrigger asChild>
+                                              <button
+                                                className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border whitespace-nowrap cursor-pointer transition-colors ${hasSelections ? 'bg-primary/10 text-primary border-primary/20' : 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800'}`}
+                                                data-testid={`optimizer-trigger-${item.id}`}
+                                              >
+                                                {triggerLabel}
+                                                <ChevronDown className="h-2.5 w-2.5 ml-0.5 opacity-60" />
+                                              </button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-48 p-2" align="start">
+                                              <div className="flex flex-wrap gap-1">
+                                                {optKeys.map(key => {
+                                                  const isActive = itemSel.includes(key);
+                                                  return (
+                                                    <button
+                                                      key={key}
+                                                      type="button"
+                                                      onClick={() => toggleOpt(key)}
+                                                      className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isActive ? 'bg-primary/10 text-primary border-primary/20 font-medium' : 'bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground'}`}
+                                                      data-testid={`optimizer-chip-${item.id}-${key}`}
+                                                    >
+                                                      {OPTIMIZER_OPTIONS[key]?.label || key}
+                                                    </button>
+                                                  );
+                                                })}
+                                              </div>
+                                            </PopoverContent>
+                                          </Popover>
+                                        </td>
+                                      );
+                                    })()}
                                     <td className="px-1.5 py-1" data-testid={`choice-cell-${item.id}`}>
                                       <Popover>
                                         <PopoverTrigger asChild>
