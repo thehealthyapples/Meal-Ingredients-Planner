@@ -26,42 +26,7 @@ const RATING_COLORS = [
 ];
 
 const sizeMap: Record<string, number> = { small: 35, medium: 50, large: 70 };
-
-const SCALE = 2.2;
-
-function AppleIcon({ px }: { px: number }) {
-  const rendered = px * SCALE;
-  const offset = -((rendered - px) / 2);
-  return (
-    <div style={{ width: px, height: px, overflow: "hidden", flexShrink: 0, display: "inline-block" }}>
-      <img
-        src={thaAppleUrl}
-        width={rendered}
-        height={rendered}
-        alt=""
-        draggable={false}
-        style={{ display: "block", marginLeft: offset, marginTop: offset }}
-      />
-    </div>
-  );
-}
-
-function HalfApple({ px }: { px: number }) {
-  const rendered = px * SCALE;
-  const offset = -((rendered - px) / 2);
-  return (
-    <div style={{ width: px / 2, height: px, overflow: "hidden", flexShrink: 0, display: "inline-block" }}>
-      <img
-        src={thaAppleUrl}
-        width={rendered}
-        height={rendered}
-        alt=""
-        draggable={false}
-        style={{ display: "block", marginLeft: offset, marginTop: offset }}
-      />
-    </div>
-  );
-}
+const OVERLAP = 0.38;
 
 export default function AppleRating({
   rating: rawRating,
@@ -75,17 +40,30 @@ export default function AppleRating({
   const labelIndex = Math.min(4, Math.max(0, Math.round(clamped) - 1));
   const label = RATING_LABELS[labelIndex];
   const px = sizeMap[size] ?? 20;
+  const overlap = Math.round(px * OVERLAP);
 
   const content = (
     <div
       className="inline-flex items-center"
-      style={{ gap: -6, ...(animate ? { animation: "appleBounce 0.4s ease-out both" } : {}) }}
+      style={animate ? { animation: "appleBounce 0.4s ease-out both" } : undefined}
       data-testid={`apple-rating-${Math.round(clamped)}`}
     >
       {Array.from({ length: fullCount }).map((_, i) => (
-        <AppleIcon key={i} px={px} />
+        <img
+          key={i}
+          src={thaAppleUrl}
+          width={px}
+          height={px}
+          alt=""
+          draggable={false}
+          style={{ display: "block", flexShrink: 0, marginLeft: i === 0 ? 0 : -overlap }}
+        />
       ))}
-      {hasHalf && <HalfApple px={px} />}
+      {hasHalf && (
+        <div style={{ width: px / 2, height: px, overflow: "hidden", flexShrink: 0, marginLeft: fullCount === 0 ? 0 : -overlap }}>
+          <img src={thaAppleUrl} width={px} height={px} alt="" draggable={false} style={{ display: "block" }} />
+        </div>
+      )}
     </div>
   );
 

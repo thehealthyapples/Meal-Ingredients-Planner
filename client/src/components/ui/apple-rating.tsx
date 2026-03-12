@@ -6,52 +6,32 @@ type Props = {
   className?: string;
 };
 
-const SCALE = 2.2;
-
-function AppleIcon({ size }: { size: number }) {
-  const rendered = size * SCALE;
-  const offset = -((rendered - size) / 2);
-  return (
-    <div style={{ width: size, height: size, overflow: "hidden", flexShrink: 0, display: "inline-block" }}>
-      <img
-        src={thaAppleUrl}
-        width={rendered}
-        height={rendered}
-        alt=""
-        draggable={false}
-        style={{ display: "block", marginLeft: offset, marginTop: offset }}
-      />
-    </div>
-  );
-}
-
-function HalfApple({ size }: { size: number }) {
-  const rendered = size * SCALE;
-  const offset = -((rendered - size) / 2);
-  return (
-    <div style={{ width: size / 2, height: size, overflow: "hidden", flexShrink: 0, display: "inline-block" }}>
-      <img
-        src={thaAppleUrl}
-        width={rendered}
-        height={rendered}
-        alt=""
-        draggable={false}
-        style={{ display: "block", marginLeft: offset, marginTop: offset }}
-      />
-    </div>
-  );
-}
+const OVERLAP = 0.38;
 
 export default function AppleRating({ rating, size = 25 }: Props) {
   const clamped = Math.max(0, Math.min(5, rating || 0));
   const fullCount = Math.floor(clamped);
   const hasHalf = clamped % 1 >= 0.5;
+  const overlap = Math.round(size * OVERLAP);
+
   return (
-    <div className="flex items-center" style={{ gap: -6 }} data-testid={`apple-rating-icons-${rating}`}>
+    <div className="inline-flex items-center" data-testid={`apple-rating-icons-${rating}`}>
       {Array.from({ length: fullCount }).map((_, i) => (
-        <AppleIcon key={i} size={size} />
+        <img
+          key={i}
+          src={thaAppleUrl}
+          width={size}
+          height={size}
+          alt=""
+          draggable={false}
+          style={{ display: "block", flexShrink: 0, marginLeft: i === 0 ? 0 : -overlap }}
+        />
       ))}
-      {hasHalf && <HalfApple size={size} />}
+      {hasHalf && (
+        <div style={{ width: size / 2, height: size, overflow: "hidden", flexShrink: 0, marginLeft: fullCount === 0 ? 0 : -overlap }}>
+          <img src={thaAppleUrl} width={size} height={size} alt="" draggable={false} style={{ display: "block" }} />
+        </div>
+      )}
     </div>
   );
 }
