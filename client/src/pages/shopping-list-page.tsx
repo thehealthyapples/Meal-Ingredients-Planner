@@ -2677,23 +2677,22 @@ export default function ShoppingListPage() {
       <Dialog open={!!alwaysAddModal} onOpenChange={(open) => { if (!open) setAlwaysAddModal(null); }}>
         <DialogContent className="max-w-sm" data-testid="dialog-always-add">
           <DialogHeader>
-            <DialogTitle>Remove from basket?</DialogTitle>
+            <DialogTitle>Turn off "Always in Basket"?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Do you want to remove <span className="font-medium text-foreground">{alwaysAddModal ? capitalizeWords(alwaysAddModal.extraName) : ''}</span> from your basket?
+            <span className="font-medium text-foreground">{alwaysAddModal ? capitalizeWords(alwaysAddModal.extraName) : ''}</span> will no longer be added automatically to future baskets. It will stay in your current basket.
           </p>
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setAlwaysAddModal(null)} data-testid="button-always-no">No, keep it</Button>
             <Button
-              variant="destructive"
               onClick={() => {
                 if (!alwaysAddModal) return;
-                updateExtraMutation.mutate({ id: alwaysAddModal.extraId, alwaysAdd: false, inBasket: false });
+                updateExtraMutation.mutate({ id: alwaysAddModal.extraId, alwaysAdd: false });
                 setAlwaysAddModal(null);
               }}
               data-testid="button-always-yes"
             >
-              Yes, remove
+              Yes, turn off
             </Button>
           </DialogFooter>
         </DialogContent>
