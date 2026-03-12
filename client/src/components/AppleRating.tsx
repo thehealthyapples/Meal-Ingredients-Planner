@@ -27,7 +27,7 @@ const RATING_COLORS = [
 
 const sizeMap: Record<string, number> = { small: 35, medium: 50, large: 70 };
 
-const SCALE = 1.5;
+const SCALE = 2.2;
 
 function AppleIcon({ px }: { px: number }) {
   const rendered = px * SCALE;
@@ -79,7 +79,7 @@ export default function AppleRating({
   const content = (
     <div
       className="inline-flex items-center"
-      style={{ gap: 0, ...(animate ? { animation: "appleBounce 0.4s ease-out both" } : {}) }}
+      style={{ gap: -6, ...(animate ? { animation: "appleBounce 0.4s ease-out both" } : {}) }}
       data-testid={`apple-rating-${Math.round(clamped)}`}
     >
       {Array.from({ length: fullCount }).map((_, i) => (

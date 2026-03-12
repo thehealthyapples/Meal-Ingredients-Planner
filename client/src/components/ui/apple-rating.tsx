@@ -6,7 +6,7 @@ type Props = {
   className?: string;
 };
 
-const SCALE = 1.5;
+const SCALE = 2.2;
 
 function AppleIcon({ size }: { size: number }) {
   const rendered = size * SCALE;
@@ -47,7 +47,7 @@ export default function AppleRating({ rating, size = 25 }: Props) {
   const fullCount = Math.floor(clamped);
   const hasHalf = clamped % 1 >= 0.5;
   return (
-    <div className="flex items-center" style={{ gap: 0 }} data-testid={`apple-rating-icons-${rating}`}>
+    <div className="flex items-center" style={{ gap: -6 }} data-testid={`apple-rating-icons-${rating}`}>
       {Array.from({ length: fullCount }).map((_, i) => (
         <AppleIcon key={i} size={size} />
       ))}
