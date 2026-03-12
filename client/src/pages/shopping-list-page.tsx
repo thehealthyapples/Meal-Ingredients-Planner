@@ -2027,9 +2027,9 @@ export default function ShoppingListPage() {
                                     <td className="px-1.5 py-1" data-testid={`choice-cell-${item.id}`}>
                                       <Popover>
                                         <PopoverTrigger asChild>
-                                          <button className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground text-left w-full" data-testid={`choice-summary-${item.id}`}>
-                                            <span className="truncate">{choiceSummary}</span>
-                                            <ChevronDown className="h-3 w-3 flex-shrink-0 opacity-50" />
+                                          <button className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border whitespace-nowrap cursor-pointer transition-colors ${isOverridden ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-700' : 'bg-muted/60 text-muted-foreground border-border hover:text-foreground'}`} data-testid={`choice-summary-${item.id}`}>
+                                            <span className="truncate max-w-[120px]">{choiceSummary}</span>
+                                            <ChevronDown className="h-2.5 w-2.5 ml-0.5 flex-shrink-0 opacity-60" />
                                           </button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-64 p-3" align="start">
