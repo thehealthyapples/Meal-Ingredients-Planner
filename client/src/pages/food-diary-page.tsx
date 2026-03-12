@@ -24,6 +24,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
+import AppleRating from "@/components/AppleRating";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -136,17 +137,9 @@ function ThaAppleScorePicker({
 
 // ── THA Apple Score Display ─────────────────────────────────────────────────
 
-function ThaAppleScoreDisplay({ value, max = 5 }: { value: number | null; max?: number }) {
+function ThaAppleScoreDisplay({ value }: { value: number | null; max?: number }) {
   if (value === null) return <span className="text-muted-foreground text-xs">—</span>;
-  return (
-    <div className="flex gap-0.5">
-      {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
-        <span key={n} className={n <= value ? "opacity-100" : "opacity-15"}>
-          <ThaAppleIcon size={16} />
-        </span>
-      ))}
-    </div>
-  );
+  return <AppleRating rating={value} size="small" showTooltip={false} animate={false} />;
 }
 
 // ── Metric stat card ────────────────────────────────────────────────────────
