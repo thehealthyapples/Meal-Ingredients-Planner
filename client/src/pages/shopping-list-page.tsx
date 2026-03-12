@@ -335,6 +335,7 @@ const OPTIMIZER_OPTIONS: Record<string, { label: string; short: string }> = {
   organic: { label: 'Organic', short: 'Organic' },
   grass_finished: { label: 'Grass Finished', short: 'Grass Fin' },
   pasture_raised: { label: 'Pasture Raised', short: 'Past Raised' },
+  tha_safe: { label: 'THA Safe', short: 'THA Safe' },
 };
 
 const ADDITIVE_OPTION_KEYS = ['no_upf', 'no_acidity_reg', 'no_emulsifiers', 'no_high_risk'];
@@ -364,8 +365,8 @@ const PRODUCT_FAMILY_OPTIMIZER: Record<string, string[]> = {
   mince: ['grass_finished', 'pasture_raised', 'organic'],
   steak: ['grass_finished', 'pasture_raised', 'organic'],
   lamb: ['grass_finished', 'pasture_raised', 'organic'],
-  chicken: ['free_range', 'organic'],
-  pork: ['pasture_raised', 'organic'],
+  chicken: ['grass_finished', 'pasture_raised', 'organic'],
+  pork: ['grass_finished', 'pasture_raised', 'organic'],
 };
 
 const CATEGORY_OPTIMIZER_FALLBACK: Record<string, string[]> = {
@@ -386,7 +387,7 @@ function getOptimizerOptions(normalizedName: string, category: string): string[]
     const kw = keyword.replace(/_/g, ' ');
     if (spaced.includes(kw) || lower.includes(keyword)) return PRODUCT_FAMILY_OPTIMIZER[keyword];
   }
-  return CATEGORY_OPTIMIZER_FALLBACK[category] || [];
+  return CATEGORY_OPTIMIZER_FALLBACK[category] || ['tha_safe'];
 }
 
 function getOptimizerTriggerLabel(selections: string[]): string {
@@ -1983,13 +1984,6 @@ export default function ShoppingListPage() {
                                           return { ...prev, [item.id]: next };
                                         });
                                       };
-                                      if (optKeys.length === 0) {
-                                        return (
-                                          <td className="px-1.5 py-1" data-testid={`optimizer-cell-${item.id}`}>
-                                            <span className="text-[10px] text-muted-foreground">—</span>
-                                          </td>
-                                        );
-                                      }
                                       return (
                                         <td className="px-1.5 py-1" data-testid={`optimizer-cell-${item.id}`}>
                                           <Popover>
