@@ -1007,7 +1007,7 @@ export default function ShoppingListPage() {
     return new Set(pantryItems.map(p => p.ingredientKey));
   }, [pantryItems]);
 
-  const { data: shoppingExtras = [] } = useQuery<{ id: number; name: string; category: string; alwaysAdd: boolean }[]>({
+  const { data: shoppingExtras = [] } = useQuery<{ id: number; name: string; category: string; alwaysAdd: boolean; inBasket: boolean }[]>({
     queryKey: ['/api/shopping-list/extras'],
   });
 
@@ -1023,8 +1023,8 @@ export default function ShoppingListPage() {
   });
 
   const updateExtraMutation = useMutation({
-    mutationFn: ({ id, alwaysAdd }: { id: number; alwaysAdd: boolean }) =>
-      apiRequest("PATCH", `/api/shopping-list/extras/${id}`, { alwaysAdd }),
+    mutationFn: ({ id, alwaysAdd, inBasket }: { id: number; alwaysAdd?: boolean; inBasket?: boolean }) =>
+      apiRequest("PATCH", `/api/shopping-list/extras/${id}`, { alwaysAdd, inBasket }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] }),
   });
 
@@ -1066,7 +1066,7 @@ export default function ShoppingListPage() {
     const extraCategory = basketCategory === 'household' ? 'household'
       : basketCategory === 'pantry' ? 'larder'
       : basketCategory;
-    await addExtraMutation.mutateAsync({ name: name.trim(), category: extraCategory, alwaysAdd: true });
+    await addExtraMutation.mutateAsync({ name: name.trim(), category: extraCategory });
     const pantryCategory = basketCategory === 'household' ? 'household' : 'larder';
     try {
       await apiRequest("POST", "/api/pantry", {
@@ -1632,11 +1632,11 @@ export default function ShoppingListPage() {
     const toCollapse = new Set<string>();
     for (const cat of BASKET_DISPLAY_CATEGORIES) {
       const catItems = sortedItems.filter(i => !isStaple(i) && !isHousehold(i) && getBasketCategory(i) === cat);
-      const catAlwaysExtras = shoppingExtras.filter(e => e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat);
+      const catAlwaysExtras = shoppingExtras.filter(e => (e.inBasket || e.alwaysAdd) && e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat);
       if (catItems.length === 0 && catAlwaysExtras.length === 0) toCollapse.add(cat);
     }
     const hhSaved = sortedItems.filter(i => !isStaple(i) && isHousehold(i));
-    const hhExtras = shoppingExtras.filter(e => e.category === 'household');
+    const hhExtras = shoppingExtras.filter(e => (e.inBasket || e.alwaysAdd) && e.category === 'household');
     if (hhSaved.length === 0 && hhExtras.length === 0) toCollapse.add('household');
     setCollapsedCategories(toCollapse);
     collapsedInitRef.current = true;
@@ -1909,7 +1909,7 @@ export default function ShoppingListPage() {
               <div>
                 {BASKET_DISPLAY_CATEGORIES.map(cat => {
                   const catItems = sortedItems.filter(i => !isStaple(i) && !isHousehold(i) && getBasketCategory(i) === cat);
-                  const catExtras = shoppingExtras.filter(e => e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat);
+                  const catExtras = shoppingExtras.filter(e => (e.inBasket || e.alwaysAdd) && e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat);
                   const hasContent = catItems.length > 0 || catExtras.length > 0;
                   const isPantry = cat === 'pantry';
                   const displayRows = isPantry
@@ -2444,7 +2444,7 @@ export default function ShoppingListPage() {
                 {/* Household section */}
                 {(() => {
                   const householdSavedItems = sortedItems.filter(i => !isStaple(i) && isHousehold(i));
-                  const householdExtras = shoppingExtras.filter(e => e.category === 'household');
+                  const householdExtras = shoppingExtras.filter(e => (e.inBasket || e.alwaysAdd) && e.category === 'household');
                   return (
                     <div className="border-t border-border/40">
                       {/* Household header */}

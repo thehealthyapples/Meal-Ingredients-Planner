@@ -830,6 +830,7 @@ export const shoppingListExtras = pgTable("shopping_list_extras", {
   name: text("name").notNull(),
   category: text("category").notNull().default("household"),
   alwaysAdd: boolean("always_add").notNull().default(false),
+  inBasket: boolean("in_basket").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

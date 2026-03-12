@@ -201,8 +201,8 @@ export interface IStorage {
 
   // ── Shopping List Extras ───────────────────────────────────────────────────
   getShoppingListExtras(userId: number): Promise<ShoppingListExtra[]>;
-  addShoppingListExtra(userId: number, name: string, category?: string): Promise<ShoppingListExtra>;
-  updateShoppingListExtra(userId: number, id: number, fields: { alwaysAdd?: boolean }): Promise<ShoppingListExtra | undefined>;
+  addShoppingListExtra(userId: number, name: string, category?: string, alwaysAdd?: boolean): Promise<ShoppingListExtra>;
+  updateShoppingListExtra(userId: number, id: number, fields: { alwaysAdd?: boolean; inBasket?: boolean }): Promise<ShoppingListExtra | undefined>;
   deleteShoppingListExtra(userId: number, id: number): Promise<void>;
 
   // ── Meal Pairings ─────────────────────────────────────────────────────────────
@@ -1799,19 +1799,20 @@ export class DatabaseStorage implements IStorage {
       .orderBy(shoppingListExtras.createdAt);
   }
 
-  async addShoppingListExtra(userId: number, name: string, category = "household"): Promise<ShoppingListExtra> {
+  async addShoppingListExtra(userId: number, name: string, category = "household", alwaysAdd = false): Promise<ShoppingListExtra> {
     const householdId = await getHouseholdForUser(userId);
     const [item] = await db
       .insert(shoppingListExtras)
-      .values({ userId, householdId, name, category })
+      .values({ userId, householdId, name, category, alwaysAdd, inBasket: true })
       .returning();
     return item;
   }
 
-  async updateShoppingListExtra(userId: number, id: number, fields: { alwaysAdd?: boolean }): Promise<ShoppingListExtra | undefined> {
+  async updateShoppingListExtra(userId: number, id: number, fields: { alwaysAdd?: boolean; inBasket?: boolean }): Promise<ShoppingListExtra | undefined> {
     const householdId = await getHouseholdForUser(userId);
     const updates: Partial<typeof shoppingListExtras.$inferInsert> = {};
     if (fields.alwaysAdd !== undefined) updates.alwaysAdd = fields.alwaysAdd;
+    if (fields.inBasket !== undefined) updates.inBasket = fields.inBasket;
     if (Object.keys(updates).length === 0) return undefined;
     const [result] = await db
       .update(shoppingListExtras)

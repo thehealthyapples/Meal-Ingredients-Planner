@@ -4962,9 +4962,10 @@ export async function registerRoutes(
       const schema = z.object({
         name: z.string().min(1),
         category: z.string().optional(),
+        alwaysAdd: z.boolean().optional(),
       });
-      const { name, category } = schema.parse(req.body);
-      const item = await storage.addShoppingListExtra(req.user!.id, name, category);
+      const { name, category, alwaysAdd } = schema.parse(req.body);
+      const item = await storage.addShoppingListExtra(req.user!.id, name, category, alwaysAdd);
       res.status(201).json(item);
     } catch (err) {
       if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
@@ -4978,7 +4979,7 @@ export async function registerRoutes(
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
-      const schema = z.object({ alwaysAdd: z.boolean().optional() });
+      const schema = z.object({ alwaysAdd: z.boolean().optional(), inBasket: z.boolean().optional() });
       const fields = schema.parse(req.body);
       const result = await storage.updateShoppingListExtra(req.user!.id, id, fields);
       res.json(result);

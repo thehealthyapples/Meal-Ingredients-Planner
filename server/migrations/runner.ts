@@ -396,6 +396,14 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-12_add_in_basket_to_extras",
+    statements: [
+      "ALTER TABLE shopping_list_extras ADD COLUMN IF NOT EXISTS in_basket boolean NOT NULL DEFAULT false",
+      "ALTER TABLE shopping_list_extras ALTER COLUMN in_basket SET DEFAULT true",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
