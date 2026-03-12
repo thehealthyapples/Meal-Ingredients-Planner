@@ -25,7 +25,7 @@ const RATING_COLORS = [
   { fill: "#10b981", stroke: "#059669", leaf: "#047857", stem: "#365314" },
 ];
 
-const sizeMap: Record<string, number> = { small: 14, medium: 20, large: 28 };
+const sizeMap: Record<string, number> = { small: 35, medium: 50, large: 70 };
 
 function HalfApple({ px }: { px: number }) {
   return (
