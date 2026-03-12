@@ -335,7 +335,6 @@ const OPTIMIZER_OPTIONS: Record<string, { label: string; short: string }> = {
   organic: { label: 'Organic', short: 'Organic' },
   grass_finished: { label: 'Grass Finished', short: 'Grass Fin' },
   pasture_raised: { label: 'Pasture Raised', short: 'Past Raised' },
-  tha_safe: { label: 'THA Safe', short: 'THA Safe' },
 };
 
 const ADDITIVE_OPTION_KEYS = ['no_upf', 'no_acidity_reg', 'no_emulsifiers', 'no_high_risk'];
@@ -353,12 +352,12 @@ const PRODUCT_FAMILY_OPTIMIZER: Record<string, string[]> = {
   soy_sauce: ['no_upf', 'no_high_risk'],
   stock: ['no_upf', 'no_high_risk'],
   broth: ['no_upf', 'no_high_risk'],
-  milk: ['bovaer_free', 'no_high_risk'],
-  cheese: ['bovaer_free', 'no_high_risk'],
-  yoghurt: ['bovaer_free', 'no_high_risk'],
-  yogurt: ['bovaer_free', 'no_high_risk'],
-  cream: ['bovaer_free', 'no_high_risk'],
-  butter: ['bovaer_free', 'no_high_risk'],
+  milk: ['bovaer_free', 'organic', 'no_upf', 'no_high_risk'],
+  cheese: ['bovaer_free', 'organic', 'no_upf', 'no_high_risk'],
+  yoghurt: ['bovaer_free', 'organic', 'no_upf', 'no_high_risk'],
+  yogurt: ['bovaer_free', 'organic', 'no_upf', 'no_high_risk'],
+  cream: ['bovaer_free', 'organic', 'no_upf', 'no_high_risk'],
+  butter: ['bovaer_free', 'organic', 'no_upf', 'no_high_risk'],
   egg: ['free_range', 'organic'],
   eggs: ['free_range', 'organic'],
   beef: ['grass_finished', 'pasture_raised', 'organic'],
@@ -370,7 +369,7 @@ const PRODUCT_FAMILY_OPTIMIZER: Record<string, string[]> = {
 };
 
 const CATEGORY_OPTIMIZER_FALLBACK: Record<string, string[]> = {
-  dairy: ['bovaer_free', 'no_high_risk'],
+  dairy: ['bovaer_free', 'organic', 'no_upf', 'no_high_risk'],
   eggs: ['free_range', 'organic'],
   meat: ['grass_finished', 'pasture_raised', 'organic'],
   condiments: ['no_upf', 'no_acidity_reg', 'no_emulsifiers', 'no_high_risk'],
@@ -387,11 +386,11 @@ function getOptimizerOptions(normalizedName: string, category: string): string[]
     const kw = keyword.replace(/_/g, ' ');
     if (spaced.includes(kw) || lower.includes(keyword)) return PRODUCT_FAMILY_OPTIMIZER[keyword];
   }
-  return CATEGORY_OPTIMIZER_FALLBACK[category] || ['tha_safe'];
+  return CATEGORY_OPTIMIZER_FALLBACK[category] || [];
 }
 
 function getOptimizerTriggerLabel(selections: string[]): string {
-  if (selections.length === 0) return 'THA Safe';
+  if (selections.length === 0) return 'Default';
   if (selections.length === 1) return OPTIMIZER_OPTIONS[selections[0]]?.short || selections[0];
   const allAdditive = selections.every(s => ADDITIVE_OPTION_KEYS.includes(s));
   if (allAdditive && selections.length >= 2) return 'No Additives';
@@ -1984,12 +1983,19 @@ export default function ShoppingListPage() {
                                           return { ...prev, [item.id]: next };
                                         });
                                       };
+                                      if (optKeys.length === 0) {
+                                        return (
+                                          <td className="px-1.5 py-1" data-testid={`optimizer-cell-${item.id}`}>
+                                            <span className="text-[10px] text-muted-foreground">Default</span>
+                                          </td>
+                                        );
+                                      }
                                       return (
                                         <td className="px-1.5 py-1" data-testid={`optimizer-cell-${item.id}`}>
                                           <Popover>
                                             <PopoverTrigger asChild>
                                               <button
-                                                className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border whitespace-nowrap cursor-pointer transition-colors ${hasSelections ? 'bg-primary/10 text-primary border-primary/20' : 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800'}`}
+                                                className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border whitespace-nowrap cursor-pointer transition-colors ${hasSelections ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted/60 text-muted-foreground border-border'}`}
                                                 data-testid={`optimizer-trigger-${item.id}`}
                                               >
                                                 {triggerLabel}
