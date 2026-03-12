@@ -1993,6 +1993,7 @@ export default function ShoppingListPage() {
                             <AnimatePresence>
                               {displayRows.map(({ primary: item, combinedSources, combinedQtyValue, mergedCount }) => {
                                 const { qty, unitLabel } = formatQty(combinedQtyValue ?? item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
+                                const showStepper = !['g', 'kg', 'ml', 'L', 'oz', 'lb', 'cups', 'tbsp', 'tsp'].includes(unitLabel);
                                 const itemPrices = pricesByItem.get(item.id);
                                 const cheapest = getCheapestForItem(item.id);
                                 const isEditing = editState?.itemId === item.id;
@@ -2281,17 +2282,17 @@ export default function ShoppingListPage() {
                                         </div>
                                       ) : (
                                         <div className="flex items-center justify-center gap-0.5">
-                                          <button
+                                          {showStepper && <button
                                             onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: Math.max(0, (combinedQtyValue ?? item.quantityValue ?? 0) - 1) } })}
                                             className="h-4 w-4 flex-shrink-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
                                             data-testid={`button-qty-minus-${item.id}`}
-                                          ><Minus className="h-2.5 w-2.5" /></button>
+                                          ><Minus className="h-2.5 w-2.5" /></button>}
                                           <span className="cursor-pointer tabular-nums whitespace-nowrap px-0.5" onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue || 0))} data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
-                                          <button
+                                          {showStepper && <button
                                             onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: (combinedQtyValue ?? item.quantityValue ?? 0) + 1 } })}
                                             className="h-4 w-4 flex-shrink-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
                                             data-testid={`button-qty-plus-${item.id}`}
-                                          ><Plus className="h-2.5 w-2.5" /></button>
+                                          ><Plus className="h-2.5 w-2.5" /></button>}
                                         </div>
                                       )}
                                     </td>

@@ -1,0 +1,226 @@
+Replit Prompt — Roll Back Qty Stepper for Measured Quantities
+Implementation Guardrails
+
+Work in a cost-controlled, efficient way.
+
+This is a targeted rollback / safeguard pass only.
+Do not refactor the basket architecture.
+Do not redesign quantity logic broadly.
+Do not alter table layout, totals layout, sticky work, or unrelated basket behaviour.
+
+Stay tightly on task.
+Do not stray beyond this issue.
+Use the least invasive implementation that prevents incorrect quantity stepping for measured quantities.
+
+Do not run automated tests. I will verify visually.
+
+Objective
+
+Roll back the + / - qty stepper behaviour for basket rows where the displayed quantity is not a true simple numeric count, but instead contains an embedded measure such as:
+
+500ml
+
+1L
+
+250g
+
+2kg
+
+The current generic stepper can create invalid behaviour such as:
+
+500ml becoming 501ml
+
+That must not happen.
+
+This is especially important because basket quantities can also be populated from pantry logic, so the implementation must be conservative and must not interfere with existing quantity semantics.
+
+Required Rule
+
+Only show or enable the + / - qty stepper when the quantity is a plain numeric count that can sensibly be incremented/decremented.
+
+Do not show or use the stepper for quantities that include a measurement/unit string.
+
+Keep stepper allowed for examples like:
+
+1
+
+2
+
+10
+
+eggs with qty 10
+
+count-based items where qty is clearly a simple number
+
+Disable or hide stepper for examples like:
+
+500ml
+
+1L
+
+250g
+
+2kg
+
+any qty string containing unit text rather than a pure count
+
+Important Clarification
+
+Eggs are fine to remain numeric if the basket quantity is a count such as:
+
+6
+
+10
+
+12
+
+That is acceptable.
+
+The problem to prevent is measured quantities being treated like arithmetic numeric values.
+
+So:
+
+10 eggs as a plain count can still use + / -
+
+500ml yogurt must not increment to 501ml
+
+Implementation Guidance
+
+Inspect the current quantity display / qty cell logic and add a simple guard:
+
+if qty is a plain numeric count, keep current reveal stepper behaviour
+
+if qty includes measurement text/units, do not show the stepper controls
+
+For measured quantities:
+
+show the qty value only
+
+preserve current display formatting
+
+do not alter the underlying value through + / -
+
+Use the smallest reliable check based on the current basket data and rendered qty value.
+
+Prefer a conservative rule over an over-smart parser.
+
+Preferred Behaviour
+For plain numeric qty rows
+
+Keep current Stage 1.6 behaviour:
+
+default shows qty value
+
+hover/focus reveals - / +
+
+existing qty update behaviour remains
+
+For measured qty rows
+
+Show only the qty value:
+
+no - / + reveal
+
+no stepper interaction
+
+no attempt to increment embedded measure text
+
+Pantry / Existing Logic Safeguard
+
+This change must not interfere with:
+
+pantry-imported basket quantities
+
+existing matched product logic
+
+totals logic
+
+existing quantity display formatting
+
+This is a UI/control safeguard, not a quantity model rewrite.
+
+Do not attempt to reinterpret or normalise all qty formats in this pass.
+
+Price / Totals Requirement
+
+This rollback should not break existing price/totals behaviour for rows that still use numeric quantity stepping.
+
+For rows where the stepper remains enabled:
+
+row price should still update correctly
+
+category total should still update correctly
+
+basket total should still update correctly
+
+For measured rows where the stepper is hidden:
+
+leave current display/state untouched
+
+Scope Control
+
+Do not:
+
+redesign quantity semantics globally
+
+rewrite pantry logic
+
+rewrite matching
+
+add new quantity parsers
+
+implement pack-size logic in this pass
+
+change sticky column work
+
+alter unrelated basket UI
+
+This is a focused rollback to prevent clearly invalid quantity stepping.
+
+Done When
+
+The following are true:
+
+rows with measured quantities like 500ml, 1L, 250g, 2kg do not show + / -
+
+those measured values are no longer incrementable into invalid values like 501ml
+
+plain numeric quantities still support the current + / - reveal behaviour
+
+eggs with numeric counts such as 10 still work as numeric quantities
+
+pantry-fed quantities are not disrupted
+
+no unrelated redesign or refactor is introduced
+
+Manual Visual Review Checklist
+
+I will manually verify:
+
+Measured qty
+
+hover a row with qty like 500ml
+
+confirm no + / - appears
+
+confirm no invalid increment is possible
+
+Numeric qty
+
+hover a row with qty like 2 or 10
+
+confirm + / - still appears
+
+confirm quantity still updates correctly
+
+Eggs
+
+confirm an egg row with numeric qty such as 10 still behaves as a numeric quantity
+
+Safety
+
+pantry-derived rows still render correctly
+
+no unintended table/layout changes
+
+no unrelated logic was changed
