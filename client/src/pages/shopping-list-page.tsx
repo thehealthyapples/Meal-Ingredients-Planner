@@ -1838,7 +1838,7 @@ export default function ShoppingListPage() {
                   <Scale className="h-3 w-3" />
                   {measurementPref === 'metric' ? 'Metric' : 'Imperial'}
                 </Button>
-                {savedItems.length > 0 && (
+                {(savedItems.length > 0 || shoppingExtras.some(e => e.inBasket || e.alwaysAdd)) && (
                   <>
                     <Button
                       variant="outline"
@@ -1877,7 +1877,7 @@ export default function ShoppingListPage() {
                     </Button>
                   </>
                 )}
-                {savedItems.length > 0 && (
+                {(savedItems.length > 0 || shoppingExtras.some(e => e.inBasket || e.alwaysAdd)) && (
                   <Button
                     variant="outline"
                     size="icon"
