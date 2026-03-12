@@ -1,0 +1,395 @@
+Replit Prompt — Stage 1 Basket Professionalisation (Grid, Household Alignment, Totals, Actions)
+Implementation Guardrails
+
+Work in a cost-controlled, efficient way.
+
+Do not redesign the page from scratch.
+Do not introduce new architecture, abstractions, or speculative improvements.
+Do not change basket logic, pricing logic, matching logic, selection logic, or data models unless strictly required for the layout alignment described below.
+
+Stay tightly on task.
+Do not stray beyond the scope of this prompt.
+Do not add unrelated UX ideas, animations, refactors, or extra enhancements.
+
+This is a professional visual refinement pass to make the Basket page feel structured, aligned, and premium with the least invasive implementation.
+
+Do not run automated tests. I will do a manual visual review.
+
+Objective
+
+Refine the Basket page so it feels like one professionally designed interface rather than multiple table types stitched together.
+
+This stage must deliver:
+
+A single shared column grid across food and household rows wherever columns can logically align
+
+Tighter, more disciplined column widths
+
+A single Actions column instead of fragmented utility columns
+
+The row selector moved into the Actions column
+
+Household aligned to the same Choice / Qty / Price / Actions positions as food rows
+
+Category totals and basket totals integrated into the table structure, not rendered as separate detached blocks
+
+Do not implement sticky columns in this stage.
+
+Part 1 — Use One Shared Master Grid
+
+Create one shared grid for basket rows.
+
+Master Column Order
+
+Ingredient
+
+THA Optimizer
+
+Choice
+
+Match
+
+Qty
+
+Price
+
+THA Rating
+
+Meal
+
+Actions
+
+This shared grid must be used across:
+
+Pantry
+
+Fresh
+
+Dairy
+
+Meat
+
+Frozen
+
+Other food categories
+
+Household
+
+Do not use a separate simplified schema for Household.
+
+Household must sit on the same grid, with non-relevant columns left empty or shown as muted dashes.
+
+This is essential so that these columns align vertically throughout the page:
+
+Choice
+
+Qty
+
+Price
+
+Actions
+
+Part 2 — Remove Dedicated Checkbox Column
+
+Remove the standalone checkbox/selector column from the left side of the table.
+
+The selector must no longer occupy its own column.
+
+The grid now starts with:
+
+Ingredient
+
+THA Optimizer
+
+Choice
+
+Match
+
+Qty
+
+Price
+
+THA Rating
+
+Meal
+
+Actions
+
+This is a layout change only. Do not alter selection logic.
+
+Part 3 — Move Selector into Actions Column
+
+Move the row selector into the Actions column.
+
+Inside the Actions cell, render controls in this order:
+
+[selector] [analyse] [edit] [remove]
+
+Use whatever existing selector control already exists in the codebase to minimise implementation cost.
+
+Maintain all current selection behaviour:
+
+multi-select still works
+
+existing bulk behaviour still works
+
+selection state storage remains unchanged
+
+This is strictly a UI placement change, not a logic rewrite.
+
+Actions cell layout direction
+flex items-center justify-end gap-1
+Part 4 — Replace Fragmented Utility Columns with One Actions Column
+
+Replace the separate utility columns for:
+
+Analyse
+
+Edit
+
+Remove
+
+with a single Actions column.
+
+The Actions column now contains:
+
+selector
+
+analyse
+
+edit
+
+remove
+
+This should make the right edge feel cleaner and more professional.
+
+Part 5 — Column Widths
+
+Use disciplined fixed widths so the basket feels intentional and aligned.
+
+Required widths
+Column	Width
+Ingredient	210px
+THA Optimizer	80px
+Choice	150px
+Match	200px
+Qty	70px
+Price	95px
+THA Rating	110px
+Meal	80px
+Actions	90px
+
+Use fixed table layout.
+
+Implementation direction:
+
+table-fixed text-xs
+
+Keep compact cell density:
+
+px-1.5 py-1
+
+Ingredient remains the dominant readable column.
+Optimizer / Choice / Qty / Meal should feel tighter and more controlled.
+
+Part 6 — Do Not Remove Columns by Category
+
+Do not hide columns per category.
+
+Use the same grid everywhere.
+
+Where a column is not relevant, render a muted dash (—) or an intentionally empty muted cell.
+
+Food examples
+
+Pantry: THA Optimizer populated, Match / Price / THA Rating may be empty
+
+Priced rows: Match / Price / THA Rating populated
+
+Non-priced rows: muted placeholders where needed
+
+Household rows
+
+Household must use the same grid positions and populate:
+
+Ingredient
+
+Choice
+
+Qty
+
+Price
+
+Actions
+
+Household should render muted placeholders for:
+
+THA Optimizer
+
+Match
+
+THA Rating
+
+Meal
+
+Use muted styling such as:
+
+text-muted-foreground
+Part 7 — Household Must Align with Food Rows
+
+This is a key requirement.
+
+Household must not appear as a different table system.
+
+It must align exactly with food rows for:
+
+Choice
+
+Qty
+
+Price
+
+Actions
+
+Example intent:
+
+Ingredient	THA Optimizer	Choice	Match	Qty	Price	THA Rating	Meal	Actions
+Dishwasher Tablets	—	Finish Quantum	—	1	£6.00	—	—	[selector] [analyse] [edit] [remove]
+
+This is a visual consistency requirement.
+
+Part 8 — Integrate Category Totals into the Table
+
+Category totals should no longer look like a separate UI entity.
+
+At the bottom of each category table, add a totals row using the same grid.
+
+The totals row should visually belong to the table.
+
+Alignment intent:
+
+total quantity under Qty
+
+category total under Price
+
+average THA under THA Rating where relevant
+
+Styling direction:
+
+border-t bg-muted/20 font-medium
+
+Keep it subtle and integrated.
+
+Part 9 — Add Final Basket Totals Footer Row Using Same Grid
+
+At the end of the basket, create a final basket totals row using the same grid.
+
+Do not render basket totals as a separate detached card/block.
+
+It should feel like the footer of the full basket table structure.
+
+Alignment intent:
+
+basket total quantity under Qty
+
+basket total price under Price
+
+basket average THA under THA Rating where relevant
+
+Styling direction:
+
+border-t-2 bg-muted/30 font-semibold
+
+This should be stronger than category totals, but still integrated into the same table architecture.
+
+Part 10 — Keep Current Behaviour / Scope Tight
+
+Retain:
+
+current collapse / expand behaviour
+
+current tier selector behaviour
+
+current auto/manual behaviour
+
+current add-item behaviour
+
+current selection behaviour
+
+current pricing and matching behaviour
+
+Do not do any behavioural redesign in this stage.
+
+Do not add sticky columns yet.
+
+Done When
+
+The Basket page should now feel like one unified professional tool.
+
+Success criteria:
+
+no left checkbox column exists
+
+selector is inside Actions
+
+only one Actions column exists
+
+Choice / Qty / Price / Actions align across food and household
+
+Household no longer looks like a separate table type
+
+optional columns do not break the grid
+
+category totals are integrated into the table
+
+final basket totals are integrated into the same structure
+
+page feels tighter, calmer, and more deliberate
+
+Manual Visual Review Checklist
+
+After implementation I will manually check:
+
+Shared grid
+
+Expand Pantry, Fresh, Dairy, Household
+
+Confirm Choice aligns vertically across sections
+
+Confirm Qty aligns vertically across sections
+
+Confirm Price aligns vertically across sections
+
+Confirm Actions aligns vertically across sections
+
+Selector placement
+
+No dedicated checkbox column on the left
+
+Selector appears inside Actions
+
+Multi-select still works
+
+Bulk behaviour still works
+
+Actions
+
+Only one Actions column exists
+
+Analyse / Edit / Remove remain available
+
+Right edge looks cleaner and less fragmented
+
+Household alignment
+
+Household visually sits on the same grid as food
+
+Household Choice / Qty / Price / Actions align exactly
+
+Totals
+
+Each category has an integrated totals row
+
+Basket totals appear as an integrated footer row
+
+Totals no longer feel like a detached component

@@ -1966,33 +1966,27 @@ export default function ShoppingListPage() {
                       <><div className="overflow-x-auto">
                         <table className="w-full text-xs table-fixed" data-testid={`table-category-${cat}`}>
                           <colgroup>
-                            <col style={{ width: 28 }} />
-                            <col style={{ width: 220 }} />
-                            {isPantry && <col style={{ width: 90 }} />}
-                            <col style={{ width: 180 }} />
-                            {hasPrices && <col style={{ width: 200 }} />}
+                            <col style={{ width: 210 }} />
                             <col style={{ width: 80 }} />
-                            {hasPrices && <col style={{ width: 100 }} />}
-                            {hasPrices && <col style={{ width: 120 }} />}
+                            <col style={{ width: 150 }} />
+                            <col style={{ width: 200 }} />
+                            <col style={{ width: 70 }} />
+                            <col style={{ width: 95 }} />
+                            <col style={{ width: 110 }} />
+                            <col style={{ width: 80 }} />
                             <col style={{ width: 90 }} />
-                            <col style={{ width: 40 }} />
-                            <col style={{ width: 40 }} />
-                            <col style={{ width: 40 }} />
                           </colgroup>
                           <thead>
                             <tr className="border-b border-border/40 bg-muted/10">
-                              <th className="px-1.5 py-1" />
                               <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Ingredient</th>
-                              {isPantry && <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">THA Optimizer</th>}
+                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Optimizer</th>
                               <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Choice</th>
-                              {hasPrices && <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Match</th>}
+                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap">Match</th>
                               <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Qty</th>
-                              {hasPrices && <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Price</th>}
-                              {hasPrices && <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">THA Rating</th>}
+                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Price</th>
+                              <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">THA Rating</th>
                               <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap">Meal</th>
-                              <th className="px-1.5 py-1" />
-                              <th className="px-1.5 py-1" />
-                              <th className="px-1.5 py-1" />
+                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2062,15 +2056,6 @@ export default function ShoppingListPage() {
                                     data-testid={`shopping-item-${item.id}`}
                                   >
                                     <td className="px-1.5 py-1">
-                                      <Checkbox
-                                        checked={item.checked || false}
-                                        onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })}
-                                        className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                                        data-testid={`checkbox-item-${item.id}`}
-                                      />
-                                    </td>
-
-                                    <td className="px-1.5 py-1">
                                       {isEditing && editState?.field === 'productName' ? (
                                         <div className="flex items-center gap-1">
                                           <Input value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-6 text-xs" autoFocus data-testid={`input-edit-name-${item.id}`} />
@@ -2102,7 +2087,8 @@ export default function ShoppingListPage() {
                                       )}
                                     </td>
 
-                                    {isPantry && (() => {
+                                    {(() => {
+                                      if (!isPantry) return <td className="px-1.5 py-1 text-muted-foreground" data-testid={`optimizer-cell-${item.id}`}>—</td>;
                                       const optName = item.normalizedName ?? item.productName;
                                       const optCategory = (item.category || 'other').toLowerCase();
                                       const optKeys = getOptimizerOptions(optName, optCategory);
@@ -2237,9 +2223,8 @@ export default function ShoppingListPage() {
                                       </Popover>
                                     </td>
 
-                                    {hasPrices && (
-                                      <td className="px-1.5 py-1">
-                                        {selectedMatch ? (
+                                    <td className="px-1.5 py-1">
+                                      {hasPrices ? (selectedMatch ? (
                                           <div className="flex items-start gap-1.5">
                                             {selectedMatch.imageUrl && <img src={selectedMatch.imageUrl} alt={selectedMatch.productName} className="w-7 h-7 rounded object-cover flex-shrink-0 mt-0.5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} data-testid={`img-product-${item.id}`} />}
                                             <div className="min-w-0">
@@ -2277,15 +2262,15 @@ export default function ShoppingListPage() {
                                               </Tooltip>
                                             )}
                                           </div>
-                                        )}
-                                        {showHint && (
-                                          <div className="flex items-center gap-1 mt-0.5">
-                                            <span className="text-[10px] text-amber-600 dark:text-amber-400" data-testid={`text-tha-pick-${item.id}`}>⭐ {topPick.productName}</span>
-                                            <button className="text-[10px] text-primary hover:underline font-medium" onClick={() => updateItem.mutate({ id: item.id, fields: { matchedStore: topPick.retailer, matchedProductId: null, matchedPrice: null } })} data-testid={`button-use-tha-pick-${item.id}`}>[Use]</button>
-                                          </div>
-                                        )}
-                                      </td>
-                                    )}
+                                        )
+                                      ) : <span className="text-muted-foreground">—</span>}
+                                      {hasPrices && showHint && (
+                                        <div className="flex items-center gap-1 mt-0.5">
+                                          <span className="text-[10px] text-amber-600 dark:text-amber-400" data-testid={`text-tha-pick-${item.id}`}>⭐ {topPick.productName}</span>
+                                          <button className="text-[10px] text-primary hover:underline font-medium" onClick={() => updateItem.mutate({ id: item.id, fields: { matchedStore: topPick.retailer, matchedProductId: null, matchedPrice: null } })} data-testid={`button-use-tha-pick-${item.id}`}>[Use]</button>
+                                        </div>
+                                      )}
+                                    </td>
 
                                     <td className="px-1.5 py-1 text-right tabular-nums text-muted-foreground whitespace-nowrap">
                                       {isEditing && editState?.field === 'quantityValue' ? (
@@ -2299,8 +2284,8 @@ export default function ShoppingListPage() {
                                       )}
                                     </td>
 
-                                    {hasPrices && (
-                                      <td className="px-1.5 py-1 text-right" data-testid={`text-price-${item.id}`}>
+                                    <td className="px-1.5 py-1 text-right" data-testid={`text-price-${item.id}`}>
+                                      {hasPrices ? (
                                         <div className="flex items-center gap-1 justify-end">
                                           {selectedPrice !== null && selectedPrice !== undefined ? (
                                             <span className={`tabular-nums cursor-pointer ${isBestPrice ? 'text-primary font-semibold' : 'text-foreground'}`} onClick={() => setComparisonItem(item)}>£{selectedPrice.toFixed(2)}</span>
@@ -2309,18 +2294,16 @@ export default function ShoppingListPage() {
                                           )}
                                           {isBestPrice && <span className="text-[9px] bg-secondary text-secondary-foreground px-1 py-0.5 rounded font-semibold">Best</span>}
                                         </div>
-                                      </td>
-                                    )}
+                                      ) : <span className="text-muted-foreground">—</span>}
+                                    </td>
 
-                                    {hasPrices && (
-                                      <td className="px-1.5 py-1 text-center" data-testid={`text-smp-${item.id}`}>
-                                        {(() => {
-                                          const smp = getItemSmpRating(item.id, item);
-                                          if (smp === 0) return <span className="text-muted-foreground">—</span>;
-                                          return <AppleRating rating={smp} size="small" hasCape={smp === 5} />;
-                                        })()}
-                                      </td>
-                                    )}
+                                    <td className="px-1.5 py-1 text-center" data-testid={`text-smp-${item.id}`}>
+                                      {hasPrices ? (() => {
+                                        const smp = getItemSmpRating(item.id, item);
+                                        if (smp === 0) return <span className="text-muted-foreground">—</span>;
+                                        return <AppleRating rating={smp} size="small" hasCape={smp === 5} />;
+                                      })() : <span className="text-muted-foreground">—</span>}
+                                    </td>
 
                                     <td className="px-1.5 py-1 text-center" data-testid={`meal-count-${item.id}`}>
                                       {(() => {
@@ -2369,13 +2352,17 @@ export default function ShoppingListPage() {
                                     </td>
 
                                     <td className="px-1.5 py-1">
-                                      <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
-                                    </td>
-                                    <td className="px-1.5 py-1">
-                                      <Button variant="ghost" size="icon" onClick={() => startEdit(item.id, 'productName', item.productName)} className="text-muted-foreground h-7 w-7" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
-                                    </td>
-                                    <td className="px-1.5 py-1">
-                                      <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                      <div className="flex items-center justify-end gap-0.5">
+                                        <Checkbox
+                                          checked={item.checked || false}
+                                          onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })}
+                                          className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+                                          data-testid={`checkbox-item-${item.id}`}
+                                        />
+                                        <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => startEdit(item.id, 'productName', item.productName)} className="text-muted-foreground h-7 w-7" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                      </div>
                                     </td>
                                   </motion.tr>
                                 );
@@ -2384,10 +2371,7 @@ export default function ShoppingListPage() {
                             {/* Extras rows for this category */}
                             {catExtras.map(extra => (
                               <tr key={`extra-${extra.id}`} className={`border-b border-border/30 ${extra.alwaysAdd ? 'bg-primary/3' : ''}`} data-testid={`row-extra-${extra.id}`}>
-                                <td className="px-1.5 py-1.5 w-7">
-                                  <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" data-testid={`checkbox-extra-${extra.id}`} />
-                                </td>
-                                <td className="px-1.5 py-1.5" colSpan={2}>
+                                <td className="px-1.5 py-1.5">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="font-medium text-foreground/80" data-testid={`text-extra-name-${extra.id}`}>{capitalizeWords(extra.name)}</span>
                                     <button
@@ -2397,8 +2381,16 @@ export default function ShoppingListPage() {
                                     >Always in Basket</button>
                                   </div>
                                 </td>
-                                <td colSpan={99} className="px-1.5 py-1.5 text-right">
-                                  <div className="flex items-center justify-end gap-1">
+                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                <td className="px-1.5 py-1.5">
+                                  <div className="flex items-center justify-end gap-0.5">
+                                    <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" data-testid={`checkbox-extra-${extra.id}`} />
                                     <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
                                   </div>
                                 </td>
@@ -2407,9 +2399,37 @@ export default function ShoppingListPage() {
                             {/* Empty state row when no items at all */}
                             {!hasContent && (
                               <tr>
-                                <td colSpan={99} className="px-3 py-2 text-[11px] text-muted-foreground/50 italic">No {capitalizeWords(cat)} items yet</td>
+                                <td colSpan={9} className="px-3 py-2 text-[11px] text-muted-foreground/50 italic">No {capitalizeWords(cat)} items yet</td>
                               </tr>
                             )}
+                            {/* Category totals row */}
+                            {hasContent && (() => {
+                              const catPriceTotal = hasPrices ? catItems.reduce((sum, itm) => {
+                                const catDef = getCategoryDefault(cat);
+                                const cheapest = getCheapestForItem(itm.id);
+                                const selStore = itm.selectedStore || catDef.supermarket || cheapest?.supermarket || '';
+                                const match = selStore ? pricesByItem.get(itm.id)?.get(selStore) : null;
+                                return sum + (match?.price ?? 0);
+                              }, 0) : null;
+                              const catRatings = catItems.map(i => getItemSmpRating(i.id, i)).filter(r => r > 0);
+                              const catAvgRating = catRatings.length > 0 ? catRatings.reduce((a, b) => a + b, 0) / catRatings.length : null;
+                              const totalCount = catItems.length + catExtras.length;
+                              return (
+                                <tr className="border-t border-border/60 bg-muted/20 font-medium">
+                                  <td colSpan={4} className="px-1.5 py-1 text-right text-[10px] text-muted-foreground">
+                                    {totalCount} {totalCount === 1 ? 'item' : 'items'}
+                                  </td>
+                                  <td className="px-1.5 py-1" />
+                                  <td className="px-1.5 py-1 text-right tabular-nums text-xs">
+                                    {catPriceTotal !== null && catPriceTotal > 0 ? `£${catPriceTotal.toFixed(2)}` : <span className="text-muted-foreground font-normal">—</span>}
+                                  </td>
+                                  <td className="px-1.5 py-1 text-center">
+                                    {catAvgRating !== null ? <AppleRating rating={catAvgRating} size="small" showTooltip={false} /> : <span className="text-muted-foreground font-normal">—</span>}
+                                  </td>
+                                  <td colSpan={2} />
+                                </tr>
+                              );
+                            })()}
                           </tbody>
                         </table>
                       </div>
@@ -2473,32 +2493,46 @@ export default function ShoppingListPage() {
                               <span className="text-[10px] font-medium text-muted-foreground">{HOUSEHOLD_SUBCATEGORY_LABELS[subcat]}</span>
                               <span className="text-[10px] text-muted-foreground/50">({subcatSaved.length + subcatExtras.length})</span>
                             </div>
-                            <table className="w-full text-xs">
+                            <table className="w-full text-xs table-fixed">
+                              <colgroup>
+                                <col style={{ width: 210 }} />
+                                <col style={{ width: 80 }} />
+                                <col style={{ width: 150 }} />
+                                <col style={{ width: 200 }} />
+                                <col style={{ width: 70 }} />
+                                <col style={{ width: 95 }} />
+                                <col style={{ width: 110 }} />
+                                <col style={{ width: 80 }} />
+                                <col style={{ width: 90 }} />
+                              </colgroup>
                               <tbody>
                                 {subcatSaved.map(item => {
                                   const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
                                   return (
                                     <tr key={`hh-saved-${item.id}`} className={`border-b border-border/30 ${item.checked ? 'opacity-50' : ''}`} data-testid={`row-household-${item.id}`}>
-                                      <td className="px-1.5 py-1.5 w-7">
-                                        <Checkbox checked={item.checked || false} onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })} className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" data-testid={`checkbox-household-${item.id}`} />
-                                      </td>
                                       <td className="px-1.5 py-1.5">
                                         <span className={`font-medium ${item.checked ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{capitalizeWords(item.productName)}</span>
                                         {item.quantity > 1 && <Badge variant="secondary" className="text-[10px] ml-1">x{item.quantity}</Badge>}
                                       </td>
+                                      <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                      <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                      <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                       <td className="px-1.5 py-1.5 text-right text-muted-foreground tabular-nums whitespace-nowrap">{qty} {unitLabel}</td>
-                                      <td className="px-1.5 py-1.5 text-right w-8">
-                                        <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-remove-household-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                      <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                      <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                      <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                      <td className="px-1.5 py-1.5">
+                                        <div className="flex items-center justify-end gap-0.5">
+                                          <Checkbox checked={item.checked || false} onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })} className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" data-testid={`checkbox-household-${item.id}`} />
+                                          <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-remove-household-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                        </div>
                                       </td>
                                     </tr>
                                   );
                                 })}
                                 {subcatExtras.map(extra => (
                                   <tr key={`hh-extra-${extra.id}`} className="border-b border-border/30" data-testid={`row-hh-extra-${extra.id}`}>
-                                    <td className="px-1.5 py-1.5 w-7">
-                                      <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" />
-                                    </td>
-                                    <td className="px-1.5 py-1.5" colSpan={2}>
+                                    <td className="px-1.5 py-1.5">
                                       <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className="font-medium text-foreground/80">{capitalizeWords(extra.name)}</span>
                                         <button
@@ -2508,8 +2542,16 @@ export default function ShoppingListPage() {
                                         >Always in Basket</button>
                                       </div>
                                     </td>
-                                    <td className="px-1.5 py-1.5 text-right">
-                                      <div className="flex items-center justify-end gap-1">
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                    <td className="px-1.5 py-1.5">
+                                      <div className="flex items-center justify-end gap-0.5">
+                                        <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" />
                                         <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-hh-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
                                       </div>
                                     </td>
@@ -2583,29 +2625,42 @@ export default function ShoppingListPage() {
               </div>
             )}
 
-            {/* Basket Totals */}
+            {/* Basket Totals — integrated table footer using same grid */}
             {savedItems.length > 0 && (
-              <div className="border-t border-border px-4 py-3 bg-muted/10" data-testid="section-basket-totals">
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Basket Totals</p>
-                <div className="flex flex-wrap gap-6">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-muted-foreground">Total Price</span>
-                    <span className="text-sm font-bold tabular-nums" data-testid="text-basket-total-price">{clientBestTotal !== null ? `£${clientBestTotal.toFixed(2)}` : '—'}</span>
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-muted-foreground">Avg THA Rating</span>
-                    <span className="text-sm font-bold tabular-nums" data-testid="text-basket-avg-smp">{avgSmpRating !== null ? `${avgSmpRating.toFixed(1)} / 5` : '—'}</span>
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[10px] text-muted-foreground">Overall Confidence</span>
-                    <span data-testid="text-basket-confidence">
-                      {overallConfidence === null ? <span className="text-xs text-muted-foreground">N/A</span>
-                        : overallConfidence === 'high' ? <span className="text-xs font-medium text-green-600 dark:text-green-400">High</span>
-                        : overallConfidence === 'medium' ? <span className="text-xs font-medium text-yellow-600 dark:text-yellow-400">Medium</span>
-                        : <span className="text-xs font-medium text-red-500 dark:text-red-400">Low</span>}
-                    </span>
-                  </div>
-                </div>
+              <div className="overflow-x-auto border-t-2 border-border" data-testid="section-basket-totals">
+                <table className="w-full text-xs table-fixed">
+                  <colgroup>
+                    <col style={{ width: 210 }} />
+                    <col style={{ width: 80 }} />
+                    <col style={{ width: 150 }} />
+                    <col style={{ width: 200 }} />
+                    <col style={{ width: 70 }} />
+                    <col style={{ width: 95 }} />
+                    <col style={{ width: 110 }} />
+                    <col style={{ width: 80 }} />
+                    <col style={{ width: 90 }} />
+                  </colgroup>
+                  <tbody>
+                    <tr className="bg-muted/30 font-semibold">
+                      <td colSpan={4} className="px-1.5 py-1.5 text-right text-xs font-semibold text-muted-foreground">
+                        Basket total · {savedItems.length} {savedItems.length === 1 ? 'item' : 'items'}
+                        {overallConfidence !== null && (
+                          <span className={`ml-2 font-normal ${overallConfidence === 'high' ? 'text-green-600 dark:text-green-400' : overallConfidence === 'medium' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}`}>
+                            · {overallConfidence === 'high' ? 'High' : overallConfidence === 'medium' ? 'Medium' : 'Low'} confidence
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-1.5 py-1.5" />
+                      <td className="px-1.5 py-1.5 text-right tabular-nums" data-testid="text-basket-total-price">
+                        {clientBestTotal !== null ? `£${clientBestTotal.toFixed(2)}` : <span className="text-muted-foreground font-normal">—</span>}
+                      </td>
+                      <td className="px-1.5 py-1.5 text-center" data-testid="text-basket-avg-smp">
+                        {avgSmpRating !== null ? <AppleRating rating={avgSmpRating} size="small" showTooltip={false} /> : <span className="text-muted-foreground font-normal">—</span>}
+                      </td>
+                      <td colSpan={2} />
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
