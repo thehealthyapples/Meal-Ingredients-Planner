@@ -1,3 +1,4 @@
+import thaAppleUrl from "@/assets/icons/tha-apple.png";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AppleRatingProps {
@@ -24,31 +25,39 @@ const RATING_COLORS = [
   { fill: "#10b981", stroke: "#059669", leaf: "#047857", stem: "#365314" },
 ];
 
+const sizeMap: Record<string, number> = { small: 14, medium: 20, large: 28 };
+
+function HalfApple({ px }: { px: number }) {
+  return (
+    <div style={{ width: px / 2, height: px, overflow: "hidden", flexShrink: 0, display: "inline-block" }}>
+      <img src={thaAppleUrl} width={px} height={px} alt="" draggable={false} style={{ display: "block" }} />
+    </div>
+  );
+}
+
 export default function AppleRating({
   rating: rawRating,
   size = "medium",
   showTooltip = true,
   animate = true,
 }: AppleRatingProps) {
-  const rating = Math.max(1, Math.min(5, Math.round(rawRating || 1)));
-  const label = RATING_LABELS[rating - 1];
-
-  const sizeMap = { small: 35, medium: 45, large: 70 };
-  const imgHeight = sizeMap[size];
+  const clamped = Math.max(1, Math.min(5, rawRating || 1));
+  const fullCount = Math.floor(clamped);
+  const hasHalf = clamped % 1 >= 0.5;
+  const labelIndex = Math.min(4, Math.max(0, Math.round(clamped) - 1));
+  const label = RATING_LABELS[labelIndex];
+  const px = sizeMap[size] ?? 20;
 
   const content = (
     <div
-      className="inline-flex items-center apple-rating-row"
-      data-testid={`apple-rating-${rating}`}
-      style={animate ? { animation: "appleBounce 0.4s ease-out both" } : undefined}
+      className="inline-flex items-center"
+      style={{ gap: 2, ...(animate ? { animation: "appleBounce 0.4s ease-out both" } : {}) }}
+      data-testid={`apple-rating-${Math.round(clamped)}`}
     >
-      <img
-        src={`/apple-rating-${rating}.png`}
-        alt={`${rating} Apple${rating > 1 ? "s" : ""} - ${label}`}
-        style={{ height: imgHeight, width: "auto" }}
-        className="object-contain"
-        draggable={false}
-      />
+      {Array.from({ length: fullCount }).map((_, i) => (
+        <img key={i} src={thaAppleUrl} width={px} height={px} alt="" draggable={false} style={{ display: "block", flexShrink: 0 }} />
+      ))}
+      {hasHalf && <HalfApple px={px} />}
     </div>
   );
 
@@ -56,11 +65,9 @@ export default function AppleRating({
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        {content}
-      </TooltipTrigger>
+      <TooltipTrigger asChild>{content}</TooltipTrigger>
       <TooltipContent side="top" className="text-xs">
-        <span>SMP Rating: {rating} — {label}</span>
+        <span>SMP Rating: {Math.round(clamped)} — {label}</span>
       </TooltipContent>
     </Tooltip>
   );

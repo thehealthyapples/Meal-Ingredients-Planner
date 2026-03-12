@@ -1,0 +1,174 @@
+THA Replit Execution Rules — Apple Rating Display Update (Transparent Apple Icons) / Cost Efficient / Do Not Deviate
+
+• Follow this plan exactly
+• Modify only the minimum code required
+• Do NOT change the THA scoring engine
+• Do NOT modify calculateStrictSMPRating
+• Do NOT change rating thresholds
+• Do NOT change scoring inputs or logic
+• Only update how the rating is visually rendered
+• Do NOT refactor unrelated components
+• Do NOT generate automated tests
+• Run only a TypeScript compile check
+• Start dev server when finished
+• I will visually verify behaviour
+
+Objective
+
+Replace the current apple rating images (which include white backgrounds) with repeated instances of the transparent THA apple icon already used in the application.
+
+The rating should be represented visually by repeating the apple icon rather than displaying a numeric value.
+
+Half scores should be represented by rendering a clipped half-apple using the same icon.
+
+--------------------------------------------------
+
+Current behaviour
+
+The UI currently renders rating images such as:
+
+apple-rating-1.png  
+apple-rating-2.png  
+apple-rating-3.png  
+apple-rating-4.png  
+apple-rating-5.png
+
+These images have white backgrounds and look visually inconsistent with the rest of the interface.
+
+--------------------------------------------------
+
+Required behaviour
+
+Render the rating using repeated instances of the transparent THA apple icon component.
+
+Examples:
+
+Score 5  
+🍏🍏🍏🍏🍏
+
+Score 4  
+🍏🍏🍏🍏
+
+Score 3  
+🍏🍏🍏
+
+Score 2  
+🍏🍏
+
+Score 1  
+🍏
+
+--------------------------------------------------
+
+Half scores
+
+Support half ratings using a clipped half apple.
+
+Examples:
+
+4.5  
+🍏🍏🍏🍏 + half apple
+
+3.5  
+🍏🍏🍏 + half apple
+
+2.5  
+🍏🍏 + half apple
+
+Implementation rules:
+
+• fullApples = Math.floor(score)
+• if score % 1 >= 0.5 → render one half apple
+
+The half apple must be created by clipping the existing transparent apple icon so only the LEFT half is visible.
+
+Do NOT introduce a separate half-apple asset unless absolutely required.
+
+Preferred approach:
+
+• wrap the icon in a container with half width
+• apply overflow hidden
+• render the same apple icon inside
+• clip to show only the left half
+
+This ensures the half apple visually matches the full apples.
+
+--------------------------------------------------
+
+Icon styling requirements
+
+• apple icons should be small (approx 14–16px height)
+• maintain a small horizontal gap between apples
+• rendering must remain compact for table rows
+• must not increase basket row height
+• icons must scale consistently across the application
+
+--------------------------------------------------
+
+Files to update
+
+Update only the rating display components:
+
+client/src/components/AppleRating.tsx  
+client/src/components/ui/apple-rating.tsx  
+client/src/components/ui/score-badge.tsx
+
+Remove dependency on:
+
+apple-rating-*.png
+
+Use the existing transparent THA apple icon component instead.
+
+--------------------------------------------------
+
+Where ratings appear
+
+Confirm the new rendering works correctly in:
+
+• Product analyser
+• Basket table
+• Pantry (if ratings appear there)
+• Score badge components
+• Any UI element using AppleRating
+
+--------------------------------------------------
+
+Important constraints
+
+Do NOT modify:
+
+• calculateStrictSMPRating
+• smpScore calculation
+• rating thresholds
+• scoring engine logic
+• basket totals
+• product analysis pipeline
+
+Only the display of the rating should change.
+
+--------------------------------------------------
+
+Verification steps
+
+1. Run:
+   npx tsc --noEmit
+
+2. Start dev server.
+
+3. Visually confirm:
+
+• ratings display using transparent apple icons
+• half ratings display as half apples
+• no white background apple images remain
+• layout remains compact in basket tables
+
+--------------------------------------------------
+
+Final acceptance criteria
+
+• apple ratings render using repeated transparent THA apple icons
+• half ratings render as clipped half apples
+• old apple-rating PNG images are no longer used
+• scoring logic remains unchanged
+• UI remains compact and visually consistent
+• TypeScript compiles cleanly
