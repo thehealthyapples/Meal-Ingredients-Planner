@@ -1036,6 +1036,7 @@ export default function ShoppingListPage() {
   const [alwaysAddModal, setAlwaysAddModal] = useState<{ extraId: number; currentValue: boolean } | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const collapsedInitRef = useRef(false);
+  const prevExtrasLenRef = useRef(0);
 
   const toggleNeededThisWeek = (id: number) => {
     setNeededThisWeek(prev => {
@@ -1631,16 +1632,35 @@ export default function ShoppingListPage() {
     const toCollapse = new Set<string>();
     for (const cat of BASKET_DISPLAY_CATEGORIES) {
       const catItems = sortedItems.filter(i => !isStaple(i) && !isHousehold(i) && getBasketCategory(i) === cat);
-      const catAlwaysExtras = shoppingExtras.filter(e => e.alwaysAdd && e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat);
+      const catAlwaysExtras = shoppingExtras.filter(e => e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat);
       if (catItems.length === 0 && catAlwaysExtras.length === 0) toCollapse.add(cat);
     }
     const hhSaved = sortedItems.filter(i => !isStaple(i) && isHousehold(i));
-    const hhExtras = shoppingExtras.filter(e => e.alwaysAdd && e.category === 'household');
+    const hhExtras = shoppingExtras.filter(e => e.category === 'household');
     if (hhSaved.length === 0 && hhExtras.length === 0) toCollapse.add('household');
     setCollapsedCategories(toCollapse);
     collapsedInitRef.current = true;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortedItems, shoppingExtras, loadingSaved]);
+
+  // Auto-expand a category when new extras are added to it
+  useEffect(() => {
+    if (!collapsedInitRef.current) return;
+    if (shoppingExtras.length <= prevExtrasLenRef.current) {
+      prevExtrasLenRef.current = shoppingExtras.length;
+      return;
+    }
+    prevExtrasLenRef.current = shoppingExtras.length;
+    setCollapsedCategories(prev => {
+      const next = new Set(prev);
+      for (const cat of BASKET_DISPLAY_CATEGORIES) {
+        if (shoppingExtras.some(e => e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat)) next.delete(cat);
+      }
+      if (shoppingExtras.some(e => e.category === 'household')) next.delete('household');
+      return next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shoppingExtras.length]);
 
   const startEdit = (itemId: number, field: EditState['field'], currentValue: string) => {
     setEditState({ itemId, field, value: currentValue });
@@ -1889,7 +1909,7 @@ export default function ShoppingListPage() {
               <div>
                 {BASKET_DISPLAY_CATEGORIES.map(cat => {
                   const catItems = sortedItems.filter(i => !isStaple(i) && !isHousehold(i) && getBasketCategory(i) === cat);
-                  const catExtras = shoppingExtras.filter(e => e.alwaysAdd && e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat);
+                  const catExtras = shoppingExtras.filter(e => e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat);
                   const hasContent = catItems.length > 0 || catExtras.length > 0;
                   const isPantry = cat === 'pantry';
                   const displayRows = isPantry
@@ -2375,7 +2395,7 @@ export default function ShoppingListPage() {
                                 <td colSpan={99} className="px-1.5 py-1.5 text-right">
                                   <div className="flex items-center justify-end gap-1">
                                     <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => setAlwaysAddModal({ extraId: extra.id, currentValue: extra.alwaysAdd })} title="Toggle Always in Basket" data-testid={`button-always-extra-${extra.id}`}><RefreshCw className="h-3 w-3" /></Button>
-                                    <Button variant="ghost" size="icon" onClick={() => updateExtraMutation.mutate({ id: extra.id, alwaysAdd: false })} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                    <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
                                   </div>
                                 </td>
                               </tr>
@@ -2424,7 +2444,7 @@ export default function ShoppingListPage() {
                 {/* Household section */}
                 {(() => {
                   const householdSavedItems = sortedItems.filter(i => !isStaple(i) && isHousehold(i));
-                  const householdExtras = shoppingExtras.filter(e => e.alwaysAdd && e.category === 'household');
+                  const householdExtras = shoppingExtras.filter(e => e.category === 'household');
                   return (
                     <div className="border-t border-border/40">
                       {/* Household header */}
@@ -2483,7 +2503,7 @@ export default function ShoppingListPage() {
                                     <td className="px-1.5 py-1.5 text-right">
                                       <div className="flex items-center justify-end gap-1">
                                         <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => setAlwaysAddModal({ extraId: extra.id, currentValue: extra.alwaysAdd })} title="Toggle Always in Basket" data-testid={`button-always-hh-extra-${extra.id}`}><RefreshCw className="h-3 w-3" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => updateExtraMutation.mutate({ id: extra.id, alwaysAdd: false })} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-hh-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-hh-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
                                       </div>
                                     </td>
                                   </tr>
