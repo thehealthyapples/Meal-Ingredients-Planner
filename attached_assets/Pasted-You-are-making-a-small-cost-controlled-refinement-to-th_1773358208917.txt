@@ -1,0 +1,75 @@
+You are making a small, cost-controlled refinement to the Planner tab only. Be efficient, inspect the existing implementation first, and do not redesign unrelated areas.
+
+Objective
+Fix 2 minor issues on the Planner tab:
+1. Clean up the top-right controls layout by arranging the 5 buttons + the meal-count pill into a tidy 2-row x 3-column block.
+2. Fix planner generation so that when Kids meals and Baby meals are enabled, each of those profiles gets 3 meals per day, not just 1 meal added at the end of the day.
+
+Rules
+- Stay strictly within the Planner tab and its directly-related planner generation logic.
+- Do not change styling, spacing, data models, labels, or behaviour outside these two tasks.
+- Do not refactor broadly.
+- Do not add new dependencies.
+- Do not run broad test suites. I will do visual/functional testing myself.
+- Keep the UI professional, compact, and tidy.
+
+Task 1 — Top-right controls layout cleanup
+Find the Planner tab header/actions area that currently contains:
+- 5 buttons
+- 1 pill showing how many meals are filled on the planner
+
+Change this controls area so it renders as:
+- a compact 2-row by 3-column layout
+- positioned at the top-right of the planner screen/header area
+- with consistent spacing and alignment
+- visually neat and balanced
+
+Layout intent:
+- Total 6 items = 5 buttons + 1 pill
+- Render as a clean grid, not a messy wrapped row
+- Keep all existing button functionality exactly the same
+- Keep the pill functionality exactly the same
+- Do not rename controls unless already required elsewhere
+- Ensure it remains responsive and does not overlap the planner content
+
+Preferred implementation:
+- Use a simple CSS grid or equivalent utility classes
+- 3 columns, 2 rows
+- Right-aligned container
+- Compact gaps
+- Middle/center aligned content within each cell where appropriate
+
+Task 2 — Fix Kids and Baby meal generation logic
+Inspect the planner generation/options logic for household meal profiles.
+
+Current bug:
+- When Kids meals and Baby meals are selected in planner options, the planner only adds 1 extra meal at the end of the day.
+- This is incorrect.
+
+Required behaviour:
+- If Kids meals are enabled, kids should receive 3 meals per day.
+- If Baby meals are enabled, baby should receive 3 meals per day.
+- This should apply across each day in the planner, not just append one extra meal at day-end.
+- The meals should be inserted into the correct meal structure for the day, consistent with how adult meals are scheduled.
+- Do not duplicate incorrectly or stack all extra meals into a single final slot.
+
+Implementation guidance:
+- Inspect how daily meal slots are currently built.
+- Inspect where option flags for Kids/Baby are applied.
+- Adjust the generation logic so each enabled profile gets a full 3-meal daily structure.
+- Reuse the existing meal-slot pattern where possible.
+- Preserve current planner behaviour for adults and any other meal profiles unless directly necessary.
+
+Acceptance criteria
+1. On the Planner tab, the 5 buttons and the filled-meals pill appear as a tidy 2x3 block in the top-right area.
+2. The controls no longer look messy or uneven.
+3. When Kids meals is enabled, the planner creates 3 kid meals per day.
+4. When Baby meals is enabled, the planner creates 3 baby meals per day.
+5. When both are enabled, both Kids and Baby each receive 3 meals per day.
+6. No unrelated planner UI or behaviour is changed.
+
+Output
+Provide:
+1. A brief summary of files changed
+2. A short explanation of the logic fix
+3. Confirmation that no unrelated areas were modified

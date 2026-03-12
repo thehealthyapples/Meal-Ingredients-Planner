@@ -507,10 +507,14 @@ export default function WeeklyPlannerPage() {
       rows.push({ id: "drinks", label: "Drinks", mealType: undefined, audience: "adult", isDrink: true, addMealType: "snacks", icon: Wine, iconColor: "text-purple-400" });
     }
     if (plannerSettings?.enableChildMeals) {
-      rows.push({ id: "child", label: "Kids", mealType: undefined, audience: "child", isDrink: false, addMealType: "snacks", icon: PersonStanding, iconColor: "text-sky-500" });
+      rows.push({ id: "child-breakfast", label: "Kids Breakfast", mealType: "breakfast", audience: "child", isDrink: false, addMealType: "breakfast", icon: PersonStanding, iconColor: "text-sky-500" });
+      rows.push({ id: "child-lunch",     label: "Kids Lunch",     mealType: "lunch",     audience: "child", isDrink: false, addMealType: "lunch",     icon: PersonStanding, iconColor: "text-sky-500" });
+      rows.push({ id: "child-dinner",    label: "Kids Dinner",    mealType: "dinner",    audience: "child", isDrink: false, addMealType: "dinner",    icon: PersonStanding, iconColor: "text-sky-500" });
     }
     if (plannerSettings?.enableBabyMeals) {
-      rows.push({ id: "baby", label: "Baby", mealType: undefined, audience: "baby", isDrink: false, addMealType: "snacks", icon: Baby, iconColor: "text-pink-500" });
+      rows.push({ id: "baby-breakfast", label: "Baby Breakfast", mealType: "breakfast", audience: "baby", isDrink: false, addMealType: "breakfast", icon: Baby, iconColor: "text-pink-500" });
+      rows.push({ id: "baby-lunch",     label: "Baby Lunch",     mealType: "lunch",     audience: "baby", isDrink: false, addMealType: "lunch",     icon: Baby, iconColor: "text-pink-500" });
+      rows.push({ id: "baby-dinner",    label: "Baby Dinner",    mealType: "dinner",    audience: "baby", isDrink: false, addMealType: "dinner",    icon: Baby, iconColor: "text-pink-500" });
     }
     return rows;
   }, [plannerSettings]);
@@ -552,8 +556,8 @@ export default function WeeklyPlannerPage() {
             Plan 6 weeks of meals with breakfast, lunch, dinner, and snacks
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" data-testid="badge-week-progress">
+        <div className="grid grid-cols-3 gap-1.5 items-center">
+          <Badge variant="outline" className="justify-center" data-testid="badge-week-progress">
             {weekStats.filled} / {weekStats.total} meals planned
           </Badge>
           <Button size="sm" onClick={() => setTemplatesOpen(true)} data-testid="button-open-templates">
