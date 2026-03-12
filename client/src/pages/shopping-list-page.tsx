@@ -165,6 +165,7 @@ const HOUSEHOLD_SUBCATEGORIES: Array<{ key: string; label: string; keywords: str
   { key: 'paper', label: 'Paper & Home Essentials', keywords: ['toilet roll', 'toilet paper', 'kitchen roll', 'kitchen towel', 'tissue', 'loo roll', 'paper towel', 'foil', 'cling film', 'baking paper', 'parchment', 'kitchen paper', 'bin bag', 'bin liner', 'sandwich bag', 'freezer bag'] },
   { key: 'laundry', label: 'Laundry', keywords: ['laundry', 'washing powder', 'washing liquid', 'washing tablet', 'fabric softener', 'fabric conditioner', 'stain remover', 'tumble dryer', 'dryer sheet', 'dryer ball', 'colour catcher'] },
   { key: 'cleaning', label: 'Cleaning', keywords: ['bleach', 'spray', 'wipes', 'sponge', 'cloth', 'scrubber', 'dishwasher', 'washing up', 'washing-up', 'detergent', 'duster', 'mop', 'brush', 'cleaner', 'disinfect', 'descal', 'toilet cleaner', 'flash', 'fairy', 'anti-bac', 'antibacterial'] },
+  { key: 'pet_care', label: 'Pet Care', keywords: ['cat food', 'dog food', 'cat litter', 'pet food', 'dog treat', 'cat treat', 'poop bag', 'dog biscuit', 'bird seed', 'fish food', 'hamster', 'rabbit food', 'pet bed', 'flea'] },
 ];
 
 const HOUSEHOLD_SUBCATEGORY_LABELS: Record<string, string> = {
@@ -172,8 +173,11 @@ const HOUSEHOLD_SUBCATEGORY_LABELS: Record<string, string> = {
   paper: 'Paper & Home Essentials',
   laundry: 'Laundry',
   cleaning: 'Cleaning',
+  pet_care: 'Pet Care',
   misc_household: 'Miscellaneous Household',
 };
+
+const HOUSEHOLD_SUBCAT_KEYS = ['personal_care', 'paper', 'laundry', 'cleaning', 'pet_care', 'misc_household'];
 
 function getHouseholdSubcategory(productName: string): string {
   const lower = (productName || '').toLowerCase();
@@ -182,6 +186,24 @@ function getHouseholdSubcategory(productName: string): string {
   }
   return 'misc_household';
 }
+
+const EXTRAS_TO_BASKET_CATEGORY: Record<string, string> = {
+  larder: 'pantry', fridge: 'pantry', freezer: 'pantry', pantry: 'pantry',
+  produce: 'produce', dairy: 'dairy', eggs: 'eggs', meat: 'meat',
+  fish: 'fish', bakery: 'bakery', other: 'other',
+};
+
+const CATEGORY_COMMON_ITEMS: Record<string, string[]> = {
+  produce: ['carrots', 'onions', 'garlic', 'spinach', 'broccoli', 'tomatoes', 'potatoes', 'lemons', 'apples', 'bananas'],
+  dairy: ['milk', 'butter', 'cheddar cheese', 'greek yogurt', 'cream', 'sour cream'],
+  eggs: ['free-range eggs', 'organic eggs'],
+  meat: ['chicken breast', 'beef mince', 'sausages', 'bacon', 'pork chops'],
+  fish: ['salmon fillets', 'cod fillets', 'tuna', 'prawns', 'mackerel'],
+  bakery: ['sourdough bread', 'wholemeal bread', 'wraps', 'pitta bread', 'rolls'],
+  pantry: ['olive oil', 'rice', 'pasta', 'plain flour', 'tinned tomatoes', 'stock cubes', 'honey', 'soy sauce', 'passata'],
+  other: [],
+  household: ['toilet roll', 'kitchen roll', 'bin bags', 'dishwasher tablets', 'washing up liquid', 'toothpaste', 'shampoo', 'fabric softener'],
+};
 
 const BASKET_CATEGORY_MAP: Record<string, string> = {
   produce: 'produce',
@@ -985,7 +1007,7 @@ export default function ShoppingListPage() {
     return new Set(pantryItems.map(p => p.ingredientKey));
   }, [pantryItems]);
 
-  const { data: shoppingExtras = [] } = useQuery<{ id: number; name: string; category: string }[]>({
+  const { data: shoppingExtras = [] } = useQuery<{ id: number; name: string; category: string; alwaysAdd: boolean }[]>({
     queryKey: ['/api/shopping-list/extras'],
   });
 
@@ -994,9 +1016,24 @@ export default function ShoppingListPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] }),
   });
 
+  const addExtraMutation = useMutation({
+    mutationFn: ({ name, category }: { name: string; category: string }) =>
+      apiRequest("POST", "/api/shopping-list/extras", { name, category }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] }),
+  });
+
+  const updateExtraMutation = useMutation({
+    mutationFn: ({ id, alwaysAdd }: { id: number; alwaysAdd: boolean }) =>
+      apiRequest("PATCH", `/api/shopping-list/extras/${id}`, { alwaysAdd }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] }),
+  });
+
   const [neededThisWeek, setNeededThisWeek] = useState<Set<number>>(new Set());
   const [staplesOpen, setStaplesOpen] = useState(false);
   const [thaPicks, setThaPicks] = useState<Record<string, IngredientProduct[]>>({});
+  const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
+  const [addItemInput, setAddItemInput] = useState('');
+  const [alwaysAddModal, setAlwaysAddModal] = useState<{ extraId: number; currentValue: boolean } | null>(null);
 
   const toggleNeededThisWeek = (id: number) => {
     setNeededThisWeek(prev => {
@@ -1012,6 +1049,24 @@ export default function ShoppingListPage() {
   };
 
   const isHousehold = (item: ShoppingListItem) => (item.category || '').toLowerCase() === 'household';
+
+  const handleAddItem = useCallback(async (name: string, basketCategory: string) => {
+    if (!name.trim()) return;
+    const extraCategory = basketCategory === 'household' ? 'household'
+      : basketCategory === 'pantry' ? 'larder'
+      : basketCategory;
+    await addExtraMutation.mutateAsync({ name: name.trim(), category: extraCategory });
+    const pantryCategory = basketCategory === 'household' ? 'household' : 'larder';
+    try {
+      await apiRequest("POST", "/api/pantry", {
+        ingredient: name.trim().toLowerCase(),
+        displayName: name.trim(),
+        category: pantryCategory,
+      });
+    } catch { /* silent if already exists */ }
+    setAddItemInput('');
+    setAddingToCategory(null);
+  }, [addExtraMutation]);
 
   const frozenMealIds = useMemo(() => {
     const ids = new Set<number>();
@@ -1801,19 +1856,12 @@ export default function ShoppingListPage() {
               <div className="flex items-center justify-center py-8">
                 <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : savedItems.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground opacity-50 space-y-4 p-8">
-                <ShoppingCart className="h-16 w-16 stroke-1" />
-                <div>
-                  <p>Your basket is empty.</p>
-                  <p className="text-sm mt-1">Select meals on the left, set quantities with +/-,<br/>then click "Add to Basket".</p>
-                </div>
-              </div>
             ) : (
               <div>
                 {BASKET_DISPLAY_CATEGORIES.map(cat => {
                   const catItems = sortedItems.filter(i => !isStaple(i) && !isHousehold(i) && getBasketCategory(i) === cat);
-                  if (catItems.length === 0) return null;
+                  const catExtras = shoppingExtras.filter(e => e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat);
+                  const hasContent = catItems.length > 0 || catExtras.length > 0;
                   const isPantry = cat === 'pantry';
                   const displayRows = isPantry
                     ? computePantryMergedRows(catItems, sourcesByItem)
@@ -2273,64 +2321,158 @@ export default function ShoppingListPage() {
                                 );
                               })}
                             </AnimatePresence>
+                            {/* Extras rows for this category */}
+                            {catExtras.map(extra => (
+                              <tr key={`extra-${extra.id}`} className={`border-b border-border/30 ${extra.alwaysAdd ? 'bg-primary/3' : ''}`} data-testid={`row-extra-${extra.id}`}>
+                                <td className="px-1.5 py-1.5 w-7">
+                                  <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" data-testid={`checkbox-extra-${extra.id}`} />
+                                </td>
+                                <td className="px-1.5 py-1.5" colSpan={2}>
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-medium text-foreground/80" data-testid={`text-extra-name-${extra.id}`}>{capitalizeWords(extra.name)}</span>
+                                    {extra.alwaysAdd && (
+                                      <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border border-primary/40 text-primary bg-primary/8" data-testid={`chip-always-${extra.id}`}>Always in Basket</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td colSpan={99} className="px-1.5 py-1.5 text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <Button variant="ghost" size="icon" className={`h-6 w-6 text-[10px] ${extra.alwaysAdd ? 'text-primary' : 'text-muted-foreground'}`} onClick={() => setAlwaysAddModal({ extraId: extra.id, currentValue: extra.alwaysAdd })} title="Toggle Always in Basket" data-testid={`button-always-extra-${extra.id}`}><RefreshCw className="h-3 w-3" /></Button>
+                                    <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                            {/* Empty state row when no items at all */}
+                            {!hasContent && (
+                              <tr>
+                                <td colSpan={99} className="px-3 py-2 text-[11px] text-muted-foreground/50 italic">No {capitalizeWords(cat)} items yet</td>
+                              </tr>
+                            )}
                           </tbody>
                         </table>
                       </div>
+                      {/* Inline add panel for this category */}
+                      {addingToCategory === cat ? (
+                        <div className="flex flex-col gap-2 px-3 py-2 bg-muted/10 border-t border-border/30" data-testid={`add-panel-${cat}`}>
+                          <div className="flex flex-wrap gap-1">
+                            {(CATEGORY_COMMON_ITEMS[cat] || []).map(item => (
+                              <button key={item} onClick={() => handleAddItem(item, cat)} className="text-[10px] px-2 py-0.5 rounded-full border border-border hover:border-primary hover:text-primary transition-colors" data-testid={`suggestion-${item.replace(/\s+/g, '-')}`}>{item}</button>
+                            ))}
+                          </div>
+                          <div className="flex gap-1.5">
+                            <Input
+                              value={addItemInput}
+                              onChange={e => setAddItemInput(e.target.value)}
+                              onKeyDown={e => { if (e.key === 'Enter') handleAddItem(addItemInput, cat); if (e.key === 'Escape') { setAddingToCategory(null); setAddItemInput(''); } }}
+                              placeholder={`Add ${cat} item…`}
+                              className="h-6 text-xs flex-1"
+                              autoFocus
+                              data-testid={`input-add-${cat}`}
+                            />
+                            <Button size="sm" className="h-6 text-xs px-2" onClick={() => handleAddItem(addItemInput, cat)} data-testid={`button-confirm-add-${cat}`}>Add</Button>
+                            <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => { setAddingToCategory(null); setAddItemInput(''); }}>Cancel</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => setAddingToCategory(cat)} className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary px-3 py-1.5 w-full border-t border-border/20 hover:bg-muted/10 transition-colors" data-testid={`button-open-add-${cat}`}>
+                          <Plus className="h-3 w-3" /> Add {capitalizeWords(cat)} item
+                        </button>
+                      )}
                     </div>
                   );
                 })}
 
-                {/* Household items */}
+                {/* Household section */}
                 {(() => {
-                  const householdItems = sortedItems.filter(i => !isStaple(i) && isHousehold(i));
-                  if (householdItems.length === 0) return null;
-                  const subcatKeys = ['personal_care', 'paper', 'laundry', 'cleaning', 'misc_household'];
+                  const householdSavedItems = sortedItems.filter(i => !isStaple(i) && isHousehold(i));
+                  const householdExtras = shoppingExtras.filter(e => e.category === 'household');
                   return (
-                    <div className="mt-1 border-t border-border/40">
-                      <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 border-b border-border/40">
-                        <Home className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Household Items</span>
-                        <span className="text-[10px] text-muted-foreground ml-auto">Not included in basket totals</span>
+                    <div className="border-t border-border/40">
+                      {/* Household header */}
+                      <div className="sticky top-0 z-10 flex items-center gap-3 py-1.5 px-3 bg-muted/80 border-y border-border text-xs backdrop-blur-sm" data-testid="category-header-household">
+                        <div className="flex items-center gap-1.5 font-semibold min-w-[90px]">
+                          <Home className="h-3 w-3" />
+                          <span>Household</span>
+                        </div>
+                        <span className="text-[10px] text-muted-foreground/70 ml-auto italic">Not included in basket totals</span>
                       </div>
-                      {subcatKeys.map(subcat => {
-                        const subcatItems = householdItems.filter(i => getHouseholdSubcategory(i.normalizedName ?? i.productName) === subcat);
-                        if (subcatItems.length === 0) return null;
+                      {/* Subcategories */}
+                      {HOUSEHOLD_SUBCAT_KEYS.map(subcat => {
+                        const subcatSaved = householdSavedItems.filter(i => getHouseholdSubcategory(i.normalizedName ?? i.productName) === subcat);
+                        const subcatExtras = householdExtras.filter(e => getHouseholdSubcategory(e.name) === subcat);
+                        if (subcatSaved.length === 0 && subcatExtras.length === 0) return null;
                         return (
                           <div key={subcat}>
                             <div className="flex items-center gap-2 px-3 py-1 bg-muted/15 border-b border-border/30">
                               <span className="text-[10px] font-medium text-muted-foreground">{HOUSEHOLD_SUBCATEGORY_LABELS[subcat]}</span>
-                              <span className="text-[10px] text-muted-foreground/60">({subcatItems.length})</span>
+                              <span className="text-[10px] text-muted-foreground/50">({subcatSaved.length + subcatExtras.length})</span>
                             </div>
                             <table className="w-full text-xs">
                               <tbody>
-                                {subcatItems.map(item => {
+                                {subcatSaved.map(item => {
                                   const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
                                   return (
-                                    <tr key={`household-${item.id}`} className={`border-b border-border/30 ${item.checked ? 'opacity-50' : ''}`} data-testid={`row-household-${item.id}`}>
+                                    <tr key={`hh-saved-${item.id}`} className={`border-b border-border/30 ${item.checked ? 'opacity-50' : ''}`} data-testid={`row-household-${item.id}`}>
                                       <td className="px-1.5 py-1.5 w-7">
-                                        <Checkbox
-                                          checked={item.checked || false}
-                                          onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })}
-                                          className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                                          data-testid={`checkbox-household-${item.id}`}
-                                        />
+                                        <Checkbox checked={item.checked || false} onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })} className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" data-testid={`checkbox-household-${item.id}`} />
                                       </td>
                                       <td className="px-1.5 py-1.5">
-                                        <span className={`font-medium ${item.checked ? 'line-through text-muted-foreground' : 'text-foreground'}`} data-testid={`text-household-name-${item.id}`}>{capitalizeWords(item.productName)}</span>
+                                        <span className={`font-medium ${item.checked ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{capitalizeWords(item.productName)}</span>
                                         {item.quantity > 1 && <Badge variant="secondary" className="text-[10px] ml-1">x{item.quantity}</Badge>}
                                       </td>
                                       <td className="px-1.5 py-1.5 text-right text-muted-foreground tabular-nums whitespace-nowrap">{qty} {unitLabel}</td>
-                                      <td className="px-1.5 py-1.5 text-right">
+                                      <td className="px-1.5 py-1.5 text-right w-8">
                                         <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-remove-household-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
                                       </td>
                                     </tr>
                                   );
                                 })}
+                                {subcatExtras.map(extra => (
+                                  <tr key={`hh-extra-${extra.id}`} className="border-b border-border/30" data-testid={`row-hh-extra-${extra.id}`}>
+                                    <td className="px-1.5 py-1.5 w-7">
+                                      <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" />
+                                    </td>
+                                    <td className="px-1.5 py-1.5" colSpan={2}>
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="font-medium text-foreground/80">{capitalizeWords(extra.name)}</span>
+                                        {extra.alwaysAdd && (
+                                          <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border border-primary/40 text-primary bg-primary/8" data-testid={`chip-always-hh-${extra.id}`}>Always in Basket</span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    <td className="px-1.5 py-1.5 text-right">
+                                      <div className="flex items-center justify-end gap-1">
+                                        <Button variant="ghost" size="icon" className={`h-6 w-6 ${extra.alwaysAdd ? 'text-primary' : 'text-muted-foreground'}`} onClick={() => setAlwaysAddModal({ extraId: extra.id, currentValue: extra.alwaysAdd })} title="Toggle Always in Basket" data-testid={`button-always-hh-extra-${extra.id}`}><RefreshCw className="h-3 w-3" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-hh-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
                               </tbody>
                             </table>
                           </div>
                         );
                       })}
+                      {/* Household add panel */}
+                      {addingToCategory === 'household' ? (
+                        <div className="flex flex-col gap-2 px-3 py-2 bg-muted/10 border-t border-border/30" data-testid="add-panel-household">
+                          <div className="flex flex-wrap gap-1">
+                            {CATEGORY_COMMON_ITEMS.household.map(item => (
+                              <button key={item} onClick={() => handleAddItem(item, 'household')} className="text-[10px] px-2 py-0.5 rounded-full border border-border hover:border-primary hover:text-primary transition-colors">{item}</button>
+                            ))}
+                          </div>
+                          <div className="flex gap-1.5">
+                            <Input value={addItemInput} onChange={e => setAddItemInput(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') handleAddItem(addItemInput, 'household'); if (e.key === 'Escape') { setAddingToCategory(null); setAddItemInput(''); } }} placeholder="Add household item…" className="h-6 text-xs flex-1" autoFocus data-testid="input-add-household" />
+                            <Button size="sm" className="h-6 text-xs px-2" onClick={() => handleAddItem(addItemInput, 'household')} data-testid="button-confirm-add-household">Add</Button>
+                            <Button size="sm" variant="ghost" className="h-6 text-xs px-2" onClick={() => { setAddingToCategory(null); setAddItemInput(''); }}>Cancel</Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => setAddingToCategory('household')} className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary px-3 py-1.5 w-full border-t border-border/20 hover:bg-muted/10 transition-colors" data-testid="button-open-add-household">
+                          <Plus className="h-3 w-3" /> Add household item
+                        </button>
+                      )}
                     </div>
                   );
                 })()}
@@ -2465,37 +2607,34 @@ export default function ShoppingListPage() {
       </div>
 
 
-      {shoppingExtras.length > 0 && (
-        <div className="px-4 sm:px-6 lg:px-8 max-w-screen-2xl mx-auto mt-4">
-          <Card className="overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-primary" />
-                <span className="font-semibold text-sm">Pantry Selections</span>
-                <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{shoppingExtras.length}</Badge>
-              </div>
-              <span className="text-xs text-muted-foreground">Added from My Pantry</span>
-            </div>
-            <div className="divide-y divide-border">
-              {shoppingExtras.map(extra => (
-                <div key={extra.id} className="flex items-center justify-between px-4 py-2.5 group" data-testid={`row-extra-${extra.id}`}>
-                  <span className="text-sm">{extra.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => deleteExtraMutation.mutate(extra.id)}
-                    disabled={deleteExtraMutation.isPending}
-                    data-testid={`button-delete-extra-${extra.id}`}
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-      )}
+      {/* Always in Basket confirmation modal */}
+      <Dialog open={!!alwaysAddModal} onOpenChange={(open) => { if (!open) setAlwaysAddModal(null); }}>
+        <DialogContent className="max-w-sm" data-testid="dialog-always-add">
+          <DialogHeader>
+            <DialogTitle>
+              {alwaysAddModal?.currentValue ? 'Stop automatically adding this item?' : 'Always add this item to your basket?'}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {alwaysAddModal?.currentValue
+              ? 'This item will no longer be added to future baskets.'
+              : 'This item will automatically appear in future baskets until you remove it.'}
+          </p>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setAlwaysAddModal(null)} data-testid="button-always-cancel">Cancel</Button>
+            <Button
+              onClick={() => {
+                if (!alwaysAddModal) return;
+                updateExtraMutation.mutate({ id: alwaysAddModal.extraId, alwaysAdd: !alwaysAddModal.currentValue });
+                setAlwaysAddModal(null);
+              }}
+              data-testid="button-always-confirm"
+            >
+              {alwaysAddModal?.currentValue ? 'Remove Auto Add' : 'Always Add'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!comparisonItem} onOpenChange={(open) => { if (!open) setComparisonItem(null); }}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto" data-testid="dialog-price-comparison">

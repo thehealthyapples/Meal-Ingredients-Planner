@@ -4973,6 +4973,22 @@ export async function registerRoutes(
     }
   });
 
+  app.patch("/api/shopping-list/extras/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      const schema = z.object({ alwaysAdd: z.boolean().optional() });
+      const fields = schema.parse(req.body);
+      const result = await storage.updateShoppingListExtra(req.user!.id, id, fields);
+      res.json(result);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      console.error("[Extras] PATCH error:", err);
+      res.status(500).json({ message: "Failed to update extra" });
+    }
+  });
+
   app.delete("/api/shopping-list/extras/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {

@@ -1,0 +1,398 @@
+THA Replit Execution Rules — Household + Pantry Input Flow / Cost Efficient / Do Not Deviate
+
+• Follow this plan exactly
+• Modify only the minimum code required
+• Do NOT redesign basket architecture
+• Do NOT change THA scoring logic
+• Do NOT change THA Rating logic
+• Do NOT alter Basket Totals or Comparison Strip calculations
+• Do NOT alter pantry optimizer logic except where required for display consistency
+• Do NOT refactor unrelated code
+• Prefer additive helpers and local UI changes over broad rewrites
+• Reuse existing pantry add/create pathways where possible
+• Do NOT generate automated tests
+• Do NOT run test frameworks
+• Only run a TypeScript compile check
+• Start dev server when finished
+• I will manually verify behaviour
+
+Objective
+
+Make the Basket feel like one unified shopping list that includes both food and household items.
+
+This pass must do all of the following:
+
+1. Route Pantry-page items into the main Basket display as either Pantry or Household
+2. Remove the old redundant pantry block at the bottom of the page
+3. Add Household as a proper main Basket section, with household subcategories
+4. Add Pet Care as a household subcategory
+5. Keep Household items excluded from current Basket Totals / Comparison Strip calculations
+6. On a fresh/empty basket, still render the category sections so the page is not blank
+7. Allow users to add common items directly from the Basket by category
+8. Allow users to add freeform items directly from the Basket
+9. When users add a new pantry/household item from the Basket, also write it into their Pantry so Pantry stays in sync
+10. Support an “Always in Basket” recurring flag for pantry/household items
+11. Persist “Always in Basket”
+12. Show a visible chip in the row when Always in Basket is enabled
+13. Require a confirmation modal when enabling/disabling Always in Basket
+
+Important product rule:
+• Pantry page is an input source, not a separate Basket display section
+• Household should look and feel like part of the same shopping list
+• Household items remain excluded from current basket totals in this pass
+
+--------------------------------------------------
+Required Basket display structure
+
+The main Basket page should render visible category sections such as:
+• Produce
+• Dairy
+• Eggs
+• Meat
+• Fish
+• Bakery
+• Pantry
+• Household
+• Other
+
+Household should contain visible subcategories such as:
+• Personal Care
+• Cleaning
+• Paper & Home Essentials
+• Laundry
+• Pet Care
+• Miscellaneous Household
+
+Examples:
+Personal Care:
+• toothpaste
+• toothbrushes
+• soap
+• shampoo
+
+Cleaning:
+• bin bags
+• dishwasher tablets
+• washing-up liquid
+• sprays
+• sponges
+
+Paper & Home Essentials:
+• toilet roll
+• kitchen roll
+• tissues
+
+Laundry:
+• detergent
+• softener
+• stain remover
+
+Pet Care:
+• cat food
+• dog food
+• cat litter
+• treats
+• poop bags
+
+If uncertain, place in Miscellaneous Household.
+
+--------------------------------------------------
+T001 — Route Pantry-page items into Basket display categories
+
+File:
+client/src/pages/shopping-list-page.tsx
+(and a small helper only if clearly cleaner)
+
+Implement routing so items added from the Pantry page are classified into Basket display sections by item type, not by source.
+
+Required rule:
+• food pantry items → Pantry
+• household items → Household
+
+Examples:
+Pantry:
+• flour
+• olive oil
+• rice
+• cumin
+• passata
+• tinned tomatoes
+
+Household:
+• toothpaste
+• toothbrushes
+• soap
+• bin bags
+• dishwasher tablets
+• toilet roll
+• cat food
+• dog food
+• cat litter
+
+Use a conservative mapping.
+If uncertain:
+• clearly food-like items → Pantry
+• clearly household/pet items → Household
+
+Acceptance:
+• Pantry-page items appear in the main Basket category structure
+• food pantry items go to Pantry
+• household items go to Household
+
+--------------------------------------------------
+T002 — Remove redundant bottom pantry block
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Remove the now-redundant separate pantry-items block at the bottom of the page.
+
+Important:
+• only remove the bottom pantry display block
+• do not remove Pantry as a category in the main Basket
+• do not remove Pantry page as an input source
+
+Acceptance:
+• no duplicate pantry section remains at the bottom
+• Pantry items appear only in the main Basket category display
+
+--------------------------------------------------
+T003 — Render Household section and disclaimer
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Keep Household as part of the main Basket display.
+Show the note near the Household section header:
+
+Household items are currently excluded from basket totals.
+
+Requirements:
+• keep the text small, muted, and friendly
+• do not make it look like an error/warning banner
+• show the note whenever Household is visible
+
+Acceptance:
+• Household section appears in the main Basket when household items exist
+• note is visible and clear
+
+--------------------------------------------------
+T004 — Fresh basket still shows category sections
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+When the basket is fresh/empty, the category sections should still render so the page does not look blank.
+
+At minimum, render empty category shells/headers for the main categories, especially:
+• Pantry
+• Household
+and the current food categories already used in the Basket
+
+Keep the empty state compact and calm.
+
+Acceptance:
+• fresh basket still shows category sections
+• user can immediately see where items can be added
+
+--------------------------------------------------
+T005 — Add direct item entry inside the Basket by category
+
+File:
+client/src/pages/shopping-list-page.tsx
+(and a small helper/component only if clearly cleaner)
+
+Allow users to add items directly from the Basket, inside category sections, instead of forcing them to use the Pantry page first.
+
+Required behaviour:
+Each visible category section should have a lightweight add-item entry area.
+
+This should support both:
+1. common category-specific items
+2. freeform item entry
+
+Examples:
+Pantry common items:
+• flour
+• rice
+• olive oil
+• passata
+• sugar
+
+Household common items:
+• toothpaste
+• toilet roll
+• bin bags
+• dishwasher tablets
+• cat food
+
+Implementation guidance:
+• keep it lightweight
+• a simple add row / inline input / compact picker is enough
+• do not build a large new modal flow unless already trivial
+• common items can be a short suggested list for that category
+• freeform add must also be available
+
+Acceptance:
+• user can add common items directly inside the Basket by category
+• user can add freeform items directly inside the Basket
+
+--------------------------------------------------
+T006 — Write Basket-added pantry/household items into Pantry
+
+Important:
+When a user adds a new pantry/household item directly in the Basket, it should also be written into the user’s Pantry so Pantry stays in sync.
+
+Examples:
+• user adds cat food in Household from the Basket
+  → appears in the shopping list
+  → also gets written into the user’s Pantry
+
+Requirements:
+• reuse the lightest existing pantry add/create pathway if available
+• do not invent a second storage model if avoidable
+• keep implementation minimal and pragmatic
+
+Acceptance:
+• new Basket-added pantry/household items also appear in the user Pantry data
+• Basket and Pantry stay aligned for newly added items
+
+--------------------------------------------------
+T007 — Add “Always in Basket” recurring flag
+
+Files:
+client/src/pages/shopping-list-page.tsx
+and only the minimum supporting persistence path if needed
+
+Objective:
+Support a recurring flag for pantry/household items so certain essentials are always included in future baskets.
+
+Examples:
+• toilet roll
+• toothpaste
+• bin bags
+• cat food
+• dishwasher tablets
+
+Required behaviour:
+• pantry/household items can have an `alwaysAdd` / recurring boolean
+• items with this flag are automatically added to future baskets
+• this flag must persist
+
+Important:
+• keep the implementation minimal
+• reuse existing pantry/item persistence if possible
+• do not redesign basket generation broadly
+
+Acceptance:
+• recurring items are automatically included in future baskets
+• setting persists
+
+--------------------------------------------------
+T008 — Visible row chip for recurring items
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+When `alwaysAdd=true`, show a visible chip inside the Ingredient cell.
+
+Chip label:
+Always in Basket
+
+Requirements:
+• use the same chip/button visual language already used elsewhere in the app (similar to optimizer chips)
+• do not add a new column
+• place the chip beneath or beside the ingredient name in a compact way
+• keep row height reasonable
+
+When `alwaysAdd=false`:
+• chip is not shown
+
+Acceptance:
+• recurring items clearly show “Always in Basket” in the row
+• non-recurring items do not show the chip
+
+--------------------------------------------------
+T009 — Confirmation modal when toggling Always in Basket
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Clicking to enable or disable Always in Basket should open a confirmation modal.
+
+Enable modal:
+Title:
+Always add this item to your basket?
+
+Body:
+This item will automatically appear in future baskets until you remove it.
+
+Buttons:
+• Cancel
+• Always Add
+
+Disable modal:
+Title:
+Stop automatically adding this item?
+
+Body:
+This item will no longer be added to future baskets.
+
+Buttons:
+• Cancel
+• Remove Auto Add
+
+Requirements:
+• use a small existing modal/dialog pattern if already available
+• do not add new page flows
+• do not skip confirmation
+
+Acceptance:
+• modal appears on enable
+• modal appears on disable
+• state only changes after confirmation
+
+--------------------------------------------------
+T010 — Preserve all existing food totals and logic
+
+Do NOT change:
+• Basket Totals calculation
+• Comparison Strip calculation
+• THA Rating logic
+• THA scoring logic
+• Pantry optimizer logic
+• food category rendering beyond what is necessary for the routing/input changes
+
+Household items remain excluded from basket totals in this pass.
+
+Acceptance:
+• food totals still behave as before
+• household items do not affect current totals
+
+--------------------------------------------------
+T011 — Minimal verification only
+
+Steps:
+• Run npx tsc --noEmit
+• Start dev server
+• Do not generate tests
+• Do not run automated testing
+
+--------------------------------------------------
+Final acceptance
+
+• Pantry-page items are routed into Pantry or Household in the main Basket display
+• surplus bottom pantry block is removed
+• Household appears in the main Basket when household items exist
+• Household contains sensible subcategories including Pet Care
+• Household note reads:
+  Household items are currently excluded from basket totals.
+• Fresh basket still shows category sections
+• Users can add common items directly inside the Basket by category
+• Users can add freeform items directly inside the Basket
+• New Basket-added pantry/household items are also written into the user Pantry
+• “Always in Basket” is supported and persists
+• recurring items show a visible “Always in Basket” chip in the row
+• toggling recurring state requires confirmation modal
+• food basket totals/comparison remain unchanged
+• no TypeScript errors

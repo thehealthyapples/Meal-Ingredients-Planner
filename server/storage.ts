@@ -202,6 +202,7 @@ export interface IStorage {
   // ── Shopping List Extras ───────────────────────────────────────────────────
   getShoppingListExtras(userId: number): Promise<ShoppingListExtra[]>;
   addShoppingListExtra(userId: number, name: string, category?: string): Promise<ShoppingListExtra>;
+  updateShoppingListExtra(userId: number, id: number, fields: { alwaysAdd?: boolean }): Promise<ShoppingListExtra | undefined>;
   deleteShoppingListExtra(userId: number, id: number): Promise<void>;
 
   // ── Meal Pairings ─────────────────────────────────────────────────────────────
@@ -1805,6 +1806,19 @@ export class DatabaseStorage implements IStorage {
       .values({ userId, householdId, name, category })
       .returning();
     return item;
+  }
+
+  async updateShoppingListExtra(userId: number, id: number, fields: { alwaysAdd?: boolean }): Promise<ShoppingListExtra | undefined> {
+    const householdId = await getHouseholdForUser(userId);
+    const updates: Partial<typeof shoppingListExtras.$inferInsert> = {};
+    if (fields.alwaysAdd !== undefined) updates.alwaysAdd = fields.alwaysAdd;
+    if (Object.keys(updates).length === 0) return undefined;
+    const [result] = await db
+      .update(shoppingListExtras)
+      .set(updates)
+      .where(and(eq(shoppingListExtras.id, id), eq(shoppingListExtras.householdId, householdId)))
+      .returning();
+    return result;
   }
 
   async deleteShoppingListExtra(userId: number, id: number): Promise<void> {

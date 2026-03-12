@@ -389,6 +389,13 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-12_add_always_add_to_extras",
+    statements: [
+      "ALTER TABLE shopping_list_extras ADD COLUMN IF NOT EXISTS always_add boolean NOT NULL DEFAULT false",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
