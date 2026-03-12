@@ -1,0 +1,163 @@
+THA Replit Execution Rules — Basket Flow Fixes / Cost Efficient / Do Not Deviate
+
+• Follow this plan exactly
+• Modify only the minimum code required
+• Do not redesign basket architecture
+• Do not change backend schema unless absolutely required to fix current basket/pantry separation
+• Do not alter THA scoring logic
+• Do not alter Basket Totals or Comparison Strip logic
+• Do not refactor unrelated code
+• Do not generate automated tests
+• Do not run test frameworks
+• Only run a TypeScript compile check
+• Start dev server when finished
+• I will manually verify behaviour
+
+Objective
+
+Fix four current Basket issues:
+
+1. “Always in Basket” control/indicator is not visible
+2. The Basket is currently showing all pantry items, which is incorrect
+3. Pantry items cannot be removed cleanly from the current Basket
+4. Categories should be collapsible, especially when empty, to reduce scrolling
+
+Important product rules:
+• The Basket should not show the user’s entire Pantry inventory by default
+• Only basket-relevant pantry items should appear
+• Removing an item from the Basket must not delete it from the user Pantry unless explicitly intended elsewhere
+• Empty categories should not waste vertical space
+
+--------------------------------------------------
+T001 — Restore visible “Always in Basket” control and indicator
+
+File:
+client/src/pages/shopping-list-page.tsx
+(and any small related row/add-item component only if clearly needed)
+
+Problem:
+The Always in Basket button/chip is not currently visible.
+
+Required behaviour:
+• Items with alwaysAdd=true must show a visible chip in the row:
+  “Always in Basket”
+• When adding or editing eligible pantry/household items, the user must have a visible way to enable/disable Always in Basket
+• Keep the control compact and in-row or in the relevant add/edit interaction
+• Do not add a new full-width column
+
+Acceptance:
+• recurring items visibly show “Always in Basket”
+• user can enable/disable this state from the Basket flow
+
+--------------------------------------------------
+T002 — Stop showing all pantry items in the Basket
+
+Problem:
+The Basket is currently showing all pantry items, which is incorrect.
+
+Correct Basket contents should be limited to:
+• recipe-needed pantry items
+• manually added basket items
+• items flagged Always in Basket
+
+Do NOT show:
+• the user’s full pantry inventory by default
+
+Implementation guidance:
+• fix the selection/filtering step that determines which pantry/pantry-derived items appear in the current Basket
+• do not remove the Pantry as a source of suggestions/addable items
+• do not redesign Pantry storage
+
+Acceptance:
+• Basket no longer shows all pantry items by default
+• only basket-relevant pantry items appear
+
+--------------------------------------------------
+T003 — Allow pantry items to be removed from the current Basket without removing them from Pantry
+
+Problem:
+Pantry items cannot currently be removed properly from the Basket.
+
+Required behaviour:
+• user must be able to remove a pantry item from the current basket
+• this must remove it from the current basket display/state only
+• it must NOT delete the item from the user’s Pantry inventory unless there is a separate explicit pantry-delete flow elsewhere
+
+Important:
+Maintain separation between:
+• Basket membership
+• Pantry storage
+
+Acceptance:
+• pantry item can be removed from the current basket
+• pantry item remains in Pantry data unless explicitly deleted elsewhere
+
+--------------------------------------------------
+T004 — Add collapsible category sections
+
+File:
+client/src/pages/shopping-list-page.tsx
+
+Add expand/collapse behaviour for Basket category sections.
+
+Required behaviour:
+• every category header should have an expand/collapse toggle
+• categories with current basket items may default to expanded
+• categories with no current basket items should default to collapsed
+• user can expand them to add items directly if needed
+• collapse state should reduce vertical scrolling significantly
+
+Keep the UI lightweight:
+• simple chevron/toggle in the category header
+• no redesign of table structure
+
+Acceptance:
+• categories can be collapsed/expanded
+• empty categories do not consume excessive space
+• user can still expand an empty category to add items
+
+--------------------------------------------------
+T005 — Preserve add-from-category behaviour
+
+Important:
+Do NOT remove the ability to add common items/freeform items from category sections.
+
+Even if a category is empty/collapsed:
+• user must still be able to expand it and add items
+
+Acceptance:
+• direct add-by-category still works after collapse behaviour is introduced
+
+--------------------------------------------------
+T006 — Preserve all existing totals and food logic
+
+Do NOT change:
+• Basket Totals calculation
+• Comparison Strip calculation
+• THA Rating logic
+• THA Optimizer logic
+• non-related scoring/matching code
+
+Acceptance:
+• food totals still behave as before
+• these fixes only affect basket membership, visibility, and category UX
+
+--------------------------------------------------
+T007 — Minimal verification only
+
+Steps:
+• Run npx tsc --noEmit
+• Start dev server
+• Do not generate tests
+• Do not run automated testing
+
+--------------------------------------------------
+Final acceptance
+
+• Always in Basket chip/control is visible and usable
+• Basket no longer shows the full pantry inventory by default
+• pantry items can be removed from the current Basket without deleting them from Pantry
+• category sections are collapsible
+• empty categories default to collapsed or otherwise take minimal vertical space
+• user can still expand empty categories and add items
+• no TypeScript errors

@@ -1017,8 +1017,8 @@ export default function ShoppingListPage() {
   });
 
   const addExtraMutation = useMutation({
-    mutationFn: ({ name, category }: { name: string; category: string }) =>
-      apiRequest("POST", "/api/shopping-list/extras", { name, category }),
+    mutationFn: ({ name, category, alwaysAdd }: { name: string; category: string; alwaysAdd?: boolean }) =>
+      apiRequest("POST", "/api/shopping-list/extras", { name, category, alwaysAdd }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] }),
   });
 
@@ -1034,6 +1034,8 @@ export default function ShoppingListPage() {
   const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
   const [addItemInput, setAddItemInput] = useState('');
   const [alwaysAddModal, setAlwaysAddModal] = useState<{ extraId: number; currentValue: boolean } | null>(null);
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const collapsedInitRef = useRef(false);
 
   const toggleNeededThisWeek = (id: number) => {
     setNeededThisWeek(prev => {
@@ -1050,12 +1052,20 @@ export default function ShoppingListPage() {
 
   const isHousehold = (item: ShoppingListItem) => (item.category || '').toLowerCase() === 'household';
 
+  const toggleCollapsed = useCallback((cat: string) => {
+    setCollapsedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
+      return next;
+    });
+  }, []);
+
   const handleAddItem = useCallback(async (name: string, basketCategory: string) => {
     if (!name.trim()) return;
     const extraCategory = basketCategory === 'household' ? 'household'
       : basketCategory === 'pantry' ? 'larder'
       : basketCategory;
-    await addExtraMutation.mutateAsync({ name: name.trim(), category: extraCategory });
+    await addExtraMutation.mutateAsync({ name: name.trim(), category: extraCategory, alwaysAdd: true });
     const pantryCategory = basketCategory === 'household' ? 'household' : 'larder';
     try {
       await apiRequest("POST", "/api/pantry", {
@@ -1066,7 +1076,8 @@ export default function ShoppingListPage() {
     } catch { /* silent if already exists */ }
     setAddItemInput('');
     setAddingToCategory(null);
-  }, [addExtraMutation]);
+    if (collapsedCategories.has(basketCategory)) toggleCollapsed(basketCategory);
+  }, [addExtraMutation, collapsedCategories, toggleCollapsed]);
 
   const frozenMealIds = useMemo(() => {
     const ids = new Set<number>();
@@ -1613,6 +1624,24 @@ export default function ShoppingListPage() {
     return sorted;
   }, [savedItems, sortColumn, sortDirection, pricesByItem, getCheapestForItem, getItemTier, getItemSmpRating, sourcesByItem]);
 
+  // Initialise collapsed-category state once data has loaded
+  useEffect(() => {
+    if (collapsedInitRef.current) return;
+    if (loadingSaved && !shoppingExtras.length) return;
+    const toCollapse = new Set<string>();
+    for (const cat of BASKET_DISPLAY_CATEGORIES) {
+      const catItems = sortedItems.filter(i => !isStaple(i) && !isHousehold(i) && getBasketCategory(i) === cat);
+      const catAlwaysExtras = shoppingExtras.filter(e => e.alwaysAdd && e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat);
+      if (catItems.length === 0 && catAlwaysExtras.length === 0) toCollapse.add(cat);
+    }
+    const hhSaved = sortedItems.filter(i => !isStaple(i) && isHousehold(i));
+    const hhExtras = shoppingExtras.filter(e => e.alwaysAdd && e.category === 'household');
+    if (hhSaved.length === 0 && hhExtras.length === 0) toCollapse.add('household');
+    setCollapsedCategories(toCollapse);
+    collapsedInitRef.current = true;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortedItems, shoppingExtras, loadingSaved]);
+
   const startEdit = (itemId: number, field: EditState['field'], currentValue: string) => {
     setEditState({ itemId, field, value: currentValue });
   };
@@ -1860,7 +1889,7 @@ export default function ShoppingListPage() {
               <div>
                 {BASKET_DISPLAY_CATEGORIES.map(cat => {
                   const catItems = sortedItems.filter(i => !isStaple(i) && !isHousehold(i) && getBasketCategory(i) === cat);
-                  const catExtras = shoppingExtras.filter(e => e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat);
+                  const catExtras = shoppingExtras.filter(e => e.alwaysAdd && e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat);
                   const hasContent = catItems.length > 0 || catExtras.length > 0;
                   const isPantry = cat === 'pantry';
                   const displayRows = isPantry
@@ -1875,35 +1904,45 @@ export default function ShoppingListPage() {
                     <div key={cat}>
                       {/* Sticky category header */}
                       <div className="sticky top-0 z-10 flex items-center gap-3 py-1.5 px-3 bg-muted/80 border-y border-border text-xs backdrop-blur-sm" data-testid={`category-header-${cat}`}>
-                        <div className="flex items-center gap-1.5 font-semibold min-w-[90px]">
+                        <button className="flex items-center gap-1.5 font-semibold min-w-[90px] hover:text-primary transition-colors" onClick={() => toggleCollapsed(cat)} data-testid={`button-collapse-${cat}`}>
+                          {collapsedCategories.has(cat) ? <ChevronDown className="h-3 w-3 flex-shrink-0" /> : <ChevronUp className="h-3 w-3 flex-shrink-0" />}
                           <CatIcon className="h-3 w-3" />
                           <span>{capitalizeWords(cat)}</span>
-                        </div>
-                        <select
-                          className="h-6 text-[11px] border border-border rounded px-1.5 bg-background cursor-pointer"
-                          value={catDefault.supermarket}
-                          onChange={e => setCategoryDefault(cat, 'supermarket', e.target.value)}
-                          data-testid={`select-cat-supermarket-${cat}`}
-                        >
-                          <option value="">Auto</option>
-                          {SUPERMARKET_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                        <div className="ml-auto flex items-center gap-1.5 text-[11px]">
-                          {isMixed && <span className="text-amber-600 dark:text-amber-400 font-medium">Mixed</span>}
+                          {(catItems.length + catExtras.length) > 0 && <span className="text-muted-foreground font-normal">({catItems.length + catExtras.length})</span>}
+                        </button>
+                        {!collapsedCategories.has(cat) && <>
                           <select
                             className="h-6 text-[11px] border border-border rounded px-1.5 bg-background cursor-pointer"
-                            value={catDefault.tier}
-                            onChange={e => setCategoryDefault(cat, 'tier', e.target.value)}
-                            data-testid={`select-cat-tier-${cat}`}
+                            value={catDefault.supermarket}
+                            onChange={e => setCategoryDefault(cat, 'supermarket', e.target.value)}
+                            data-testid={`select-cat-supermarket-${cat}`}
                           >
-                            {(CATEGORY_TIER_OPTIONS[cat] || CATEGORY_TIER_OPTIONS.other).map(key => (
-                              <option key={key} value={key}>{EXTENDED_TIER_LABELS[key]?.label || key}</option>
-                            ))}
+                            <option value="">Auto</option>
+                            {SUPERMARKET_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
-                        </div>
+                          <div className="ml-auto flex items-center gap-1.5 text-[11px]">
+                            {isMixed && <span className="text-amber-600 dark:text-amber-400 font-medium">Mixed</span>}
+                            <select
+                              className="h-6 text-[11px] border border-border rounded px-1.5 bg-background cursor-pointer"
+                              value={catDefault.tier}
+                              onChange={e => setCategoryDefault(cat, 'tier', e.target.value)}
+                              data-testid={`select-cat-tier-${cat}`}
+                            >
+                              {(CATEGORY_TIER_OPTIONS[cat] || CATEGORY_TIER_OPTIONS.other).map(key => (
+                                <option key={key} value={key}>{EXTENDED_TIER_LABELS[key]?.label || key}</option>
+                              ))}
+                            </select>
+                          </div>
+                        </>}
+                        {collapsedCategories.has(cat) && (
+                          <button onClick={() => { toggleCollapsed(cat); setAddingToCategory(cat); }} className="ml-auto text-[10px] text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors" data-testid={`button-add-collapsed-${cat}`}>
+                            <Plus className="h-3 w-3" />Add
+                          </button>
+                        )}
                       </div>
 
-                      <div className="overflow-x-auto">
+                      {!collapsedCategories.has(cat) && (
+                      <><div className="overflow-x-auto">
                         <table className="w-full text-xs table-fixed" data-testid={`table-category-${cat}`}>
                           <colgroup>
                             <col style={{ width: 28 }} />
@@ -2330,15 +2369,13 @@ export default function ShoppingListPage() {
                                 <td className="px-1.5 py-1.5" colSpan={2}>
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span className="font-medium text-foreground/80" data-testid={`text-extra-name-${extra.id}`}>{capitalizeWords(extra.name)}</span>
-                                    {extra.alwaysAdd && (
-                                      <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border border-primary/40 text-primary bg-primary/8" data-testid={`chip-always-${extra.id}`}>Always in Basket</span>
-                                    )}
+                                    <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border border-primary/40 text-primary bg-primary/10" data-testid={`chip-always-${extra.id}`}>Always in Basket</span>
                                   </div>
                                 </td>
                                 <td colSpan={99} className="px-1.5 py-1.5 text-right">
                                   <div className="flex items-center justify-end gap-1">
-                                    <Button variant="ghost" size="icon" className={`h-6 w-6 text-[10px] ${extra.alwaysAdd ? 'text-primary' : 'text-muted-foreground'}`} onClick={() => setAlwaysAddModal({ extraId: extra.id, currentValue: extra.alwaysAdd })} title="Toggle Always in Basket" data-testid={`button-always-extra-${extra.id}`}><RefreshCw className="h-3 w-3" /></Button>
-                                    <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => setAlwaysAddModal({ extraId: extra.id, currentValue: extra.alwaysAdd })} title="Toggle Always in Basket" data-testid={`button-always-extra-${extra.id}`}><RefreshCw className="h-3 w-3" /></Button>
+                                    <Button variant="ghost" size="icon" onClick={() => updateExtraMutation.mutate({ id: extra.id, alwaysAdd: false })} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
                                   </div>
                                 </td>
                               </tr>
@@ -2379,6 +2416,7 @@ export default function ShoppingListPage() {
                           <Plus className="h-3 w-3" /> Add {capitalizeWords(cat)} item
                         </button>
                       )}
+                      </>)}
                     </div>
                   );
                 })}
@@ -2386,17 +2424,20 @@ export default function ShoppingListPage() {
                 {/* Household section */}
                 {(() => {
                   const householdSavedItems = sortedItems.filter(i => !isStaple(i) && isHousehold(i));
-                  const householdExtras = shoppingExtras.filter(e => e.category === 'household');
+                  const householdExtras = shoppingExtras.filter(e => e.alwaysAdd && e.category === 'household');
                   return (
                     <div className="border-t border-border/40">
                       {/* Household header */}
                       <div className="sticky top-0 z-10 flex items-center gap-3 py-1.5 px-3 bg-muted/80 border-y border-border text-xs backdrop-blur-sm" data-testid="category-header-household">
-                        <div className="flex items-center gap-1.5 font-semibold min-w-[90px]">
+                        <button className="flex items-center gap-1.5 font-semibold min-w-[90px] hover:text-primary transition-colors" onClick={() => toggleCollapsed('household')} data-testid="button-collapse-household">
+                          {collapsedCategories.has('household') ? <ChevronDown className="h-3 w-3 flex-shrink-0" /> : <ChevronUp className="h-3 w-3 flex-shrink-0" />}
                           <Home className="h-3 w-3" />
                           <span>Household</span>
-                        </div>
+                          {(householdSavedItems.length + householdExtras.length) > 0 && <span className="text-muted-foreground font-normal">({householdSavedItems.length + householdExtras.length})</span>}
+                        </button>
                         <span className="text-[10px] text-muted-foreground/70 ml-auto italic">Not included in basket totals</span>
                       </div>
+                      {!collapsedCategories.has('household') && (<>
                       {/* Subcategories */}
                       {HOUSEHOLD_SUBCAT_KEYS.map(subcat => {
                         const subcatSaved = householdSavedItems.filter(i => getHouseholdSubcategory(i.normalizedName ?? i.productName) === subcat);
@@ -2436,15 +2477,13 @@ export default function ShoppingListPage() {
                                     <td className="px-1.5 py-1.5" colSpan={2}>
                                       <div className="flex items-center gap-1.5 flex-wrap">
                                         <span className="font-medium text-foreground/80">{capitalizeWords(extra.name)}</span>
-                                        {extra.alwaysAdd && (
-                                          <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border border-primary/40 text-primary bg-primary/8" data-testid={`chip-always-hh-${extra.id}`}>Always in Basket</span>
-                                        )}
+                                        <span className="inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border border-primary/40 text-primary bg-primary/10" data-testid={`chip-always-hh-${extra.id}`}>Always in Basket</span>
                                       </div>
                                     </td>
                                     <td className="px-1.5 py-1.5 text-right">
                                       <div className="flex items-center justify-end gap-1">
-                                        <Button variant="ghost" size="icon" className={`h-6 w-6 ${extra.alwaysAdd ? 'text-primary' : 'text-muted-foreground'}`} onClick={() => setAlwaysAddModal({ extraId: extra.id, currentValue: extra.alwaysAdd })} title="Toggle Always in Basket" data-testid={`button-always-hh-extra-${extra.id}`}><RefreshCw className="h-3 w-3" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-hh-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" onClick={() => setAlwaysAddModal({ extraId: extra.id, currentValue: extra.alwaysAdd })} title="Toggle Always in Basket" data-testid={`button-always-hh-extra-${extra.id}`}><RefreshCw className="h-3 w-3" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => updateExtraMutation.mutate({ id: extra.id, alwaysAdd: false })} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-hh-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
                                       </div>
                                     </td>
                                   </tr>
@@ -2473,6 +2512,7 @@ export default function ShoppingListPage() {
                           <Plus className="h-3 w-3" /> Add household item
                         </button>
                       )}
+                      </>)}
                     </div>
                   );
                 })()}
