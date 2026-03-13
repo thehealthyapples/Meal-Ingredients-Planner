@@ -181,7 +181,7 @@ export default function ProductFlowVisual() {
         {NODES.map((node) => (
           <div
             key={node.deg}
-            className="rounded-lg border shadow-sm px-2 py-1.5 bg-white/80 border-primary/15"
+            className="rounded-lg border shadow-sm px-2 py-1.5 bg-white/80 border-primary/15 flex flex-col items-center justify-center text-center"
             style={nodeStyle(node.deg)}
             data-testid={node.testId}
           >

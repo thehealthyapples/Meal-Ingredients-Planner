@@ -16,7 +16,7 @@ import {
 import { useLocation, useSearch } from "wouter";
 import KitchenToBasketVisual from "@/components/KitchenToBasketVisual";
 import transparentAppleUrl from "@assets/new_single_apple_transparent_1772836544576.png";
-import brandLogoUrl from "@assets/thehealthy_apples_transparent_logo__1773438557183.png";
+import brandLogoUrl from "@assets/thehealthy_apples_logo_cropped.png";
 
 type AppConfig = {
   registrationEnabled: boolean;
