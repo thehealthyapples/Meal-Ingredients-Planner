@@ -29,6 +29,7 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   isDemo: boolean("is_demo").notNull().default(false),
   demoExpiresAt: timestamp("demo_expires_at", { withTimezone: true }),
+  demoClaimedEmail: text("demo_claimed_email"),
 });
 
 export const mealCategories = pgTable("meal_categories", {

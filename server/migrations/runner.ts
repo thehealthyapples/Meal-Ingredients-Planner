@@ -496,6 +496,13 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-13_add_demo_claimed_email",
+    statements: [
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS demo_claimed_email TEXT",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

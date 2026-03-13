@@ -361,6 +361,28 @@ export function setupAuth(app: Express) {
     }
   });
 
+  app.post("/api/demo/save-email", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as SelectUser;
+    if (!user.isDemo) return res.status(403).json({ message: "Not a demo account." });
+    const { email } = req.body;
+    if (!email || typeof email !== "string" || !email.includes("@")) {
+      return res.status(400).json({ message: "Valid email required." });
+    }
+    try {
+      const { db: database } = await import("./db");
+      const { users: usersTable } = await import("@shared/schema");
+      const { eq } = await import("drizzle-orm");
+      await database.update(usersTable)
+        .set({ demoClaimedEmail: email.trim().toLowerCase() })
+        .where(eq(usersTable.id, user.id));
+      res.json({ success: true });
+    } catch (err: any) {
+      console.error("[Demo] Save email error:", err?.message);
+      res.status(500).json({ message: "Failed to save email." });
+    }
+  });
+
   app.delete("/api/demo/cleanup", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const user = req.user as SelectUser;
