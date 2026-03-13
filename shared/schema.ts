@@ -27,6 +27,8 @@ export const users = pgTable("users", {
   subscriptionStatus: text("subscription_status"),
   subscriptionExpiresAt: timestamp("subscription_expires_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  isDemo: boolean("is_demo").notNull().default(false),
+  demoExpiresAt: timestamp("demo_expires_at", { withTimezone: true }),
 });
 
 export const mealCategories = pgTable("meal_categories", {

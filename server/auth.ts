@@ -54,6 +54,20 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  app.use("/api", (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated()) return next();
+    const user = req.user as SelectUser;
+    if (!user.isDemo) return next();
+    if (req.path === "/demo/start" && req.method === "POST") return next();
+    if (!user.demoExpiresAt || new Date(user.demoExpiresAt) < new Date()) {
+      req.logout((err: any) => {
+        if (err) console.error("[Demo] Logout error:", err);
+      });
+      return res.status(401).json({ code: "DEMO_EXPIRED" });
+    }
+    next();
+  });
+
   passport.use(
     new LocalStrategy(async (username, password, done) => {
       try {
@@ -330,4 +344,52 @@ export function setupAuth(app: Express) {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     res.json(sanitizeUser(req.user as SelectUser));
   });
+
+  app.post("/api/demo/start", async (req, res, next) => {
+    try {
+      const user = await storage.createDemoUser();
+      await storage.seedDemoData(user.id).catch(e =>
+        console.error("[Demo] Seed error (non-fatal):", e?.message)
+      );
+      req.login(user, (loginErr) => {
+        if (loginErr) return next(loginErr);
+        res.status(201).json(sanitizeUser(user));
+      });
+    } catch (err: any) {
+      console.error("[Demo] Failed to start demo session:", err?.message);
+      res.status(500).json({ message: "Failed to start demo session. Please try again." });
+    }
+  });
+
+  app.delete("/api/demo/cleanup", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as SelectUser;
+    if (!user.isDemo) return res.status(403).json({ message: "Not a demo account." });
+    try {
+      req.logout(() => {});
+      await storage.cleanupDemoUser(user.id);
+      res.json({ message: "Demo session cleaned up." });
+    } catch (err: any) {
+      console.error("[Demo] Cleanup error:", err?.message);
+      res.status(500).json({ message: "Cleanup failed." });
+    }
+  });
+
+  app.delete("/api/admin/demo/cleanup-expired", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as SelectUser;
+    if (user.role !== "admin") return res.status(403).json({ message: "Admin only." });
+    const { db: database } = await import("./db");
+    const { users: usersTable } = await import("@shared/schema");
+    const { sql: sqlExpr, lte } = await import("drizzle-orm");
+    const expired = await database.select({ id: usersTable.id })
+      .from(usersTable)
+      .where(sqlExpr`is_demo = true AND demo_expires_at < NOW()`);
+    let cleaned = 0;
+    for (const { id } of expired) {
+      try { await storage.cleanupDemoUser(id); cleaned++; } catch { }
+    }
+    res.json({ cleaned });
+  });
+
 }

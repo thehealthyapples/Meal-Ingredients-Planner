@@ -1,0 +1,218 @@
+#4 - Demo Mode Phase 1 — Temporary Demo User, Global Banner, and 20-Minute Expiry
+
+What & Why
+Replace the current fake/demo-only experience with a real restricted demo mode that uses the normal THA app. Demo visitors should experience the real planner/basket/analysis flows through a temporary demo user account, with a clear banner explaining restrictions and a hard 20-minute timeout.
+
+This is the first implementation pass only. Keep it tightly scoped and low-risk.
+
+Done looks like
+
+Demo entry
+- The auth page provides a demo entry path using the chosen hero secondary CTA:
+  - "Explore The Healthy Apples →"
+- Clicking this starts a temporary demo account/session and routes the visitor into the normal app, not the old fake /demo experience
+
+Temporary demo user
+- A temporary demo user is created automatically by the backend
+- The user is marked clearly as a demo user in persisted user data
+- The demo user has an expiry timestamp exactly 20 minutes after creation
+- Demo users use the normal authenticated app/session flow
+
+Normal app, not fake demo
+- Demo users enter the normal THA app routes and layout
+- They do not use a separate fake frontend-only /demo experience
+- Demo users skip onboarding and land in a prepared seeded state suitable for exploring the product immediately
+
+Global banner
+- A visible banner appears throughout the app for demo users
+- The banner clearly explains:
+  - this is a demo account
+  - some features are limited
+  - changes are temporary / not saved permanently
+  - the session expires in 20 minutes
+- The banner includes a live countdown based on the server-provided expiry timestamp
+- The banner is layout-level / global, not page-specific
+
+20-minute timeout
+- Demo expiry is enforced server-side, not only by the frontend
+- Once expired, demo API access is blocked
+- The frontend redirects the user back to /auth with a friendly expired-session message
+- Demo users cannot continue using the app after expiry
+
+Scope safety
+- Keep the right-hand login/register flows intact except for wiring the demo CTA
+- Do not implement the full restriction matrix yet beyond what is required for a safe Phase 1
+- Do not redesign onboarding, planner, basket, or other unrelated pages
+- Do not implement analytics/leads/email capture in this pass
+
+Out of scope
+- Full demo restriction hardening across every route/action
+- Email capture / save-your-demo flow
+- One-meal-per-session logic
+- Cleanup automation cron scheduling beyond a safe minimum implementation
+- Full removal of legacy /demo routes unless trivial and safe
+- Landing page redesign outside the existing hero/button wiring
+- New third-party analytics tools
+
+Tasks
+
+T001 — Add demo-user persistence fields
+Add the minimum backend/schema support required for temporary demo users.
+
+Required fields
+- is_demo: boolean
+- demo_expires_at: timestamp/datetime nullable
+
+Requirements
+- default existing users safely to non-demo
+- keep schema changes minimal and maintainable
+- do not introduce unnecessary new account types or complex role logic in this pass
+
+T002 — Add POST /api/demo/start
+Create a backend endpoint that starts a demo session.
+
+Behaviour
+- no normal login required
+- creates a temporary demo user
+- sets is_demo = true
+- sets demo_expires_at = now + 20 minutes
+- logs the demo user in through the normal session/auth mechanism
+- seeds a prepared demo state sufficient to explore the normal app
+- returns the authenticated demo user object needed by the frontend
+
+Requirements
+- keep implementation transactional/safe where possible
+- if seeding fails, do not leave broken partial demo users behind
+- keep this endpoint rate-aware / guarded if a lightweight protection is easy to add without drift
+
+T003 — Seed a prepared demo experience
+Demo users should skip onboarding and enter a ready-to-explore product state.
+
+Requirements
+- seed enough realistic THA data to make the real app feel valuable immediately
+- focus on what best demonstrates the product:
+  - planner
+  - basket
+  - ingredient/product analysis context
+  - household/pantry context if needed for the seeded experience
+- do not overbuild this pass
+- keep demo seed data canonical and maintainable
+
+Important
+- demo users should not be sent through onboarding
+- they should land in a meaningful pre-prepared state
+
+T004 — Add server-side demo expiry enforcement
+Add middleware/guards so the 20-minute timeout is enforced on the backend.
+
+Requirements
+- on authenticated requests, if req.user.is_demo is true and demo_expires_at has passed:
+  - destroy/invalidate the session
+  - block access
+  - return a clear machine-readable error code such as DEMO_EXPIRED
+- server is the source of truth
+- frontend countdown is secondary/cosmetic only
+
+T005 — Wire auth page CTA to start demo
+Update the auth page so the chosen secondary CTA:
+- "Explore The Healthy Apples →"
+
+starts the real demo flow.
+
+Requirements
+- clicking the CTA should call POST /api/demo/start
+- on success, route the demo user into the normal app
+- preserve the normal create-account/login flows
+- keep styling/copy already agreed for the hero
+
+T006 — Skip onboarding for demo users
+Ensure demo users are not forced into onboarding.
+
+Requirements
+- demo users should be treated as ready-to-use for routing purposes
+- they should enter the seeded app experience directly
+- do not disturb normal onboarding behaviour for real users
+
+T007 — Add global demo banner in the normal app shell
+Add a layout-level banner shown whenever the authenticated user is a demo user.
+
+Banner requirements
+- visible across the normal app while in demo mode
+- explains:
+  - "Demo account — some features are limited"
+  - "Changes are temporary"
+  - "Session expires in X minutes"
+- countdown based on demo_expires_at from the authenticated user
+- keep styling clear, calm, and professional
+- if low effort, add a warning state when under 2 minutes remaining
+
+Important
+- drive banner visibility from real authenticated user state (e.g. /api/user / useUser)
+- do not rely on a separate fake demo context as the source of truth
+
+T008 — Handle expiry UX cleanly
+When the server returns demo-expired, the frontend should handle it gracefully.
+
+Requirements
+- redirect the user to /auth?demo=expired (or equivalent existing pattern)
+- show a friendly message on the auth page, such as:
+  - "Your demo session has ended. Create an account to continue."
+- keep this non-intrusive and clear
+
+T009 — Add minimum cleanup support
+Implement a safe minimum cleanup path for expired demo users/data.
+
+Requirements
+- add a cleanupDemoUser(userId) function or equivalent explicit cleanup helper
+- account for any known non-cascading demo-owned records identified in the planning phase
+- this does not need full scheduled automation yet, but must make cleanup possible and safe
+- if low effort, add a simple admin/internal/manual cleanup endpoint for expired demo users
+
+Important
+- cleanup must not rely purely on hope/cascade assumptions
+- explicitly handle known household-related cleanup concerns
+
+T010 — Keep legacy demo system isolated for now
+If the old /demo routes still exist, do not spend time fully removing them in this pass unless trivial.
+But:
+- the new CTA should use the new temporary demo-user flow
+- the new demo architecture should be clearly preferred
+- avoid introducing more dependencies on the legacy fake demo system
+
+Implementation guidance
+- prefer the simplest architecture that gives a real-app demo experience safely
+- keep changes focused
+- reuse existing auth/session/user query patterns
+- do not redesign unrelated components
+- preserve production user behaviour for non-demo users
+
+Relevant files
+- auth page / hero CTA wiring
+- current auth/session backend files
+- users schema/model definitions
+- any current demo-related context/routes/components
+- app shell / layout where a global banner should live
+- protected route / onboarding guard logic
+- storage/repository layer for demo cleanup + seeding
+
+Acceptance checklist
+- clicking "Explore The Healthy Apples →" starts a real temporary demo session
+- demo user is created and logged in through normal auth/session flow
+- demo user enters the normal app, not the fake static demo
+- demo user skips onboarding
+- global banner appears and explains restrictions
+- banner includes countdown
+- session definitely expires after 20 minutes, enforced server-side
+- expiry redirects back to auth with a friendly message
+- cleanup helper exists for demo users/data
+- normal users and auth flows remain unaffected
+
+At the end, provide a concise implementation summary covering
+- files changed
+- schema changes made
+- how demo user creation works
+- how seeded demo state works
+- how the banner is driven
+- how 20-minute expiry is enforced
+- what cleanup support was added
+- any known follow-up work that should be handled in Phase 2

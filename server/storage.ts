@@ -248,6 +248,11 @@ export interface IStorage {
   upsertFoodDiaryMetrics(userId: number, date: string, data: Partial<InsertFoodDiaryMetrics>): Promise<FoodDiaryMetrics>;
   getFoodDiaryMetricsTrends(userId: number, days?: number): Promise<FoodDiaryMetrics[]>;
 
+  // ── Demo User Lifecycle ───────────────────────────────────────────────────────
+  createDemoUser(): Promise<User>;
+  seedDemoData(userId: number): Promise<void>;
+  cleanupDemoUser(userId: number): Promise<void>;
+
   sessionStore: session.Store;
 }
 
@@ -2523,6 +2528,229 @@ export class DatabaseStorage implements IStorage {
       }
     }
     return { imported, skipped, failed };
+  }
+  // ── Demo User Lifecycle ───────────────────────────────────────────────────────
+
+  async createDemoUser(): Promise<User> {
+    const { randomBytes } = await import("crypto");
+    const suffix = randomBytes(6).toString("hex");
+    const username = `demo_${suffix}@demo.thehealthyapples.com`;
+    const password = randomBytes(24).toString("hex");
+    const demoExpiresAt = new Date(Date.now() + 20 * 60 * 1000);
+
+    return await db.transaction(async (tx) => {
+      const [user] = await tx.insert(users).values({
+        username,
+        password,
+        displayName: "Demo User",
+        isDemo: true,
+        demoExpiresAt,
+        onboardingCompleted: true,
+        emailVerified: true,
+        isBetaUser: true,
+        starterMealsLoaded: true,
+      }).returning();
+
+      const inviteCode = randomBytes(4).toString("hex").toUpperCase();
+      const [household] = await tx.insert(households).values({
+        name: "Demo Household",
+        inviteCode,
+        createdByUserId: user.id,
+      }).returning();
+
+      await tx.insert(householdMembers).values({
+        householdId: household.id,
+        userId: user.id,
+        role: "owner",
+        status: "active",
+        joinedAt: new Date(),
+      });
+
+      return user;
+    });
+  }
+
+  async seedDemoData(userId: number): Promise<void> {
+    const DEMO_MEALS = [
+      {
+        name: "Overnight Oats with Berries",
+        ingredients: ["Rolled oats", "Oat milk", "Chia seeds", "Mixed berries", "Honey", "Vanilla extract"],
+        mealSourceType: "scratch" as const,
+        mealFormat: "recipe" as const,
+        isReadyMeal: false,
+        dietTypes: ["vegetarian", "vegan"] as string[],
+        audience: "adult" as const,
+        servings: 1,
+      },
+      {
+        name: "Griddled Chicken & Avocado Salad",
+        ingredients: ["Free-range chicken breast", "Avocado", "Mixed salad leaves", "Cherry tomatoes", "Cucumber", "Lemon juice", "Extra virgin olive oil", "Black pepper"],
+        mealSourceType: "scratch" as const,
+        mealFormat: "recipe" as const,
+        isReadyMeal: false,
+        dietTypes: ["gluten-free"] as string[],
+        audience: "adult" as const,
+        servings: 2,
+      },
+      {
+        name: "Baked Salmon with Tenderstem Broccoli",
+        ingredients: ["Salmon fillets", "Tenderstem broccoli", "Lemon", "Garlic", "Extra virgin olive oil", "Dill", "Sea salt"],
+        mealSourceType: "scratch" as const,
+        mealFormat: "recipe" as const,
+        isReadyMeal: false,
+        dietTypes: ["gluten-free", "dairy-free"] as string[],
+        audience: "adult" as const,
+        servings: 2,
+      },
+      {
+        name: "Red Lentil & Spinach Soup",
+        ingredients: ["Red lentils", "Baby spinach", "Tinned chopped tomatoes", "Vegetable stock", "Red onion", "Garlic", "Ground cumin", "Ground coriander", "Olive oil"],
+        mealSourceType: "scratch" as const,
+        mealFormat: "recipe" as const,
+        isReadyMeal: false,
+        dietTypes: ["vegetarian", "vegan", "gluten-free"] as string[],
+        audience: "adult" as const,
+        servings: 4,
+      },
+    ];
+
+    const createdMeals: Meal[] = [];
+    for (const mealData of DEMO_MEALS) {
+      const meal = await this.createMeal(userId, {
+        ...mealData,
+        instructions: [],
+        imageUrl: null,
+        categoryId: null,
+        sourceUrl: null,
+        mealTemplateId: null,
+        isFreezerEligible: true,
+        isDrink: false,
+        drinkType: null,
+        barcode: null,
+        brand: null,
+        originalMealId: null,
+        kind: "meal",
+        isSystemMeal: false,
+      });
+      createdMeals.push(meal);
+    }
+
+    const [oats, chickenSalad, salmon, lentilSoup] = createdMeals;
+
+    const weeks = await this.createPlannerWeeks(userId);
+    const week1 = weeks[0];
+    if (!week1) return;
+
+    const days = await this.getPlannerDays(week1.id);
+    const monday    = days.find(d => d.dayOfWeek === 0);
+    const tuesday   = days.find(d => d.dayOfWeek === 1);
+    const wednesday = days.find(d => d.dayOfWeek === 2);
+    const thursday  = days.find(d => d.dayOfWeek === 3);
+
+    const entries: Array<[number, string, number]> = [
+      [monday?.id ?? 0,    "breakfast", oats.id],
+      [monday?.id ?? 0,    "lunch",     chickenSalad.id],
+      [monday?.id ?? 0,    "dinner",    salmon.id],
+      [tuesday?.id ?? 0,   "breakfast", oats.id],
+      [tuesday?.id ?? 0,   "dinner",    lentilSoup.id],
+      [wednesday?.id ?? 0, "lunch",     lentilSoup.id],
+      [wednesday?.id ?? 0, "dinner",    chickenSalad.id],
+      [thursday?.id ?? 0,  "breakfast", oats.id],
+      [thursday?.id ?? 0,  "dinner",    salmon.id],
+    ];
+
+    for (const [dayId, mealType, mealId] of entries) {
+      if (!dayId) continue;
+      await this.addPlannerEntry(dayId, mealType, "adult", mealId);
+    }
+
+    const shoppingItems: Omit<InsertShoppingListItem, "userId">[] = [
+      { productName: "Free Range Eggs (12)", normalizedName: "eggs", quantity: 1, category: "dairy-eggs", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 2.49, smpRating: 4 },
+      { productName: "Oat Milk (1L)", normalizedName: "oat milk", quantity: 2, category: "dairy-eggs", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Waitrose", matchedPrice: 1.45, smpRating: 3 },
+      { productName: "Rolled Oats (1kg)", normalizedName: "rolled oats", quantity: 1, category: "grains", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.09, smpRating: 5 },
+      { productName: "Mixed Berries (400g)", normalizedName: "mixed berries", quantity: 1, category: "fruit", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 2.99, smpRating: 5 },
+      { productName: "Salmon Fillets (2 pack)", normalizedName: "salmon", quantity: 1, category: "fish", selectedTier: "premium", checked: false, needsReview: false, matchedStore: "Waitrose", matchedPrice: 5.49, smpRating: 5 },
+      { productName: "Chicken Breast (500g)", normalizedName: "chicken breast", quantity: 1, category: "meat", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 3.79, smpRating: 4 },
+      { productName: "Tenderstem Broccoli (200g)", normalizedName: "broccoli", quantity: 1, category: "vegetables", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.99, smpRating: 5 },
+      { productName: "Avocado (2 pack)", normalizedName: "avocado", quantity: 1, category: "fruit", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.89, smpRating: 5 },
+      { productName: "Red Split Lentils (500g)", normalizedName: "red lentils", quantity: 1, category: "pulses", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.29, smpRating: 5 },
+      { productName: "Baby Spinach (200g)", normalizedName: "spinach", quantity: 1, category: "vegetables", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.49, smpRating: 5 },
+      { productName: "Tinned Chopped Tomatoes (400g)", normalizedName: "chopped tomatoes", quantity: 2, category: "tinned", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 0.55, smpRating: 4 },
+      { productName: "Extra Virgin Olive Oil (500ml)", normalizedName: "olive oil", quantity: 1, category: "oils", selectedTier: "premium", checked: true, needsReview: false, matchedStore: "Waitrose", matchedPrice: 5.99, smpRating: 5 },
+    ];
+
+    for (const item of shoppingItems) {
+      await this.addShoppingListItem(userId, { ...item } as InsertShoppingListItem);
+    }
+
+    await this.upsertUserPreferences(userId, {
+      dietTypes: [],
+      excludedIngredients: [],
+      healthGoals: ["eat_healthier", "reduce_processed"],
+      budgetLevel: "standard",
+      preferredStores: ["Tesco", "Waitrose"],
+      upfSensitivity: "moderate",
+      qualityPreference: "standard",
+      calorieTarget: 2000,
+      calorieMode: "auto",
+      adultsCount: 2,
+      childrenCount: 0,
+      babiesCount: 0,
+      soundEnabled: false,
+      eliteTrackingEnabled: true,
+      healthTrendEnabled: true,
+      barcodeScannerEnabled: true,
+      plannerShowCalories: true,
+      plannerEnableBabyMeals: false,
+      plannerEnableChildMeals: false,
+      plannerEnableDrinks: false,
+    });
+  }
+
+  async cleanupDemoUser(userId: number): Promise<void> {
+    let householdId: number | null = null;
+    try {
+      householdId = await getHouseholdForUser(userId);
+    } catch { }
+
+    if (householdId) {
+      const hhWeeks = await db.select().from(plannerWeeks).where(eq(plannerWeeks.householdId, householdId));
+      for (const week of hhWeeks) {
+        const days = await db.select().from(plannerDays).where(eq(plannerDays.weekId, week.id));
+        for (const day of days) {
+          await db.delete(plannerEntries).where(eq(plannerEntries.dayId, day.id));
+        }
+        await db.delete(plannerDays).where(eq(plannerDays.weekId, week.id));
+      }
+      await db.delete(plannerWeeks).where(eq(plannerWeeks.householdId, householdId));
+    }
+
+    const userShoppingItems = await db.select({ id: shoppingList.id }).from(shoppingList).where(eq(shoppingList.userId, userId));
+    const itemIds = userShoppingItems.map(i => i.id);
+    if (itemIds.length > 0) {
+      await db.delete(ingredientSources).where(inArray(ingredientSources.shoppingListItemId, itemIds));
+      await db.delete(productMatches).where(inArray(productMatches.shoppingListItemId, itemIds));
+    }
+    await db.delete(shoppingList).where(eq(shoppingList.userId, userId));
+
+    const userMeals = await db.select({ id: meals.id }).from(meals).where(eq(meals.userId, userId));
+    const mealIds = userMeals.map(m => m.id);
+    if (mealIds.length > 0) {
+      await db.delete(nutrition).where(inArray(nutrition.mealId, mealIds));
+      await db.delete(mealAllergens).where(inArray(mealAllergens.mealId, mealIds));
+    }
+    await db.delete(meals).where(eq(meals.userId, userId));
+
+    await db.delete(userPreferences).where(eq(userPreferences.userId, userId));
+    await db.delete(userStreaks).where(eq(userStreaks.userId, userId));
+    await db.delete(userHealthTrends).where(eq(userHealthTrends.userId, userId));
+
+    if (householdId) {
+      await db.delete(householdMembers).where(eq(householdMembers.householdId, householdId));
+      await db.delete(households).where(eq(households.id, householdId));
+    }
+
+    await db.delete(users).where(eq(users.id, userId));
   }
 }
 

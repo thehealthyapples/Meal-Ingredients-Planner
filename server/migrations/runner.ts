@@ -488,6 +488,14 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-13_add_demo_user_fields",
+    statements: [
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT false",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS demo_expires_at TIMESTAMPTZ",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

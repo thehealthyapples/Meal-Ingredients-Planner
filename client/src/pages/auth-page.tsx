@@ -43,11 +43,14 @@ export default function AuthPage() {
   const [resetState, setResetState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [resetError, setResetError] = useState("");
 
+  const [demoStarting, setDemoStarting] = useState(false);
+
   const searchString = useSearch();
   const params = new URLSearchParams(searchString);
   const verified = params.get("verified") === "1";
   const verifyError = params.get("verify_error");
   const resetTokenParam = params.get("reset_token");
+  const demoExpired = params.get("demo") === "expired";
 
   useEffect(() => {
     if (resetTokenParam) {
@@ -55,6 +58,21 @@ export default function AuthPage() {
       setMode("reset");
     }
   }, [resetTokenParam]);
+
+  const handleDemoStart = async () => {
+    if (demoStarting) return;
+    setDemoStarting(true);
+    try {
+      const res = await fetch("/api/demo/start", {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to start demo");
+      window.location.href = "/";
+    } catch {
+      setDemoStarting(false);
+    }
+  };
 
   const { data: config } = useQuery<AppConfig>({
     queryKey: ["/api/config"],
@@ -201,6 +219,13 @@ export default function AuthPage() {
 
       <div className="flex items-center justify-center p-6 lg:p-10 bg-primary overflow-y-auto">
         <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 space-y-5">
+          {demoExpired && (
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800" data-testid="banner-demo-expired">
+              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
+              <p className="text-sm font-medium">Your demo session has ended. Create an account to save your progress and continue.</p>
+            </div>
+          )}
+
           {verified && (
             <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200 text-green-800" data-testid="banner-email-verified">
               <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
@@ -578,13 +603,21 @@ export default function AuthPage() {
                 </div>
               )}
               <div className="text-center pt-2">
-                <a
-                  href="/demo"
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  data-testid="link-explore-demo"
+                <button
+                  onClick={handleDemoStart}
+                  disabled={demoStarting}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                  data-testid="button-explore-demo"
                 >
-                  Explore the demo →
-                </a>
+                  {demoStarting ? (
+                    <span className="flex items-center gap-1.5 justify-center">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Starting demo…
+                    </span>
+                  ) : (
+                    "Explore The Healthy Apples →"
+                  )}
+                </button>
               </div>
             </>
           )}

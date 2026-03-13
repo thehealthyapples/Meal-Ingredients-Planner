@@ -3,6 +3,15 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
+    if (res.status === 401) {
+      try {
+        const json = JSON.parse(text);
+        if (json?.code === "DEMO_EXPIRED") {
+          window.location.href = "/auth?demo=expired";
+          return;
+        }
+      } catch { }
+    }
     throw new Error(`${res.status}: ${text}`);
   }
 }

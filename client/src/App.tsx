@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { TopBar, DesktopSidebar, MobileNav } from "@/components/nav-bar";
 import OrchardBackdrop from "@/components/layout/orchard-backdrop";
 import OrchardShell from "@/components/layout/orchard-shell";
+import DemoBanner from "@/components/DemoBanner";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import OnboardingPage from "@/pages/onboarding-page";
@@ -53,6 +54,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     <div className="relative min-h-[100dvh]">
       <OrchardBackdrop />
       <div className="relative z-10 flex flex-col h-[100dvh]">
+        {user?.isDemo && <DemoBanner />}
         <TopBar />
         <div className="flex flex-1 overflow-hidden">
           <DesktopSidebar />
