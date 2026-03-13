@@ -1,0 +1,136 @@
+#2B - Premium Hero Refinement — Brand Line, Product Flow, Watermark, and Rating Polish
+What & Why
+Refine the completed premium auth/landing hero so it better reflects the full THA product story. The current version is visually strong, but it is still too narrowly framed as a one-way “kitchen → basket” flow. The hero should communicate the broader value of the product: planning, ingredient analysis, smarter baskets, and kitchen/pantry awareness. It also needs stronger brand presence via the slogan and a more visible apple watermark.
+
+Done looks like
+The left panel hero now includes the THA brand line:
+- "Confidently better Choices, Simply"
+
+The headline is updated so it reflects the fuller product story, not just cupboard-to-basket
+Recommended headline:
+- "Plan meals. Analyse ingredients. Build smarter baskets."
+
+Supporting copy is updated accordingly so the story is:
+- planning
+- ingredient intelligence
+- grocery decision support
+- lower effort
+
+The lower hero visual is no longer framed as a single one-way cupboard → basket flow
+Instead, it should feel like a connected product flow or ecosystem, such as:
+- Pantry / Kitchen
+- Plan
+- Analyse
+- Basket
+
+The current single directional arrow/connector is replaced with a broader connected-flow treatment that better reflects the app
+
+The apple watermark behind the hero text is made more visible and intentional
+- increase opacity moderately
+- increase size if needed
+- reposition so it is clearly legible behind the text area
+- remain decorative only
+
+The apple-rating display on the basket rows is polished so it clearly reads as THA apple ratings, not star-like marks
+- use the existing tha-apple.png asset
+- improve sizing, spacing, alignment, and clarity
+- recreate the rating presentation if needed
+
+The right-hand login/register form remains completely untouched
+No backend routes, schemas, or unrelated pages are changed
+
+Out of scope
+Changes to the right-hand auth form
+Any backend changes
+Any redesign below the existing hero area
+New routes or pages
+Heavy animation libraries
+Changes to unrelated pages
+
+Tasks
+
+T001 — Add brand slogan into the hero
+Add:
+- "Confidently better Choices, Simply"
+
+Placement guidance
+- near the logo/brand area or just above the main headline
+- should feel like a brand line, not a second headline
+- keep styling calm and premium
+
+T002 — Update hero headline and supporting copy
+Replace the current copy so the hero reflects the fuller THA story
+
+Recommended headline:
+- "Plan meals. Analyse ingredients. Build smarter baskets."
+
+Recommended supporting copy direction:
+- The Healthy Apples helps users plan meals, assess ingredients, and make better grocery choices with less effort.
+
+Keep typography strong and readable
+Preserve existing CTA pattern
+
+T003 — Reframe the lower visual from one-way arrow to connected product flow
+The current one-way kitchen/cupboard → basket connector feels too limited
+Refactor the lower visual so it represents a broader THA workflow
+
+Preferred concept
+- Pantry / Kitchen
+- Plan
+- Analyse
+- Basket
+
+Implementation guidance
+- stay within the current composed React/Tailwind visual approach
+- no heavy diagrams
+- no complex animation
+- use clean connected cards / columns / segments / labels
+- keep it premium and easy to read at a glance
+
+T004 — Improve watermark visibility
+Adjust the existing apple watermark so it is clearly present
+
+Requirements
+- decorative only
+- pointer-events-none
+- low but visible opacity, roughly stronger than current implementation
+- ensure it is not getting lost against the background
+- maintain text readability
+
+T005 — Recreate / polish the apple rating display
+Improve the rating marks used in the basket panel so they clearly read as THA apple ratings
+
+Requirements
+- use tha-apple.png
+- increase clarity at small size
+- improve alignment and spacing
+- avoid the visual reading like star icons
+- recreate the rating presentation if necessary rather than trying to preserve a weak version
+
+T006 — Keep implementation tightly scoped
+Only refine the left hero panel in auth-page.tsx and any directly related presentational component(s)
+Do not touch the right-hand form
+Do not touch backend logic
+Do not drift into broader redesign work
+
+Relevant files
+- client/src/pages/auth-page.tsx
+- any current KitchenToBasketVisual or related hero component already created
+- client/src/assets/icons/tha-apple.png
+- client/src/components/FiveApplesLogo.tsx if needed for consistent brand treatment
+
+Acceptance checklist
+- slogan appears in the hero
+- headline reflects plan + analyse + basket, not just kitchen → basket
+- lower visual no longer feels like a one-way cupboard-only flow
+- watermark is visibly present but still subtle
+- apple ratings are clearly THA apples
+- right-hand auth form unchanged
+- no unrelated page drift
+
+At the end, provide a concise implementation summary covering
+- files changed
+- copy updates made
+- how the lower flow visual was reframed
+- how watermark visibility was improved
+- how apple ratings were refined

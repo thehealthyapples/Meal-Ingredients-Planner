@@ -162,33 +162,36 @@ export default function AuthPage() {
       <div className="relative hidden lg:flex flex-col justify-between p-12 bg-primary overflow-hidden">
         <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3" />
-        
+        <img
+          src={transparentAppleUrl}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          className="absolute top-1/2 right-4 -translate-y-1/2 w-80 h-80 object-contain opacity-[0.13] pointer-events-none select-none"
+          data-testid="img-apple-watermark-hero"
+        />
+
         <div className="relative z-10">
-          <div className="flex items-center gap-4 text-primary-foreground mb-8">
+          <div className="flex items-center gap-4 text-primary-foreground mb-2">
             <h1 className="text-4xl font-bold font-display tracking-tight" data-testid="text-brand-title">The Healthy Apples</h1>
             <img src={transparentAppleUrl} alt="The Healthy Apples" style={{ height: 80, width: "auto" }} className="object-contain" draggable={false} />
           </div>
-          
+          <p className="text-sm font-medium tracking-widest text-white/45 uppercase mb-8" data-testid="text-brand-slogan">
+            Confidently better Choices, Simply
+          </p>
+
           <div className="space-y-6 max-w-lg">
             <h2 className="text-5xl font-bold font-display text-white leading-tight" data-testid="text-hero-headline">
-              Plan meals. Build smarter baskets.<br/>
-              <span className="text-secondary-foreground">Make better choices.</span>
+              Plan meals. Analyse ingredients.<br/>
+              <span className="text-secondary-foreground">Build smarter baskets.</span>
             </h2>
             <p className="text-lg text-primary-foreground/90 leading-relaxed" data-testid="text-hero-sub-copy">
-              The Healthy Apples learns what's in your kitchen and helps you choose better ingredients and groceries with less effort.
+              The Healthy Apples helps you plan meals, assess every ingredient, and make better grocery choices — with far less effort.
             </p>
           </div>
         </div>
 
-        <div className="relative">
-          <img
-            src={transparentAppleUrl}
-            alt=""
-            aria-hidden="true"
-            draggable={false}
-            className="absolute -bottom-8 -right-8 w-56 h-56 object-contain opacity-[0.07] pointer-events-none select-none"
-            data-testid="img-apple-watermark-hero"
-          />
+        <div className="relative z-10">
           <KitchenToBasketVisual />
         </div>
       </div>
