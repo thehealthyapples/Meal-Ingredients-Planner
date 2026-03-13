@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight, Lock, UserPlus, CheckCircle2, AlertTriangle, Mail,
-  Loader2, RefreshCw, KeyRound, CalendarDays, Search, ShoppingBasket,
+  Loader2, RefreshCw, KeyRound, CalendarDays, Search, ShoppingBasket, ChevronDown,
 } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import KitchenToBasketVisual from "@/components/KitchenToBasketVisual";
@@ -65,6 +65,7 @@ export default function AuthPage() {
   const [resetError, setResetError] = useState("");
 
   const [demoStarting, setDemoStarting] = useState(false);
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
   const searchString = useSearch();
   const params = new URLSearchParams(searchString);
@@ -204,7 +205,7 @@ export default function AuthPage() {
     <div className="min-h-screen lg:h-screen grid lg:grid-cols-2 bg-background overflow-hidden">
 
       {/* ── LEFT PANEL ── */}
-      <div className="relative hidden lg:flex flex-col p-10 bg-background overflow-y-auto">
+      <div className="relative hidden lg:flex flex-col p-10 bg-background overflow-hidden">
         <img
           src={transparentAppleUrl}
           alt=""
@@ -217,20 +218,20 @@ export default function AuthPage() {
         <div className="relative z-10 flex flex-col h-full">
 
           {/* Logo */}
-          <div className="mb-6 -ml-2">
+          <div className="mb-4 -ml-2">
             <img
               src={brandLogoUrl}
               alt="The Healthy Apples — Confidently Choose Better, Simply"
-              className="h-36 w-auto object-contain"
+              className="h-20 w-auto object-contain"
               draggable={false}
               data-testid="img-brand-logo"
             />
           </div>
 
           {/* Headline + copy */}
-          <div className="max-w-lg mb-7">
+          <div className="max-w-lg mb-4">
             <h1
-              className="text-[2rem] font-bold font-display text-foreground leading-[1.2] mb-3"
+              className="text-[1.75rem] font-bold font-display text-foreground leading-[1.2] mb-2"
               data-testid="text-hero-headline"
             >
               Plan meals. Analyse ingredients.<br />
@@ -241,24 +242,36 @@ export default function AuthPage() {
             </p>
           </div>
 
-          {/* Feature cards */}
-          <div className="grid grid-cols-3 gap-3 mb-8">
-            {FEATURE_CARDS.map((card) => (
-              <div
-                key={card.title}
-                className="rounded-xl border border-border/60 bg-white/60 p-4 space-y-2"
-              >
-                <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                  {card.icon}
-                </div>
-                <p className="text-sm font-semibold text-foreground">{card.title}</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">{card.desc}</p>
-              </div>
-            ))}
+          {/* Feature accordion */}
+          <div className="flex flex-col gap-2 mb-4">
+            {FEATURE_CARDS.map((card) => {
+              const isOpen = expandedCard === card.title;
+              return (
+                <button
+                  key={card.title}
+                  onClick={() => setExpandedCard(isOpen ? null : card.title)}
+                  className="w-full text-left rounded-xl border border-border/60 bg-white/60 px-4 py-3 hover:bg-white/80 transition-colors"
+                  data-testid={`card-feature-${card.title.toLowerCase().replace(/\s+/g, "-")}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                      {card.icon}
+                    </div>
+                    <p className="text-sm font-semibold text-foreground flex-1">{card.title}</p>
+                    <ChevronDown
+                      className={`h-4 w-4 text-muted-foreground/50 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                    />
+                  </div>
+                  {isOpen && (
+                    <p className="text-xs text-muted-foreground leading-relaxed mt-2 ml-10">{card.desc}</p>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Flow visual */}
-          <div className="mt-auto">
+          {/* Flow visual — always visible */}
+          <div className="flex-1 min-h-0">
             <KitchenToBasketVisual />
           </div>
 
