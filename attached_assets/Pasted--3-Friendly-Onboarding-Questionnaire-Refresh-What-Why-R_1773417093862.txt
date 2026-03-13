@@ -1,0 +1,220 @@
+#3 - Friendly Onboarding Questionnaire Refresh
+What & Why
+Refine the onboarding questionnaire so it feels warm, visual, and preference-led rather than clinical or restrictive. The current flow is structurally useful, but the wording is too functional and the experience does not yet feel premium or strongly branded. This pass should improve copy, presentation, and brand feel while preserving the existing backend field mapping and submission flow.
+
+Done looks like
+The onboarding flow feels friendlier, more positive, and more visual
+Question titles and helper copy are rewritten in a calm, encouraging tone
+Language shifts away from “strictness” / “adherence” toward “preferences” / “approach”
+Answer options are presented as polished cards/chips rather than plain utility selections where appropriate
+A subtle low-opacity THA apple watermark appears decoratively behind the onboarding content
+A simple apple-based progress indicator appears near the top of the onboarding flow
+The existing submission shape and backend field mapping remain intact:
+- dietPattern
+- dietRestrictions
+- eatingSchedule
+- healthGoals
+- budgetLevel
+- preferredStores
+- upfSensitivity
+- qualityPreference
+- excludedIngredients
+No backend routes, schemas, or unrelated pages are changed
+
+Out of scope
+Pantry / fridge / freezer illustrated kitchen setup
+Drag-and-drop interactions
+New backend onboarding fields
+Changes to auth page
+Changes to unrelated planner or basket pages
+Heavy animation libraries
+Any onboarding logic rewrite that changes API payload shape
+
+Primary goal
+Keep the current onboarding architecture, but make it feel like a polished THA setup flow rather than a settings form.
+
+Tasks
+
+T001 — Rewrite onboarding copy in a friendly, premium tone
+Update the onboarding step titles, helper text, and answer labels to feel positive, calm, and meaningful.
+
+Recommended content direction
+
+Welcome / framing text
+- Add a short warm framing line near the top if the page structure allows:
+  "A few quick preferences and we’ll tailor meals, baskets, and better choices around you."
+
+Diet step
+Current intent: dietPattern + dietRestrictions + eatingSchedule
+Rewrite title to:
+- "How do you like to eat?"
+Helper copy:
+- "Choose the style that fits you best. You can always change this later."
+
+Diet pattern labels
+- No preference → No particular style
+- Mediterranean → Mediterranean
+- DASH → DASH
+- MIND → MIND
+- Flexitarian → Flexitarian
+- Vegetarian → Vegetarian
+- Vegan → Vegan
+- Keto → Keto
+- Low-Carb / Atkins → Lower carb
+- Paleo → Paleo
+- Carnivore → Carnivore
+
+Restrictions section title
+- "Are there any foods you prefer to avoid?"
+Helper copy:
+- "Select any that matter to you."
+
+Keep only currently supported options if needed for safety in this pass:
+- Gluten-Free
+- Dairy-Free
+
+Eating schedule title
+- "Does your eating routine have a rhythm to it?"
+Options:
+- No preference → No set routine
+- Intermittent Fasting → Intermittent fasting
+
+Goals step
+Current title: What are your goals?
+Rewrite to:
+- "What would you like to focus on?"
+Helper copy:
+- "Choose up to 3 things that matter most to you."
+
+Goal label rewrites
+- Eat Healthier → Eat more whole foods
+- Avoid Ultra-Processed → Cut back on ultra-processed foods
+- Save Money → Save money on groceries
+- Build Muscle → Build muscle / higher protein
+- Lose Weight → Manage weight more easily
+
+Budget step
+This should feel like shopping preference, not budget strictness
+Rewrite title to:
+- "What matters most when you shop?"
+Helper copy:
+- "We’ll use this to shape product and basket suggestions."
+
+Option label rewrites while preserving value mapping underneath
+- Budget → Best value
+- Standard → Balanced
+- Premium → Higher quality
+- Organic → Organic when possible
+- Grass Finished → Pasture-raised / grass-fed where it matters
+
+Stores step
+Rewrite title to:
+- "Which shops do you usually use?"
+Helper copy:
+- "We’ll use this for matching products and prices."
+
+Keep existing store list and selection logic intact
+
+UPF step
+Reframe away from strictness language
+Rewrite title to:
+- "How would you like us to approach processed foods?"
+Helper copy:
+- "We’ll tailor recommendations to match your preference."
+
+Rewrite visible option labels while preserving stored values underneath
+- Strict → Mostly whole foods
+- Moderate → A balanced approach
+- Flexible → Flexible
+
+If descriptive subtext is feasible inside the cards, use:
+- Mostly whole foods: "I’d prefer choices that lean as natural and minimally processed as possible."
+- A balanced approach: "I prefer simpler ingredients, but convenience still matters."
+- Flexible: "I’m happy with a mix of fresh foods and convenient options."
+
+T002 — Improve answer presentation with polished visual cards/chips
+Upgrade the UI so the onboarding feels more premium and easier to scan.
+
+Guidance
+- Single-choice groups should use larger rounded cards where space allows
+- Multi-select groups can use premium chips or mini-cards
+- Add calm spacing, consistent typography hierarchy, and soft shadows
+- Preserve accessibility and clear selected states
+- Do not introduce any new component library if existing patterns are sufficient
+
+Specific intent
+- Diet pattern should feel like a visual card grid
+- Goals should feel like selectable cards/chips
+- Budget / shopping style should feel like a premium card row or stacked card set
+- UPF / processed food preference should feel like the most polished card set in the flow
+
+T003 — Add THA apple watermark behind onboarding content
+Add a subtle decorative watermark using the existing tha-apple.png asset.
+
+Requirements
+- Absolutely positioned decorative image
+- Low opacity only (roughly 3–6%)
+- pointer-events-none
+- Behind the onboarding card/content, never interfering with readability
+- Scales down appropriately on smaller screens
+- Keep the effect calm and premium, not loud
+
+T004 — Add apple-based progress indicator
+Introduce a simple branded progress indicator near the top of the onboarding flow.
+
+Requirements
+- Use small repeated apple icons or a simple branded step treatment
+- Reflect the current step visually
+- Keep it subtle and elegant
+- Must work responsively
+- No heavy animation
+
+Guidance
+- Completed steps can appear stronger
+- Current step can appear slightly emphasized
+- Remaining steps muted
+- Keep implementation simple and maintainable
+
+T005 — Preserve backend mapping and submit behaviour
+Do not alter the API contract or onboarding completion logic.
+The visible labels may change, but the stored values and submission structure must continue to map correctly to the existing backend expectations.
+
+Important
+- Do not change route names
+- Do not change request payload shape
+- Do not change database schema
+- Do not change completion flow
+
+T006 — Maintain responsive, premium layout
+Ensure the onboarding remains polished across breakpoints.
+
+Requirements
+- Desktop: comfortable spacing and clear card presentation
+- Tablet: compact but still premium
+- Mobile: text first, cards stacked cleanly, watermark subdued
+- Maintain readability at all sizes
+
+Relevant files
+- client/src/pages/onboarding-page.tsx
+- any small new presentational component(s) created under client/src/components/ if needed
+- client/src/assets/icons/tha-apple.png
+
+Implementation notes
+- Prefer extracting small presentational components only if it improves maintainability
+- Keep logic changes minimal
+- Reuse existing onboarding state and submit flow
+- Keep this pass focused on wording, visual hierarchy, and branding
+
+Acceptance checklist
+- onboarding copy is friendlier and more meaningful
+- processed food step no longer uses “strictness” framing in the UI
+- THA apple watermark is visible but subtle
+- apple progress indicator is present
+- current onboarding payload mapping still works unchanged
+- no backend or unrelated page changes
+
+At the end, provide a concise implementation summary covering
+- files changed
+- components added or updated
+- any preserved backend mappings
+- any optional follow-up suggestions that are strictly out of scope for this pass
