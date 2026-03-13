@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight, Lock, UserPlus, CheckCircle2, AlertTriangle, Mail,
-  Loader2, RefreshCw, KeyRound, Play, CalendarDays, Search, ShoppingBasket,
+  Loader2, RefreshCw, KeyRound, CalendarDays, Search, ShoppingBasket,
 } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import KitchenToBasketVisual from "@/components/KitchenToBasketVisual";
@@ -96,11 +96,6 @@ export default function AuthPage() {
     } catch {
       setDemoStarting(false);
     }
-  };
-
-  const handleExploreBeta = () => {
-    const el = document.querySelector<HTMLInputElement>('[data-testid="input-login-username"]');
-    el?.focus();
   };
 
   const { data: config } = useQuery<AppConfig>({
@@ -244,32 +239,6 @@ export default function AuthPage() {
             <p className="text-sm text-muted-foreground leading-relaxed max-w-md" data-testid="text-hero-sub-copy">
               A calmer way to review your meals, understand every ingredient, and make more confident grocery choices — with far less effort.
             </p>
-          </div>
-
-          {/* CTAs */}
-          <div className="flex items-center gap-3 mb-8">
-            <button
-              onClick={handleDemoStart}
-              disabled={demoStarting}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground rounded-xl text-sm font-semibold shadow-md shadow-primary/20 hover:bg-primary/90 transition-colors disabled:opacity-60"
-              data-testid="button-watch-demo"
-            >
-              {demoStarting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Play className="h-4 w-4 fill-current" />
-              )}
-              {demoStarting ? "Starting…" : "Watch the demo"}
-            </button>
-
-            <button
-              onClick={handleExploreBeta}
-              className="inline-flex items-center gap-1.5 px-5 py-3 border border-border rounded-xl text-sm font-medium text-foreground/70 hover:text-foreground hover:bg-accent transition-colors"
-              data-testid="button-explore-beta"
-            >
-              Explore the beta
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
           </div>
 
           {/* Feature cards */}
@@ -626,6 +595,23 @@ export default function AuthPage() {
               <div className="flex items-center justify-center gap-1.5 pt-1">
                 <Lock className="h-3 w-3 text-muted-foreground/40 shrink-0" />
                 <p className="text-xs text-muted-foreground/50">Secure login. Your data stays private.</p>
+              </div>
+
+              {/* Demo CTA */}
+              <div className="pt-3 border-t border-border/40">
+                <button
+                  onClick={handleDemoStart}
+                  disabled={demoStarting}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-primary/25 bg-primary/5 text-primary text-sm font-semibold hover:bg-primary/10 transition-colors disabled:opacity-60"
+                  data-testid="button-explore-demo"
+                >
+                  {demoStarting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4" />
+                  )}
+                  {demoStarting ? "Starting…" : "Explore The Healthy Apples"}
+                </button>
               </div>
             </>
           )}
