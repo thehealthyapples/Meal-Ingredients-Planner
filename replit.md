@@ -52,6 +52,23 @@ The "Calm Orchard" design system features a warm cream/sage palette (HSL tokens)
 -   **Basket Refactor — Smart Food-Intent System**: Whole foods and packaged foods are treated differently. New `shoppingList` columns (`itemType`, `variantSelections`, `attributePreferences`, `confidenceLevel`, `confidenceReason` — all nullable text). New client libs: `ingredient-catalogue.ts` (4 entries: apples/tomatoes/pistachios/eggs with variant selectors and relevant attributes), `basket-item-classifier.ts` (`classifyItem`/`isWholeFood`), `whole-food-matcher.ts` (score-based resolver with tunable weights), `whole-food-fallback.ts` (relaxation chain builder), `food-confidence.ts` (`calcConfidence`/`CONFIDENCE_LABELS`), `json-utils.ts` (safe JSON parse/stringify). New `WholeFoodSelector` component for variant chips + attribute checkboxes. Basket page adds: (1) multi-retailer selector chips persisted to `localStorage`, (2) global basket tier selector with "Per item" option, (3) fulfilment note, (4) `getEffectiveTier` helper that applies global tier without overwriting stored per-item tiers, (5) whole-food rows show variant selector chips and attribute checkboxes in dedicated Variant and Attributes table columns, (6) confidence badge shown in dedicated Conf. column. Generation routes stamp `itemType` via category heuristic.
 -   **Basket UI Refinements**: (1) Shopping Summary section is compact — horizontal pill chips per retailer, with live filtering by `selectedRetailers` (both display and best-total computation happen client-side). (2) Copy button removed from top toolbar; moved into the Export dialog footer. (3) "Added by" user attribution text removed from ingredient cells. (4) Table restructured with dedicated columns: Variant (selectorSchema chips for whole-food items), Attributes (attribute checkboxes for whole-food items), Conf. (confidence badge for whole-food items) — empty `—` cells for packaged items. WholeFoodSelector no longer embedded in ingredient cell.
 
+## Pre-Push DB Audit Rule
+
+**Before every production push, a schema-vs-migrations audit must be performed — not just a `git status` check.**
+
+`git status` only confirms files are committed. It does not confirm the DB schema is in sync.
+
+The correct audit is:
+1. For every table in `shared/schema.ts`, list its columns.
+2. Verify each column is covered by either:
+   - The table's `CREATE TABLE` statement in `server/migrations/runner.ts`, or
+   - A subsequent `ALTER TABLE ... ADD COLUMN` migration in the same file.
+3. If any column exists in the schema but has no corresponding migration, a new migration must be written before pushing.
+
+**Past failure (2026-03-13):** `user_pantry_items` gained four columns (`display_name`, `is_default`, `is_deleted`, `sort_order`) and `shopping_list` gained several columns — all added directly to `shared/schema.ts` without migrations. A `git status` check showed a clean tree and gave a false "no DB changes" answer. Production 500s resulted on `/api/pantry`, `/api/shopping-list`, and `/api/shopping-list/from-meals`.
+
+**The rule:** a clean git tree ≠ a safe production deploy. Always cross-reference schema columns against migration history.
+
 ## External Dependencies
 
 -   **PostgreSQL**: Relational database.
