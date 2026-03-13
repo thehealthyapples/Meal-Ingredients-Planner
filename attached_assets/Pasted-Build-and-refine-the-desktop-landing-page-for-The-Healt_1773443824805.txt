@@ -1,0 +1,100 @@
+Build and refine the desktop landing page for “The Healthy Apples” with a premium, calm, confident feel.
+
+Core brand:
+- Brand name: The Healthy Apples
+- Slogan: “Confidently Choose Better, Simply”
+- Tone: calm, capable, premium, welcoming, not flashy, not playful
+- The design should feel polished, modern, and trustworthy
+- Keep the UI soft, elegant, and lightly editorial
+- Prioritise visual clarity, efficiency, and clean implementation
+- Do not over-engineer anything
+- Stay tightly on brief and do not introduce extra features unless requested
+
+Primary goal:
+Create a premium desktop landing page that feels more refined and high-end than a typical SaaS page, while still being practical and conversion-friendly.
+
+Layout:
+- Desktop-first two-column layout
+- Left side: brand/storytelling/product value
+- Right side: sign-in card / private beta access
+- The page should feel balanced, spacious, and calm
+- Avoid anything too imposing, crowded, or overly corporate
+
+Left side requirements:
+- Prominent Healthy Apples branding at the top
+- Use the provided apple logo asset
+- Strong premium headline:
+  “Plan meals. Analyse ingredients. Build smarter baskets.”
+- Supporting body copy should communicate:
+  a calmer way to review meals, understand ingredients, and make more confident grocery choices
+- Include a premium CTA area
+- The demo CTA should be the primary button and more visually prominent than the beta button
+- Primary CTA text: “Watch the demo”
+- Secondary CTA text: “Explore the beta”
+
+Feature/value section:
+Include 3 premium feature cards:
+1. Plan clearly
+2. Analyse simply
+3. Shop intentionally
+
+Each card should feel elegant, restrained, and readable.
+Use soft backgrounds, subtle borders, and premium spacing.
+
+Flow card:
+Add a refined card showing the weekly flow:
+1. Kitchen
+2. Plan
+3. Analyse
+4. Basket
+
+This should use THA greens only, not multicoloured accents.
+Keep it clean, aligned, and lightly premium.
+
+Right side requirements:
+- Premium sign-in card
+- Less imposing than before
+- Warm, welcoming copy:
+  Heading: “Really good to see you again.”
+  Subtext: “Let’s get you in and review some meals.”
+- Include:
+  - Email field
+  - Password field
+  - Sign in button
+  - “Forgot password?”
+  - Small trust line such as “Secure login. Your data stays private.”
+- Include a subtle “Private beta” badge
+- The right panel should feel soft, premium, and calm, not heavy
+
+Visual direction:
+- Soft off-white / warm neutral background
+- Muted, premium greens inspired by the apple logo
+- Yellow only as a restrained accent, not dominant
+- Rounded corners
+- Soft shadows
+- Spacious padding
+- Elegant typography hierarchy
+- Strong desktop composition
+- Avoid harsh contrast, busy gradients, loud colours, or startup-style gimmicks
+
+Buttons:
+- “Watch the demo” must be the main CTA
+- It should be larger, stronger, and more prominent than the secondary CTA
+- Styling should feel premium, not flashy
+
+Implementation rules:
+- Use React + Tailwind
+- Keep the code clean, modular, and efficient
+- Do not add unnecessary dependencies
+- Do not add backend work
+- Do not add animations unless they are very subtle and clearly improve polish
+- Do not redesign the product concept; only improve presentation
+- Keep performance and maintainability in mind
+- Make sensible styling decisions without asking unnecessary questions
+- Stay focused on the requested landing page only
+
+Output:
+- Return production-ready React/Tailwind code for the landing page
+- Make it desktop-optimised first, but responsive for tablet/mobile
+- Use polished spacing and premium visual balance
+- Ensure the final result feels calm, confident, premium, and conversion-friendly

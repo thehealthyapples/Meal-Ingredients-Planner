@@ -37,11 +37,11 @@ function pt(deg: number) {
 }
 
 const GAP = 22;
-const ARCS = [
-  { from: 270 + GAP, to: 360 - GAP, color: "#7c3aed" },
-  { from: 0   + GAP, to: 90  - GAP, color: "#0284c7" },
-  { from: 90  + GAP, to: 180 - GAP, color: "#15803d" },
-  { from: 180 + GAP, to: 270 - GAP, color: "#b45309" },
+const GREEN_ARCS = [
+  { from: 270 + GAP, to: 360 - GAP, color: "hsl(132, 12%, 60%)" },
+  { from: 0   + GAP, to: 90  - GAP, color: "hsl(132, 14%, 50%)" },
+  { from: 90  + GAP, to: 180 - GAP, color: "hsl(132, 14%, 44%)" },
+  { from: 180 + GAP, to: 270 - GAP, color: "hsl(132, 16%, 34%)" },
 ];
 
 function arcPath(fromDeg: number, toDeg: number) {
@@ -56,8 +56,6 @@ const NODES = [
   {
     deg: 270,
     label: "Kitchen",
-    color: "bg-amber-50 border-amber-200",
-    labelColor: "text-amber-700",
     testId: "flow-card-kitchen",
     content: (
       <div className="flex flex-wrap gap-0.5 justify-center mt-0.5">
@@ -70,13 +68,11 @@ const NODES = [
   {
     deg: 0,
     label: "Plan",
-    color: "bg-violet-50 border-violet-200",
-    labelColor: "text-violet-700",
     testId: "flow-card-plan",
     content: (
       <div className="space-y-px mt-0.5">
-        {["🍲 Pasta Bake","🥗 Egg Salad"].map(n => (
-          <p key={n} className="text-[8px] text-gray-500 leading-tight truncate">{n}</p>
+        {["Pasta Bake","Egg Salad"].map(n => (
+          <p key={n} className="text-[8px] text-primary/60 leading-tight truncate">{n}</p>
         ))}
       </div>
     ),
@@ -84,12 +80,10 @@ const NODES = [
   {
     deg: 90,
     label: "Analyse",
-    color: "bg-sky-50 border-sky-200",
-    labelColor: "text-sky-700",
     testId: "flow-card-analyse",
     content: (
       <div className="mt-0.5">
-        <p className="text-[8px] text-gray-500 truncate">Free Range Eggs</p>
+        <p className="text-[8px] text-primary/60 truncate">Free Range Eggs</p>
         <MiniAppleRating rating={5} size={10} />
       </div>
     ),
@@ -97,15 +91,13 @@ const NODES = [
   {
     deg: 180,
     label: "Basket",
-    color: "bg-green-50 border-green-200",
-    labelColor: "text-green-700",
     testId: "flow-card-basket",
     content: (
       <div className="space-y-px mt-0.5">
-        {[["Free Range Eggs","£2.49"],["Greek Yoghurt","£1.29"]].map(([n,p]) => (
+        {[["Eggs","£2.49"],["Yoghurt","£1.29"]].map(([n,p]) => (
           <div key={n} className="flex justify-between gap-1">
-            <span className="text-[7px] text-gray-500 truncate">{n}</span>
-            <span className="text-[7px] font-bold text-green-700 shrink-0">{p}</span>
+            <span className="text-[7px] text-primary/60 truncate">{n}</span>
+            <span className="text-[7px] font-bold text-primary shrink-0">{p}</span>
           </div>
         ))}
       </div>
@@ -131,12 +123,8 @@ export default function ProductFlowVisual() {
   const size = CX * 2 + 4;
 
   return (
-    <div
-      className="mt-3 flex flex-col items-center"
-      data-testid="kitchen-to-basket-visual"
-    >
+    <div className="flex flex-col items-center" data-testid="kitchen-to-basket-visual">
       <div className="relative" style={{ width: size, height: size }}>
-
         <svg
           className="absolute inset-0"
           width={size}
@@ -144,7 +132,7 @@ export default function ProductFlowVisual() {
           viewBox={`0 0 ${size} ${size}`}
         >
           <defs>
-            {ARCS.map((a, i) => (
+            {GREEN_ARCS.map((a, i) => (
               <marker
                 key={i}
                 id={`arr${i}`}
@@ -160,32 +148,29 @@ export default function ProductFlowVisual() {
           </defs>
 
           <circle
-            cx={CX}
-            cy={CY}
-            r={R}
+            cx={CX} cy={CY} r={R}
             fill="none"
-            stroke="#e5e7eb"
+            stroke="hsl(132, 14%, 82%)"
             strokeWidth="1"
             strokeDasharray="3 3"
           />
 
-          {ARCS.map((a, i) => (
+          {GREEN_ARCS.map((a, i) => (
             <path
               key={i}
               d={arcPath(a.from, a.to)}
               fill="none"
               stroke={a.color}
               strokeWidth="1.5"
-              strokeOpacity="0.55"
+              strokeOpacity="0.6"
               markerEnd={`url(#arr${i})`}
             />
           ))}
 
           <text
-            x={CX}
-            y={CY + 5}
+            x={CX} y={CY + 5}
             textAnchor="middle"
-            fill="#9ca3af"
+            fill="hsl(132, 14%, 74%)"
             fontSize="16"
             fontFamily="sans-serif"
           >
@@ -196,11 +181,11 @@ export default function ProductFlowVisual() {
         {NODES.map((node) => (
           <div
             key={node.deg}
-            className={`rounded-lg border shadow-sm px-2 py-1.5 ${node.color}`}
+            className="rounded-lg border shadow-sm px-2 py-1.5 bg-white/80 border-primary/15"
             style={nodeStyle(node.deg)}
             data-testid={node.testId}
           >
-            <p className={`text-[9px] font-bold uppercase tracking-wider leading-none ${node.labelColor}`}>
+            <p className="text-[9px] font-bold uppercase tracking-wider leading-none text-primary/70">
               {node.label}
             </p>
             {node.content}
@@ -208,8 +193,8 @@ export default function ProductFlowVisual() {
         ))}
       </div>
 
-      <p className="mt-2 text-[8px] font-semibold uppercase tracking-widest text-gray-300">
-        Kitchen · Plan · Analyse · Basket · Kitchen
+      <p className="mt-1.5 text-[8px] font-semibold uppercase tracking-widest text-primary/30">
+        Kitchen · Plan · Analyse · Basket
       </p>
     </div>
   );
