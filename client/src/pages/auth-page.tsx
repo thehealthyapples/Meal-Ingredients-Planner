@@ -13,7 +13,7 @@ import { ArrowRight, Lock, UserPlus, CheckCircle2, AlertTriangle, Mail, Loader2,
 import { useLocation, useSearch } from "wouter";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
 import KitchenToBasketVisual from "@/components/KitchenToBasketVisual";
-import thaAppleUrl from "@/assets/icons/tha-apple.png";
+import transparentAppleUrl from "@assets/new_single_apple_transparent_1772836544576.png";
 
 type AppConfig = {
   registrationEnabled: boolean;
@@ -183,11 +183,11 @@ export default function AuthPage() {
 
         <div className="relative">
           <img
-            src={thaAppleUrl}
+            src={transparentAppleUrl}
             alt=""
             aria-hidden="true"
             draggable={false}
-            className="absolute -bottom-8 -right-8 w-56 h-56 object-contain opacity-[0.06] pointer-events-none select-none"
+            className="absolute -bottom-8 -right-8 w-56 h-56 object-contain opacity-[0.07] pointer-events-none select-none"
             data-testid="img-apple-watermark-hero"
           />
           <KitchenToBasketVisual />
