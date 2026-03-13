@@ -205,7 +205,7 @@ export default function AuthPage() {
     <div className="min-h-screen lg:h-screen grid lg:grid-cols-2 bg-background overflow-hidden">
 
       {/* ── LEFT PANEL ── */}
-      <div className="relative hidden lg:flex flex-col p-10 bg-background overflow-hidden">
+      <div className="relative hidden lg:flex flex-col p-8 bg-background overflow-hidden">
         <img
           src={transparentAppleUrl}
           alt=""
@@ -218,20 +218,20 @@ export default function AuthPage() {
         <div className="relative z-10 flex flex-col h-full">
 
           {/* Logo */}
-          <div className="mb-4 -ml-2">
+          <div className="mb-3 -ml-2">
             <img
               src={brandLogoUrl}
               alt="The Healthy Apples — Confidently Choose Better, Simply"
-              className="h-20 w-auto object-contain"
+              className="h-40 w-auto object-contain"
               draggable={false}
               data-testid="img-brand-logo"
             />
           </div>
 
           {/* Headline + copy */}
-          <div className="max-w-lg mb-4">
+          <div className="max-w-lg mb-3">
             <h1
-              className="text-[1.75rem] font-bold font-display text-foreground leading-[1.2] mb-2"
+              className="text-xl font-bold font-display text-foreground leading-[1.3] mb-1.5"
               data-testid="text-hero-headline"
             >
               Plan meals. Analyse ingredients.<br />
@@ -243,7 +243,7 @@ export default function AuthPage() {
           </div>
 
           {/* Feature accordion */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
+          <div className="grid grid-cols-3 gap-2 mb-3">
             {FEATURE_CARDS.map((card) => {
               const isOpen = expandedCard === card.title;
               return (
