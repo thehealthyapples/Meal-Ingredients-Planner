@@ -1,0 +1,158 @@
+Objective
+
+Plan a proper restricted demo-account architecture for The Healthy Apples so demo users experience the real product, not a separate cut-down demo site.
+
+Important constraints
+
+- This task is for planning, inspection, and proposal first — do not implement yet
+- Be cost-controlled and architecture-aware
+- Do not drift into unrelated redesign work
+- The goal is to use the normal site/app experience with temporary restricted demo accounts
+- Demo users must clearly understand they are in a restricted temporary account
+- Demo sessions must time out after 20 minutes
+- Demo users must not have full-user capabilities
+- We want a safe, supportable, low-risk design before coding
+
+Core product goal
+
+Replace the current demo approach with a temporary demo-user model that:
+- logs a visitor into the normal THA site/app
+- creates or uses a temporary restricted demo account/session
+- gives access to the real planner / basket / analysis experience
+- applies clear restrictions
+- shows a visible banner explaining demo limitations
+- expires automatically after 20 minutes
+- supports later cleanup of demo data/accounts
+
+What I want you to do in this planning pass
+
+1. Inspect the current repo and explain how the current demo flow works today
+2. Identify how auth/session/user creation currently works
+3. Assess how achievable it is to support temporary demo users based on session id / demo token
+4. Propose the safest architecture for restricted demo mode using the real app
+5. Identify the minimum set of backend and frontend changes required
+6. Identify risks, edge cases, and cleanup requirements
+7. Propose an implementation plan in phases
+8. Do not code yet unless a tiny proof-of-feasibility inspection is needed
+
+Required product rules for the proposed design
+
+Demo account behaviour
+- A demo visitor should enter the normal THA app, not a separate fake demo experience
+- Demo access should be tied to a temporary demo user/session
+- The system may create a temporary demo user account automatically when demo starts
+- That demo user should be isolated from other demo users
+- The demo user should be marked clearly as restricted/demo-only
+
+Restrictions to account for in the design
+- visible banner shown throughout demo mode
+- banner must explain restrictions with the account
+- definite timeout after 20 minutes
+- basket saving should be blocked or limited according to the safest architecture
+- meal saving should be limited in a controlled way if feasible
+- account/admin/full-user features should be restricted
+- demo data should not pollute normal user data long-term
+
+Banner requirement
+When a user is in a demo account, there must be a visible banner in the app that clearly outlines restrictions, such as:
+- this is a temporary demo account
+- some features are limited
+- changes may not be saved permanently
+- session expires after 20 minutes
+
+Do not finalise wording yet unless useful for planning, but do propose:
+- where the banner should appear
+- whether it should be global/layout-level
+- how it should be driven (user flag/session flag/etc.)
+
+Timeout requirement
+- demo accounts must definitely time out after 20 minutes
+- planning should explain the best technical mechanism for this
+- include what happens on expiry:
+  - redirect behaviour
+  - message shown
+  - whether stale demo data remains until cleanup
+  - how access is blocked after timeout
+
+Specific planning questions to answer
+
+A. Current architecture
+- How is the current demo implemented?
+- Is it a separate route set, fake data layer, or restricted normal flow?
+- How does auth currently work?
+- Is session handling already present?
+- Where would demo-user creation fit best?
+
+B. Temporary demo user feasibility
+- Can a temporary account be created automatically and associated with a session id or demo token?
+- What existing user/account structures support this?
+- What schema fields might be needed, if any?
+- What related records would need cleanup?
+
+C. Restriction enforcement
+- Which restrictions can be enforced on the frontend only?
+- Which must be enforced on the backend?
+- What writes/actions should be blocked for demo accounts?
+- What should remain available so the demo still feels like the real product?
+
+D. Cleanup strategy
+- How should expired demo users be cleaned up?
+- Should they be soft-expired first, then deleted later?
+- What related tables/data need cleanup?
+- What is the safest low-maintenance approach?
+
+E. UX design requirements
+- Where should the demo banner live?
+- What should happen when the 20-minute session expires?
+- How can the demo still feel premium while clearly restricted?
+
+Output format required
+
+Please return:
+
+1. Current-state assessment
+- concise summary of how demo/auth currently work in this repo
+
+2. Feasibility assessment
+- is this approach achievable?
+- complexity level
+- key blockers if any
+
+3. Recommended architecture
+- best-practice proposal for temporary demo users on the normal site
+
+4. Restriction model
+- what demo users can do
+- what demo users cannot do
+
+5. Timeout model
+- exactly how the 20-minute timeout should be enforced
+
+6. Cleanup model
+- how expired demo users/data should be handled
+
+7. Frontend/UI implications
+- banner placement
+- expiry UX
+- any routing implications
+
+8. Implementation plan
+- phased plan with smallest safe first step
+
+9. Risks / edge cases
+- list the important ones only
+
+Important working style
+- Stay tightly focused on planning this feature
+- Do not redesign unrelated auth or onboarding flows
+- Do not code the full feature yet
+- Do not make assumptions without checking the repo
+- Be honest if schema or route constraints make parts harder than expected
+- Prefer the simplest architecture that gives a real-app demo experience safely
+
+Success criteria for this planning pass
+- clear explanation of current demo implementation
+- clear judgement on whether temporary demo users are viable
+- clear recommendation for demo banner + 20-minute timeout
+- clear phased implementation plan
+- enough detail that we can then produce an implementation prompt with confidence

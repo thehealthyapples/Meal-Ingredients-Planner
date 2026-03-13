@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "yqKbZ_ZYt6DUyjC5wMCYc"
+uri = "file://.local/demo-architecture-plan.md"
+type = "text"
+title = "THA Demo Account Architecture — Planning Document"
