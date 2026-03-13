@@ -1,0 +1,83 @@
+You are making a safe production data update for pantry defaults only. Be highly conservative. Do not overwrite or alter user-specific pantry data.
+
+Objective
+Update production default pantry items so prod matches the current default pantry items in dev, while protecting all user-specific data.
+
+Critical safety rule
+Do NOT copy dev pantry rows directly into prod.
+Do NOT overwrite user-created or user-modified pantry items.
+Only sync system default pantry data.
+
+Scope
+Inspect the pantry data model, seed logic, and any default pantry item definitions.
+Implement a safe default-data sync path only.
+Do not redesign unrelated pantry logic.
+Do not change UI.
+Do not delete user data.
+
+Tasks
+
+T1. Inspect how pantry defaults are currently represented
+Determine:
+- where the canonical default pantry items live in code
+- how default food items are identified
+- how default household items are identified
+- whether pantry defaults are stored per user
+- which fields distinguish default/system items from user-specific items
+- what stable key exists for matching default items across environments (for example ingredient_key or another canonical key)
+
+T2. Design a safe sync strategy
+Implement a sync path that:
+- inserts missing default pantry items into production
+- updates existing system default items only where safe
+- does not touch user-created items
+- does not touch non-default items
+- does not remove user-specific pantry data
+- does not do a blanket overwrite from dev to prod
+
+Matching rules
+- Match defaults by a stable system key, not by row id
+- Only update items that are explicitly system/default items
+- If an item is missing, insert it
+- If an existing item is user-specific or user-modified, leave it alone
+- Prefer additive sync over destructive sync
+
+T3. Add protection against user-data overwrite
+If needed, add or use existing guards such as:
+- is_default
+- source='system'
+- is_user_modified
+- canonical/default key
+
+If user-modified detection already exists, respect it.
+If it does not exist, be conservative and avoid overwriting ambiguous rows.
+
+T4. Make the sync deployable
+Implement this as one of the following, choosing the safest/lightest option already compatible with the codebase:
+- a dedicated idempotent seed/sync function
+- a startup-safe default sync for pantry defaults
+- a targeted admin/dev script
+- a migration-safe data patch only if appropriate
+
+The sync must be idempotent:
+- running it multiple times must not create duplicates
+- running it multiple times must not overwrite user data
+
+T5. Report clearly
+Return:
+1. how defaults are identified
+2. what exact fields are updated
+3. what exact fields are never touched
+4. whether existing users receive newly added default items
+5. whether any manual production action is required
+6. exact files changed
+
+Acceptance criteria
+1. Production receives the latest default pantry food items from dev
+2. Production receives the latest default pantry household items from dev
+3. Newly added default items are inserted safely
+4. Existing default items are updated only if they are system/default records
+5. User-specific pantry items are not overwritten
+6. User-specific pantry items are not deleted
+7. The sync is idempotent
+8. No unrelated data paths are changed

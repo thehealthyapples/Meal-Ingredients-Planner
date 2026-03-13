@@ -198,6 +198,7 @@ export interface IStorage {
   deletePantryItem(userId: number, id: number): Promise<void>;
   seedDefaultHouseholdItems(userId: number): Promise<void>;
   seedDefaultFoodPantryItems(userId: number): Promise<void>;
+  syncAllPantryDefaults(): Promise<void>;
 
   // ── Shopping List Extras ───────────────────────────────────────────────────
   getShoppingListExtras(userId: number): Promise<ShoppingListExtra[]>;
@@ -1669,6 +1670,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async seedDefaultHouseholdItems(userId: number): Promise<void> {
+    let householdId: number;
+    try {
+      householdId = await getHouseholdForUser(userId);
+    } catch {
+      console.warn(`[Pantry Seed] No household for user ${userId}, skipping household seed`);
+      return;
+    }
     const defaults = [
       "Toilet roll", "Kitchen roll", "Tissues", "Washing up liquid",
       "Dishwasher tablets", "Laundry detergent", "Fabric conditioner",
@@ -1684,6 +1692,7 @@ export class DatabaseStorage implements IStorage {
           .insert(userPantryItems)
           .values({
             userId,
+            householdId,
             ingredientKey,
             displayName: name,
             category: "household",
@@ -1698,6 +1707,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async seedDefaultFoodPantryItems(userId: number): Promise<void> {
+    let householdId: number;
+    try {
+      householdId = await getHouseholdForUser(userId);
+    } catch {
+      console.warn(`[Pantry Seed] No household for user ${userId}, skipping food pantry seed`);
+      return;
+    }
     const defaults: { name: string; category: "larder" | "fridge" | "freezer"; sortOrder: number }[] = [
       // FRIDGE
       { name: "Milk", category: "fridge", sortOrder: 0 },
@@ -1785,6 +1801,7 @@ export class DatabaseStorage implements IStorage {
           .insert(userPantryItems)
           .values({
             userId,
+            householdId,
             ingredientKey,
             displayName: name,
             category,
@@ -1797,6 +1814,27 @@ export class DatabaseStorage implements IStorage {
         // skip duplicates silently
       }
     }
+  }
+
+  async syncAllPantryDefaults(): Promise<void> {
+    // Find the owner user for every household. We only need one representative
+    // user per household — the owner is always present.
+    const owners = await db
+      .select({ userId: householdMembers.userId })
+      .from(householdMembers)
+      .where(and(eq(householdMembers.role, "owner"), eq(householdMembers.status, "active")));
+
+    let count = 0;
+    for (const { userId } of owners) {
+      try {
+        await this.seedDefaultFoodPantryItems(userId);
+        await this.seedDefaultHouseholdItems(userId);
+        count++;
+      } catch (err) {
+        console.warn(`[Pantry Sync] Failed for user ${userId}:`, err);
+      }
+    }
+    console.log(`[Pantry Sync] Synced defaults for ${count} household(s)`);
   }
 
   // ── Shopping List Extras ──────────────────────────────────────────────────

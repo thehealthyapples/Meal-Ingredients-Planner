@@ -421,6 +421,21 @@ const MIGRATIONS: Migration[] = [
   },
 
   {
+    id: "2026-03-13_fix_pantry_null_household_id",
+    statements: [
+      // Patch any pantry rows that were inserted without a household_id.
+      // This backfills the correct household by joining to the user's active
+      // household membership. Safe: only touches rows where household_id IS NULL.
+      `UPDATE user_pantry_items upi
+       SET household_id = hm.household_id
+       FROM household_members hm
+       WHERE hm.user_id = upi.user_id
+         AND hm.status = 'active'
+         AND upi.household_id IS NULL`,
+    ],
+  },
+
+  {
     id: "2026-03-13_shopping_list_columns_fix",
     statements: [
       // These columns were added to the Drizzle schema incrementally without migrations.
