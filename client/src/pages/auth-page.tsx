@@ -12,6 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Lock, UserPlus, CheckCircle2, AlertTriangle, Mail, Loader2, RefreshCw, KeyRound } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
+import KitchenToBasketVisual from "@/components/KitchenToBasketVisual";
+import thaAppleUrl from "@/assets/icons/tha-apple.png";
 
 type AppConfig = {
   registrationEnabled: boolean;
@@ -169,25 +171,26 @@ export default function AuthPage() {
           </div>
           
           <div className="space-y-6 max-w-lg">
-            <h2 className="text-5xl font-bold font-display text-white leading-tight">
-              Plan your meals,<br/>
-              <span className="text-secondary-foreground">Simplify your shopping.</span>
+            <h2 className="text-5xl font-bold font-display text-white leading-tight" data-testid="text-hero-headline">
+              Plan meals. Build smarter baskets.<br/>
+              <span className="text-secondary-foreground">Make better choices.</span>
             </h2>
-            <p className="text-lg text-primary-foreground/90 leading-relaxed">
-              Create custom meal plans, organise your favourite recipes, and automatically analyse your basket in seconds.
+            <p className="text-lg text-primary-foreground/90 leading-relaxed" data-testid="text-hero-sub-copy">
+              The Healthy Apples learns what's in your kitchen and helps you choose better ingredients and groceries with less effort.
             </p>
           </div>
         </div>
 
-        <div className="relative h-64 mt-12 rounded-2xl overflow-hidden shadow-2xl border-4 border-white/20">
-          <img 
-            src="https://images.unsplash.com/photo-1498837167922-ddd27525d352?auto=format&fit=crop&q=80&w=1000" 
-            alt="Fresh ingredients layout"
-            className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700" 
+        <div className="relative">
+          <img
+            src={thaAppleUrl}
+            alt=""
+            aria-hidden="true"
+            draggable={false}
+            className="absolute -bottom-8 -right-8 w-56 h-56 object-contain opacity-[0.06] pointer-events-none select-none"
+            data-testid="img-apple-watermark-hero"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-6">
-            <p className="text-white font-medium">Start eating better today.</p>
-          </div>
+          <KitchenToBasketVisual />
         </div>
       </div>
 
