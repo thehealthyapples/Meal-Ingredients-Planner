@@ -13,6 +13,7 @@ import { ArrowRight, Lock, UserPlus, CheckCircle2, AlertTriangle, Mail, Loader2,
 import { useLocation, useSearch } from "wouter";
 import KitchenToBasketVisual from "@/components/KitchenToBasketVisual";
 import transparentAppleUrl from "@assets/new_single_apple_transparent_1772836544576.png";
+import brandLogoUrl from "@assets/thehealthy_apples_transparent_logo__1773438557183.png";
 
 type AppConfig = {
   registrationEnabled: boolean;
@@ -172,13 +173,15 @@ export default function AuthPage() {
         />
 
         <div className="relative z-10">
-          <div className="flex items-center gap-4 text-primary-foreground mb-2">
-            <h1 className="text-4xl font-bold font-display tracking-tight" data-testid="text-brand-title">The Healthy Apples</h1>
-            <img src={transparentAppleUrl} alt="The Healthy Apples" style={{ height: 80, width: "auto" }} className="object-contain" draggable={false} />
+          <div className="mb-8">
+            <img
+              src={brandLogoUrl}
+              alt="The Healthy Apples — Confidently Choose Better, Simply"
+              className="h-24 w-auto object-contain"
+              draggable={false}
+              data-testid="img-brand-logo"
+            />
           </div>
-          <p className="text-sm font-medium tracking-widest text-white/45 uppercase mb-8" data-testid="text-brand-slogan">
-            Confidently better Choices, Simply
-          </p>
 
           <div className="space-y-6 max-w-lg">
             <h2 className="text-5xl font-bold font-display text-white leading-tight" data-testid="text-hero-headline">
