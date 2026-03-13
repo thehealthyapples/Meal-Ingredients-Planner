@@ -1,0 +1,114 @@
+Objective
+
+Create a premium landing-page hero visual and onboarding visual direction for The Healthy Apples, centred around a “Kitchen to Basket” story.
+
+Important constraints
+
+- Keep this tightly scoped and do not redesign the entire site
+- Do not change backend logic or routes
+- Do not introduce heavy animation libraries or large image dependencies unless already present
+- Prefer clean React + Tailwind implementation using existing app patterns
+- Keep performance in mind
+- Do not deviate from the design brief
+- I will do the visual testing myself, so do not spend time adding automated tests
+
+Goal
+
+Create a hero section visual that instantly explains the product:
+The Healthy Apples understands what is in your kitchen and helps build a smarter, healthier shopping basket.
+
+Primary design concept
+
+Build a polished split-layout hero visual with 3 parts:
+
+1. Kitchen side
+- Show a desirable pantry / fridge inspired UI scene
+- Warm, organised, premium feel
+- Pantry shelves should include simple labelled jars such as:
+  - Rice
+  - Pasta
+  - Lentils
+  - Oats
+- Fridge items can include:
+  - Eggs
+  - Milk
+  - Butter
+- Use calm spacing, rounded cards, soft shadows, premium feel
+- This should feel like looking into a beautiful modern utility / kitchen setup
+
+2. Transition / connection
+- Add a subtle visual connection between kitchen and basket
+- This can be a soft arrow, connector line, or gentle directional layout cue
+- Keep it elegant and minimal
+
+3. Basket side
+- Show a compact smart basket result panel
+- Include rows with:
+  - ingredient or matched product
+  - price
+  - THA apple rating using the new single apple transparent asset where relevant
+- Example rows:
+  - Free Range Eggs
+  - Organic Passata
+  - Greek Yoghurt
+  - Olive Oil
+
+Brand requirements
+
+- The Healthy Apples should feel calm, intelligent, modern, and premium
+- Use a subtle large apple watermark behind the hero text area
+- Watermark should be low opacity only, not distracting
+- Reuse THA green tones already in the product
+- Avoid anything loud, cluttered, cartoonish, or generic stock-photo feeling
+
+Hero text area
+
+Update the hero so it clearly tells the story in one glance.
+
+Recommended headline:
+Plan meals. Build smarter baskets. Make better choices.
+
+Recommended supporting copy:
+The Healthy Apples learns what’s in your kitchen and helps you choose better ingredients and groceries with less effort.
+
+CTA:
+Keep the existing primary CTA pattern if there is one; otherwise use a single clean primary CTA
+
+Implementation details
+
+- Find the landing page / homepage hero component and update only that area plus any small supporting styles required
+- Create the hero visual using React/Tailwind UI composition, not a baked static image
+- Use simple cards / panels / labelled items to represent pantry, fridge, and basket
+- Keep the layout responsive:
+  - desktop: clear side-by-side composition
+  - tablet: stacked but still readable
+  - mobile: text first, then kitchen card, then basket card
+- Add the apple watermark as an absolutely positioned decorative layer with pointer-events-none
+- Ensure the text remains readable over the watermark
+- Keep DOM structure simple and maintainable
+
+Optional but encouraged if low effort
+
+- Add a small “Your Kitchen → Smart Basket” label above the visual
+- Add subtle apple-rating presentation using the transparent single apple icon repeated where appropriate
+- Add a very light hover lift on cards if the site already uses similar interactions
+
+Do not
+
+- Do not redesign the full landing page below the hero
+- Do not add complex drag-and-drop
+- Do not add heavy animation work
+- Do not touch unrelated pages
+- Do not replace core architecture
+- Do not invent new backend APIs
+
+Deliverable
+
+Make the landing page hero feel like a polished branded explanation of the product in one screen:
+kitchen awareness + ingredient intelligence + smarter basket.
+
+At the end, provide a concise implementation summary covering:
+- files changed
+- components added or updated
+- any assets reused
+- any follow-up suggestions that are strictly optional
