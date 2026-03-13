@@ -451,6 +451,43 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-13_backfill_missing_households",
+    statements: [
+      // Some users created after the original backfill (2026-03-04) have no household.
+      // This migration is idempotent and safe to run any number of times.
+
+      // Step 1: Create a household for any user who still has none
+      `INSERT INTO households (name, invite_code, created_by_user_id, created_at, updated_at)
+       SELECT
+         username || '''s Household',
+         upper(substr(md5(random()::text), 1, 8)),
+         id,
+         NOW(),
+         NOW()
+       FROM users
+       WHERE id NOT IN (
+         SELECT created_by_user_id FROM households WHERE created_by_user_id IS NOT NULL
+       )
+       ON CONFLICT DO NOTHING`,
+
+      // Step 2: Insert an owner membership for those users
+      `INSERT INTO household_members (household_id, user_id, role, status, joined_at)
+       SELECT h.id, u.id, 'owner', 'active', NOW()
+       FROM users u
+       JOIN households h ON h.created_by_user_id = u.id
+       ON CONFLICT ON CONSTRAINT household_members_household_user_unique DO NOTHING`,
+
+      // Step 3: Backfill household_id on planner_weeks rows that are still NULL
+      `UPDATE planner_weeks pw
+       SET household_id = hm.household_id
+       FROM household_members hm
+       WHERE hm.user_id = pw.user_id
+         AND hm.status = 'active'
+         AND pw.household_id IS NULL`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

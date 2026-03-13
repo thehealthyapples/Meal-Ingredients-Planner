@@ -303,8 +303,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db.insert(users).values(insertUser).returning();
-    return user;
+    return await db.transaction(async (tx) => {
+      const [user] = await tx.insert(users).values(insertUser).returning();
+
+      const inviteCode = crypto.randomUUID().replace(/-/g, "").substring(0, 8).toUpperCase();
+      const [household] = await tx.insert(households).values({
+        name: `${user.username}'s Household`,
+        inviteCode,
+        createdByUserId: user.id,
+      }).returning();
+
+      await tx.insert(householdMembers).values({
+        householdId: household.id,
+        userId: user.id,
+        role: "owner",
+        status: "active",
+        joinedAt: new Date(),
+      });
+
+      return user;
+    });
   }
 
   async updateUserPreference(id: number, measurementPreference: string): Promise<User | undefined> {
