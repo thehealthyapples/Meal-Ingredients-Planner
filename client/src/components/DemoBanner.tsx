@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Clock, AlertTriangle, X } from "lucide-react";
 import { useUser } from "@/hooks/use-user";
-import { apiRequest } from "@/lib/queryClient";
-import { useLocation } from "wouter";
+import { Link } from "wouter";
 
 function formatCountdown(ms: number): string {
   if (ms <= 0) return "0:00";
@@ -56,20 +55,38 @@ export default function DemoBanner() {
         <Clock className="h-4 w-4 shrink-0" aria-hidden="true" />
       )}
 
-      <span className="flex-1 min-w-0">
-        <span className="font-semibold">Demo account</span>
-        {" — "}
-        <span className="opacity-90">
-          Some features are limited. Changes are temporary and not saved permanently.
+      {isWarning ? (
+        <span className="flex-1 min-w-0 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+          <span className="font-semibold">Demo ending in{" "}
+            <span className="font-mono" data-testid="text-demo-countdown">
+              {isExpired ? "0:00" : formatCountdown(msLeft)}
+            </span>
+          </span>
+          <span className="opacity-90">— Don't lose your progress.</span>
+          <Link
+            href="/auth?register=1"
+            className="underline underline-offset-2 font-semibold hover:opacity-80 transition-opacity whitespace-nowrap"
+            data-testid="link-demo-register"
+          >
+            Create a free account →
+          </Link>
         </span>
-        {" "}
-        <span
-          className={`font-mono font-bold ${isWarning ? "text-red-900" : ""}`}
-          data-testid="text-demo-countdown"
-        >
-          Session expires in {isExpired ? "0:00" : formatCountdown(msLeft)}.
+      ) : (
+        <span className="flex-1 min-w-0">
+          <span className="font-semibold">Demo account</span>
+          {" — "}
+          <span className="opacity-90">
+            Some features are limited. Changes are temporary and not saved permanently.
+          </span>
+          {" "}
+          <span
+            className="font-mono font-bold"
+            data-testid="text-demo-countdown"
+          >
+            Session expires in {isExpired ? "0:00" : formatCountdown(msLeft)}.
+          </span>
         </span>
-      </span>
+      )}
 
       <button
         onClick={() => setDismissed(true)}

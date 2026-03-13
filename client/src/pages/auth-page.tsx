@@ -51,13 +51,16 @@ export default function AuthPage() {
   const verifyError = params.get("verify_error");
   const resetTokenParam = params.get("reset_token");
   const demoExpired = params.get("demo") === "expired";
+  const forceRegister = params.get("register") === "1";
 
   useEffect(() => {
     if (resetTokenParam) {
       setResetToken(resetTokenParam);
       setMode("reset");
+    } else if (forceRegister) {
+      setMode("register");
     }
-  }, [resetTokenParam]);
+  }, [resetTokenParam, forceRegister]);
 
   const handleDemoStart = async () => {
     if (demoStarting) return;
