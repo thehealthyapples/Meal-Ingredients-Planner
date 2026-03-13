@@ -1,0 +1,93 @@
+You are investigating a production-only backend issue. Be disciplined, cost-controlled, and do not redesign anything.
+
+Problem summary
+Production is not working 100% correctly.
+
+Observed production issues:
+1. Pantry is missing the default lists for food and household.
+2. Add to basket from My Meals is not working.
+3. Add to planner from My Meals is working.
+4. The browser console/network shows:
+- GET /api/pantry -> 500
+- GET /api/shopping-list -> 500
+- POST /api/shopping-list/from-meals -> 500
+
+Likely implication:
+- Planner-side functionality is working
+- Pantry / shopping-list backend paths are failing in production
+- This may be caused by production DB schema drift, missing migrations, missing seed/default pantry data, or unhandled null/empty production data
+
+Scope
+Investigate only the pantry + shopping-list production failure path and the missing default pantry lists.
+Do not refactor unrelated code.
+Do not restyle UI.
+Do not change working planner functionality unless directly required for the fix.
+
+Tasks
+
+T1. Inspect the backend routes and services for:
+- /api/pantry
+- /api/shopping-list
+- /api/shopping-list/from-meals
+
+Trace each route through:
+- route handler
+- service/storage function
+- DB query
+- expected table/column dependencies
+- any default pantry initialization logic
+
+T2. Identify likely production failure points
+Specifically check for:
+- references to columns/tables that may exist in dev but not prod
+- assumptions that default pantry rows already exist
+- null/undefined user pantry or shopping list records
+- seed/init code that runs in dev but not in prod
+- schema changes that require a migration the production DB may not have
+- joins or inserts that fail when pantry defaults are absent
+
+T3. Inspect schema + migrations
+Check:
+- shared/schema.ts
+- migrations folder
+- any DB bootstrap / seed / startup init logic
+
+Determine whether production would correctly create or seed:
+- default pantry food items
+- default pantry household items
+- shopping list records needed by from-meals flow
+
+T4. Make the minimum safe fix
+Priority order:
+1. Stop the 500 errors
+2. Restore default pantry food and household lists in production
+3. Restore add-to-basket from My Meals
+4. Keep changes minimal and safe
+
+Preferred fix style
+- Add defensive backend handling for missing pantry/shopping-list state
+- Ensure default pantry initialization happens safely if absent
+- Avoid relying on manual DB state
+- If needed, add a targeted migration or startup-safe initialization path
+- Do not do broad renames or architecture changes
+
+T5. Add robust error handling
+If these endpoints currently throw, make them fail gracefully and log clearly enough for diagnosis.
+Do not expose sensitive internals to the client.
+
+Acceptance criteria
+1. /api/pantry no longer returns 500
+2. Pantry default food list appears in production
+3. Pantry default household list appears in production
+4. /api/shopping-list no longer returns 500
+5. /api/shopping-list/from-meals no longer returns 500
+6. “Add to basket from My Meals” works in production
+7. Existing “Add to planner from My Meals” behaviour remains unchanged
+8. No unrelated areas are modified
+
+Output format
+Return:
+1. Root cause found
+2. Exact files changed
+3. Whether this was a migration issue, seed issue, null-handling issue, or a combination
+4. Any production action still required after code changes (for example migration run or seed run)

@@ -2096,8 +2096,13 @@ export async function registerRoutes(
 
   app.get(api.shoppingList.list.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const items = await storage.getShoppingListItemsWithAttribution(req.user!.id);
-    res.json(items);
+    try {
+      const items = await storage.getShoppingListItemsWithAttribution(req.user!.id);
+      res.json(items);
+    } catch (err) {
+      console.error("[ShoppingList] GET error:", err);
+      res.status(500).json({ message: "Failed to fetch shopping list" });
+    }
   });
 
   app.post(api.shoppingList.add.path, async (req, res) => {
@@ -2538,7 +2543,8 @@ export async function registerRoutes(
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
       }
-      throw err;
+      console.error("[ShoppingList] from-meals error:", err);
+      res.status(500).json({ message: "Failed to generate shopping list from meals" });
     }
   });
 
@@ -4900,7 +4906,16 @@ export async function registerRoutes(
   app.get("/api/pantry", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const items = await storage.getPantryItems(req.user!.id);
+      let items = await storage.getPantryItems(req.user!.id);
+      if (items.length === 0) {
+        await storage.seedDefaultFoodPantryItems(req.user!.id).catch(e =>
+          console.warn("[Pantry] Failed to seed food pantry defaults:", e)
+        );
+        await storage.seedDefaultHouseholdItems(req.user!.id).catch(e =>
+          console.warn("[Pantry] Failed to seed household defaults:", e)
+        );
+        items = await storage.getPantryItems(req.user!.id);
+      }
       res.json(items);
     } catch (err) {
       console.error("[Pantry] GET error:", err);

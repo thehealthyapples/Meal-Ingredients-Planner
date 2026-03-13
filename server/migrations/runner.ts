@@ -404,6 +404,38 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-13_pantry_columns_fix",
+    statements: [
+      // Add columns that were added to the Drizzle schema without a migration
+      "ALTER TABLE user_pantry_items ADD COLUMN IF NOT EXISTS display_name TEXT",
+      "ALTER TABLE user_pantry_items ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT FALSE",
+      "ALTER TABLE user_pantry_items ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN NOT NULL DEFAULT FALSE",
+      "ALTER TABLE user_pantry_items ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0",
+      // Backfill display_name from ingredient_key for any pre-existing rows
+      "UPDATE user_pantry_items SET display_name = ingredient_key WHERE display_name IS NULL",
+      // Widen the category CHECK to include 'household' (seed inserts this value)
+      "ALTER TABLE user_pantry_items DROP CONSTRAINT IF EXISTS user_pantry_items_category_check",
+      "ALTER TABLE user_pantry_items ADD CONSTRAINT user_pantry_items_category_check CHECK (category IN ('larder','fridge','freezer','household'))",
+    ],
+  },
+
+  {
+    id: "2026-03-13_shopping_list_columns_fix",
+    statements: [
+      // These columns were added to the Drizzle schema incrementally without migrations.
+      // All use IF NOT EXISTS so they are safe to run even if a column already exists.
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS needs_review BOOLEAN NOT NULL DEFAULT FALSE",
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS validation_note TEXT",
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS selected_store TEXT",
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS item_type TEXT",
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS variant_selections TEXT",
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS attribute_preferences TEXT",
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS confidence_level TEXT",
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS confidence_reason TEXT",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
