@@ -159,36 +159,36 @@ export default function AuthPage() {
   if (user) return null;
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
-      <div className="relative hidden lg:flex flex-col justify-between p-12 bg-primary overflow-hidden">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-secondary/20 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3" />
+    <div className="h-screen grid lg:grid-cols-2 bg-background overflow-hidden">
+      <div className="relative hidden lg:flex flex-col justify-between p-8 bg-background overflow-hidden">
+        <div className="absolute top-0 right-0 w-72 h-72 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/5 rounded-full blur-3xl translate-y-1/3 -translate-x-1/3" />
         <img
           src={transparentAppleUrl}
           alt=""
           aria-hidden="true"
           draggable={false}
-          className="absolute top-1/2 right-4 -translate-y-1/2 w-80 h-80 object-contain opacity-[0.13] pointer-events-none select-none"
+          className="absolute top-1/2 right-4 -translate-y-1/2 w-72 h-72 object-contain opacity-[0.04] pointer-events-none select-none"
           data-testid="img-apple-watermark-hero"
         />
 
         <div className="relative z-10">
-          <div className="mb-8">
+          <div className="mb-3">
             <img
               src={brandLogoUrl}
               alt="The Healthy Apples — Confidently Choose Better, Simply"
-              className="h-24 w-auto object-contain"
+              className="h-48 w-auto object-contain"
               draggable={false}
               data-testid="img-brand-logo"
             />
           </div>
 
-          <div className="space-y-6 max-w-lg">
-            <h2 className="text-5xl font-bold font-display text-white leading-tight" data-testid="text-hero-headline">
+          <div className="space-y-3 max-w-lg">
+            <h2 className="text-3xl font-bold font-display text-foreground leading-tight" data-testid="text-hero-headline">
               Plan meals. Analyse ingredients.<br/>
-              <span className="text-secondary-foreground">Build smarter baskets.</span>
+              <span className="text-primary">Build smarter baskets.</span>
             </h2>
-            <p className="text-lg text-primary-foreground/90 leading-relaxed" data-testid="text-hero-sub-copy">
+            <p className="text-sm text-muted-foreground leading-relaxed" data-testid="text-hero-sub-copy">
               The Healthy Apples helps you plan meals, assess every ingredient, and make better grocery choices — with far less effort.
             </p>
           </div>
@@ -199,8 +199,8 @@ export default function AuthPage() {
         </div>
       </div>
 
-      <div className="flex items-center justify-center p-6 lg:p-12">
-        <div className="w-full max-w-md space-y-8">
+      <div className="flex items-center justify-center p-6 lg:p-10 bg-primary overflow-y-auto">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 space-y-5">
           {verified && (
             <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200 text-green-800" data-testid="banner-email-verified">
               <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
