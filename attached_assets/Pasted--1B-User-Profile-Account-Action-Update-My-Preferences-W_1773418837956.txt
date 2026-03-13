@@ -1,0 +1,105 @@
+#1B - User Profile Account Action: Update My Preferences
+What & Why
+Add a user-facing entry point in the profile/account area that allows a signed-in user to go back through onboarding and update their preferences. This should mirror the admin-side Run Onboarding behaviour, but with user-friendly wording and a confirmation modal.
+
+Done looks like
+In the user profile/account area, a new action appears:
+- Update my preferences
+
+Clicking it does not immediately execute
+Instead, it opens a confirmation modal
+
+The confirmation modal explains that:
+- the user will go back through their setup questions
+- current answers will be reused where available
+- unrelated account data will not be deleted
+
+Modal actions:
+- Cancel
+- Continue
+
+On confirm, the user is routed into the existing onboarding flow
+Existing onboarding answers are prefilled where supported
+Completing onboarding updates only onboarding-related preference fields
+No pantry, basket, recipe history, password, or unrelated account data is deleted
+
+Out of scope
+Any redesign of the account page
+Any backend schema changes unless absolutely necessary
+Any rebuild of onboarding itself
+Any changes to admin tools beyond shared reuse if helpful
+
+Tasks
+
+T001 — Add user-facing action in profile/account area
+Locate the user profile/account section and add a new action:
+- Update my preferences
+
+Requirements
+- Match existing account/settings button styling
+- Place it in a sensible location around account/preferences
+- Keep wording user-friendly, not technical
+
+T002 — Add confirmation modal
+Clicking the action should open a confirmation modal
+
+Recommended content
+Title:
+- Update your preferences?
+
+Body:
+- You’ll go back through your setup questions so you can review or change your food and shopping preferences.
+- Your current answers will be reused where available.
+- No unrelated account data will be removed.
+
+Buttons:
+- Cancel
+- Continue
+
+Reuse existing dialog/modal patterns if already present
+
+T003 — Launch existing onboarding flow
+On confirm, route the user into the existing onboarding flow
+Do not create a second onboarding implementation
+
+T004 — Reuse existing answers where available
+Ensure the onboarding flow preloads saved preference values where the current implementation supports it
+
+T005 — Save only onboarding-related fields
+On completion, update only onboarding-related preference fields, such as:
+- dietPattern
+- dietRestrictions
+- eatingSchedule
+- healthGoals
+- budgetLevel
+- preferredStores
+- upfSensitivity
+- qualityPreference
+- excludedIngredients
+
+Do not modify unrelated user data
+
+T006 — Reuse shared logic where sensible
+If the new user-facing action and the admin-side Run Onboarding action can share modal/action/launch logic cleanly, do so
+But do not over-engineer
+
+Relevant files
+- user profile / account page component
+- client/src/pages/onboarding-page.tsx
+- any shared modal/dialog components
+- any existing preference/account action handlers
+
+Acceptance checklist
+- Update my preferences appears in the account area
+- clicking it opens a confirmation modal
+- confirming launches existing onboarding
+- existing answers are reused where supported
+- only onboarding-related fields are updated
+- unrelated account data remains untouched
+
+At the end, provide a concise implementation summary covering
+- files changed
+- where the new action was added
+- how the modal works
+- how onboarding is launched
+- confirmation that only onboarding-related fields are updated

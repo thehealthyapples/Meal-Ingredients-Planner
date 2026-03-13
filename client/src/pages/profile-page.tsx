@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { useUser } from "@/hooks/use-user";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
@@ -13,12 +14,15 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import {
   User, Heart, Home, Flame, Target, Settings, Shield,
   Plus, Minus, Save, Activity, Scale, Ruler,
   Baby, PersonStanding, Users, Apple, TrendingUp,
   Volume2, Scan, Loader2, ArrowLeft, Check, Store,
   PiggyBank, ShieldAlert, Sparkles, Ban, Mail, Trash2,
-  Copy, LogOut, UserMinus, Pencil, X
+  Copy, LogOut, UserMinus, Pencil, X, RefreshCw
 } from "lucide-react";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
@@ -1177,12 +1181,14 @@ function FeatureToggles({ prefs, onToggle }: { prefs: any; onToggle: (field: str
 function AccountSettings({ profile }: { profile: ProfileData }) {
   const { logout } = useUser();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [pwState, setPwState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [pwError, setPwError] = useState("");
+  const [showPrefsConfirm, setShowPrefsConfirm] = useState(false);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1352,6 +1358,18 @@ function AccountSettings({ profile }: { profile: ProfileData }) {
 
         <Button
           variant="outline"
+          className="w-full"
+          onClick={() => setShowPrefsConfirm(true)}
+          data-testid="button-update-preferences"
+        >
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Update my preferences
+        </Button>
+
+        <Separator />
+
+        <Button
+          variant="outline"
           className="w-full text-destructive"
           onClick={() => logout()}
           data-testid="button-logout-profile"
@@ -1359,6 +1377,39 @@ function AccountSettings({ profile }: { profile: ProfileData }) {
           Sign out
         </Button>
       </div>
+
+      <Dialog open={showPrefsConfirm} onOpenChange={setShowPrefsConfirm}>
+        <DialogContent className="sm:max-w-sm" data-testid="dialog-update-preferences">
+          <DialogHeader>
+            <DialogTitle>Update your preferences?</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground mt-1">
+                <p>You'll go back through your setup questions so you can review or change your food and shopping preferences.</p>
+                <p>Your current answers will be reused where available.</p>
+                <p>No unrelated account data will be removed.</p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowPrefsConfirm(false)}
+              data-testid="button-cancel-update-preferences"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setShowPrefsConfirm(false);
+                setLocation("/onboarding");
+              }}
+              data-testid="button-confirm-update-preferences"
+            >
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
