@@ -11,7 +11,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Lock, UserPlus, CheckCircle2, AlertTriangle, Mail, Loader2, RefreshCw, KeyRound } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
-import FiveApplesLogo from "@/components/FiveApplesLogo";
 import KitchenToBasketVisual from "@/components/KitchenToBasketVisual";
 import transparentAppleUrl from "@assets/new_single_apple_transparent_1772836544576.png";
 
@@ -167,7 +166,7 @@ export default function AuthPage() {
         <div className="relative z-10">
           <div className="flex items-center gap-4 text-primary-foreground mb-8">
             <h1 className="text-4xl font-bold font-display tracking-tight" data-testid="text-brand-title">The Healthy Apples</h1>
-            <FiveApplesLogo size={40} />
+            <img src={transparentAppleUrl} alt="The Healthy Apples" style={{ height: 80, width: "auto" }} className="object-contain" draggable={false} />
           </div>
           
           <div className="space-y-6 max-w-lg">
