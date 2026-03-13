@@ -6,3 +6,9 @@ id = "yqKbZ_ZYt6DUyjC5wMCYc"
 uri = "file://.local/demo-architecture-plan.md"
 type = "text"
 title = "THA Demo Account Architecture — Planning Document"
+
+[[outputs]]
+id = "N4R3XGQwaS01rrEBEYru-"
+uri = "file://.local/planner-bug-plan.md"
+type = "text"
+title = "Planner Bug — Root Cause & Fix Plan"
