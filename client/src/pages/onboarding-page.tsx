@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -143,6 +143,38 @@ export default function OnboardingPage() {
   const [upfSensitivity, setUpfSensitivity] = useState("moderate");
 
   const [direction, setDirection] = useState(0);
+  const prefillApplied = useRef(false);
+
+  const { data: profile } = useQuery<any>({
+    queryKey: ["/api/profile"],
+    queryFn: async () => {
+      const res = await fetch("/api/profile", { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  const { data: prefs } = useQuery<any>({
+    queryKey: ["/api/user/preferences"],
+    queryFn: async () => {
+      const res = await fetch("/api/user/preferences", { credentials: "include" });
+      if (!res.ok) return null;
+      return res.json();
+    },
+  });
+
+  useEffect(() => {
+    if (prefillApplied.current) return;
+    if (!profile && !prefs) return;
+    prefillApplied.current = true;
+    if (profile?.dietPattern) setDietPattern(profile.dietPattern);
+    if (Array.isArray(profile?.dietRestrictions) && profile.dietRestrictions.length > 0) setDietRestrictions(profile.dietRestrictions);
+    if (profile?.eatingSchedule) setEatingSchedule(profile.eatingSchedule);
+    if (Array.isArray(prefs?.healthGoals) && prefs.healthGoals.length > 0) setHealthGoals(prefs.healthGoals);
+    if (prefs?.budgetLevel) setBudgetLevel(prefs.budgetLevel);
+    if (Array.isArray(prefs?.preferredStores) && prefs.preferredStores.length > 0) setPreferredStores(prefs.preferredStores);
+    if (prefs?.upfSensitivity) setUpfSensitivity(prefs.upfSensitivity);
+  }, [profile, prefs]);
 
   const completeMutation = useMutation({
     mutationFn: async () => {

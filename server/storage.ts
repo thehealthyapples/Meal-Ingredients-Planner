@@ -96,6 +96,7 @@ export interface IStorage {
   upsertUserPreferences(userId: number, prefs: InsertUserPreferences): Promise<UserPreferences>;
   updateUserProfile(id: number, fields: Partial<Pick<User, 'displayName' | 'profilePhotoUrl' | 'dietPattern' | 'dietRestrictions' | 'eatingSchedule'>>): Promise<User | undefined>;
   completeOnboarding(userId: number): Promise<User | undefined>;
+  resetOnboarding(userId: number): Promise<void>;
   getAllAdditives(): Promise<Additive[]>;
   getAdditiveByName(name: string): Promise<Additive | undefined>;
   getProductAdditives(productBarcode: string): Promise<ProductAdditive[]>;
@@ -698,6 +699,10 @@ export class DatabaseStorage implements IStorage {
   async completeOnboarding(userId: number): Promise<User | undefined> {
     const [result] = await db.update(users).set({ onboardingCompleted: true }).where(eq(users.id, userId)).returning();
     return result;
+  }
+
+  async resetOnboarding(userId: number): Promise<void> {
+    await db.update(users).set({ onboardingCompleted: false }).where(eq(users.id, userId));
   }
 
   async getAllAdditives(): Promise<Additive[]> {

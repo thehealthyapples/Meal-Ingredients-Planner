@@ -1,0 +1,133 @@
+#1 - Admin User Tool: Run Onboarding Action
+What & Why
+Add a new admin action for each user in the existing admin user tools area, positioned next to the current Reset Password action. This gives admins a quick, safe way to relaunch onboarding for QA, demos, support, and preference refreshes. Because this affects a real user flow, the action must require confirmation in a modal before proceeding.
+
+Done looks like
+In the admin user tools / user list area, each user row now shows:
+- Reset Password
+- Run Onboarding
+
+The new Run Onboarding action appears adjacent to Reset Password and matches the existing admin action styling
+
+Clicking Run Onboarding does not immediately execute
+Instead, it opens a confirmation modal
+
+The confirmation modal clearly states:
+- which user the action applies to
+- that the user will be taken back through onboarding
+- that onboarding preferences may be updated
+- that unrelated user data will not be deleted
+
+Modal actions:
+- Cancel
+- Run Onboarding
+
+On confirm, the selected user is sent through the existing onboarding flow using current app patterns
+Existing onboarding answers should prefill where supported by the current onboarding implementation
+Completing onboarding updates only onboarding-related preference fields
+The Reset Password action remains untouched
+No unrelated user data, pantry data, basket data, recipes, or account history is deleted
+No backend schema changes unless absolutely necessary
+
+Out of scope
+Any redesign of the full admin page
+Any changes to Reset Password behaviour
+Any changes to unrelated user actions
+Deleting or recreating users
+Rebuilding onboarding itself
+Adding drag-and-drop or richer kitchen onboarding in this pass
+
+Tasks
+
+T001 — Add Run Onboarding action beside Reset Password
+Locate the existing admin user tools / user row actions where Reset Password already exists
+Add a second button/action immediately next to it:
+- Run Onboarding
+
+Requirements
+- Match existing button sizing, spacing, and styling conventions
+- Keep layout professional and compact
+- Ensure the action is clearly visible but not destructive-looking
+
+T002 — Add confirmation modal before action
+Clicking Run Onboarding should open a confirmation modal before anything happens
+
+Modal content should include:
+Title:
+- Run onboarding again?
+
+Body copy:
+- This will relaunch onboarding for this user so their preferences can be reviewed or updated.
+- Existing onboarding answers should be reused where available.
+- Unrelated user data will not be deleted.
+
+Buttons:
+- Cancel
+- Run Onboarding
+
+Requirements
+- Reuse any existing modal/dialog component patterns already in the codebase
+- Modal should identify the selected user clearly (name/email if already available in this view)
+- Cancel closes modal with no side effects
+- Confirm proceeds with the action
+
+T003 — Trigger existing onboarding flow
+On confirm, route the selected user into the existing onboarding flow using current architecture
+Do not duplicate onboarding pages
+Do not build a separate onboarding flow for admins
+
+Prefer existing route/guard/update patterns
+
+T004 — Preserve and prefill onboarding answers
+Where existing onboarding preference values already exist, ensure the onboarding flow loads with current selections where the current implementation supports it
+
+Use the existing preference fields only, such as:
+- dietPattern
+- dietRestrictions
+- eatingSchedule
+- healthGoals
+- budgetLevel
+- preferredStores
+- upfSensitivity
+- qualityPreference
+- excludedIngredients
+
+T005 — Limit save scope to onboarding-related fields
+On completion, update only onboarding-related preference fields
+Do not modify:
+- password
+- pantry contents
+- basket contents
+- recipe history
+- account history
+- unrelated profile/system fields
+
+T006 — Keep implementation controlled and low-risk
+Requirements
+- Prefer minimal backend or routing changes
+- Reuse existing onboarding submit/update flow wherever possible
+- Do not touch unrelated pages
+- Do not introduce new libraries
+- Keep this strictly focused on adding the admin action + confirmation modal + existing onboarding launch path
+
+Relevant files
+- the existing admin user tools / user list component where Reset Password already exists
+- client/src/pages/onboarding-page.tsx
+- any existing modal/dialog component already used in the app
+- any existing user/admin action handlers already wired for Reset Password or user management
+
+Acceptance checklist
+- Run Onboarding appears next to Reset Password for each user
+- clicking it opens a confirmation modal
+- confirming launches existing onboarding flow
+- existing onboarding values are reused where supported
+- unrelated user data is untouched
+- Reset Password still works unchanged
+- no unrelated admin page drift
+
+At the end, provide a concise implementation summary covering
+- files changed
+- where the new button was added
+- how the confirmation modal works
+- how onboarding is launched
+- confirmation that only onboarding-related fields are updated

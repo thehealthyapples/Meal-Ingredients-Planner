@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, ChevronLeft, ChevronRight, ShieldCheck, KeyRound, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ShieldCheck, KeyRound, Eye, EyeOff, Loader2, RotateCcw } from "lucide-react";
 
 type SafeUser = {
   id: number;
@@ -70,6 +70,8 @@ export default function AdminUsersPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  const [onboardingDialog, setOnboardingDialog] = useState<{ userId: number; username: string } | null>(null);
 
   if ((user as any)?.role !== "admin") {
     setLocation("/");
@@ -119,6 +121,18 @@ export default function AdminUsersPage() {
     },
     onError: (err: any) => {
       toast({ title: "Reset failed", description: err.message || "Failed to reset password.", variant: "destructive" });
+    },
+  });
+
+  const runOnboardingMutation = useMutation({
+    mutationFn: (userId: number) =>
+      apiRequest("POST", `/api/admin/users/${userId}/run-onboarding`, {}),
+    onSuccess: () => {
+      toast({ title: "Onboarding reset", description: "The user will be taken through onboarding on their next login." });
+      setOnboardingDialog(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed", description: err.message || "Failed to reset onboarding.", variant: "destructive" });
     },
   });
 
@@ -195,20 +209,21 @@ export default function AdminUsersPage() {
               <TableHead>Change Tier</TableHead>
               <TableHead className="w-20">Save</TableHead>
               <TableHead className="w-32">Password</TableHead>
+              <TableHead className="w-36">Onboarding</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 7 }).map((_, j) => (
+                  {Array.from({ length: 8 }).map((_, j) => (
                     <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : users_list.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
@@ -275,6 +290,18 @@ export default function AdminUsersPage() {
                         Reset
                       </Button>
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setOnboardingDialog({ userId: u.id, username: u.username })}
+                        data-testid={`button-run-onboarding-${u.id}`}
+                        title="Relaunch onboarding for this user"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                        Onboarding
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -326,6 +353,35 @@ export default function AdminUsersPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmTierChange}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!onboardingDialog} onOpenChange={(open) => !open && setOnboardingDialog(null)}>
+        <AlertDialogContent data-testid="dialog-run-onboarding">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Run onboarding again?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                <p>This will relaunch onboarding for <strong className="text-foreground">{onboardingDialog?.username}</strong> so their preferences can be reviewed or updated.</p>
+                <p>Existing onboarding answers will be reused where available.</p>
+                <p>Unrelated user data will not be deleted.</p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-onboarding">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => onboardingDialog && runOnboardingMutation.mutate(onboardingDialog.userId)}
+              disabled={runOnboardingMutation.isPending}
+              data-testid="button-confirm-run-onboarding"
+            >
+              {runOnboardingMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Running...</>
+              ) : (
+                "Run Onboarding"
+              )}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

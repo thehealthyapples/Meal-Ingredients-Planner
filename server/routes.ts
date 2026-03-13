@@ -4902,6 +4902,31 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/admin/users/:id/run-onboarding", assertAdmin, async (req, res) => {
+    try {
+      const targetId = parseInt(req.params.id, 10);
+      if (isNaN(targetId)) return res.status(400).json({ message: "Invalid user id" });
+
+      const targetUser = await storage.getUser(targetId);
+      if (!targetUser) return res.status(404).json({ message: "User not found" });
+
+      await storage.resetOnboarding(targetId);
+
+      await storage.createAuditLog({
+        adminUserId: req.user!.id,
+        action: "ADMIN_RUN_ONBOARDING",
+        targetUserId: targetId,
+        metadata: {},
+      });
+
+      console.log(`[AdminUsers] run-onboarding: admin=${req.user!.id}, target=${targetId}`);
+      res.sendStatus(200);
+    } catch (err) {
+      console.error("[AdminUsers] run-onboarding error:", err);
+      res.status(500).json({ message: "Failed to reset onboarding" });
+    }
+  });
+
   // ── Pantry Staples ──────────────────────────────────────────────────────────
   app.get("/api/pantry", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
