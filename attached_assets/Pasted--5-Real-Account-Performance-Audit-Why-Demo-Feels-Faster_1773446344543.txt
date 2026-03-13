@@ -1,0 +1,156 @@
+#5 - Real Account Performance Audit — Why Demo Feels Faster Than Authenticated App
+
+What & Why
+The current demo experience feels much faster than a real authenticated account. We need a focused performance audit to identify exactly what is slowing down the normal app experience and produce a clear, cost-controlled improvement plan.
+
+This is a planning / inspection pass first. Do not do broad refactors yet.
+
+Important context
+- The current demo experience is perceived as rapid
+- Real/dev accounts feel slower
+- We need to identify whether the slowdown is:
+  - auth/session checks
+  - route guards
+  - onboarding/profile/preferences fetches
+  - app-shell load
+  - planner/basket/meals queries
+  - server/database latency
+  - unnecessary serial requests
+  - oversized payloads
+  - client-side rendering inefficiency
+
+Goal
+Inspect the repo and determine why a real authenticated account is slower than the demo experience, then propose the smallest high-impact fixes in priority order.
+
+Do not
+- Do not redesign pages
+- Do not implement major refactors yet
+- Do not drift into unrelated cleanup
+- Do not optimise blindly
+- Do not guess without inspecting the current code path
+
+What I want from this pass
+
+1. Compare the current demo flow vs real authenticated flow
+2. Identify the critical path for first load of a real user
+3. Identify where extra latency is introduced
+4. Check whether requests are serial when they could be parallel
+5. Check whether unnecessary requests happen on app load
+6. Check whether onboarding/profile/preferences calls are slowing entry
+7. Check whether route guard logic is causing extra waiting/spinners/redirect churn
+8. Check whether planner/basket/home/dashboard initial queries are heavy
+9. Assess whether server/database queries are likely expensive
+10. Propose the most cost-effective fixes in priority order
+
+Specific questions to answer
+
+A. Current flow comparison
+- What does the current demo load path actually do?
+- What does a real authenticated user load path do?
+- Which extra requests and checks happen only for real users?
+
+B. Critical path for real accounts
+- From login success to usable screen, what exact requests/components/guards are on the path?
+- Which of those are blocking render?
+- Which are avoidable or could be deferred?
+
+C. Auth and route guard overhead
+- How is /api/user used?
+- How often is it called?
+- Does the app wait for it before deciding too much?
+- Are there duplicate auth/user fetches?
+- Are protected routes/onboarding guards introducing extra latency or churn?
+
+D. Onboarding / profile / preferences overhead
+- Are profile/preferences fetched eagerly when they could be lazy?
+- Are multiple calls retrieving overlapping user data?
+- Are there serial requests that could be consolidated or parallelised?
+
+E. Page-level data cost
+- Which real pages are heavy on initial load?
+- Planner?
+- Basket?
+- Meals?
+- Dashboard/home?
+- Are there oversized payloads or expensive derived computations?
+
+F. Client-side performance
+- Are there obvious render bottlenecks?
+- Heavy components mounted too early?
+- Repeated expensive transforms?
+- Missing memoization where it truly matters?
+- Too much work happening before first meaningful paint?
+
+G. Backend / DB performance
+- Which endpoints in the real-user flow are likely doing the most work?
+- Are there joins / loops / repeated queries that look expensive?
+- Are there endpoints that fetch more than the first screen really needs?
+- Are there obvious opportunities for lighter payloads or staged loading?
+
+H. Practical improvement plan
+- What are the top 5 fixes by impact vs effort?
+- Which fix should be done first?
+- Which can wait?
+- Which improvements are low-risk and measurable?
+
+Output format required
+
+Please return:
+
+1. Current-state comparison
+- concise comparison of demo load path vs real-user load path
+
+2. Critical-path map
+- step-by-step path from login to usable authenticated screen
+- identify blocking steps clearly
+
+3. Bottleneck findings
+- ranked list of the main slowdown causes
+- include whether each is frontend, backend, network, or architectural
+
+4. Request audit
+- list the key requests triggered on first authenticated load
+- identify duplicates, serial chains, and unnecessary fetches
+
+5. Guard / onboarding assessment
+- explain whether route guards or onboarding checks are adding delay
+
+6. Backend query / endpoint assessment
+- flag likely expensive endpoints or data-loading patterns
+
+7. Recommended fixes
+- top fixes in priority order
+- each with:
+  - expected impact
+  - complexity
+  - risk
+  - why it should or should not be done now
+
+8. Suggested implementation phases
+- smallest safe first phase
+- follow-up phases if needed
+
+9. Any measurement hooks we should add
+- lightweight timing/logging recommendations so we can verify improvements after implementation
+
+Working style requirements
+- Stay tightly focused on explaining why real accounts are slower
+- Be honest about what you can confirm from the repo vs what would need runtime measurement
+- Prefer specific repo-grounded observations over generic advice
+- Keep recommendations cost-controlled and practical
+- Do not start broad optimisation work yet unless a tiny proof point is needed
+
+Helpful measurement guidance
+Where useful, inspect and propose timing around:
+- /api/user
+- login completion to first usable route
+- onboarding/profile/preferences fetches
+- planner initial load
+- basket initial load
+- any first authenticated render path
+
+Success criteria for this audit
+- clear explanation of why demo feels faster
+- clear identification of the real-account bottlenecks
+- clear priority list of fixes
+- enough detail to write a clean implementation prompt for performance improvements

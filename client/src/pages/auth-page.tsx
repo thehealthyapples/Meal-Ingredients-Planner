@@ -218,20 +218,20 @@ export default function AuthPage() {
         <div className="relative z-10 flex flex-col h-full">
 
           {/* Logo */}
-          <div className="mb-2 -ml-2">
+          <div className="mb-1 -ml-2">
             <img
               src={brandLogoUrl}
               alt="The Healthy Apples — Confidently Choose Better, Simply"
-              className="h-80 w-auto object-contain"
+              className="h-56 w-auto object-contain"
               draggable={false}
               data-testid="img-brand-logo"
             />
           </div>
 
           {/* Headline + copy */}
-          <div className="max-w-lg mb-2">
+          <div className="max-w-lg mb-1">
             <h1
-              className="text-base font-bold font-display text-foreground leading-[1.3] mb-1"
+              className="text-base font-bold font-display text-foreground leading-[1.3] mb-0.5"
               data-testid="text-hero-headline"
             >
               Plan meals. Analyse ingredients.<br />

@@ -27,9 +27,9 @@ function MiniAppleRating({ rating, size = 11 }: { rating: number; size?: number 
   );
 }
 
-const CX = 135;
-const CY = 135;
-const R  = 88;
+const CX = 110;
+const CY = 110;
+const R  = 70;
 
 function pt(deg: number) {
   const rad = (deg * Math.PI) / 180;
@@ -105,8 +105,8 @@ const NODES = [
   },
 ];
 
-const CARD_W = 82;
-const CARD_H = 58;
+const CARD_W = 68;
+const CARD_H = 48;
 
 function nodeStyle(deg: number): React.CSSProperties {
   const pos = pt(deg);
