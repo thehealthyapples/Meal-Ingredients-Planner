@@ -32,7 +32,9 @@ const SUPERFOODS = [
 const WHOLE_FOOD_CORE = new Set([
   // Vegetables
   "onion", "onions", "carrot", "carrots", "potato", "potatoes",
-  "sweet potato", "sweet potatoes", "tomato", "tomatoes", "spinach",
+  "sweet potato", "sweet potatoes",
+  "tomato", "tomatoes", "cherry tomato", "cherry tomatoes",
+  "plum tomato", "plum tomatoes", "vine tomato", "vine tomatoes", "spinach",
   "broccoli", "cauliflower", "cabbage", "lettuce", "celery", "cucumber",
   "courgette", "zucchini", "aubergine", "eggplant", "pepper", "peppers",
   "capsicum", "mushroom", "mushrooms", "garlic", "leek", "leeks",
