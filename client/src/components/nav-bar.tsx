@@ -357,13 +357,13 @@ export function TopBar() {
     <>
       <div className="sticky top-0 z-50 shrink-0" data-testid="top-nav-bar">
         {/* Desktop: pure logo bar */}
-        <header className="h-20 w-full bg-card/60 backdrop-blur-md border-b border-border">
+        <header className="h-[120px] w-full bg-card/60 backdrop-blur-md border-b border-border">
           <div className="hidden md:flex items-center justify-center h-full px-4">
             <Link href="/" data-testid="link-logo" className="flex items-center">
               <img
                 src="/logo-long.png"
                 alt="The Healthy Apples"
-                className="h-20 w-auto max-w-[550px] object-contain"
+                className="h-[120px] w-auto max-w-[825px] object-contain"
               />
             </Link>
           </div>
@@ -382,7 +382,7 @@ export function TopBar() {
               <img
                 src="/logo-long.png"
                 alt="The Healthy Apples"
-                className="h-14 w-auto max-w-[320px] object-contain"
+                className="h-[84px] w-auto max-w-[480px] object-contain"
               />
             </Link>
             <button
