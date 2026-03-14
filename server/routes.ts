@@ -2294,7 +2294,7 @@ export async function registerRoutes(
           let bestScore = 0;
           meal.ingredients.forEach((ing, idx) => {
             const parsed = parseIngredient(ing);
-            const parsedNorm = normalizeName(parsed.ingredient || '').toLowerCase();
+            const parsedNorm = normalizeName(parsed.name || '').toLowerCase();
             const parsedWords = parsedNorm.split(/\s+/).filter(Boolean);
             const overlap = parsedWords.filter(w => currentWords.has(w)).length;
             const score = overlap / Math.max(currentWords.size, parsedWords.length, 1);

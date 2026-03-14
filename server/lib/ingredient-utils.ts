@@ -73,6 +73,18 @@ const COUNTABLE_WORDS: Record<string, string> = {
   cans: 'can',
   tin: 'tin',
   tins: 'tin',
+  jar: 'jar',
+  jars: 'jar',
+  bottle: 'bottle',
+  bottles: 'bottle',
+  tub: 'tub',
+  tubs: 'tub',
+  sachet: 'sachet',
+  sachets: 'sachet',
+  packet: 'packet',
+  packets: 'packet',
+  carton: 'carton',
+  cartons: 'carton',
   pinch: 'pinch',
   dash: 'dash',
 };
@@ -454,6 +466,15 @@ export function parseIngredient(text: string): ParsedIngredient {
   }
 
   remaining = remaining.replace(/^of\s+/i, '');
+
+  // Strip prep descriptions after comma (e.g. "courgette, coarsely grated" → "courgette")
+  const commaIdx = remaining.indexOf(',');
+  if (commaIdx > 0) {
+    remaining = remaining.slice(0, commaIdx).trim();
+  }
+
+  // Strip trailing purpose phrases (e.g. "tomato sauce for pasta" → "tomato sauce")
+  remaining = remaining.replace(/\s+for\s+\w+(?:\s+\w+)?\s*$/i, '').trim();
 
   if (unit === 'unit') {
     const orSplit = remaining.match(/^(.+?)\s+or\s+\d+\s+\w+/i);
