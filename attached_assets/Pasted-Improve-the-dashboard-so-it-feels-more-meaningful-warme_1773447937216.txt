@@ -1,0 +1,91 @@
+Improve the dashboard so it feels more meaningful, warmer, and more visually on-brand for The Healthy Apples.
+
+Goals:
+- Add more colour to the dashboard in a tasteful, premium way
+- Use THA-inspired greens with subtle berry accents
+- Make the page feel calmer, more polished, and more useful
+- Avoid a flat, overly white, overly corporate dashboard
+- Keep the interface elegant and restrained, not loud or childish
+
+Colour direction:
+Use a soft THA palette inspired by apples, greens, and berries:
+- Deep leaf green for anchors and headings
+- Fresh mid greens for highlights and cards
+- Soft sage / pale green for backgrounds
+- Berry accents for small highlights, badges, or data emphasis
+- Warm neutral/off-white base backgrounds
+- Keep contrast accessible and clean
+
+Suggested palette direction:
+- Primary green: muted healthy green
+- Secondary green: soft sage
+- Accent berry: muted raspberry / blackberry tone
+- Backgrounds: warm cream / pale green wash
+- Borders: soft green-grey
+- Do not use bright synthetic colours
+- Do not use rainbow colours or generic dashboard blue unless absolutely necessary
+
+Dashboard improvements:
+1. Add visual hierarchy with colour
+- Some cards can have soft tinted backgrounds
+- Add subtle icon or badge colour treatment
+- Section headers should feel more editorial and premium
+- Important actions or insights can use green emphasis
+- Secondary insights can use berry accents sparingly
+
+2. Add a graph / visual summary
+Create a clean dashboard graph using the THA colour scheme.
+It should feel elegant and informative, not like a finance dashboard.
+
+Possible graph ideas:
+- Meals planned this week
+- Meal type split
+- Planner completion across the week
+- Basket readiness / missing items
+- Healthy choice progress or ingredient review trends
+
+Graph design rules:
+- Use THA greens as the main data colour
+- Use berry accents only as secondary contrast
+- Keep lines, bars, or areas soft and polished
+- Rounded corners where appropriate
+- Minimal gridlines
+- No harsh chart borders
+- No bright default chart colours
+- Make the graph feel integrated with the product brand
+
+3. Add more meaning to the dashboard
+The dashboard should focus less on raw counts and more on user value.
+
+Prioritise:
+- This week’s progress
+- Meals planned
+- Gaps still needing attention
+- Basket readiness
+- Helpful next actions
+
+Demote:
+- Generic raw totals without context
+- Dashboard cards that only repeat navigation
+- Anything that feels like internal admin data instead of user benefit
+
+Design feel:
+- Calm
+- Capable
+- Premium
+- Lightly editorial
+- Slightly more alive through colour, but still restrained
+
+Implementation rules:
+- Use React + Tailwind
+- Keep code clean and efficient
+- Use tasteful colour only where it improves comprehension and polish
+- Do not clutter the screen
+- Do not over-design the dashboard
+- Keep the THA brand consistent with the landing page direction
+- Make sensible visual decisions without drifting from the brief
+
+Output:
+- Update the dashboard UI to include more THA brand colour
+- Add a graph visual in THA colours
+- Keep the experience premium, meaningful, and user-friendly
