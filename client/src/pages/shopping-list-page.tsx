@@ -39,7 +39,7 @@ import {
   CircleDot, Plus, Minus, Info, Layers, Crown, Sprout, Tag,
   Download, UtensilsCrossed, Store, Maximize2, Minimize2,
   ChevronDown, ChevronUp, AlertTriangle, Microscope, Filter, SlidersHorizontal,
-  Snowflake, Home, EllipsisVertical, Columns2,
+  Snowflake, Home, EllipsisVertical, Columns2, Clock, ChefHat, Sparkles,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -58,6 +58,7 @@ import { isWholeFood } from "@/lib/basket-item-classifier";
 import { safeParseJsonObject, safeStringifyJsonObject } from "@/lib/json-utils";
 import { resolveBestMatch, type WholeFoodIntent } from "@/lib/whole-food-matcher";
 import { calcConfidence, CONFIDENCE_LABELS, type ConfidenceLevel } from "@/lib/food-confidence";
+import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
 import WholeFoodSelector from "@/components/whole-food-selector";
 
 type ShoppingListItemExtended = ShoppingListItem & {
@@ -613,10 +614,89 @@ function EditItemModal({ item, sources, onClose }: {
   );
 }
 
+function getCurrentProductInsight(item: ShoppingListItem): { headline: string; detail: string } {
+  const rating = item.smpRating;
+  const isWF = item.itemType === 'whole_food';
+  const cat = item.category || 'other';
+
+  if (isWF) {
+    return {
+      headline: 'Already a whole food',
+      detail: 'This ingredient is a whole or minimally processed food — no additives, no unnecessary processing. About as good as it gets.',
+    };
+  }
+  if (rating === null || rating === undefined) {
+    return {
+      headline: 'Not yet scored',
+      detail: 'This item hasn\'t been matched to a product yet. Use the cleaner shop options below to find and score a specific product.',
+    };
+  }
+  if (rating >= 5) {
+    return {
+      headline: 'Top of its class',
+      detail: 'Minimal processing and a clean ingredient profile. This is a strong packaged choice.',
+    };
+  }
+  if (rating >= 4) {
+    const catNote: Record<string, string> = {
+      dairy: 'Dairy products at this level typically contain few or no stabilisers.',
+      grains: 'A reasonably clean grain product — fewer emulsifiers and dough improvers than lower-rated options.',
+      condiments: 'A good sauce or condiment with limited additives and a shorter ingredient list.',
+    };
+    return {
+      headline: 'A good packaged option',
+      detail: catNote[cat] || 'Limited processing with a relatively short and recognisable ingredient list.',
+    };
+  }
+  if (rating >= 3) {
+    const catNote: Record<string, string> = {
+      grains: 'Packaged grain products at this level commonly contain emulsifiers like E471 or E472 and dough conditioners.',
+      condiments: 'Mid-range sauces and dressings often use stabilisers, modified starches, and added sugars to improve shelf life.',
+      dairy: 'Processed dairy at this level may contain thickeners, modified starches, or artificial flavouring.',
+      bakery: 'Most shop bread contains dough improvers, emulsifiers, and sometimes preservatives at this score.',
+    };
+    return {
+      headline: 'Average quality',
+      detail: catNote[cat] || 'Moderate processing. Worth checking the ingredient list for emulsifiers, stabilisers, or modified starches.',
+    };
+  }
+  if (rating >= 2) {
+    return {
+      headline: 'Below average',
+      detail: 'This product likely contains several additives and significant processing. A cleaner packaged option or a whole-food route would be a clear improvement.',
+    };
+  }
+  return {
+    headline: 'Highly processed',
+    detail: 'This product scores poorly due to heavy processing and a complex additive profile. Both the cleaner shop option and the whole-food route below are worth considering.',
+  };
+}
+
+function getCleanerShopping(products: any[], currentRating: number | null): { best: any | null; improvements: string[] } {
+  if (!products.length) return { best: null, improvements: [] };
+  const sorted = [...products].sort((a, b) => (b.upfAnalysis?.smpRating ?? 0) - (a.upfAnalysis?.smpRating ?? 0));
+  const best = sorted[0];
+  const bestRating = best.upfAnalysis?.smpRating ?? 0;
+  if (currentRating !== null && bestRating <= currentRating) return { best: null, improvements: [] };
+  const improvements: string[] = [];
+  if (currentRating !== null && bestRating > currentRating) {
+    improvements.push(`Higher THA score: ${bestRating}/5 vs current ${currentRating}/5`);
+  }
+  const bestAdditives = best.upfAnalysis?.additiveMatches?.length ?? 0;
+  if (bestAdditives === 0) improvements.push('No additives detected');
+  else if (bestAdditives <= 2) improvements.push(`Fewer additives (${bestAdditives})`);
+  const bestHighRisk = best.upfAnalysis?.additiveMatches?.filter((a: any) => a.riskLevel === 'high').length ?? 0;
+  if (bestHighRisk === 0 && (currentRating ?? 0) <= 3) improvements.push('No high-risk additives');
+  if (!best.analysis?.isUltraProcessed && (currentRating ?? 0) <= 2) improvements.push('Not ultra-processed');
+  if (best.nova_group && best.nova_group <= 2) improvements.push(`Lower NOVA group (${best.nova_group})`);
+  return { best, improvements };
+}
+
 function ProductAnalyseModal({ open, onOpenChange, item }: { open: boolean; onOpenChange: (v: boolean) => void; item: ShoppingListItem }) {
   const [searchQuery, setSearchQuery] = useState(item.productName);
   const [products, setProducts] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showBrowse, setShowBrowse] = useState(false);
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [hideUltraProcessed, setHideUltraProcessed] = useState(false);
@@ -727,279 +807,371 @@ function ProductAnalyseModal({ open, onOpenChange, item }: { open: boolean; onOp
 
   const activeFilterCount = [hideUltraProcessed, hideHighRiskAdditives, hideEmulsifiers, hideAcidityRegulators, hideBovaer, minRating > 0].filter(Boolean).length;
 
+  const insight = getCurrentProductInsight(item);
+  const { best: cleanerProduct, improvements } = useMemo(
+    () => getCleanerShopping(products, item.smpRating ?? null),
+    [products, item.smpRating]
+  );
+  const wholeFoodAlt = useMemo(() => getWholeFoodAlternative(item.productName), [item.productName]);
+  const isWholeFood_ = item.itemType === 'whole_food';
+
+  const ratingColor = (r: number | null) => {
+    if (!r) return 'text-muted-foreground';
+    if (r >= 4) return 'text-green-600 dark:text-green-400';
+    if (r >= 3) return 'text-yellow-600 dark:text-yellow-400';
+    return 'text-red-500 dark:text-red-400';
+  };
+
+  const SectionHeader = ({ icon: Icon, label, color }: { icon: any; label: string; color: string }) => (
+    <div className={`flex items-center gap-1.5 mb-2`}>
+      <Icon className={`h-3.5 w-3.5 ${color}`} />
+      <span className={`text-[10px] font-semibold uppercase tracking-wider ${color}`}>{label}</span>
+    </div>
+  );
+
   return (
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Microscope className="h-5 w-5 text-primary" />
-            Product Analysis: {capitalizeWords(item.productName)}
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="pb-1">
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Microscope className="h-4 w-4 text-primary flex-shrink-0" />
+            <span className="truncate">Analyser: {capitalizeWords(item.productName)}</span>
           </DialogTitle>
-          <p className="text-xs text-muted-foreground">Find and compare real products by health score, UPF rating, and additives. Select the healthiest option for your basket.</p>
+          <p className="text-xs text-muted-foreground">Compare your current product, a cleaner shop option, and a whole-food route.</p>
         </DialogHeader>
-        <div className="flex items-center gap-2 mb-2">
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') doSearch(searchQuery); }}
-            placeholder="Search products..."
-            className="flex-1"
-            data-testid="input-analyse-search"
-          />
-          <Button onClick={() => doSearch(searchQuery)} disabled={isSearching} data-testid="button-analyse-search">
-            {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-          </Button>
-          <Button
-            variant={showFilters ? 'default' : 'outline'}
-            size="icon"
-            onClick={() => setShowFilters(!showFilters)}
-            className="relative"
-            data-testid="button-analyse-toggle-filters"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            {activeFilterCount > 0 && (
-              <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-                {activeFilterCount}
-              </span>
-            )}
-          </Button>
-        </div>
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden mb-3"
-            >
-              <Card data-testid="card-analyse-filters">
-                <CardContent className="pt-4 pb-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="analyse-hide-upf" className="text-xs cursor-pointer">Hide ultra-processed</Label>
-                      <Switch id="analyse-hide-upf" checked={hideUltraProcessed} onCheckedChange={setHideUltraProcessed} data-testid="switch-analyse-hide-upf" />
+
+        <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+
+          {/* ── Section 1: Current Product ──────────────────────────────── */}
+          <div data-testid="section-current-product">
+            <SectionHeader icon={Package} label="Current product" color="text-muted-foreground" />
+            <Card className="border-border/60">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-sm leading-snug">{capitalizeWords(item.productName)}</p>
+                    <p className={`text-xs font-medium mt-0.5 ${ratingColor(item.smpRating ?? null)}`}>
+                      {insight.headline}
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0">
+                    <ScoreBadge score={item.smpRating ?? 0} size={30} />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{insight.detail}</p>
+                {item.category && (
+                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                    <Badge variant="outline" className="text-[10px] capitalize">{item.category}</Badge>
+                    {isWholeFood_ && (
+                      <Badge className="text-[10px] bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 border-green-300 dark:border-green-800 no-default-hover-elevate">
+                        <Leaf className="h-2.5 w-2.5 mr-1" />
+                        Whole food
+                      </Badge>
+                    )}
+                    {item.itemType === 'packaged' && item.smpRating !== null && item.smpRating <= 2 && (
+                      <Badge className="text-[10px] bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 no-default-hover-elevate">
+                        Worth reconsidering
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ── Section 2: Cleaner Shop Option ──────────────────────────── */}
+          <div data-testid="section-cleaner-option">
+            <SectionHeader icon={ShoppingCart} label="Cleaner shop option" color="text-blue-500 dark:text-blue-400" />
+            {isSearching ? (
+              <Card className="border-border/60">
+                <CardContent className="p-4 flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+                  <span className="text-xs">Searching for alternatives…</span>
+                </CardContent>
+              </Card>
+            ) : isWholeFood_ ? (
+              <Card className="border-border/60 bg-muted/30">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">This is already a whole food — any packaged version would be a step down, not up.</p>
+                </CardContent>
+              </Card>
+            ) : cleanerProduct ? (
+              <Card className="border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/20" data-testid="card-cleaner-product">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-sm leading-snug truncate">{cleanerProduct.product_name}</p>
+                      {cleanerProduct.brand && <p className="text-xs text-muted-foreground">{cleanerProduct.brand}</p>}
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="analyse-hide-additives" className="text-xs cursor-pointer">Hide high-risk additives</Label>
-                      <Switch id="analyse-hide-additives" checked={hideHighRiskAdditives} onCheckedChange={setHideHighRiskAdditives} data-testid="switch-analyse-hide-additives" />
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="analyse-hide-emulsifiers" className="text-xs cursor-pointer">Hide emulsifiers</Label>
-                      <Switch id="analyse-hide-emulsifiers" checked={hideEmulsifiers} onCheckedChange={setHideEmulsifiers} data-testid="switch-analyse-hide-emulsifiers" />
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="analyse-hide-acidity" className="text-xs cursor-pointer">Hide acidity regulators</Label>
-                      <Switch id="analyse-hide-acidity" checked={hideAcidityRegulators} onCheckedChange={setHideAcidityRegulators} data-testid="switch-analyse-hide-acidity" />
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="analyse-hide-bovaer" className="text-xs cursor-pointer">Exclude Bovaer-risk (dairy/meat)</Label>
-                      <Switch id="analyse-hide-bovaer" checked={hideBovaer} onCheckedChange={setHideBovaer} data-testid="switch-analyse-hide-bovaer" />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Min SMP Rating</Label>
-                      <div className="flex items-center gap-1">
-                        {[0, 1, 2, 3, 4, 5].map(r => (
-                          <Button key={r} size="sm" variant={minRating === r ? 'default' : 'outline'} onClick={() => setMinRating(r)} data-testid={`button-analyse-min-rating-${r}`}>
-                            {r === 0 ? 'All' : r}
-                          </Button>
-                        ))}
-                      </div>
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                      <ScoreBadge score={cleanerProduct.upfAnalysis?.smpRating ?? 0} size={28} />
+                      <Button size="sm" className="h-7 text-xs" onClick={() => handleSelectProduct(cleanerProduct)} data-testid="button-select-cleaner-product">
+                        <Check className="h-3 w-3 mr-1" />
+                        Select
+                      </Button>
                     </div>
                   </div>
-                  {activeFilterCount > 0 && products.length > 0 && (
-                    <p className="text-[10px] text-muted-foreground mt-2">
-                      Showing {filteredProducts.length} of {products.length} products
+                  {improvements.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {improvements.map((imp, i) => (
+                        <Badge key={i} className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 no-default-hover-elevate">
+                          <Sparkles className="h-2.5 w-2.5 mr-1" />
+                          {imp}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  {cleanerProduct.availableStores && cleanerProduct.availableStores.length > 0 && (
+                    <div className="flex items-center gap-1 mt-2 flex-wrap">
+                      <Store className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      {cleanerProduct.availableStores.map((s: string) => (
+                        <Badge key={s} variant="outline" className="text-[10px] no-default-hover-elevate">{s}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ) : products.length > 0 ? (
+              <Card className="border-border/60 bg-muted/30">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">No clearly better packaged alternative found in these results. You can browse all options below.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-border/60 bg-muted/30">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">No search results yet.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* ── Section 3: Whole-Food Option ────────────────────────────── */}
+          <div data-testid="section-wholefood-option">
+            <SectionHeader icon={ChefHat} label="Whole-food option" color="text-green-600 dark:text-green-400" />
+            {wholeFoodAlt ? (
+              <Card className="border-green-200 dark:border-green-800 bg-green-50/40 dark:bg-green-950/20" data-testid="card-wholefood-alternative">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-sm flex items-center gap-1.5">
+                        <span>{wholeFoodAlt.emoji}</span>
+                        {wholeFoodAlt.title}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${effortColor(wholeFoodAlt.effort)}`}>
+                        {effortLabel(wholeFoodAlt.effort)}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                        <Clock className="h-3 w-3" />
+                        {formatTime(wholeFoodAlt.timeMinutes)}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Ingredients</p>
+                    <ul className="space-y-0.5">
+                      {wholeFoodAlt.ingredients.map((ing, i) => (
+                        <li key={i} className="text-xs text-foreground flex items-start gap-1.5">
+                          <span className="text-muted-foreground mt-0.5 flex-shrink-0">·</span>
+                          {ing}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Method</p>
+                    <p className="text-xs leading-relaxed">{wholeFoodAlt.method}</p>
+                  </div>
+                  {wholeFoodAlt.tip && (
+                    <p className="text-[11px] text-muted-foreground italic leading-relaxed border-t border-green-200 dark:border-green-800 pt-2">
+                      💡 {wholeFoodAlt.tip}
                     </p>
                   )}
                 </CardContent>
               </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <div className="flex-1 overflow-y-auto space-y-3">
-          {isSearching && (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          )}
-          {!isSearching && products.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No products found. Try a different search term.</p>
-            </div>
-          )}
-          {!isSearching && filteredProducts.length === 0 && products.length > 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Filter className="h-8 w-8 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">All products filtered out</p>
-              <p className="text-xs mt-1">Adjust your filters to see more results</p>
-            </div>
-          )}
-          {!isSearching && filteredProducts.map((product, idx) => {
-            const smpRating = product.upfAnalysis?.smpRating ?? 0;
-            const additiveCount = product.upfAnalysis?.additiveMatches?.length ?? 0;
-            const emulsifierCount = product.upfAnalysis?.additiveMatches?.filter((a: any) => a.type === 'emulsifier').length ?? 0;
-            const highRiskCount = product.upfAnalysis?.additiveMatches?.filter((a: any) => a.riskLevel === 'high').length ?? 0;
-            const hasCape = product.upfAnalysis?.hasCape ?? false;
-            const verdict = getVerdict(product);
+            ) : (
+              <Card className="border-border/60 bg-muted/30">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">No whole-food route mapped for this item yet. Use the search below to find better packaged options.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
-            return (
-            <Card key={`${product.barcode}-${idx}`} className="overflow-visible" data-testid={`card-analyse-product-${idx}`}>
-              <CardContent className="p-4">
-                <div className="flex gap-3">
-                  {product.image_url && (
-                    <img
-                      src={product.image_url}
-                      alt={product.product_name}
-                      className="w-16 h-16 rounded-md object-cover flex-shrink-0"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{product.product_name}</p>
-                        {product.brand && <p className="text-xs text-muted-foreground">{product.brand}</p>}
-                      </div>
-                      <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                        <ScoreBadge score={smpRating} size={25} />
-                        <Button size="sm" onClick={() => handleSelectProduct(product)} data-testid={`button-select-product-${idx}`}>
-                          <Check className="h-3 w-3 mr-1" />
-                          Select
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                      {product.isUK && (
-                        <Badge variant="outline" className="text-[10px] border-blue-400 text-blue-600 dark:text-blue-400">UK</Badge>
-                      )}
-                      {product.nutriscore_grade && (
-                        <Badge className={`text-[10px] ${getNutriScoreColor(product.nutriscore_grade)} no-default-hover-elevate`}>
-                          Nutri-Score {product.nutriscore_grade.toUpperCase()}
-                        </Badge>
-                      )}
-                      {product.nova_group && (
-                        <Badge className={`text-[10px] ${getNovaColor(product.nova_group)} no-default-hover-elevate`}>
-                          NOVA {product.nova_group}
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 mt-3 text-xs">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-muted-foreground">Ultra-Processed</span>
-                        <span className={product.analysis?.isUltraProcessed ? 'font-medium text-red-500 dark:text-red-400' : 'font-medium text-green-600 dark:text-green-400'}>
-                          {product.analysis?.isUltraProcessed ? 'Yes' : 'No'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-muted-foreground">Additives</span>
-                        <span className={`font-medium ${additiveCount > 3 ? 'text-red-500 dark:text-red-400' : additiveCount > 0 ? 'text-orange-500 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
-                          {additiveCount > 0 ? `${additiveCount} detected` : 'None'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-muted-foreground">Emulsifiers</span>
-                        <span className={`font-medium ${emulsifierCount > 0 ? 'text-orange-500 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`}>
-                          {emulsifierCount > 0 ? `${emulsifierCount} detected` : 'None'}
-                        </span>
-                      </div>
-                      {product.upfAnalysis && (
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-muted-foreground">UPF Score</span>
-                          <span className={`font-medium ${product.upfAnalysis.upfScore < 30 ? 'text-green-600 dark:text-green-400' : product.upfAnalysis.upfScore < 60 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}`}>
-                            {product.upfAnalysis.upfScore}/100
+          {/* ── Browse all products (collapsible) ───────────────────────── */}
+          <div data-testid="section-browse-all">
+            <button
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left py-1"
+              onClick={() => setShowBrowse(!showBrowse)}
+              data-testid="button-toggle-browse"
+            >
+              {showBrowse ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              Browse all products {products.length > 0 && `(${products.length} found)`}
+            </button>
+            <AnimatePresence>
+              {showBrowse && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') doSearch(searchQuery); }}
+                        placeholder="Search products…"
+                        className="flex-1 h-8 text-sm"
+                        data-testid="input-analyse-search"
+                      />
+                      <Button size="sm" onClick={() => doSearch(searchQuery)} disabled={isSearching} className="h-8" data-testid="button-analyse-search">
+                        {isSearching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
+                      </Button>
+                      <Button
+                        variant={showFilters ? 'default' : 'outline'}
+                        size="icon"
+                        onClick={() => setShowFilters(!showFilters)}
+                        className="h-8 w-8 relative flex-shrink-0"
+                        data-testid="button-analyse-toggle-filters"
+                      >
+                        <SlidersHorizontal className="h-3.5 w-3.5" />
+                        {activeFilterCount > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                            {activeFilterCount}
                           </span>
-                        </div>
-                      )}
-                      {product.analysis && (
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-muted-foreground">Health Score</span>
-                          <span className={`font-medium ${product.analysis.healthScore >= 60 ? 'text-green-600 dark:text-green-400' : product.analysis.healthScore >= 40 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}`}>
-                            {product.analysis.healthScore}/100
-                          </span>
-                        </div>
-                      )}
-                      {highRiskCount > 0 && (
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="text-muted-foreground">High-Risk</span>
-                          <span className="font-medium text-red-500 dark:text-red-400">{highRiskCount} additive{highRiskCount > 1 ? 's' : ''}</span>
-                        </div>
-                      )}
+                        )}
+                      </Button>
                     </div>
+                    <AnimatePresence>
+                      {showFilters && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                          <Card data-testid="card-analyse-filters">
+                            <CardContent className="pt-3 pb-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <Label htmlFor="analyse-hide-upf" className="text-xs cursor-pointer">Hide ultra-processed</Label>
+                                  <Switch id="analyse-hide-upf" checked={hideUltraProcessed} onCheckedChange={setHideUltraProcessed} data-testid="switch-analyse-hide-upf" />
+                                </div>
+                                <div className="flex items-center justify-between gap-2">
+                                  <Label htmlFor="analyse-hide-additives" className="text-xs cursor-pointer">Hide high-risk additives</Label>
+                                  <Switch id="analyse-hide-additives" checked={hideHighRiskAdditives} onCheckedChange={setHideHighRiskAdditives} data-testid="switch-analyse-hide-additives" />
+                                </div>
+                                <div className="flex items-center justify-between gap-2">
+                                  <Label htmlFor="analyse-hide-emulsifiers" className="text-xs cursor-pointer">Hide emulsifiers</Label>
+                                  <Switch id="analyse-hide-emulsifiers" checked={hideEmulsifiers} onCheckedChange={setHideEmulsifiers} data-testid="switch-analyse-hide-emulsifiers" />
+                                </div>
+                                <div className="flex items-center justify-between gap-2">
+                                  <Label htmlFor="analyse-hide-acidity" className="text-xs cursor-pointer">Hide acidity regulators</Label>
+                                  <Switch id="analyse-hide-acidity" checked={hideAcidityRegulators} onCheckedChange={setHideAcidityRegulators} data-testid="switch-analyse-hide-acidity" />
+                                </div>
+                                <div className="flex items-center justify-between gap-2">
+                                  <Label htmlFor="analyse-hide-bovaer" className="text-xs cursor-pointer">Exclude Bovaer-risk</Label>
+                                  <Switch id="analyse-hide-bovaer" checked={hideBovaer} onCheckedChange={setHideBovaer} data-testid="switch-analyse-hide-bovaer" />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">Min THA Score</Label>
+                                  <div className="flex items-center gap-1">
+                                    {[0, 1, 2, 3, 4, 5].map(r => (
+                                      <Button key={r} size="sm" variant={minRating === r ? 'default' : 'outline'} onClick={() => setMinRating(r)} className="h-6 px-2 text-xs" data-testid={`button-analyse-min-rating-${r}`}>
+                                        {r === 0 ? 'All' : r}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                              {activeFilterCount > 0 && products.length > 0 && (
+                                <p className="text-[10px] text-muted-foreground mt-2">
+                                  Showing {filteredProducts.length} of {products.length} products
+                                </p>
+                              )}
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
-                    <p className="text-[11px] text-muted-foreground mt-2 italic leading-relaxed">{verdict}</p>
-
-                    {product.availableStores && product.availableStores.length > 0 && (
-                      <div className="flex items-center gap-1 mt-2 flex-wrap">
-                        <Store className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span className="text-[10px] text-muted-foreground mr-0.5">Sold at:</span>
-                        {product.availableStores.map((store: string) => (
-                          <Badge key={store} variant="outline" className="text-[10px] border-green-400 text-green-600 dark:text-green-400 no-default-hover-elevate">
-                            {store}
-                          </Badge>
-                        ))}
+                    {!isSearching && filteredProducts.length === 0 && products.length > 0 && (
+                      <div className="text-center py-4 text-muted-foreground">
+                        <Filter className="h-6 w-6 mx-auto mb-1 opacity-30" />
+                        <p className="text-xs">All products filtered out — adjust your filters</p>
                       </div>
                     )}
-
-                    {product.nutriments && (
-                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-muted-foreground flex-wrap">
-                        {product.nutriments.calories && <span>{product.nutriments.calories}</span>}
-                        {product.nutriments.protein && <span>P: {product.nutriments.protein}</span>}
-                        {product.nutriments.carbs && <span>C: {product.nutriments.carbs}</span>}
-                        {product.nutriments.fat && <span>F: {product.nutriments.fat}</span>}
-                      </div>
-                    )}
-
-                    {product.upfAnalysis && product.upfAnalysis.additiveMatches.length > 0 && (
-                      <div className="mt-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs h-6 px-2 text-muted-foreground"
-                          onClick={() => setExpandedProduct(expandedProduct === product.barcode ? null : product.barcode)}
-                          data-testid={`button-toggle-additives-${idx}`}
-                        >
-                          <FlaskConical className="h-3 w-3 mr-1" />
-                          {product.upfAnalysis.additiveMatches.length} additive{product.upfAnalysis.additiveMatches.length > 1 ? 's' : ''}
-                          {expandedProduct === product.barcode ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
-                        </Button>
-                        {expandedProduct === product.barcode && (
-                          <div className="mt-1 space-y-1 pl-2 border-l-2 border-border">
-                            {product.upfAnalysis.additiveMatches.map((additive: any, aIdx: number) => (
-                              <div key={aIdx} className="text-xs flex items-center gap-1.5">
-                                <span className={`inline-block w-1.5 h-1.5 rounded-full ${
-                                  additive.riskLevel === 'high' ? 'bg-red-500' :
-                                  additive.riskLevel === 'moderate' ? 'bg-orange-400' :
-                                  additive.riskLevel === 'low' ? 'bg-yellow-400' : 'bg-green-400'
-                                }`} />
-                                <span className="font-medium">{additive.name}</span>
-                                <span className="text-muted-foreground">({additive.type})</span>
-                                {additive.description && (
-                                  <span className="text-muted-foreground truncate">- {additive.description}</span>
+                    {filteredProducts.map((product, idx) => {
+                      const smpRating = product.upfAnalysis?.smpRating ?? 0;
+                      const additiveCount = product.upfAnalysis?.additiveMatches?.length ?? 0;
+                      const emulsifierCount = product.upfAnalysis?.additiveMatches?.filter((a: any) => a.type === 'emulsifier').length ?? 0;
+                      const highRiskCount = product.upfAnalysis?.additiveMatches?.filter((a: any) => a.riskLevel === 'high').length ?? 0;
+                      const verdict = getVerdict(product);
+                      return (
+                        <Card key={`${product.barcode}-${idx}`} className="overflow-visible" data-testid={`card-analyse-product-${idx}`}>
+                          <CardContent className="p-3">
+                            <div className="flex gap-3">
+                              {product.image_url && (
+                                <img src={product.image_url} alt={product.product_name} className="w-12 h-12 rounded object-cover flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className="font-medium text-xs truncate">{product.product_name}</p>
+                                    {product.brand && <p className="text-[10px] text-muted-foreground">{product.brand}</p>}
+                                  </div>
+                                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                    <ScoreBadge score={smpRating} size={22} />
+                                    <Button size="sm" className="h-6 text-xs px-2" onClick={() => handleSelectProduct(product)} data-testid={`button-select-product-${idx}`}>
+                                      <Check className="h-3 w-3 mr-1" />Select
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                                  {product.nutriscore_grade && (
+                                    <Badge className={`text-[10px] ${getNutriScoreColor(product.nutriscore_grade)} no-default-hover-elevate`}>NS {product.nutriscore_grade.toUpperCase()}</Badge>
+                                  )}
+                                  {product.nova_group && (
+                                    <Badge className={`text-[10px] ${getNovaColor(product.nova_group)} no-default-hover-elevate`}>NOVA {product.nova_group}</Badge>
+                                  )}
+                                  {additiveCount > 0 && (
+                                    <Badge variant="outline" className={`text-[10px] ${additiveCount > 3 ? 'text-red-500 border-red-300' : 'text-orange-500 border-orange-300'} no-default-hover-elevate`}>
+                                      {additiveCount} additives
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-[10px] text-muted-foreground mt-1 italic leading-relaxed">{verdict}</p>
+                                {product.upfAnalysis?.additiveMatches?.length > 0 && (
+                                  <div className="mt-1.5">
+                                    <Button variant="ghost" size="sm" className="text-[10px] h-5 px-1.5 text-muted-foreground" onClick={() => setExpandedProduct(expandedProduct === product.barcode ? null : product.barcode)} data-testid={`button-toggle-additives-${idx}`}>
+                                      <FlaskConical className="h-2.5 w-2.5 mr-1" />
+                                      {product.upfAnalysis.additiveMatches.length} additive{product.upfAnalysis.additiveMatches.length > 1 ? 's' : ''}
+                                      {expandedProduct === product.barcode ? <ChevronUp className="h-2.5 w-2.5 ml-1" /> : <ChevronDown className="h-2.5 w-2.5 ml-1" />}
+                                    </Button>
+                                    {expandedProduct === product.barcode && (
+                                      <div className="mt-1 space-y-1 pl-2 border-l-2 border-border">
+                                        {product.upfAnalysis.additiveMatches.map((additive: any, aIdx: number) => (
+                                          <div key={aIdx} className="text-xs flex items-center gap-1.5">
+                                            <span className={`inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ${additive.riskLevel === 'high' ? 'bg-red-500' : additive.riskLevel === 'moderate' ? 'bg-orange-400' : additive.riskLevel === 'low' ? 'bg-yellow-400' : 'bg-green-400'}`} />
+                                            <span className="font-medium">{additive.name}</span>
+                                            <span className="text-muted-foreground">({additive.type})</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
                                 )}
                               </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {product.upfAnalysis && product.upfAnalysis.processingIndicators.length > 0 && (
-                      <div className="flex items-center gap-1 mt-1 flex-wrap">
-                        {product.upfAnalysis.processingIndicators.map((indicator: string, iIdx: number) => (
-                          <Badge key={iIdx} variant="outline" className="text-[10px] text-orange-500 dark:text-orange-400 border-orange-300 dark:border-orange-700">
-                            {indicator}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-            );
-          })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -1020,6 +1192,7 @@ function ProductAnalyseModal({ open, onOpenChange, item }: { open: boolean; onOp
           setBadAppleProduct(null);
           setMinRating(3);
           setShowFilters(true);
+          setShowBrowse(true);
         }}
         onAddAnyway={() => {
           doSelectProduct(badAppleProduct);

@@ -1,0 +1,263 @@
+#6 - Analyser Page Reframe — Current Product, Cleaner Shop Option, and Whole-Food Alternative
+
+What & Why
+Rework the dedicated Analyser page so it becomes a practical decision-support tool, not just a product scoring screen.
+
+The Analyser should help users understand three meaningful paths for an item:
+1. the current product
+2. a cleaner packaged/shop alternative
+3. a whole-food / from-scratch alternative
+
+This is especially important for basket-origin products and convenience foods. The Analyser should not only look for a “healthier branded swap”, but also surface a realistic whole-food or homemade route where relevant, with honest effort/time context.
+
+Example:
+If the analysed item is tortilla wraps, the Analyser should not stop at a cleaner wrap product. It should also surface a quick homemade wrap option from scratch.
+
+Core product principle
+Always show the whole-food / from-scratch option where a relevant one exists.
+Do not hide it just because it may take more effort.
+Instead, be honest and useful by showing:
+- time
+- effort
+- ingredients
+- likely pantry fit where available
+
+The user should be informed, not pushed.
+
+Done looks like
+
+Page role
+- The Analyser page feels like a practical THA decision page, not a narrow score-only page
+- It clearly compares:
+  - current product
+  - cleaner shop option
+  - whole-food / from-scratch option
+
+Information structure
+- The page has a clear “Current product” section
+- A clear “Cleaner shop option” section
+- A clear “Whole-food option” section
+- The page explains what improves and what the trade-offs are
+
+Whole-food option
+- Where relevant, the Analyser shows a from-scratch / whole-food alternative
+- It includes honest practical context such as:
+  - effort
+  - time
+  - ingredients
+  - simple method or quick recipe summary
+- It should not pretend everything homemade is easy, but it also should not suppress those options
+
+Cleaner shop option
+- The Analyser still supports cleaner packaged alternatives
+- This remains an important comparison path
+- It should explain what is better about the cleaner alternative:
+  - fewer additives
+  - shorter ingredient list
+  - less processing
+  - better THA score
+  - etc.
+
+Current product
+- The Analyser still assesses the current product clearly
+- It should explain:
+  - what is driving the current score
+  - convenience upside if relevant
+  - why the item may be worth reconsidering
+
+Tone
+- Helpful and practical
+- Not preachy
+- Not alarmist
+- Honest about effort and trade-offs
+
+UI
+- The page is clearly structured and easy to scan
+- It feels premium and aligned with THA
+- It should make comparison easy at a glance
+
+Scope safety
+- Keep this pass focused on the dedicated Analyser page and any directly related comparison logic/presentation
+- Do not redesign unrelated basket/planner pages
+- Do not introduce heavy new libraries
+- Do not change backend architecture broadly unless a small additive endpoint/helper is genuinely needed
+
+Out of scope
+- Full rewrite of scoring engine
+- Full recipe system redesign
+- Major backend architecture changes
+- Demo mode work
+- Onboarding work
+- Landing/auth hero work
+- Broad basket redesign
+- Personalisation logic based on household profile in this pass unless trivially available
+
+Primary goal
+Turn the Analyser into a comparison page that helps users choose the simplest better path:
+- keep current
+- buy a cleaner version
+- make a simpler whole-food version
+
+Tasks
+
+T001 — Inspect current Analyser page and identify current inputs/outputs
+Inspect the dedicated Analyser page and document how it currently:
+- receives a product/item
+- calculates/displays score/analysis
+- shows alternatives if any
+- connects back to basket or product flows
+
+Keep implementation aligned with the existing architecture where possible.
+
+T002 — Reframe the page into 3 comparison sections
+Refactor the Analyser page UI so it consistently presents three comparison layers:
+
+1. Current product
+2. Cleaner shop option
+3. Whole-food / from-scratch option
+
+Requirements
+- make these sections visually distinct and easy to scan
+- preserve the current analysis/scoring context where still useful
+- avoid clutter
+- maintain responsive layout
+
+T003 — Improve the Current product section
+Ensure the current product section clearly explains:
+- THA view / score
+- key additives / processing / reasons if currently available
+- convenience value if relevant
+- why it may or may not be worth replacing
+
+This section should feel informative, not purely judgmental.
+
+T004 — Add / improve Cleaner shop option section
+Ensure the Analyser can show a cleaner packaged/shop alternative where available.
+
+Requirements
+- explain what makes it cleaner/better
+- examples:
+  - shorter ingredient list
+  - fewer additives
+  - better score
+  - simpler processing
+- make this feel like a realistic shopping option, not a vague statement
+
+T005 — Add Whole-food / from-scratch option section
+This is the key new framing.
+
+Where a relevant whole-food or homemade option exists, show it in the Analyser.
+
+Requirements
+- include:
+  - title of the whole-food option
+  - basic ingredients
+  - effort level
+  - approximate time
+  - short method / quick recipe summary
+- be honest about effort
+- do not suppress this option because it is more work than a packaged product
+- keep the explanation practical and calm
+
+Examples of direction
+- tortilla wraps → homemade wraps
+- sauces/dressings → simple homemade version
+- granola → homemade granola
+- dips → simple homemade dip
+- bread/yoghurt where relevant → show realistic effort/time rather than filtering them out
+
+Important
+The purpose is not to scare users with complexity.
+The purpose is to show them the option clearly and honestly.
+
+T006 — Show trade-offs clearly
+For each option, make the trade-off visible where practical:
+- convenience
+- effort
+- ingredients simplicity
+- likely processing difference
+- maybe cost if already easily available in current logic
+
+Requirements
+- comparison should be understandable quickly
+- avoid dense blocks of text
+- use concise labels/supporting text/cards
+
+T007 — Keep basket-origin analysis aligned
+Where the Analyser is opened from the basket (or basket-origin product analysis flow), ensure the page still works smoothly in that context.
+
+Requirements
+- preserve current navigation/context if possible
+- if basket terminology currently says "Basket", rename the analysis-facing terminology to "Analyser" where relevant and safe
+- do not create route confusion
+
+T008 — Reuse existing THA logic where possible
+If current scoring/additive analysis logic already exists, reuse it.
+If current alternative-search logic exists, reuse it where sensible.
+Only add minimal new logic required to support the whole-food option presentation.
+
+If a lightweight helper/mapping is needed for v1 whole-food alternatives, that is acceptable.
+Prefer maintainable, explicit mappings over over-engineered AI-like logic in this pass.
+
+T009 — Start with a maintainable v1 whole-food option strategy
+For this first implementation, do not try to solve every product in the catalogue.
+
+Preferred approach
+- introduce a maintainable mapping/helper/rule set for common product types where whole-food alternatives are especially relevant
+- examples may include:
+  - wraps
+  - sauces
+  - dressings
+  - dips
+  - granola
+  - breadcrumbs
+  - spice mixes
+  - flatbreads
+- if an item has no relevant whole-food mapping yet, the page should still work gracefully with current product + cleaner shop option
+
+T010 — Keep implementation tightly scoped
+Focus on:
+- dedicated Analyser page
+- directly related presentational components
+- any small helper/data mapping needed for whole-food alternatives
+- any small additive endpoint/helper only if truly necessary
+
+Do not drift into:
+- full recipe library redesign
+- major basket architecture changes
+- broad scoring refactors
+- unrelated page redesigns
+
+Implementation guidance
+- prefer a strong, useful v1 over an overly ambitious system
+- keep the page premium, clear, and practical
+- make the comparison model obvious
+- use existing THA visual language where possible
+- keep wording calm and non-preachy
+- be transparent about effort/time rather than hiding more involved homemade options
+
+Relevant files
+- the dedicated Analyser page component
+- any current product analysis / basket analysis components and helpers
+- any current THA scoring / additive analysis logic already used there
+- any routing/navigation files directly connected to opening the Analyser
+- any shared UI components useful for comparison cards/sections
+
+Acceptance checklist
+- Analyser page clearly shows:
+  - current product
+  - cleaner shop option
+  - whole-food / from-scratch option
+- whole-food option includes honest effort/time/ingredient context
+- cleaner packaged option still exists
+- current product assessment remains clear
+- page feels structured as a comparison/decision-support page
+- implementation is maintainable and does not drift into broad unrelated work
+
+At the end, provide a concise implementation summary covering
+- files changed
+- how the Analyser page structure changed
+- how whole-food options are determined in v1
+- which existing logic was reused
+- any product types supported in the first whole-food mapping pass
+- any sensible next-step recommendations strictly related to improving the Analyser
