@@ -1,0 +1,123 @@
+PRIORITY — User ingredient correction flow across Basket, Pantry, and My Meals
+
+Problem:
+Some ingredients arrive in the basket with poor formatting or poor naming.
+Example:
+- "jar tomato sauce for pasta"
+
+This creates repeat frustration because the bad ingredient text can keep reappearing from the original recipe.
+
+Product goal:
+Users must be able to correct bad ingredient names themselves.
+That correction should not only fix the current basket item, but also optionally update the source recipe so the same issue does not repeat for that user again.
+
+Required behaviour:
+
+1. Editable basket item
+In the basket, users should be able to edit an ingredient entry directly.
+
+Editable fields should include at minimum:
+- ingredient name
+- quantity
+- unit
+- category (if category exists on basket items)
+- optional notes if already supported
+
+2. Save the correction immediately in the basket
+When the user edits the item, the basket row should update immediately.
+
+3. Pantry propagation
+If that ingredient is also persisted into Pantry logic, the corrected version should be the one that moves into Pantry / staple tracking / always-in-basket flows, not the old broken wording.
+
+4. Recipe source propagation
+If the basket ingredient came from a recipe in My Meals, the user should be able to apply the correction back to the recipe ingredient too.
+
+Preferred UX:
+When saving the edit, show a simple choice such as:
+- Update basket only
+- Update this recipe too
+
+Default selection:
+- If ingredient clearly came from a recipe, default to “Update this recipe too”
+- Keep the choice simple and obvious
+
+5. Remember the correction for this user
+Once corrected, the same bad ingredient formatting should not keep returning for that user from the same recipe.
+
+This means:
+- the recipe ingredient in My Meals must be updated if the user chooses that option
+- future basket generations from that recipe must use the corrected ingredient text
+
+6. Preserve structure where possible
+If the original ingredient parser stored:
+- quantity
+- unit
+- ingredient name
+
+then editing should preserve structured fields rather than collapsing everything into one free-text blob.
+
+Example desired correction:
+Before:
+- "jar tomato sauce for pasta"
+
+After:
+- ingredient name: Tomato pasta sauce
+- quantity: 1
+- unit: jar
+
+Do not force the user to keep awkward source phrasing if a cleaner pantry/basket wording is better.
+
+7. Optional pantry normalisation
+Where appropriate, support a cleaner pantry-friendly naming convention.
+Example:
+- basket display may stay human-friendly
+- pantry item should not be saved with messy phrase fragments
+
+8. Scope of propagation
+Please identify and support these source paths where possible:
+- ingredient manually added in basket
+- ingredient generated from recipe in My Meals
+- ingredient coming from planner -> basket
+- ingredient moving into pantry or always-in-basket logic
+
+9. Do not silently rewrite all items globally
+This should be a user-controlled correction, not an automatic mass rename across unrelated recipes.
+
+10. Audit trail / safety
+If a correction updates a source recipe, keep the implementation safe:
+- only update that user’s recipe
+- do not affect shared/default recipes globally unless explicitly intended
+- do not affect other users
+
+Implementation notes:
+1. Identify the current basket item model and how it links back to:
+   - recipe id
+   - meal id
+   - ingredient id / source ingredient text
+2. Add edit UI for basket rows, especially mobile-friendly
+3. Add save logic for:
+   - basket-only update
+   - basket + source recipe update
+4. Ensure pantry sync uses corrected values
+5. Ensure future basket regeneration from the updated recipe uses corrected values
+6. If source linkage is missing today, add enough linkage to support this safely
+
+UX notes:
+- Keep this lightweight
+- An inline edit modal or slide-over is fine
+- Mobile usability matters
+- Do not clutter every row permanently; an Edit action is enough
+
+Acceptance criteria:
+- User can edit a badly formatted basket ingredient
+- Basket immediately reflects the corrected value
+- If user chooses to update the recipe too, the ingredient is corrected in My Meals
+- Future basket generations from that recipe use the corrected ingredient
+- Pantry uses the corrected wording, not the broken original wording
+- Existing user-specific recipes only are updated; no global default data is unintentionally changed
+
+Please report back with:
+- files changed
+- data model changes, if any
+- whether source recipe linkage already existed or had to be added
+- any edge cases not yet handled

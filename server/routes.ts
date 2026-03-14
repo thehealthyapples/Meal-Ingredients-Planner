@@ -2243,6 +2243,88 @@ export async function registerRoutes(
     res.json(item);
   });
 
+  // Correct a basket item: update name/qty/unit/category and optionally
+  // rewrite the matching ingredient in every source recipe.
+  app.post('/api/shopping-list/:id/correct', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const id = Number(req.params.id);
+      const allItems = await storage.getShoppingListItems(req.user!.id);
+      const item = allItems.find(i => i.id === id);
+      if (!item) return res.status(404).json({ message: 'Item not found' });
+
+      const { productName, quantityValue, unit, category, updateRecipe } = req.body;
+
+      // Build basket update — clear cached price matches when name changes
+      const updates: Record<string, any> = { smpRating: null };
+      if (productName !== undefined) {
+        updates.productName = String(productName).trim();
+        const { normalizeName } = await import('./lib/ingredient-utils');
+        updates.normalizedName = normalizeName(updates.productName);
+        updates.matchedProductId = null;
+        updates.matchedStore = null;
+        updates.matchedPrice = null;
+        updates.availableStores = null;
+        updates.imageUrl = null;
+      }
+      if (quantityValue !== undefined) {
+        const qv = Number(quantityValue);
+        if (!isNaN(qv) && qv >= 0) updates.quantityValue = qv;
+      }
+      if (unit !== undefined) updates.unit = String(unit).trim() || null;
+      if (category !== undefined) updates.category = String(category).trim() || null;
+
+      await storage.updateShoppingListItem(id, updates);
+
+      let recipesUpdated = 0;
+
+      if (updateRecipe) {
+        const { parseIngredient, normalizeName } = await import('./lib/ingredient-utils');
+        const currentNorm = normalizeName(item.normalizedName || item.productName || '').toLowerCase();
+        const currentWords = new Set(currentNorm.split(/\s+/).filter(Boolean));
+
+        const sources = await storage.getIngredientSources(id);
+        for (const source of sources) {
+          const meal = await storage.getMeal(source.mealId);
+          // Safety: only update the authenticated user's own meals
+          if (!meal || meal.userId !== req.user!.id) continue;
+
+          // Find best-matching ingredient by normalized word overlap
+          let bestIdx = -1;
+          let bestScore = 0;
+          meal.ingredients.forEach((ing, idx) => {
+            const parsed = parseIngredient(ing);
+            const parsedNorm = normalizeName(parsed.ingredient || '').toLowerCase();
+            const parsedWords = parsedNorm.split(/\s+/).filter(Boolean);
+            const overlap = parsedWords.filter(w => currentWords.has(w)).length;
+            const score = overlap / Math.max(currentWords.size, parsedWords.length, 1);
+            if (score > bestScore) { bestScore = score; bestIdx = idx; }
+          });
+
+          if (bestIdx >= 0 && bestScore > 0.2) {
+            const correctedName = (updates.productName ?? item.productName ?? '').trim();
+            const correctedQty = updates.quantityValue ?? item.quantityValue;
+            const correctedUnit = updates.unit !== undefined ? updates.unit : (item.unit ?? '');
+            const unitStr = correctedUnit && correctedUnit !== 'unit' ? ` ${correctedUnit}` : '';
+            const newIngText = correctedQty && Number(correctedQty) > 0
+              ? `${correctedQty}${unitStr} ${correctedName}`
+              : correctedName;
+
+            const newIngredients = [...meal.ingredients];
+            newIngredients[bestIdx] = newIngText;
+            await storage.updateMeal(meal.id, { ingredients: newIngredients });
+            recipesUpdated++;
+          }
+        }
+      }
+
+      res.json({ updated: true, recipesUpdated });
+    } catch (err) {
+      console.error('[correct-item] Error:', err);
+      res.status(500).json({ message: 'Failed to save correction' });
+    }
+  });
+
   app.delete(api.shoppingList.remove.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const items = await storage.getShoppingListItems(req.user!.id);

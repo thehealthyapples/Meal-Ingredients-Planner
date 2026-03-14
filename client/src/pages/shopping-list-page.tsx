@@ -471,6 +471,148 @@ function getVerdict(product: any): string {
   return "Poor quality product with significant processing. Look for a healthier option.";
 }
 
+const ITEM_CATEGORIES = [
+  { value: 'produce', label: 'Produce' },
+  { value: 'dairy', label: 'Dairy' },
+  { value: 'eggs', label: 'Eggs' },
+  { value: 'meat', label: 'Meat' },
+  { value: 'fish', label: 'Fish' },
+  { value: 'grains', label: 'Grains' },
+  { value: 'herbs', label: 'Herbs & Spices' },
+  { value: 'oils', label: 'Oils' },
+  { value: 'condiments', label: 'Condiments' },
+  { value: 'nuts', label: 'Nuts & Seeds' },
+  { value: 'legumes', label: 'Legumes' },
+  { value: 'bakery', label: 'Bakery' },
+  { value: 'tinned', label: 'Tinned / Canned' },
+  { value: 'pantry', label: 'Pantry' },
+  { value: 'other', label: 'Other' },
+];
+
+function EditItemModal({ item, sources, onClose }: {
+  item: ShoppingListItem;
+  sources: IngredientSource[];
+  onClose: () => void;
+}) {
+  const [name, setName] = useState(item.productName);
+  const [qty, setQty] = useState(item.quantityValue != null ? String(item.quantityValue) : '');
+  const [unit, setUnit] = useState(item.unit || '');
+  const [category, setCategory] = useState(item.category || '');
+  const [updateRecipe, setUpdateRecipe] = useState(sources.length > 0);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  const correction = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/shopping-list/${item.id}/correct`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productName: name.trim() || undefined,
+          quantityValue: qty !== '' ? Number(qty) : undefined,
+          unit: unit.trim() || undefined,
+          category: category || undefined,
+          updateRecipe,
+        }),
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed');
+      return res.json() as Promise<{ updated: boolean; recipesUpdated: number }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shopping-list'] });
+      if (data.recipesUpdated > 0) {
+        queryClient.invalidateQueries({ queryKey: ['/api/meals'] });
+        toast({ title: "Saved", description: `Basket updated. ${data.recipesUpdated} recipe${data.recipesUpdated > 1 ? 's' : ''} also corrected.` });
+      } else {
+        toast({ title: "Saved", description: "Basket updated." });
+      }
+      onClose();
+    },
+    onError: () => {
+      toast({ title: "Could not save", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Edit ingredient</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-1">
+          <div className="space-y-1">
+            <Label htmlFor="edit-item-name" className="text-xs font-medium">Name</Label>
+            <Input
+              id="edit-item-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ingredient name"
+              data-testid="input-edit-item-name"
+              autoFocus
+            />
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="edit-item-qty" className="text-xs font-medium">Quantity</Label>
+              <Input
+                id="edit-item-qty"
+                type="number"
+                min="0"
+                step="any"
+                value={qty}
+                onChange={(e) => setQty(e.target.value)}
+                placeholder="e.g. 1"
+                data-testid="input-edit-item-qty"
+              />
+            </div>
+            <div className="flex-1 space-y-1">
+              <Label htmlFor="edit-item-unit" className="text-xs font-medium">Unit</Label>
+              <Input
+                id="edit-item-unit"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                placeholder="e.g. jar, g, tbsp"
+                data-testid="input-edit-item-unit"
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="edit-item-category" className="text-xs font-medium">Category</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger id="edit-item-category" data-testid="select-edit-item-category">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                {ITEM_CATEGORIES.map(c => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {sources.length > 0 && (
+            <div className="flex items-center justify-between rounded-md border border-border px-3 py-2.5 bg-muted/30">
+              <div className="flex-1 min-w-0 mr-3">
+                <p className="text-sm font-medium">Update recipe too</p>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                  {sources.map(s => s.mealName).join(', ')}
+                </p>
+              </div>
+              <Switch checked={updateRecipe} onCheckedChange={setUpdateRecipe} data-testid="switch-edit-update-recipe" />
+            </div>
+          )}
+        </div>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={onClose} data-testid="button-edit-item-cancel">Cancel</Button>
+          <Button onClick={() => correction.mutate()} disabled={correction.isPending || !name.trim()} data-testid="button-edit-item-save">
+            {correction.isPending ? 'Saving…' : 'Save'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function ProductAnalyseModal({ open, onOpenChange, item }: { open: boolean; onOpenChange: (v: boolean) => void; item: ShoppingListItem }) {
   const [searchQuery, setSearchQuery] = useState(item.productName);
   const [products, setProducts] = useState<any[]>([]);
@@ -910,6 +1052,7 @@ export default function ShoppingListPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [globalStore, setGlobalStore] = useState<string>('auto');
   const [analyseItem, setAnalyseItem] = useState<ShoppingListItem | null>(null);
+  const [correctItem, setCorrectItem] = useState<ShoppingListItem | null>(null);
   const [optimizerSelections, setOptimizerSelections] = useState<Record<number, string[]>>({});
   const [splitByShop, setSplitByShop] = useState(false);
 
@@ -2457,7 +2600,7 @@ export default function ShoppingListPage() {
                                           data-testid={`checkbox-item-${item.id}`}
                                         />
                                         <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7 hidden sm:inline-flex" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => startEdit(item.id, 'productName', item.productName)} className="text-muted-foreground h-7 w-7 hidden sm:inline-flex" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => setCorrectItem(item)} className="text-muted-foreground h-7 w-7 hidden sm:inline-flex" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
                                         <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
                                       </div>
                                     </td>
@@ -3116,6 +3259,14 @@ export default function ShoppingListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {correctItem && (
+        <EditItemModal
+          item={correctItem}
+          sources={sourcesByItem.get(correctItem.id) || []}
+          onClose={() => setCorrectItem(null)}
+        />
+      )}
 
       {analyseItem && (
         <ProductAnalyseModal
