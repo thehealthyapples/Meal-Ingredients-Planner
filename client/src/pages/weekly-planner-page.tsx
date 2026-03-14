@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TemplatesPanel } from "@/components/templates-panel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
@@ -126,6 +126,7 @@ export default function WeeklyPlannerPage() {
   const [expandedDayLabel, setExpandedDayLabel] = useState("");
   const [mealDetail, setMealDetail] = useState<MealDetailState | null>(null);
   const [selectedDayId, setSelectedDayId] = useState<number | null>(null);
+  const [mobileDayIndex, setMobileDayIndex] = useState(0);
   const { user } = useUser();
   const [, navigate] = useLocation();
 
@@ -558,7 +559,7 @@ export default function WeeklyPlannerPage() {
         </div>
         <div className="grid grid-cols-3 gap-1.5 items-center">
           <Badge variant="outline" className="justify-center" data-testid="badge-week-progress">
-            {weekStats.filled} / {weekStats.total} meals planned
+            {weekStats.filled} / {weekStats.total} meals
           </Badge>
           <Button size="sm" onClick={() => setTemplatesOpen(true)} data-testid="button-open-templates">
             <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
@@ -648,8 +649,19 @@ export default function WeeklyPlannerPage() {
         {fullPlanner.map((week) => (
           <TabsContent key={week.id} value={String(week.weekNumber)} className="mt-0">
 
-            {/* ── Week sub-header: slot basket buttons ── */}
+            {/* ── Week sub-header: slot basket buttons + add all ── */}
             <div className="flex items-center gap-2 mb-4 flex-wrap">
+              <Button
+                size="sm"
+                onClick={addAllToBasket}
+                disabled={addToBasketMutation.isPending}
+                data-testid="button-add-all-week-basket"
+                className="h-7 text-xs"
+              >
+                <ShoppingBasket className="h-3 w-3 mr-1.5" />
+                {addToBasketMutation.isPending ? "Adding…" : "Add All"}
+              </Button>
+              <div className="h-4 w-px bg-border mx-0.5" />
               {MEAL_TYPES.map((slot) => {
                 const SlotIcon = slot.icon;
                 return (
@@ -669,8 +681,111 @@ export default function WeeklyPlannerPage() {
               })}
             </div>
 
-            {/* ── Matrix Grid ── */}
-            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-6">
+            {/* ── Mobile: single-day view (hidden on sm+) ── */}
+            <div className="sm:hidden mb-6">
+              {/* Day navigation */}
+              <div className="flex items-center justify-between mb-3">
+                <button
+                  className="p-1.5 rounded-md hover:bg-accent/40 disabled:opacity-30 transition-colors"
+                  onClick={() => setMobileDayIndex(i => Math.max(0, i - 1))}
+                  disabled={mobileDayIndex === 0}
+                  data-testid="button-mobile-prev-day"
+                  aria-label="Previous day"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <span className="text-base font-semibold" data-testid="text-mobile-day-name">
+                  {sortedDays[mobileDayIndex] ? DAY_NAMES[sortedDays[mobileDayIndex].dayOfWeek] : "—"}
+                </span>
+                <button
+                  className="p-1.5 rounded-md hover:bg-accent/40 disabled:opacity-30 transition-colors"
+                  onClick={() => setMobileDayIndex(i => Math.min(sortedDays.length - 1, i + 1))}
+                  disabled={mobileDayIndex >= sortedDays.length - 1}
+                  data-testid="button-mobile-next-day"
+                  aria-label="Next day"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Meal rows for current mobile day */}
+              {sortedDays[mobileDayIndex] && (() => {
+                const mobileDay = sortedDays[mobileDayIndex];
+                const isUpdating = upsertEntryMutation.isPending || addEntryMutation.isPending;
+                return (
+                  <Card className="overflow-hidden divide-y divide-border">
+                    {visibleRows.map((row) => {
+                      const RowIcon = row.icon;
+                      const cellEntries = getCellEntries(mobileDay.entries, row);
+                      return (
+                        <div key={row.id} className="p-3 flex flex-col gap-1.5">
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <RowIcon className={`h-3.5 w-3.5 flex-shrink-0 ${row.iconColor}`} />
+                            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{row.label}</span>
+                          </div>
+                          {cellEntries.map((entry) => {
+                            const meal = getMeal(entry.mealId);
+                            if (!meal) return null;
+                            const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
+                            return (
+                              <button
+                                key={entry.id}
+                                className="w-full text-left text-sm text-foreground hover:text-primary transition-colors flex items-start gap-1.5"
+                                onClick={() => setMealDetail({
+                                  entry,
+                                  meal,
+                                  dayId: mobileDay.id,
+                                  mealType: row.mealType ?? row.addMealType,
+                                  audience: row.audience,
+                                  isDrink: row.isDrink,
+                                  dayName: DAY_NAMES[mobileDay.dayOfWeek],
+                                  slotLabel: row.label,
+                                })}
+                                data-testid={`button-mobile-meal-${row.id}-${entry.id}`}
+                              >
+                                <span className="flex-1 min-w-0 leading-snug">{meal.name}</span>
+                                {isFrozen && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
+                                {basketMealIdSet.has(meal.id) && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
+                              </button>
+                            );
+                          })}
+                          <button
+                            className="text-xs text-muted-foreground/50 hover:text-primary transition-colors flex items-center gap-1 mt-0.5"
+                            onClick={() => openPicker({
+                              dayId: mobileDay.id,
+                              mealType: row.addMealType,
+                              audience: row.audience,
+                              isDrink: row.isDrink,
+                            })}
+                            disabled={isUpdating}
+                            data-testid={`button-mobile-add-${row.id}`}
+                          >
+                            <Plus className="h-3 w-3" /> Add {row.label}
+                          </button>
+                        </div>
+                      );
+                    })}
+                    {/* Add day to basket */}
+                    <div className="p-3">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full h-8 text-xs"
+                        onClick={() => addDayToBasket(mobileDay)}
+                        disabled={addToBasketMutation.isPending}
+                        data-testid="button-mobile-add-day-basket"
+                      >
+                        <ShoppingBasket className="h-3.5 w-3.5 mr-1.5" />
+                        Add {DAY_NAMES[mobileDay.dayOfWeek]} to Basket
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })()}
+            </div>
+
+            {/* ── Desktop Matrix Grid (hidden on mobile) ── */}
+            <div className="hidden sm:block overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-6">
               <div style={{ minWidth: "960px" }}>
                 <Card className="overflow-hidden">
                   <div
@@ -680,7 +795,7 @@ export default function WeeklyPlannerPage() {
                     }}
                   >
                     {/* ── Header row: corner + day names ── */}
-                    <div className="bg-muted/40 border-b-2 border-border" />
+                    <div className="bg-muted/40 border-b-2 border-border sticky left-0 z-20" style={{ backgroundColor: "hsl(var(--muted) / 0.4)" }} />
                     {sortedDays.map((day) => {
                       const isSelected = selectedDay?.id === day.id;
                       return (
@@ -705,10 +820,11 @@ export default function WeeklyPlannerPage() {
                       const RowIcon = row.icon;
                       return (
                         <>
-                          {/* Row label */}
+                          {/* Row label — sticky left */}
                           <div
                             key={row.id + "-label"}
-                            className={`flex items-center gap-1.5 px-2 py-2 bg-muted/15 border-r border-border ${!isLastRow ? "border-b border-border" : ""}`}
+                            className={`flex items-center gap-1.5 px-2 py-2 border-r border-border sticky left-0 z-10 ${!isLastRow ? "border-b border-border" : ""}`}
+                            style={{ backgroundColor: "hsl(var(--background))" }}
                           >
                             <RowIcon className={`h-3 w-3 flex-shrink-0 ${row.iconColor}`} />
                             <span className="text-xs font-medium text-muted-foreground">{row.label}</span>
@@ -796,9 +912,10 @@ export default function WeeklyPlannerPage() {
                     {/* ── Summary row — same grid, aligned under day columns ── */}
                     {sortedDays.length > 0 && (
                       <>
-                        {/* Summary label cell */}
+                        {/* Summary label cell — sticky left */}
                         <div
-                          className="flex items-center gap-1.5 px-2 py-2.5 bg-muted/30 border-t-2 border-border"
+                          className="flex items-center gap-1.5 px-2 py-2.5 border-t-2 border-border sticky left-0 z-10"
+                          style={{ backgroundColor: "hsl(var(--muted) / 0.3)" }}
                           data-testid="weekly-summary-strip"
                         >
                           <span className="text-xs font-medium text-muted-foreground">Summary</span>
