@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from "react";
 import { useMeals } from "@/hooks/use-meals";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1142,6 +1142,12 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
 }
 
 const MEAL_CATEGORY_ORDER = ["user_meals", "from_web", "ready_meals", "drinks"] as const;
+const SECTION_LABELS: Record<string, string> = {
+  user_meals: "Saved Recipes",
+  from_web: "From the Web",
+  ready_meals: "Ready Meals",
+  drinks: "Drinks",
+};
 const CATEGORY_DROPDOWN_ORDER = ["Drink", "Smoothie", "Baby Meal", "Kids Meal", "Frozen Meal"];
 
 function getMealDisplayCategory(meal: Meal): string {
@@ -1583,10 +1589,25 @@ export default function MealsPage() {
     const idxB = MEAL_CATEGORY_ORDER.indexOf(catB as typeof MEAL_CATEGORY_ORDER[number]);
     const orderA = idxA === -1 ? MEAL_CATEGORY_ORDER.length : idxA;
     const orderB = idxB === -1 ? MEAL_CATEGORY_ORDER.length : idxB;
-    return orderA - orderB;
+    return orderA - orderB || a.name.localeCompare(b.name);
   }), [meals, searchTerm, categoryFilter, allCategories, mealTypeFilter, audienceFilter, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
 
   const visibleMeals = useMemo(() => filteredMeals?.slice(0, visibleCount), [filteredMeals, visibleCount]);
+
+  const sectionCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    filteredMeals?.forEach(m => {
+      const cat = getMealDisplayCategory(m);
+      counts.set(cat, (counts.get(cat) ?? 0) + 1);
+    });
+    return counts;
+  }, [filteredMeals]);
+
+  const showSectionHeaders = useMemo(() => {
+    if (!filteredMeals?.length) return false;
+    const cats = new Set(filteredMeals.map(getMealDisplayCategory));
+    return cats.size > 1;
+  }, [filteredMeals]);
 
   const allMealIds = useMemo(() => (visibleMeals || []).map(m => m.id), [visibleMeals]);
   const { data: bulkNutritionData = [] } = useQuery<Nutrition[]>({
@@ -2011,14 +2032,27 @@ export default function MealsPage() {
         <AnimatePresence>
           {viewMode === 'grid' ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {visibleMeals?.map((meal, index) => (
-                <motion.div
-                  key={meal.id}
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 12 }}
-                  transition={{ duration: 0.2, delay: index * 0.03 }}
-                >
+              {visibleMeals?.map((meal, index) => {
+                const cat = getMealDisplayCategory(meal);
+                const prevCat = index > 0 ? getMealDisplayCategory(visibleMeals[index - 1]) : null;
+                const isNewSection = showSectionHeaders && cat !== prevCat;
+                return (
+                  <Fragment key={meal.id}>
+                    {isNewSection && (
+                      <div
+                        className={`col-span-full flex items-center gap-2 ${index > 0 ? "mt-4 pt-4 border-t border-border/50" : ""}`}
+                        data-testid={`section-header-${cat}`}
+                      >
+                        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">{SECTION_LABELS[cat]}</span>
+                        <span className="text-xs text-muted-foreground/35">· {sectionCounts.get(cat) ?? 0}</span>
+                      </div>
+                    )}
+                    <motion.div
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 12 }}
+                      transition={{ duration: 0.2, delay: index * 0.03 }}
+                    >
                   <Card className="h-full flex flex-col group cursor-pointer overflow-hidden hover-elevate transition-all duration-200" onClick={(e) => { e.stopPropagation(); setExpandedMealId(expandedMealId === meal.id ? null : meal.id); setExpandedTab("ingredients"); }} data-testid={`card-meal-${meal.id}`}>
                     <div className="relative w-full h-48 overflow-hidden rounded-t-md">
                       {meal.isReadyMeal && !meal.imageUrl ? (
@@ -2247,18 +2281,33 @@ export default function MealsPage() {
                     </CardFooter>
                   </Card>
                 </motion.div>
-              ))}
+                  </Fragment>
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              {visibleMeals?.map((meal, index) => (
-                <motion.div
-                  key={meal.id}
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -12 }}
-                  transition={{ duration: 0.15, delay: index * 0.02 }}
-                >
+              {visibleMeals?.map((meal, index) => {
+                const cat = getMealDisplayCategory(meal);
+                const prevCat = index > 0 ? getMealDisplayCategory(visibleMeals[index - 1]) : null;
+                const isNewSection = showSectionHeaders && cat !== prevCat;
+                return (
+                  <Fragment key={meal.id}>
+                    {isNewSection && (
+                      <div
+                        className={`flex items-center gap-2 ${index > 0 ? "mt-4 pt-4 border-t border-border/50" : ""}`}
+                        data-testid={`section-header-list-${cat}`}
+                      >
+                        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">{SECTION_LABELS[cat]}</span>
+                        <span className="text-xs text-muted-foreground/35">· {sectionCounts.get(cat) ?? 0}</span>
+                      </div>
+                    )}
+                    <motion.div
+                      initial={{ opacity: 0, x: -12 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -12 }}
+                      transition={{ duration: 0.15, delay: index * 0.02 }}
+                    >
                   <Card className="group cursor-pointer" onClick={() => { setExpandedMealId(expandedMealId === meal.id ? null : meal.id); setExpandedTab("ingredients"); }} data-testid={`card-meal-${meal.id}`}>
                     <div className="flex items-stretch relative">
                       {meal.isReadyMeal ? (
@@ -2437,7 +2486,9 @@ export default function MealsPage() {
                     </AnimatePresence>
                   </Card>
                 </motion.div>
-              ))}
+                  </Fragment>
+                );
+              })}
             </div>
           )}
         </AnimatePresence>
