@@ -1141,10 +1141,11 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
   );
 }
 
-const MEAL_CATEGORY_ORDER = ["user_meals", "from_web", "drinks", "ready_meals"] as const;
+const MEAL_CATEGORY_ORDER = ["user_meals", "from_web", "tha_meals", "drinks", "ready_meals"] as const;
 const SECTION_LABELS: Record<string, string> = {
   user_meals: "Saved Recipes",
   from_web: "From the Web",
+  tha_meals: "The Healthy Apples",
   ready_meals: "Ready Meals",
   drinks: "Drinks",
 };
@@ -1153,7 +1154,8 @@ const CATEGORY_DROPDOWN_ORDER = ["Drink", "Smoothie", "Baby Meal", "Kids Meal", 
 function getMealDisplayCategory(meal: Meal): string {
   if (meal.isDrink || meal.mealFormat === "drink") return "drinks";
   if (meal.isReadyMeal || meal.mealFormat === "ready-meal") return "ready_meals";
-  if (meal.isSystemMeal || meal.sourceUrl) return "from_web";
+  if (meal.isSystemMeal) return "tha_meals";
+  if (meal.sourceUrl) return "from_web";
   return "user_meals";
 }
 

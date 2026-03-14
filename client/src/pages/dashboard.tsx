@@ -33,9 +33,10 @@ function getGreeting(): string {
   return "Good evening";
 }
 
-function getMealDisplayCat(meal: any): "user" | "web" | "ready" {
+function getMealDisplayCat(meal: any): "user" | "web" | "tha" | "ready" {
   if (meal.isReadyMeal || meal.mealFormat === "ready-meal") return "ready";
-  if (meal.isSystemMeal || meal.sourceUrl) return "web";
+  if (meal.isSystemMeal) return "tha";
+  if (meal.sourceUrl) return "web";
   return "user";
 }
 
@@ -66,11 +67,12 @@ export default function Dashboard() {
 
   const mealMix = useMemo(() => {
     if (!meals?.length) return [];
-    const counts = { user: 0, web: 0, ready: 0 };
+    const counts = { user: 0, web: 0, tha: 0, ready: 0 };
     meals.forEach(m => { counts[getMealDisplayCat(m)]++; });
     return [
       { name: "Saved Recipes", value: counts.user, color: GREEN_MID },
       { name: "From the Web", value: counts.web, color: "hsl(132, 14%, 65%)" },
+      { name: "The Healthy Apples", value: counts.tha, color: "hsl(118, 16%, 72%)" },
       { name: "Ready Meals", value: counts.ready, color: BERRY },
     ].filter(d => d.value > 0);
   }, [meals]);
