@@ -1141,7 +1141,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
   );
 }
 
-const MEAL_CATEGORY_ORDER = ["user_meals", "from_web", "ready_meals", "drinks"] as const;
+const MEAL_CATEGORY_ORDER = ["user_meals", "from_web", "drinks", "ready_meals"] as const;
 const SECTION_LABELS: Record<string, string> = {
   user_meals: "Saved Recipes",
   from_web: "From the Web",
