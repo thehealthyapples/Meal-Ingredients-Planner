@@ -60,6 +60,8 @@ interface UPFAnalysisInfo {
   smpRating: number;
   hasCape: boolean;
   smpScore: number;
+  isWholeFoodOverride?: boolean;
+  isOrganic?: boolean;
   additiveMatches: AdditiveMatchInfo[];
   processingIndicators: string[];
   ingredientCount: number;
@@ -1283,7 +1285,7 @@ export default function ProductsPage() {
                               </div>
                               {product.upfAnalysis && (
                                 <div className="mt-1.5">
-                                  <ScoreBadge score={product.upfAnalysis.smpRating} size={20} />
+                                  <ScoreBadge score={product.upfAnalysis.smpRating} size={20} isOrganic={product.upfAnalysis.isOrganic} />
                                 </div>
                               )}
                             </div>
@@ -1400,7 +1402,14 @@ export default function ProductsPage() {
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">SMP Rating</p>
-                          <ScoreBadge score={selectedProduct.upfAnalysis.smpRating} size={35} />
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <ScoreBadge score={selectedProduct.upfAnalysis.smpRating} size={35} isOrganic={selectedProduct.upfAnalysis.isOrganic} />
+                            {selectedProduct.upfAnalysis.isWholeFoodOverride && (
+                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border border-green-200 dark:border-green-700">
+                                Whole Food
+                              </span>
+                            )}
+                          </div>
                         </div>
                         {selectedProduct.analysis && (
                           <div className="flex items-center gap-2">
@@ -1569,7 +1578,7 @@ export default function ProductsPage() {
                             <p className="text-sm font-medium leading-tight truncate">{alt.product_name}</p>
                             <div className="flex items-center gap-1 mt-0.5">
                               {alt.analysis && <NovaGroupBadge group={alt.analysis.novaGroup} />}
-                              {alt.upfAnalysis && <ScoreBadge score={alt.upfAnalysis.smpRating} size={20} />}
+                              {alt.upfAnalysis && <ScoreBadge score={alt.upfAnalysis.smpRating} size={20} isOrganic={alt.upfAnalysis.isOrganic} />}
                               {!alt.upfAnalysis && alt.analysis && (
                                 <Badge variant="secondary" className="text-[10px]">
                                   Score: {alt.analysis.healthScore}
@@ -1644,7 +1653,7 @@ export default function ProductsPage() {
                 <tbody>
                   <CompareRow label="SMP Rating" products={compareProducts} render={(p) => {
                     if (!p.upfAnalysis) return <span className="text-muted-foreground">N/A</span>;
-                    return <ScoreBadge score={p.upfAnalysis.smpRating} size={20} />;
+                    return <ScoreBadge score={p.upfAnalysis.smpRating} size={20} isOrganic={p.upfAnalysis.isOrganic} />;
                   }} highlightBest={(products) => {
                     const ratings = products.map(p => p.upfAnalysis?.smpRating ?? -1);
                     return ratings.indexOf(Math.max(...ratings));

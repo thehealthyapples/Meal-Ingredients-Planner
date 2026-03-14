@@ -14,6 +14,7 @@ import { analyzeProduct } from "./lib/product-analysis";
 import { sendBasketToSupermarket, getSupportedSupermarkets } from "./lib/grocery-integration";
 import { filterMealsByPreferences, rankMealsByPreferences } from "./lib/recommendation-service";
 import { analyzeProductUPF } from "./lib/upf-analysis-service";
+import { isWholeFoodIngredient } from "./lib/smp-rating-service";
 import { createBasket, getBasketSupermarkets } from "./lib/supermarket-basket-service";
 import { generateSmartSuggestion, type SmartSuggestSettings, type LockedEntry } from "./lib/smart-suggest-service";
 import { searchAllRecipes, searchJamieOliver, searchSeriousEats, searchEdamam, searchApiNinjas, searchBigOven, searchFatSecret, type ExternalMealCandidate } from "./lib/external-meal-service";
@@ -1212,6 +1213,8 @@ export async function registerRoutes(
               smpRating: upfResult.smpRating,
               hasCape: upfResult.hasCape,
               smpScore: upfResult.smpScore,
+              isWholeFoodOverride: upfResult.isWholeFoodOverride,
+              isOrganic: upfResult.isOrganic,
               additiveMatches: upfResult.additiveMatches || [],
               processingIndicators: upfResult.processingIndicators || [],
               ingredientCount: upfResult.ingredientCount || 0,
@@ -1848,6 +1851,8 @@ export async function registerRoutes(
               smpRating: altUpf.smpRating,
               hasCape: altUpf.hasCape,
               smpScore: altUpf.smpScore,
+              isWholeFoodOverride: altUpf.isWholeFoodOverride,
+              isOrganic: altUpf.isOrganic,
               additiveMatches: altUpf.additiveMatches.map(m => ({
                 name: m.additive.name,
                 type: m.additive.type,
@@ -2269,6 +2274,16 @@ export async function registerRoutes(
           try {
             const searchName = (item as any).ingredientName || (item as any).name || item.normalizedName || item.productName;
             const cleanName = searchName.replace(/^\d+[\.\d]*\s*(g|kg|ml|l|oz|lb)\s+/i, '').trim();
+
+            // Whole-food short-circuit: skip OpenFoodFacts lookup entirely.
+            // Plain whole foods always score 5 apples by product rule.
+            if (isWholeFoodIngredient(cleanName)) {
+              await storage.updateShoppingListItem(item.id, { smpRating: 5 });
+              updated.push({ id: item.id, smpRating: 5 });
+              console.log(`[auto-smp] Whole-food override for "${cleanName}" → 5 apples`);
+              return;
+            }
+
             const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(cleanName)}&json=1&page_size=5&fields=${OFF_FIELDS}&tagtype_0=countries&tag_contains_0=contains&tag_0=united-kingdom`;
             const response = await axios.get(url, OFF_HEADERS);
             const products = response.data?.products || [];
@@ -3949,6 +3964,8 @@ export async function registerRoutes(
           smpRating: upfAnalysis.smpRating,
           hasCape: upfAnalysis.hasCape,
           smpScore: upfAnalysis.smpScore,
+          isWholeFoodOverride: upfAnalysis.isWholeFoodOverride,
+          isOrganic: upfAnalysis.isOrganic,
           additiveMatches: upfAnalysis.additiveMatches,
           processingIndicators: upfAnalysis.processingIndicators,
           ingredientCount: upfAnalysis.ingredientCount,

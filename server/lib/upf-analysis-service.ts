@@ -37,6 +37,8 @@ export interface UPFAnalysisResult {
   smpRating: number;
   hasCape: boolean;
   smpScore: number;
+  isWholeFoodOverride: boolean;
+  isOrganic: boolean;
   additiveMatches: AdditiveMatch[];
   processingIndicators: string[];
   ingredientCount: number;
@@ -189,6 +191,8 @@ export function analyzeProductUPF(
     smpRating: smpResult.smpRating,
     hasCape: smpResult.hasCape,
     smpScore: smpResult.score,
+    isWholeFoodOverride: smpResult.isWholeFoodOverride,
+    isOrganic: smpResult.isOrganic,
     additiveMatches,
     processingIndicators,
     ingredientCount: ingredients.length,

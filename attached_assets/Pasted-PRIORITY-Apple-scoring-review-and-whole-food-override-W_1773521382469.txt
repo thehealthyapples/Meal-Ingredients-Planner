@@ -1,0 +1,130 @@
+PRIORITY — Apple scoring review and whole-food override
+
+We need to correct the Healthy Apples scoring logic.
+
+Problem:
+- Plain whole foods are currently being shown with low apple scores.
+- Example observed by user: onions in the shopping list showing 2 apples.
+- This breaks trust in the scoring system because a basic whole food should not score below more processed items.
+
+Product rule:
+Healthy Apples score should represent “how close to a clean whole food this is,” not “whether the system managed to parse the product nicely.”
+
+This means:
+- plain whole foods must always land in the top score band
+- parser uncertainty must not drag a true whole food down to a low score
+- when classification is uncertain, the system should fail safely and avoid obviously unfair scores for simple whole foods
+- scoring should feel intuitive to a normal shopper, not just technically consistent with the code
+
+Required scoring rule changes:
+
+1. Whole-food baseline
+Any plain whole food ingredient should default to 5 apples.
+
+Examples:
+- onions
+- carrots
+- apples
+- bananas
+- potatoes
+- oats
+- rice
+- eggs
+- plain meat cuts
+- plain fish
+- beans / lentils
+- herbs / spices
+- plain nuts / seeds
+
+Definition:
+A whole food is a single-ingredient food with no additives and no meaningful industrial reformulation.
+
+2. Organic handling
+Organic should NOT create a higher score than 5 apples.
+Instead:
+- keep score at 5 apples
+- add a small organic indicator on the visual, for example:
+  - “Org” on the 5th apple
+  - or a subtle organic tag beside the score
+Do not increase layout width.
+
+3. Scoring hierarchy
+Apply this order:
+
+A. If item is recognised as a plain whole food:
+   => force score = 5 apples
+   => bypass normal processed-food penalties
+
+B. Else if item is a minimally processed single-ingredient product:
+   => high score, close to 5 apples, according to current model
+
+C. Else if item is processed / ultra-processed:
+   => use normal additive / processing logic
+
+4. Shopping basket and pantry display
+Wherever ingredient scores are shown in:
+- basket
+- pantry
+- analyser
+- meal ingredient views
+
+make sure raw whole-food items use the whole-food override.
+
+5. Prevent obvious bad outputs
+Add guardrails so the following do NOT happen:
+- onion scoring 2 apples
+- apple scoring below processed snack foods
+- plain oats scoring below flavoured cereal bars
+- plain chicken breast scoring below processed deli meat
+
+6. Organic display
+Implement one compact visual option:
+Option preferred:
+- show 5 apples as normal
+- place a tiny “Org” marker on or near the 5th apple
+Fallback:
+- small organic badge next to the score
+
+7. Half-apple support review
+While in this area, review whether half-apples should be supported internally.
+This is optional for this pass unless already easy to implement.
+Do not expand the width of the score component.
+
+Technical tasks:
+1. Find every scoring path used by:
+   - analyser
+   - basket
+   - pantry
+   - ingredient rows
+   - meal ingredient summaries
+2. Identify where whole foods are currently falling into the generic product scoring path.
+3. Introduce a shared helper, for example:
+   - isWholeFoodIngredient(...)
+   - getWholeFoodOverrideScore(...)
+4. Apply the override before additive / NOVA / UPF penalties.
+5. Keep the implementation simple, deterministic, and cheap to maintain.
+
+Implementation guidance:
+- Prefer a whitelist + heuristic hybrid:
+  - single ingredient
+  - no additives
+  - no long industrial ingredient list
+  - known raw ingredient category
+- If classification confidence is high that the item is a plain whole food, force 5 apples.
+- If confidence is low, fall back to existing scoring logic.
+
+Deliverables:
+- list all files changed
+- explain the exact reason onions were able to show 2 apples before
+- confirm the new override rule
+- provide 10 before/after examples including:
+  - onion
+  - apple
+  - oats
+  - eggs
+  - chicken breast
+  - tinned beans
+  - plain yogurt
+  - flavoured yogurt
+  - breakfast cereal
+  - protein bar
