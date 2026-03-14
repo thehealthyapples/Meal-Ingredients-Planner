@@ -39,7 +39,7 @@ import {
   CircleDot, Plus, Minus, Info, Layers, Crown, Sprout, Tag,
   Download, UtensilsCrossed, Store, Maximize2, Minimize2,
   ChevronDown, ChevronUp, AlertTriangle, Microscope, Filter, SlidersHorizontal,
-  Snowflake, Home,
+  Snowflake, Home, EllipsisVertical, Columns2,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -899,7 +899,7 @@ export default function ShoppingListPage() {
     return () => { document.title = "The Healthy Apples"; };
   }, []);
 
-  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>('ingredient');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [editState, setEditState] = useState<EditState | null>(null);
   const [comparisonItem, setComparisonItem] = useState<ShoppingListItem | null>(null);
@@ -911,6 +911,7 @@ export default function ShoppingListPage() {
   const [globalStore, setGlobalStore] = useState<string>('auto');
   const [analyseItem, setAnalyseItem] = useState<ShoppingListItem | null>(null);
   const [optimizerSelections, setOptimizerSelections] = useState<Record<number, string[]>>({});
+  const [splitByShop, setSplitByShop] = useState(false);
 
   const [selectedRetailers, setSelectedRetailers] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("tha-basket-retailers") || '["Tesco","Sainsbury\'s","Asda"]'); } catch { return ["Tesco", "Sainsbury's", "Asda"]; }
@@ -1528,8 +1529,20 @@ export default function ShoppingListPage() {
   }, [hasPrices, savedItems, pricesByItem, selectedRetailers, getCheapestForItem]);
 
   const currentTotal = useMemo(() => {
-    return Object.values(currentByRetailer).reduce((sum, v) => sum + v, 0);
-  }, [currentByRetailer]);
+    if (!hasPrices) return 0;
+    let total = 0;
+    for (const item of savedItems) {
+      const itemPrices = pricesByItem.get(item.id);
+      if (item.selectedStore) {
+        const price = itemPrices?.get(item.selectedStore)?.price;
+        if (price !== null && price !== undefined) total += price;
+      } else {
+        const cheapest = getCheapestForItem(item.id);
+        if (cheapest) total += cheapest.price;
+      }
+    }
+    return total;
+  }, [hasPrices, savedItems, pricesByItem, getCheapestForItem]);
 
   useEffect(() => {
     if (!hasPrices || savedItems.length === 0 || Object.keys(thaPicks).length > 0) return;
@@ -1566,8 +1579,14 @@ export default function ShoppingListPage() {
   };
 
   const sortedItems = useMemo(() => {
-    if (!sortColumn) return savedItems;
     const sorted = [...savedItems].sort((a, b) => {
+      // When splitByShop is on, first sort by shop so items cluster by store
+      if (splitByShop) {
+        const aShop = a.selectedStore || getCheapestForItem(a.id)?.supermarket || 'zzz';
+        const bShop = b.selectedStore || getCheapestForItem(b.id)?.supermarket || 'zzz';
+        if (aShop !== bShop) return aShop.localeCompare(bShop);
+      }
+      if (!sortColumn) return 0;
       let cmp = 0;
       switch (sortColumn) {
         case 'ingredient':
@@ -1624,7 +1643,7 @@ export default function ShoppingListPage() {
       return sortDirection === 'desc' ? -cmp : cmp;
     });
     return sorted;
-  }, [savedItems, sortColumn, sortDirection, pricesByItem, getCheapestForItem, getItemTier, getItemSmpRating, sourcesByItem]);
+  }, [savedItems, sortColumn, sortDirection, pricesByItem, getCheapestForItem, getItemTier, getItemSmpRating, sourcesByItem, splitByShop]);
 
   // Initialise collapsed-category state once data has loaded
   useEffect(() => {
@@ -1805,9 +1824,24 @@ export default function ShoppingListPage() {
   );
 
   return (
-    <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-background overflow-auto p-4 sm:p-6' : 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`}>
+    <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-background overflow-auto flex flex-col' : 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`}>
 
-      <div className="flex flex-col">
+      {/* Fullscreen branding bar */}
+      {isFullscreen && (
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-background/95 backdrop-blur-sm shrink-0" data-testid="fullscreen-header">
+          <div className="flex items-center gap-2">
+            <Apple className="h-5 w-5 text-primary" />
+            <span className="font-semibold text-sm text-foreground">The Healthy Apples</span>
+            <span className="text-muted-foreground text-sm">· Basket</span>
+          </div>
+          <Button variant="outline" size="sm" className="gap-1" onClick={() => setIsFullscreen(false)} data-testid="button-exit-fullscreen">
+            <Minimize2 className="h-3.5 w-3.5" />
+            Exit Fullscreen
+          </Button>
+        </div>
+      )}
+
+      <div className={`flex flex-col ${isFullscreen ? 'flex-1 overflow-auto p-4 sm:p-6' : ''}`}>
         <Card className="flex-1 flex flex-col">
           <CardHeader className="pb-6 border-b border-border">
             <div className="flex justify-between items-center gap-1 flex-wrap">
@@ -1828,6 +1862,19 @@ export default function ShoppingListPage() {
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-wrap">
+                {/* Split by shop toggle */}
+                {(savedItems.length > 0) && (
+                  <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1" data-testid="toggle-split-by-shop">
+                    <Columns2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground hidden sm:inline">Split by shop</span>
+                    <Switch
+                      checked={splitByShop}
+                      onCheckedChange={setSplitByShop}
+                      className="scale-75"
+                      data-testid="switch-split-by-shop"
+                    />
+                  </div>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -1837,7 +1884,7 @@ export default function ShoppingListPage() {
                   className="gap-1"
                 >
                   <Scale className="h-3 w-3" />
-                  {measurementPref === 'metric' ? 'Metric' : 'Imperial'}
+                  <span className="hidden sm:inline">{measurementPref === 'metric' ? 'Metric' : 'Imperial'}</span>
                 </Button>
                 {(savedItems.length > 0 || shoppingExtras.some(e => e.inBasket || e.alwaysAdd)) && (
                   <>
@@ -1854,49 +1901,56 @@ export default function ShoppingListPage() {
                       ) : (
                         <Search className="h-3 w-3" />
                       )}
-                      Match Products
+                      <span className="hidden sm:inline">Match Products</span>
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setBasketDialogOpen(true)}
-                      data-testid="button-send-to-supermarket"
-                      className="gap-1"
-                    >
-                      <ShoppingCart className="h-3 w-3" />
-                      Send to Supermarket
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setExportDialogOpen(true)}
-                      data-testid="button-export-list"
-                      className="gap-1"
-                    >
-                      <Download className="h-3 w-3" />
-                      Export
-                    </Button>
+                    {/* More actions popover */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="icon" data-testid="button-more-actions">
+                          <EllipsisVertical className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-52 p-1.5">
+                        <button
+                          className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/60 transition-colors"
+                          onClick={() => setBasketDialogOpen(true)}
+                          data-testid="button-send-to-supermarket"
+                        >
+                          <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                          Send to Supermarket
+                        </button>
+                        <button
+                          className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/60 transition-colors"
+                          onClick={() => setExportDialogOpen(true)}
+                          data-testid="button-export-list"
+                        >
+                          <Download className="h-4 w-4 text-muted-foreground" />
+                          Export / Download
+                        </button>
+                        <div className="my-1 border-t border-border" />
+                        <button
+                          className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/60 transition-colors text-destructive"
+                          onClick={() => clearAll.mutate()}
+                          disabled={clearAll.isPending}
+                          data-testid="button-clear-all"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Clear Basket
+                        </button>
+                      </PopoverContent>
+                    </Popover>
                   </>
                 )}
-                {(savedItems.length > 0 || shoppingExtras.some(e => e.inBasket || e.alwaysAdd)) && (
+                {!isFullscreen && (
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => clearAll.mutate()}
-                    disabled={clearAll.isPending}
-                    data-testid="button-clear-all"
+                    onClick={() => setIsFullscreen(true)}
+                    data-testid="button-fullscreen-toggle"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Maximize2 className="h-4 w-4" />
                   </Button>
                 )}
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setIsFullscreen(!isFullscreen)}
-                  data-testid="button-fullscreen-toggle"
-                >
-                  {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                </Button>
               </div>
             </div>
           </CardHeader>
@@ -1964,7 +2018,7 @@ export default function ShoppingListPage() {
 
                       {!collapsedCategories.has(cat) && (
                       <><div className="overflow-x-auto">
-                        <table className="w-full text-xs table-fixed" data-testid={`table-category-${cat}`}>
+                        <table className="w-full text-xs sm:table-fixed" data-testid={`table-category-${cat}`}>
                           <colgroup>
                             <col style={{ width: 210 }} />
                             <col style={{ width: 80 }} />
@@ -1979,13 +2033,13 @@ export default function ShoppingListPage() {
                           <thead>
                             <tr className="border-b border-border/40 bg-muted/10">
                               <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle sticky left-0 z-10 bg-background">Ingredient</th>
-                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle">Optimizer</th>
+                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle hidden sm:table-cell">Optimizer</th>
                               <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle">Choice</th>
                               <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle">Match</th>
                               <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap align-middle">Qty</th>
                               <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap align-middle">Price</th>
-                              <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap align-middle">THA Rating</th>
-                              <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap align-middle">Meal</th>
+                              <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap align-middle hidden sm:table-cell">THA Rating</th>
+                              <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap align-middle hidden sm:table-cell">Meal</th>
                               <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap align-middle sticky right-0 z-10 bg-background">Actions</th>
                             </tr>
                           </thead>
@@ -2089,7 +2143,7 @@ export default function ShoppingListPage() {
                                     </td>
 
                                     {(() => {
-                                      if (!isPantry) return <td className="px-1.5 py-1 text-muted-foreground" data-testid={`optimizer-cell-${item.id}`}>—</td>;
+                                      if (!isPantry) return <td className="px-1.5 py-1 text-muted-foreground hidden sm:table-cell" data-testid={`optimizer-cell-${item.id}`}>—</td>;
                                       const optName = item.normalizedName ?? item.productName;
                                       const optCategory = (item.category || 'other').toLowerCase();
                                       const optKeys = getOptimizerOptions(optName, optCategory);
@@ -2105,13 +2159,13 @@ export default function ShoppingListPage() {
                                       };
                                       if (optKeys.length === 0) {
                                         return (
-                                          <td className="px-1.5 py-1" data-testid={`optimizer-cell-${item.id}`}>
+                                          <td className="px-1.5 py-1 hidden sm:table-cell" data-testid={`optimizer-cell-${item.id}`}>
                                             <span className="text-[10px] text-muted-foreground">Default</span>
                                           </td>
                                         );
                                       }
                                       return (
-                                        <td className="px-1.5 py-1" data-testid={`optimizer-cell-${item.id}`}>
+                                        <td className="px-1.5 py-1 hidden sm:table-cell" data-testid={`optimizer-cell-${item.id}`}>
                                           <Popover>
                                             <PopoverTrigger asChild>
                                               <button
@@ -2310,7 +2364,7 @@ export default function ShoppingListPage() {
                                       ) : <span className="text-muted-foreground">—</span>}
                                     </td>
 
-                                    <td className="px-1.5 py-1 text-center" data-testid={`text-smp-${item.id}`}>
+                                    <td className="px-1.5 py-1 text-center hidden sm:table-cell" data-testid={`text-smp-${item.id}`}>
                                       {hasPrices ? (() => {
                                         const smp = getItemSmpRating(item.id, item);
                                         if (smp === 0) return <span className="text-muted-foreground">—</span>;
@@ -2318,7 +2372,7 @@ export default function ShoppingListPage() {
                                       })() : <span className="text-muted-foreground">—</span>}
                                     </td>
 
-                                    <td className="px-1.5 py-1 text-center" data-testid={`meal-count-${item.id}`}>
+                                    <td className="px-1.5 py-1 text-center hidden sm:table-cell" data-testid={`meal-count-${item.id}`}>
                                       {(() => {
                                         const hasPantry = isPantry;
                                         const hasRecipes = sources.length > 0;
@@ -2372,8 +2426,8 @@ export default function ShoppingListPage() {
                                           className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
                                           data-testid={`checkbox-item-${item.id}`}
                                         />
-                                        <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => startEdit(item.id, 'productName', item.productName)} className="text-muted-foreground h-7 w-7" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7 hidden sm:inline-flex" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => startEdit(item.id, 'productName', item.productName)} className="text-muted-foreground h-7 w-7 hidden sm:inline-flex" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
                                         <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
                                       </div>
                                     </td>
@@ -2385,22 +2439,22 @@ export default function ShoppingListPage() {
                             {catExtras.map(extra => (
                               <tr key={`extra-${extra.id}`} className={`border-b border-border/30 ${extra.alwaysAdd ? 'bg-primary/3' : ''}`} data-testid={`row-extra-${extra.id}`}>
                                 <td className="px-1.5 py-1.5 sticky left-0 z-10 bg-background">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                  <div className="flex flex-col gap-0.5">
                                     <span className="font-medium text-foreground/80" data-testid={`text-extra-name-${extra.id}`}>{capitalizeWords(extra.name)}</span>
                                     <button
-                                      className={`inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`}
+                                      className={`self-start inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`}
                                       onClick={() => extra.alwaysAdd ? setAlwaysAddModal({ extraId: extra.id, extraName: extra.name }) : updateExtraMutation.mutate({ id: extra.id, alwaysAdd: true })}
                                       data-testid={`pill-always-${extra.id}`}
                                     >Always in Basket</button>
                                   </div>
                                 </td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">—</td>
                                 <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                 <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                 <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                 <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">—</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">—</td>
                                 <td className="px-1.5 py-1.5 sticky right-0 z-10 bg-background">
                                   <div className="flex items-center justify-end gap-0.5">
                                     <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" data-testid={`checkbox-extra-${extra.id}`} />
@@ -2546,10 +2600,10 @@ export default function ShoppingListPage() {
                                 {subcatExtras.map(extra => (
                                   <tr key={`hh-extra-${extra.id}`} className="border-b border-border/30" data-testid={`row-hh-extra-${extra.id}`}>
                                     <td className="px-1.5 py-1.5 sticky left-0 z-10 bg-background">
-                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                      <div className="flex flex-col gap-0.5">
                                         <span className="font-medium text-foreground/80">{capitalizeWords(extra.name)}</span>
                                         <button
-                                          className={`inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`}
+                                          className={`self-start inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`}
                                           onClick={() => extra.alwaysAdd ? setAlwaysAddModal({ extraId: extra.id, extraName: extra.name }) : updateExtraMutation.mutate({ id: extra.id, alwaysAdd: true })}
                                           data-testid={`pill-always-hh-${extra.id}`}
                                         >Always in Basket</button>
@@ -2689,49 +2743,48 @@ export default function ShoppingListPage() {
           {/* Comparison Strip */}
           {hasPrices && selectedRetailers.length > 0 && savedItems.length > 0 && (
             <div className="border-t border-border px-4 py-4 bg-muted/5" data-testid="section-comparison-strip">
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">Comparison Strip</p>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs border border-border rounded-md" data-testid="table-comparison-strip">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">Price Comparison</p>
+              <div className="overflow-x-auto rounded-md border border-border">
+                <table className="text-xs" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: '480px' }} data-testid="table-comparison-strip">
                   <thead>
-                    <tr className="border-b border-border bg-muted/30">
-                      <th className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap">Shop</th>
-                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Budget</th>
-                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Standard</th>
-                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Premium</th>
-                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Organic</th>
-                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap">Current</th>
+                    <tr className="bg-muted/30">
+                      <th className="px-3 py-2 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-20 bg-muted/30 border-b border-r border-border">Shop</th>
+                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-b border-border">Budget</th>
+                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-b border-border">Standard</th>
+                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-b border-border">Premium</th>
+                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap border-b border-border">Organic</th>
+                      <th className="px-3 py-2 text-right font-medium text-muted-foreground whitespace-nowrap sticky right-0 z-20 bg-muted/30 border-b border-l border-border">Current</th>
                     </tr>
                   </thead>
                   <tbody>
                     {selectedRetailers.map(retailer => (
-                      <tr key={retailer} className="border-b border-border/50" data-testid={`row-comparison-${retailer.replace(/[\s']/g, '-').toLowerCase()}`}>
-                        <td className="px-3 py-2 font-medium text-foreground">{retailer}</td>
+                      <tr key={retailer} className="group" data-testid={`row-comparison-${retailer.replace(/[\s']/g, '-').toLowerCase()}`}>
+                        <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap sticky left-0 z-10 bg-background border-b border-r border-border/50 group-hover:bg-muted/20">{retailer}</td>
                         {(['budget', 'standard', 'premium', 'organic'] as const).map(tier => {
                           const val = comparisonMatrix[retailer]?.[tier] ?? 0;
-                          return <td key={tier} className="px-3 py-2 text-right tabular-nums text-foreground">{val > 0 ? `£${val.toFixed(2)}` : '—'}</td>;
+                          return <td key={tier} className="px-3 py-2 text-right tabular-nums text-foreground border-b border-border/50">{val > 0 ? `£${val.toFixed(2)}` : '—'}</td>;
                         })}
-                        <td className="px-3 py-2 text-right tabular-nums font-medium text-foreground">{(currentByRetailer[retailer] ?? 0) > 0 ? `£${(currentByRetailer[retailer] ?? 0).toFixed(2)}` : '—'}</td>
+                        <td className="px-3 py-2 text-right tabular-nums font-semibold text-foreground whitespace-nowrap sticky right-0 z-10 bg-background border-b border-l border-border/50 group-hover:bg-muted/20">
+                          {(currentByRetailer[retailer] ?? 0) > 0 ? `£${(currentByRetailer[retailer] ?? 0).toFixed(2)}` : '—'}
+                        </td>
                       </tr>
                     ))}
-                    <tr className="border-b border-border/50 bg-muted/20" data-testid="row-comparison-difference">
-                      <td className="px-3 py-2 font-medium text-muted-foreground">Difference vs Current</td>
+                    <tr className="bg-muted/20" data-testid="row-comparison-difference">
+                      <td className="px-3 py-2 font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/20 border-b border-r border-border/50">vs Current</td>
                       {(['budget', 'standard', 'premium', 'organic'] as const).map(tier => {
                         const minVal = Math.min(...selectedRetailers.map(r => comparisonMatrix[r]?.[tier] ?? 0).filter(v => v > 0));
-                        if (!isFinite(minVal)) return <td key={tier} className="px-3 py-2 text-right tabular-nums text-muted-foreground">—</td>;
+                        if (!isFinite(minVal)) return <td key={tier} className="px-3 py-2 text-right tabular-nums text-muted-foreground border-b border-border/50">—</td>;
                         const diff = minVal - currentTotal;
                         const isPositive = diff > 0;
                         return (
-                          <td key={tier} className={`px-3 py-2 text-right tabular-nums font-medium ${isPositive ? 'text-red-500 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                          <td key={tier} className={`px-3 py-2 text-right tabular-nums font-medium border-b border-border/50 ${isPositive ? 'text-red-500 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                             {isPositive ? '+' : ''}{diff.toFixed(2)}
                           </td>
                         );
                       })}
-                      <td className="px-3 py-2 text-right tabular-nums font-bold">{currentTotal > 0 ? `£${currentTotal.toFixed(2)}` : '—'}</td>
-                    </tr>
-                    <tr data-testid="row-comparison-current-total">
-                      <td className="px-3 py-2 font-medium text-muted-foreground">Current Total</td>
-                      <td colSpan={4} className="px-3 py-2 text-muted-foreground text-center">—</td>
-                      <td className="px-3 py-2 text-right tabular-nums font-bold">{currentTotal > 0 ? `£${currentTotal.toFixed(2)}` : '—'}</td>
+                      <td className="px-3 py-2 text-right tabular-nums font-bold sticky right-0 z-10 bg-muted/20 border-b border-l border-border/50">
+                        {currentTotal > 0 ? `£${currentTotal.toFixed(2)}` : '—'}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
