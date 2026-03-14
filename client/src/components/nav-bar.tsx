@@ -7,11 +7,25 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   LayoutDashboard, Utensils, CalendarDays, ShoppingBasket,
-  PackageOpen, User, LogOut, ShieldCheck, Star,
+  User, LogOut, ShieldCheck, Star,
   Mail, Sliders, Search, Menu, ChevronLeft, ChevronRight,
   MoreHorizontal, Microscope, BookOpen, Heart,
 } from "lucide-react";
 import { api } from "@shared/routes";
+
+function PantryIcon({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <line x1="1" y1="20" x2="23" y2="20" />
+      <rect x="1.5" y="14" width="5" height="6" rx="1" />
+      <rect x="2.5" y="12.5" width="3" height="2" rx="0.5" />
+      <rect x="9.5" y="11" width="5" height="9" rx="1" />
+      <rect x="10.5" y="9.5" width="3" height="2" rx="0.5" />
+      <rect x="17" y="13" width="5.5" height="7" rx="1" />
+      <rect x="18" y="11.5" width="3" height="2" rx="0.5" />
+    </svg>
+  );
+}
 
 const NAV_ITEMS_TOP = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -20,7 +34,7 @@ const NAV_ITEMS_TOP = [
 const NAV_ITEMS_MAIN = [
   { href: "/meals", label: "My Meals", icon: Utensils },
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
-  { href: "/pantry", label: "Pantry", icon: PackageOpen },
+  { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/products", label: "Analyser", icon: Microscope },
   { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
   { href: "/diary", label: "My Diary", icon: BookOpen },
@@ -39,7 +53,7 @@ const ADMIN_ITEMS = [
 const MOBILE_BOTTOM_ITEMS = [
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
   { href: "/meals", label: "My Meals", icon: Utensils },
-  { href: "/pantry", label: "Pantry", icon: PackageOpen },
+  { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
   { href: "/profile", label: "Profile", icon: User },
 ];
