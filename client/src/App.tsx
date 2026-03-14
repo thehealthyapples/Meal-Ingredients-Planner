@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -36,19 +37,24 @@ import DemoBasketPage from "@/pages/demo-basket-page";
 import DemoMealsPage from "@/pages/demo-meals-page";
 import PartnersPage from "@/pages/partners-page";
 
+let _contentRenderMeasured = false;
+
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
 
-  if (isLoading) {
-    return (
-      <div className="flex min-h-[100dvh] w-full items-center justify-center bg-background">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!isLoading && user && !_contentRenderMeasured) {
+      _contentRenderMeasured = true;
+      try {
+        performance.mark("THA_CONTENT_RENDER");
+        const m = performance.measure("THA_content_render", "THA_APP_START", "THA_CONTENT_RENDER");
+        console.debug(`[THA perf] content render in ${m.duration.toFixed(0)}ms`);
+      } catch {}
+    }
+  }, [isLoading, user]);
 
-  if (!user) return <Redirect to="/auth" />;
-  if (!user.onboardingCompleted) return <Redirect to="/onboarding" />;
+  if (!isLoading && !user) return <Redirect to="/auth" />;
+  if (!isLoading && user && !user.onboardingCompleted) return <Redirect to="/onboarding" />;
 
   return (
     <div className="relative min-h-[100dvh]">
@@ -59,7 +65,13 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
         <div className="flex flex-1 overflow-hidden">
           <DesktopSidebar />
           <main className="flex-1 overflow-y-auto main-safe bg-background/25">
-            <Component />
+            {isLoading ? (
+              <div className="flex h-full items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+              </div>
+            ) : (
+              <Component />
+            )}
           </main>
         </div>
         <MobileNav />

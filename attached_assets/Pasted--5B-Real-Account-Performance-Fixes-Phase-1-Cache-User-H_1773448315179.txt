@@ -1,0 +1,121 @@
+#5B - Real Account Performance Fixes Phase 1 — Cache, User Hydration, and Protected Shell Render
+
+What & Why
+Implement the first, highest-impact, lowest-risk performance fixes identified in the real-account performance audit.
+
+The audit found that real accounts feel slower than the demo primarily because:
+- login invalidates all cached queries unnecessarily
+- /api/user is re-fetched even though login already returns the user
+- ProtectedRoute blocks the entire shell until /api/user resolves
+
+This pass should improve perceived and actual speed for real authenticated users without broad refactors.
+
+Done looks like
+- login no longer invalidates the entire React Query cache
+- only the minimum necessary user/auth query state is refreshed on login
+- the authenticated user cache is populated directly from the login response where possible
+- the app shell/chrome can render before /api/user fully resolves
+- the content area can still show a loading/skeleton state if needed
+- no unrelated page redesigns
+- no backend schema changes
+- no broad performance refactor beyond this scoped pass
+- lightweight timing hooks are added so we can compare before/after behaviour
+
+Out of scope
+- /api/meals/summary
+- planner endpoint consolidation
+- N+1 backend query refactors
+- onboarding preload refactor
+- demo mode work
+- any redesign of dashboard/planner/basket pages
+- heavy instrumentation platforms
+
+Tasks
+
+T001 — Scope login query invalidation
+Inspect the current login success flow and replace any broad query invalidation such as:
+- queryClient.invalidateQueries() with no scope
+
+with the smallest necessary invalidation/update behaviour.
+
+Requirements
+- do not invalidate every cached query on login
+- refresh only auth/user-related state that genuinely changed
+- preserve correct authenticated behaviour
+
+T002 — Hydrate authenticated user state from login response
+If the login endpoint already returns the authenticated user, use that response to populate the user/auth query cache directly rather than immediately forcing a separate blocking /api/user fetch.
+
+Requirements
+- reuse the login response body where possible
+- keep auth state and user cache consistent
+- avoid duplicate work
+- preserve correctness for routing and guards
+
+T003 — Reduce full-shell blocking in ProtectedRoute
+Refactor ProtectedRoute so the app shell/chrome does not stay completely blank while waiting for /api/user.
+
+Requirements
+- render static shell structure earlier where safe
+- if loading is still needed, keep it in the main content area rather than blocking the full shell
+- do not break auth protection
+- do not expose protected page content before auth is known
+- preserve onboarding/user checks for actual content routing
+
+Guidance
+- sidebar/topbar/layout chrome can often render before user data finishes loading
+- protected content area can still wait on auth result
+
+T004 — Keep behaviour safe for non-authenticated users
+Ensure the refactor does not accidentally allow unauthenticated access or broken redirect behaviour.
+
+Requirements
+- unauthenticated users must still be redirected correctly
+- authenticated users must still land correctly
+- onboarding-related behaviour must remain intact
+
+T005 — Add lightweight timing hooks for before/after comparison
+Add simple, low-overhead timing/logging hooks around the critical path so we can measure whether this pass improved performance.
+
+Suggested measurement points
+- login success to user-resolved
+- user-resolved to first meaningful dashboard render
+- any key auth-route timing that helps validate the fixes
+
+Requirements
+- keep instrumentation lightweight
+- use existing logging patterns if any
+- avoid introducing analytics libraries
+- make it easy to remove or reduce later if desired
+
+T006 — Keep implementation tightly scoped
+Focus only on the login/auth/query/protected-shell path.
+
+Do not drift into:
+- meals payload work
+- planner endpoint changes
+- backend performance rewrites
+- unrelated UI redesign
+
+Relevant files
+- client/src/hooks/use-user.ts
+- client/src/App.tsx
+- any ProtectedRoute/auth-route related components
+- any small shared layout/auth utilities involved in route guarding
+
+Acceptance checklist
+- broad invalidateQueries() on login is removed/replaced with scoped behaviour
+- authenticated user cache is populated from login response where possible
+- full shell is no longer blank while /api/user resolves
+- auth protection still works correctly
+- onboarding flow still behaves correctly
+- timing hooks are added for before/after comparison
+- no unrelated page drift
+
+At the end, provide a concise implementation summary covering
+- files changed
+- what was changed in login cache handling
+- how user hydration now works
+- how ProtectedRoute rendering changed
+- what timing hooks were added
+- any follow-up recommendations strictly for Phase 2

@@ -1,11 +1,24 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { InsertUser, User } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 
+let _userResolveMeasured = false;
+
+function perfMark(name: string) {
+  try { performance.mark(name); } catch {}
+}
+
+function perfMeasure(name: string, from: string, to: string): number {
+  try {
+    const m = performance.measure(name, from, to);
+    return m.duration;
+  } catch { return -1; }
+}
+
 export function useUser() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
   const { data: user, isLoading, error } = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
@@ -16,6 +29,17 @@ export function useUser() {
     },
     retry: false,
   });
+
+  useEffect(() => {
+    if (!isLoading && !_userResolveMeasured) {
+      _userResolveMeasured = true;
+      perfMark("THA_USER_RESOLVED");
+      const ms = perfMeasure("THA_user_resolve", "THA_APP_START", "THA_USER_RESOLVED");
+      if (ms >= 0) {
+        console.debug(`[THA perf] user resolved in ${ms.toFixed(0)}ms (authenticated=${!!user})`);
+      }
+    }
+  }, [isLoading, user]);
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {
@@ -29,15 +53,18 @@ export function useUser() {
       return await res.json();
     },
     onSuccess: (data) => {
+      perfMark("THA_LOGIN_SUCCESS");
+      const ms = perfMeasure("THA_login", "THA_APP_START", "THA_LOGIN_SUCCESS");
+      if (ms >= 0) console.debug(`[THA perf] login completed in ${ms.toFixed(0)}ms`);
+
       queryClient.setQueryData(["/api/user"], data);
-      queryClient.invalidateQueries();
       toast({ title: "Welcome back!", description: "You have successfully logged in." });
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Login failed", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Login failed",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
@@ -65,10 +92,10 @@ export function useUser() {
       }
     },
     onError: (error: Error) => {
-      toast({ 
-        title: "Registration failed", 
-        description: error.message, 
-        variant: "destructive" 
+      toast({
+        title: "Registration failed",
+        description: error.message,
+        variant: "destructive",
       });
     },
   });
