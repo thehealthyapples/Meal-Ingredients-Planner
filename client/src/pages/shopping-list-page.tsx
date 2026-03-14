@@ -1362,6 +1362,27 @@ export default function ShoppingListPage() {
     },
   });
 
+  const recalculateScores = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(api.shoppingList.autoSmp.path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: true }),
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to recalculate');
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      const count = data?.updated?.length ?? 0;
+      toast({ title: "Scores updated", description: count > 0 ? `${count} item${count === 1 ? '' : 's'} re-scored with the latest rules.` : "All scores are already up to date." });
+    },
+    onError: () => {
+      toast({ title: "Could not recalculate", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
   const toggleChecked = useMutation({
     mutationFn: async ({ id, checked }: { id: number; checked: boolean }) => {
       const url = buildUrl(api.shoppingList.update.path, { id });
@@ -1926,6 +1947,15 @@ export default function ShoppingListPage() {
                         >
                           <Download className="h-4 w-4 text-muted-foreground" />
                           Export / Download
+                        </button>
+                        <button
+                          className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/60 transition-colors"
+                          onClick={() => recalculateScores.mutate()}
+                          disabled={recalculateScores.isPending}
+                          data-testid="button-recalculate-scores"
+                        >
+                          <RefreshCw className={`h-4 w-4 text-muted-foreground ${recalculateScores.isPending ? 'animate-spin' : ''}`} />
+                          {recalculateScores.isPending ? 'Recalculating…' : 'Recalculate Scores'}
                         </button>
                         <div className="my-1 border-t border-border" />
                         <button

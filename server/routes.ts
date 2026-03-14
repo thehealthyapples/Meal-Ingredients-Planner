@@ -2256,9 +2256,13 @@ export async function registerRoutes(
   app.post(api.shoppingList.autoSmp.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
+      // force=true re-scores ALL items, not just those missing a rating
+      const force = req.body?.force === true;
       const items = await storage.getShoppingListItems(req.user!.id);
-      const needsSmp = items.filter(i => i.smpRating === null || i.smpRating === undefined);
-      console.log(`[auto-smp] ${items.length} total items, ${needsSmp.length} need SMP rating`);
+      const needsSmp = force
+        ? items
+        : items.filter(i => i.smpRating === null || i.smpRating === undefined);
+      console.log(`[auto-smp] ${items.length} total items, ${needsSmp.length} to score (force=${force})`);
       if (needsSmp.length === 0) return res.json({ updated: [] });
 
       const allAdditives = await storage.getAllAdditives();
@@ -2266,6 +2270,10 @@ export async function registerRoutes(
       const OFF_HEADERS = { timeout: 10000, headers: { 'User-Agent': 'SmartMealPlanner/1.0 (contact: smartmealplanner@replit.app)' } };
       const updated: { id: number; smpRating: number }[] = [];
       const skipped: string[] = [];
+
+      // Matches items that might be in a packaged/processed form — these need
+      // actual ingredient validation before we short-circuit to 5 apples.
+      const PACKAGED_INDICATOR_RX = /\b(tinned|canned|jarred|bottled|in\s+brine|in\s+water|in\s+oil)\b/i;
 
       const batchSize = 3;
       for (let i = 0; i < needsSmp.length; i += batchSize) {
@@ -2275,12 +2283,14 @@ export async function registerRoutes(
             const searchName = (item as any).ingredientName || (item as any).name || item.normalizedName || item.productName;
             const cleanName = searchName.replace(/^\d+[\.\d]*\s*(g|kg|ml|l|oz|lb)\s+/i, '').trim();
 
-            // Whole-food short-circuit: skip OpenFoodFacts lookup entirely.
-            // Plain whole foods always score 5 apples by product rule.
-            if (isWholeFoodIngredient(cleanName)) {
+            // Whole-food short-circuit: for clearly raw/fresh items we can skip
+            // the OpenFoodFacts lookup entirely — no ambiguity about additives.
+            // Tinned/canned items still go through OFF so their ingredient list
+            // can be validated before granting the override.
+            if (isWholeFoodIngredient(cleanName) && !PACKAGED_INDICATOR_RX.test(cleanName)) {
               await storage.updateShoppingListItem(item.id, { smpRating: 5 });
               updated.push({ id: item.id, smpRating: 5 });
-              console.log(`[auto-smp] Whole-food override for "${cleanName}" → 5 apples`);
+              console.log(`[auto-smp] Whole-food short-circuit for "${cleanName}" → 5 apples`);
               return;
             }
 

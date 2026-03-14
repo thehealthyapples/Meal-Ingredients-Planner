@@ -44,6 +44,11 @@ const WHOLE_FOOD_CORE = new Set([
   "spring greens", "watercress", "rocket", "arugula", "edamame",
   "mangetout", "sugar snap peas", "broad bean", "broad beans",
   "runner bean", "runner beans", "okra",
+  // Tinned/canned compound terms that may reach the name check
+  // (ingredient-text validation still required at scoring time)
+  "tinned beans", "tinned chickpeas", "tinned lentils", "tinned tomatoes",
+  "canned beans", "canned chickpeas", "canned lentils", "canned tomatoes",
+  "dried beans", "dried chickpeas", "dried lentils",
   // Fruits
   "apple", "apples", "banana", "bananas", "orange", "oranges",
   "grape", "grapes", "strawberry", "strawberries", "blueberry", "blueberries",
@@ -89,21 +94,20 @@ const WHOLE_FOOD_CORE = new Set([
   "bay leaf", "bay leaves", "star anise", "saffron", "sumac",
   // Oils (unrefined)
   "olive oil", "extra virgin olive oil", "coconut oil",
-  // Pulses / tinned (minimally processed)
-  "tinned beans", "tinned chickpeas", "tinned lentils", "tinned tomatoes",
-  "canned beans", "canned chickpeas", "canned lentils", "canned tomatoes",
-  "dried beans", "dried chickpeas", "dried lentils",
   // Natural sweeteners
   "honey", "maple syrup",
 ]);
 
+// Qualifiers that may precede or follow a core term without disqualifying it.
+// NOTE: "tinned" and "canned" are intentionally EXCLUDED here; canned items
+// only reach 5 apples if their actual ingredient list is also clean.
 const WHOLE_FOOD_QUALIFIER_PREFIXES = [
   "fresh", "frozen", "organic", "raw", "peeled", "chopped", "sliced",
   "diced", "whole", "dried", "plain", "washed", "baby", "new",
   "red", "green", "yellow", "white", "brown", "sweet", "large", "medium",
   "small", "boneless", "skinless", "free-range", "free range",
   "british", "english", "local", "seasonal", "extra virgin",
-  "salted", "unsalted", "tinned", "canned", "mixed", "ripe",
+  "salted", "unsalted", "mixed", "ripe",
 ];
 
 const WHOLE_FOOD_DISQUALIFIERS = [
@@ -116,7 +120,86 @@ const WHOLE_FOOD_DISQUALIFIERS = [
   "spread", "dip", "relish", "chutney", "ketchup", "mayo", "mayonnaise",
   "soup", "stew", "curry", "casserole", "pie", "tart",
   "artificial", "modified starch",
+  "baked beans",  // compound override — baked beans ≠ plain beans
+  "in sauce", "in brine with",
 ];
+
+/**
+ * Detects functional additives / processing agents in an ingredient list that
+ * disqualify a product from the whole-food override, even if the product name
+ * looks like a whole food.
+ *
+ * Allowed: the food itself + water (any form) + salt (any form).
+ * Everything else is a contaminant for this purpose.
+ */
+const INGREDIENT_CONTAMINANT_PATTERNS: RegExp[] = [
+  /\bsugar\b/i,
+  /\bglucose\b/i,
+  /\bfructose\b/i,
+  /\bsyrup\b/i,
+  /\bsweetener\b/i,
+  /\bsaccharin\b/i,
+  /\baspartame\b/i,
+  /\bsucralose\b/i,
+  /\bstevia\b/i,
+  // Sauces / condiments
+  /\bsauce\b/i,
+  /\btomato\s+paste\b/i,
+  /\bketchup\b/i,
+  /\bvinegar\b/i,
+  /\bmustard\b/i,
+  // Flavourings
+  /\bflavouring\b/i,
+  /\bflavoring\b/i,
+  /\bnatural\s+flavour\b/i,
+  /\bnatural\s+flavor\b/i,
+  /\bartificial\s+flavou?r\b/i,
+  /\byeast\s+extract\b/i,
+  // Acidity regulators
+  /\bacidity\s+regulator\b/i,
+  /\bcitric\s+acid\b/i,
+  /\blactic\s+acid\b/i,
+  /\bacetic\s+acid\b/i,
+  /\bascorbic\s+acid\b/i,
+  /\bmalic\s+acid\b/i,
+  // Firming / preserving agents
+  /\bfirming\s+agent\b/i,
+  /\bcalcium\s+chloride\b/i,
+  /\bpreservative\b/i,
+  /\bsodium\s+benzoate\b/i,
+  /\bpotassium\s+sorbate\b/i,
+  /\bsorbate\b/i,
+  /\bbenzoate\b/i,
+  // Colours
+  /\bcolou?r(ing)?\b/i,
+  // Modified starches / UPF markers
+  /\bmodified\s+starch\b/i,
+  /\bmodified\s+maize\s+starch\b/i,
+  /\bmaltodextrin\b/i,
+  /\bdextrose\b/i,
+  // Emulsifiers / stabilisers
+  /\bemulsifier\b/i,
+  /\bstabiliser\b/i,
+  /\bstabilizer\b/i,
+  /\bxanthan\b/i,
+  /\bcarrageenan\b/i,
+  /\bguar\s+gum\b/i,
+  // Spice blends (suggest processed product, not plain)
+  /\bspices\b/i,
+  /\bseasonings?\b/i,
+];
+
+/**
+ * Returns true if the ingredient list is clean enough to permit the whole-food
+ * override. An empty / missing ingredients string is treated as clean (no info
+ * to contradict the name-level check).
+ *
+ * "Clean" means: the only non-food ingredients are water and salt in any form.
+ */
+export function isCleanIngredientListForWholeFood(ingredientsText: string): boolean {
+  if (!ingredientsText || ingredientsText.trim().length < 2) return true;
+  return !INGREDIENT_CONTAMINANT_PATTERNS.some(rx => rx.test(ingredientsText));
+}
 
 export function isWholeFoodIngredient(name: string): boolean {
   const lower = name.toLowerCase().trim();
@@ -218,10 +301,19 @@ export function calculateStrictSMPRating(input: SMPRatingInput): SMPRatingResult
 
   // ---------------------------------------------------------------------------
   // Whole-food override: plain whole foods always score 5 apples.
-  // Check productName first, then fall back to ingredientsText (single ingredient).
+  //
+  // Two-gate check:
+  //   Gate 1 — name-level: product/ingredient name must be a recognised whole food.
+  //   Gate 2 — ingredient-level: if an actual ingredient list is present, it must
+  //            not contain functional additives (sugar, sauce, flavourings, acidity
+  //            regulators, etc.). This prevents canned products with additives from
+  //            being pulled up to 5 apples via the name check alone.
   // ---------------------------------------------------------------------------
   const nameToCheck = input.productName || input.ingredientsText;
-  if (isWholeFoodIngredient(nameToCheck) || (input.ingredientCount <= 1 && isWholeFoodIngredient(input.ingredientsText))) {
+  const nameIsWholeFood = isWholeFoodIngredient(nameToCheck)
+    || (input.ingredientCount <= 1 && isWholeFoodIngredient(input.ingredientsText));
+
+  if (nameIsWholeFood && isCleanIngredientListForWholeFood(input.ingredientsText)) {
     return {
       score: 100,
       smpRating: 5,
