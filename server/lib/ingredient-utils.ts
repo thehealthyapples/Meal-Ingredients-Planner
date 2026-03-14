@@ -277,7 +277,7 @@ const INGREDIENT_CATEGORIES: Record<string, string[]> = {
   grains: ['rice', 'pasta', 'noodle', 'bread', 'flour', 'oat', 'quinoa', 'couscous', 'barley', 'bulgur', 'polenta', 'cornmeal', 'semolina', 'tortilla', 'wrap', 'pitta', 'pita', 'naan', 'focaccia', 'ciabatta', 'sourdough', 'bagel', 'croissant', 'cracker', 'breadcrumb'],
   herbs: ['basil', 'oregano', 'thyme', 'rosemary', 'parsley', 'coriander', 'cilantro', 'mint', 'dill', 'sage', 'chive', 'tarragon', 'bay leaf', 'bay leaves', 'marjoram', 'cumin', 'paprika', 'turmeric', 'cinnamon', 'nutmeg', 'clove', 'cardamom', 'ginger', 'saffron', 'chilli', 'cayenne'],
   oils: ['olive oil', 'vegetable oil', 'sunflower oil', 'coconut oil', 'sesame oil', 'rapeseed oil', 'oil', 'vinegar', 'balsamic'],
-  condiments: ['soy sauce', 'worcestershire', 'tabasco', 'ketchup', 'mustard', 'mayonnaise', 'honey', 'maple syrup', 'sugar', 'salt', 'pepper', 'stock', 'broth', 'bouillon', 'paste', 'sauce'],
+  condiments: ['tomato sauce', 'pasta sauce', 'tomato paste', 'tomato purée', 'tomato puree', 'tomato ketchup', 'chilli sauce', 'hot sauce', 'soy sauce', 'fish sauce', 'oyster sauce', 'hoisin sauce', 'worcestershire', 'tabasco', 'ketchup', 'mustard', 'mayonnaise', 'honey', 'maple syrup', 'sugar', 'salt', 'pepper', 'stock', 'broth', 'bouillon', 'paste', 'sauce'],
   nuts: ['almond', 'walnut', 'cashew', 'pecan', 'pistachio', 'peanut', 'hazelnut', 'macadamia', 'pine nut', 'brazil nut', 'chestnut', 'sesame seed', 'sunflower seed', 'pumpkin seed', 'flaxseed', 'chia seed'],
   legumes: ['lentil', 'chickpea', 'kidney bean', 'black bean', 'cannellini', 'butter bean', 'haricot', 'edamame', 'tofu', 'tempeh'],
   bakery: ['cake', 'pastry', 'pie', 'tart', 'biscuit', 'cookie', 'muffin', 'scone', 'doughnut', 'brownie', 'flapjack'],
@@ -286,10 +286,17 @@ const INGREDIENT_CATEGORIES: Record<string, string[]> = {
 
 export function detectIngredientCategory(name: string): string {
   const lower = name.toLowerCase();
+  // Collect all [keyword, category] pairs and sort longest-first so multi-word
+  // phrases (e.g. "tomato sauce") beat single-word overlaps (e.g. "tomato").
+  const allKeywords: Array<[string, string]> = [];
   for (const [category, keywords] of Object.entries(INGREDIENT_CATEGORIES)) {
     for (const kw of keywords) {
-      if (lower.includes(kw)) return category;
+      allKeywords.push([kw, category]);
     }
+  }
+  allKeywords.sort((a, b) => b[0].length - a[0].length);
+  for (const [kw, category] of allKeywords) {
+    if (lower.includes(kw)) return category;
   }
   return 'other';
 }
