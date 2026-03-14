@@ -435,6 +435,9 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 export type MealCategory = typeof mealCategories.$inferSelect;
 export type InsertMealCategory = z.infer<typeof insertMealCategorySchema>;
 export type Meal = typeof meals.$inferSelect;
+export type MealSummary = Omit<Meal, 'ingredients' | 'instructions'> & {
+  ingredientCount: number;
+};
 export type InsertMeal = z.infer<typeof insertMealSchema>;
 export type Nutrition = typeof nutrition.$inferSelect;
 export type InsertNutrition = z.infer<typeof insertNutritionSchema>;

@@ -761,6 +761,15 @@ export async function registerRoutes(
     res.json([...userMeals, ...systemMeals]);
   });
 
+  app.get("/api/meals/summary", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const [userMeals, systemMeals] = await Promise.all([
+      storage.getMealsSummary(req.user!.id),
+      storage.getSystemMealsSummary(),
+    ]);
+    res.json([...userMeals, ...systemMeals]);
+  });
+
   app.get(api.meals.get.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const meal = await storage.getMeal(Number(req.params.id));

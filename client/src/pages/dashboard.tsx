@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useUser } from "@/hooks/use-user";
-import { useMeals } from "@/hooks/use-meals";
+import { useMealsSummary } from "@/hooks/use-meals-summary";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,7 +50,7 @@ const item = {
 
 export default function Dashboard() {
   const { user } = useUser();
-  const { meals } = useMeals();
+  const { meals } = useMealsSummary();
 
   const { data: shoppingListItems = [] } = useQuery<any[]>({
     queryKey: [api.shoppingList.list.path],
@@ -431,7 +431,7 @@ export default function Dashboard() {
                       <CardContent className="p-4">
                         <h3 className="title-card truncate">{meal.name}</h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {meal.ingredients.length} ingredient{meal.ingredients.length !== 1 ? "s" : ""}
+                          {meal.ingredientCount} ingredient{meal.ingredientCount !== 1 ? "s" : ""}
                         </p>
                       </CardContent>
                     </Card>

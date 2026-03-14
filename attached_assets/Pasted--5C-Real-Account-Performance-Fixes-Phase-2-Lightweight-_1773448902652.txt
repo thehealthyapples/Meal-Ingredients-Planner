@@ -1,0 +1,137 @@
+#5C - Real Account Performance Fixes Phase 2 — Lightweight Meals Summary Endpoint
+
+What & Why
+Implement the next highest-impact performance improvement from the authenticated-user performance audit: reduce the payload and work caused by loading the full meals dataset on list-style screens.
+
+Right now real accounts get slower as meal libraries grow because list views are loading full meal objects when they often only need lightweight summary data.
+
+This pass should introduce a lightweight meals summary endpoint and switch the relevant list-style UI surfaces to use it, while preserving the full-detail endpoint for places that actually need complete meal data.
+
+Done looks like
+- a new lightweight backend endpoint exists for meal summaries
+- list-style screens no longer fetch full meal objects unnecessarily
+- full meal detail is still available where actually needed
+- dashboard / planner / meals-list style views use summary payloads only
+- payload size and first-render work are reduced for users with larger meal libraries
+- no unrelated page redesigns
+- no schema changes required unless absolutely necessary
+- no behaviour regression for meal detail interactions
+
+Out of scope
+- planner endpoint consolidation
+- shopping list N+1 refactors
+- onboarding preload refactor
+- broad dashboard redesign
+- demo mode work
+- pagination / infinite scroll unless trivially helpful and low risk
+- heavy instrumentation platforms
+
+Primary goal
+Reduce unnecessary meal payload on first-load and list-style pages by splitting "meal summary data" from "full meal detail".
+
+Tasks
+
+T001 — Inspect current meal consumers and define summary shape
+Inspect where /api/meals is currently used and identify which pages/components only need summary/list data.
+
+Define a minimal summary payload shape suitable for list/card/grid usage.
+
+Summary payload should aim to include only what list-style views genuinely need, such as:
+- id
+- name
+- category
+- dietTypes or similar small tags if already used in lists
+- rating / score if already shown in list cards
+- thumbnail/image if already used in lists
+- any lightweight metadata required for sorting/filtering
+
+Do not include heavy fields unless absolutely needed for list rendering:
+- full ingredients arrays
+- instructions
+- large notes/blobs
+- detailed analysis payloads
+- any other heavy nested structures
+
+T002 — Add GET /api/meals/summary backend endpoint
+Create a lightweight backend endpoint for summary meal data.
+
+Requirements
+- return only the minimal summary shape
+- preserve any existing auth/access rules that apply to meals
+- keep the endpoint additive; do not break existing /api/meals consumers yet
+- keep implementation simple and maintainable
+- prefer selecting only the needed columns/fields rather than fetching full meals and trimming in memory if practical in the current architecture
+
+T003 — Switch list-style UIs to use summary endpoint
+Update the relevant list-style meal consumers to use the new summary endpoint instead of /api/meals where full detail is not required.
+
+Likely targets (confirm in repo before changing)
+- dashboard meal lists/cards
+- meals page list/grid
+- planner meal-picking/listing surfaces where only titles/cards/tags are shown
+
+Requirements
+- only switch pages/components that do not require full meal detail
+- preserve filters, sorting, and display behaviour
+- if a component later needs full detail for a selected/opened meal, fetch that separately rather than loading full data for the entire list
+
+T004 — Preserve full-detail flows
+Where the app actually needs the full meal object, keep using the existing full-detail path or add an appropriate per-meal detail fetch if needed.
+
+Requirements
+- do not break meal detail views
+- do not break flows that genuinely depend on ingredients/instructions/full metadata
+- do not overfetch for list screens
+
+T005 — Add lightweight performance comparison hooks
+Add minimal logging/measurement so we can compare before/after impact of the summary endpoint.
+
+Suggested measurement points
+- payload/count/timing in the meals summary endpoint
+- payload/count/timing in the existing /api/meals endpoint
+- first list render timing on one or two major screens if low effort
+
+Requirements
+- keep instrumentation lightweight
+- use existing console/perf patterns already introduced in the prior phase
+- avoid adding third-party tooling
+
+T006 — Keep implementation tightly scoped
+Focus this pass strictly on splitting summary-vs-detail meal loading.
+
+Do not drift into:
+- planner combined endpoints
+- backend N+1 cleanup elsewhere
+- UI redesigns
+- unrelated caching work
+- demo feature work
+
+Implementation guidance
+- prefer an additive endpoint over risky mutation of the existing one
+- keep summary payload intentionally lean
+- if there are multiple list screens, update the highest-traffic/highest-value ones first
+- be honest in the final summary about any screens intentionally left on full data because they truly need it
+
+Relevant files
+- server meal routes / handlers
+- storage/repository methods used by /api/meals
+- dashboard meal list consumers
+- meals page list/grid consumers
+- planner meal selection/list consumers
+- any shared types/hooks/query helpers for meals
+
+Acceptance checklist
+- GET /api/meals/summary exists
+- summary payload is materially lighter than /api/meals
+- key list-style screens use summary data instead of full meal payloads
+- full meal detail flows still work
+- no unrelated page drift
+- lightweight measurement/logging added for before/after comparison
+
+At the end, provide a concise implementation summary covering
+- files changed
+- summary payload shape
+- which screens/components were moved to /api/meals/summary
+- which places still use full meal data and why
+- any measured or expected performance impact
+- any recommended Phase 3 follow-up strictly related to meal-loading performance
