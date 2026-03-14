@@ -24,6 +24,7 @@ import {
   Sparkles, Mail, Trash2,
   Copy, LogOut, UserMinus, Pencil, X, RefreshCw
 } from "lucide-react";
+import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES } from "@/lib/diets";
@@ -190,71 +191,83 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(profile.firstName || "");
 
-  const displayName = profile.firstName || profile.displayName || profile.username;
-  const userInitial = displayName.charAt(0).toUpperCase();
+  const primaryName = profile.firstName || profile.displayName || profile.username;
+  const userInitial = primaryName.charAt(0).toUpperCase();
+  const isEmailUsername = profile.username.includes("@");
+  const subtitleText = isEmailUsername ? profile.username : `@${profile.username}`;
+
+  const commitEdit = () => {
+    onSave("firstName", name.trim() || null);
+    setEditing(false);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setName(profile.firstName || "");
+  };
 
   return (
     <Card className="p-5" data-testid="card-profile-header">
       <div className="flex items-center gap-4">
-        <Avatar className="h-16 w-16" data-testid="avatar-profile">
+        {/* Avatar */}
+        <Avatar className="h-14 w-14 shrink-0" data-testid="avatar-profile">
           <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
             {userInitial}
           </AvatarFallback>
         </Avatar>
 
+        {/* Name area — stable height whether editing or not */}
         <div className="flex-1 min-w-0">
           {editing ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="First name"
-                className="max-w-[200px]"
+                placeholder="Your first name"
+                className="h-8 text-sm max-w-[180px]"
+                autoFocus
                 data-testid="input-first-name"
-              />
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => {
-                  onSave("firstName", name.trim() || null);
-                  setEditing(false);
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") commitEdit();
+                  if (e.key === "Escape") cancelEdit();
                 }}
-                data-testid="button-save-name"
-              >
-                <Check className="h-4 w-4" />
+              />
+              <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={commitEdit} data-testid="button-save-name">
+                <Check className="h-3.5 w-3.5" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0" onClick={cancelEdit} data-testid="button-cancel-name">
+                <X className="h-3.5 w-3.5" />
               </Button>
             </div>
           ) : (
-            <div>
+            <div className="flex items-center gap-1.5 min-w-0">
               <h2 className="text-lg font-semibold truncate" data-testid="text-display-name">
-                {displayName}
+                {primaryName}
               </h2>
-              <p className="text-xs text-muted-foreground/60 truncate" data-testid="text-username">
-                @{profile.username}
-              </p>
+              <button
+                onClick={() => setEditing(true)}
+                className="shrink-0 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                aria-label="Edit name"
+                data-testid="button-edit-name"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
             </div>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-1 text-xs text-muted-foreground"
-            onClick={() => { setEditing(!editing); setName(profile.firstName || ""); }}
-            data-testid="button-edit-name"
-          >
-            {editing ? "Cancel" : "Edit name"}
-          </Button>
+          {/* Username / email — tiny, faded, always rendered so layout doesn't shift */}
+          <p className="text-[11px] text-muted-foreground/45 truncate mt-0.5 leading-tight" data-testid="text-username">
+            {editing ? "\u00A0" : subtitleText}
+          </p>
         </div>
 
-        <div className="text-right shrink-0">
-          <div className="flex items-center gap-0.5 justify-end" data-testid="display-apple-rating">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Apple
-                key={i}
-                className={`h-5 w-5 ${i <= 3 ? "text-green-500 fill-green-500" : "text-muted-foreground/30"}`}
-              />
-            ))}
-          </div>
-          <p className="text-[11px] text-muted-foreground mt-1">The Healthy Apples Score</p>
+        {/* Single THA apple mark */}
+        <div className="shrink-0 flex flex-col items-center gap-1" data-testid="display-apple-mark">
+          <img
+            src={thaAppleSrc}
+            alt="The Healthy Apples"
+            className="h-10 w-10 object-contain opacity-75"
+          />
+          <p className="text-[10px] text-muted-foreground/50 leading-tight text-center">THA</p>
         </div>
       </div>
     </Card>
@@ -985,7 +998,7 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
                   data-testid={`button-upf-${u.id}`}
                 >
                   <Icon className="h-3.5 w-3.5 flex-shrink-0" />
-                  <span className="text-xs font-medium leading-tight text-center truncate w-full">{u.label}</span>
+                  <span className="text-[10px] font-medium leading-tight text-center break-words whitespace-normal w-full line-clamp-2">{u.label}</span>
                   {upf === u.id && <Check className="h-3 w-3 flex-shrink-0" />}
                 </Button>
               );
