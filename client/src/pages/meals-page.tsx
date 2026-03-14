@@ -1151,9 +1151,9 @@ const SECTION_LABELS: Record<string, string> = {
 const CATEGORY_DROPDOWN_ORDER = ["Drink", "Smoothie", "Baby Meal", "Kids Meal", "Frozen Meal"];
 
 function getMealDisplayCategory(meal: Meal): string {
-  if (meal.isDrink) return "drinks";
-  if (meal.isReadyMeal) return "ready_meals";
-  if (meal.isSystemMeal) return "from_web";
+  if (meal.isDrink || meal.mealFormat === "drink") return "drinks";
+  if (meal.isReadyMeal || meal.mealFormat === "ready-meal") return "ready_meals";
+  if (meal.isSystemMeal || meal.sourceUrl) return "from_web";
   return "user_meals";
 }
 
