@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2 } from "lucide-react";
 import { ScanConfirmDialog } from "@/components/scan-confirm-dialog";
 import { IngredientRow, buildIngredientString } from "@/components/ingredient-input";
 import { CameraModal } from "@/components/camera-modal";
@@ -1637,13 +1637,10 @@ export default function MealsPage() {
     (mealsUpfFilter ? 1 : 0);
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Row A: title + action buttons */}
-      <div className="flex justify-between items-center gap-4 mb-4">
-        <div>
-          <h1 className="text-[28px] font-semibold tracking-tight" data-testid="text-meals-title">My Meals</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage your recipes and ingredients</p>
-        </div>
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      {/* Row A: compact title + action buttons */}
+      <div className="flex justify-between items-center gap-4 mb-3">
+        <h1 className="text-xl font-semibold tracking-tight" data-testid="text-meals-title">My Meals</h1>
         <div className="flex items-center gap-2 shrink-0">
           <input
             ref={scanFileRef}
@@ -1674,8 +1671,8 @@ export default function MealsPage() {
         </div>
       </div>
 
-      {/* Row B: search + category + view toggle */}
-      <div className="flex w-full gap-3 items-center mb-6">
+      {/* Row B: search + category */}
+      <div className="flex w-full gap-3 items-center mb-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -1692,7 +1689,7 @@ export default function MealsPage() {
           )}
         </div>
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[140px]" data-testid="select-category-filter">
+          <SelectTrigger className="w-[130px] shrink-0" data-testid="select-category-filter">
             <SelectValue placeholder="All Categories" />
           </SelectTrigger>
           <SelectContent>
@@ -1708,26 +1705,6 @@ export default function MealsPage() {
             ))}
           </SelectContent>
         </Select>
-        <div className="flex border border-border rounded-md">
-          <Button
-            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-            size="icon"
-            className="rounded-r-none"
-            onClick={() => setViewMode('grid')}
-            data-testid="button-view-grid"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-            size="icon"
-            className="rounded-l-none border-l border-border"
-            onClick={() => setViewMode('list')}
-            data-testid="button-view-list"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
       </div>
 
       {searchTerm.trim().length >= 2 && (
@@ -1765,8 +1742,9 @@ export default function MealsPage() {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        <div className="flex border border-border rounded-md">
+      {/* Row C: filters + view toggle — horizontally scrollable on mobile */}
+      <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
+        <div className="flex border border-border rounded-md shrink-0">
           {([
             { value: "all", label: "All Meals", icon: null, iconColor: "" },
             { value: "recipes", label: "Recipes", icon: null, iconColor: "" },
@@ -1793,7 +1771,7 @@ export default function MealsPage() {
             </Button>
           ))}
         </div>
-        <div className="flex border border-border rounded-md">
+        <div className="flex border border-border rounded-md shrink-0">
           {([
             { value: "all-audience", label: "All", icon: null, iconColor: "" },
             { value: "adult", label: "Adult", icon: null, iconColor: "" },
@@ -1817,7 +1795,7 @@ export default function MealsPage() {
         <Button
           variant={showAdvancedFilters ? "secondary" : "outline"}
           size="sm"
-          className="ml-auto h-8 gap-1.5"
+          className="h-8 gap-1.5 shrink-0"
           onClick={() => setShowAdvancedFilters(v => !v)}
           data-testid="button-toggle-advanced-filters"
         >
@@ -1827,6 +1805,26 @@ export default function MealsPage() {
             <Badge variant="secondary" className="ml-0.5 text-[10px] px-1.5 py-0">{advancedFilterCount}</Badge>
           )}
         </Button>
+        <div className="flex border border-border rounded-md ml-auto shrink-0">
+          <Button
+            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+            size="icon"
+            className="rounded-r-none h-8 w-8"
+            onClick={() => setViewMode('grid')}
+            data-testid="button-view-grid"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+            size="icon"
+            className="rounded-l-none border-l border-border h-8 w-8"
+            onClick={() => setViewMode('list')}
+            data-testid="button-view-list"
+          >
+            <List className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {showAdvancedFilters && (
@@ -3101,16 +3099,147 @@ interface ImportPreview {
   servings?: number;
 }
 
+function VoiceMealDialog({ open, onOpenChange, onTranscript }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onTranscript: (text: string) => void;
+}) {
+  const [listening, setListening] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const recognitionRef = useRef<any>(null);
+
+  const SpeechRecognition = typeof window !== "undefined"
+    ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    : null;
+  const supported = !!SpeechRecognition;
+
+  const startListening = () => {
+    if (!SpeechRecognition) return;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-GB";
+    recognition.onresult = (event: any) => {
+      const t = Array.from(event.results).map((r: any) => r[0].transcript).join("");
+      setTranscript(t);
+    };
+    recognition.onerror = () => {
+      setError("Couldn't hear you. Please try again.");
+      setListening(false);
+    };
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setListening(true);
+    setError(null);
+  };
+
+  const stopListening = () => {
+    recognitionRef.current?.stop();
+    setListening(false);
+  };
+
+  const handleConfirm = () => {
+    onTranscript(transcript.trim());
+    onOpenChange(false);
+    setTranscript("");
+    setListening(false);
+  };
+
+  const handleClose = (v: boolean) => {
+    if (!v) {
+      recognitionRef.current?.stop();
+      setListening(false);
+      setTranscript("");
+      setError(null);
+    }
+    onOpenChange(v);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Mic className="h-5 w-5 text-primary" />
+            Speak your meal
+          </DialogTitle>
+          <DialogDescription>
+            Say the meal name or describe what you'd like to add.
+          </DialogDescription>
+        </DialogHeader>
+        {!supported ? (
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Voice input isn't supported in this browser. Type your meal below instead.
+            </p>
+            <Input
+              placeholder="e.g. Spaghetti Bolognese"
+              value={transcript}
+              onChange={(e) => setTranscript(e.target.value)}
+              autoFocus
+              data-testid="input-voice-fallback"
+            />
+          </div>
+        ) : (
+          <div className="space-y-4 py-2">
+            <div className="flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={listening ? stopListening : startListening}
+                className={`h-16 w-16 rounded-full flex items-center justify-center transition-all ${
+                  listening
+                    ? "bg-destructive hover:bg-destructive/90 animate-pulse"
+                    : "bg-primary hover:bg-primary/90"
+                }`}
+                data-testid="button-voice-mic"
+              >
+                <Mic className="h-7 w-7 text-white" />
+              </button>
+              <p className="text-sm text-muted-foreground">
+                {listening ? "Listening… tap to stop" : "Tap to start speaking"}
+              </p>
+            </div>
+            {transcript && (
+              <div className="rounded-lg border border-border bg-muted/40 p-3">
+                <p className="text-sm" data-testid="text-voice-transcript">{transcript}</p>
+              </div>
+            )}
+            {error && <p className="text-sm text-destructive">{error}</p>}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => handleClose(false)}>Cancel</Button>
+          <Button onClick={handleConfirm} disabled={!transcript.trim()} data-testid="button-voice-confirm">
+            Use this
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function AddMealGatewayDialog({ onScan }: { onScan: () => void }) {
   const [open, setOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [socialOpen, setSocialOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [speakOpen, setSpeakOpen] = useState(false);
+  const [voiceTranscript, setVoiceTranscript] = useState("");
 
-  const handleOption = (option: "import" | "scan" | "manual") => {
+  const handleOption = (option: "import" | "scan" | "manual" | "speak" | "social") => {
     setOpen(false);
     if (option === "import") setImportOpen(true);
     else if (option === "scan") setTimeout(() => onScan(), 100);
-    else setCreateOpen(true);
+    else if (option === "manual") setCreateOpen(true);
+    else if (option === "speak") setTimeout(() => setSpeakOpen(true), 100);
+    else if (option === "social") setSocialOpen(true);
+  };
+
+  const handleVoiceTranscript = (text: string) => {
+    setVoiceTranscript(text);
+    setCreateOpen(true);
   };
 
   return (
@@ -3140,6 +3269,17 @@ function AddMealGatewayDialog({ onScan }: { onScan: () => void }) {
               </div>
             </button>
             <button
+              onClick={() => handleOption("social")}
+              className="w-full flex items-center gap-4 rounded-lg border border-border p-4 text-left hover:bg-accent transition-colors"
+              data-testid="button-gateway-social"
+            >
+              <Share2 className="h-5 w-5 text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-medium">From social media</p>
+                <p className="text-xs text-muted-foreground">Import from Instagram, TikTok, YouTube and more</p>
+              </div>
+            </button>
+            <button
               onClick={() => handleOption("scan")}
               className="w-full flex items-center gap-4 rounded-lg border border-border p-4 text-left hover:bg-accent transition-colors"
               data-testid="button-gateway-scan"
@@ -3148,6 +3288,17 @@ function AddMealGatewayDialog({ onScan }: { onScan: () => void }) {
               <div>
                 <p className="text-sm font-medium">Scan Image</p>
                 <p className="text-xs text-muted-foreground">Photograph or upload a recipe or meal plan</p>
+              </div>
+            </button>
+            <button
+              onClick={() => handleOption("speak")}
+              className="w-full flex items-center gap-4 rounded-lg border border-border p-4 text-left hover:bg-accent transition-colors"
+              data-testid="button-gateway-speak"
+            >
+              <Mic className="h-5 w-5 text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Speak to input meal</p>
+                <p className="text-xs text-muted-foreground">Describe your meal by voice to fill the form</p>
               </div>
             </button>
             <button
@@ -3166,12 +3317,14 @@ function AddMealGatewayDialog({ onScan }: { onScan: () => void }) {
       </Dialog>
 
       <ImportRecipeDialog externalOpen={importOpen} onExternalOpenChange={setImportOpen} />
-      <CreateMealDialog externalOpen={createOpen} onExternalOpenChange={setCreateOpen} />
+      <ImportRecipeDialog externalOpen={socialOpen} onExternalOpenChange={setSocialOpen} socialMode />
+      <VoiceMealDialog open={speakOpen} onOpenChange={setSpeakOpen} onTranscript={handleVoiceTranscript} />
+      <CreateMealDialog externalOpen={createOpen} onExternalOpenChange={setCreateOpen} initialName={voiceTranscript} />
     </>
   );
 }
 
-function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOpen?: boolean; onExternalOpenChange?: (v: boolean) => void } = {}) {
+function ImportRecipeDialog({ externalOpen, onExternalOpenChange, socialMode }: { externalOpen?: boolean; onExternalOpenChange?: (v: boolean) => void; socialMode?: boolean } = {}) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = (v: boolean) => {
@@ -3294,11 +3447,13 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
       <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-primary" />
-            Import Recipe
+            {socialMode ? <Share2 className="h-5 w-5 text-primary" /> : <Globe className="h-5 w-5 text-primary" />}
+            {socialMode ? "Import from Social Media" : "Import Recipe"}
           </DialogTitle>
           <DialogDescription>
-            Paste a recipe URL to extract the name, ingredients, and nutrition automatically.
+            {socialMode
+              ? "Paste a link from Instagram, TikTok, YouTube, or any recipe site to import automatically."
+              : "Paste a recipe URL to extract the name, ingredients, and nutrition automatically."}
           </DialogDescription>
         </DialogHeader>
 
@@ -3425,7 +3580,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
   );
 }
 
-function CreateMealDialog({ externalOpen, onExternalOpenChange }: { externalOpen?: boolean; onExternalOpenChange?: (v: boolean) => void } = {}) {
+function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: { externalOpen?: boolean; onExternalOpenChange?: (v: boolean) => void; initialName?: string } = {}) {
   const { createMeal } = useMeals();
   const queryClient = useQueryClient();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -3454,12 +3609,18 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange }: { externalOpen
   const form = useForm<CreateMealFormValues>({
     resolver: zodResolver(createMealFormSchema),
     defaultValues: {
-      name: "",
+      name: initialName ?? "",
       ingredients: [{ amount: "", unit: "", name: "" }],
       servings: 1,
       kind: "meal",
     }
   });
+
+  useEffect(() => {
+    if (open && initialName) {
+      form.setValue("name", initialName);
+    }
+  }, [open, initialName]);
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -3513,7 +3674,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange }: { externalOpen
           </Button>
         </DialogTrigger>
       )}
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Add New Meal</DialogTitle>
           <DialogDescription>
@@ -3522,7 +3683,8 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange }: { externalOpen
         </DialogHeader>
         
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col min-h-0 flex-1">
+          <div className="flex-1 overflow-y-auto space-y-5 pr-1 -mr-1 py-1">
             <FormField
               control={form.control}
               name="name"
@@ -3674,7 +3836,8 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange }: { externalOpen
               </Button>
             </div>
 
-            <DialogFooter>
+            </div>
+            <DialogFooter className="pt-4 shrink-0">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={createMeal.isPending} data-testid="button-submit-meal">
                 {createMeal.isPending ? "Creating..." : "Create Meal"}
