@@ -21,16 +21,18 @@ import {
   Plus, Minus, Save, Activity, Scale, Ruler,
   Baby, PersonStanding, Users, Apple, TrendingUp,
   Volume2, Scan, Loader2, ArrowLeft, Check, Store,
-  PiggyBank, ShieldAlert, Sparkles, Ban, Mail, Trash2,
+  Sparkles, Mail, Trash2,
   Copy, LogOut, UserMinus, Pencil, X, RefreshCw
 } from "lucide-react";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES } from "@/lib/diets";
+import { GOAL_OPTIONS, STORE_OPTIONS, UPF_OPTIONS, BUDGET_OPTIONS, deriveGoalType } from "@/lib/shared-options";
 
 interface ProfileData {
   id: number;
   username: string;
+  firstName: string | null;
   displayName: string;
   profilePhotoUrl: string | null;
   measurementPreference: string;
@@ -56,52 +58,12 @@ interface ProfileData {
   };
 }
 
-type GoalType = "lose" | "maintain" | "build" | "health";
 type ActivityLevel = "low" | "moderate" | "high";
-
-const GOALS: { value: GoalType; label: string }[] = [
-  { value: "lose", label: "Lose weight" },
-  { value: "maintain", label: "Maintain weight" },
-  { value: "build", label: "Build muscle" },
-  { value: "health", label: "Improve health" },
-];
 
 const ACTIVITY_LEVELS: { value: ActivityLevel; label: string }[] = [
   { value: "low", label: "Low" },
   { value: "moderate", label: "Moderate" },
   { value: "high", label: "High" },
-];
-
-const HEALTH_GOALS = [
-  { id: "eat-healthier", label: "Eat Healthier" },
-  { id: "avoid-upf", label: "Avoid Ultra-Processed" },
-  { id: "save-money", label: "Save Money" },
-  { id: "build-muscle", label: "Build Muscle" },
-  { id: "lose-weight", label: "Lose Weight" },
-];
-
-const BUDGET_OPTIONS = [
-  { id: "budget", label: "Budget", desc: "Best value picks" },
-  { id: "standard", label: "Standard", desc: "Good quality balance" },
-  { id: "premium", label: "Premium", desc: "Higher quality brands" },
-  { id: "organic", label: "Organic", desc: "Certified organic products" },
-  { id: "grass-finished", label: "Grass Finished", desc: "Premium sourced meats" },
-];
-
-const STORE_OPTIONS = [
-  { id: "tesco", label: "Tesco" },
-  { id: "sainsburys", label: "Sainsbury's" },
-  { id: "waitrose", label: "Waitrose" },
-  { id: "ocado", label: "Ocado" },
-  { id: "aldi", label: "Aldi" },
-  { id: "lidl", label: "Lidl" },
-  { id: "asda", label: "Asda" },
-];
-
-const UPF_OPTIONS = [
-  { id: "strict", label: "Strict", desc: "Avoid all ultra-processed foods" },
-  { id: "moderate", label: "Moderate", desc: "Limit most UPF items" },
-  { id: "flexible", label: "Flexible", desc: "Occasional UPF is fine" },
 ];
 
 export default function ProfilePage() {
@@ -226,9 +188,10 @@ export default function ProfilePage() {
 
 function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (field: string, value: any) => void }) {
   const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(profile.displayName);
+  const [name, setName] = useState(profile.firstName || "");
 
-  const userInitial = (profile.displayName || profile.username || "U").charAt(0).toUpperCase();
+  const displayName = profile.firstName || profile.displayName || profile.username;
+  const userInitial = displayName.charAt(0).toUpperCase();
 
   return (
     <Card className="p-5" data-testid="card-profile-header">
@@ -245,14 +208,15 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                placeholder="First name"
                 className="max-w-[200px]"
-                data-testid="input-display-name"
+                data-testid="input-first-name"
               />
               <Button
                 size="icon"
                 variant="ghost"
                 onClick={() => {
-                  onSave("displayName", name);
+                  onSave("firstName", name.trim() || null);
                   setEditing(false);
                 }}
                 data-testid="button-save-name"
@@ -263,9 +227,9 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
           ) : (
             <div>
               <h2 className="text-lg font-semibold truncate" data-testid="text-display-name">
-                {profile.displayName}
+                {displayName}
               </h2>
-              <p className="text-sm text-muted-foreground" data-testid="text-username">
+              <p className="text-xs text-muted-foreground/60 truncate" data-testid="text-username">
                 @{profile.username}
               </p>
             </div>
@@ -274,7 +238,7 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
             variant="ghost"
             size="sm"
             className="mt-1 text-xs text-muted-foreground"
-            onClick={() => { setEditing(!editing); setName(profile.displayName); }}
+            onClick={() => { setEditing(!editing); setName(profile.firstName || ""); }}
             data-testid="button-edit-name"
           >
             {editing ? "Cancel" : "Edit name"}
@@ -756,7 +720,6 @@ function CalorieSettings({ profile, onSave }: { profile: ProfileData; onSave: (p
 
 function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (data: any) => void }) {
   const prefs = profile.preferences || {};
-  const [goal, setGoal] = useState<string>(prefs.goalType || profile.health.goalType || "maintain");
   const [activity, setActivity] = useState<string>(prefs.activityLevel || profile.health.activityLevel || "moderate");
   const [dietPattern, setDietPattern] = useState<string | null>(profile.dietPattern ?? null);
   const [dietRestrictions, setDietRestrictions] = useState<string[]>(profile.dietRestrictions ?? []);
@@ -765,7 +728,6 @@ function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
-    setGoal(prefs.goalType || profile.health.goalType || "maintain");
     setActivity(prefs.activityLevel || profile.health.activityLevel || "moderate");
     setDietPattern(profile.dietPattern ?? null);
     setDietRestrictions(profile.dietRestrictions ?? []);
@@ -773,8 +735,8 @@ function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (
     setHealthGoals(prefs.healthGoals || []);
     setDirty(false);
   }, [
-    prefs.goalType, prefs.activityLevel, JSON.stringify(prefs.healthGoals),
-    profile.health.goalType, profile.health.activityLevel,
+    prefs.activityLevel, JSON.stringify(prefs.healthGoals),
+    profile.health.activityLevel,
     profile.dietPattern, JSON.stringify(profile.dietRestrictions), profile.eatingSchedule,
   ]);
 
@@ -783,7 +745,7 @@ function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (
     setDirty(true);
   };
 
-  const toggleHealthGoal = (g: string) => {
+  const toggleGoal = (g: string) => {
     setHealthGoals(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
     setDirty(true);
   };
@@ -793,7 +755,7 @@ function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (
       dietPattern: dietPattern ?? null,
       dietRestrictions,
       eatingSchedule: eatingSchedule ?? null,
-      preferences: { goalType: goal, activityLevel: activity, healthGoals },
+      preferences: { goalType: deriveGoalType(healthGoals), activityLevel: activity, healthGoals },
     });
     setDirty(false);
   };
@@ -814,41 +776,25 @@ function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (
 
       <div className="space-y-4">
         <div>
-          <Label className="text-xs text-muted-foreground mb-2 block">Goal</Label>
-          <div className="grid grid-cols-2 gap-2">
-            {GOALS.map((g) => (
-              <Button
-                key={g.value}
-                variant={goal === g.value ? "default" : "outline"}
-                size="sm"
-                className="justify-start"
-                onClick={() => { setGoal(g.value); setDirty(true); }}
-                data-testid={`button-goal-${g.value}`}
-              >
-                {goal === g.value && <Check className="h-3.5 w-3.5 mr-1.5" />}
-                {g.label}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        <Separator />
-
-        <div>
-          <Label className="text-xs text-muted-foreground mb-2 block">Health goals</Label>
+          <Label className="text-xs text-muted-foreground mb-2 block">Goals</Label>
           <div className="flex flex-wrap gap-2">
-            {HEALTH_GOALS.map((g) => (
-              <Badge
-                key={g.id}
-                variant={healthGoals.includes(g.id) ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => toggleHealthGoal(g.id)}
-                data-testid={`badge-health-goal-${g.id}`}
-              >
-                {healthGoals.includes(g.id) && <Check className="h-3 w-3 mr-1" />}
-                {g.label}
-              </Badge>
-            ))}
+            {GOAL_OPTIONS.map((g) => {
+              const Icon = g.icon;
+              const selected = healthGoals.includes(g.id);
+              return (
+                <Badge
+                  key={g.id}
+                  variant={selected ? "default" : "outline"}
+                  className="cursor-pointer flex items-center gap-1"
+                  onClick={() => toggleGoal(g.id)}
+                  data-testid={`badge-goal-${g.id}`}
+                >
+                  <Icon className="h-3 w-3" />
+                  {g.label}
+                  {selected && <Check className="h-3 w-3 ml-0.5" />}
+                </Badge>
+              );
+            })}
           </div>
         </div>
 
@@ -1026,23 +972,24 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
 
         <div>
           <Label className="text-xs text-muted-foreground mb-2 block">UPF strictness</Label>
-          <div className="flex gap-2">
-            {UPF_OPTIONS.map((u) => (
-              <Button
-                key={u.id}
-                variant={upf === u.id ? "default" : "outline"}
-                size="sm"
-                className="flex-1 flex-col items-center h-auto py-2"
-                onClick={() => { setUpf(u.id); setDirty(true); }}
-                data-testid={`button-upf-${u.id}`}
-              >
-                <span className="flex items-center gap-1">
-                  {upf === u.id && <Check className="h-3.5 w-3.5" />}
-                  {u.label}
-                </span>
-                <span className="text-[10px] font-normal opacity-70">{u.desc}</span>
-              </Button>
-            ))}
+          <div className="grid grid-cols-3 gap-2">
+            {UPF_OPTIONS.map((u) => {
+              const Icon = u.icon;
+              return (
+                <Button
+                  key={u.id}
+                  variant={upf === u.id ? "default" : "outline"}
+                  size="sm"
+                  className="flex-col items-center h-auto py-2.5 px-2 gap-1 min-w-0"
+                  onClick={() => { setUpf(u.id); setDirty(true); }}
+                  data-testid={`button-upf-${u.id}`}
+                >
+                  <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                  <span className="text-xs font-medium leading-tight text-center truncate w-full">{u.label}</span>
+                  {upf === u.id && <Check className="h-3 w-3 flex-shrink-0" />}
+                </Button>
+              );
+            })}
           </div>
         </div>
       </div>

@@ -4,16 +4,18 @@ import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   ChefHat, ArrowRight, ArrowLeft, Check,
   Leaf, Flame, Wheat, Ban, Sparkles,
-  Heart, ShieldAlert, PiggyBank, Dumbbell, TrendingDown,
-  Store, Star, Shield, Drumstick,
-  Fish, Activity, Scale, Brain, Mountain, Zap, Clock, Sprout,
+  Store, Star, Drumstick,
+  Fish, Activity, Scale, Brain, Mountain, Zap, Clock, Sprout, User,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
 import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES } from "@/lib/diets";
+import { GOAL_OPTIONS, STORE_OPTIONS, UPF_OPTIONS, BUDGET_OPTIONS } from "@/lib/shared-options";
 import type { LucideIcon } from "lucide-react";
 import appleIcon from "@/assets/icons/tha-apple.png";
 
@@ -40,54 +42,7 @@ const SCHEDULE_ICONS: Record<string, LucideIcon> = {
   "Intermittent Fasting": Clock,
 };
 
-const GOAL_OPTIONS = [
-  { id: "eat-healthier",  label: "Eat more whole foods",           icon: Heart,       desc: "Better nutrition every day" },
-  { id: "avoid-upf",      label: "Cut back on ultra-processed foods", icon: ShieldAlert, desc: "Choose simpler, cleaner ingredients" },
-  { id: "save-money",     label: "Save money on groceries",        icon: PiggyBank,   desc: "Smart choices that fit your budget" },
-  { id: "build-muscle",   label: "Build muscle / higher protein",  icon: Dumbbell,    desc: "Meals that support strength and recovery" },
-  { id: "lose-weight",    label: "Manage weight more easily",      icon: TrendingDown,desc: "Balanced, calorie-conscious plans" },
-];
-
-const BUDGET_OPTIONS = [
-  { id: "budget",         label: "Best value",                        desc: "Great nutrition without overspending" },
-  { id: "standard",       label: "Balanced",                          desc: "A good mix of quality and value" },
-  { id: "premium",        label: "Higher quality",                    desc: "Better brands and better ingredients" },
-  { id: "organic",        label: "Organic when possible",             desc: "Certified organic products where available" },
-  { id: "grass-finished", label: "Pasture-raised / grass-fed where it matters", desc: "Premium sourced meat and dairy" },
-];
-
-const STORE_OPTIONS = [
-  { id: "tesco",      label: "Tesco" },
-  { id: "sainsburys", label: "Sainsbury's" },
-  { id: "waitrose",   label: "Waitrose" },
-  { id: "ocado",      label: "Ocado" },
-  { id: "aldi",       label: "Aldi" },
-  { id: "lidl",       label: "Lidl" },
-  { id: "asda",       label: "Asda" },
-];
-
-const UPF_OPTIONS = [
-  {
-    id: "strict",
-    label: "Mostly whole foods",
-    icon: Shield,
-    desc: "I'd prefer choices that lean as natural and minimally processed as possible.",
-  },
-  {
-    id: "moderate",
-    label: "A balanced approach",
-    icon: ShieldAlert,
-    desc: "I prefer simpler ingredients, but convenience still matters.",
-  },
-  {
-    id: "flexible",
-    label: "Flexible",
-    icon: Sparkles,
-    desc: "I'm happy with a mix of fresh foods and convenient options.",
-  },
-];
-
-const STEP_LABELS = ["Diet", "Goals", "Shopping", "Stores", "Food approach"];
+const STEP_LABELS = ["Name", "Diet", "Goals", "Shopping", "Stores", "Food approach"];
 const TOTAL_STEPS = STEP_LABELS.length;
 
 function AppleProgressIndicator({ step, total }: { step: number; total: number }) {
@@ -133,6 +88,7 @@ export default function OnboardingPage() {
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
 
+  const [firstName, setFirstName] = useState("");
   const [dietPattern, setDietPattern] = useState<string | null>(null);
   const [dietRestrictions, setDietRestrictions] = useState<string[]>([]);
   const [eatingSchedule, setEatingSchedule] = useState<string | null>(null);
@@ -167,6 +123,7 @@ export default function OnboardingPage() {
     if (prefillApplied.current) return;
     if (!profile && !prefs) return;
     prefillApplied.current = true;
+    if (profile?.firstName) setFirstName(profile.firstName);
     if (profile?.dietPattern) setDietPattern(profile.dietPattern);
     if (Array.isArray(profile?.dietRestrictions) && profile.dietRestrictions.length > 0) setDietRestrictions(profile.dietRestrictions);
     if (profile?.eatingSchedule) setEatingSchedule(profile.eatingSchedule);
@@ -179,6 +136,7 @@ export default function OnboardingPage() {
   const completeMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest("POST", "/api/user/complete-onboarding", {
+        firstName: firstName.trim() || null,
         dietPattern: dietPattern ?? null,
         dietRestrictions,
         eatingSchedule: eatingSchedule ?? null,
@@ -202,8 +160,8 @@ export default function OnboardingPage() {
   }
 
   const canProceed = () => {
-    if (step === 2) return !!budgetLevel;
-    if (step === 4) return !!upfSensitivity;
+    if (step === 3) return !!budgetLevel;
+    if (step === 5) return !!upfSensitivity;
     return true;
   };
 
@@ -273,7 +231,37 @@ export default function OnboardingPage() {
                     className="w-full"
                   >
 
+                    {/* Step 0 — Name */}
                     {step === 0 && (
+                      <div className="space-y-6">
+                        <div>
+                          <h2 className="text-xl font-semibold mb-1">What's your first name?</h2>
+                          <p className="text-sm text-muted-foreground">So we can personalise your experience.</p>
+                        </div>
+                        <div className="max-w-sm">
+                          <Label htmlFor="onboarding-first-name" className="text-sm font-medium mb-2 block">
+                            First name
+                          </Label>
+                          <div className="relative">
+                            <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              id="onboarding-first-name"
+                              placeholder="e.g. Alex"
+                              value={firstName}
+                              onChange={(e) => setFirstName(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && goNext()}
+                              className="pl-9"
+                              autoFocus
+                              data-testid="input-first-name"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">You can skip this — it's optional.</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 1 — Diet */}
+                    {step === 1 && (
                       <div className="space-y-6">
                         <div>
                           <h2 className="text-xl font-semibold mb-1">How do you like to eat?</h2>
@@ -373,7 +361,8 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {step === 1 && (
+                    {/* Step 2 — Goals */}
+                    {step === 2 && (
                       <div className="space-y-5">
                         <div>
                           <h2 className="text-xl font-semibold mb-1">What would you like to focus on?</h2>
@@ -410,7 +399,8 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {step === 2 && (
+                    {/* Step 3 — Shopping */}
+                    {step === 3 && (
                       <div className="space-y-5">
                         <div>
                           <h2 className="text-xl font-semibold mb-1">What matters most when you shop?</h2>
@@ -441,7 +431,8 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {step === 3 && (
+                    {/* Step 4 — Stores */}
+                    {step === 4 && (
                       <div className="space-y-5">
                         <div>
                           <h2 className="text-xl font-semibold mb-1">Which shops do you usually use?</h2>
@@ -467,7 +458,8 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {step === 4 && (
+                    {/* Step 5 — Food approach (UPF) */}
+                    {step === 5 && (
                       <div className="space-y-5">
                         <div>
                           <h2 className="text-xl font-semibold mb-1">How would you like us to approach processed foods?</h2>
@@ -489,9 +481,9 @@ export default function OnboardingPage() {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <div className="font-semibold text-sm">{opt.label}</div>
-                                  <div className="text-xs text-muted-foreground mt-1 leading-relaxed">{opt.desc}</div>
+                                  <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{opt.desc}</div>
                                 </div>
-                                {selected && <Check className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />}
+                                {selected && <Check className="w-5 h-5 text-primary flex-shrink-0" />}
                               </button>
                             );
                           })}
@@ -503,49 +495,38 @@ export default function OnboardingPage() {
                 </AnimatePresence>
               </div>
 
-              <div className="flex items-center justify-between mt-6 pt-4 border-t gap-3">
+              <div className="flex items-center justify-between mt-8 pt-4 border-t border-border/40">
                 <Button
                   variant="ghost"
+                  size="sm"
                   onClick={goPrev}
                   disabled={step === 0}
-                  data-testid="button-prev-step"
+                  data-testid="button-onboarding-back"
+                  className="text-muted-foreground"
                 >
                   <ArrowLeft className="w-4 h-4 mr-1" />
                   Back
                 </Button>
 
-                <div className="flex items-center gap-3">
-                  {step < TOTAL_STEPS - 1 && (
-                    <Button
-                      variant="ghost"
-                      onClick={() => completeMutation.mutate()}
-                      disabled={completeMutation.isPending}
-                      className="text-muted-foreground"
-                      data-testid="button-skip-onboarding"
-                    >
-                      Skip for now
-                    </Button>
+                <span className="text-xs text-muted-foreground">
+                  {step + 1} / {TOTAL_STEPS}
+                </span>
+
+                <Button
+                  onClick={goNext}
+                  disabled={!canProceed() || completeMutation.isPending}
+                  data-testid="button-onboarding-next"
+                  size="sm"
+                >
+                  {step === TOTAL_STEPS - 1 ? (
+                    completeMutation.isPending ? "Saving…" : "Get started"
+                  ) : (
+                    <>
+                      {step === 0 && !firstName.trim() ? "Skip" : "Next"}
+                      <ArrowRight className="w-4 h-4 ml-1" />
+                    </>
                   )}
-                  <Button
-                    onClick={goNext}
-                    disabled={!canProceed() || completeMutation.isPending}
-                    data-testid="button-next-step"
-                  >
-                    {completeMutation.isPending ? (
-                      "Saving..."
-                    ) : step === TOTAL_STEPS - 1 ? (
-                      <>
-                        Get Started
-                        <Sparkles className="w-4 h-4 ml-1" />
-                      </>
-                    ) : (
-                      <>
-                        Next
-                        <ArrowRight className="w-4 h-4 ml-1" />
-                      </>
-                    )}
-                  </Button>
-                </div>
+                </Button>
               </div>
             </CardContent>
           </Card>

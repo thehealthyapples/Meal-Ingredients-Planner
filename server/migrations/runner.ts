@@ -503,6 +503,13 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-14_add_first_name",
+    statements: [
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

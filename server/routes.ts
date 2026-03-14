@@ -514,6 +514,7 @@ export async function registerRoutes(
     return {
       id: user.id,
       username: user.username,
+      firstName: user.firstName ?? null,
       displayName: user.displayName || user.username,
       profilePhotoUrl: user.profilePhotoUrl,
       measurementPreference: user.measurementPreference,
@@ -556,6 +557,7 @@ export async function registerRoutes(
   const ALLOWED_EATING_SCHEDULES = ["None", "Intermittent Fasting"] as const;
 
   const profileUpdateSchema = z.object({
+    firstName: z.string().nullable().optional(),
     displayName: z.string().optional(),
     profilePhotoUrl: z.string().nullable().optional(),
     dietPattern: z.enum(ALLOWED_DIET_PATTERNS).nullable().optional(),
@@ -590,6 +592,7 @@ export async function registerRoutes(
       const parsed = profileUpdateSchema.parse(req.body);
 
       const profileFields: Partial<Parameters<typeof storage.updateUserProfile>[1]> = {};
+      if (parsed.firstName !== undefined) profileFields.firstName = parsed.firstName;
       if (parsed.displayName !== undefined) profileFields.displayName = parsed.displayName;
       if (parsed.profilePhotoUrl !== undefined) profileFields.profilePhotoUrl = parsed.profilePhotoUrl;
       if (parsed.dietPattern !== undefined) profileFields.dietPattern = parsed.dietPattern;
@@ -3436,22 +3439,32 @@ export async function registerRoutes(
     try {
       if (req.body && Object.keys(req.body).length > 0) {
         const onboardingSchema = preferencesSchema.extend({
+          firstName: z.string().nullable().optional(),
           dietPattern: z.string().nullable().optional(),
           dietRestrictions: z.array(z.string()).optional(),
           eatingSchedule: z.string().nullable().optional(),
         });
         const parsed = onboardingSchema.parse(req.body);
-        const { dietPattern, dietRestrictions, eatingSchedule, ...prefFields } = parsed;
-        await storage.upsertUserPreferences(req.user!.id, prefFields);
+        const { firstName, dietPattern, dietRestrictions, eatingSchedule, ...prefFields } = parsed;
+
+        const goalsForGoalType: string[] = Array.isArray(prefFields.healthGoals) ? prefFields.healthGoals : [];
+        const derivedGoalType = goalsForGoalType.includes("lose-weight") ? "lose"
+          : (goalsForGoalType.includes("build-muscle") || goalsForGoalType.includes("put-on-weight")) ? "build"
+          : goalsForGoalType.includes("improve-health") ? "health"
+          : "maintain";
+
+        await storage.upsertUserPreferences(req.user!.id, { ...prefFields, goalType: derivedGoalType });
         if (parsed.budgetLevel) {
           await storage.updateUserPriceTier(req.user!.id, parsed.budgetLevel);
         }
-        if (dietPattern !== undefined || dietRestrictions !== undefined || eatingSchedule !== undefined) {
-          await storage.updateUserProfile(req.user!.id, {
-            dietPattern: dietPattern ?? null,
-            dietRestrictions: dietRestrictions ?? [],
-            eatingSchedule: eatingSchedule ?? null,
-          });
+
+        const profileUpdate: any = {};
+        if (firstName !== undefined && firstName !== null && firstName.trim()) profileUpdate.firstName = firstName.trim();
+        if (dietPattern !== undefined) profileUpdate.dietPattern = dietPattern ?? null;
+        if (dietRestrictions !== undefined) profileUpdate.dietRestrictions = dietRestrictions ?? [];
+        if (eatingSchedule !== undefined) profileUpdate.eatingSchedule = eatingSchedule ?? null;
+        if (Object.keys(profileUpdate).length > 0) {
+          await storage.updateUserProfile(req.user!.id, profileUpdate);
         }
       }
       const user = await storage.completeOnboarding(req.user!.id);

@@ -1,0 +1,63 @@
+PRIORITY 1 — Profile + Onboarding consistency
+
+The user profile changes must also be reflected in onboarding.
+
+Current problems:
+- Profile has a single Goal plus a separate Health goals section.
+- Onboarding asks focus goals in a different way.
+- This feels duplicated and inconsistent.
+- Onboarding does not currently ask for the user’s name.
+- Profile appears to rely on username/email display rather than a proper first name.
+
+Please make Profile and Onboarding use the same model and wording.
+
+Required change:
+1. Replace the current single-goal + health-goals split with one consistent multi-select goal system.
+2. Supported goals should include:
+   - Put on weight
+   - Build muscle
+   - Improve health
+   - Lose weight
+   - Save money
+   - Avoid ultra-processed foods
+3. Allow multiple selections in Profile.
+4. Update onboarding so the same goal options appear there too.
+5. Use the same labels, same ids, same validation rules, and same save/load behavior in both places.
+6. Remove duplicate wording such as “Goals” vs “Health goals” if they now represent the same thing.
+7. Add “Local” as a preferred store option in both Profile and Onboarding.
+8. Review UPF strictness cards in Profile so they do not overflow their container.
+
+NEW REQUIRED CHANGE — user name capture
+9. Add a first-name field to onboarding.
+10. Keep it simple and low-friction:
+   - Label: First name
+   - Helper copy: “So we can personalise your experience”
+11. This should be collected early in onboarding, ideally before preference questions begin.
+12. Save this first name to the user profile so it can be reused across the app.
+13. In Profile, display first name as the primary identity label.
+14. De-emphasise long email / username values in the profile account card.
+15. Keep backward compatibility for existing users:
+   - If firstName is missing, fall back gracefully to username/email display
+   - Do not break existing accounts
+16. If there is already a registration/auth source for email/username elsewhere, do not duplicate that in onboarding.
+   - Only add first name to onboarding, not email
+   - Email should continue to come from the auth/account flow if that is already established
+
+Implementation notes:
+- Frontend files likely include:
+  - client/src/pages/profile-page.tsx
+  - client/src/pages/onboarding-page.tsx
+- Also review backend validation / persistence for profile and onboarding submission.
+- Keep backward compatibility where possible by mapping old values into the new format.
+- If goalType currently exists as a single value, migrate or gracefully map it into the new multi-select goal array.
+- If no firstName column/field exists yet, add it safely and thread it through:
+  - schema/types
+  - onboarding POST payload
+  - profile GET/PUT payloads
+  - any user/session serialization needed
+
+Delivery requirements:
+- Reuse shared constants for goals, stores, and UPF options so Profile and Onboarding cannot drift again.
+- List all files changed.
+- State whether a migration was required.
+- Confirm existing users without firstName continue to work.
