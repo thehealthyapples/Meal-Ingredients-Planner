@@ -9,7 +9,7 @@ import {
   LayoutDashboard, Utensils, CalendarDays, ShoppingBasket,
   PackageOpen, User, LogOut, ShieldCheck, Star,
   Mail, Sliders, Search, Menu, ChevronLeft, ChevronRight,
-  MoreHorizontal, Archive, ScanLine, BookOpen, Heart,
+  MoreHorizontal, Microscope, BookOpen, Heart,
 } from "lucide-react";
 import { api } from "@shared/routes";
 
@@ -21,7 +21,7 @@ const NAV_ITEMS_MAIN = [
   { href: "/meals", label: "My Meals", icon: Utensils },
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PackageOpen },
-  { href: "/products", label: "Products", icon: ScanLine },
+  { href: "/products", label: "Analyser", icon: Microscope },
   { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
   { href: "/diary", label: "My Diary", icon: BookOpen },
   { href: "/partners", label: "Partners", icon: Heart },
@@ -363,7 +363,7 @@ export function TopBar() {
               <img
                 src="/logo-long.png"
                 alt="The Healthy Apples"
-                className="h-auto max-h-[120px] w-auto max-w-[825px]"
+                className="h-auto max-h-[144px] w-auto max-w-[900px]"
               />
             </Link>
           </div>
@@ -382,7 +382,7 @@ export function TopBar() {
               <img
                 src="/logo-long.png"
                 alt="The Healthy Apples"
-                className="h-auto max-h-[84px] w-auto max-w-[480px]"
+                className="h-auto max-h-[96px] w-auto max-w-[520px]"
               />
             </Link>
             <button
@@ -591,8 +591,8 @@ export function MobileNav() {
               className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/products" ? "text-primary font-medium" : ""}`}
               data-testid="more-link-products"
             >
-              <Archive className="h-5 w-5 text-muted-foreground" />
-              <span className="font-medium">Products</span>
+              <Microscope className="h-5 w-5 text-muted-foreground" />
+              <span className="font-medium">Analyser</span>
             </Link>
 
             {isAdmin && (

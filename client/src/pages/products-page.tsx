@@ -713,7 +713,7 @@ export default function ProductsPage() {
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-[28px] font-semibold tracking-tight" data-testid="text-products-title">Product Analysis</h1>
+            <h1 className="text-[28px] font-semibold tracking-tight" data-testid="text-products-title">Analyser</h1>
             <p className="text-sm text-muted-foreground mt-1">Search packaged foods, detect ultra-processed ingredients, and find healthier alternatives</p>
           </div>
           <div className="flex gap-2 flex-wrap">
