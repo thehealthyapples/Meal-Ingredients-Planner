@@ -6,23 +6,34 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Utensils, ShoppingBasket, Plus, ArrowRight,
-  CalendarDays, Leaf, CheckCircle2, Circle,
+  CalendarDays, Leaf, CheckCircle2, Circle, Apple,
 } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { api } from "@shared/routes";
 import OrchardHero from "@/components/illustrations/orchard-hero";
+import AppleRating from "@/components/ui/apple-rating";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie,
 } from "recharts";
 
-const BERRY = "hsl(340, 28%, 48%)";
-const BERRY_LIGHT = "hsl(340, 24%, 94%)";
 const GREEN_DEEP = "hsl(132, 25%, 30%)";
 const GREEN_MID = "hsl(132, 18%, 46%)";
 const GREEN_PALE = "hsl(132, 20%, 96%)";
 const SAGE = "hsl(118, 16%, 91%)";
+
+const BASKET_BG = "hsl(218, 30%, 96%)";
+const BASKET_FG = "hsl(218, 28%, 42%)";
+const BASKET_ICON_BG = "hsl(218, 26%, 90%)";
+const BASKET_BORDER = "hsl(218, 20%, 87%)";
+
+const APPLE_BG = "hsl(90, 32%, 95%)";
+const APPLE_FG = "hsl(90, 28%, 36%)";
+const APPLE_ICON_BG = "hsl(90, 26%, 89%)";
+const APPLE_BORDER = "hsl(90, 20%, 85%)";
+
+const BERRY = "hsl(340, 28%, 48%)";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -92,6 +103,14 @@ export default function Dashboard() {
   const mealsPlannedThisWeek = weekData.reduce((s, d) => s + d.count, 0);
   const daysWithMeals = weekData.filter(d => d.count > 0).length;
 
+  const avgThaScore = useMemo(() => {
+    const rated = shoppingListItems.filter(
+      (i: any) => i.smpRating !== null && i.smpRating !== undefined && (i.smpRating as number) > 0
+    );
+    if (!rated.length) return null;
+    return rated.reduce((sum: number, i: any) => sum + (i.smpRating as number), 0) / rated.length;
+  }, [shoppingListItems]);
+
   const displayName = user?.displayName || user?.username || "there";
 
   return (
@@ -104,21 +123,21 @@ export default function Dashboard() {
             background: `linear-gradient(160deg, hsl(132,22%,90%) 0%, hsl(118,19%,94%) 50%, hsl(var(--background)) 100%)`,
           }}
         />
-        <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ height: 100, opacity: 0.45 }}>
+        <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ height: 90, opacity: 0.45 }}>
           <OrchardHero />
         </div>
-        <div className="relative z-10" style={{ padding: "var(--space-8) var(--space-6) 80px" }}>
+        <div className="relative z-10" style={{ padding: "var(--space-5) var(--space-6) 56px" }}>
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-            <div className="flex items-center gap-2 mb-1">
-              <Leaf className="h-4 w-4" style={{ color: GREEN_DEEP }} />
-              <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: GREEN_DEEP, opacity: 0.7 }}>
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <Leaf className="h-3.5 w-3.5" style={{ color: GREEN_DEEP }} />
+              <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: GREEN_DEEP, opacity: 0.65 }}>
                 The Healthy Apples
               </span>
             </div>
             <h1 className="title-page" data-testid="text-welcome" style={{ color: GREEN_DEEP }}>
               {getGreeting()}, {displayName.split("@")[0]}
             </h1>
-            <p className="text-sm mt-2" style={{ color: GREEN_MID }}>
+            <p className="text-sm mt-1" style={{ color: GREEN_MID }}>
               {mealsPlannedThisWeek > 0
                 ? `${mealsPlannedThisWeek} meal${mealsPlannedThisWeek !== 1 ? "s" : ""} planned this week · ${userMeals.length} in your collection`
                 : userMeals.length > 0
@@ -128,20 +147,21 @@ export default function Dashboard() {
           </motion.div>
         </div>
         <div className="relative z-10">
-          <svg viewBox="0 0 1440 32" fill="none" xmlns="http://www.w3.org/2000/svg"
-            className="w-full" preserveAspectRatio="none" style={{ height: 32, display: "block" }}>
-            <path d="M0 0C240 32 480 32 720 16C960 0 1200 0 1440 16V32H0V0Z" fill="hsl(var(--background))" />
+          <svg viewBox="0 0 1440 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+            className="w-full" preserveAspectRatio="none" style={{ height: 24, display: "block" }}>
+            <path d="M0 0C240 24 480 24 720 12C960 0 1200 0 1440 12V24H0V0Z" fill="hsl(var(--background))" />
           </svg>
         </div>
       </div>
 
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        <motion.div variants={container} initial="hidden" animate="show" className="space-y-8">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
 
           {/* ── Stat strip ── */}
           <motion.div variants={item}>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
+              {/* My Meals */}
               <Link href="/meals" aria-label="Go to My Meals">
                 <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-total-meals"
                   style={{ background: GREEN_PALE, borderColor: "hsl(132,18%,85%)" }}>
@@ -160,25 +180,27 @@ export default function Dashboard() {
                 </Card>
               </Link>
 
+              {/* Basket — neutral blue, not a warning colour */}
               <Link href="/analyse-basket" aria-label="Go to Basket">
                 <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-basket-items"
-                  style={{ background: BERRY_LIGHT, borderColor: "hsl(340,20%,86%)" }}>
+                  style={{ background: BASKET_BG, borderColor: BASKET_BORDER }}>
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: BERRY }}>Basket</span>
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "hsl(340,20%,88%)" }}>
-                        <ShoppingBasket className="h-4 w-4" style={{ color: BERRY }} />
+                      <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: BASKET_FG }}>Basket</span>
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: BASKET_ICON_BG }}>
+                        <ShoppingBasket className="h-4 w-4" style={{ color: BASKET_FG }} />
                       </div>
                     </div>
-                    <div className="text-numeric" style={{ color: BERRY }}>{shoppingListItems.length}</div>
-                    <p className="text-xs mt-1" style={{ color: BERRY, opacity: 0.75 }}>
+                    <div className="text-numeric" style={{ color: BASKET_FG }} data-testid="text-basket-count">{shoppingListItems.length}</div>
+                    <p className="text-xs mt-1" style={{ color: BASKET_FG, opacity: 0.75 }}>
                       {shoppingListItems.length === 1 ? "item to buy" : "items to buy"}
                     </p>
                   </CardContent>
                 </Card>
               </Link>
 
-              <Link href="/weekly-planner" aria-label="Go to Planner" className="col-span-2 lg:col-span-1">
+              {/* This Week */}
+              <Link href="/weekly-planner" aria-label="Go to Planner">
                 <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-week-progress"
                   style={{ background: SAGE, borderColor: "hsl(118,14%,84%)" }}>
                   <CardContent className="p-5">
@@ -190,7 +212,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-end gap-2">
                       <div className="text-numeric">{daysWithMeals}</div>
-                      <div className="text-sm text-muted-foreground mb-0.5">/ 7 days covered</div>
+                      <div className="text-sm text-muted-foreground mb-0.5">/ 7 days</div>
                     </div>
                     <div className="flex gap-1 mt-2">
                       {weekData.map((d, i) => (
@@ -204,12 +226,52 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
               </Link>
+
+              {/* THA Health Score */}
+              <Link href="/analyse-basket" aria-label="Go to Basket Analysis" className="col-span-2 lg:col-span-1">
+                <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-tha-score"
+                  style={{ background: APPLE_BG, borderColor: APPLE_BORDER }}>
+                  <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: APPLE_FG }}>THA Score</span>
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: APPLE_ICON_BG }}>
+                        <Apple className="h-4 w-4" style={{ color: APPLE_FG }} />
+                      </div>
+                    </div>
+                    {avgThaScore !== null ? (
+                      <>
+                        <div className="mt-1 mb-1">
+                          <AppleRating rating={avgThaScore} size={22} />
+                        </div>
+                        <p className="text-xs mt-1" style={{ color: APPLE_FG, opacity: 0.8 }}>
+                          {avgThaScore >= 4.5
+                            ? "Excellent basket health"
+                            : avgThaScore >= 3.5
+                            ? "Good basket health"
+                            : avgThaScore >= 2.5
+                            ? "Fair basket health"
+                            : "Room to improve"}
+                          {" · "}avg {avgThaScore.toFixed(1)}/5
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-numeric" style={{ color: APPLE_FG }}>—</div>
+                        <p className="text-xs mt-1" style={{ color: APPLE_FG, opacity: 0.75 }}>
+                          {shoppingListItems.length > 0 ? "Analyse basket to score" : "Add items to basket"}
+                        </p>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </Link>
+
             </div>
           </motion.div>
 
           {/* ── Weekly planner chart ── */}
           <motion.div variants={item}>
-            <div className="flex items-baseline justify-between mb-4">
+            <div className="flex items-baseline justify-between mb-3">
               <h2 className="title-section">This Week's Plan</h2>
               <Link href="/weekly-planner">
                 <Button variant="ghost" className="text-sm text-muted-foreground gap-1" data-testid="link-go-planner">
@@ -220,7 +282,7 @@ export default function Dashboard() {
             <Card style={{ borderColor: "hsl(132,14%,87%)" }}>
               <CardContent className="p-5 pt-4">
                 {mealsPlannedThisWeek === 0 ? (
-                  <div className="flex flex-col items-center py-8 gap-3">
+                  <div className="flex flex-col items-center py-7 gap-3">
                     <CalendarDays className="h-8 w-8 text-muted-foreground/25" />
                     <p className="text-sm text-muted-foreground text-center max-w-xs">
                       No meals planned yet — head to the planner to map out your week.
@@ -276,7 +338,7 @@ export default function Dashboard() {
 
               {/* Meal mix */}
               <div>
-                <h2 className="title-section mb-4">Your Collection</h2>
+                <h2 className="title-section mb-3">Your Collection</h2>
                 <Card style={{ borderColor: "hsl(132,14%,87%)" }}>
                   <CardContent className="p-5">
                     {!meals?.length ? (
@@ -327,7 +389,7 @@ export default function Dashboard() {
 
               {/* Quick actions */}
               <div>
-                <h2 className="title-section mb-4">Quick Actions</h2>
+                <h2 className="title-section mb-3">Quick Actions</h2>
                 <div className="flex flex-col gap-3">
                   <Link href="/meals">
                     <Card className="group cursor-pointer hover-elevate transition-all duration-200" data-testid="action-add-meal">
@@ -360,8 +422,8 @@ export default function Dashboard() {
                   <Link href="/analyse-basket">
                     <Card className="group cursor-pointer hover-elevate transition-all duration-200" data-testid="action-analyse-basket">
                       <CardContent className="p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: BERRY_LIGHT }}>
-                          <ShoppingBasket className="h-5 w-5" style={{ color: BERRY }} />
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: BASKET_BG }}>
+                          <ShoppingBasket className="h-5 w-5" style={{ color: BASKET_FG }} />
                         </div>
                         <div>
                           <p className="title-card">Analyse Basket</p>
@@ -379,7 +441,7 @@ export default function Dashboard() {
 
           {/* ── Recent Meals ── */}
           <motion.div variants={item}>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <div>
                 <h2 className="title-section">Recent Meals</h2>
                 <p className="text-xs text-muted-foreground mt-0.5">Your latest additions</p>
@@ -395,7 +457,7 @@ export default function Dashboard() {
 
             {userMeals.length === 0 ? (
               <Card className="border-dashed" data-testid="card-empty-meals">
-                <CardContent className="py-12 text-center">
+                <CardContent className="py-10 text-center">
                   <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: GREEN_PALE }}>
                     <Utensils className="h-6 w-6" style={{ color: GREEN_DEEP }} />
                   </div>
