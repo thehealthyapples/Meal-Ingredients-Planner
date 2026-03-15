@@ -438,22 +438,45 @@ export class DatabaseStorage implements IStorage {
 
   async addOrConsolidateShoppingListItem(userId: number, item: InsertShoppingListItem, addedByUserId?: number): Promise<ShoppingListItem> {
     const householdId = await getHouseholdForUser(userId);
+
+    // Labels that identify member-specific (non-shared) items.
+    // These must only consolidate with items carrying the same label,
+    // so a vegetarian swap never collapses into the shared ingredient line.
+    const MEMBER_SPECIFIC_LABELS = ["vegetarian_swap", "keto_swap", "optional", "vegetarian", "keto"];
+    const incomingLabel = item.basketLabel ?? null;
+    const isMemberSpecific = incomingLabel !== null && MEMBER_SPECIFIC_LABELS.includes(incomingLabel);
+
     if (item.normalizedName && item.unit) {
-      const existing = await db.select().from(shoppingList).where(
-        and(
-          eq(shoppingList.householdId, householdId),
-          eq(shoppingList.normalizedName, item.normalizedName),
-          eq(shoppingList.unit, item.unit)
-        )
+      // Build WHERE clause: always match on household + normalizedName + unit.
+      // For member-specific labels, also require the same basketLabel so they
+      // never merge with the shared base item.
+      const baseCondition = and(
+        eq(shoppingList.householdId, householdId),
+        eq(shoppingList.normalizedName, item.normalizedName),
+        eq(shoppingList.unit, item.unit)
       );
+
+      const condition = isMemberSpecific
+        ? and(baseCondition, eq(shoppingList.basketLabel, incomingLabel))
+        : baseCondition;
+
+      const existing = await db.select().from(shoppingList).where(condition);
+
       if (existing.length > 0) {
         const existingItem = existing[0];
         const newQty = (existingItem.quantityValue || 0) + (item.quantityValue || 0);
         const newGrams = item.quantityInGrams
           ? (existingItem.quantityInGrams || 0) + item.quantityInGrams
           : existingItem.quantityInGrams;
+
+        // If the incoming item is labelled 'shared', promote the merged row to
+        // 'shared' so the UI always reflects the shared status.
+        const labelUpdate = incomingLabel === "shared" && existingItem.basketLabel !== "shared"
+          ? { basketLabel: "shared" as string }
+          : {};
+
         const [result] = await db.update(shoppingList)
-          .set({ quantityValue: newQty, quantityInGrams: newGrams })
+          .set({ quantityValue: newQty, quantityInGrams: newGrams, ...labelUpdate })
           .where(eq(shoppingList.id, existingItem.id))
           .returning();
         return result;
