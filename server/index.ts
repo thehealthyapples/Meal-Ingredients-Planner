@@ -4,6 +4,7 @@ import { serveStatic } from "./static";
 import { createServer } from "http";
 import { runTemplateMigration } from "./template-migration";
 import { seedReadyMeals } from "./lib/seed-ready-meals";
+import { seedFoodKnowledge } from "./lib/seed-food-knowledge";
 import { runMigrations } from "./migrations/runner";
 import { storage } from "./storage";
 
@@ -67,6 +68,7 @@ app.use((req, res, next) => {
   await runMigrations();
   await runTemplateMigration().catch(err => console.error("[Template Migration] Error:", err));
   await seedReadyMeals().catch(err => console.error("[Seed Ready Meals] Error:", err));
+  await seedFoodKnowledge().catch(err => console.error("[Seed Food Knowledge] Error:", err));
   // Sync default pantry items for all households. Runs in the background so it
   // does not delay server startup. Idempotent: only inserts missing defaults,
   // never overwrites user-created or user-modified items.
