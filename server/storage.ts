@@ -602,15 +602,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getProductMatchesForUser(userId: number): Promise<ProductMatch[]> {
-    const items = await db.select().from(shoppingList).where(eq(shoppingList.userId, userId));
+    const householdId = await getHouseholdForUser(userId);
+    const items = await db.select().from(shoppingList).where(eq(shoppingList.householdId, householdId));
     if (items.length === 0) return [];
     const itemIds = items.map(i => i.id);
-    const allMatches: ProductMatch[] = [];
-    for (const id of itemIds) {
-      const matches = await db.select().from(productMatches).where(eq(productMatches.shoppingListItemId, id));
-      allMatches.push(...matches);
-    }
-    return allMatches;
+    return await db.select().from(productMatches).where(inArray(productMatches.shoppingListItemId, itemIds));
   }
 
   async addProductMatch(match: InsertProductMatch): Promise<ProductMatch> {

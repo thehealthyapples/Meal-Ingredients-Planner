@@ -77,7 +77,7 @@ const CATEGORY_PRICE_ESTIMATES: Record<string, { perKg: number; perUnit: number;
   fruit: { perKg: 3.00, perUnit: 0.40, perLitre: 0 },
   grains: { perKg: 1.50, perUnit: 1.00, perLitre: 0 },
   herbs: { perKg: 15.00, perUnit: 0.80, perLitre: 0 },
-  oils: { perKg: 0, perUnit: 3.00, perLitre: 4.00 },
+  oils: { perKg: 4.00, perUnit: 3.00, perLitre: 4.00 },
   condiments: { perKg: 5.00, perUnit: 2.00, perLitre: 3.00 },
   nuts: { perKg: 10.00, perUnit: 2.50, perLitre: 0 },
   legumes: { perKg: 2.50, perUnit: 1.00, perLitre: 0 },

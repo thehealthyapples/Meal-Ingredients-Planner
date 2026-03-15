@@ -2697,7 +2697,7 @@ export async function registerRoutes(
       for (const item of items) {
         if (isGarbageIngredient(item.productName)) continue;
 
-        if (item.matchedProductId) {
+        if (item.matchedProductId && item.matchedPrice) {
           const getSearchUrl = (store: string) => {
             const q = encodeURIComponent(item.productName);
             const urls: Record<string, string> = {
@@ -2725,7 +2725,7 @@ export async function registerRoutes(
               shoppingListItemId: item.id,
               supermarket: store,
               productName: item.productName,
-              price: item.matchedPrice || null,
+              price: item.matchedPrice,
               pricePerUnit: null,
               productUrl: getSearchUrl(store),
               imageUrl: item.imageUrl || null,
