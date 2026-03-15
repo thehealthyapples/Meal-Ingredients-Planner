@@ -2206,6 +2206,21 @@ export default function ShoppingListPage() {
                       </span>
                     </div>
                   )}
+                  {householdData && (() => {
+                    const sharedCount = savedItems.filter(i => i.basketLabel === 'shared').length;
+                    const memberCount = savedItems.filter(i => i.basketLabel && i.basketLabel !== 'shared').length;
+                    if (sharedCount === 0 && memberCount === 0) return null;
+                    return (
+                      <div className="mt-1.5 text-[11px] text-muted-foreground leading-tight space-y-0.5" data-testid="banner-basket-summary">
+                        {sharedCount > 0 && (
+                          <div data-testid="text-shared-count">{sharedCount} ingredient{sharedCount !== 1 ? 's' : ''} shared across all plates</div>
+                        )}
+                        {memberCount > 0 && (
+                          <div data-testid="text-member-count">{memberCount} item{memberCount !== 1 ? 's' : ''} specific to one member</div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-wrap">
