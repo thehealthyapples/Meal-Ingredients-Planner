@@ -158,6 +158,43 @@ export interface ProductContext {
   novaGroup: number | null;
 }
 
+// Converts a UPFAnalysisResult into a concise, plain-English phrase for display in THA.
+// Intended as a single-line summary shown next to a product card.
+export function buildTHAExplanation(result: UPFAnalysisResult, novaGroup?: number | null): string {
+  if (result.isWholeFoodOverride) return "Minimally processed — mostly whole-food ingredients";
+  if (result.isOrganic && result.additiveMatches.length === 0) return "Organic with no detected additives";
+
+  const nova = novaGroup ?? (result.upfScore >= 50 ? 4 : result.upfScore >= 25 ? 3 : result.upfScore >= 10 ? 2 : 1);
+  const addCount = result.additiveMatches.length;
+  const highRiskCount = result.additiveMatches.filter(m => m.additive.riskLevel === "high").length;
+  const parts: string[] = [];
+
+  if (nova === 4) {
+    parts.push("Ultra-processed (NOVA 4)");
+  } else if (nova === 3) {
+    parts.push("Moderately processed (NOVA 3)");
+  } else if (nova <= 2 && addCount === 0 && result.processingIndicators.length === 0) {
+    return "Low processing — minimal additives detected";
+  }
+
+  if (addCount === 0 && result.processingIndicators.length === 0) {
+    parts.push("no additives detected");
+  } else {
+    if (addCount > 0) {
+      const topTypes = Array.from(new Set(result.additiveMatches.slice(0, 3).map(m => m.additive.type))).join(", ");
+      parts.push(`${addCount} additive${addCount !== 1 ? "s" : ""} (${topTypes})`);
+    }
+    if (highRiskCount > 0) {
+      parts.push(`${highRiskCount} high-risk`);
+    }
+    if (result.processingIndicators.length > 0) {
+      parts.push(result.processingIndicators.slice(0, 2).map(s => s.toLowerCase()).join(", "));
+    }
+  }
+
+  return parts.length > 0 ? parts.join(" · ") : "Processing level unknown";
+}
+
 export function analyzeProductUPF(
   ingredientsText: string,
   additiveDb: Additive[],

@@ -13,7 +13,7 @@ import { matchProductsForIngredient } from "./lib/product-matching-service";
 import { analyzeProduct } from "./lib/product-analysis";
 import { sendBasketToSupermarket, getSupportedSupermarkets } from "./lib/grocery-integration";
 import { filterMealsByPreferences, rankMealsByPreferences } from "./lib/recommendation-service";
-import { analyzeProductUPF } from "./lib/upf-analysis-service";
+import { analyzeProductUPF, buildTHAExplanation } from "./lib/upf-analysis-service";
 import { isWholeFoodIngredient } from "./lib/smp-rating-service";
 import { createBasket, getBasketSupermarkets } from "./lib/supermarket-basket-service";
 import { generateSmartSuggestion, type SmartSuggestSettings, type LockedEntry } from "./lib/smart-suggest-service";
@@ -1223,13 +1223,20 @@ export async function registerRoutes(
               smpScore: upfResult.smpScore,
               isWholeFoodOverride: upfResult.isWholeFoodOverride,
               isOrganic: upfResult.isOrganic,
-              additiveMatches: upfResult.additiveMatches || [],
+              additiveMatches: upfResult.additiveMatches.map(m => ({
+                name: m.additive.name,
+                type: m.additive.type,
+                riskLevel: m.additive.riskLevel,
+                description: m.additive.description,
+                foundIn: m.foundIn,
+              })),
               processingIndicators: upfResult.processingIndicators || [],
               ingredientCount: upfResult.ingredientCount || 0,
               upfIngredientCount: upfResult.upfIngredientCount || 0,
               riskBreakdown: upfResult.riskBreakdown || { additiveRisk: 0, processingRisk: 0, ingredientComplexityRisk: 0 },
               smpPenalties: upfResult.smpPenalties,
               smpBonuses: upfResult.smpBonuses,
+              thaExplanation: buildTHAExplanation(upfResult, novaGroup ? Number(novaGroup) : null),
             } : null,
             quantity: p.quantity || null,
             servingSize: p.serving_size || null,
@@ -1874,6 +1881,7 @@ export async function registerRoutes(
               riskBreakdown: altUpf.riskBreakdown,
               smpPenalties: altUpf.smpPenalties,
               smpBonuses: altUpf.smpBonuses,
+              thaExplanation: buildTHAExplanation(altUpf, p.nova_group || null),
             } : null,
           };
         })
@@ -4092,13 +4100,20 @@ export async function registerRoutes(
           smpScore: upfAnalysis.smpScore,
           isWholeFoodOverride: upfAnalysis.isWholeFoodOverride,
           isOrganic: upfAnalysis.isOrganic,
-          additiveMatches: upfAnalysis.additiveMatches,
+          additiveMatches: upfAnalysis.additiveMatches.map(m => ({
+            name: m.additive.name,
+            type: m.additive.type,
+            riskLevel: m.additive.riskLevel,
+            description: m.additive.description,
+            foundIn: m.foundIn,
+          })),
           processingIndicators: upfAnalysis.processingIndicators,
           ingredientCount: upfAnalysis.ingredientCount,
           upfIngredientCount: upfAnalysis.upfIngredientCount,
           riskBreakdown: upfAnalysis.riskBreakdown,
           smpPenalties: upfAnalysis.smpPenalties,
           smpBonuses: upfAnalysis.smpBonuses,
+          thaExplanation: buildTHAExplanation(upfAnalysis, p.nova_group || null),
         } : null,
         availableStores,
       };
