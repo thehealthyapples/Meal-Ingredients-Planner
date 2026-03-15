@@ -1,0 +1,48 @@
+Step 9 prompt — build household meal matcher service
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- Do not add extra features, ideas, refactors, abstractions, or “nice to have” improvements unless explicitly requested.
+- Touch only the files and logic necessary for this task.
+- Reuse existing patterns, components, services, and schema structure wherever possible.
+- Keep implementation simple, targeted, and easy to maintain.
+- Minimise token usage, file churn, and unnecessary code generation.
+- Do not run broad tests. Only do the absolute minimum validation needed to avoid obvious breakage.
+- Do not create large new frameworks or generic systems where a small direct implementation will do.
+- Preserve existing behaviour unless this task explicitly requires a change.
+- Before making changes, inspect the relevant existing code paths and follow the current repo conventions closely.
+- After changes, provide a short summary of exactly what changed, which files changed, and any risks or follow-up notes.
+
+Task:
+Create a minimal backend service for household meal matching.
+
+Service goal:
+Given a household, available meal templates, and swap rules, return practical meal options that can work for the household with shared-base logic.
+
+The service should:
+1. load household members and preferences
+2. inspect meal templates
+3. apply relevant swap rules
+4. estimate shared fit
+5. return:
+   - meal/template selected
+   - swaps needed
+   - shared ingredients
+   - member-specific changes
+   - extra prep time
+   - short explanation of why it fits
+
+Requirements:
+- Keep the logic simple and readable.
+- Do not build a generic recommendation platform.
+- Do not add ML, advanced ranking infrastructure, or speculative abstractions.
+- Focus on the smallest useful rule-based implementation.
+
+Validation:
+- Only do the minimum needed to ensure the service runs and types are coherent.
+- Do not run broad tests.
+
+Output:
+- Apply the service implementation.
+- Then provide a short summary of changed files, logic used, and any l
