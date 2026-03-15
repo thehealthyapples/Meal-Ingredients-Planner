@@ -586,6 +586,10 @@ export const userPreferences = pgTable("user_preferences", {
   plannerEnableDrinks: boolean("planner_enable_drinks").notNull().default(false),
   preferredIngredients: text("preferred_ingredients").array().notNull().default([]),
   maxPrepTolerance: integer("max_prep_tolerance"),
+  mealMode: text("meal_mode").notNull().default("exact"),
+  maxExtraPrepMinutes: integer("max_extra_prep_minutes"),
+  maxTotalCookTime: integer("max_total_cook_time"),
+  preferLessProcessed: boolean("prefer_less_processed").notNull().default(false),
 });
 
 export const insertUserPreferencesSchema = createInsertSchema(userPreferences).pick({
@@ -615,6 +619,10 @@ export const insertUserPreferencesSchema = createInsertSchema(userPreferences).p
   plannerEnableDrinks: true,
   preferredIngredients: true,
   maxPrepTolerance: true,
+  mealMode: true,
+  maxExtraPrepMinutes: true,
+  maxTotalCookTime: true,
+  preferLessProcessed: true,
 });
 
 export type UserPreferences = typeof userPreferences.$inferSelect;

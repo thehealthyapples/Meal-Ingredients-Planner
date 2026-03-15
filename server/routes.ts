@@ -541,6 +541,10 @@ export async function registerRoutes(
         adultsCount: prefs?.adultsCount ?? 1,
         childrenCount: prefs?.childrenCount ?? 0,
         babiesCount: prefs?.babiesCount ?? 0,
+        mealMode: prefs?.mealMode ?? "exact",
+        maxExtraPrepMinutes: prefs?.maxExtraPrepMinutes ?? null,
+        maxTotalCookTime: prefs?.maxTotalCookTime ?? null,
+        preferLessProcessed: prefs?.preferLessProcessed ?? false,
       },
     };
   }
@@ -584,6 +588,10 @@ export async function registerRoutes(
       eliteTrackingEnabled: z.boolean().optional(),
       healthTrendEnabled: z.boolean().optional(),
       barcodeScannerEnabled: z.boolean().optional(),
+      mealMode: z.enum(["exact", "shared-with-swaps"]).optional(),
+      maxExtraPrepMinutes: z.number().int().min(0).nullable().optional(),
+      maxTotalCookTime: z.number().int().min(0).nullable().optional(),
+      preferLessProcessed: z.boolean().optional(),
     }).optional(),
   });
 

@@ -570,6 +570,17 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-15_household_meal_mode_settings",
+    statements: [
+      `ALTER TABLE user_preferences
+        ADD COLUMN IF NOT EXISTS meal_mode TEXT NOT NULL DEFAULT 'exact',
+        ADD COLUMN IF NOT EXISTS max_extra_prep_minutes INTEGER,
+        ADD COLUMN IF NOT EXISTS max_total_cook_time INTEGER,
+        ADD COLUMN IF NOT EXISTS prefer_less_processed BOOLEAN NOT NULL DEFAULT FALSE`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

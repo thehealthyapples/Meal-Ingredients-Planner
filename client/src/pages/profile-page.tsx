@@ -56,6 +56,10 @@ interface ProfileData {
     adultsCount: number;
     childrenCount: number;
     babiesCount: number;
+    mealMode: string;
+    maxExtraPrepMinutes: number | null;
+    maxTotalCookTime: number | null;
+    preferLessProcessed: boolean;
   };
 }
 
@@ -325,14 +329,22 @@ function HouseholdSettings({ household, onSave }: { household: ProfileData["hous
   const [adults, setAdults] = useState(household.adultsCount);
   const [children, setChildren] = useState(household.childrenCount);
   const [babies, setBabies] = useState(household.babiesCount);
+  const [mealMode, setMealMode] = useState(household.mealMode ?? "exact");
+  const [maxExtraPrep, setMaxExtraPrep] = useState<string>(household.maxExtraPrepMinutes != null ? String(household.maxExtraPrepMinutes) : "");
+  const [maxCookTime, setMaxCookTime] = useState<string>(household.maxTotalCookTime != null ? String(household.maxTotalCookTime) : "");
+  const [preferLessProcessed, setPreferLessProcessed] = useState(household.preferLessProcessed ?? false);
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     setAdults(household.adultsCount);
     setChildren(household.childrenCount);
     setBabies(household.babiesCount);
+    setMealMode(household.mealMode ?? "exact");
+    setMaxExtraPrep(household.maxExtraPrepMinutes != null ? String(household.maxExtraPrepMinutes) : "");
+    setMaxCookTime(household.maxTotalCookTime != null ? String(household.maxTotalCookTime) : "");
+    setPreferLessProcessed(household.preferLessProcessed ?? false);
     setDirty(false);
-  }, [household.adultsCount, household.childrenCount, household.babiesCount]);
+  }, [household.adultsCount, household.childrenCount, household.babiesCount, household.mealMode, household.maxExtraPrepMinutes, household.maxTotalCookTime, household.preferLessProcessed]);
 
   const adjust = (setter: (v: number) => void, current: number, delta: number, min = 0) => {
     const next = Math.max(min, current + delta);
@@ -341,7 +353,15 @@ function HouseholdSettings({ household, onSave }: { household: ProfileData["hous
   };
 
   const save = () => {
-    onSave({ adultsCount: adults, childrenCount: children, babiesCount: babies });
+    onSave({
+      adultsCount: adults,
+      childrenCount: children,
+      babiesCount: babies,
+      mealMode,
+      maxExtraPrepMinutes: maxExtraPrep !== "" ? parseInt(maxExtraPrep, 10) : null,
+      maxTotalCookTime: maxCookTime !== "" ? parseInt(maxCookTime, 10) : null,
+      preferLessProcessed,
+    });
     setDirty(false);
   };
 
@@ -363,6 +383,67 @@ function HouseholdSettings({ household, onSave }: { household: ProfileData["hous
         <CounterRow icon={<Users className="h-4 w-4 text-muted-foreground" />} label="Adults" value={adults} onMinus={() => adjust(setAdults, adults, -1, 1)} onPlus={() => adjust(setAdults, adults, 1)} testId="counter-adults" />
         <CounterRow icon={<PersonStanding className="h-4 w-4 text-sky-500" />} label="Children" value={children} onMinus={() => adjust(setChildren, children, -1)} onPlus={() => adjust(setChildren, children, 1)} testId="counter-children" />
         <CounterRow icon={<Baby className="h-4 w-4 text-pink-500" />} label="Babies" value={babies} onMinus={() => adjust(setBabies, babies, -1)} onPlus={() => adjust(setBabies, babies, 1)} testId="counter-babies" />
+
+        <Separator className="my-1" />
+
+        <div>
+          <p className="text-xs text-muted-foreground mb-2">Shared meal style</p>
+          <div className="flex gap-2">
+            {[
+              { value: "exact", label: "Same recipe" },
+              { value: "shared-with-swaps", label: "Shared + swaps" },
+            ].map((opt) => (
+              <Button
+                key={opt.value}
+                size="sm"
+                variant={mealMode === opt.value ? "default" : "outline"}
+                className="text-xs flex-1"
+                onClick={() => { setMealMode(opt.value); setDirty(true); }}
+                data-testid={`button-meal-mode-${opt.value}`}
+              >
+                {mealMode === opt.value && <Check className="h-3 w-3 mr-1" />}
+                {opt.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <Label className="text-xs text-muted-foreground">Max extra prep (min)</Label>
+            <Input
+              type="number"
+              min={0}
+              placeholder="—"
+              value={maxExtraPrep}
+              onChange={(e) => { setMaxExtraPrep(e.target.value); setDirty(true); }}
+              className="mt-1 h-8 text-sm"
+              data-testid="input-max-extra-prep"
+            />
+          </div>
+          <div className="flex-1">
+            <Label className="text-xs text-muted-foreground">Max cook time (min)</Label>
+            <Input
+              type="number"
+              min={0}
+              placeholder="—"
+              value={maxCookTime}
+              onChange={(e) => { setMaxCookTime(e.target.value); setDirty(true); }}
+              className="mt-1 h-8 text-sm"
+              data-testid="input-max-cook-time"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <Label htmlFor="prefer-less-processed" className="text-sm cursor-pointer">Prefer less processed foods</Label>
+          <Switch
+            id="prefer-less-processed"
+            checked={preferLessProcessed}
+            onCheckedChange={(v) => { setPreferLessProcessed(v); setDirty(true); }}
+            data-testid="switch-prefer-less-processed"
+          />
+        </div>
       </div>
     </Card>
   );
