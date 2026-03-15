@@ -561,6 +561,15 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-15_user_preferences_meal_matching",
+    statements: [
+      `ALTER TABLE user_preferences
+        ADD COLUMN IF NOT EXISTS preferred_ingredients TEXT[] NOT NULL DEFAULT '{}',
+        ADD COLUMN IF NOT EXISTS max_prep_tolerance INTEGER`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
