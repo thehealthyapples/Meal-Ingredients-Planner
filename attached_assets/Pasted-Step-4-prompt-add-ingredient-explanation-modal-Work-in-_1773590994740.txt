@@ -1,0 +1,41 @@
+Step 4 prompt — add ingredient explanation modal
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- Do not add extra features, ideas, refactors, abstractions, or “nice to have” improvements unless explicitly requested.
+- Touch only the files and logic necessary for this task.
+- Reuse existing patterns, components, services, and schema structure wherever possible.
+- Keep implementation simple, targeted, and easy to maintain.
+- Minimise token usage, file churn, and unnecessary code generation.
+- Do not run broad tests. Only do the absolute minimum validation needed to avoid obvious breakage.
+- Do not create large new frameworks or generic systems where a small direct implementation will do.
+- Preserve existing behaviour unless this task explicitly requires a change.
+- Before making changes, inspect the relevant existing code paths and follow the current repo conventions closely.
+- After changes, provide a short summary of exactly what changed, which files changed, and any risks or follow-up notes.
+
+Task:
+Add a lightweight Food Encyclopedia explanation UI in the frontend.
+
+Goal:
+Where ingredients, additives, or processing flags are already shown, allow the user to tap an info icon or similar small affordance to open a modal, drawer, or panel with:
+- title
+- short_summary
+- why_tha_highlights_this
+- what_to_know
+- simpler_alternatives
+
+Implementation requirements:
+- Reuse existing modal, drawer, tooltip, or panel components if already present.
+- Keep the UI simple, calm, and consistent with the current design language.
+- Do not redesign the page.
+- Do not add filtering, editing, bookmarking, or encyclopedia browsing pages yet.
+- Only wire this into the most relevant existing ingredient/additive display areas.
+
+Validation:
+- Only do the minimum validation needed to ensure the UI renders and does not obviously break the current screen.
+- Do not run broad tests.
+
+Output:
+- Apply the UI change.
+- Then provide a short summary of changed files, where it appears in 

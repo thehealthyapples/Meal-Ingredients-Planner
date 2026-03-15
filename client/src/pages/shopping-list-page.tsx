@@ -59,6 +59,7 @@ import { safeParseJsonObject, safeStringifyJsonObject } from "@/lib/json-utils";
 import { resolveBestMatch, type WholeFoodIntent } from "@/lib/whole-food-matcher";
 import { calcConfidence, CONFIDENCE_LABELS, type ConfidenceLevel } from "@/lib/food-confidence";
 import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
+import FoodKnowledgeModal from "@/components/food-knowledge-modal";
 import WholeFoodSelector from "@/components/whole-food-selector";
 
 type ShoppingListItemExtended = ShoppingListItem & {
@@ -698,6 +699,7 @@ function ProductAnalyseModal({ open, onOpenChange, item }: { open: boolean; onOp
   const [isSearching, setIsSearching] = useState(false);
   const [showBrowse, setShowBrowse] = useState(false);
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
+  const [knowledgeSlug, setKnowledgeSlug] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [hideUltraProcessed, setHideUltraProcessed] = useState(false);
   const [hideHighRiskAdditives, setHideHighRiskAdditives] = useState(false);
@@ -1154,7 +1156,14 @@ function ProductAnalyseModal({ open, onOpenChange, item }: { open: boolean; onOp
                                           <div key={aIdx} className="text-xs flex items-center gap-1.5">
                                             <span className={`inline-block w-1.5 h-1.5 rounded-full flex-shrink-0 ${additive.riskLevel === 'high' ? 'bg-red-500' : additive.riskLevel === 'moderate' ? 'bg-orange-400' : additive.riskLevel === 'low' ? 'bg-yellow-400' : 'bg-green-400'}`} />
                                             <span className="font-medium">{additive.name}</span>
-                                            <span className="text-muted-foreground">({additive.type})</span>
+                                            <button
+                                              className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-0.5"
+                                              onClick={() => setKnowledgeSlug(additive.type.toLowerCase().replace(/[\s_]+/g, '-'))}
+                                              data-testid={`button-fk-${additive.type}`}
+                                            >
+                                              <span>({additive.type})</span>
+                                              <Info className="h-2.5 w-2.5" />
+                                            </button>
                                           </div>
                                         ))}
                                       </div>
@@ -1200,6 +1209,7 @@ function ProductAnalyseModal({ open, onOpenChange, item }: { open: boolean; onOp
         }}
       />
     )}
+    <FoodKnowledgeModal slug={knowledgeSlug} onClose={() => setKnowledgeSlug(null)} />
     </>
   );
 }
