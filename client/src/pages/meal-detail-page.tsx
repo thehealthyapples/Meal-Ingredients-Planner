@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingCart, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet } from "lucide-react";
+import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingCart, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock } from "lucide-react";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -327,6 +327,29 @@ export default function MealDetailPage() {
           </Badge>
         </div>
       )}
+
+      <div className="flex gap-2 flex-wrap mb-5" data-testid="section-recipe-actions">
+        {[
+          { id: "adapt-household",   icon: <Users className="h-3.5 w-3.5 mr-1.5" />,       label: "Adapt for my household",  msg: "Household adaptation coming soon." },
+          { id: "make-vegetarian",   icon: <Leaf className="h-3.5 w-3.5 mr-1.5" />,        label: "Make this vegetarian",    msg: "Vegetarian adaptation coming soon." },
+          { id: "make-keto",         icon: <Zap className="h-3.5 w-3.5 mr-1.5" />,         label: "Make this keto",          msg: "Keto adaptation coming soon." },
+          { id: "lower-cost",        icon: <TrendingDown className="h-3.5 w-3.5 mr-1.5" />,label: "Lower the cost",          msg: "Cost-reduction adaptation coming soon." },
+          { id: "less-processed",    icon: <Sprout className="h-3.5 w-3.5 mr-1.5" />,      label: "Make this less processed",msg: "Lower-UPF adaptation coming soon." },
+          { id: "under-30",          icon: <Clock className="h-3.5 w-3.5 mr-1.5" />,       label: "Keep under 30 mins",      msg: "Time-reducing adaptation coming soon." },
+        ].map((action) => (
+          <Button
+            key={action.id}
+            variant="outline"
+            size="sm"
+            className="text-xs h-7 px-2.5"
+            data-testid={`button-recipe-action-${action.id}`}
+            onClick={() => toast({ title: action.label, description: action.msg })}
+          >
+            {action.icon}
+            {action.label}
+          </Button>
+        ))}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="md:col-span-1">
