@@ -169,6 +169,7 @@ export const shoppingList = pgTable("shopping_list", {
   attributePreferences: text("attribute_preferences"),
   confidenceLevel: text("confidence_level"),
   confidenceReason: text("confidence_reason"),
+  basketLabel: text("basket_label"),
 });
 
 export const productMatches = pgTable("product_matches", {
@@ -292,6 +293,7 @@ export const insertShoppingListItemSchema = createInsertSchema(shoppingList).pic
   needsReview: true,
   validationNote: true,
   selectedStore: true,
+  basketLabel: true,
 });
 
 export const insertProductMatchSchema = createInsertSchema(productMatches).pick({

@@ -2494,6 +2494,23 @@ export default function ShoppingListPage() {
                                               <TooltipContent><p className="text-xs">{item.validationNote || 'This item may need manual review'}</p></TooltipContent>
                                             </Tooltip>
                                           )}
+                                          {item.basketLabel && (() => {
+                                            const BASKET_LABEL_CONFIG: Record<string, { text: string; className: string }> = {
+                                              shared:            { text: "Shared ingredient",  className: "text-indigo-600 dark:text-indigo-400 border-indigo-300 dark:border-indigo-600" },
+                                              vegetarian_swap:   { text: "Vegetarian option",  className: "text-green-600 dark:text-green-400 border-green-300 dark:border-green-600" },
+                                              vegetarian:        { text: "Vegetarian option",  className: "text-green-600 dark:text-green-400 border-green-300 dark:border-green-600" },
+                                              keto_swap:         { text: "Low-carb option",    className: "text-yellow-600 dark:text-yellow-400 border-yellow-300 dark:border-yellow-600" },
+                                              keto:              { text: "Low-carb option",    className: "text-yellow-600 dark:text-yellow-400 border-yellow-300 dark:border-yellow-600" },
+                                              optional:          { text: "Optional topping",   className: "text-muted-foreground border-border" },
+                                            };
+                                            const cfg = BASKET_LABEL_CONFIG[item.basketLabel];
+                                            if (!cfg) return null;
+                                            return (
+                                              <Badge variant="outline" className={`text-[10px] ${cfg.className}`} data-testid={`badge-basket-label-${item.id}`}>
+                                                {cfg.text}
+                                              </Badge>
+                                            );
+                                          })()}
                                         </div>
                                       )}
                                     </td>

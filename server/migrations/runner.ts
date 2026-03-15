@@ -581,6 +581,13 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-15_shopping_list_basket_label",
+    statements: [
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS basket_label TEXT",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

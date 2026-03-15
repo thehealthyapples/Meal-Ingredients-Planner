@@ -53,7 +53,7 @@ export interface IStorage {
   addShoppingListItem(userId: number, item: InsertShoppingListItem): Promise<ShoppingListItem>;
   addOrConsolidateShoppingListItem(userId: number, item: InsertShoppingListItem): Promise<ShoppingListItem>;
   updateShoppingListItemQuantity(id: number, quantity: number): Promise<ShoppingListItem | undefined>;
-  updateShoppingListItem(id: number, fields: Partial<Pick<ShoppingListItem, 'productName' | 'normalizedName' | 'quantityValue' | 'unit' | 'category' | 'quantity' | 'selectedTier' | 'checked' | 'quantityInGrams' | 'ingredientId' | 'matchedProductId' | 'matchedStore' | 'matchedPrice' | 'availableStores' | 'smpRating' | 'itemType' | 'variantSelections' | 'attributePreferences' | 'confidenceLevel' | 'confidenceReason'>>): Promise<ShoppingListItem | undefined>;
+  updateShoppingListItem(id: number, fields: Partial<Pick<ShoppingListItem, 'productName' | 'normalizedName' | 'quantityValue' | 'unit' | 'category' | 'quantity' | 'selectedTier' | 'checked' | 'quantityInGrams' | 'ingredientId' | 'matchedProductId' | 'matchedStore' | 'matchedPrice' | 'availableStores' | 'smpRating' | 'itemType' | 'variantSelections' | 'attributePreferences' | 'confidenceLevel' | 'confidenceReason' | 'basketLabel'>>): Promise<ShoppingListItem | undefined>;
   removeShoppingListItem(id: number): Promise<void>;
   clearShoppingList(userId: number): Promise<void>;
   getMealPlans(userId: number): Promise<MealPlan[]>;
@@ -468,7 +468,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async updateShoppingListItem(id: number, fields: Partial<Pick<ShoppingListItem, 'productName' | 'normalizedName' | 'quantityValue' | 'unit' | 'quantityInGrams' | 'category' | 'quantity' | 'selectedTier' | 'checked' | 'ingredientId' | 'matchedProductId' | 'matchedStore' | 'matchedPrice' | 'availableStores' | 'smpRating' | 'itemType' | 'variantSelections' | 'attributePreferences' | 'confidenceLevel' | 'confidenceReason'>>): Promise<ShoppingListItem | undefined> {
+  async updateShoppingListItem(id: number, fields: Partial<Pick<ShoppingListItem, 'productName' | 'normalizedName' | 'quantityValue' | 'unit' | 'quantityInGrams' | 'category' | 'quantity' | 'selectedTier' | 'checked' | 'ingredientId' | 'matchedProductId' | 'matchedStore' | 'matchedPrice' | 'availableStores' | 'smpRating' | 'itemType' | 'variantSelections' | 'attributePreferences' | 'confidenceLevel' | 'confidenceReason' | 'basketLabel'>>): Promise<ShoppingListItem | undefined> {
     const [result] = await db.update(shoppingList).set(fields).where(eq(shoppingList.id, id)).returning();
     return result;
   }
