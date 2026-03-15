@@ -1,0 +1,46 @@
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- Do not add extra features, ideas, refactors, abstractions, or “nice to have” improvements unless explicitly requested.
+- Touch only the files and logic necessary for this task.
+- Reuse existing patterns, components, services, and schema structure wherever possible.
+- Keep implementation simple, targeted, and easy to maintain.
+- Minimise token usage, file churn, and unnecessary code generation.
+- Do not run broad tests. Only do the absolute minimum validation needed to avoid obvious breakage.
+- Do not create large new frameworks or generic systems where a small direct implementation will do.
+- Preserve existing behaviour unless this task explicitly requires a change.
+- Before making changes, inspect the relevant existing code paths and follow the current repo conventions closely.
+- After changes, provide a short summary of exactly what changed, which files changed, and any risks or follow-up notes.
+
+Task:
+Add a new database table called `food_knowledge` for the THA Food Encyclopedia.
+
+Required fields:
+- id
+- slug
+- type (`food`, `ingredient`, `additive`, `label`, `processing_flag`)
+- title
+- short_summary
+- why_tha_highlights_this
+- what_to_know
+- who_it_matters_to
+- simpler_alternatives
+- tags
+- source
+- is_active
+
+Implementation requirements:
+- Follow the repo’s existing schema and migration patterns exactly.
+- Use the lightest possible implementation that matches the current database approach.
+- Use JSON fields only if that matches existing project conventions.
+- Do not add admin tooling, editing UI, or unrelated models.
+- Do not alter existing tables unless strictly necessary for compatibility.
+
+Validation:
+- Only do the minimum required to ensure the schema compiles and migration shape is consistent with the repo.
+- Do not run broad or unnecessary tests.
+
+Output:
+- Apply the change directly.
+- Then provide a short summary of changed files and any migration notes.

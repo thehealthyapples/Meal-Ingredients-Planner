@@ -1015,3 +1015,22 @@ export type FoodDiaryEntry = typeof foodDiaryEntries.$inferSelect;
 export type InsertFoodDiaryEntry = z.infer<typeof insertFoodDiaryEntrySchema>;
 export type FoodDiaryMetrics = typeof foodDiaryMetrics.$inferSelect;
 export type InsertFoodDiaryMetrics = z.infer<typeof insertFoodDiaryMetricsSchema>;
+
+export const foodKnowledge = pgTable("food_knowledge", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  shortSummary: text("short_summary"),
+  whyThaHighlightsThis: text("why_tha_highlights_this"),
+  whatToKnow: text("what_to_know"),
+  whoItMattersTo: text("who_it_matters_to"),
+  simplerAlternatives: text("simpler_alternatives"),
+  tags: text("tags").array(),
+  source: text("source"),
+  isActive: boolean("is_active").notNull().default(true),
+});
+
+export const insertFoodKnowledgeSchema = createInsertSchema(foodKnowledge).omit({ id: true });
+export type FoodKnowledge = typeof foodKnowledge.$inferSelect;
+export type InsertFoodKnowledge = z.infer<typeof insertFoodKnowledgeSchema>;

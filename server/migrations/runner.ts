@@ -510,6 +510,26 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-14_create_food_knowledge",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS food_knowledge (
+        id                    SERIAL PRIMARY KEY,
+        slug                  TEXT NOT NULL UNIQUE,
+        type                  TEXT NOT NULL,
+        title                 TEXT NOT NULL,
+        short_summary         TEXT,
+        why_tha_highlights_this TEXT,
+        what_to_know          TEXT,
+        who_it_matters_to     TEXT,
+        simpler_alternatives  TEXT,
+        tags                  TEXT[],
+        source                TEXT,
+        is_active             BOOLEAN NOT NULL DEFAULT TRUE
+      )`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
