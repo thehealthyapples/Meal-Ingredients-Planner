@@ -48,6 +48,20 @@ export const mealTemplates = pgTable("meal_templates", {
   defaultProtein: integer("default_protein"),
   defaultCarbs: integer("default_carbs"),
   defaultFat: integer("default_fat"),
+  // shared-meal / personal-plate fields
+  title: text("title"),
+  cuisine: text("cuisine"),
+  sharedBaseComponents: text("shared_base_components").array(),
+  proteinSlots: text("protein_slots").array(),
+  carbSlots: text("carb_slots").array(),
+  vegSlots: text("veg_slots").array(),
+  toppingSlots: text("topping_slots").array(),
+  sauceSlots: text("sauce_slots").array(),
+  compatibleDiets: text("compatible_diets").array(),
+  estimatedTotalTime: integer("estimated_total_time"),
+  estimatedExtraTimePerVariant: integer("estimated_extra_time_per_variant"),
+  costBand: text("cost_band"),
+  isActive: boolean("is_active").notNull().default(true),
 });
 
 export const mealTemplateProducts = pgTable("meal_template_products", {
@@ -713,6 +727,19 @@ export const insertMealTemplateSchema = createInsertSchema(mealTemplates).pick({
   defaultProtein: true,
   defaultCarbs: true,
   defaultFat: true,
+  title: true,
+  cuisine: true,
+  sharedBaseComponents: true,
+  proteinSlots: true,
+  carbSlots: true,
+  vegSlots: true,
+  toppingSlots: true,
+  sauceSlots: true,
+  compatibleDiets: true,
+  estimatedTotalTime: true,
+  estimatedExtraTimePerVariant: true,
+  costBand: true,
+  isActive: true,
 });
 
 export const insertMealTemplateProductSchema = createInsertSchema(mealTemplateProducts).pick({

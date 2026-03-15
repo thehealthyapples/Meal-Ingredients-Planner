@@ -530,6 +530,26 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-15_extend_meal_templates",
+    statements: [
+      `ALTER TABLE meal_templates
+        ADD COLUMN IF NOT EXISTS title TEXT,
+        ADD COLUMN IF NOT EXISTS cuisine TEXT,
+        ADD COLUMN IF NOT EXISTS shared_base_components TEXT[],
+        ADD COLUMN IF NOT EXISTS protein_slots TEXT[],
+        ADD COLUMN IF NOT EXISTS carb_slots TEXT[],
+        ADD COLUMN IF NOT EXISTS veg_slots TEXT[],
+        ADD COLUMN IF NOT EXISTS topping_slots TEXT[],
+        ADD COLUMN IF NOT EXISTS sauce_slots TEXT[],
+        ADD COLUMN IF NOT EXISTS compatible_diets TEXT[],
+        ADD COLUMN IF NOT EXISTS estimated_total_time INTEGER,
+        ADD COLUMN IF NOT EXISTS estimated_extra_time_per_variant INTEGER,
+        ADD COLUMN IF NOT EXISTS cost_band TEXT,
+        ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
