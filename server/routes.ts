@@ -3764,6 +3764,32 @@ export async function registerRoutes(
     }
   });
 
+  // Recipe adaptation
+  app.post("/api/meals/:id/adapt", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { applyRecipeSwaps } = await import("./lib/recipe-swap-engine");
+      const bodySchema = z.object({
+        goal: z.enum(["vegetarian", "keto", "lower-cost", "less-processed", "under-time", "household"]),
+        memberExclusions: z.array(z.string()).optional(),
+      });
+      const body = bodySchema.parse(req.body);
+      const mealId = parseInt(req.params.id);
+      const meal = await storage.getMeal(mealId);
+      if (!meal) return res.status(404).json({ message: "Meal not found" });
+      const result = await applyRecipeSwaps(
+        { name: meal.name, ingredients: meal.ingredients },
+        body.goal,
+        { memberExclusions: body.memberExclusions }
+      );
+      res.json(result);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: "Invalid goal", errors: err.errors });
+      console.error("Error adapting recipe:", err);
+      res.status(500).json({ message: "Failed to adapt recipe" });
+    }
+  });
+
   // Planner routes (6-week planner)
   app.get("/api/planner/weeks", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

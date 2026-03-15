@@ -15,6 +15,17 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
 
+type SwapGoal = "vegetarian" | "keto" | "lower-cost" | "less-processed" | "under-time" | "household";
+
+interface ChangedIngredient { original: string; replacement: string; reason: string; }
+interface AdaptResult {
+  changedIngredients: ChangedIngredient[];
+  basketChanges: string[];
+  prepTimeChangeDelta: number | null;
+  costChange: "lower" | "higher" | "same" | null;
+  explanation: string;
+}
+
 export default function MealDetailPage() {
   const [, params] = useRoute("/meals/:id");
   const [, navigate] = useLocation();
@@ -23,6 +34,8 @@ export default function MealDetailPage() {
   const mealId = params?.id ? Number(params.id) : null;
   const [reimportOpen, setReimportOpen] = useState(false);
   const [reimportUrl, setReimportUrl] = useState("");
+  const [adaptResult, setAdaptResult] = useState<AdaptResult | null>(null);
+  const [adaptingGoal, setAdaptingGoal] = useState<string | null>(null);
 
   const [editName, setEditName] = useState("");
   const [editIngredients, setEditIngredients] = useState<string[]>([]);
@@ -180,6 +193,20 @@ export default function MealDetailPage() {
     },
   });
 
+  const adaptMutation = useMutation({
+    mutationFn: async (goal: SwapGoal) => {
+      const res = await apiRequest("POST", `/api/meals/${mealId}/adapt`, { goal });
+      return res.json() as Promise<AdaptResult>;
+    },
+    onSuccess: (data, goal) => {
+      setAdaptResult(data);
+      setAdaptingGoal(goal);
+    },
+    onError: () => {
+      toast({ title: "Adaptation failed", description: "Could not adapt this recipe. Please try again.", variant: "destructive" });
+    },
+  });
+
   const markChanged = useCallback(() => setHasChanges(true), []);
 
   const updateIngredient = (index: number, value: string) => {
@@ -328,28 +355,77 @@ export default function MealDetailPage() {
         </div>
       )}
 
-      <div className="flex gap-2 flex-wrap mb-5" data-testid="section-recipe-actions">
-        {[
-          { id: "adapt-household",   icon: <Users className="h-3.5 w-3.5 mr-1.5" />,       label: "Adapt for my household",  msg: "Household adaptation coming soon." },
-          { id: "make-vegetarian",   icon: <Leaf className="h-3.5 w-3.5 mr-1.5" />,        label: "Make this vegetarian",    msg: "Vegetarian adaptation coming soon." },
-          { id: "make-keto",         icon: <Zap className="h-3.5 w-3.5 mr-1.5" />,         label: "Make this keto",          msg: "Keto adaptation coming soon." },
-          { id: "lower-cost",        icon: <TrendingDown className="h-3.5 w-3.5 mr-1.5" />,label: "Lower the cost",          msg: "Cost-reduction adaptation coming soon." },
-          { id: "less-processed",    icon: <Sprout className="h-3.5 w-3.5 mr-1.5" />,      label: "Make this less processed",msg: "Lower-UPF adaptation coming soon." },
-          { id: "under-30",          icon: <Clock className="h-3.5 w-3.5 mr-1.5" />,       label: "Keep under 30 mins",      msg: "Time-reducing adaptation coming soon." },
-        ].map((action) => (
-          <Button
-            key={action.id}
-            variant="outline"
-            size="sm"
-            className="text-xs h-7 px-2.5"
-            data-testid={`button-recipe-action-${action.id}`}
-            onClick={() => toast({ title: action.label, description: action.msg })}
-          >
-            {action.icon}
-            {action.label}
-          </Button>
-        ))}
+      <div className="flex gap-2 flex-wrap mb-3" data-testid="section-recipe-actions">
+        {([
+          { id: "adapt-household", goal: "household"      as SwapGoal, icon: <Users className="h-3.5 w-3.5 mr-1.5" />,        label: "Adapt for my household"   },
+          { id: "make-vegetarian", goal: "vegetarian"     as SwapGoal, icon: <Leaf className="h-3.5 w-3.5 mr-1.5" />,         label: "Make this vegetarian"     },
+          { id: "make-keto",       goal: "keto"           as SwapGoal, icon: <Zap className="h-3.5 w-3.5 mr-1.5" />,          label: "Make this keto"           },
+          { id: "lower-cost",      goal: "lower-cost"     as SwapGoal, icon: <TrendingDown className="h-3.5 w-3.5 mr-1.5" />, label: "Lower the cost"           },
+          { id: "less-processed",  goal: "less-processed" as SwapGoal, icon: <Sprout className="h-3.5 w-3.5 mr-1.5" />,       label: "Make this less processed" },
+          { id: "under-30",        goal: "under-time"     as SwapGoal, icon: <Clock className="h-3.5 w-3.5 mr-1.5" />,        label: "Keep under 30 mins"       },
+        ] as const).map((action) => {
+          const isActive = adaptingGoal === action.goal && adaptMutation.isPending;
+          return (
+            <Button
+              key={action.id}
+              variant={adaptingGoal === action.goal && adaptResult ? "secondary" : "outline"}
+              size="sm"
+              className="text-xs h-7 px-2.5"
+              data-testid={`button-recipe-action-${action.id}`}
+              disabled={adaptMutation.isPending}
+              onClick={() => { setAdaptResult(null); adaptMutation.mutate(action.goal); }}
+            >
+              {isActive ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : action.icon}
+              {action.label}
+            </Button>
+          );
+        })}
       </div>
+
+      {adaptResult && (
+        <Card className="mb-5 border-muted" data-testid="card-adapt-result">
+          <CardContent className="p-4">
+            <div className="flex items-start justify-between gap-2 mb-3">
+              <p className="text-sm font-medium" data-testid="text-adapt-explanation">{adaptResult.explanation}</p>
+              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 -mt-0.5" onClick={() => { setAdaptResult(null); setAdaptingGoal(null); }} data-testid="button-close-adapt">
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+
+            {(adaptResult.costChange || adaptResult.prepTimeChangeDelta != null) && (
+              <div className="flex gap-3 mb-3 text-xs text-muted-foreground">
+                {adaptResult.costChange && adaptResult.costChange !== "same" && (
+                  <span data-testid="text-adapt-cost">
+                    Cost: <span className={adaptResult.costChange === "lower" ? "text-green-600" : "text-amber-600"}>
+                      {adaptResult.costChange === "lower" ? "likely lower" : "likely higher"}
+                    </span>
+                  </span>
+                )}
+                {adaptResult.prepTimeChangeDelta != null && adaptResult.prepTimeChangeDelta !== 0 && (
+                  <span data-testid="text-adapt-time">
+                    Time: <span className="text-green-600">~{Math.abs(adaptResult.prepTimeChangeDelta)} min saved</span>
+                  </span>
+                )}
+              </div>
+            )}
+
+            {adaptResult.changedIngredients.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic" data-testid="text-adapt-no-changes">No ingredient changes needed.</p>
+            ) : (
+              <div className="space-y-1.5" data-testid="list-adapt-changes">
+                {adaptResult.changedIngredients.map((c, i) => (
+                  <div key={i} className="text-xs" data-testid={`item-adapt-change-${i}`}>
+                    <span className="line-through text-muted-foreground">{c.original}</span>
+                    <span className="mx-1.5 text-muted-foreground">→</span>
+                    <span className="font-medium">{c.replacement}</span>
+                    <span className="ml-1.5 text-muted-foreground">({c.reason})</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="md:col-span-1">
