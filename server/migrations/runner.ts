@@ -550,6 +550,17 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-15_meals_meal_template_fk",
+    statements: [
+      `ALTER TABLE meals
+        ADD CONSTRAINT meals_meal_template_id_fkey
+        FOREIGN KEY (meal_template_id)
+        REFERENCES meal_templates(id)
+        ON DELETE SET NULL`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

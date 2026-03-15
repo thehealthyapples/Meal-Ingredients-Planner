@@ -88,7 +88,7 @@ export const meals = pgTable("meals", {
   servings: integer("servings").notNull().default(1),
   categoryId: integer("category_id"),
   sourceUrl: text("source_url"),
-  mealTemplateId: integer("meal_template_id"),
+  mealTemplateId: integer("meal_template_id").references(() => mealTemplates.id),
   mealSourceType: text("meal_source_type").notNull().default("scratch"),
   isReadyMeal: boolean("is_ready_meal").notNull().default(false),
   isSystemMeal: boolean("is_system_meal").notNull().default(false),
