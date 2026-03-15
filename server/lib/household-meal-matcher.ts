@@ -311,29 +311,87 @@ function scoreTemplate(
     extraPrepMinutes,
     fitScore: computeFitScore(breakdown),
     scoreBreakdown: breakdown,
-    explanation: buildExplanation(template, members, memberChanges, sharedIngredients),
+    explanation: buildExplanation(
+      members,
+      memberChanges,
+      sharedIngredients,
+      base,
+      swapsNeeded,
+      extraPrepMinutes,
+      breakdown,
+      settings
+    ),
   };
 }
 
 // ─── Explanation ──────────────────────────────────────────────────────────────
 
 function buildExplanation(
-  template: MealTemplate,
   members: MemberProfile[],
   memberChanges: MemberChange[],
-  sharedIngredients: string[]
+  sharedIngredients: string[],
+  base: string[],
+  swapsNeeded: string[],
+  extraPrepMinutes: number,
+  breakdown: ScoreBreakdown,
+  settings: HouseholdSettings
 ): string {
-  const name = template.title ?? template.name;
-  const n = memberChanges.length;
+  const phrases: string[] = [];
 
-  if (n === 0) {
-    return `${name} works for the whole household with no changes needed.`;
+  // 1. Profile fit
+  const variantCount = memberChanges.length;
+  if (variantCount === 0) {
+    phrases.push(`Fits all ${members.length} profile${members.length !== 1 ? "s" : ""}`);
+  } else {
+    const ok = members.length - variantCount;
+    phrases.push(`Fits ${ok} of ${members.length} profiles`);
   }
 
-  const sharedPart =
-    sharedIngredients.length > 0
-      ? ` Shared base: ${sharedIngredients.slice(0, 3).join(", ")}${sharedIngredients.length > 3 ? "…" : "."}`
-      : "";
+  // 2. Swaps
+  const allSwapLines = memberChanges.flatMap((c) => c.swaps);
+  const ruleSwaps = swapsNeeded.length;
+  const removals = allSwapLines.filter((s) => s.startsWith("remove ")).length;
+  if (ruleSwaps > 0) {
+    const dietSwaps = allSwapLines.filter((s) => s.includes("diet not covered"));
+    const dietLabel = dietSwaps.length > 0 ? " diet" : "";
+    phrases.push(`${ruleSwaps === 1 ? "One" : ruleSwaps} easy${dietLabel} swap${ruleSwaps !== 1 ? "s" : ""}`);
+  }
+  if (removals > 0) {
+    phrases.push(`${removals} ingredient removal${removals !== 1 ? "s" : ""}`);
+  }
 
-  return `${name} fits ${members.length - n} of ${members.length} members as-is.${sharedPart} ${n} member${n > 1 ? "s" : ""} need${n === 1 ? "s" : ""} adjustments.`;
+  // 3. Extra prep
+  if (extraPrepMinutes > 0) {
+    phrases.push(`Extra prep only ${extraPrepMinutes} min`);
+  }
+
+  // 4. Base overlap
+  if (base.length > 0) {
+    const overlapRatio = sharedIngredients.length / base.length;
+    if (overlapRatio >= 0.8) {
+      phrases.push("High ingredient overlap");
+    } else if (overlapRatio >= 0.4) {
+      phrases.push("Good base ingredient overlap");
+    }
+  }
+
+  // 5. UPF / health preference
+  if (settings.preferLessProcessed && breakdown.healthAlignment >= 0.6) {
+    phrases.push("Matches your lower-UPF preference");
+  }
+
+  // 6. Budget
+  if (breakdown.costFit === 1 && settings.budgetLevel) {
+    phrases.push("Fits your budget");
+  }
+
+  // 7. Time
+  if (
+    breakdown.timeFit === 1 &&
+    (settings.maxTotalCookTime != null || settings.maxExtraPrepMinutes != null)
+  ) {
+    phrases.push("Within your time limit");
+  }
+
+  return phrases.join(" · ");
 }
