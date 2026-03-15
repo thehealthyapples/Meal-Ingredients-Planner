@@ -5870,7 +5870,15 @@ export async function registerRoutes(
     try {
       const entry = await storage.getFoodKnowledgeBySlug(req.params.slug);
       if (!entry) return res.status(404).json({ message: "Not found" });
-      res.json(entry);
+
+      // Enrich with USDA nutrient snapshot for whole foods (best-effort, non-blocking)
+      let nutrientSnapshot = null;
+      if (entry.type === "food" || entry.type === "ingredient") {
+        const { getWholeFoodSnapshot } = await import("./lib/usda-whole-food-service");
+        nutrientSnapshot = await getWholeFoodSnapshot(entry.slug);
+      }
+
+      res.json({ ...entry, nutrientSnapshot });
     } catch (err) {
       console.error("[FoodKnowledge] slug error:", err);
       res.status(500).json({ message: "Failed to fetch entry" });
