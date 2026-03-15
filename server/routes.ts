@@ -5794,5 +5794,39 @@ export async function registerRoutes(
     }
   });
 
+  // ── Food Knowledge (Encyclopedia) ──────────────────────────────────────────
+  app.get("/api/food-knowledge", async (req, res) => {
+    try {
+      const entries = await storage.getFoodKnowledgeAll();
+      res.json(entries);
+    } catch (err) {
+      console.error("[FoodKnowledge] list error:", err);
+      res.status(500).json({ message: "Failed to fetch food knowledge" });
+    }
+  });
+
+  app.get("/api/food-knowledge/search", async (req, res) => {
+    const q = String(req.query.q ?? "").trim();
+    if (!q) return res.json([]);
+    try {
+      const results = await storage.searchFoodKnowledge(q);
+      res.json(results);
+    } catch (err) {
+      console.error("[FoodKnowledge] search error:", err);
+      res.status(500).json({ message: "Search failed" });
+    }
+  });
+
+  app.get("/api/food-knowledge/:slug", async (req, res) => {
+    try {
+      const entry = await storage.getFoodKnowledgeBySlug(req.params.slug);
+      if (!entry) return res.status(404).json({ message: "Not found" });
+      res.json(entry);
+    } catch (err) {
+      console.error("[FoodKnowledge] slug error:", err);
+      res.status(500).json({ message: "Failed to fetch entry" });
+    }
+  });
+
   return httpServer;
 }

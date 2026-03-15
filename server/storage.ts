@@ -1,7 +1,7 @@
-import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics } from "@shared/schema";
+import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
-import { eq, and, ilike, sql, inArray, isNull, isNotNull } from "drizzle-orm";
+import { eq, and, ilike, or, sql, inArray, isNull, isNotNull } from "drizzle-orm";
 import { getHouseholdForUser } from "./lib/household";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -254,6 +254,11 @@ export interface IStorage {
   createDemoUser(): Promise<User>;
   seedDemoData(userId: number): Promise<void>;
   cleanupDemoUser(userId: number): Promise<void>;
+
+  // ── Food Knowledge ────────────────────────────────────────────────────────────
+  getFoodKnowledgeAll(): Promise<FoodKnowledge[]>;
+  getFoodKnowledgeBySlug(slug: string): Promise<FoodKnowledge | null>;
+  searchFoodKnowledge(q: string): Promise<FoodKnowledge[]>;
 
   sessionStore: session.Store;
 }
@@ -2789,6 +2794,32 @@ export class DatabaseStorage implements IStorage {
     }
 
     await db.delete(users).where(eq(users.id, userId));
+  }
+
+  async getFoodKnowledgeAll(): Promise<FoodKnowledge[]> {
+    return db.select().from(foodKnowledge)
+      .where(eq(foodKnowledge.isActive, true))
+      .orderBy(foodKnowledge.type, foodKnowledge.title);
+  }
+
+  async getFoodKnowledgeBySlug(slug: string): Promise<FoodKnowledge | null> {
+    const [row] = await db.select().from(foodKnowledge)
+      .where(and(eq(foodKnowledge.slug, slug), eq(foodKnowledge.isActive, true)));
+    return row ?? null;
+  }
+
+  async searchFoodKnowledge(q: string): Promise<FoodKnowledge[]> {
+    const pattern = `%${q}%`;
+    return db.select().from(foodKnowledge)
+      .where(and(
+        eq(foodKnowledge.isActive, true),
+        or(
+          ilike(foodKnowledge.title, pattern),
+          ilike(foodKnowledge.shortSummary, pattern),
+          ilike(foodKnowledge.type, pattern),
+        )
+      ))
+      .orderBy(foodKnowledge.title);
   }
 }
 
