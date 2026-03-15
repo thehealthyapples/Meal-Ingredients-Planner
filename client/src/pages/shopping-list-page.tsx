@@ -708,8 +708,24 @@ function ProductAnalyseModal({ open, onOpenChange, item }: { open: boolean; onOp
   const [hideBovaer, setHideBovaer] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const [badAppleProduct, setBadAppleProduct] = useState<any>(null);
+  const [showWFRecipe, setShowWFRecipe] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
+
+  const addWFToBasket = useMutation({
+    mutationFn: async (ingredients: string[]) => {
+      for (const ing of ingredients) {
+        await apiRequest("POST", "/api/shopping-list/extras", { name: ing, category: "other" });
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] });
+      toast({ title: "Added to basket", description: "Wholefood recipe ingredients added to your basket." });
+    },
+    onError: () => {
+      toast({ title: "Failed to add", description: "Could not add ingredients to basket.", variant: "destructive" });
+    },
+  });
 
   useEffect(() => {
     if (open && item.productName) {
@@ -972,26 +988,53 @@ function ProductAnalyseModal({ open, onOpenChange, item }: { open: boolean; onOp
                       </span>
                     </div>
                   </div>
-                  <div>
-                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Ingredients</p>
-                    <ul className="space-y-0.5">
-                      {wholeFoodAlt.ingredients.map((ing, i) => (
-                        <li key={i} className="text-xs text-foreground flex items-start gap-1.5">
-                          <span className="text-muted-foreground mt-0.5 flex-shrink-0">·</span>
-                          {ing}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Method</p>
-                    <p className="text-xs leading-relaxed">{wholeFoodAlt.method}</p>
-                  </div>
-                  {wholeFoodAlt.tip && (
-                    <p className="text-[11px] text-muted-foreground italic leading-relaxed border-t border-green-200 dark:border-green-800 pt-2">
-                      💡 {wholeFoodAlt.tip}
-                    </p>
+                  {showWFRecipe && (
+                    <>
+                      <div>
+                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Ingredients</p>
+                        <ul className="space-y-0.5">
+                          {wholeFoodAlt.ingredients.map((ing, i) => (
+                            <li key={i} className="text-xs text-foreground flex items-start gap-1.5">
+                              <span className="text-muted-foreground mt-0.5 flex-shrink-0">·</span>
+                              {ing}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Method</p>
+                        <p className="text-xs leading-relaxed">{wholeFoodAlt.method}</p>
+                      </div>
+                      {wholeFoodAlt.tip && (
+                        <p className="text-[11px] text-muted-foreground italic leading-relaxed border-t border-green-200 dark:border-green-800 pt-2">
+                          💡 {wholeFoodAlt.tip}
+                        </p>
+                      )}
+                    </>
                   )}
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs px-3 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40"
+                      onClick={() => setShowWFRecipe(v => !v)}
+                      data-testid="button-view-wf-recipe"
+                    >
+                      <ChefHat className="h-3 w-3 mr-1" />
+                      {showWFRecipe ? 'Hide Recipe' : 'View Recipe'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs px-3 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40"
+                      onClick={() => addWFToBasket.mutate(wholeFoodAlt.ingredients)}
+                      disabled={addWFToBasket.isPending}
+                      data-testid="button-add-wf-to-basket"
+                    >
+                      {addWFToBasket.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <ShoppingCart className="h-3 w-3 mr-1" />}
+                      Add to Basket
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ) : (
