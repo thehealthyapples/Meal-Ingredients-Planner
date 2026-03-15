@@ -1,0 +1,52 @@
+Phase 4 — Household Fit Score
+Step 11 prompt — implement scoring logic
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- Do not add extra features, ideas, refactors, abstractions, or “nice to have” improvements unless explicitly requested.
+- Touch only the files and logic necessary for this task.
+- Reuse existing patterns, components, services, and schema structure wherever possible.
+- Keep implementation simple, targeted, and easy to maintain.
+- Minimise token usage, file churn, and unnecessary code generation.
+- Do not run broad tests. Only do the absolute minimum validation needed to avoid obvious breakage.
+- Do not create large new frameworks or generic systems where a small direct implementation will do.
+- Preserve existing behaviour unless this task explicitly requires a change.
+- Before making changes, inspect the relevant existing code paths and follow the current repo conventions closely.
+- After changes, provide a short summary of exactly what changed, which files changed, and any risks or follow-up notes.
+
+Task:
+Add a simple first-pass Household Fit Score to support ranking meal options.
+
+Use these score components:
+- compatibility
+- shared base overlap
+- swap simplicity
+- time fit
+- cost fit
+- health alignment
+- preference confidence
+
+Suggested first version:
+score =
+  compatibility * 0.25 +
+  sharedBase * 0.20 +
+  swapSimplicity * 0.15 +
+  timeFit * 0.10 +
+  costFit * 0.10 +
+  healthAlignment * 0.10 +
+  preferenceConfidence * 0.10
+
+Requirements:
+- Keep this implementation very simple and easy to adjust.
+- Hardcoded weights are fine for now.
+- Do not build a full ranking framework.
+- Do not add experimentation layers, analytics engines, or tuning systems.
+
+Validation:
+- Only do the minimum validation needed to confirm scoring executes without obvious breakage.
+- Do not run broad tests.
+
+Output:
+- Apply the scoring logic.
+- Then provide a short summary of changed files, score inputs used, and where the score is consumed.
