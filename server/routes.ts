@@ -3974,6 +3974,24 @@ export async function registerRoutes(
     }
   });
 
+  app.delete("/api/planner/weeks/:weekId/entries", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const weekId = Number(req.params.weekId);
+      const week = await storage.getPlannerWeek(weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Week not found" });
+      const entries = await storage.getPlannerEntriesForWeek(weekId);
+      for (const entry of entries) {
+        await storage.deletePlannerEntry(entry.id);
+      }
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Error clearing planner week:", err);
+      res.status(500).json({ message: "Failed to clear week" });
+    }
+  });
+
   app.patch("/api/planner/entries/:entryId", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {

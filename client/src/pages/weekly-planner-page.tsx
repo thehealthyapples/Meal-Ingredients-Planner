@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TemplatesPanel } from "@/components/templates-panel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
@@ -107,6 +107,7 @@ export default function WeeklyPlannerPage() {
   const [activeWeek, setActiveWeek] = useState("1");
   const [renameWeekId, setRenameWeekId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [clearWeekId, setClearWeekId] = useState<number | null>(null);
   const [mealPickerOpen, setMealPickerOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<EntryTarget | null>(null);
   const [mealSearch, setMealSearch] = useState("");
@@ -237,6 +238,21 @@ export default function WeeklyPlannerPage() {
     },
     onError: () => {
       toast({ title: "Failed to rename week", variant: "destructive" });
+    },
+  });
+
+  const clearWeekMutation = useMutation({
+    mutationFn: async (weekId: number) => {
+      const res = await apiRequest("DELETE", `/api/planner/weeks/${weekId}/entries`);
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      setClearWeekId(null);
+      toast({ title: "Week cleared", description: "All meals for this week have been removed." });
+    },
+    onError: () => {
+      toast({ title: "Failed to clear week", variant: "destructive" });
     },
   });
 
@@ -679,6 +695,17 @@ export default function WeeklyPlannerPage() {
                   </Button>
                 );
               })}
+              <div className="h-4 w-px bg-border mx-0.5" />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                onClick={() => setClearWeekId(week.id)}
+                data-testid={`button-clear-week-${week.weekNumber}`}
+              >
+                <Trash2 className="h-3 w-3 mr-1" />
+                Clear This Week
+              </Button>
             </div>
 
             {/* ── Mobile: single-day view (hidden on sm+) ── */}
@@ -1457,6 +1484,31 @@ export default function WeeklyPlannerPage() {
       </Dialog>
 
       <TemplatesPanel open={templatesOpen} onClose={() => setTemplatesOpen(false)} user={user} />
+      <Dialog open={clearWeekId !== null} onOpenChange={(v) => { if (!v) setClearWeekId(null); }}>
+        <DialogContent className="max-w-sm" data-testid="dialog-clear-week">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-4 w-4 text-destructive" />
+              Clear This Week
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">All scheduled meals for this week will be removed. Recipes, templates, and other weeks are not affected.</p>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" size="sm" onClick={() => setClearWeekId(null)} data-testid="button-clear-week-cancel">Cancel</Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={clearWeekMutation.isPending}
+              onClick={() => clearWeekId !== null && clearWeekMutation.mutate(clearWeekId)}
+              data-testid="button-clear-week-confirm"
+            >
+              {clearWeekMutation.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
+              Clear Week
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <SharePlanDialog open={sharePlanOpen} onOpenChange={setSharePlanOpen} />
     </div>
   );
