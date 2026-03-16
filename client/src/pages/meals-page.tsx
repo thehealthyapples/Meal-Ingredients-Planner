@@ -284,7 +284,7 @@ function CategoryBadge({ categoryId, categories }: { categoryId: number | null; 
   );
 }
 
-function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, audience, isFreezerEligible, onFreezeClick, servings, sourceUrl }: {
+function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, audience, isFreezerEligible, onFreezeClick, servings, sourceUrl, mealFormat }: {
   mealId: number;
   mealName: string;
   ingredients: string[];
@@ -295,6 +295,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
   onFreezeClick: () => void;
   servings?: number;
   sourceUrl?: string | null;
+  mealFormat?: string | null;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -431,7 +432,11 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                 variant="ghost"
                 onClick={(e) => {
                   e.stopPropagation();
-                  editCopyMutation.mutate();
+                  if (mealFormat === "grouped") {
+                    navigate(`/quick-meal?edit=${mealId}`);
+                  } else {
+                    editCopyMutation.mutate();
+                  }
                 }}
                 disabled={editCopyMutation.isPending}
                 data-testid={`button-edit-recipe-${mealId}`}
@@ -2286,6 +2291,7 @@ export default function MealsPage() {
                         onFreezeClick={() => setAddToFreezerMealId(meal.id)}
                         servings={meal.servings}
                         sourceUrl={meal.sourceUrl}
+                        mealFormat={meal.mealFormat}
                       />
                     </CardFooter>
                   </Card>
@@ -2402,6 +2408,7 @@ export default function MealsPage() {
                             onFreezeClick={() => setAddToFreezerMealId(meal.id)}
                             servings={meal.servings}
                             sourceUrl={meal.sourceUrl}
+                            mealFormat={meal.mealFormat}
                           />
                           {!meal.isSystemMeal && (
                             <Button

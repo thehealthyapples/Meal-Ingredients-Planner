@@ -1,0 +1,66 @@
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- Do not add extra features, ideas, refactors, abstractions, or “nice to have” improvements unless explicitly requested.
+- Touch only the files and logic necessary for this task.
+- Reuse existing patterns, components, services, schema structure, meal card UI, planner flows, basket flows, freezer flows, analyser flows, and edit flows wherever possible.
+- Keep implementation simple, targeted, and easy to maintain.
+- Minimise token usage, file churn, and unnecessary code generation.
+- Do not run broad tests. Only do the absolute minimum validation needed to avoid obvious breakage.
+- Preserve existing behaviour unless this task explicitly requires a change.
+
+Task:
+Ensure that a saved grouped meal created via Meal Builder behaves like a normal My Meals meal card.
+
+Required behaviour:
+Once a grouped meal is saved, it should appear in My Meals and support the same core actions as other meal cards, including:
+- Add to basket
+- Add to planner
+- Website
+- Add to freezer
+- Analyser
+- Edit
+- Serves / how many it serves
+
+Implementation requirements:
+- Reuse the existing My Meals card component and action patterns as much as possible.
+- Do not build a separate card system for grouped meals unless absolutely necessary.
+- Extend the current meal card/action handling in the smallest possible way to support grouped meals.
+
+Specific rules:
+1. Add to basket:
+- add the grouped meal ingredients using existing basket logic
+- merge shared ingredients where appropriate
+
+2. Add to planner:
+- save/add the grouped meal as a planner meal entry
+
+3. Website:
+- if grouped meal components have multiple source URLs, open all applicable source sites for that grouped meal
+- only include links that actually exist
+
+4. Add to freezer:
+- support freezer action at grouped meal level using the simplest existing pattern possible
+
+5. Analyser:
+- allow grouped meals to be analysed using the simplest extension of the current analyser flow
+
+6. Edit:
+- editing a grouped meal should reopen Meal Builder / grouped meal editing flow, not a normal single-recipe edit path
+
+7. Serves:
+- grouped meals should show and store a serves value
+- use the simplest practical approach consistent with current meal models
+
+Validation:
+- Only do the minimum needed to confirm grouped meals now appear and behave like normal meal cards with these actions.
+- Do not run broad tests.
+
+After implementing:
+Provide a short summary of:
+- which files changed
+- how grouped meals now appear in My Meals
+- which existing meal card actions were reused
+- any grouped-meal-specific handling added
+- any first-version limitations
