@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, X, ShoppingBasket, Loader2, ChefHat, Leaf, Save, Globe, UtensilsCrossed, Snowflake, Search, Check, ChevronDown, ChevronUp, Utensils } from "lucide-react";
+import { Plus, X, ShoppingBasket, Loader2, ChefHat, Leaf, Save, Globe, UtensilsCrossed, Snowflake, Check, ChevronDown, ChevronUp, Utensils, ImageOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { getWholeFoodAlternative } from "@/lib/whole-food-alternatives";
@@ -63,7 +63,7 @@ function sourceLabel(source: PartSource): string {
   }
 }
 
-function sourceBadgeVariant(type: PartSource["type"]): string {
+function sourceBadgeClass(type: PartSource["type"]): string {
   switch (type) {
     case "web": return "border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-400";
     case "my-meal": return "border-purple-300 text-purple-700 dark:border-purple-700 dark:text-purple-400";
@@ -72,6 +72,8 @@ function sourceBadgeVariant(type: PartSource["type"]): string {
     default: return "border-border text-muted-foreground";
   }
 }
+
+const PAGE_SIZE = 4;
 
 let partIdCounter = 0;
 function makeId() { return `part-${++partIdCounter}`; }
@@ -92,7 +94,9 @@ export default function QuickMealPage() {
   const [expandedPartId, setExpandedPartId] = useState<string | null>(null);
   const [webResults, setWebResults] = useState<Record<string, WebSearchRecipe[]>>({});
   const [webLoading, setWebLoading] = useState<Record<string, boolean>>({});
+  const [webDisplayCount, setWebDisplayCount] = useState<Record<string, number>>({});
   const [myMealResults, setMyMealResults] = useState<Record<string, Meal[]>>({});
+  const fetchedParts = useRef<Set<string>>(new Set());
 
   const { data: userMeals = [] } = useQuery<Meal[]>({
     queryKey: [api.meals.list.path],
@@ -122,6 +126,34 @@ export default function QuickMealPage() {
     }
   }, [existingMeal]);
 
+  const searchWeb = useCallback(async (partId: string, label: string) => {
+    if (fetchedParts.current.has(partId)) return;
+    fetchedParts.current.add(partId);
+    setWebLoading((prev) => ({ ...prev, [partId]: true }));
+    try {
+      const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(label)}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Search failed");
+      const data: { recipes: WebSearchRecipe[] } = await res.json();
+      setWebResults((prev) => ({ ...prev, [partId]: data.recipes }));
+      setWebDisplayCount((prev) => ({ ...prev, [partId]: PAGE_SIZE }));
+    } catch {
+      fetchedParts.current.delete(partId);
+      toast({ title: "Search failed", description: "Could not fetch recipes.", variant: "destructive" });
+    } finally {
+      setWebLoading((prev) => ({ ...prev, [partId]: false }));
+    }
+  }, [toast]);
+
+  useEffect(() => {
+    if (!expandedPartId) return;
+    const part = parts.find((p) => p.id === expandedPartId);
+    if (!part) return;
+    searchWeb(expandedPartId, part.label);
+    const q = part.label.toLowerCase();
+    const matches = userMeals.filter((m) => !m.isSystemMeal && m.name.toLowerCase().includes(q)).slice(0, 5);
+    setMyMealResults((prev) => ({ ...prev, [expandedPartId]: matches }));
+  }, [expandedPartId]);
+
   const addItem = () => {
     const trimmed = inputValue.trim();
     if (!trimmed) return;
@@ -144,27 +176,9 @@ export default function QuickMealPage() {
     setExpandedPartId((prev) => prev === id ? null : id);
   };
 
-  const searchWeb = useCallback(async (partId: string, label: string) => {
-    setWebLoading((prev) => ({ ...prev, [partId]: true }));
-    try {
-      const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(label)}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Search failed");
-      const data: { recipes: WebSearchRecipe[] } = await res.json();
-      setWebResults((prev) => ({ ...prev, [partId]: data.recipes.slice(0, 5) }));
-    } catch {
-      toast({ title: "Search failed", description: "Could not fetch recipes.", variant: "destructive" });
-    } finally {
-      setWebLoading((prev) => ({ ...prev, [partId]: false }));
-    }
-  }, [toast]);
-
-  const searchMyMeals = useCallback((partId: string, label: string) => {
-    const q = label.toLowerCase();
-    const matches = userMeals
-      .filter((m) => !m.isSystemMeal && m.name.toLowerCase().includes(q))
-      .slice(0, 5);
-    setMyMealResults((prev) => ({ ...prev, [partId]: matches }));
-  }, [userMeals]);
+  const loadMore = (partId: string) => {
+    setWebDisplayCount((prev) => ({ ...prev, [partId]: (prev[partId] ?? PAGE_SIZE) + PAGE_SIZE }));
+  };
 
   const buildInstructions = (currentParts: MealPart[]): string[] => {
     const hasSources = currentParts.some((p) => p.source.type !== "basic");
@@ -283,17 +297,21 @@ export default function QuickMealPage() {
                   {parts.map((part, idx) => {
                     const wf = getWholeFoodAlternative(part.label);
                     const isOpen = expandedPartId === part.id;
-                    const webRes = webResults[part.id] ?? [];
+                    const allWebRes = webResults[part.id] ?? [];
+                    const displayCount = webDisplayCount[part.id] ?? PAGE_SIZE;
+                    const visibleWebRes = allWebRes.slice(0, displayCount);
+                    const hasMore = allWebRes.length > displayCount;
                     const myMeals = myMealResults[part.id] ?? [];
-                    const isSearchingWeb = webLoading[part.id] ?? false;
+                    const isSearching = webLoading[part.id] ?? false;
 
                     return (
                       <li key={part.id} className="rounded-md border border-border overflow-hidden" data-testid={`item-quick-meal-${idx}`}>
+                        {/* Row */}
                         <div className="flex items-center gap-2 px-3 py-2 text-sm">
                           <span className="flex-1 font-medium">{part.label}</span>
 
                           {part.source.type !== "basic" && (
-                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0.5 flex items-center gap-1 shrink-0 ${sourceBadgeVariant(part.source.type)}`}>
+                            <Badge variant="outline" className={`text-[10px] px-1.5 py-0.5 flex items-center gap-1 shrink-0 ${sourceBadgeClass(part.source.type)}`}>
                               {part.source.type === "web" && <Globe className="h-2.5 w-2.5" />}
                               {part.source.type === "my-meal" && <Utensils className="h-2.5 w-2.5" />}
                               {part.source.type === "fresh" && <Leaf className="h-2.5 w-2.5" />}
@@ -313,7 +331,6 @@ export default function QuickMealPage() {
                             onClick={() => toggleExpanded(part.id)}
                             className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
                             data-testid={`button-source-picker-${idx}`}
-                            title="Resolve source"
                           >
                             {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                           </button>
@@ -327,10 +344,11 @@ export default function QuickMealPage() {
                           </button>
                         </div>
 
+                        {/* Source picker panel */}
                         {isOpen && (
-                          <div className="border-t border-border bg-muted/30 px-3 pb-3 pt-2 space-y-2">
-                            <p className="text-xs text-muted-foreground font-medium mb-2">Resolve "{part.label}" from:</p>
+                          <div className="border-t border-border bg-muted/30 px-3 pb-3 pt-2 space-y-3">
 
+                            {/* Quick type buttons */}
                             <div className="flex flex-wrap gap-1.5">
                               <Button
                                 size="sm"
@@ -340,7 +358,7 @@ export default function QuickMealPage() {
                                 data-testid={`button-source-basic-${idx}`}
                               >
                                 {part.source.type === "basic" && <Check className="h-3 w-3 mr-1" />}
-                                Basic item
+                                Basic
                               </Button>
                               <Button
                                 size="sm"
@@ -366,33 +384,12 @@ export default function QuickMealPage() {
                               </Button>
                             </div>
 
-                            <div className="flex gap-1.5 mt-1">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs h-7 px-2 flex-1"
-                                onClick={() => searchMyMeals(part.id, part.label)}
-                                data-testid={`button-source-mymeals-${idx}`}
-                              >
-                                <UtensilsCrossed className="h-3 w-3 mr-1" />
-                                My Meals
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs h-7 px-2 flex-1"
-                                onClick={() => searchWeb(part.id, part.label)}
-                                disabled={isSearchingWeb}
-                                data-testid={`button-source-web-${idx}`}
-                              >
-                                {isSearchingWeb ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Search className="h-3 w-3 mr-1" />}
-                                Search web
-                              </Button>
-                            </div>
-
+                            {/* My Meals matches (compact list) */}
                             {myMeals.length > 0 && (
-                              <div className="space-y-1 mt-1">
-                                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">My Meals matches</p>
+                              <div className="space-y-1">
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                                  <UtensilsCrossed className="h-3 w-3" /> My Meals
+                                </p>
                                 {myMeals.map((m) => (
                                   <button
                                     key={m.id}
@@ -409,38 +406,84 @@ export default function QuickMealPage() {
                               </div>
                             )}
 
-                            {webRes.length > 0 && (
-                              <div className="space-y-1 mt-1">
-                                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Web results</p>
-                                {webRes.map((r) => (
-                                  <button
-                                    key={r.id}
-                                    className="w-full text-left text-xs rounded border border-border px-2 py-1.5 hover:bg-accent transition-colors"
-                                    onClick={() => updatePartSource(part.id, {
-                                      type: "web",
-                                      url: r.url ?? undefined,
-                                      displayName: r.name,
-                                      sourceName: r.source,
-                                    })}
-                                    data-testid={`result-web-${r.id}`}
-                                  >
-                                    <div className="flex items-center justify-between gap-2">
-                                      <span className="font-medium truncate">{r.name}</span>
-                                      <div className="flex items-center gap-1 shrink-0">
-                                        {r.source && <span className="text-[10px] text-muted-foreground">{r.source}</span>}
-                                        {part.source.type === "web" && part.source.displayName === r.name && (
-                                          <Check className="h-3 w-3 text-primary" />
-                                        )}
-                                      </div>
-                                    </div>
-                                  </button>
-                                ))}
-                              </div>
-                            )}
+                            {/* Web recipe image grid */}
+                            <div className="space-y-2">
+                              <p className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                                <Globe className="h-3 w-3" /> Recipes
+                              </p>
 
-                            {webRes.length === 0 && myMeals.length === 0 && !isSearchingWeb && (
-                              <p className="text-[11px] text-muted-foreground text-center py-1">Click "My Meals" or "Search web" to find a recipe for this part.</p>
-                            )}
+                              {isSearching ? (
+                                <div className="flex items-center justify-center py-6">
+                                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                                </div>
+                              ) : visibleWebRes.length > 0 ? (
+                                <>
+                                  <div className="grid grid-cols-2 gap-2" data-testid={`grid-web-results-${idx}`}>
+                                    {visibleWebRes.map((r) => {
+                                      const isSelected = part.source.type === "web" && part.source.displayName === r.name;
+                                      return (
+                                        <button
+                                          key={r.id}
+                                          className={`relative rounded-md overflow-hidden border-2 text-left transition-all ${isSelected ? "border-primary" : "border-border hover:border-primary/50"}`}
+                                          onClick={() => updatePartSource(part.id, {
+                                            type: "web",
+                                            url: r.url ?? undefined,
+                                            displayName: r.name,
+                                            sourceName: r.source,
+                                          })}
+                                          data-testid={`result-web-${r.id}`}
+                                        >
+                                          {/* Image */}
+                                          <div className="w-full aspect-square bg-muted relative">
+                                            {r.image ? (
+                                              <img
+                                                src={r.image}
+                                                alt={r.name}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                                              />
+                                            ) : (
+                                              <div className="w-full h-full flex items-center justify-center">
+                                                <ImageOff className="h-6 w-6 text-muted-foreground/40" />
+                                              </div>
+                                            )}
+                                            {isSelected && (
+                                              <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                                                <div className="bg-primary rounded-full p-1">
+                                                  <Check className="h-3 w-3 text-primary-foreground" />
+                                                </div>
+                                              </div>
+                                            )}
+                                          </div>
+                                          {/* Caption */}
+                                          <div className="px-1.5 py-1.5 bg-background">
+                                            <p className="text-[11px] font-medium leading-tight line-clamp-2">{r.name}</p>
+                                            {r.source && (
+                                              <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{r.source}</p>
+                                            )}
+                                          </div>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+
+                                  {hasMore && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="w-full text-xs h-7 mt-1"
+                                      onClick={() => loadMore(part.id)}
+                                      data-testid={`button-load-more-${idx}`}
+                                    >
+                                      Load more
+                                    </Button>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-[11px] text-muted-foreground text-center py-3">No recipes found for "{part.label}".</p>
+                              )}
+                            </div>
+
                           </div>
                         )}
                       </li>
@@ -450,7 +493,7 @@ export default function QuickMealPage() {
               )}
 
               {parts.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-4">Add components above, then optionally resolve each one from a recipe source.</p>
+                <p className="text-xs text-muted-foreground text-center py-4">Add components above, then tap ▼ to pick a recipe source for each one.</p>
               )}
             </CardContent>
           </Card>
