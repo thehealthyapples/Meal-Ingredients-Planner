@@ -36,6 +36,7 @@ import DemoPlannerPage from "@/pages/demo-planner-page";
 import DemoBasketPage from "@/pages/demo-basket-page";
 import DemoMealsPage from "@/pages/demo-meals-page";
 import PartnersPage from "@/pages/partners-page";
+import QuickMealPage from "@/pages/quick-meal-page";
 
 let _contentRenderMeasured = false;
 
@@ -103,6 +104,7 @@ function Router() {
       <Route path="/diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
       <Route path="/shared/:token" component={SharedPlanPage} />
       <Route path="/partners" component={() => <ProtectedRoute component={PartnersPage} />} />
+      <Route path="/quick-meal" component={() => <ProtectedRoute component={QuickMealPage} />} />
 
       <Route path="/demo" component={() => <DemoRoute component={DemoOverviewPage} />} />
       <Route path="/demo/planner" component={() => <DemoRoute component={DemoPlannerPage} />} />

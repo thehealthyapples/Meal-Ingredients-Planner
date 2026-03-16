@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2 } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap } from "lucide-react";
 import { ScanConfirmDialog } from "@/components/scan-confirm-dialog";
 import { IngredientRow, buildIngredientString } from "@/components/ingredient-input";
 import { CameraModal } from "@/components/camera-modal";
@@ -1651,6 +1651,15 @@ export default function MealsPage() {
             data-testid="input-scan-file"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleScanFile(f); }}
           />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/quick-meal")}
+            data-testid="button-quick-meal"
+          >
+            <Zap className="h-4 w-4 mr-1.5" />
+            Quick Meal
+          </Button>
           <AddMealGatewayDialog onScan={() => setCameraModalOpen(true)} />
           {(!importStatus || importStatus.totalImported === 0) && (
             <Button

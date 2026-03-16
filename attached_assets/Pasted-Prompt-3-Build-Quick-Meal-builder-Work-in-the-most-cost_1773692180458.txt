@@ -1,0 +1,58 @@
+Prompt 3 — Build “Quick Meal” builder
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- Do not add extra features, ideas, refactors, abstractions, or “nice to have” improvements unless explicitly requested.
+- Touch only the files and logic necessary for this task.
+- Reuse existing patterns, components, services, and schema structure wherever possible.
+- Keep implementation simple, targeted, and easy to maintain.
+- Minimise token usage, file churn, and unnecessary code generation.
+- Do not run broad tests. Only do the absolute minimum validation needed to avoid obvious breakage.
+- Preserve existing behaviour unless this task explicitly requires a change.
+
+Task:
+Create a lightweight "Quick Meal" flow to help users quickly assemble a meal without creating a full recipe.
+
+Example use case:
+A user wants to quickly plan a roast dinner by entering items such as:
+- chicken
+- carrots
+- mixed veg
+- roast potatoes
+- cauliflower cheese
+- gravy
+- mint sauce
+- Yorkshire puddings
+- braised cabbage
+
+Required behaviour:
+- Add a new "Quick Meal" option.
+- User can enter meal components line-by-line.
+- THA builds a combined ingredient list from those components.
+- The result can be opened in the basket as a shopping list.
+
+Implementation requirements:
+- This must be a lightweight tool, not a full recipe creation system.
+- Reuse ingredient search and basket logic already in the app.
+- Do not introduce a new recipe model unless absolutely necessary.
+- Treat Quick Meal primarily as a fast list builder.
+
+UI requirements:
+- Simple interface:
+  - meal name optional
+  - add components one at a time
+  - button: "Create Basket List"
+
+Optional if cheap to support:
+- show quick wholefood suggestions for items if available.
+
+Validation:
+- Only ensure that components correctly generate a basket list.
+- Do not run broad tests.
+
+After implementing:
+Provide a short summary of:
+- which files changed
+- where the Quick Meal feature appears
+- how the basket list is generated.
