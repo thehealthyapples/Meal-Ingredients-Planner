@@ -284,7 +284,24 @@ function CategoryBadge({ categoryId, categories }: { categoryId: number | null; 
   );
 }
 
-function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, audience, isFreezerEligible, onFreezeClick, servings, sourceUrl, mealFormat }: {
+interface GroupedPartSource {
+  type: "basic" | "web" | "my-meal" | "fresh" | "frozen";
+  url?: string;
+  displayName?: string;
+  sourceName?: string;
+  mealId?: number;
+}
+
+function parseGroupedSources(instructions: string[] | null | undefined): Record<string, GroupedPartSource> | null {
+  if (!instructions || instructions.length === 0) return null;
+  try {
+    const parsed = JSON.parse(instructions[0]);
+    if (parsed.__v === 1 && parsed.sources) return parsed.sources as Record<string, GroupedPartSource>;
+  } catch { }
+  return null;
+}
+
+function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, audience, isFreezerEligible, onFreezeClick, servings, sourceUrl, mealFormat, instructions }: {
   mealId: number;
   mealName: string;
   ingredients: string[];
@@ -296,6 +313,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
   servings?: number;
   sourceUrl?: string | null;
   mealFormat?: string | null;
+  instructions?: string[] | null;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -407,7 +425,53 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
               <TooltipContent><p className="text-xs">{servings === 1 ? '1 serving' : `${servings} servings`}</p></TooltipContent>
             </Tooltip>
           )}
-          {sourceUrl && (
+          {mealFormat === "grouped" ? (() => {
+            const groupedSources = parseGroupedSources(instructions);
+            const webParts = groupedSources
+              ? Object.entries(groupedSources).filter(([, s]) => s.type === "web" && s.url)
+              : [];
+            if (webParts.length === 0) return null;
+            return (
+              <Tooltip>
+                <Popover>
+                  <TooltipTrigger asChild>
+                    <PopoverTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={(e) => e.stopPropagation()}
+                        data-testid={`button-grouped-sources-${mealId}`}
+                      >
+                        <Globe className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                  </TooltipTrigger>
+                  <PopoverContent className="w-64 p-2" align="end" side="top" onClick={(e) => e.stopPropagation()}>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Recipe sources</p>
+                    <div className="space-y-1">
+                      {webParts.map(([label, source]) => (
+                        <a
+                          key={label}
+                          href={source.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between gap-2 text-xs rounded px-2 py-1.5 hover:bg-accent transition-colors"
+                          data-testid={`link-grouped-source-${mealId}-${label}`}
+                        >
+                          <span className="font-medium truncate">{label}</span>
+                          <span className="text-muted-foreground shrink-0 flex items-center gap-1">
+                            {source.sourceName && <span className="text-[10px]">{source.sourceName}</span>}
+                            <ExternalLink className="h-2.5 w-2.5" />
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <TooltipContent><p className="text-xs">Recipe sources</p></TooltipContent>
+              </Tooltip>
+            );
+          })() : sourceUrl && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <a
@@ -2292,6 +2356,7 @@ export default function MealsPage() {
                         servings={meal.servings}
                         sourceUrl={meal.sourceUrl}
                         mealFormat={meal.mealFormat}
+                        instructions={meal.instructions}
                       />
                     </CardFooter>
                   </Card>
@@ -2409,6 +2474,7 @@ export default function MealsPage() {
                             servings={meal.servings}
                             sourceUrl={meal.sourceUrl}
                             mealFormat={meal.mealFormat}
+                            instructions={meal.instructions}
                           />
                           {!meal.isSystemMeal && (
                             <Button

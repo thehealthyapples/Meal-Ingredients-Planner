@@ -1,0 +1,72 @@
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- Do not add extra features, ideas, refactors, abstractions, or “nice to have” improvements unless explicitly requested.
+- Touch only the files and logic necessary for this task.
+- Reuse existing patterns, components, services, schema structure, recipe search logic, meal builder flow, and source-link handling wherever possible.
+- Keep implementation simple, targeted, and easy to maintain.
+- Minimise token usage, file churn, and unnecessary code generation.
+- Do not run broad tests. Only do the absolute minimum validation needed to avoid obvious breakage.
+- Preserve existing behaviour unless this task explicitly requires a change.
+
+Task:
+Extend Meal Builder so each meal part can be resolved from multiple sources, including web search, before the grouped meal is finalised.
+
+Current gap:
+Meal Builder allows grouped meals to be saved and behave like meal cards, but it does not give the user the option to search for a meal part from the web.
+
+Required behaviour:
+When a user adds a meal part such as:
+- roast potatoes
+- cauliflower cheese
+- gravy
+- Yorkshire puddings
+- braised cabbage
+
+THA should allow that part to be resolved from one of these sources:
+1. My Meals existing recipes
+2. internal THA recipe search / local recipe data
+3. web recipe/source search
+4. simple basic item / wholefood item
+5. fresh / frozen / basic option where appropriate for simple veg or sides
+
+UI requirements:
+- For each entered meal part, show a lightweight source selection flow.
+- At minimum provide actions such as:
+  - Use My Meals match
+  - Search THA
+  - Search web
+  - Use basic item
+- For simple wholefood items, allow practical options such as:
+  - Fresh
+  - Frozen
+  - Basic wholefood entry
+
+Implementation requirements:
+- Reuse any existing recipe search, website/source-link, and meal selection logic already in the app.
+- Keep the web search implementation lightweight.
+- Do not build a large crawler, scraping framework, or complex new search architecture.
+- If website/source logic already exists on meal cards, reuse that pattern as much as possible.
+- The selected result for each meal part should become the stored component inside the grouped meal.
+
+Grouped meal requirements:
+- once components are selected, the grouped meal should still save as one grouped meal
+- grouped meal card behaviour already implemented should remain intact
+- website action on grouped meal should include web-linked components where relevant
+- component methods should use the selected recipe/source per part
+
+Validation:
+- Only do the minimum needed to confirm:
+  - meal part source selection works
+  - web-selected components can be saved into the grouped meal
+  - grouped meal still flows into planner, basket, and method view without obvious breakage
+- Do not run broad tests.
+
+After implementing:
+Provide a short summary of:
+- which files changed
+- where the "Search web" option now appears in Meal Builder
+- how selected web-based meal parts are stored in the grouped meal
+- how website/method behaviour works for those selected components
+- any first-version limitations
