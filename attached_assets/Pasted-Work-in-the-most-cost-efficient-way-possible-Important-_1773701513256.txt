@@ -1,0 +1,69 @@
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- Do not add extra features, ideas, refactors, abstractions, or “nice to have” improvements unless explicitly requested.
+- Touch only the files and logic necessary for this task.
+- Reuse existing meal models, My Meals storage, grouped meal structures, recipe import/parsing logic, meal detail rendering, and source-link handling wherever possible.
+- Keep implementation simple, targeted, and easy to maintain.
+- Minimise token usage, file churn, and unnecessary code generation.
+- Do not run broad tests. Only do the absolute minimum validation needed to avoid obvious breakage.
+- Preserve existing behaviour unless this task explicitly requires a change.
+
+Task:
+Fix grouped meal component saving so web-selected recipe parts become real THA meal data instead of only being stored as source links.
+
+Current issue:
+For grouped meals, components selected from the web are not being saved down as proper THA meals. They do not appear as real meal entries in My Meals, and method rendering falls back to showing website links because THA does not actually know the recipe data in a structured way.
+
+Required behaviour:
+When a user selects a component from the web for a grouped meal, such as:
+- cauliflower cheese
+- braised red cabbage
+- stuffing
+
+THA should save a THA-owned structured version of that component with, where available:
+- title
+- ingredients
+- method steps
+- serves
+- timings
+- source URL
+- source type / imported flag
+
+Then the grouped meal should reference that saved THA meal data, not just a raw web link.
+
+Desired outcome:
+1. Web-selected components become usable structured meal records inside THA.
+2. Grouped meal detail pages can render proper ingredients and method content for those components.
+3. Combined method can use structured steps instead of only links.
+4. These imported components should be available in My Meals if this can be done cheaply using existing meal storage patterns.
+
+Implementation requirements:
+- Reuse the existing My Meals meal model if possible.
+- Prefer storing imported web recipes as normal THA meals with source metadata, rather than inventing a separate parallel structure.
+- Keep the original website/source URL for attribution and Website action.
+- Do not build a large new ingestion pipeline.
+- Use the smallest practical import/save-down step based on the data already being captured from web-selected recipes.
+- If full parsing is not always available, save as much structured data as currently exists, but do not leave the recipe as URL-only when structured title/ingredients/method data are available.
+
+Rendering requirements:
+- Grouped meal ingredients page should use saved structured component ingredients.
+- Grouped meal method page should use saved structured component method steps.
+- Website links can remain as a secondary source action, not the main method content.
+
+Validation:
+- Only do the minimum needed to confirm:
+  - web-selected grouped meal components are now saved as structured THA meal data
+  - grouped meal detail shows ingredients and method from that saved data
+  - imported components can appear in My Meals if supported
+- Do not run broad tests.
+
+After implementing:
+Provide a short summary of:
+- which files changed
+- what data model was used for imported web-selected components
+- whether imported components now appear in My Meals
+- how grouped meals now reference those components
+- how ingredients and method are rendered after save
+- any first-version limitations

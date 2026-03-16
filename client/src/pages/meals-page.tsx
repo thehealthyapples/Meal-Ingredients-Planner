@@ -301,6 +301,69 @@ function parseGroupedSources(instructions: string[] | null | undefined): Record<
   return null;
 }
 
+function GroupedMealDetail({ meal, allMeals, tab, mealId }: {
+  meal: Meal;
+  allMeals: Meal[];
+  tab: "ingredients" | "method";
+  mealId: number;
+}) {
+  const sources = parseGroupedSources(meal.instructions);
+  const components = (meal.ingredients ?? []).map((label) => {
+    const src = sources?.[label];
+    const componentMeal = src?.mealId ? allMeals.find((m) => m.id === src.mealId) ?? null : null;
+    return { label, src, componentMeal };
+  });
+
+  if (tab === "ingredients") {
+    return (
+      <div className="space-y-3 pb-2" data-testid={`expanded-ingredients-${mealId}`}>
+        {components.map(({ label, componentMeal }) => (
+          <div key={label}>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
+            {componentMeal && (componentMeal.ingredients ?? []).length > 0 ? (
+              <div className="space-y-0.5 pl-2">
+                {componentMeal.ingredients!.map((ing, i) => {
+                  const parsed = parseIngredient(ing);
+                  return (
+                    <div key={i} className="text-sm flex gap-2 py-0.5">
+                      <span className="text-muted-foreground shrink-0 w-20 text-right text-xs leading-5">{parsed.detail || ''}</span>
+                      <span className="text-foreground">{parsed.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground pl-2">No ingredients saved</p>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 pb-2" data-testid={`expanded-method-${mealId}`}>
+      {components.map(({ label, componentMeal }) => (
+        <div key={label}>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
+          {componentMeal && (componentMeal.instructions ?? []).length > 0 ? (
+            <div className="space-y-1 pl-2">
+              {componentMeal.instructions!.map((step, i) => (
+                <div key={i} className="flex gap-2 text-sm">
+                  <span className="text-primary font-semibold shrink-0 w-5 text-right">{i + 1}.</span>
+                  <span className="text-foreground leading-relaxed">{step}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground pl-2">No method saved</p>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, audience, isFreezerEligible, onFreezeClick, servings, sourceUrl, mealFormat, instructions }: {
   mealId: number;
   mealName: string;
@@ -2307,7 +2370,9 @@ export default function MealsPage() {
                               </Button>
                             </div>
                             <div className="max-h-52 overflow-y-auto">
-                              {expandedTab === "ingredients" ? (
+                              {meal.mealFormat === "grouped" ? (
+                                <GroupedMealDetail meal={meal} allMeals={meals} tab={expandedTab} mealId={meal.id} />
+                              ) : expandedTab === "ingredients" ? (
                                 <div className="space-y-1 pb-2" data-testid={`expanded-ingredients-${meal.id}`}>
                                   {meal.ingredients.length > 0 ? meal.ingredients.map((ing, i) => {
                                     const parsed = parseIngredient(ing);
@@ -2535,7 +2600,9 @@ export default function MealsPage() {
                               </Button>
                             </div>
                             <div className="max-h-64 overflow-y-auto">
-                              {expandedTab === "ingredients" ? (
+                              {meal.mealFormat === "grouped" ? (
+                                <GroupedMealDetail meal={meal} allMeals={meals} tab={expandedTab} mealId={meal.id} />
+                              ) : expandedTab === "ingredients" ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 pb-2" data-testid={`expanded-ingredients-${meal.id}`}>
                                   {meal.ingredients.length > 0 ? meal.ingredients.map((ing, i) => {
                                     const parsed = parseIngredient(ing);

@@ -96,6 +96,7 @@ export default function QuickMealPage() {
   const [webLoading, setWebLoading] = useState<Record<string, boolean>>({});
   const [webDisplayCount, setWebDisplayCount] = useState<Record<string, number>>({});
   const [myMealResults, setMyMealResults] = useState<Record<string, Meal[]>>({});
+  const [savingCardId, setSavingCardId] = useState<string | null>(null);
   const fetchedParts = useRef<Set<string>>(new Set());
 
   const { data: userMeals = [] } = useQuery<Meal[]>({
@@ -143,6 +144,46 @@ export default function QuickMealPage() {
       setWebLoading((prev) => ({ ...prev, [partId]: false }));
     }
   }, [toast]);
+
+  const selectWebRecipe = useCallback(async (partId: string, recipe: WebSearchRecipe) => {
+    setSavingCardId(recipe.id);
+    try {
+      const res = await apiRequest("POST", api.meals.create.path, {
+        name: recipe.name,
+        ingredients: recipe.ingredients,
+        instructions: recipe.instructions ?? [],
+        imageUrl: recipe.image || null,
+        sourceUrl: recipe.url || null,
+        mealSourceType: "web",
+        mealFormat: "recipe",
+        servings: 1,
+        isReadyMeal: false,
+        isDrink: false,
+        isFreezerEligible: true,
+        audience: "adult",
+        dietTypes: [],
+      });
+      const saved: Meal = await res.json();
+      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      updatePartSource(partId, {
+        type: "web",
+        mealId: saved.id,
+        url: recipe.url ?? undefined,
+        displayName: recipe.name,
+        sourceName: recipe.source,
+      });
+    } catch {
+      toast({ title: "Failed to save recipe", variant: "destructive" });
+      updatePartSource(partId, {
+        type: "web",
+        url: recipe.url ?? undefined,
+        displayName: recipe.name,
+        sourceName: recipe.source,
+      });
+    } finally {
+      setSavingCardId(null);
+    }
+  }, [toast, queryClient]);
 
   useEffect(() => {
     if (!expandedPartId) return;
@@ -421,16 +462,13 @@ export default function QuickMealPage() {
                                   <div className="grid grid-cols-2 gap-2" data-testid={`grid-web-results-${idx}`}>
                                     {visibleWebRes.map((r) => {
                                       const isSelected = part.source.type === "web" && part.source.displayName === r.name;
+                                      const isSaving = savingCardId === r.id;
                                       return (
                                         <button
                                           key={r.id}
-                                          className={`relative rounded-md overflow-hidden border-2 text-left transition-all ${isSelected ? "border-primary" : "border-border hover:border-primary/50"}`}
-                                          onClick={() => updatePartSource(part.id, {
-                                            type: "web",
-                                            url: r.url ?? undefined,
-                                            displayName: r.name,
-                                            sourceName: r.source,
-                                          })}
+                                          disabled={isSaving || !!savingCardId}
+                                          className={`relative rounded-md overflow-hidden border-2 text-left transition-all disabled:opacity-60 ${isSelected ? "border-primary" : "border-border hover:border-primary/50"}`}
+                                          onClick={() => selectWebRecipe(part.id, r)}
                                           data-testid={`result-web-${r.id}`}
                                         >
                                           {/* Image */}
@@ -447,7 +485,12 @@ export default function QuickMealPage() {
                                                 <ImageOff className="h-6 w-6 text-muted-foreground/40" />
                                               </div>
                                             )}
-                                            {isSelected && (
+                                            {isSaving && (
+                                              <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
+                                                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                                              </div>
+                                            )}
+                                            {isSelected && !isSaving && (
                                               <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
                                                 <div className="bg-primary rounded-full p-1">
                                                   <Check className="h-3 w-3 text-primary-foreground" />
