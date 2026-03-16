@@ -9,13 +9,28 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingCart, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock } from "lucide-react";
+import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingCart, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, ExternalLink } from "lucide-react";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { useState, useEffect, useCallback } from "react";
 
 type SwapGoal = "vegetarian" | "keto" | "lower-cost" | "less-processed" | "under-time" | "household";
+
+type PartSource =
+  | { type: "basic" | "fresh" | "frozen" }
+  | { type: "web"; url: string; displayName: string; sourceName: string; mealId?: number }
+  | { type: "my-meal"; mealId: number; displayName: string };
+interface GroupedSources { __v: 1; sources: Record<string, PartSource> }
+
+function decodeGroupedSources(instructions: string[]): GroupedSources | null {
+  try {
+    if (!instructions?.[0]) return null;
+    const parsed = JSON.parse(instructions[0]);
+    if (parsed?.__v === 1 && parsed.sources) return parsed as GroupedSources;
+    return null;
+  } catch { return null; }
+}
 
 interface ChangedIngredient { original: string; replacement: string; reason: string; }
 interface AdaptResult {
@@ -105,6 +120,11 @@ export default function MealDetailPage() {
       return res.json();
     },
     enabled: !!mealId,
+  });
+
+  const { data: allMeals = [] } = useQuery<Meal[]>({
+    queryKey: [api.meals.list.path],
+    enabled: meal?.mealFormat === "grouped",
   });
 
   const copyMutation = useMutation({
@@ -269,6 +289,8 @@ export default function MealDetailPage() {
     .filter(Boolean);
   const instructions = meal.instructions || [];
   const hasNoInstructions = instructions.length === 0;
+  const isGrouped = meal.mealFormat === "grouped";
+  const groupedSources = isGrouped ? decodeGroupedSources(instructions) : null;
 
   return (
     <motion.div
@@ -570,6 +592,35 @@ export default function MealDetailPage() {
                     </div>
                   ))}
                 </div>
+              ) : isGrouped && groupedSources ? (
+                <div className="space-y-4" data-testid="section-grouped-ingredients">
+                  {Object.entries(groupedSources.sources).map(([label, src]) => {
+                    const componentMeal = (src.type === "web" || src.type === "my-meal") && src.mealId
+                      ? allMeals.find(m => m.id === src.mealId)
+                      : null;
+                    return (
+                      <div key={label} data-testid={`group-ingredients-${label}`}>
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{label}</p>
+                        {componentMeal && componentMeal.ingredients.length > 0 ? (
+                          <ul className="space-y-1 pl-1">
+                            {componentMeal.ingredients.map((ing, i) => (
+                              <li key={i} className="text-sm flex items-start gap-2">
+                                <span className="text-primary mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
+                                <span>{ing}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-sm text-muted-foreground italic pl-1">
+                            {src.type === "basic" || src.type === "fresh" || src.type === "frozen"
+                              ? "Add your own"
+                              : "No ingredients saved"}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
                 <ul className="space-y-2">
                   {meal.ingredients.map((ing, idx) => (
@@ -599,15 +650,17 @@ export default function MealDetailPage() {
                       Add
                     </Button>
                   )}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => { setReimportUrl(meal.sourceUrl || ""); setReimportOpen(true); }}
-                    data-testid="button-reimport-instructions"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                    {hasNoInstructions && !isEditedCopy ? "Import" : "Re-import"}
-                  </Button>
+                  {!isGrouped && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setReimportUrl(meal.sourceUrl || ""); setReimportOpen(true); }}
+                      data-testid="button-reimport-instructions"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                      {hasNoInstructions && !isEditedCopy ? "Import" : "Re-import"}
+                    </Button>
+                  )}
                 </div>
               </div>
               {isEditedCopy ? (
@@ -645,6 +698,53 @@ export default function MealDetailPage() {
                     </Button>
                   </div>
                 )
+              ) : isGrouped && groupedSources ? (
+                <div className="space-y-5" data-testid="section-grouped-method">
+                  {Object.entries(groupedSources.sources)
+                    .filter(([, src]) => src.type !== "basic" && src.type !== "fresh" && src.type !== "frozen")
+                    .map(([label, src]) => {
+                      const componentMeal = (src.type === "web" || src.type === "my-meal") && src.mealId
+                        ? allMeals.find(m => m.id === src.mealId)
+                        : null;
+                      const webSrc = src.type === "web" ? src : null;
+                      return (
+                        <div key={label} data-testid={`group-method-${label}`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</p>
+                            {webSrc?.url && (
+                              <a
+                                href={webSrc.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary flex items-center gap-0.5 hover:underline"
+                                data-testid={`link-source-${label}`}
+                              >
+                                {webSrc.sourceName || webSrc.displayName}
+                                <ExternalLink className="h-3 w-3 ml-0.5" />
+                              </a>
+                            )}
+                          </div>
+                          {componentMeal && componentMeal.instructions && componentMeal.instructions.length > 0 ? (
+                            <ol className="space-y-2">
+                              {componentMeal.instructions.map((step, i) => (
+                                <li key={i} className="text-sm flex gap-3">
+                                  <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                                  <span className="flex-1 leading-relaxed">{step}</span>
+                                </li>
+                              ))}
+                            </ol>
+                          ) : (
+                            <p className="text-sm text-muted-foreground italic">
+                              {webSrc?.url ? "Visit the link above for full instructions" : "No method saved"}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  {Object.values(groupedSources.sources).every(s => s.type === "basic" || s.type === "fresh" || s.type === "frozen") && (
+                    <p className="text-sm text-muted-foreground">No method steps — all components are fresh/frozen ingredients.</p>
+                  )}
+                </div>
               ) : (
                 instructions.length > 0 ? (
                   <ol className="space-y-3">
