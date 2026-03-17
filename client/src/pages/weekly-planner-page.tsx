@@ -51,6 +51,7 @@ interface MatrixRow {
 interface SmartCandidate {
   id: string | number;
   name: string;
+  image?: string | null;
   isExternal?: boolean;
   externalId?: string;
   sourceUrl?: string | null;
@@ -252,6 +253,7 @@ export default function WeeklyPlannerPage() {
     queryKey: ["/api/planner/basket-meal-ids"],
   });
   const basketMealIdSet = useMemo(() => new Set(basketMealIds), [basketMealIds]);
+  const mealById = useMemo(() => new Map(meals.map(m => [m.id, m])), [meals]);
 
   const { data: categories = [] } = useQuery<MealCategory[]>({
     queryKey: ['/api/categories'],
@@ -645,6 +647,43 @@ export default function WeeklyPlannerPage() {
       toast({ title: "Failed to apply plan", variant: "destructive" });
     } finally {
       setApplyingSmartPlan(false);
+    }
+  };
+
+  const regenerateSingleEntry = async (targetEntry: SmartSuggestEntry) => {
+    if (!smartResult) return;
+    const targetKey = `${targetEntry.dayOfWeek}-${targetEntry.slot}`;
+    const locked = smartResult.entries
+      .filter(e => `${e.dayOfWeek}-${e.slot}` !== targetKey)
+      .map(e => ({ dayOfWeek: e.dayOfWeek, slot: e.slot, candidateId: e.candidate.id, candidateName: e.candidate.name }));
+    setSmartLoading(true);
+    try {
+      const res = await apiRequest('POST', '/api/meal-plans/smart-suggest', {
+        mealsPerDay: Number(smartMealsPerDay) || 3,
+        includeLeftovers: smartLeftovers,
+        maxWeeklyBudget: smartBudget ? Number(smartBudget) : undefined,
+        maxWeeklyUPF: smartMaxUPF ? Number(smartMaxUPF) : undefined,
+        preferredCuisine: smartCuisine || undefined,
+        fishPerWeek: Number(smartFishPerWeek),
+        redMeatPerWeek: Number(smartRedMeatPerWeek),
+        vegetarianDays: smartVegDays,
+        lockedEntries: locked,
+      });
+      const data = await res.json() as SmartSuggestResult;
+      const newEntry = data.entries.find(e => e.dayOfWeek === targetEntry.dayOfWeek && e.slot === targetEntry.slot);
+      if (newEntry) {
+        setSmartResult(prev => prev ? {
+          ...prev,
+          entries: prev.entries.map(e =>
+            e.dayOfWeek === targetEntry.dayOfWeek && e.slot === targetEntry.slot ? newEntry : e
+          ),
+          stats: data.stats,
+        } : null);
+      }
+    } catch {
+      toast({ title: "Could not refresh this meal", variant: "destructive" });
+    } finally {
+      setSmartLoading(false);
     }
   };
 
@@ -1842,21 +1881,31 @@ export default function WeeklyPlannerPage() {
                           const exKey = `${key}-expl`;
                           const expanded = expandedExplanation === exKey;
                           return (
-                            <div key={key} className="flex items-start gap-3 px-3 py-2.5">
+                            <div key={key} className="flex items-start gap-3 px-3 py-3">
+                              {(() => {
+                                const mealImg = entry.candidate.image || mealById.get(Number(entry.candidate.id))?.imageUrl || null;
+                                return (
+                                  <div className="h-14 w-14 rounded-lg overflow-hidden bg-muted shrink-0 border flex items-center justify-center">
+                                    {mealImg
+                                      ? <img src={mealImg} alt={entry.candidate.name} className="h-full w-full object-cover" />
+                                      : <UtensilsCrossed className="h-5 w-5 text-muted-foreground/50" />}
+                                  </div>
+                                );
+                              })()}
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-medium text-muted-foreground capitalize w-14 shrink-0">{entry.slot}</span>
-                                  <span className="text-sm font-medium truncate">{entry.candidate.name}</span>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-xs font-medium text-muted-foreground capitalize">{entry.slot}</span>
                                   {entry.candidate.isExternal && <Badge variant="outline" className="text-xs h-4 px-1">New</Badge>}
                                 </div>
+                                <p className="text-sm font-semibold mt-0.5 leading-snug">{entry.candidate.name}</p>
                                 {entry.candidate.estimatedCost != null && (
-                                  <p className="text-xs text-muted-foreground mt-0.5 ml-16">
+                                  <p className="text-xs text-muted-foreground mt-0.5">
                                     ~£{(entry.candidate.estimatedCost ?? 0).toFixed(2)}
                                     {entry.candidate.estimatedUPFScore != null && <span className={`ml-2 ${getUPFColor(entry.candidate.estimatedUPFScore ?? undefined)}`}>UPF: {getUPFLabel(entry.candidate.estimatedUPFScore ?? undefined)}</span>}
                                   </p>
                                 )}
                                 {entry.explanation && (
-                                  <div className="ml-16 mt-1">
+                                  <div className="mt-1">
                                     <button
                                       className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
                                       onClick={() => setExpandedExplanation(expanded ? null : exKey)}
@@ -1872,14 +1921,25 @@ export default function WeeklyPlannerPage() {
                                   </div>
                                 )}
                               </div>
-                              <button
-                                onClick={() => toggleLockEntry(key)}
-                                className={`shrink-0 p-1.5 rounded-md transition-colors ${locked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent/40"}`}
-                                title={locked ? "Locked — will be kept on regenerate" : "Click to lock this meal"}
-                                data-testid={`button-lock-${key}`}
-                              >
-                                <Lock className="h-3.5 w-3.5" />
-                              </button>
+                              <div className="flex flex-col gap-1 shrink-0">
+                                <button
+                                  onClick={() => regenerateSingleEntry(entry)}
+                                  disabled={smartLoading}
+                                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors disabled:opacity-40"
+                                  title="Get a different meal for this slot"
+                                  data-testid={`button-refresh-${key}`}
+                                >
+                                  <RefreshCw className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => toggleLockEntry(key)}
+                                  className={`p-1.5 rounded-md transition-colors ${locked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent/40"}`}
+                                  title={locked ? "Locked — will be kept on regenerate" : "Click to lock this meal"}
+                                  data-testid={`button-lock-${key}`}
+                                >
+                                  <Lock className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
                             </div>
                           );
                         })}
