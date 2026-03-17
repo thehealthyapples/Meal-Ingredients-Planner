@@ -1,0 +1,56 @@
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- Do not add extra features, ideas, refactors, abstractions, or “nice to have” improvements unless explicitly requested.
+- Touch only the files and logic necessary for this investigation.
+- Reuse existing code paths and report what already exists before changing anything.
+- Keep implementation minimal.
+- Do not run broad tests. Only do the absolute minimum validation needed to confirm findings.
+
+Task:
+Investigate whether the AI / smart meal planner already exists in the current Dev branch, and if so provide exact details of what is implemented, where it is wired, and how it is currently meant to be used.
+
+What to check:
+1. Compare the current Dev branch against the existing Meal Planner implementation.
+2. Inspect whether there is already:
+   - a standard suggest flow
+   - a smart suggest / AI plan flow
+   - any UI entry point for smart plan generation
+   - any backend endpoint for smart plan generation
+   - lock / regenerate support
+   - explanation / “why this meal” support
+   - auto-import of external recipes into a plan
+3. Confirm whether the current Dev UI exposes these features or whether they exist only in code.
+
+Specific repo clues already identified:
+- `client/src/pages/meal-planner-page.tsx` appears to include:
+  - `suggestMutation`
+  - `runSmartSuggest()`
+  - POST to `/api/meal-plans/smart-suggest`
+  - smart state such as mealsPerDay, cuisine, budget, maxUPF, fish/red meat limits, vegetarian days, leftovers, lockedEntries, explanations
+  - `applySmartSuggestion()`
+  - `/api/smart-suggest/auto-import`
+- `client/src/App.tsx` imports `MealPlannerPage`
+- `SMP-Features.md` documents Smart Meal Suggestions (AI-Powered)
+
+Required output:
+- Tell me clearly whether the AI/smart planner exists in Dev right now: yes / partly / no
+- List the exact frontend files involved
+- List the exact backend routes/endpoints involved
+- Explain how a user is supposed to access it today
+- If it is present in code but not visible in Dev, explain why
+- If it is broken or incomplete, explain exactly what is missing
+- Do not make code changes yet unless absolutely necessary to confirm the findings
+
+Validation:
+- Only perform the minimum checks needed to inspect route wiring, UI entry points, and whether the feature is reachable.
+- Do not run broad tests.
+
+After investigating:
+Provide:
+- exact files checked
+- exact endpoints found
+- exact current user path to access the feature
+- whether Dev differs from main
+- recommended smallest next step to surface it if it already exists
