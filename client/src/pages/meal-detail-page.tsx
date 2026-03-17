@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingCart, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock } from "lucide-react";
+import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingCart, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, AlarmClock } from "lucide-react";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -41,6 +41,32 @@ interface AdaptResult {
   explanation: string;
 }
 
+function minsToTimeStr(totalMins: number): string {
+  const normalized = ((totalMins % 1440) + 1440) % 1440;
+  const h = Math.floor(normalized / 60);
+  const m = normalized % 60;
+  const period = h >= 12 ? "pm" : "am";
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${m.toString().padStart(2, "0")}${period}`;
+}
+
+function generateSchedule(
+  sources: Record<string, PartSource>,
+  durations: Record<string, number>,
+  serveTime: string
+): Array<{ label: string; startTime: string; duration: number }> {
+  const [hh, mm] = serveTime.split(":").map(Number);
+  const serveMins = hh * 60 + (mm || 0);
+  const webKeys = Object.keys(sources).filter(k => {
+    const s = sources[k];
+    return s.type !== "basic" && s.type !== "fresh" && s.type !== "frozen";
+  });
+  return webKeys
+    .map(label => ({ label, duration: durations[label] ?? 30, startMins: serveMins - (durations[label] ?? 30) }))
+    .sort((a, b) => a.startMins - b.startMins)
+    .map(e => ({ label: e.label, startTime: minsToTimeStr(e.startMins), duration: e.duration }));
+}
+
 export default function MealDetailPage() {
   const [, params] = useRoute("/meals/:id");
   const [, navigate] = useLocation();
@@ -57,6 +83,10 @@ export default function MealDetailPage() {
   const [editInstructions, setEditInstructions] = useState<string[]>([]);
   const [editServings, setEditServings] = useState(1);
   const [hasChanges, setHasChanges] = useState(false);
+  const [methodView, setMethodView] = useState<"component" | "full" | "timing">("component");
+  const [activeComponent, setActiveComponent] = useState<string | null>(null);
+  const [componentDurations, setComponentDurations] = useState<Record<string, number>>({});
+  const [serveTime, setServeTime] = useState("17:00");
 
   const { data: meal, isLoading: mealLoading } = useQuery<Meal>({
     queryKey: [api.meals.list.path, mealId],
@@ -148,6 +178,23 @@ export default function MealDetailPage() {
         .catch(() => {});
     }
   }, [meal, allMeals]);
+
+  useEffect(() => {
+    if (!meal || meal.mealFormat !== "grouped") return;
+    let gs: GroupedSources | null = null;
+    try { gs = decodeGroupedSources(meal.instructions || []); } catch { return; }
+    if (!gs) return;
+    const webKeys = Object.keys(gs.sources).filter(k => {
+      const s = gs.sources[k];
+      return s.type !== "basic" && s.type !== "fresh" && s.type !== "frozen";
+    });
+    if (webKeys.length > 0) setActiveComponent(prev => prev ?? webKeys[0]);
+    setComponentDurations(prev => {
+      const next = { ...prev };
+      for (const k of webKeys) { if (!(k in next)) next[k] = 30; }
+      return next;
+    });
+  }, [meal?.id]);
 
   const copyMutation = useMutation({
     mutationFn: async () => {
@@ -724,34 +771,165 @@ export default function MealDetailPage() {
                   </div>
                 )
               ) : isGrouped && groupedSources ? (
-                <div className="space-y-5" data-testid="section-grouped-method">
-                  {Object.entries(groupedSources.sources)
-                    .filter(([, src]) => src.type !== "basic" && src.type !== "fresh" && src.type !== "frozen")
-                    .map(([label, src]) => {
-                      const componentMeal = (src.type === "web" || src.type === "my-meal") && src.mealId
-                        ? allMeals.find(m => m.id === src.mealId)
-                        : null;
-                      return (
-                        <div key={label} data-testid={`group-method-${label}`}>
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{label}</p>
-                          {componentMeal && componentMeal.instructions && componentMeal.instructions.length > 0 ? (
-                            <ol className="space-y-2">
-                              {componentMeal.instructions.map((step, i) => (
-                                <li key={i} className="text-sm flex gap-3">
-                                  <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
-                                  <span className="flex-1 leading-relaxed">{step}</span>
-                                </li>
-                              ))}
-                            </ol>
-                          ) : (
-                            <p className="text-sm text-muted-foreground italic">No method saved</p>
-                          )}
+                <div data-testid="section-grouped-method">
+                  {(() => {
+                    const webEntries = Object.entries(groupedSources.sources).filter(([, s]) =>
+                      s.type !== "basic" && s.type !== "fresh" && s.type !== "frozen"
+                    );
+                    if (webEntries.length === 0) {
+                      return <p className="text-sm text-muted-foreground">No method steps — all components are fresh/frozen ingredients.</p>;
+                    }
+                    const schedule = generateSchedule(groupedSources.sources, componentDurations, serveTime);
+                    const serveLabel = minsToTimeStr((() => { const [h,m] = serveTime.split(":").map(Number); return h*60+(m||0); })());
+                    return (
+                      <>
+                        <div className="flex gap-1 mb-4 border-b pb-3">
+                          <button
+                            className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${methodView === "component" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/50"}`}
+                            onClick={() => setMethodView("component")}
+                            data-testid="button-view-component"
+                          >
+                            By component
+                          </button>
+                          <button
+                            className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors ${methodView === "full" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/50"}`}
+                            onClick={() => setMethodView("full")}
+                            data-testid="button-view-full"
+                          >
+                            Full method
+                          </button>
+                          <button
+                            className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-colors flex items-center gap-1 ${methodView === "timing" ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/50"}`}
+                            onClick={() => setMethodView("timing")}
+                            data-testid="button-view-timing"
+                          >
+                            <AlarmClock className="h-3 w-3" />
+                            Timing
+                          </button>
                         </div>
-                      );
-                    })}
-                  {Object.values(groupedSources.sources).every(s => s.type === "basic" || s.type === "fresh" || s.type === "frozen") && (
-                    <p className="text-sm text-muted-foreground">No method steps — all components are fresh/frozen ingredients.</p>
-                  )}
+
+                        {methodView === "component" && (
+                          <div>
+                            <div className="flex gap-1 flex-wrap mb-4">
+                              {webEntries.map(([label]) => (
+                                <button
+                                  key={label}
+                                  onClick={() => setActiveComponent(label)}
+                                  data-testid={`tab-component-${label}`}
+                                  className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${activeComponent === label ? "bg-primary/10 border-primary text-primary font-semibold" : "border-border text-muted-foreground hover:border-primary/40"}`}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                            {webEntries.filter(([label]) => label === activeComponent).map(([label, src]) => {
+                              const componentMeal = (src.type === "web" || src.type === "my-meal") && src.mealId
+                                ? allMeals.find(m => m.id === src.mealId) : null;
+                              return (
+                                <div key={label}>
+                                  {componentMeal && componentMeal.instructions && componentMeal.instructions.length > 0 ? (
+                                    <ol className="space-y-2">
+                                      {componentMeal.instructions.map((step, i) => (
+                                        <li key={i} className="text-sm flex gap-3">
+                                          <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                                          <span className="flex-1 leading-relaxed">{step}</span>
+                                        </li>
+                                      ))}
+                                    </ol>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground italic">No method saved for {label}</p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {methodView === "full" && (
+                          <div className="space-y-5">
+                            {webEntries.map(([label, src]) => {
+                              const componentMeal = (src.type === "web" || src.type === "my-meal") && src.mealId
+                                ? allMeals.find(m => m.id === src.mealId) : null;
+                              return (
+                                <div key={label} data-testid={`group-method-${label}`}>
+                                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{label}</p>
+                                  {componentMeal && componentMeal.instructions && componentMeal.instructions.length > 0 ? (
+                                    <ol className="space-y-2">
+                                      {componentMeal.instructions.map((step, i) => (
+                                        <li key={i} className="text-sm flex gap-3">
+                                          <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                                          <span className="flex-1 leading-relaxed">{step}</span>
+                                        </li>
+                                      ))}
+                                    </ol>
+                                  ) : (
+                                    <p className="text-sm text-muted-foreground italic">No method saved</p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {methodView === "timing" && (
+                          <div className="space-y-5">
+                            <div className="flex items-center gap-3">
+                              <label className="text-sm font-medium shrink-0">Serve time</label>
+                              <input
+                                type="time"
+                                value={serveTime}
+                                onChange={e => setServeTime(e.target.value)}
+                                className="border border-border rounded-md px-2 py-1 text-sm bg-background"
+                                data-testid="input-serve-time"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Component durations</p>
+                              {webEntries.map(([label]) => (
+                                <div key={label} className="flex items-center justify-between gap-3">
+                                  <span className="text-sm">{label}</span>
+                                  <div className="flex items-center gap-1.5">
+                                    <input
+                                      type="number"
+                                      min={1}
+                                      max={480}
+                                      value={componentDurations[label] ?? 30}
+                                      onChange={e => setComponentDurations(prev => ({ ...prev, [label]: Math.max(1, parseInt(e.target.value) || 30) }))}
+                                      className="w-16 border border-border rounded-md px-2 py-1 text-sm bg-background text-right"
+                                      data-testid={`input-duration-${label}`}
+                                    />
+                                    <span className="text-xs text-muted-foreground">min</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="border rounded-lg overflow-hidden" data-testid="section-schedule">
+                              <div className="bg-muted/40 px-3 py-2 border-b">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cooking schedule</p>
+                              </div>
+                              <div className="divide-y">
+                                {schedule.map((entry, i) => (
+                                  <div key={i} className="flex items-center justify-between px-3 py-2.5" data-testid={`schedule-entry-${i}`}>
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                      <span className="text-sm font-medium tabular-nums">{entry.startTime}</span>
+                                    </div>
+                                    <span className="text-sm flex-1 mx-3">Start {entry.label}</span>
+                                    <span className="text-xs text-muted-foreground shrink-0">{entry.duration} min</span>
+                                  </div>
+                                ))}
+                                <div className="flex items-center gap-2 px-3 py-2.5 bg-primary/5">
+                                  <AlarmClock className="h-3.5 w-3.5 text-primary shrink-0" />
+                                  <span className="text-sm font-semibold tabular-nums text-primary">{serveLabel}</span>
+                                  <span className="text-sm font-semibold text-primary flex-1 mx-1">Serve!</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                 </div>
               ) : (
                 instructions.length > 0 ? (
