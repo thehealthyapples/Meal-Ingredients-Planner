@@ -161,13 +161,13 @@ export default function Dashboard() {
           <motion.div variants={item}>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
-              {/* My Meals */}
-              <Link href="/meals" aria-label="Go to My Meals">
+              {/* Cookbook */}
+              <Link href="/meals" aria-label="Go to Cookbook">
                 <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-total-meals"
                   style={{ background: GREEN_PALE, borderColor: "hsl(132,18%,85%)" }}>
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: GREEN_MID }}>My Meals</span>
+                      <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: GREEN_MID }}>Cookbook</span>
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "hsl(132,18%,88%)" }}>
                         <Utensils className="h-4 w-4" style={{ color: GREEN_DEEP }} />
                       </div>
@@ -398,7 +398,7 @@ export default function Dashboard() {
                           <Plus className="h-5 w-5" style={{ color: GREEN_DEEP }} />
                         </div>
                         <div>
-                          <p className="title-card">Add a Meal</p>
+                          <p className="title-card">Add Recipe</p>
                           <p className="text-xs text-muted-foreground">Browse or create a new recipe</p>
                         </div>
                         <ArrowRight className="h-4 w-4 text-muted-foreground/40 ml-auto shrink-0" />

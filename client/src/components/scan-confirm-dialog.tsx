@@ -66,7 +66,7 @@ function RecipeForm({ parsed, rawText, onClose }: {
       return res;
     },
     onSuccess: () => {
-      toast({ title: "Recipe saved", description: `"${title}" added to My Meals.` });
+      toast({ title: "Recipe saved", description: `"${title}" added to Cookbook.` });
       qc.invalidateQueries({ queryKey: [api.meals.list.path] });
       onClose();
     },
@@ -330,7 +330,7 @@ function MealPlanForm({ parsed, onClose }: {
                 key={mi}
                 value={meal}
                 onChange={e => updateMeal(di, mi, e.target.value)}
-                placeholder="Meal name"
+                placeholder="Recipe name"
                 data-testid={`input-scan-meal-${di}-${mi}`}
               />
             ))}

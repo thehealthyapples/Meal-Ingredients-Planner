@@ -1780,7 +1780,7 @@ export default function MealsPage() {
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
       {/* Row A: compact title + action buttons */}
       <div className="flex justify-between items-center gap-4 mb-3">
-        <h1 className="text-xl font-semibold tracking-tight" data-testid="text-meals-title">My Meals</h1>
+        <h1 className="text-xl font-semibold tracking-tight" data-testid="text-meals-title">Cookbook</h1>
         <div className="flex items-center gap-2 shrink-0">
           <input
             ref={scanFileRef}
@@ -1798,7 +1798,7 @@ export default function MealsPage() {
             data-testid="button-quick-meal"
           >
             <Zap className="h-4 w-4 mr-1.5" />
-            Quick Meal
+            Build a Meal
           </Button>
           <AddMealGatewayDialog onScan={() => setCameraModalOpen(true)} />
           {(!importStatus || importStatus.totalImported === 0) && (
@@ -1899,7 +1899,7 @@ export default function MealsPage() {
             { value: "recipes", label: "Recipes", icon: null, iconColor: "" },
             { value: "ready-meals", label: "Ready Meals", icon: null, iconColor: "" },
             { value: "frozen-meals", label: "Frozen Meals", icon: Snowflake, iconColor: "text-muted-foreground" },
-            { value: "my-meals", label: "My Meals Only", icon: null, iconColor: "" },
+            { value: "my-meals", label: "My Cookbook", icon: null, iconColor: "" },
             { value: "freezer", label: "Freezer", icon: Snowflake, iconColor: "text-muted-foreground" },
           ] as const).map(({ value, label, icon: Icon, iconColor }, idx) => (
             <Button
@@ -3330,10 +3330,10 @@ function VoiceMealDialog({ open, onOpenChange, onTranscript }: {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mic className="h-5 w-5 text-primary" />
-            Speak your meal
+            Speak your recipe
           </DialogTitle>
           <DialogDescription>
-            Say the meal name or describe what you'd like to add.
+            Say the recipe name or describe what you'd like to add.
           </DialogDescription>
         </DialogHeader>
         {!supported ? (
@@ -3415,13 +3415,13 @@ function AddMealGatewayDialog({ onScan }: { onScan: () => void }) {
         <DialogTrigger asChild>
           <Button data-testid="button-add-meal">
             <Plus className="mr-2 h-4 w-4" />
-            Add Meal
+            Add Recipe
           </Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Add a Meal</DialogTitle>
-            <DialogDescription>Choose how you'd like to add your meal.</DialogDescription>
+            <DialogTitle>Add a Recipe</DialogTitle>
+            <DialogDescription>Choose how you'd like to add your recipe.</DialogDescription>
           </DialogHeader>
           <div className="space-y-2 pt-1">
             <button
@@ -3464,8 +3464,8 @@ function AddMealGatewayDialog({ onScan }: { onScan: () => void }) {
             >
               <Mic className="h-5 w-5 text-primary shrink-0" />
               <div>
-                <p className="text-sm font-medium">Speak to input meal</p>
-                <p className="text-xs text-muted-foreground">Describe your meal by voice to fill the form</p>
+                <p className="text-sm font-medium">Speak to input recipe</p>
+                <p className="text-xs text-muted-foreground">Describe your recipe by voice to fill the form</p>
               </div>
             </button>
             <button
@@ -3475,7 +3475,7 @@ function AddMealGatewayDialog({ onScan }: { onScan: () => void }) {
             >
               <Pencil className="h-5 w-5 text-primary shrink-0" />
               <div>
-                <p className="text-sm font-medium">Input manually</p>
+                <p className="text-sm font-medium">Add new recipe</p>
                 <p className="text-xs text-muted-foreground">Type in a recipe from scratch</p>
               </div>
             </button>
@@ -3727,7 +3727,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange, socialMode }: 
                 ) : (
                   <Save className="mr-2 h-4 w-4" />
                 )}
-                Save to My Meals
+                Save Recipe
               </Button>
               <Button
                 variant="outline"
@@ -3837,15 +3837,15 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: {
         <DialogTrigger asChild>
           <Button data-testid="button-add-meal-direct">
             <Plus className="mr-2 h-4 w-4" />
-            Add Meal
+            Add Recipe
           </Button>
         </DialogTrigger>
       )}
       <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Add New Meal</DialogTitle>
+          <DialogTitle>Add New Recipe</DialogTitle>
           <DialogDescription>
-            Create a meal with its required ingredients.
+            Create a recipe with its required ingredients.
           </DialogDescription>
         </DialogHeader>
         
@@ -3857,7 +3857,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Meal Name</FormLabel>
+                  <FormLabel>Recipe Name</FormLabel>
                   <FormControl>
                     <Input placeholder="e.g. Spicy Chicken Pasta" {...field} data-testid="input-meal-name" />
                   </FormControl>
@@ -4007,7 +4007,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: {
             <DialogFooter className="pt-4 shrink-0">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={createMeal.isPending} data-testid="button-submit-meal">
-                {createMeal.isPending ? "Creating..." : "Create Meal"}
+                {createMeal.isPending ? "Creating..." : "Create Recipe"}
               </Button>
             </DialogFooter>
           </form>

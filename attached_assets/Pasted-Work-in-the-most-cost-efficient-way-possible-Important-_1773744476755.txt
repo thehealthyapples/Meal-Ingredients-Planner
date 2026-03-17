@@ -1,0 +1,72 @@
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- Do not add extra features, ideas, refactors, abstractions, or “nice to have” improvements unless explicitly requested.
+- Touch only UI labels and text.
+- Do not change database schema, models, API structures, or routing unless absolutely necessary for a visible label.
+- Reuse existing components and layouts.
+- Keep implementation minimal and consistent.
+- Do not run broad tests. Only confirm UI text updates render correctly.
+
+Task:
+Standardise terminology across the UI so that:
+- the main library area is called “Cookbook”
+- single dish = “Recipe”
+- grouped/assembled items = “Meal”
+- “Quick Meal” becomes “Build a Meal”
+
+Required changes:
+
+1. Rename “My Meals” to “Cookbook”
+- Update the main page title, navigation label, menu label, and any obvious visible UI references that currently say “My Meals”
+- Replace with “Cookbook”
+- Do not rename backend entities, tables, or APIs
+- Keep this to visible UI wording only
+
+2. Rename “Quick Meal” to “Build a Meal”
+- Update all buttons, entry points, and labels that currently say “Quick Meal”
+- Replace with “Build a Meal”
+- Do not change underlying logic
+
+3. Change “Add a Meal” to “Add Recipe”
+- Update all buttons and entry points that create a single dish
+- Replace “Add a Meal” with “Add Recipe”
+
+4. Update Add Recipe modal wording
+In the modal triggered by “Add Recipe”, make the following changes:
+
+- “Speak your meal” → “Speak your recipe”
+- “Say the meal name or describe what you'd like to add.” → “Say the recipe name or describe what you'd like to add.”
+- “Input manually” → “Add new recipe”
+- “Add new meal” → “Add new recipe”
+- “Meal name” → “Recipe name”
+- “Meal description” → “Recipe description”
+- “Save Meal” → “Save Recipe”
+
+5. Replace remaining incorrect “Meal” references in the single-dish create/edit flow
+- Any wording inside the single-dish creation or editing flow that refers to “meal” should be changed to “recipe”
+
+Important rules:
+- Do NOT change wording where “Meal” is correct, including:
+  - Build a Meal
+  - Meal Planner
+  - grouped meals
+  - meal cards created from Meal Builder
+- Do NOT rename backend entities, database tables, or APIs
+- This is strictly a UI terminology correction
+
+Validation:
+- Confirm that:
+  - “Cookbook” appears instead of “My Meals”
+  - “Build a Meal” appears instead of “Quick Meal”
+  - “Add Recipe” appears instead of “Add a Meal”
+  - the modal text uses “recipe” consistently
+- Do not run broad tests
+
+After implementing:
+Provide a short summary of:
+- which UI labels were changed
+- which files were updated
+- confirmation that backend naming was not changed
+- confirmation that Meal Builder and Meal Planner wording were preserved where correct

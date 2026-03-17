@@ -213,7 +213,7 @@ function CopyFromPlannerModal({
             title="Coming soon"
           >
             <input type="radio" name="copy-slot" disabled />
-            <span className="text-sm text-muted-foreground">Import from My Meals</span>
+            <span className="text-sm text-muted-foreground">Import from Cookbook</span>
             <Badge variant="outline" className="ml-auto text-[9px]">Soon</Badge>
           </label>
         </div>

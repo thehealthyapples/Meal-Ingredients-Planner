@@ -56,7 +56,7 @@ export function decodeGroupedSources(instructions: string[] | null | undefined):
 function sourceLabel(source: PartSource): string {
   switch (source.type) {
     case "web": return source.sourceName || "Web";
-    case "my-meal": return "My Meals";
+    case "my-meal": return "Cookbook";
     case "fresh": return "Fresh";
     case "frozen": return "Frozen";
     default: return "Basic";
@@ -229,7 +229,7 @@ export default function QuickMealPage() {
 
   const saveMealMutation = useMutation({
     mutationFn: async () => {
-      const name = mealName.trim() || "Quick Meal";
+      const name = mealName.trim() || "Build a Meal";
       const ingredients = parts.map((p) => p.label);
       const instructions = buildInstructions(parts);
       if (editId) {
@@ -275,7 +275,7 @@ export default function QuickMealPage() {
     mutationFn: async () => saveMealMutation.mutateAsync(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
-      toast({ title: editId ? "Meal updated" : "Meal saved", description: `${mealName.trim() || "Quick Meal"} added to My Meals.` });
+      toast({ title: editId ? "Meal updated" : "Meal saved", description: `${mealName.trim() || "Build a Meal"} added to Cookbook.` });
       navigate("/meals");
     },
     onError: () => {
@@ -290,7 +290,7 @@ export default function QuickMealPage() {
       <div className="flex items-center gap-2 mb-6">
         <ChefHat className="h-5 w-5 text-primary" />
         <h1 className="text-xl font-semibold tracking-tight">
-          {editId ? "Edit Quick Meal" : "Quick Meal"}
+          {editId ? "Edit Meal" : "Build a Meal"}
         </h1>
       </div>
 
@@ -429,7 +429,7 @@ export default function QuickMealPage() {
                             {myMeals.length > 0 && (
                               <div className="space-y-1">
                                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide flex items-center gap-1">
-                                  <UtensilsCrossed className="h-3 w-3" /> My Meals
+                                  <UtensilsCrossed className="h-3 w-3" /> Cookbook
                                 </p>
                                 {myMeals.map((m) => (
                                   <button
@@ -569,7 +569,7 @@ export default function QuickMealPage() {
               ) : (
                 <Save className="h-4 w-4 mr-2" />
               )}
-              {editId ? "Save Changes" : "Save to My Meals"}
+              {editId ? "Save Changes" : "Save to Cookbook"}
             </Button>
           </div>
         </>

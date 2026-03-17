@@ -32,7 +32,7 @@ const NAV_ITEMS_TOP = [
 ];
 
 const NAV_ITEMS_MAIN = [
-  { href: "/meals", label: "My Meals", icon: Utensils },
+  { href: "/meals", label: "Cookbook", icon: Utensils },
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/products", label: "Analyser", icon: Microscope },
@@ -52,7 +52,7 @@ const ADMIN_ITEMS = [
 
 const MOBILE_BOTTOM_ITEMS = [
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
-  { href: "/meals", label: "My Meals", icon: Utensils },
+  { href: "/meals", label: "Cookbook", icon: Utensils },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
   { href: "/profile", label: "Profile", icon: User },
