@@ -54,12 +54,17 @@ interface SmartCandidate {
   image?: string | null;
   isExternal?: boolean;
   externalId?: string;
+  source?: string | null;
   sourceUrl?: string | null;
   estimatedCost?: number | null;
   estimatedUPFScore?: number | null;
   scoreBreakdown?: Record<string, number>;
   category?: string | null;
+  cuisine?: string | null;
   primaryProtein?: string | null;
+  dietTypes?: string[];
+  ingredients?: string[];
+  servings?: number | null;
 }
 interface MealExplanation {
   title: string;
@@ -1881,65 +1886,126 @@ export default function WeeklyPlannerPage() {
                           const exKey = `${key}-expl`;
                           const expanded = expandedExplanation === exKey;
                           return (
-                            <div key={key} className="flex items-start gap-3 px-3 py-3">
-                              {(() => {
-                                const mealImg = entry.candidate.image || mealById.get(Number(entry.candidate.id))?.imageUrl || null;
-                                return (
-                                  <div className="h-14 w-14 rounded-lg overflow-hidden bg-muted shrink-0 border flex items-center justify-center">
-                                    {mealImg
-                                      ? <img src={mealImg} alt={entry.candidate.name} className="h-full w-full object-cover" />
-                                      : <UtensilsCrossed className="h-5 w-5 text-muted-foreground/50" />}
-                                  </div>
-                                );
-                              })()}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-xs font-medium text-muted-foreground capitalize">{entry.slot}</span>
-                                  {entry.candidate.isExternal && <Badge variant="outline" className="text-xs h-4 px-1">New</Badge>}
+                            <div key={key} className="flex flex-col">
+                              <div className="flex items-start gap-3 px-3 pt-3 pb-2">
+                                {(() => {
+                                  const internalMeal = !entry.candidate.isExternal ? mealById.get(Number(entry.candidate.id)) : null;
+                                  const mealImg = entry.candidate.image || internalMeal?.imageUrl || null;
+                                  return (
+                                    <div className="h-20 w-20 rounded-lg overflow-hidden bg-muted shrink-0 border flex items-center justify-center">
+                                      {mealImg
+                                        ? <img src={mealImg} alt={entry.candidate.name} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                        : <UtensilsCrossed className="h-6 w-6 text-muted-foreground/40" />}
+                                    </div>
+                                  );
+                                })()}
+                                <div className="flex-1 min-w-0">
+                                  {(() => {
+                                    const internalMeal = !entry.candidate.isExternal ? mealById.get(Number(entry.candidate.id)) : null;
+                                    const dietTypes = entry.candidate.dietTypes || internalMeal?.dietTypes || [];
+                                    const cuisine = entry.candidate.cuisine || null;
+                                    const sourceName = entry.candidate.source || (entry.candidate.isExternal ? 'Web' : 'Cookbook');
+                                    const sourceUrl = entry.candidate.sourceUrl || internalMeal?.sourceUrl || null;
+                                    const ingredientCount = (entry.candidate.ingredients?.length ?? 0) || internalMeal?.ingredients?.length || null;
+                                    const servings = entry.candidate.servings || internalMeal?.servings || null;
+                                    const primaryProtein = entry.candidate.primaryProtein || null;
+                                    const upfScore = entry.candidate.estimatedUPFScore ?? null;
+                                    const cost = entry.candidate.estimatedCost ?? null;
+                                    return (
+                                      <>
+                                        <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                          <span className="text-xs font-medium text-muted-foreground capitalize">{entry.slot}</span>
+                                          <span className="text-muted-foreground/40">·</span>
+                                          <span className="text-xs text-muted-foreground">{sourceName}</span>
+                                          {dietTypes.includes('vegetarian') && (
+                                            <Badge variant="outline" className="text-[10px] h-4 px-1 border-green-500/50 text-green-600 dark:text-green-400">Vegetarian</Badge>
+                                          )}
+                                          {dietTypes.includes('vegan') && (
+                                            <Badge variant="outline" className="text-[10px] h-4 px-1 border-green-500/50 text-green-600 dark:text-green-400">Vegan</Badge>
+                                          )}
+                                          {dietTypes.includes('gluten-free') && (
+                                            <Badge variant="outline" className="text-[10px] h-4 px-1 border-amber-500/50 text-amber-600 dark:text-amber-400">GF</Badge>
+                                          )}
+                                        </div>
+                                        <p className="text-sm font-semibold leading-snug mb-1.5">{entry.candidate.name}</p>
+                                        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                                          {cuisine && <span className="capitalize">{cuisine}</span>}
+                                          {primaryProtein && <span className="capitalize">{primaryProtein}</span>}
+                                          {ingredientCount ? <span className="flex items-center gap-0.5"><UtensilsCrossed className="h-3 w-3" />{ingredientCount} ingredients</span> : null}
+                                          {servings ? <span className="flex items-center gap-0.5"><UtensilsCrossed className="h-3 w-3" />{servings} servings</span> : null}
+                                        </div>
+                                      </>
+                                    );
+                                  })()}
                                 </div>
-                                <p className="text-sm font-semibold mt-0.5 leading-snug">{entry.candidate.name}</p>
-                                {entry.candidate.estimatedCost != null && (
-                                  <p className="text-xs text-muted-foreground mt-0.5">
-                                    ~£{(entry.candidate.estimatedCost ?? 0).toFixed(2)}
-                                    {entry.candidate.estimatedUPFScore != null && <span className={`ml-2 ${getUPFColor(entry.candidate.estimatedUPFScore ?? undefined)}`}>UPF: {getUPFLabel(entry.candidate.estimatedUPFScore ?? undefined)}</span>}
-                                  </p>
-                                )}
-                                {entry.explanation && (
-                                  <div className="mt-1">
-                                    <button
-                                      className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
-                                      onClick={() => setExpandedExplanation(expanded ? null : exKey)}
-                                      data-testid={`button-explain-${key}`}
-                                    >
-                                      {expanded ? "Hide" : "Why this?"}
-                                    </button>
-                                    {expanded && (
-                                      <div className="mt-1.5 text-xs text-muted-foreground space-y-0.5">
-                                        {entry.explanation.reasons.map((r, i) => <p key={i}>• {r}</p>)}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
+                                <div className="flex flex-col gap-1 shrink-0">
+                                  <button
+                                    onClick={() => regenerateSingleEntry(entry)}
+                                    disabled={smartLoading}
+                                    className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors disabled:opacity-40"
+                                    title="Get a different meal for this slot"
+                                    data-testid={`button-refresh-${key}`}
+                                  >
+                                    <RefreshCw className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => toggleLockEntry(key)}
+                                    className={`p-1.5 rounded-md transition-colors ${locked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent/40"}`}
+                                    title={locked ? "Locked — will be kept on regenerate" : "Click to lock this meal"}
+                                    data-testid={`button-lock-${key}`}
+                                  >
+                                    <Lock className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
                               </div>
-                              <div className="flex flex-col gap-1 shrink-0">
-                                <button
-                                  onClick={() => regenerateSingleEntry(entry)}
-                                  disabled={smartLoading}
-                                  className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors disabled:opacity-40"
-                                  title="Get a different meal for this slot"
-                                  data-testid={`button-refresh-${key}`}
-                                >
-                                  <RefreshCw className="h-3.5 w-3.5" />
-                                </button>
-                                <button
-                                  onClick={() => toggleLockEntry(key)}
-                                  className={`p-1.5 rounded-md transition-colors ${locked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent/40"}`}
-                                  title={locked ? "Locked — will be kept on regenerate" : "Click to lock this meal"}
-                                  data-testid={`button-lock-${key}`}
-                                >
-                                  <Lock className="h-3.5 w-3.5" />
-                                </button>
+                              <div className="px-3 pb-2.5 flex items-center gap-3 flex-wrap">
+                                {(() => {
+                                  const internalMeal = !entry.candidate.isExternal ? mealById.get(Number(entry.candidate.id)) : null;
+                                  const sourceUrl = entry.candidate.sourceUrl || internalMeal?.sourceUrl || null;
+                                  const upfScore = entry.candidate.estimatedUPFScore ?? null;
+                                  const cost = entry.candidate.estimatedCost ?? null;
+                                  return (
+                                    <>
+                                      {cost != null && (
+                                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                          <DollarSign className="h-3 w-3" />£{cost.toFixed(2)}
+                                        </span>
+                                      )}
+                                      {upfScore != null && (
+                                        <span className={`flex items-center gap-1 text-xs ${getUPFColor(upfScore)}`}>
+                                          <Shield className="h-3 w-3" />UPF: {getUPFLabel(upfScore)}
+                                        </span>
+                                      )}
+                                      {sourceUrl && (
+                                        <a
+                                          href={sourceUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                          data-testid={`link-recipe-source-${key}`}
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <ExternalLink className="h-3 w-3" />View recipe
+                                        </a>
+                                      )}
+                                      {entry.explanation && (
+                                        <button
+                                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                                          onClick={() => setExpandedExplanation(expanded ? null : exKey)}
+                                          data-testid={`button-explain-${key}`}
+                                        >
+                                          <HelpCircle className="h-3 w-3" />{expanded ? "Hide" : "Why this?"}
+                                        </button>
+                                      )}
+                                    </>
+                                  );
+                                })()}
                               </div>
+                              {expanded && entry.explanation && (
+                                <div className="px-3 pb-3 text-xs text-muted-foreground space-y-0.5 border-t pt-2">
+                                  {entry.explanation.reasons.map((r, i) => <p key={i}>• {r}</p>)}
+                                </div>
+                              )}
                             </div>
                           );
                         })}
