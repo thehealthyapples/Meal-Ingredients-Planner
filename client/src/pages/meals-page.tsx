@@ -309,16 +309,18 @@ function GroupedMealDetail({ meal, allMeals, tab, mealId }: {
   mealId: number;
 }) {
   const sources = parseGroupedSources(meal.instructions);
-  const components = (meal.ingredients ?? []).map((label) => {
-    const src = sources?.[label];
-    const componentMeal = src?.mealId ? allMeals.find((m) => m.id === src.mealId) ?? null : null;
-    return { label, src, componentMeal };
-  });
+  // Labels come from the sources JSON, NOT from meal.ingredients
+  const components = sources
+    ? Object.entries(sources).map(([label, src]) => {
+        const componentMeal = src?.mealId ? allMeals.find((m) => m.id === src.mealId) ?? null : null;
+        return { label, src, componentMeal };
+      })
+    : [];
 
   if (tab === "ingredients") {
     return (
       <div className="space-y-3 pb-2" data-testid={`expanded-ingredients-${mealId}`}>
-        {components.map(({ label, componentMeal }) => (
+        {components.map(({ label, src, componentMeal }) => (
           <div key={label}>
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
             {componentMeal && (componentMeal.ingredients ?? []).length > 0 ? (
@@ -333,11 +335,16 @@ function GroupedMealDetail({ meal, allMeals, tab, mealId }: {
                   );
                 })}
               </div>
+            ) : src?.type === "fresh" || src?.type === "frozen" || src?.type === "basic" ? (
+              <div className="pl-2 text-sm text-foreground py-0.5">{label}</div>
             ) : (
               <p className="text-xs text-muted-foreground pl-2">No ingredients saved</p>
             )}
           </div>
         ))}
+        {components.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-2">No components found</p>
+        )}
       </div>
     );
   }
@@ -2214,8 +2221,8 @@ export default function MealsPage() {
                         </div>
                       ) : meal.mealFormat === "grouped" && !meal.imageUrl ? (
                         <div className="w-full h-full flex flex-col items-center justify-center bg-primary/5 relative" data-testid={`placeholder-grouped-${meal.id}`}>
-                          <img src={thaAppleLogo} alt="THA" className="h-16 w-16 object-contain" />
-                          <span className="text-sm font-semibold text-center px-3 mt-2 leading-tight text-foreground">{meal.name}</span>
+                          <img src={thaAppleLogo} alt="THA" className="h-40 w-40 object-contain" />
+                          <span className="text-sm font-semibold text-center px-3 mt-1 leading-tight text-foreground">{meal.name}</span>
                           <span className="text-[10px] font-medium tracking-wider uppercase text-muted-foreground/60 mt-0.5">Grouped Meal</span>
                         </div>
                       ) : meal.imageUrl ? (
@@ -2502,8 +2509,8 @@ export default function MealsPage() {
                           <MealWatermark type={meal.audience === 'baby' ? 'baby' : 'child'} size="sm" className="relative" />
                         </div>
                       ) : meal.mealFormat === "grouped" && !meal.imageUrl ? (
-                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center gap-1 bg-primary/5" data-testid={`placeholder-grouped-list-${meal.id}`}>
-                          <img src={thaAppleLogo} alt="THA" className="h-10 w-10 object-contain" />
+                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center bg-primary/5" data-testid={`placeholder-grouped-list-${meal.id}`}>
+                          <img src={thaAppleLogo} alt="THA" className="h-24 w-24 object-contain" />
                         </div>
                       ) : !meal.isSystemMeal && !meal.imageUrl ? (
                         <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex items-center justify-center bg-accent/30 relative">
