@@ -1,0 +1,67 @@
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- Do not add extra features, ideas, refactors, abstractions, or “nice to have” improvements unless explicitly requested.
+- Touch only the files and logic necessary for this task.
+- Reuse existing patterns, components, services, and schema structure wherever possible.
+- Keep implementation simple, targeted, and easy to maintain.
+- Minimise token usage, file churn, and unnecessary code generation.
+- Do not run broad tests. Only do the absolute minimum validation needed to avoid obvious breakage.
+- Preserve existing behaviour unless this task explicitly requires a change.
+
+Task:
+Add support for multi-recipe meal viewing and a simple meal timing calculator.
+
+Problem:
+Some meals consist of several recipes (example: roast dinner). Users need help coordinating cooking steps.
+
+Required behaviour:
+
+Part 1 — Component recipe view
+When a meal contains multiple recipe parts, allow switching between the methods for each component.
+
+Example:
+- chicken method
+- roast potatoes method
+- cauliflower cheese method
+- gravy method
+
+Part 2 — Full meal method view
+Add a "Full Meal Method" view which combines the cooking order into one timeline.
+
+Part 3 — Timing calculator
+User can enter a desired serve time (example: 5:00pm).
+
+THA should:
+- work backwards using recipe durations
+- generate a simple cooking schedule.
+
+Example output:
+- Chicken into oven: 2:55 pm
+- Potatoes start: 4:00 pm
+- Cauliflower cheese in oven: 4:25 pm
+- Yorkshire puddings: 4:35 pm
+- Serve: 5:00 pm
+
+Implementation requirements:
+- Keep the algorithm simple.
+- Use existing recipe time estimates.
+- Do not build a full kitchen scheduling engine.
+- A basic backwards timing calculation is sufficient.
+
+UI requirements:
+- Toggle between:
+  - component recipe methods
+  - full meal method timeline
+
+Validation:
+- Only verify that the schedule generates from a serve time.
+- Do not run broad tests.
+
+After implementing:
+Provide a short summary of:
+- which files changed
+- where the new views appear
+- how the timing calculation works
+- any limitations in this first version.
