@@ -377,7 +377,7 @@ export function TopBar() {
               <img
                 src="/logo-long.png"
                 alt="The Healthy Apples"
-                className="h-auto max-h-[44px] w-auto max-w-[900px]"
+                className="h-auto max-h-[144px] w-auto max-w-[900px]"
               />
             </Link>
           </div>
@@ -396,7 +396,7 @@ export function TopBar() {
               <img
                 src="/logo-long.png"
                 alt="The Healthy Apples"
-                className="h-auto max-h-[30px] w-auto max-w-[520px]"
+                className="h-auto max-h-[96px] w-auto max-w-[520px]"
               />
             </Link>
             <button
