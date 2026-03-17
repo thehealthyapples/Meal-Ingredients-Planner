@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingCart, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, ExternalLink } from "lucide-react";
+import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingCart, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock } from "lucide-react";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -124,8 +124,30 @@ export default function MealDetailPage() {
 
   const { data: allMeals = [] } = useQuery<Meal[]>({
     queryKey: [api.meals.list.path],
+    queryFn: async () => {
+      const res = await fetch(api.meals.list.path);
+      if (!res.ok) throw new Error("Failed to fetch meals");
+      return res.json();
+    },
     enabled: meal?.mealFormat === "grouped",
   });
+
+  useEffect(() => {
+    if (!meal || meal.mealFormat !== "grouped" || allMeals.length === 0) return;
+    let gs: GroupedSources | null = null;
+    try { gs = decodeGroupedSources(meal.instructions || []); } catch { return; }
+    if (!gs) return;
+    for (const src of Object.values(gs.sources)) {
+      if (src.type !== "web") continue;
+      if (!src.mealId || !src.url) continue;
+      const componentMeal = allMeals.find(m => m.id === src.mealId);
+      if (!componentMeal) continue;
+      if (componentMeal.instructions && componentMeal.instructions.length > 0) continue;
+      apiRequest('PATCH', buildUrl(api.meals.reimportInstructions.path, { id: src.mealId }), { url: src.url })
+        .then(() => { queryClient.invalidateQueries({ queryKey: [api.meals.list.path] }); })
+        .catch(() => {});
+    }
+  }, [meal, allMeals]);
 
   const copyMutation = useMutation({
     mutationFn: async () => {
@@ -610,12 +632,15 @@ export default function MealDetailPage() {
                               </li>
                             ))}
                           </ul>
+                        ) : src.type === "basic" || src.type === "fresh" || src.type === "frozen" ? (
+                          <ul className="space-y-1 pl-1">
+                            <li className="text-sm flex items-start gap-2">
+                              <span className="text-primary mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
+                              <span>{label}</span>
+                            </li>
+                          </ul>
                         ) : (
-                          <p className="text-sm text-muted-foreground italic pl-1">
-                            {src.type === "basic" || src.type === "fresh" || src.type === "frozen"
-                              ? "Add your own"
-                              : "No ingredients saved"}
-                          </p>
+                          <p className="text-sm text-muted-foreground italic pl-1">No ingredients saved</p>
                         )}
                       </div>
                     );
@@ -706,24 +731,9 @@ export default function MealDetailPage() {
                       const componentMeal = (src.type === "web" || src.type === "my-meal") && src.mealId
                         ? allMeals.find(m => m.id === src.mealId)
                         : null;
-                      const webSrc = src.type === "web" ? src : null;
                       return (
                         <div key={label} data-testid={`group-method-${label}`}>
-                          <div className="flex items-center gap-2 mb-2">
-                            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{label}</p>
-                            {webSrc?.url && (
-                              <a
-                                href={webSrc.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-primary flex items-center gap-0.5 hover:underline"
-                                data-testid={`link-source-${label}`}
-                              >
-                                {webSrc.sourceName || webSrc.displayName}
-                                <ExternalLink className="h-3 w-3 ml-0.5" />
-                              </a>
-                            )}
-                          </div>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{label}</p>
                           {componentMeal && componentMeal.instructions && componentMeal.instructions.length > 0 ? (
                             <ol className="space-y-2">
                               {componentMeal.instructions.map((step, i) => (
@@ -734,9 +744,7 @@ export default function MealDetailPage() {
                               ))}
                             </ol>
                           ) : (
-                            <p className="text-sm text-muted-foreground italic">
-                              {webSrc?.url ? "Visit the link above for full instructions" : "No method saved"}
-                            </p>
+                            <p className="text-sm text-muted-foreground italic">No method saved</p>
                           )}
                         </div>
                       );
