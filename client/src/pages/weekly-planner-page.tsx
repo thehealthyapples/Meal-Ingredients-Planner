@@ -168,15 +168,17 @@ interface SmartMealEntryCardProps {
   entry: SmartSuggestEntry;
   meal: Meal | undefined;
   nutrition: Nutrition | undefined;
+  nutritionLoading: boolean;
   locked: boolean;
   expanded: boolean;
   smartLoading: boolean;
   onLock: () => void;
   onRefresh: () => void;
   onExpandExplain: () => void;
+  onNutritionRefresh: () => void;
 }
 
-function SmartMealEntryCard({ entry, meal, nutrition, locked, expanded, smartLoading, onLock, onRefresh, onExpandExplain }: SmartMealEntryCardProps) {
+function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, expanded, smartLoading, onLock, onRefresh, onExpandExplain, onNutritionRefresh }: SmartMealEntryCardProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [, navigate] = useLocation();
@@ -200,7 +202,10 @@ function SmartMealEntryCard({ entry, meal, nutrition, locked, expanded, smartLoa
       const res = await apiRequest('POST', '/api/analyze-meal', { mealId });
       return res.json();
     },
-    onSuccess: (data: { healthScore: number }) => toast({ title: "Analysis complete", description: `Health score: ${data.healthScore}/100` }),
+    onSuccess: (data: { healthScore: number }) => {
+      toast({ title: "Analysis complete", description: `Health score: ${data.healthScore}/100` });
+      onNutritionRefresh();
+    },
     onError: () => toast({ title: "Analysis failed", variant: "destructive" }),
   });
 
@@ -261,17 +266,37 @@ function SmartMealEntryCard({ entry, meal, nutrition, locked, expanded, smartLoa
         </div>
       </div>
 
-      {nutritionItems.length > 0 && (
+      {mealId && (
         <div className="px-3 pb-2">
           <p className="text-[11px] font-semibold text-muted-foreground mb-1">Nutrition (per serving)</p>
-          <div className="grid grid-cols-3 gap-1">
-            {nutritionItems.map(({ label, value, Icon, color }) => (
-              <div key={label} className="flex items-center gap-1 rounded-md bg-muted/50 px-1.5 py-0.5">
-                <Icon className={`h-3 w-3 shrink-0 ${color}`} />
-                <span className="text-[11px] font-medium truncate">{value}</span>
-              </div>
-            ))}
-          </div>
+          {nutritionLoading && !nutritionItems.length ? (
+            <div className="grid grid-cols-3 gap-1">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-5 rounded-md bg-muted animate-pulse" />
+              ))}
+            </div>
+          ) : nutritionItems.length > 0 ? (
+            <div className="grid grid-cols-3 gap-1">
+              {nutritionItems.map(({ label, value, Icon, color }) => (
+                <div key={label} className="flex items-center gap-1 rounded-md bg-muted/50 px-1.5 py-0.5">
+                  <Icon className={`h-3 w-3 shrink-0 ${color}`} />
+                  <span className="text-[11px] font-medium truncate">{value}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <button
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-0.5"
+              onClick={() => analyzeMutation.mutate()}
+              disabled={analyzeMutation.isPending}
+              data-testid={`button-fetch-nutrition-${key}`}
+            >
+              {analyzeMutation.isPending
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : <Microscope className="h-3.5 w-3.5" />}
+              {analyzeMutation.isPending ? 'Analysing…' : 'Tap to fetch nutrition data'}
+            </button>
+          )}
         </div>
       )}
 
@@ -407,6 +432,8 @@ export default function WeeklyPlannerPage() {
   const [smartResult, setSmartResult] = useState<SmartSuggestResult | null>(null);
   const [smartDialogOpen, setSmartDialogOpen] = useState(false);
   const [smartNutritionMap, setSmartNutritionMap] = useState<Map<number, Nutrition>>(new Map());
+  const [nutritionLoading, setNutritionLoading] = useState(false);
+  const [nutritionFetchTick, setNutritionFetchTick] = useState(0);
   const [smartControlsOpen, setSmartControlsOpen] = useState(false);
   const [smartMealsPerDay, setSmartMealsPerDay] = useState("3");
   const [smartCuisine, setSmartCuisine] = useState("");
@@ -799,15 +826,44 @@ export default function WeeklyPlannerPage() {
       .map(e => Number(e.candidate.id))
       .filter(id => !isNaN(id));
     if (internalIds.length === 0) return;
-    apiRequest('POST', '/api/nutrition/bulk', { mealIds: internalIds })
-      .then(r => r.json())
-      .then((data: Nutrition[]) => {
-        const map = new Map<number, Nutrition>();
-        data.forEach(n => { if (n.mealId) map.set(n.mealId, n); });
-        setSmartNutritionMap(map);
-      })
-      .catch(() => {});
-  }, [smartResult, smartDialogOpen]);
+
+    let cancelled = false;
+    const retryDelays = [0, 5000, 10000, 20000, 35000];
+    let attempt = 0;
+
+    const fetchOnce = async (): Promise<boolean> => {
+      const r = await apiRequest('POST', '/api/nutrition/bulk', { mealIds: internalIds });
+      const data: Nutrition[] = await r.json();
+      if (cancelled) return true;
+      const map = new Map<number, Nutrition>();
+      data.forEach(n => { if (n.mealId) map.set(n.mealId, n); });
+      setSmartNutritionMap(map);
+      const allLoaded = internalIds.every(id => data.some(n => n.mealId === id && n.calories));
+      return allLoaded;
+    };
+
+    const runWithRetry = async () => {
+      setNutritionLoading(true);
+      try {
+        for (attempt = 0; attempt < retryDelays.length; attempt++) {
+          if (cancelled) break;
+          if (attempt > 0) {
+            await new Promise(r => setTimeout(r, retryDelays[attempt]));
+          }
+          if (cancelled) break;
+          const done = await fetchOnce();
+          if (done || cancelled) break;
+        }
+      } catch {
+        // swallow fetch errors
+      } finally {
+        if (!cancelled) setNutritionLoading(false);
+      }
+    };
+
+    runWithRetry();
+    return () => { cancelled = true; };
+  }, [smartResult, smartDialogOpen, nutritionFetchTick]);
 
   const runSmartSuggest = async (preserveLocks = false) => {
     setSmartLoading(true);
@@ -2132,12 +2188,14 @@ export default function WeeklyPlannerPage() {
                               entry={entry}
                               meal={internalMealId ? mealById.get(internalMealId) : undefined}
                               nutrition={internalMealId ? smartNutritionMap.get(internalMealId) : undefined}
+                              nutritionLoading={nutritionLoading}
                               locked={lockedEntries.has(key)}
                               expanded={expandedExplanation === exKey}
                               smartLoading={smartLoading}
                               onLock={() => toggleLockEntry(key)}
                               onRefresh={() => regenerateSingleEntry(entry)}
                               onExpandExplain={() => setExpandedExplanation(expandedExplanation === exKey ? null : exKey)}
+                              onNutritionRefresh={() => setNutritionFetchTick(t => t + 1)}
                             />
                           );
                         })}
