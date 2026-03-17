@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback, Fragment } from "react";
+import thaAppleLogo from "@/assets/icons/tha-apple.png";
 import { useMeals } from "@/hooks/use-meals";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -560,7 +561,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                 onClick={(e) => {
                   e.stopPropagation();
                   if (mealFormat === "grouped") {
-                    navigate(`/quick-meal?edit=${mealId}`);
+                    navigate(`/meals/${mealId}`);
                   } else {
                     editCopyMutation.mutate();
                   }
@@ -2211,6 +2212,12 @@ export default function MealsPage() {
                             {meal.isDrink ? 'Drink' : meal.audience === 'baby' ? 'Baby Meal' : meal.audience === 'child' ? 'Kids Meal' : 'Ready Meal'}
                           </span>
                         </div>
+                      ) : meal.mealFormat === "grouped" && !meal.imageUrl ? (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-primary/5 relative" data-testid={`placeholder-grouped-${meal.id}`}>
+                          <img src={thaAppleLogo} alt="THA" className="h-16 w-16 object-contain" />
+                          <span className="text-sm font-semibold text-center px-3 mt-2 leading-tight text-foreground">{meal.name}</span>
+                          <span className="text-[10px] font-medium tracking-wider uppercase text-muted-foreground/60 mt-0.5">Grouped Meal</span>
+                        </div>
                       ) : meal.imageUrl ? (
                         <>
                           <img
@@ -2493,6 +2500,10 @@ export default function MealsPage() {
                       ) : meal.audience === 'baby' || meal.audience === 'child' ? (
                         <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex items-center justify-center bg-accent/30">
                           <MealWatermark type={meal.audience === 'baby' ? 'baby' : 'child'} size="sm" className="relative" />
+                        </div>
+                      ) : meal.mealFormat === "grouped" && !meal.imageUrl ? (
+                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center gap-1 bg-primary/5" data-testid={`placeholder-grouped-list-${meal.id}`}>
+                          <img src={thaAppleLogo} alt="THA" className="h-10 w-10 object-contain" />
                         </div>
                       ) : !meal.isSystemMeal && !meal.imageUrl ? (
                         <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex items-center justify-center bg-accent/30 relative">

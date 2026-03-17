@@ -2601,6 +2601,34 @@ export async function registerRoutes(
           if (count === 0) continue;
           if (meal.isReadyMeal) {
             readyMealItems.push({ mealId: meal.id, name: meal.name, count });
+          } else if (meal.mealFormat === "grouped") {
+            // Decode component meals and aggregate their ingredients
+            let componentIngredients: string[] = [];
+            try {
+              const raw = (meal.instructions || [])[0];
+              if (raw) {
+                const gs = JSON.parse(raw) as { __v?: number; sources?: Record<string, { type: string; mealId?: number }> };
+                if (gs.sources) {
+                  for (const [label, src] of Object.entries(gs.sources)) {
+                    if ((src.type === "web" || src.type === "my-meal") && src.mealId) {
+                      const compMeal = await storage.getMeal(src.mealId);
+                      if (compMeal && compMeal.ingredients && compMeal.ingredients.length > 0) {
+                        componentIngredients.push(...compMeal.ingredients);
+                      }
+                    } else if (src.type === "fresh" || src.type === "frozen" || src.type === "basic") {
+                      componentIngredients.push(label);
+                    }
+                  }
+                }
+              }
+            } catch { /* fall back to meal.ingredients */ }
+            const effectiveIngredients = componentIngredients.length > 0 ? componentIngredients : meal.ingredients;
+            const multipliedIngredients: string[] = [];
+            for (let i = 0; i < count; i++) {
+              multipliedIngredients.push(...effectiveIngredients);
+            }
+            allIngredients.push(...multipliedIngredients);
+            mealMap.push({ meal: { id: meal.id, name: meal.name }, count, ingredients: effectiveIngredients });
           } else {
             const multipliedIngredients: string[] = [];
             for (let i = 0; i < count; i++) {
