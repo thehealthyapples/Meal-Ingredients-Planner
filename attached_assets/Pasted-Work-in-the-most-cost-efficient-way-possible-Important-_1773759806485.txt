@@ -1,0 +1,49 @@
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- Do not add extra features, ideas, refactors, abstractions, or “nice to have” improvements unless explicitly requested.
+- Touch only the files and UI logic necessary for this task.
+- Reuse the existing smart planner generation flow, planner page, controls panel, and current generation endpoints.
+- Keep implementation simple, targeted, and easy to maintain.
+- Minimise token usage, file churn, and unnecessary code generation.
+- Do not run broad tests. Only do the absolute minimum validation needed to avoid obvious breakage.
+- Preserve existing behaviour unless this task explicitly requires a change.
+
+Task:
+Surface the existing smart weekly planner as a clear primary feature instead of a hidden secondary control.
+
+Current issue:
+The smart planner exists, but it is effectively hidden inside the planner flow and does not feel like a core feature. Because the app already has a 6-week planner structure, users may not realise that THA can actively propose a week for them.
+
+Required behaviour:
+- Add a clear, prominent entry point for the existing smart planner generation flow.
+- This should appear on the planner page in a way that is obvious to users.
+- Use clear wording such as:
+  - Propose My Plan
+  - Plan My Week
+  - Smart Plan
+- Reuse the existing smart suggest flow and controls.
+- Do not build a new planning engine.
+
+Recommended UX:
+- On planner page, show a primary button for the smart planner flow.
+- If helpful, after selecting or opening a week, show helper text such as:
+  “Would you like THA to propose this week’s meals based on your household and preferences?”
+- If a 6-week planner already exists, do not hide the feature just because the plan structure exists.
+
+Implementation requirements:
+- Reuse the current planner generation modal/panel and endpoints.
+- Keep this as a surfacing and wording improvement, not a backend rewrite.
+- If cheap to do, improve naming so it does not rely on “AI” wording if the system is rule-based.
+
+Validation:
+- Only do the minimum needed to confirm the feature is now clearly visible and still opens the existing smart planner flow.
+- Do not run broad tests.
+
+After implementing:
+Provide a short summary of:
+- which files changed
+- where the feature is now surfaced
+- what wording is used
+- whether the old hidden entry point was preserved or simplified

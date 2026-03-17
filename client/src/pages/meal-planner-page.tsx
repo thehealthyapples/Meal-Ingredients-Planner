@@ -581,7 +581,6 @@ export default function MealPlannerPage() {
               </Button>
 
               <Button
-                variant="outline"
                 onClick={() => setSmartControlsOpen(!smartControlsOpen)}
                 disabled={smartLoading}
                 data-testid="button-smart-suggest"
@@ -589,9 +588,9 @@ export default function MealPlannerPage() {
                 {smartLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <Sparkles className="mr-2 h-4 w-4 text-primary" />
+                  <Sparkles className="mr-2 h-4 w-4" />
                 )}
-                {smartLoading ? "Generating..." : "Smart Suggest Week"}
+                {smartLoading ? "Planning..." : "Plan My Week"}
               </Button>
 
               <Button
@@ -689,6 +688,20 @@ export default function MealPlannerPage() {
             ))}
           </div>
 
+          {selectedPlanId && entries.length === 0 && !smartControlsOpen && (
+            <div className="flex items-center gap-4 rounded-xl border border-primary/20 bg-primary/5 px-5 py-4 mb-6">
+              <Sparkles className="h-5 w-5 text-primary shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground">Would you like THA to propose this week's meals?</p>
+                <p className="text-xs text-muted-foreground mt-0.5">We'll build a plan based on your cookbook, household, and preferences.</p>
+              </div>
+              <Button size="sm" onClick={() => setSmartControlsOpen(true)} data-testid="button-plan-my-week-prompt">
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                Plan My Week
+              </Button>
+            </div>
+          )}
+
           <AnimatePresence>
             {smartControlsOpen && selectedPlanId && (
               <motion.div
@@ -702,7 +715,7 @@ export default function MealPlannerPage() {
                   <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-primary" />
-                      Smart Suggestion Controls
+                      Plan My Week — Preferences
                     </CardTitle>
                     <Button size="icon" variant="ghost" onClick={() => setSmartControlsOpen(false)} data-testid="button-close-smart-controls">
                       <X className="h-4 w-4" />
@@ -892,7 +905,7 @@ export default function MealPlannerPage() {
                       ) : (
                         <Sparkles className="mr-2 h-4 w-4" />
                       )}
-                      {smartLoading ? "Generating smart plan..." : "Generate Smart Plan"}
+                      {smartLoading ? "Planning your week..." : "Propose My Plan"}
                     </Button>
                   </CardContent>
                 </Card>
@@ -1205,10 +1218,10 @@ export default function MealPlannerPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              Smart Weekly Plan
+              Your Proposed Plan
             </DialogTitle>
             <DialogDescription>
-              Multi-factor optimized plan with external recipe discovery, protein tracking, and budget awareness
+              Built from your cookbook, household preferences, protein balance, and budget
             </DialogDescription>
           </DialogHeader>
 
