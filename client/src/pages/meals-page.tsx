@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers } from "lucide-react";
 import { ScanConfirmDialog } from "@/components/scan-confirm-dialog";
 import { IngredientRow, buildIngredientString } from "@/components/ingredient-input";
 import { CameraModal } from "@/components/camera-modal";
@@ -585,6 +585,24 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
             </TooltipTrigger>
             <TooltipContent><p className="text-xs">Edit recipe</p></TooltipContent>
           </Tooltip>
+          {mealFormat === "grouped" && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/quick-meal?edit=${mealId}`);
+                  }}
+                  data-testid={`button-build-meal-${mealId}`}
+                >
+                  <Layers className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">Edit in Build a Meal</p></TooltipContent>
+            </Tooltip>
+          )}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
