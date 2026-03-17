@@ -2,13 +2,15 @@ import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AnimatePresence, motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { TemplatesPanel } from "@/components/templates-panel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
@@ -44,6 +46,46 @@ interface MatrixRow {
   addMealType: string;
   icon: React.ElementType;
   iconColor: string;
+}
+
+interface SmartCandidate {
+  id: string | number;
+  name: string;
+  isExternal?: boolean;
+  externalId?: string;
+  sourceUrl?: string | null;
+  estimatedCost?: number | null;
+  estimatedUPFScore?: number | null;
+  scoreBreakdown?: Record<string, number>;
+  category?: string | null;
+  primaryProtein?: string | null;
+}
+interface MealExplanation {
+  title: string;
+  reasons: string[];
+  scoreBreakdown: { healthScore: number; upfScore: number; budgetScore: number; preferenceMatch: number };
+}
+interface SmartSuggestEntry {
+  dayOfWeek: number;
+  day: string;
+  slot: string;
+  candidate: SmartCandidate;
+  locked: boolean;
+  explanation?: MealExplanation;
+}
+interface SmartSuggestResult {
+  entries: SmartSuggestEntry[];
+  stats: {
+    totalMeals: number;
+    userMeals: number;
+    externalMeals: number;
+    estimatedWeeklyCost: number;
+    averageUPFScore: number;
+    uniqueIngredients: number;
+    ingredientReuse: number;
+    proteinDistribution: Record<string, number>;
+    sharedIngredients: string[];
+  };
 }
 
 interface MealDetailState {
@@ -130,6 +172,22 @@ export default function WeeklyPlannerPage() {
   const [mobileDayIndex, setMobileDayIndex] = useState(0);
   const { user } = useUser();
   const [, navigate] = useLocation();
+
+  const [smartLoading, setSmartLoading] = useState(false);
+  const [smartResult, setSmartResult] = useState<SmartSuggestResult | null>(null);
+  const [smartDialogOpen, setSmartDialogOpen] = useState(false);
+  const [smartControlsOpen, setSmartControlsOpen] = useState(false);
+  const [smartMealsPerDay, setSmartMealsPerDay] = useState("3");
+  const [smartCuisine, setSmartCuisine] = useState("");
+  const [smartBudget, setSmartBudget] = useState("");
+  const [smartMaxUPF, setSmartMaxUPF] = useState("");
+  const [smartFishPerWeek, setSmartFishPerWeek] = useState("2");
+  const [smartRedMeatPerWeek, setSmartRedMeatPerWeek] = useState("3");
+  const [smartVegDays, setSmartVegDays] = useState(false);
+  const [smartLeftovers, setSmartLeftovers] = useState(false);
+  const [lockedEntries, setLockedEntries] = useState<Set<string>>(new Set());
+  const [expandedExplanation, setExpandedExplanation] = useState<string | null>(null);
+  const [applyingSmartPlan, setApplyingSmartPlan] = useState(false);
 
   const { data: plannerSettings } = useQuery<{
     showCalories: boolean;
@@ -489,6 +547,107 @@ export default function WeeklyPlannerPage() {
     addToBasketMutation.mutate(selections);
   };
 
+  const getUPFColor = (score?: number) => {
+    if (!score) return "text-muted-foreground";
+    if (score <= 20) return "text-green-600 dark:text-green-400";
+    if (score <= 50) return "text-yellow-600 dark:text-yellow-400";
+    return "text-red-600 dark:text-red-400";
+  };
+  const getUPFLabel = (score?: number) => {
+    if (!score) return "Unknown";
+    if (score <= 20) return "Minimal";
+    if (score <= 50) return "Moderate";
+    return "High";
+  };
+
+  const runSmartSuggest = async (preserveLocks = false) => {
+    setSmartLoading(true);
+    try {
+      const locked: { dayOfWeek: number; slot: string; candidateId: string | number; candidateName: string }[] = [];
+      if (preserveLocks && smartResult) {
+        for (const entry of smartResult.entries) {
+          const key = `${entry.dayOfWeek}-${entry.slot}`;
+          if (lockedEntries.has(key)) {
+            locked.push({ dayOfWeek: entry.dayOfWeek, slot: entry.slot, candidateId: entry.candidate.id, candidateName: entry.candidate.name });
+          }
+        }
+      }
+      const res = await apiRequest('POST', '/api/meal-plans/smart-suggest', {
+        mealsPerDay: Number(smartMealsPerDay) || 3,
+        includeLeftovers: smartLeftovers,
+        maxWeeklyBudget: smartBudget ? Number(smartBudget) : undefined,
+        maxWeeklyUPF: smartMaxUPF ? Number(smartMaxUPF) : undefined,
+        preferredCuisine: smartCuisine || undefined,
+        fishPerWeek: Number(smartFishPerWeek),
+        redMeatPerWeek: Number(smartRedMeatPerWeek),
+        vegetarianDays: smartVegDays,
+        lockedEntries: locked.length > 0 ? locked : undefined,
+      });
+      const data = await res.json() as SmartSuggestResult;
+      setSmartResult(data);
+      if (!preserveLocks) setLockedEntries(new Set());
+      setSmartDialogOpen(true);
+      setSmartControlsOpen(false);
+    } catch {
+      toast({ title: "Plan generation failed", description: "Could not propose a plan. Try again.", variant: "destructive" });
+    } finally {
+      setSmartLoading(false);
+    }
+  };
+
+  const toggleLockEntry = (key: string) => {
+    setLockedEntries(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const applySmartSuggestion = async () => {
+    if (!smartResult || !activeWeekData) return;
+    setApplyingSmartPlan(true);
+    let importedCount = 0;
+    let failedCount = 0;
+    try {
+      for (const entry of smartResult.entries) {
+        const day = activeWeekData.days.find(d => d.dayOfWeek === entry.dayOfWeek);
+        if (!day) continue;
+        try {
+          let mealId: number;
+          if (entry.candidate.isExternal) {
+            const importRes = await apiRequest('POST', '/api/smart-suggest/auto-import', { candidate: entry.candidate });
+            const importData = await importRes.json();
+            mealId = importData.mealId;
+            importedCount++;
+          } else {
+            mealId = Number(entry.candidate.id);
+          }
+          await apiRequest('POST', `/api/planner/days/${day.id}/items`, {
+            mealSlot: entry.slot,
+            mealId,
+            position: 0,
+            audience: 'adult',
+            isDrink: false,
+            drinkType: null,
+          });
+        } catch {
+          failedCount++;
+        }
+      }
+      qc.invalidateQueries({ queryKey: ['/api/planner/full'] });
+      setSmartDialogOpen(false);
+      setSmartResult(null);
+      const desc = failedCount === 0
+        ? `${smartResult.entries.length - failedCount} meals added to Week ${activeWeek}.${importedCount > 0 ? ` ${importedCount} recipes auto-imported.` : ''}`
+        : `${smartResult.entries.length - failedCount} meals added. ${failedCount} could not be added.`;
+      toast({ title: "Plan applied!", description: desc });
+    } catch {
+      toast({ title: "Failed to apply plan", variant: "destructive" });
+    } finally {
+      setApplyingSmartPlan(false);
+    }
+  };
+
   const addSlotToBasket = (mealType: string) => {
     const selections = collectMealSelections(sortedDays, mealType);
     if (selections.length === 0) {
@@ -574,6 +733,15 @@ export default function WeeklyPlannerPage() {
           </p>
         </div>
         <div className="grid grid-cols-3 gap-1.5 items-center">
+          <Button
+            className="col-span-3"
+            onClick={() => setSmartControlsOpen(!smartControlsOpen)}
+            disabled={smartLoading}
+            data-testid="button-plan-my-week"
+          >
+            {smartLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+            {smartLoading ? "Planning..." : "Plan My Week"}
+          </Button>
           <Badge variant="outline" className="justify-center" data-testid="badge-week-progress">
             {weekStats.filled} / {weekStats.total} meals
           </Badge>
@@ -662,6 +830,102 @@ export default function WeeklyPlannerPage() {
           </TabsList>
         </div>
 
+        <AnimatePresence>
+          {smartControlsOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <Card className="mb-6">
+                <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Plan My Week — Preferences
+                  </CardTitle>
+                  <Button size="icon" variant="ghost" onClick={() => setSmartControlsOpen(false)} data-testid="button-close-smart-controls">
+                    <X className="h-4 w-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Meals per day</label>
+                      <Select value={smartMealsPerDay} onValueChange={setSmartMealsPerDay}>
+                        <SelectTrigger data-testid="select-meals-per-day"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 meal</SelectItem>
+                          <SelectItem value="2">2 meals</SelectItem>
+                          <SelectItem value="3">3 meals</SelectItem>
+                          <SelectItem value="4">3 meals + snack</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground">Cuisine preference</label>
+                      <Select value={smartCuisine || "any"} onValueChange={v => setSmartCuisine(v === "any" ? "" : v)}>
+                        <SelectTrigger data-testid="select-cuisine"><SelectValue placeholder="Any" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="any">Any cuisine</SelectItem>
+                          <SelectItem value="british">British</SelectItem>
+                          <SelectItem value="italian">Italian</SelectItem>
+                          <SelectItem value="mexican">Mexican</SelectItem>
+                          <SelectItem value="indian">Indian</SelectItem>
+                          <SelectItem value="chinese">Chinese</SelectItem>
+                          <SelectItem value="japanese">Japanese</SelectItem>
+                          <SelectItem value="thai">Thai</SelectItem>
+                          <SelectItem value="mediterranean">Mediterranean</SelectItem>
+                          <SelectItem value="middle-eastern">Middle Eastern</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><DollarSign className="h-3 w-3" />Weekly budget (£)</label>
+                      <Input placeholder="e.g. 80" value={smartBudget} onChange={e => setSmartBudget(e.target.value)} data-testid="input-smart-budget" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Shield className="h-3 w-3" />Max UPF %</label>
+                      <Input placeholder="e.g. 30" value={smartMaxUPF} onChange={e => setSmartMaxUPF(e.target.value)} data-testid="input-smart-upf" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Fish className="h-3 w-3" />Fish meals/week</label>
+                      <Select value={smartFishPerWeek} onValueChange={setSmartFishPerWeek}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {[0,1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Beef className="h-3 w-3" />Red meat meals/week</label>
+                      <Select value={smartRedMeatPerWeek} onValueChange={setSmartRedMeatPerWeek}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {[0,1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-2 pt-4">
+                      <Switch id="smart-veg-days" checked={smartVegDays} onCheckedChange={(c) => setSmartVegDays(!!c)} data-testid="toggle-smart-veg" />
+                      <label htmlFor="smart-veg-days" className="text-sm flex items-center gap-1 cursor-pointer"><Salad className="h-3.5 w-3.5 text-green-500" />Vegetarian days</label>
+                    </div>
+                    <div className="flex items-center gap-2 pt-4">
+                      <Switch id="smart-leftovers" checked={smartLeftovers} onCheckedChange={(c) => setSmartLeftovers(!!c)} data-testid="toggle-smart-leftovers" />
+                      <label htmlFor="smart-leftovers" className="text-sm cursor-pointer">Include leftovers</label>
+                    </div>
+                  </div>
+                  <Button onClick={() => runSmartSuggest()} disabled={smartLoading} data-testid="button-run-smart-suggest">
+                    {smartLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                    {smartLoading ? "Planning your week..." : "Propose My Plan"}
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {fullPlanner.map((week) => (
           <TabsContent key={week.id} value={String(week.weekNumber)} className="mt-0">
 
@@ -707,6 +971,20 @@ export default function WeeklyPlannerPage() {
                 Clear This Week
               </Button>
             </div>
+
+            {week.days.every(d => d.entries.length === 0) && !smartControlsOpen && (
+              <div className="flex items-center gap-4 rounded-xl border border-primary/20 bg-primary/5 px-5 py-4 mb-6">
+                <Sparkles className="h-5 w-5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">Would you like THA to propose this week's meals?</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">We'll build a plan based on your cookbook, household, and preferences.</p>
+                </div>
+                <Button size="sm" onClick={() => setSmartControlsOpen(true)} data-testid="button-plan-my-week-prompt">
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                  Plan My Week
+                </Button>
+              </div>
+            )}
 
             {/* ── Mobile: single-day view (hidden on sm+) ── */}
             <div className="sm:hidden mb-6">
@@ -1510,6 +1788,128 @@ export default function WeeklyPlannerPage() {
       </Dialog>
 
       <SharePlanDialog open={sharePlanOpen} onOpenChange={setSharePlanOpen} />
+
+      <Dialog open={smartDialogOpen} onOpenChange={(v) => { if (!v) setSmartDialogOpen(false); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-smart-suggest">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Your Proposed Week Plan
+            </DialogTitle>
+            <DialogDescription>
+              Review the proposed plan. Lock meals you like, then regenerate or apply.
+            </DialogDescription>
+          </DialogHeader>
+
+          {smartResult && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-center">
+                  <p className="text-xs text-muted-foreground">Total meals</p>
+                  <p className="text-lg font-semibold">{smartResult.stats.totalMeals}</p>
+                </div>
+                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-center">
+                  <p className="text-xs text-muted-foreground">Est. cost</p>
+                  <p className="text-lg font-semibold">£{(smartResult.stats.estimatedWeeklyCost ?? 0).toFixed(0)}</p>
+                </div>
+                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-center">
+                  <p className="text-xs text-muted-foreground">Avg UPF</p>
+                  <p className={`text-lg font-semibold ${getUPFColor(smartResult.stats.averageUPFScore)}`}>{getUPFLabel(smartResult.stats.averageUPFScore)}</p>
+                </div>
+                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-center">
+                  <p className="text-xs text-muted-foreground">Ingredient reuse</p>
+                  <p className="text-lg font-semibold">{smartResult.stats.ingredientReuse ?? 0}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {(() => {
+                  const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+                  const grouped: Record<number, SmartSuggestEntry[]> = {};
+                  for (const e of smartResult.entries) {
+                    if (!grouped[e.dayOfWeek]) grouped[e.dayOfWeek] = [];
+                    grouped[e.dayOfWeek].push(e);
+                  }
+                  return Object.entries(grouped).sort(([a],[b]) => Number(a)-Number(b)).map(([dow, entries]) => (
+                    <div key={dow} className="rounded-lg border">
+                      <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 rounded-t-lg border-b">
+                        <span className="text-sm font-medium">{dayNames[Number(dow)]}</span>
+                      </div>
+                      <div className="divide-y">
+                        {entries.map((entry) => {
+                          const key = `${entry.dayOfWeek}-${entry.slot}`;
+                          const locked = lockedEntries.has(key);
+                          const exKey = `${key}-expl`;
+                          const expanded = expandedExplanation === exKey;
+                          return (
+                            <div key={key} className="flex items-start gap-3 px-3 py-2.5">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-medium text-muted-foreground capitalize w-14 shrink-0">{entry.slot}</span>
+                                  <span className="text-sm font-medium truncate">{entry.candidate.name}</span>
+                                  {entry.candidate.isExternal && <Badge variant="outline" className="text-xs h-4 px-1">New</Badge>}
+                                </div>
+                                {entry.candidate.estimatedCost != null && (
+                                  <p className="text-xs text-muted-foreground mt-0.5 ml-16">
+                                    ~£{(entry.candidate.estimatedCost ?? 0).toFixed(2)}
+                                    {entry.candidate.estimatedUPFScore != null && <span className={`ml-2 ${getUPFColor(entry.candidate.estimatedUPFScore ?? undefined)}`}>UPF: {getUPFLabel(entry.candidate.estimatedUPFScore ?? undefined)}</span>}
+                                  </p>
+                                )}
+                                {entry.explanation && (
+                                  <div className="ml-16 mt-1">
+                                    <button
+                                      className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline"
+                                      onClick={() => setExpandedExplanation(expanded ? null : exKey)}
+                                      data-testid={`button-explain-${key}`}
+                                    >
+                                      {expanded ? "Hide" : "Why this?"}
+                                    </button>
+                                    {expanded && (
+                                      <div className="mt-1.5 text-xs text-muted-foreground space-y-0.5">
+                                        {entry.explanation.reasons.map((r, i) => <p key={i}>• {r}</p>)}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => toggleLockEntry(key)}
+                                className={`shrink-0 p-1.5 rounded-md transition-colors ${locked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent/40"}`}
+                                title={locked ? "Locked — will be kept on regenerate" : "Click to lock this meal"}
+                                data-testid={`button-lock-${key}`}
+                              >
+                                <Lock className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+
+              {lockedEntries.size > 0 && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Lock className="h-3 w-3 text-primary" />{lockedEntries.size} meal{lockedEntries.size !== 1 ? "s" : ""} locked — they'll be kept when you regenerate.
+                </p>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="mt-4 flex-wrap gap-2">
+            <Button variant="outline" size="sm" onClick={() => setSmartDialogOpen(false)} data-testid="button-smart-cancel">Cancel</Button>
+            <Button variant="outline" size="sm" onClick={() => runSmartSuggest(true)} disabled={smartLoading} data-testid="button-smart-regenerate">
+              {smartLoading ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
+              Regenerate
+            </Button>
+            <Button size="sm" onClick={applySmartSuggestion} disabled={applyingSmartPlan} data-testid="button-smart-apply">
+              {applyingSmartPlan ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
+              Apply to Week {activeWeek}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
