@@ -57,10 +57,7 @@ function generateSchedule(
 ): Array<{ label: string; startTime: string; duration: number }> {
   const [hh, mm] = serveTime.split(":").map(Number);
   const serveMins = hh * 60 + (mm || 0);
-  const webKeys = Object.keys(sources).filter(k => {
-    const s = sources[k];
-    return s.type !== "basic" && s.type !== "fresh" && s.type !== "frozen";
-  });
+  const webKeys = Object.keys(sources);
   return webKeys
     .map(label => ({ label, duration: durations[label] ?? 30, startMins: serveMins - (durations[label] ?? 30) }))
     .sort((a, b) => a.startMins - b.startMins)
@@ -184,14 +181,15 @@ export default function MealDetailPage() {
     let gs: GroupedSources | null = null;
     try { gs = decodeGroupedSources(meal.instructions || []); } catch { return; }
     if (!gs) return;
-    const webKeys = Object.keys(gs.sources).filter(k => {
+    const allKeys = Object.keys(gs.sources);
+    const webOnlyKeys = allKeys.filter(k => {
       const s = gs.sources[k];
       return s.type !== "basic" && s.type !== "fresh" && s.type !== "frozen";
     });
-    if (webKeys.length > 0) setActiveComponent(prev => prev ?? webKeys[0]);
+    if (webOnlyKeys.length > 0) setActiveComponent(prev => prev ?? webOnlyKeys[0]);
     setComponentDurations(prev => {
       const next = { ...prev };
-      for (const k of webKeys) { if (!(k in next)) next[k] = 30; }
+      for (const k of allKeys) { if (!(k in next)) next[k] = 30; }
       return next;
     });
   }, [meal?.id]);
@@ -884,11 +882,16 @@ export default function MealDetailPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Component durations</p>
-                              {webEntries.map(([label]) => (
+                              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">How long does each part take?</p>
+                              {Object.entries(groupedSources.sources).map(([label, src]) => (
                                 <div key={label} className="flex items-center justify-between gap-3">
-                                  <span className="text-sm">{label}</span>
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <span className="text-xs text-muted-foreground shrink-0">
+                                      {src.type === "fresh" ? "🥦" : src.type === "frozen" ? "❄️" : src.type === "basic" ? "🧂" : "📖"}
+                                    </span>
+                                    <span className="text-sm truncate">{label}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 shrink-0">
                                     <input
                                       type="number"
                                       min={1}
