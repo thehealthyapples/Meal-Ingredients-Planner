@@ -1028,15 +1028,15 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
                 key={b.id}
                 variant={budget === b.id ? "default" : "outline"}
                 size="sm"
-                className="justify-start flex-col items-start h-auto py-2"
+                className="justify-start flex-col items-start h-auto py-2 min-w-0 overflow-hidden"
                 onClick={() => { setBudget(b.id); setDirty(true); }}
                 data-testid={`button-budget-${b.id}`}
               >
-                <span className="flex items-center gap-1.5">
-                  {budget === b.id && <Check className="h-3.5 w-3.5" />}
-                  {b.label}
+                <span className="flex items-center gap-1.5 w-full min-w-0">
+                  {budget === b.id && <Check className="h-3.5 w-3.5 flex-shrink-0" />}
+                  <span className="whitespace-normal break-words leading-tight">{b.label}</span>
                 </span>
-                <span className="text-[10px] font-normal opacity-70">{b.desc}</span>
+                <span className="text-[10px] font-normal opacity-70 whitespace-normal break-words leading-tight w-full">{b.desc}</span>
               </Button>
             ))}
           </div>
@@ -1074,7 +1074,7 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
                   key={u.id}
                   variant={upf === u.id ? "default" : "outline"}
                   size="sm"
-                  className="flex-col items-center h-auto py-2.5 px-2 gap-1 min-w-0"
+                  className="flex-col items-center h-auto py-2.5 px-2 gap-1 min-w-0 overflow-hidden"
                   onClick={() => { setUpf(u.id); setDirty(true); }}
                   data-testid={`button-upf-${u.id}`}
                 >
