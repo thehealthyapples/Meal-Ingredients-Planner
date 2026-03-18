@@ -2537,7 +2537,7 @@ export default function ShoppingListPage() {
                                           {(() => {
                                             const smp = getItemSmpRating(item.id, item);
                                             if (smp === 0) return null;
-                                            return <span className="sm:hidden" data-testid={`text-smp-mobile-${item.id}`}><AppleRating rating={smp} size="small" hasCape={smp === 5} /></span>;
+                                            return <span className="sm:hidden" data-testid={`text-smp-mobile-${item.id}`}><AppleRating rating={smp} sizePx={26} hasCape={smp === 5} /></span>;
                                           })()}
                                           {item.quantity > 1 && <Badge variant="secondary" className="text-[10px]" data-testid={`badge-quantity-${item.id}`}>x{item.quantity}</Badge>}
                                           {mergedCount > 1 && <Badge variant="outline" className="text-[10px] text-blue-500 dark:text-blue-400 border-blue-300 dark:border-blue-600" data-testid={`badge-merged-${item.id}`}>×{mergedCount}</Badge>}
