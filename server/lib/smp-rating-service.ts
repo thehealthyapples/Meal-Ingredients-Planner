@@ -46,6 +46,8 @@ const WHOLE_FOOD_CORE = new Set([
   "spring greens", "watercress", "rocket", "arugula", "edamame",
   "mangetout", "sugar snap peas", "broad bean", "broad beans",
   "runner bean", "runner beans", "okra",
+  "bean sprout", "bean sprouts", "beansprout", "beansprouts",
+  "mung bean sprout", "mung bean sprouts",
   // Tinned/canned compound terms that may reach the name check
   // (ingredient-text validation still required at scoring time)
   "tinned beans", "tinned chickpeas", "tinned lentils", "tinned tomatoes",
@@ -110,6 +112,8 @@ const WHOLE_FOOD_QUALIFIER_PREFIXES = [
   "small", "boneless", "skinless", "free-range", "free range",
   "british", "english", "local", "seasonal", "extra virgin",
   "salted", "unsalted", "mixed", "ripe",
+  "loose", "unwaxed", "waxed", "trimmed", "prepared", "ready to cook",
+  "ready to eat", "stir-fry", "stir fry",
 ];
 
 const WHOLE_FOOD_DISQUALIFIERS = [
