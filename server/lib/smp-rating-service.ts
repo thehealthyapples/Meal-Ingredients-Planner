@@ -315,7 +315,10 @@ export function calculateStrictSMPRating(input: SMPRatingInput): SMPRatingResult
   const nameIsWholeFood = isWholeFoodIngredient(nameToCheck)
     || (input.ingredientCount <= 1 && isWholeFoodIngredient(input.ingredientsText));
 
-  if (nameIsWholeFood && isCleanIngredientListForWholeFood(input.ingredientsText)) {
+  // Whole-food override only applies to NOVA 1 or unclassified (0).
+  // NOVA 2 = processed culinary ingredients, NOVA 3/4 = processed / ultra-processed —
+  // none of those are compatible with a whole-food classification.
+  if (nameIsWholeFood && isCleanIngredientListForWholeFood(input.ingredientsText) && input.novaGroup <= 1) {
     return {
       score: 100,
       smpRating: 5,
