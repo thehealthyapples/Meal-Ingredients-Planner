@@ -1580,8 +1580,8 @@ export default function ProductsPage() {
                               )}
                               <Button
                                 size="sm"
-                                variant="outline"
-                                className="h-6 text-xs px-2 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40"
+                                variant="ghost"
+                                className="h-6 text-xs px-2 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 hover:text-green-800 dark:hover:text-green-300"
                                 onClick={() => setShowDetailWFRecipe(v => !v)}
                                 data-testid="button-detail-view-wf-recipe"
                               >

@@ -869,7 +869,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                 </div>
                 <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{insight.detail}</p>
                 {showCurrentDetail && (
-                  <div className="mt-3 pt-3 border-t border-border/60 space-y-2" data-testid="section-current-detail">
+                  <div className="mt-3 pt-3 border-t border-border/60 space-y-1.5" data-testid="section-current-detail">
                     <div className="flex flex-wrap gap-1.5 items-center">
                       {item.category && (
                         <Badge variant="outline" className="text-[10px] capitalize">{item.category}</Badge>
@@ -885,30 +885,11 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                         </Badge>
                       )}
                     </div>
-                    {item.matchedProductId && (
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Why this score</p>
-                        <div className="space-y-0.5">
-                          {item.smpRating !== null && (
-                            <p className="text-xs text-foreground">THA score: {item.smpRating}/5 apples</p>
-                          )}
-                          {item.matchedStore && (
-                            <p className="text-xs text-muted-foreground">Stocked at: {item.matchedStore}</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {preferredStore && (
-                      <p className="text-[10px] text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                        <Store className="h-3 w-3" />
-                        Prioritising {preferredStore} results
+                    {item.matchedStore && (
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Store className="h-3 w-3" />Stocked at: {item.matchedStore}
                       </p>
                     )}
-                  </div>
-                )}
-                {!showCurrentDetail && item.category && (
-                  <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-                    <Badge variant="outline" className="text-[10px] capitalize">{item.category}</Badge>
                   </div>
                 )}
               </CardContent>
@@ -972,8 +953,8 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                     <div className="flex items-center gap-2 pt-1">
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="h-7 text-xs px-3 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40"
+                        variant="ghost"
+                        className="h-7 text-xs px-3 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 hover:text-green-800 dark:hover:text-green-300"
                         onClick={() => setShowWFRecipe(v => !v)}
                         data-testid="button-view-wf-recipe"
                       >
@@ -982,8 +963,8 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="h-7 text-xs px-3 border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40"
+                        variant="ghost"
+                        className="h-7 text-xs px-3 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 hover:text-green-800 dark:hover:text-green-300"
                         onClick={() => addWFToBasket.mutate(wholeFoodAlt.ingredients)}
                         disabled={addWFToBasket.isPending}
                         data-testid="button-add-wf-to-basket"
@@ -1005,10 +986,17 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
 
             {/* Confidently Choose */}
             <div data-testid="section-confidently-choose">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 dark:text-blue-400 flex items-center gap-1 mb-2">
-                <ShoppingCart className="h-3 w-3" />
-                Confidently Choose
-              </p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 dark:text-blue-400 flex items-center gap-1">
+                  <ShoppingCart className="h-3 w-3" />
+                  Confidently Choose
+                </p>
+                {preferredStore && (
+                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                    <Store className="h-2.5 w-2.5" />{preferredStore} first
+                  </span>
+                )}
+              </div>
               {isSearching ? (
                 <Card className="border-border/60">
                   <CardContent className="p-4 flex items-center gap-2 text-muted-foreground">

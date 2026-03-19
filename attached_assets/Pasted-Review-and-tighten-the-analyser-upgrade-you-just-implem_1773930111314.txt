@@ -1,0 +1,119 @@
+Review and tighten the analyser upgrade you just implemented in the THA repo.
+
+Your job now is to make the result as clean, simple, performant, visually consistent, and cost-effective as possible WITHOUT changing the agreed product direction.
+
+PRODUCT DIRECTION TO PRESERVE
+- Analyse remains the entry point
+- Basket layout remains unchanged
+- Inside analyser:
+  - Choose Better
+  - Simply Made
+  - Confidently Choose
+- Same analyser structure in Basket and main analyser page
+- Store-aware packaged alternatives
+- matchedStore must be retailer/store, never brand
+
+ADDITIONAL UI DIRECTION TO APPLY
+- All modals should use the same background feel as the main page
+- Avoid modal backgrounds that feel like a different theme or separate app
+- Buttons should use transparency / translucent styling where appropriate, while remaining readable and accessible
+- Keep the visual result calm, clean, and consistent with THA branding
+- Do not introduce flashy styling, heavy shadows, or visually noisy effects
+- Preserve performance and readability
+
+REVIEW OBJECTIVES
+1. remove unnecessary complexity
+2. eliminate duplicated logic
+3. reduce render-time work
+4. ensure headings and wording are consistent
+5. ensure no hidden basket redesign happened
+6. ensure no over-engineered backend changes were introduced
+7. ensure no runtime-expensive logic was added unnecessarily
+8. make modal styling consistent with the main page
+9. make button styling cleaner and more transparent without harming usability
+
+CHECK THESE AREAS
+
+1. Shared helper quality
+- Is there one clear shared analyser-choice helper?
+- Is the type small and focused?
+- Are there unused fields that should be removed?
+- Is ranking logic deterministic and easy to understand?
+- Remove duplicate helper logic if it now exists in multiple places
+
+2. UI consistency
+- Do both analyser entry points show the same order and wording?
+- Is Simply Made first?
+- Is Confidently Choose second?
+- Are cards compact and readable?
+- Are old labels like “Cleaner shop option” or “Whole-food option” fully removed from analyser paths if no longer intended?
+
+3. Persistence correctness
+- Verify matchedStore never gets brand assigned
+- Verify selected packaged options save cleanly
+- Verify matchedProductId and any score/store fields are preserved correctly
+- If matchedStore is currently derived from availableStores, make that logic explicit and deterministic
+
+4. Performance
+- Remove repeated mapping/sorting in render if any
+- Memoize/precompute where needed
+- Avoid duplicate fetches
+- Avoid unnecessary state
+- Remove dead imports, dead state, dead code, and dead API logic left behind after analyser changes
+- Do not introduce expensive effects or repeated re-renders for modal styling
+
+5. Scope discipline
+- Remove any feature that drifted outside phase 1
+- No best-whole-basket-shop logic yet
+- No multi-shop planner UI yet
+- No extra pages
+- No migrations unless absolutely required
+
+6. Modal visual consistency
+Review all app modals touched by this feature and align them with the main page styling.
+
+Requirements:
+- modal background should match the main page background tone/style as closely as possible
+- avoid stark white/grey boxed modal backgrounds if the page uses a softer branded background
+- keep styling simple and reusable
+- use existing theme tokens / CSS variables / Tailwind classes if available
+- do not create one-off styling per modal if a shared modal class/component can be cleaned up instead
+- preserve accessibility and text contrast
+- preserve legibility over any transparent/translucent surfaces
+
+7. Button transparency
+Review buttons in the analyser/modals and make them visually lighter and more consistent.
+
+Requirements:
+- use transparent or semi-transparent button backgrounds where appropriate
+- preserve clear hover/focus/active states
+- preserve contrast and accessibility
+- avoid making primary actions too weak to notice
+- keep one clear visual hierarchy:
+  - primary action
+  - secondary action
+  - ghost/transparent action
+- prefer reuse of existing button variants if available
+- if current button styling is duplicated, consolidate it cleanly
+
+8. Styling discipline
+- Keep styles production-simple
+- Avoid large design rewrites
+- Avoid introducing lots of custom CSS if utility classes or shared component variants already exist
+- If there is a shared Modal or Dialog wrapper, update that instead of patching each modal separately, unless doing so would create risk
+- If there is a shared Button component/variant system, extend that carefully instead of hardcoding many one-off button classes
+
+OUTPUT FORMAT
+Return:
+1. what you reviewed
+2. what you simplified
+3. what you removed
+4. what you changed for modal background consistency
+5. what you changed for button transparency/styling
+6. any remaining risks
+7. final acceptance against the required phase-1 scope
+
+IMPORTANT
+Do not expand features.
+Tighten only.
+Keep the codebase clean, efficient, and visually consistent.
