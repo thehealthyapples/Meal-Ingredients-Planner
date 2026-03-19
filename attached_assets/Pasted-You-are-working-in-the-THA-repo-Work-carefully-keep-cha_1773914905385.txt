@@ -1,0 +1,297 @@
+You are working in the THA repo.
+
+Work carefully, keep changes small, and optimise for product simplicity, performance, and cost-efficiency.
+
+IMPORTANT RULES
+- Do not redesign Basket.
+- Do not add a new page.
+- Do not rename Analyse / Analyser.
+- Do not add new external data sources.
+- Do not add a new backend service unless absolutely necessary.
+- Do not add a DB migration unless proven necessary.
+- Do not create broad refactors.
+- Reuse existing code paths, endpoints, and UI patterns wherever possible.
+- Keep runtime logic deterministic and cheap.
+- Do not introduce AI-heavy processing where normal TypeScript logic is enough.
+- Preserve existing behaviour unless explicitly changed below.
+
+PROJECT INTENT
+The Healthy Apples slogan is:
+“Confidently choose Better, Simply”
+
+Analyse / Analyser remains the core feature.
+Inside analyser, strengthen the action area using this exact structure:
+
+- Choose Better
+  - Simply Made
+  - Confidently Choose
+
+This must apply consistently in BOTH analyser entry points:
+1. Basket -> Analyse
+2. Main menu -> Analyser / Products page
+
+These two experiences should behave the same, except Basket is prefilled with the basket item.
+
+GOAL
+Implement the smallest clean change that upgrades analyser so it:
+1. shows the current product score and why
+2. shows “Choose Better”
+3. shows “Simply Made” first
+4. shows “Confidently Choose” second
+5. shows multiple ranked packaged alternatives, not just one cleaner option
+6. shows store / retailer information where available
+7. saves selected packaged alternatives back correctly using retailer-aware persistence
+8. keeps Basket layout unchanged
+
+CURRENT PROBLEM TO FIX
+The repo currently appears to split product information across:
+- analyser/product search results with THA health info
+- supermarket/product matching results with retailer / price / tier / URL info
+
+This causes weak UX and inconsistent save behaviour.
+Most importantly, analyser selection currently appears to save matchedStore from brand in one path.
+That is incorrect.
+
+REQUIRED OUTCOME
+Create one lightweight shared analyser choice helper on the client and use it in both analyser entry points.
+
+DO NOT BUILD
+- no basket redesign
+- no separate Swaps page
+- no whole-basket best-shop view yet
+- no full multi-shop planner UI
+- no complex new recommendation engine
+- no schema churn for phase 1
+- no expensive backend orchestration
+
+IMPLEMENTATION PLAN
+
+STEP 1 — Inspect only the necessary code
+Inspect these likely areas first:
+- client/src/pages/shopping-list-page.tsx
+- client/src/pages/products-page.tsx
+- any analyser modal/components used by those pages
+- current search-products response handling
+- any existing whole-food / homemade alternative logic
+- any basket item save/update handlers
+- any store-aware product-matching data already exposed to the client
+
+Do not wander into unrelated refactors.
+
+STEP 2 — Add one shared lightweight helper
+Create a new client helper file, for example:
+- client/src/lib/analyser-choice.ts
+
+This file should contain:
+1. a small shared type
+2. mapper from current analyser/search product result into that type
+3. helper to build a Simply Made entry
+4. ranking helper for packaged alternatives
+5. tiny helper for short “why better” reasons
+
+Keep this helper small and readable.
+
+USE A SMALL TYPE
+Use a minimal shared type like:
+
+export type UnifiedChoice = {
+  id: string;
+  productName: string;
+  brand?: string | null;
+  retailer?: string | null;
+  tier?: string | null;
+  thaScore?: number | null;
+  novaGroup?: number | null;
+  price?: number | null;
+  currency?: string | null;
+  availableStores?: string[];
+  whyBetter?: string[];
+  imageUrl?: string | null;
+  matchedProductId?: string | null;
+  matchedStore?: string | null;
+  isSimplyMade?: boolean;
+};
+
+Do not add a huge model with many unused fields unless truly needed.
+
+STEP 3 — Map current analyser/search results into the shared type
+Create a mapper that converts existing product search/analyser results into UnifiedChoice.
+
+Preserve where available:
+- product name
+- brand
+- THA score / smpRating
+- NOVA / UPF markers
+- availableStores
+- barcode / product id for persistence
+- image
+- any retailer hint if already present
+
+Do not remove existing raw result shapes; adapt them through the mapper.
+
+STEP 4 — Build Simply Made as a lightweight first option
+Inside analyser, the first section under Choose Better must be:
+
+- Simply Made
+
+This is the whole-food / homemade-first route.
+
+Requirements:
+- show it before packaged alternatives
+- keep it simple and practical
+- do not turn this into a recipe engine
+- if there is existing whole-food / homemade logic, reuse it
+- if not, create a lightweight display object only
+- include short grounded reasons such as:
+  - No additives
+  - Simpler ingredients
+  - Whole food first
+- include an effort note only if easy to infer or already available
+- optional CTA only if it is easy to wire correctly without risk
+
+Do not make this section large or preachy.
+
+STEP 5 — Build Confidently Choose from multiple packaged options
+Under Choose Better, second section must be:
+
+- Confidently Choose
+
+Requirements:
+- replace current single “cleaner option” style behaviour with multiple packaged alternatives where available
+- show best options first
+- keep the cards compact
+- each option should show where available:
+  - product name
+  - brand
+  - THA score
+  - retailer/store
+  - tier
+  - price
+  - 1–2 short “why better” reasons
+  - action button to select / use this option
+
+Do not overload cards with long explanations.
+
+STEP 6 — Add cheap deterministic ranking
+Implement a simple cheap ranking helper for packaged alternatives.
+
+Ranking order:
+1. higher THA score
+2. lower processing / better NOVA
+3. fewer additive concerns
+4. lower price where scores are close
+
+Keep this logic understandable.
+Do not introduce a complicated formula unless necessary.
+Do not add expensive server-side computation.
+
+A simple deterministic sort is preferred.
+
+STEP 7 — Short “why better” reasons
+Generate short reasons only from actual available data, such as:
+- Higher THA score
+- No additives detected
+- Lower processing
+- Simpler ingredients
+- Wholegrain ingredients
+
+Do not invent claims not supported by data.
+
+STEP 8 — Update analyser wording
+Inside analyser use these exact headings:
+- Choose Better
+- Simply Made
+- Confidently Choose
+
+If wording like “Cleaner shop option” exists in analyser, replace it with the new structure.
+Keep Analyse as the entry point label.
+Do not rename Analyse in Basket or navigation.
+
+STEP 9 — Fix persistence correctly
+This is mandatory.
+
+When a packaged option is selected:
+- save matchedProductId from the selected option if available
+- save matchedStore from retailer/store only
+- never save brand into matchedStore
+- preserve availableStores if the current model supports it
+- preserve THA score / smpRating if the current model supports it
+
+If retailer is unknown, matchedStore may remain null.
+But do not put brand there.
+
+This is the most important correctness fix.
+
+STEP 10 — Apply the same analyser behaviour in both entry points
+Update:
+- Basket -> Analyse flow
+- Main menu -> Products / Analyser flow
+
+They should share the same structure:
+1. current score / verdict
+2. why it scored that way
+3. Choose Better
+   - Simply Made
+   - Confidently Choose
+
+The only acceptable difference is how the analyser is prefilled.
+
+STEP 11 — Keep backend changes minimal
+Only touch backend if needed to expose retailer/store data that already exists.
+Do not create a new backend feature unless necessary.
+Prefer reusing existing endpoints and existing response fields.
+Do not add repeated API calls if the current client data is enough.
+
+STEP 12 — Preserve performance
+Important:
+- do not add multiple new fetches per analysed item unless strictly necessary
+- do not compute large recommendation sets unnecessarily
+- do not introduce expensive loops or repeated transforms in render
+- memoize or precompute where sensible
+- keep UI rendering compact and fast
+
+ACCEPTANCE CHECKS
+Your work is only complete when all of these are true:
+
+1. Basket -> Analyse shows:
+- current score
+- why
+- Choose Better
+- Simply Made first
+- Confidently Choose second
+
+2. Main analyser / Products page shows the same structure and wording
+
+3. Confidently Choose shows multiple ranked packaged options when available
+
+4. Retailer/store information is surfaced where available
+
+5. Selecting a packaged option no longer writes brand into matchedStore
+
+6. Basket layout is unchanged
+
+7. Existing analyser functionality still works
+
+8. Changes are small, maintainable, and performant
+
+IMPLEMENTATION STYLE
+- Prefer small helper functions
+- Prefer local changes over system-wide rewrites
+- Prefer reuse over replacement
+- Keep UI clean and calm
+- Keep logic easy to tune later
+
+DELIVERABLE FORMAT
+When finished, report back with:
+
+1. Summary of what changed
+2. Exact files changed
+3. What was added to the shared analyser helper
+4. How ranking works
+5. How persistence was fixed
+6. Any backend changes made, if any
+7. Known limitations
+8. Safe phase-2 recommendations only if relevant
+
+Do not go beyond scope.
+Keep this implementation lean, accurate, and production-sensible.
