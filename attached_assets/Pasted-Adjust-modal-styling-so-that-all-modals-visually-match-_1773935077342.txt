@@ -1,0 +1,56 @@
+Adjust modal styling so that all modals visually match the main page background (apple orchard), not a flat cream/plank background.
+
+This is a visual consistency fix only — do not change functionality.
+
+GOAL
+- Modals should feel like part of the same environment as the main page
+- The orchard background should be visible or carried through into modals
+- Avoid the current solid cream/plank background inside modals
+
+REQUIREMENTS
+
+1. Background consistency
+- Replace the solid cream/plank modal background with the same background used on the main page (apple orchard)
+- This can be achieved by:
+  - inheriting the parent background
+  - or reusing the same background class/style used on the main layout container
+- Do NOT introduce a different image or variation
+
+2. Overlay behaviour
+- Keep a subtle overlay behind the modal content for readability
+- Use a soft translucent overlay (e.g. dark/neutral with opacity), not a solid block
+- The orchard background should still be visible through the modal environment
+
+3. Modal content surface
+- The modal content container (the card itself) should:
+  - remain readable
+  - use a light translucent surface or softened panel (not harsh white)
+  - maintain good contrast for text
+- Avoid heavy drop shadows or harsh borders
+
+4. Reuse styling
+- If there is a shared Modal/Dialog component, update it centrally
+- Do NOT patch each modal individually unless necessary
+- Reuse existing theme classes / Tailwind utilities where possible
+
+5. Performance
+- Do not re-load background images inside modals
+- Reuse existing background rendering from the main page
+- Avoid expensive CSS effects (no heavy blur filters unless already used)
+
+6. Accessibility
+- Ensure text contrast remains readable over the background
+- Ensure buttons remain clearly visible
+
+7. Scope control
+- Do not redesign modal layout
+- Do not change spacing, structure, or behaviour
+- Do not introduce new visual themes
+
+OUTPUT
+Return:
+1. which component(s) were updated (e.g. Modal, Dialog wrapper)
+2. how the orchard background is now applied or inherited
+3. what overlay approach was used
+4. confirmation that performance is not impacted
+5. any limitations or edge cases remaining
