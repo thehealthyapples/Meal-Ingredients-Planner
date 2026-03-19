@@ -18,7 +18,7 @@ import {
 import {
   Search, Loader2, ShoppingCart, Package, AlertTriangle, Heart,
   Leaf, ArrowRight, X, ChevronDown, ChevronUp, Shield,
-  Scale, Beaker, Star, TrendingUp, Filter, Info, Layers,
+  Scale, Beaker, Star, Filter, Info, Layers,
   Plus, Minus, Save, RefreshCw, UtensilsCrossed, ScanLine, Flame,
   Settings2, Volume2, VolumeX, Award, Zap, History, Trash2,
   ChefHat, Check, Sparkles, Store, Clock,
@@ -31,7 +31,6 @@ import BarcodeScanner from "@/components/BarcodeScanner";
 import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
 import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import { useSoundEffects } from "@/hooks/use-sound-effects";
-import HealthTrendChart from "@/components/HealthTrendChart";
 
 interface ParsedIngredient {
   name: string;
@@ -907,18 +906,6 @@ export default function ProductsPage() {
                       />
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="toggle-trends" className="text-sm cursor-pointer flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4" />
-                        Health Score Trends
-                      </Label>
-                      <Switch
-                        id="toggle-trends"
-                        checked={intelligenceSettings?.healthTrendEnabled !== false}
-                        onCheckedChange={(v) => updateSettingsMutation.mutate({ healthTrendEnabled: v })}
-                        data-testid="switch-trends-enabled"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
                       <Label htmlFor="toggle-barcode" className="text-sm cursor-pointer flex items-center gap-2">
                         <ScanLine className="h-4 w-4" />
                         Barcode Scanner
@@ -1092,10 +1079,6 @@ export default function ProductsPage() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {intelligenceSettings?.healthTrendEnabled !== false && (
-          <HealthTrendChart />
-        )}
 
         {hasSearched && searchResults.length === 0 && !isSearching && (
           <div className="text-center py-12 text-muted-foreground">

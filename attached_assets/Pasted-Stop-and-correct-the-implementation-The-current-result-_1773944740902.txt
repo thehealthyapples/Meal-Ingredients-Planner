@@ -1,0 +1,167 @@
+Stop and correct the implementation. The current result is not acceptable.
+
+There are 4 explicit corrections required. Follow them exactly.
+
+--------------------------------------------------
+1. REMOVE SOLID BACKGROUNDS / MAKE ALL WIDGETS MORE OPAQUE
+--------------------------------------------------
+
+Problem:
+- I can still see solid backgrounds in modals/widgets
+- The UI is not visually consistent with the orchard/main-page feel
+- Widgets across tabs do not feel cohesive
+
+Required fix:
+- All widgets/cards/panels/modals across all tabs should use the same visual language
+- They should be MORE OPAQUE than they are now, but NOT solid flat cream/white blocks
+- The orchard/main-page background feel must remain visible behind the UI
+- Do not use solid cream/plank backgrounds for modal bodies or widget cards
+
+Visual target:
+- background environment stays orchard/main-page
+- widgets use a soft tinted translucent surface
+- opacity should be increased enough to improve readability and reduce visual noise
+- think “frosted panel with stronger opacity”, not “solid box”
+
+Implementation rules:
+- update shared card/modal/panel styles centrally where possible
+- do not patch individual widgets with one-off styles unless necessary
+- use one reusable surface style for:
+  - modals
+  - cards
+  - analyser panels
+  - widget containers
+- preserve readability and contrast
+- avoid harsh white, harsh grey, or fully solid fills
+- avoid heavy shadow/glow styling
+
+Deliverable for this part:
+- make all widgets and modals feel visually consistent with the orchard-themed main page
+- make them more opaque than before, but still translucent
+
+--------------------------------------------------
+2. HARD RULE: NOVA 3 OR 4 MUST NOT SCORE 4 OR 5 APPLES
+--------------------------------------------------
+
+Problem:
+- Products with NOVA 3 or NOVA 4 are still showing 4 or 5 apples
+- This is not acceptable and breaks trust in THA scoring
+
+Required fix:
+Add an explicit hard cap in code so that:
+- NOVA 4 can NEVER score above 2 apples
+- NOVA 3 can NEVER score above 3 apples
+
+If the current scoring engine produces a higher score, clamp it down.
+
+Required behaviour:
+- NOVA 1 and 2 can score normally
+- NOVA 3 must be capped at 3 apples max
+- NOVA 4 must be capped at 2 apples max
+
+This rule must be applied consistently wherever THA/apple score is calculated or displayed.
+Do not leave old uncapped display paths in place.
+
+Implementation rules:
+- find the central scoring/display path and apply the cap there
+- if there are multiple score generation paths, unify them or apply the same cap consistently
+- add comments explaining the cap so it is not accidentally removed later
+
+Also:
+- if there are tests for scoring, update/add them
+- if there are no tests, add at least minimal coverage for:
+  - NOVA 3 raw score > 3 gets capped to 3
+  - NOVA 4 raw score > 2 gets capped to 2
+
+--------------------------------------------------
+3. REMOVE OR REPLACE “HEALTH TREND SCORE” IN ANALYSER
+--------------------------------------------------
+
+Problem:
+- “Health Trend Score” is not displaying information well
+- It is confusing and not helping the user
+
+Required fix:
+- remove “Health Trend Score” from the analyser UI
+- replace it with simpler, clearer information only if useful
+- do not replace it with another vague metric
+
+Preferred replacement:
+Use plain, directly understandable items such as:
+- THA score / apples
+- NOVA group
+- Ultra-processed / not ultra-processed
+- additive/emulsifier/acidity-regulator warnings
+- short explanation of why it scored this way
+
+Do NOT show “Health Trend Score” anywhere in analyser after this change.
+
+--------------------------------------------------
+4. KEEP PRODUCT SIMPLICITY
+--------------------------------------------------
+
+Do not expand scope.
+Do not redesign the app.
+Do not add more experimental metrics.
+
+Keep the analyser focused on:
+- THA/apple score
+- why it scored that way
+- Choose Better
+  - Simply Made
+  - Confidently Choose
+
+--------------------------------------------------
+IMPLEMENTATION INSTRUCTIONS
+--------------------------------------------------
+
+Work in this order:
+
+Step 1
+- inspect shared widget/card/modal styles
+- identify the central reusable surfaces used across tabs
+
+Step 2
+- replace solid widget/modal backgrounds with a more opaque translucent orchard-consistent surface
+
+Step 3
+- identify the central THA/apple scoring path
+- implement the hard NOVA cap:
+  - NOVA 3 max = 3 apples
+  - NOVA 4 max = 2 apples
+
+Step 4
+- remove all analyser uses of “Health Trend Score”
+
+Step 5
+- verify analyser still shows clear useful information:
+  - apples
+  - NOVA
+  - UPF/additives reasoning
+  - Choose Better
+
+--------------------------------------------------
+ACCEPTANCE CRITERIA
+--------------------------------------------------
+
+This is only complete when:
+
+1. No solid cream/plank widget or modal backgrounds remain
+2. Widgets are more opaque than before, but still translucent
+3. Orchard/main-page feel is preserved throughout tabs/modals
+4. NOVA 3 products cannot show more than 3 apples
+5. NOVA 4 products cannot show more than 2 apples
+6. Health Trend Score no longer appears in analyser
+7. No unnecessary feature expansion has been introduced
+
+--------------------------------------------------
+OUTPUT FORMAT
+--------------------------------------------------
+
+Return:
+1. exact files changed
+2. what shared style/classes were updated
+3. how widget/modal opacity was changed
+4. where the NOVA cap was implemented
+5. how Health Trend Score was removed/replaced
+6. any remaining limitations

@@ -19,7 +19,7 @@ import {
 import {
   User, Heart, Home, Flame, Target, Settings, Shield,
   Plus, Minus, Save, Activity, Scale, Ruler,
-  Baby, PersonStanding, Users, Apple, TrendingUp,
+  Baby, PersonStanding, Users, Apple,
   Volume2, Scan, Loader2, ArrowLeft, Check, Store,
   Sparkles, Mail, Trash2,
   Copy, LogOut, UserMinus, Pencil, X, RefreshCw
@@ -1184,7 +1184,6 @@ function MealPlanSection() {
 function FeatureToggles({ prefs, onToggle }: { prefs: any; onToggle: (field: string, value: boolean) => void }) {
   const toggles = [
     { key: "eliteTrackingEnabled", label: "The Healthy Apples Health Score tracking", icon: Apple, default: true },
-    { key: "healthTrendEnabled", label: "The Healthy Apples trend tracking", icon: TrendingUp, default: true },
     { key: "soundEnabled", label: "Sound effects", icon: Volume2, default: true },
     { key: "barcodeScannerEnabled", label: "Barcode scanner", icon: Scan, default: true },
   ];

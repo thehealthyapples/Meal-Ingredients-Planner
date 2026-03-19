@@ -408,7 +408,14 @@ export function calculateStrictSMPRating(input: SMPRatingInput): SMPRatingResult
   if (score > 100) score = 100;
   if (score < 0) score = 0;
 
-  if (input.novaGroup === 4 && score > 55) score = 55;
+  // ---------------------------------------------------------------------------
+  // Hard NOVA caps — these must never be removed or loosened.
+  // The smpRating thresholds are: ≥90=5, ≥75=4, ≥55=3, ≥35=2, else=1.
+  // NOVA 3 (processed foods) must not exceed 3 apples → cap score at 74.
+  // NOVA 4 (ultra-processed) must not exceed 2 apples → cap score at 54.
+  // ---------------------------------------------------------------------------
+  if (input.novaGroup === 3 && score > 74) score = 74;
+  if (input.novaGroup === 4 && score > 54) score = 54;
 
   let smpRating: number;
   if (score >= 90) smpRating = 5;
