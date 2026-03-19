@@ -1,0 +1,217 @@
+#7 - Homepage Hero Page — Orchard Background, Final Copy, and Entry Flow
+
+What & Why
+Create a proper homepage hero page for www.thehealthyapples.com so the site has a true front door before auth. The homepage should carry the brand story, product purpose, and main entry actions, while the auth page remains focused on account creation/login.
+
+The homepage hero should use the same orchard background for brand continuity and present the final agreed THA messaging and CTA structure.
+
+Done looks like
+
+Homepage role
+- The homepage acts as the main marketing/front-door page for The Healthy Apples
+- It is distinct from the auth page
+- It introduces the product clearly and calmly
+- It leads users to either create an account or explore the demo
+
+Hero background
+- Use the same orchard background already used in the brand/auth experience
+- Keep the background soft and readable behind text
+- Reuse existing background assets/patterns if already present
+- Add the subtle THA apple watermark behind the text area if it supports the design cleanly
+
+Hero content
+The hero includes this exact content structure:
+
+Top brand line:
+- "Confidently better choices, simply"
+
+Main headline:
+- "Plan meals. Analyse ingredients. Build smarter baskets."
+
+Supporting copy:
+- "The Healthy Apples helps you make better food choices with less effort by combining meal planning, ingredient analysis, and practical alternatives for everyday life."
+
+Primary CTA row:
+- "Create account"
+- "Explore The Healthy Apples →"
+
+Micro-copy below CTA row:
+- "Instant access • No signup • 20-minute demo"
+
+Human story line:
+- "Born from our family’s journey through health challenges and years of learning how food choices affect everyday life."
+
+Hero visual
+- Include the refined THA lifecycle visual alongside the hero copy
+- This should not be a one-way arrow
+- It should represent the circular lifecycle:
+  - Kitchen
+  - Plan
+  - Analyse
+  - Basket
+  - back to Kitchen
+- Keep the visual composed, premium, and UI-like rather than a generic infographic
+- Maintain the desirable pantry/kitchen cues already developed
+
+Layout
+Desktop
+- Two-column hero layout
+- Left: copy and CTAs
+- Right: lifecycle visual
+
+Mobile
+- Single-column stack
+- Copy first
+- Visual beneath
+
+Buttons
+- Primary button: "Create account"
+- Secondary button: "Explore The Healthy Apples →"
+- Secondary CTA should feel premium and inviting
+- Keep the subtle hover treatment already discussed for the explore CTA:
+  - tiny lift
+  - slightly stronger shadow
+  - arrow nudges right slightly
+
+Page structure below hero
+Do not overbuild the homepage. Add only light supporting sections if needed for a complete front page.
+
+Recommended minimal sections below hero:
+1. Three-value block section:
+- Plan meals
+- Analyse ingredients
+- Build smarter baskets
+
+2. Short purpose/story section:
+Use the shorter About-style copy already agreed in tone, not the full long biography
+
+3. Final CTA section:
+- Create account
+- Explore The Healthy Apples →
+
+Scope safety
+- Keep this pass focused on creating the homepage and wiring it into the site cleanly
+- Do not redesign the app itself
+- Do not redesign auth in this pass beyond linking to it correctly
+- Do not introduce heavy new libraries
+- Do not create a bloated marketing site
+
+Out of scope
+- Broad redesign of auth page
+- Demo implementation changes
+- Onboarding changes
+- Full CMS/blog/about architecture
+- Heavy animation
+- Backend changes unless a tiny route wiring change is required
+
+Tasks
+
+T001 — Create homepage entry page
+Create a dedicated homepage for www.thehealthyapples.com rather than relying on the auth page as the site’s front door.
+
+Requirements
+- keep routing clean
+- homepage should lead naturally into auth/demo
+- preserve current app/auth behaviour
+
+T002 — Apply orchard hero background
+Use the same orchard background in the homepage hero.
+
+Requirements
+- preserve readability
+- keep treatment premium and calm
+- background should visually connect with the auth experience
+
+T003 — Implement final homepage hero copy
+Use this exact hero structure and wording:
+
+Brand line:
+- "Confidently better choices, simply"
+
+Headline:
+- "Plan meals. Analyse ingredients. Build smarter baskets."
+
+Supporting copy:
+- "The Healthy Apples helps you make better food choices with less effort by combining meal planning, ingredient analysis, and practical alternatives for everyday life."
+
+CTA buttons:
+- "Create account"
+- "Explore The Healthy Apples →"
+
+Micro-copy:
+- "Instant access • No signup • 20-minute demo"
+
+Story line:
+- "Born from our family’s journey through health challenges and years of learning how food choices affect everyday life."
+
+T004 — Place hero copy in the correct visual hierarchy
+Ensure layout and typography follow this order:
+1. brand line
+2. headline
+3. supporting copy
+4. CTA row
+5. micro-copy
+6. human-story line
+
+Keep spacing generous and readable.
+
+T005 — Reuse/refine the circular THA lifecycle visual
+Use the improved lifecycle visual on the homepage hero.
+
+Requirements
+- circular/looped flow, not linear
+- communicates Kitchen / Plan / Analyse / Basket / back to Kitchen
+- premium, simple, and readable
+- preserve pantry/kitchen cues
+- avoid clutter
+
+T006 — Wire CTA actions correctly
+Requirements
+- "Create account" should route to the correct auth/signup flow
+- "Explore The Healthy Apples →" should route to the preferred demo entry path
+- do not break existing auth behaviour
+
+T007 — Add minimal supporting homepage sections
+Below the hero, add a minimal but complete homepage structure.
+
+Recommended sections:
+- three value blocks for Plan / Analyse / Basket
+- short purpose/story section
+- final CTA section
+
+Keep these sections concise and brand-aligned.
+
+T008 — Keep implementation tightly scoped and polished
+Requirements
+- no overbuilt marketing site
+- no unrelated page drift
+- keep styling consistent with existing THA brand direction
+- maintain responsiveness across desktop/tablet/mobile
+
+Relevant files
+- homepage/main routing file(s)
+- any landing/home page component(s)
+- existing auth page for CTA linking only if needed
+- any existing orchard background asset/component
+- any hero visual component already created/refined
+- client/src/assets/icons/tha-apple.png if watermark is reused
+
+Acceptance checklist
+- homepage exists as the true front door of the site
+- orchard background is used in the hero
+- final agreed wording appears in the correct hierarchy
+- CTA buttons are:
+  - Create account
+  - Explore The Healthy Apples →
+- micro-copy and human-story line are present
+- lifecycle visual is circular, not one-way
+- homepage leads users into auth/demo cleanly
+- implementation remains focused and premium
+
+At the end, provide a concise implementation summary covering
+- files changed
+- route/homepage structure added or updated
+- how orchard background was applied
+- how hero copy was laid out
+- how CTA actions were wired
+- any small follow-up suggestions that are strictly optional

@@ -37,8 +37,43 @@ import DemoBasketPage from "@/pages/demo-basket-page";
 import DemoMealsPage from "@/pages/demo-meals-page";
 import PartnersPage from "@/pages/partners-page";
 import QuickMealPage from "@/pages/quick-meal-page";
+import HomePage from "@/pages/home-page";
 
 let _contentRenderMeasured = false;
+
+function HomeRoute() {
+  const { user, isLoading } = useUser();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+      </div>
+    );
+  }
+
+  if (user) {
+    if (!user.onboardingCompleted) return <Redirect to="/onboarding" />;
+    return (
+      <div className="relative min-h-[100dvh]">
+        <OrchardBackdrop />
+        <div className="relative z-10 flex flex-col h-[100dvh]">
+          {user.isDemo && <DemoBanner />}
+          <TopBar />
+          <div className="flex flex-1 overflow-hidden">
+            <DesktopSidebar />
+            <main className="flex-1 overflow-y-auto main-safe bg-background/25">
+              <Dashboard />
+            </main>
+          </div>
+          <MobileNav />
+        </div>
+      </div>
+    );
+  }
+
+  return <HomePage />;
+}
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
@@ -87,7 +122,7 @@ function Router() {
       <Route path="/auth" component={() => <OrchardShell><AuthPage /></OrchardShell>} />
       <Route path="/onboarding" component={() => <OrchardShell><OnboardingPage /></OrchardShell>} />
 
-      <Route path="/" component={() => <ProtectedRoute component={Dashboard} />} />
+      <Route path="/" component={HomeRoute} />
       <Route path="/meals/:id" component={() => <ProtectedRoute component={MealDetailPage} />} />
       <Route path="/meals" component={() => <ProtectedRoute component={MealsPage} />} />
       <Route path="/import-recipe" component={() => <ProtectedRoute component={ImportRecipePage} />} />
