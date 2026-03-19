@@ -869,14 +869,38 @@ export default function WeeklyPlannerPage() {
     setSmartLoading(true);
     try {
       const locked: { dayOfWeek: number; slot: string; candidateId: string | number; candidateName: string }[] = [];
+
+      // Always include meals already planned in the current week as locked entries
+      // so the AI builds around what's there rather than ignoring it.
+      const mealNameById = new Map(meals.map(m => [m.id, m.name]));
+      const currentWeek = fullPlanner.find(w => String(w.weekNumber) === activeWeek);
+      if (currentWeek) {
+        for (const day of currentWeek.days) {
+          for (const entry of day.entries) {
+            const slot = entry.mealType === 'snacks' ? 'snack' : entry.mealType;
+            locked.push({
+              dayOfWeek: day.dayOfWeek,
+              slot,
+              candidateId: entry.mealId,
+              candidateName: mealNameById.get(entry.mealId) ?? '',
+            });
+          }
+        }
+      }
+
       if (preserveLocks && smartResult) {
         for (const entry of smartResult.entries) {
           const key = `${entry.dayOfWeek}-${entry.slot}`;
           if (lockedEntries.has(key)) {
-            locked.push({ dayOfWeek: entry.dayOfWeek, slot: entry.slot, candidateId: entry.candidate.id, candidateName: entry.candidate.name });
+            // Only add if not already present from existing planner entries
+            const alreadyLocked = locked.some(l => l.dayOfWeek === entry.dayOfWeek && l.slot === entry.slot);
+            if (!alreadyLocked) {
+              locked.push({ dayOfWeek: entry.dayOfWeek, slot: entry.slot, candidateId: entry.candidate.id, candidateName: entry.candidate.name });
+            }
           }
         }
       }
+
       const res = await apiRequest('POST', '/api/meal-plans/smart-suggest', {
         mealsPerDay: Number(smartMealsPerDay) || 3,
         includeLeftovers: smartLeftovers,
@@ -1065,26 +1089,26 @@ export default function WeeklyPlannerPage() {
   return (
     <div className="w-full px-3 py-6">
       {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6">
+        <div className="flex-1 min-w-[160px]">
           <h1 className="text-[28px] font-semibold tracking-tight" data-testid="text-weekly-planner-title">
             Weekly Planner
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-0.5">
             Plan 6 weeks of meals with breakfast, lunch, dinner, and snacks
           </p>
         </div>
-        <div className="grid grid-cols-3 gap-1.5 items-center">
+        <div className="flex flex-wrap items-center gap-1.5">
           <Button
-            className="col-span-3"
+            size="sm"
             onClick={() => setSmartControlsOpen(!smartControlsOpen)}
             disabled={smartLoading}
             data-testid="button-plan-my-week"
           >
-            {smartLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+            {smartLoading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
             {smartLoading ? "Planning..." : "Plan My Week"}
           </Button>
-          <Badge variant="outline" className="justify-center" data-testid="badge-week-progress">
+          <Badge variant="outline" className="h-8 px-3 flex items-center" data-testid="badge-week-progress">
             {weekStats.filled} / {weekStats.total} meals
           </Badge>
           <Button size="sm" onClick={() => setTemplatesOpen(true)} data-testid="button-open-templates">
@@ -1314,19 +1338,6 @@ export default function WeeklyPlannerPage() {
               </Button>
             </div>
 
-            {week.days.every(d => d.entries.length === 0) && !smartControlsOpen && (
-              <div className="flex items-center gap-4 rounded-xl border border-primary/20 bg-primary/5 px-5 py-4 mb-6">
-                <Sparkles className="h-5 w-5 text-primary shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground">Would you like THA to propose this week's meals?</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">We'll build a plan based on your cookbook, household, and preferences.</p>
-                </div>
-                <Button size="sm" onClick={() => setSmartControlsOpen(true)} data-testid="button-plan-my-week-prompt">
-                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                  Plan My Week
-                </Button>
-              </div>
-            )}
 
             {/* ── Mobile: single-day view (hidden on sm+) ── */}
             <div className="sm:hidden mb-6">
