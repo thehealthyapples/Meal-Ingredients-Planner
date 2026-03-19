@@ -15,12 +15,18 @@ export function buildWhyBetter(product: any, currentScore: number | null): strin
   return reasons.slice(0, 3);
 }
 
-export function rankChoices(products: any[], currentScore: number | null): any[] {
+export function rankChoices(products: any[], currentScore: number | null, preferredStore?: string): any[] {
   const filtered = products.filter(p => {
     const smp = p.upfAnalysis?.smpRating ?? 0;
     return currentScore === null || smp > currentScore;
   });
   return [...filtered].sort((a, b) => {
+    if (preferredStore) {
+      const aInStore = (a.availableStores || []).includes(preferredStore);
+      const bInStore = (b.availableStores || []).includes(preferredStore);
+      if (aInStore && !bInStore) return -1;
+      if (!aInStore && bInStore) return 1;
+    }
     const aSmp = a.upfAnalysis?.smpRating ?? 0;
     const bSmp = b.upfAnalysis?.smpRating ?? 0;
     if (bSmp !== aSmp) return bSmp - aSmp;

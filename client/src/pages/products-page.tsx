@@ -1530,8 +1530,6 @@ export default function ProductsPage() {
                       searchResults.filter(p => p.barcode !== selectedProduct.barcode),
                       currentSmp
                     ).slice(0, 3);
-                    const hasChooseBetter = detailWFAlt || betterOptions.length > 0;
-                    if (!hasChooseBetter) return null;
                     return (
                       <div className="space-y-3 pt-2 border-t border-border" data-testid="section-choose-better-detail">
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
@@ -1539,13 +1537,13 @@ export default function ProductsPage() {
                           Choose Better
                         </p>
 
-                        {/* Simply Made */}
-                        {detailWFAlt && (
-                          <div data-testid="section-simply-made-detail">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600 dark:text-green-400 flex items-center gap-1 mb-1.5">
-                              <ChefHat className="h-3 w-3" />
-                              Simply Made
-                            </p>
+                        {/* Simply Made — always shown */}
+                        <div data-testid="section-simply-made-detail">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600 dark:text-green-400 flex items-center gap-1 mb-1.5">
+                            <ChefHat className="h-3 w-3" />
+                            Simply Made
+                          </p>
+                          {detailWFAlt ? (
                             <div className="rounded-md border border-green-200 dark:border-green-800 bg-green-50/40 dark:bg-green-950/20 p-3 space-y-2">
                               <div className="flex items-start justify-between gap-2">
                                 <p className="font-medium text-sm flex items-center gap-1.5">
@@ -1591,8 +1589,10 @@ export default function ProductsPage() {
                                 {showDetailWFRecipe ? 'Hide Recipe' : 'View Recipe'}
                               </Button>
                             </div>
-                          </div>
-                        )}
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">No whole-food route found for this item.</p>
+                          )}
+                        </div>
 
                         {/* Confidently Choose */}
                         {betterOptions.length > 0 && (

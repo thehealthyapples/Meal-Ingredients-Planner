@@ -675,12 +675,13 @@ function getCurrentProductInsight(item: ShoppingListItem): { headline: string; d
 }
 
 
-function ProductAnalyseModal({ open, onOpenChange, item }: { open: boolean; onOpenChange: (v: boolean) => void; item: ShoppingListItem }) {
+function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { open: boolean; onOpenChange: (v: boolean) => void; item: ShoppingListItem; preferredStore?: string }) {
   const [searchQuery, setSearchQuery] = useState(item.productName);
   const [products, setProducts] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showBrowse, setShowBrowse] = useState(false);
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
+  const [showCurrentDetail, setShowCurrentDetail] = useState(false);
   const [knowledgeSlug, setKnowledgeSlug] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [hideUltraProcessed, setHideUltraProcessed] = useState(false);
@@ -809,8 +810,8 @@ function ProductAnalyseModal({ open, onOpenChange, item }: { open: boolean; onOp
 
   const insight = getCurrentProductInsight(item);
   const rankedChoices = useMemo(
-    () => rankChoices(products, item.smpRating ?? null).slice(0, 3),
-    [products, item.smpRating]
+    () => rankChoices(products, item.smpRating ?? null, preferredStore).slice(0, 3),
+    [products, item.smpRating, preferredStore]
   );
   const wholeFoodAlt = useMemo(() => getWholeFoodAlternative(item.productName), [item.productName]);
   const isWholeFood_ = item.itemType === 'whole_food';
@@ -855,25 +856,59 @@ function ProductAnalyseModal({ open, onOpenChange, item }: { open: boolean; onOp
                       {insight.headline}
                     </p>
                   </div>
-                  <div className="flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <ScoreBadge score={item.smpRating ?? 0} size={30} />
+                    <button
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setShowCurrentDetail(v => !v)}
+                      data-testid="button-toggle-current-detail"
+                    >
+                      {showCurrentDetail ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{insight.detail}</p>
-                {item.category && (
+                {showCurrentDetail && (
+                  <div className="mt-3 pt-3 border-t border-border/60 space-y-2" data-testid="section-current-detail">
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      {item.category && (
+                        <Badge variant="outline" className="text-[10px] capitalize">{item.category}</Badge>
+                      )}
+                      {isWholeFood_ && (
+                        <Badge className="text-[10px] bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 border-green-300 dark:border-green-800 no-default-hover-elevate">
+                          <Leaf className="h-2.5 w-2.5 mr-1" />Whole food
+                        </Badge>
+                      )}
+                      {item.itemType === 'packaged' && item.smpRating !== null && item.smpRating <= 2 && (
+                        <Badge className="text-[10px] bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 no-default-hover-elevate">
+                          Worth reconsidering
+                        </Badge>
+                      )}
+                    </div>
+                    {item.matchedProductId && (
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Why this score</p>
+                        <div className="space-y-0.5">
+                          {item.smpRating !== null && (
+                            <p className="text-xs text-foreground">THA score: {item.smpRating}/5 apples</p>
+                          )}
+                          {item.matchedStore && (
+                            <p className="text-xs text-muted-foreground">Stocked at: {item.matchedStore}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {preferredStore && (
+                      <p className="text-[10px] text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                        <Store className="h-3 w-3" />
+                        Prioritising {preferredStore} results
+                      </p>
+                    )}
+                  </div>
+                )}
+                {!showCurrentDetail && item.category && (
                   <div className="flex items-center gap-1.5 mt-2 flex-wrap">
                     <Badge variant="outline" className="text-[10px] capitalize">{item.category}</Badge>
-                    {isWholeFood_ && (
-                      <Badge className="text-[10px] bg-green-100 dark:bg-green-950/40 text-green-700 dark:text-green-400 border-green-300 dark:border-green-800 no-default-hover-elevate">
-                        <Leaf className="h-2.5 w-2.5 mr-1" />
-                        Whole food
-                      </Badge>
-                    )}
-                    {item.itemType === 'packaged' && item.smpRating !== null && item.smpRating <= 2 && (
-                      <Badge className="text-[10px] bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 no-default-hover-elevate">
-                        Worth reconsidering
-                      </Badge>
-                    )}
                   </div>
                 )}
               </CardContent>
@@ -3536,6 +3571,7 @@ export default function ShoppingListPage() {
           open={!!analyseItem}
           onOpenChange={(v) => { if (!v) setAnalyseItem(null); }}
           item={analyseItem}
+          preferredStore={globalStore !== 'auto' ? globalStore : undefined}
         />
       )}
     </div>

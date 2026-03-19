@@ -1,0 +1,54 @@
+Tighten the analyser implementation without expanding scope.
+
+There are 4 issues to fix:
+
+1. Main analyser is missing “Simply Made”
+- Add the same Simply Made section used in Basket Analyse
+- Keep section order identical across both analyser entry points:
+  - current product
+  - why
+  - Choose Better
+    - Simply Made
+    - Confidently Choose
+- Do not create a separate logic path if existing whole-food logic can be reused
+
+2. Store duplication / mixed-language / wrong-country results
+- Products should default to returning only products relevant to the user’s country
+- For THA, prioritise UK results and UK supermarket/store names
+- De-duplicate availableStores before display
+- Normalise store labels into one clean display form
+- Suppress obviously non-UK / non-local store noise from the default analyser UI
+
+3. Product analysis must be expandable
+- Ensure the current product analysis is visible and expandable
+- Keep summary compact by default
+- Add expandable detail for score reasoning (THA score, NOVA/UPF, additives, concerns)
+- Where practical, alternatives should also support a lightweight expandable analysis view
+
+4. Basket Analyse should respect the basket shop picker
+- When launched from Basket, analyser must default to the currently selected basket shop first
+- Confidently Choose should prioritise products available in that selected shop
+- Selected basket shop should be reflected in analyser ranking/order
+- Main analyser can remain generic, but Basket Analyse must be context-aware
+
+Implementation constraints:
+- No basket redesign
+- No new page
+- No new external data source
+- Keep performance and cost low
+- Reuse existing analyser/search/store logic
+- Keep the shared helper small
+- Do not over-engineer
+
+Also review:
+- any duplicated store formatting
+- any lingering old wording
+- any ambiguity in matchedStore persistence
+
+Return:
+1. exact files changed
+2. what was fixed for Simply Made
+3. how country/store filtering was handled
+4. how expandable analysis was added
+5. how basket shop defaulting/prioritisation was implemented
+6. any limitations that remain

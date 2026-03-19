@@ -1110,7 +1110,7 @@ export async function registerRoutes(
         return res.json({ products: [], hasMore: false });
       }
 
-      const offFields = 'code,product_name,brands,image_url,image_front_url,image_front_small_url,nutriments,nutriscore_grade,nova_group,categories_tags,ingredients_text,quantity,serving_size,categories';
+      const offFields = 'code,product_name,brands,image_url,image_front_url,image_front_small_url,nutriments,nutriscore_grade,nova_group,categories_tags,ingredients_text,quantity,serving_size,categories,stores_tags,stores,purchase_places_tags,countries_tags';
       const offHeaders = { timeout: 20000, headers: { 'User-Agent': 'SmartMealPlanner/1.0 (contact: smartmealplanner@replit.app)' } };
 
       const ukParams = new URLSearchParams({
@@ -1186,6 +1186,27 @@ export async function registerRoutes(
           const smpRating = upfResult?.smpRating ?? 3;
           const smpScore = upfResult?.smpScore ?? 55;
 
+          const rawStoreTags: string[] = [
+            ...(p.stores_tags || []),
+            ...(p.purchase_places_tags || []),
+            ...((p.stores || '').split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean)),
+          ];
+          const searchStoreMapping: Record<string, string> = {
+            'tesco': 'Tesco', 'en:tesco': 'Tesco',
+            "sainsbury's": "Sainsbury's", "en:sainsbury-s": "Sainsbury's", "sainsburys": "Sainsbury's",
+            'asda': 'Asda', 'en:asda': 'Asda',
+            'morrisons': 'Morrisons', 'en:morrisons': 'Morrisons',
+            'aldi': 'Aldi', 'en:aldi': 'Aldi',
+            'lidl': 'Lidl', 'en:lidl': 'Lidl',
+            'waitrose': 'Waitrose', 'en:waitrose': 'Waitrose',
+            'ocado': 'Ocado', 'en:ocado': 'Ocado',
+          };
+          const availableStores: string[] = [];
+          for (const s of rawStoreTags) {
+            const mapped = searchStoreMapping[s.toLowerCase()];
+            if (mapped && !availableStores.includes(mapped)) availableStores.push(mapped);
+          }
+
           return {
             barcode: p.code || null,
             product_name: p.product_name,
@@ -1196,6 +1217,7 @@ export async function registerRoutes(
             nutriscore_grade: p.nutriscore_grade || null,
             nova_group: novaGroup ? Number(novaGroup) : null,
             categories_tags: categoriesTags,
+            availableStores,
             isUK: ukProducts.some((up: any) => (up.code || up.product_name) === (p.code || p.product_name)),
             nutriments_raw: p.nutriments || null,
             analysis: ingredientsText ? {
