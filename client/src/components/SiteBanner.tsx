@@ -16,7 +16,7 @@ export default function SiteBanner() {
 
   return (
     <div
-      className="w-full bg-green-600 text-white text-sm font-medium py-2.5 px-4 text-center"
+      className="w-full shrink-0 bg-green-600 text-white text-sm font-medium py-2.5 px-4 text-center"
       data-testid="banner-site"
       role="status"
     >

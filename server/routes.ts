@@ -5180,8 +5180,10 @@ export async function registerRoutes(
     try {
       const raw = await storage.getSiteSetting("banner");
       const parsed = raw ? JSON.parse(raw) : { enabled: false, text: "" };
+      console.log("[Banner] GET /api/site-settings/banner →", JSON.stringify(parsed));
       res.json(parsed);
-    } catch {
+    } catch (err: any) {
+      console.error("[Banner] GET error:", err?.message);
       res.json({ enabled: false, text: "" });
     }
   });
@@ -5192,8 +5194,10 @@ export async function registerRoutes(
       if (typeof enabled !== "boolean" || typeof text !== "string") {
         return res.status(400).json({ message: "Invalid banner data" });
       }
-      await storage.setSiteSetting("banner", JSON.stringify({ enabled, text: text.trim() }));
-      res.json({ enabled, text: text.trim() });
+      const payload = { enabled, text: text.trim() };
+      console.log("[Banner] PUT /api/admin/site-settings/banner →", JSON.stringify(payload));
+      await storage.setSiteSetting("banner", JSON.stringify(payload));
+      res.json(payload);
     } catch (err) {
       console.error("[SiteSettings] banner update error:", err);
       res.status(500).json({ message: "Failed to update banner" });
