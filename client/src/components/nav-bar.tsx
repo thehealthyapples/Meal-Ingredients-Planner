@@ -6,10 +6,10 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  LayoutDashboard, Utensils, CalendarDays, ShoppingBasket,
+  LayoutDashboard, CalendarDays, ShoppingBasket,
   User, LogOut, ShieldCheck, Star,
   Mail, Sliders, Search, Menu, ChevronLeft, ChevronRight,
-  MoreHorizontal, Microscope, BookOpen, Heart,
+  MoreHorizontal, Microscope, BookOpen, Heart, ScrollText,
 } from "lucide-react";
 import { api } from "@shared/routes";
 
@@ -32,12 +32,12 @@ const NAV_ITEMS_TOP = [
 ];
 
 const NAV_ITEMS_MAIN = [
-  { href: "/meals", label: "Cookbook", icon: Utensils },
+  { href: "/meals", label: "Cookbook", icon: BookOpen },
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/products", label: "Analyser", icon: Microscope },
   { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
-  { href: "/diary", label: "My Diary", icon: BookOpen },
+  { href: "/diary", label: "My Diary", icon: ScrollText },
   { href: "/partners", label: "Partners", icon: Heart },
   { href: "/profile", label: "Profile", icon: User },
 ];
@@ -52,7 +52,7 @@ const ADMIN_ITEMS = [
 
 const MOBILE_BOTTOM_ITEMS = [
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
-  { href: "/meals", label: "Cookbook", icon: Utensils },
+  { href: "/meals", label: "Cookbook", icon: BookOpen },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
   { href: "/profile", label: "Profile", icon: User },

@@ -1329,7 +1329,8 @@ export default function MealsPage() {
   const [searchSource, setSearchSource] = useState<"all" | "recipes" | "products">("all");
   const [viewMode, setViewMode] = useViewPreference();
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [mealTypeFilter, setMealTypeFilter] = useState<string>("all");
+  const [activeGroups, setActiveGroups] = useState<Set<string>>(() => new Set(["cookbook", "recipes", "freezer"]));
+  const toggleGroup = (group: string) => setActiveGroups(prev => { const n = new Set(prev); n.has(group) ? n.delete(group) : n.add(group); return n; });
   const [audienceFilter, setAudienceFilter] = useState<string>("all-audience");
   const [matchMyProfile, setMatchMyProfile] = useState<boolean>(false);
   const [mealsDietPattern, setMealsDietPattern] = useState<string>("");
@@ -1385,7 +1386,7 @@ export default function MealsPage() {
 
   useEffect(() => {
     setVisibleCount(48);
-  }, [searchTerm, categoryFilter, mealTypeFilter, audienceFilter, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
+  }, [searchTerm, categoryFilter, activeGroups, audienceFilter, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
 
   const addToFreezerMutation = useMutation({
     mutationFn: async (data: { mealId: number; totalPortions: number; batchLabel?: string; notes?: string }) => {
@@ -1724,13 +1725,17 @@ export default function MealsPage() {
 
   const filteredMeals = useMemo(() => meals?.filter(meal => {
     const matchesSearch = meal.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === "all" || 
+    const matchesCategory = categoryFilter === "all" ||
       (allCategories.find(c => c.name === categoryFilter)?.id === meal.categoryId);
-    let matchesType = true;
-    if (mealTypeFilter === "recipes") matchesType = !meal.isReadyMeal && !meal.isDrink;
-    else if (mealTypeFilter === "ready-meals") matchesType = meal.isReadyMeal === true && !meal.isDrink;
-    else if (mealTypeFilter === "my-meals") matchesType = !meal.isSystemMeal;
-    else if (mealTypeFilter === "frozen-meals") matchesType = meal.isFreezerEligible === true && (meal.isReadyMeal === true || meal.mealSourceType === "openfoodfacts");
+    const cat = getMealDisplayCategory(meal);
+    // Group filter using multi-select activeGroups
+    let matchesGroup = true;
+    if (cat === "user_meals") matchesGroup = activeGroups.has("cookbook");
+    else if (cat === "from_web" || cat === "tha_meals") matchesGroup = activeGroups.has("recipes");
+    // Packaged & Processed — only shown when explicitly enabled (hidden by default)
+    else if (cat === "ready_meals") matchesGroup = activeGroups.has("packaged");
+    // drinks follow cookbook/recipes visibility
+    else if (cat === "drinks") matchesGroup = activeGroups.has("cookbook") || activeGroups.has("recipes");
     let matchesAudience = true;
     if (audienceFilter === "adult") matchesAudience = meal.audience === "adult" || meal.audience === "universal";
     else if (audienceFilter === "baby") matchesAudience = meal.audience === "baby" || meal.audience === "universal";
@@ -1741,7 +1746,7 @@ export default function MealsPage() {
     const mealText = [meal.name, ...(meal.ingredients ?? [])].join(' ').toLowerCase();
     const matchesDiet = !shouldExcludeRecipe(mealText, ctx);
     const matchesUpf = !mealsUpfFilter || meal.isReadyMeal !== true;
-    return matchesSearch && matchesCategory && matchesType && matchesAudience && matchesDiet && matchesUpf;
+    return matchesSearch && matchesCategory && matchesGroup && matchesAudience && matchesDiet && matchesUpf;
   })?.sort((a, b) => {
     const catA = getMealDisplayCategory(a);
     const catB = getMealDisplayCategory(b);
@@ -1749,8 +1754,14 @@ export default function MealsPage() {
     const idxB = MEAL_CATEGORY_ORDER.indexOf(catB as typeof MEAL_CATEGORY_ORDER[number]);
     const orderA = idxA === -1 ? MEAL_CATEGORY_ORDER.length : idxA;
     const orderB = idxB === -1 ? MEAL_CATEGORY_ORDER.length : idxB;
+    // Within packaged group: health-first (fewer ingredients = less processed)
+    if (catA === "ready_meals" && catB === "ready_meals") {
+      const ingA = a.ingredients?.length ?? 999;
+      const ingB = b.ingredients?.length ?? 999;
+      return ingA - ingB || a.name.localeCompare(b.name);
+    }
     return orderA - orderB || a.name.localeCompare(b.name);
-  }), [meals, searchTerm, categoryFilter, allCategories, mealTypeFilter, audienceFilter, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
+  }), [meals, searchTerm, categoryFilter, allCategories, activeGroups, audienceFilter, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
 
   const visibleMeals = useMemo(() => filteredMeals?.slice(0, visibleCount), [filteredMeals, visibleCount]);
 
@@ -1913,24 +1924,21 @@ export default function MealsPage() {
       <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
         <div className="flex border border-border rounded-md shrink-0">
           {([
-            { value: "all", label: "All Meals", icon: null, iconColor: "" },
-            { value: "recipes", label: "Recipes", icon: null, iconColor: "" },
-            { value: "ready-meals", label: "Packaged & Processed", icon: null, iconColor: "" },
-            { value: "frozen-meals", label: "Frozen Meals", icon: Snowflake, iconColor: "text-muted-foreground" },
-            { value: "my-meals", label: "My Cookbook", icon: null, iconColor: "" },
-            { value: "freezer", label: "Freezer", icon: Snowflake, iconColor: "text-muted-foreground" },
-          ] as const).map(({ value, label, icon: Icon, iconColor }, idx) => (
+            { id: "cookbook", label: "My Cookbook" },
+            { id: "recipes", label: "Recipes" },
+            { id: "freezer", label: "My Freezer" },
+            { id: "packaged", label: "Packaged & Processed" },
+          ] as const).map(({ id, label }, idx) => (
             <Button
-              key={value}
-              variant={mealTypeFilter === value ? "secondary" : "ghost"}
+              key={id}
+              variant={activeGroups.has(id) ? "secondary" : "ghost"}
               size="sm"
               className={idx > 0 ? "border-l border-border rounded-none" : "rounded-r-none"}
-              onClick={() => setMealTypeFilter(prev => prev === value && value !== "all" ? "all" : value)}
-              data-testid={`button-filter-${value}`}
+              onClick={() => toggleGroup(id)}
+              data-testid={`button-filter-${id}`}
             >
-              {Icon && <Icon className={`h-3.5 w-3.5 mr-1 ${iconColor || ""}`} />}
               {label}
-              {value === "freezer" && freezerMeals.length > 0 && (
+              {id === "freezer" && freezerMeals.length > 0 && (
                 <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">
                   {freezerMeals.reduce((sum, f) => sum + f.remainingPortions, 0)}
                 </Badge>
@@ -2086,110 +2094,7 @@ export default function MealsPage() {
 
 
 
-      {mealTypeFilter === "freezer" ? (
-        <div className="space-y-4">
-          {freezerMeals.length === 0 ? (
-            <Card className="p-8">
-              <div className="flex flex-col items-center gap-3 text-center">
-                <Snowflake className="h-12 w-12 text-muted-foreground/40" />
-                <h3 className="text-lg font-medium">No frozen meals yet</h3>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  Cook a batch of your favourite meals and add them to the freezer to track portions. Look for the snowflake button on any meal card.
-                </p>
-              </div>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {freezerMeals.map((frozen, index) => {
-                const meal = meals?.find(m => m.id === frozen.mealId);
-                const portionPercent = frozen.totalPortions > 0 ? (frozen.remainingPortions / frozen.totalPortions) * 100 : 0;
-                const isExpired = frozen.expiryDate && new Date(frozen.expiryDate) < new Date();
-                const daysUntilExpiry = frozen.expiryDate ? Math.ceil((new Date(frozen.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
-                return (
-                  <motion.div
-                    key={frozen.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2, delay: index * 0.03 }}
-                  >
-                    <Card className={`h-full flex flex-col overflow-hidden ${isExpired ? 'border-red-400/50' : 'border-border'}`} data-testid={`card-freezer-${frozen.id}`}>
-                      <div className="relative w-full h-36 overflow-hidden rounded-t-md bg-accent/30">
-                        {meal?.imageUrl ? (
-                          <img src={meal.imageUrl} alt={meal.name} className="w-full h-full object-cover opacity-70" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Snowflake className="h-12 w-12 text-muted-foreground/40" />
-                          </div>
-                        )}
-                        <div className="absolute top-2 left-2 flex items-center gap-1.5">
-                          <Badge variant="secondary" className="bg-primary/90 text-white border-0 text-[10px]">
-                            <Snowflake className="h-3 w-3 mr-1" />
-                            {frozen.remainingPortions}/{frozen.totalPortions} portions
-                          </Badge>
-                        </div>
-                        {isExpired && (
-                          <div className="absolute top-2 right-2">
-                            <Badge variant="destructive" className="text-[10px]">
-                              <AlertTriangle className="h-3 w-3 mr-1" />
-                              Expired
-                            </Badge>
-                          </div>
-                        )}
-                        {!isExpired && daysUntilExpiry !== null && daysUntilExpiry <= 7 && (
-                          <div className="absolute top-2 right-2">
-                            <Badge variant="outline" className="text-[10px] border-amber-400/60 text-amber-600 dark:text-amber-400 bg-background/80">
-                              {daysUntilExpiry}d left
-                            </Badge>
-                          </div>
-                        )}
-                      </div>
-                      <CardContent className="flex-1 p-3 space-y-2">
-                        <h3 className="font-medium text-sm leading-tight">{meal?.name || `Meal #${frozen.mealId}`}</h3>
-                        {frozen.batchLabel && (
-                          <p className="text-xs text-muted-foreground">{frozen.batchLabel}</p>
-                        )}
-                        <div className="w-full bg-muted rounded-full h-1.5">
-                          <div
-                            className={`h-1.5 rounded-full transition-all ${portionPercent > 50 ? 'bg-blue-400' : portionPercent > 20 ? 'bg-amber-400' : 'bg-red-400'}`}
-                            style={{ width: `${portionPercent}%` }}
-                          />
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          Frozen {new Date(frozen.frozenDate).toLocaleDateString()}
-                          {frozen.expiryDate && ` · Expires ${new Date(frozen.expiryDate).toLocaleDateString()}`}
-                        </p>
-                        {frozen.notes && <p className="text-[11px] text-muted-foreground italic">{frozen.notes}</p>}
-                      </CardContent>
-                      <CardFooter className="p-3 pt-0 flex items-center gap-2 flex-wrap">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1 text-xs"
-                          disabled={frozen.remainingPortions <= 0 || usePortionMutation.isPending}
-                          onClick={() => usePortionMutation.mutate(frozen.id)}
-                          data-testid={`button-use-portion-${frozen.id}`}
-                        >
-                          <Minus className="h-3 w-3 mr-1" />
-                          Use Portion
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-destructive"
-                          onClick={() => deleteFreezerMutation.mutate(frozen.id)}
-                          data-testid={`button-delete-freezer-${frozen.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  </motion.div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      ) : isLoading ? (
+      {isLoading ? (
         <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "flex flex-col gap-3"}>
           {[1, 2, 3].map(i => (
             <div key={i} className={`bg-muted animate-pulse rounded-md ${viewMode === 'grid' ? 'h-48' : 'h-24'}`} />
@@ -2679,6 +2584,119 @@ export default function MealsPage() {
             </div>
           )}
         </AnimatePresence>
+      )}
+
+      {/* My Freezer section — appears after My Cookbook + Recipes, before Packaged & Processed */}
+      {activeGroups.has("freezer") && (
+        <div className="space-y-4 mt-6">
+          <div className="flex items-center gap-2 pb-1 border-b border-border/50">
+            <Snowflake className="h-4 w-4 text-blue-400" />
+            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">My Freezer</span>
+            {freezerMeals.length > 0 && (
+              <span className="text-xs text-muted-foreground/35">· {freezerMeals.reduce((s, f) => s + f.remainingPortions, 0)} portions</span>
+            )}
+          </div>
+          {freezerMeals.length === 0 ? (
+            <Card className="p-8">
+              <div className="flex flex-col items-center gap-3 text-center">
+                <Snowflake className="h-12 w-12 text-muted-foreground/40" />
+                <h3 className="text-lg font-medium">No frozen meals yet</h3>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Cook a batch of your favourite meals and add them to the freezer to track portions. Look for the snowflake button on any meal card.
+                </p>
+              </div>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {freezerMeals.map((frozen, index) => {
+                const meal = meals?.find(m => m.id === frozen.mealId);
+                const portionPercent = frozen.totalPortions > 0 ? (frozen.remainingPortions / frozen.totalPortions) * 100 : 0;
+                const isExpired = frozen.expiryDate && new Date(frozen.expiryDate) < new Date();
+                const daysUntilExpiry = frozen.expiryDate ? Math.ceil((new Date(frozen.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : null;
+                return (
+                  <motion.div
+                    key={frozen.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, delay: index * 0.03 }}
+                  >
+                    <Card className={`h-full flex flex-col overflow-hidden ${isExpired ? 'border-red-400/50' : 'border-border'}`} data-testid={`card-freezer-${frozen.id}`}>
+                      <div className="relative w-full h-36 overflow-hidden rounded-t-md bg-accent/30">
+                        {meal?.imageUrl ? (
+                          <img src={meal.imageUrl} alt={meal.name} className="w-full h-full object-cover opacity-70" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Snowflake className="h-12 w-12 text-muted-foreground/40" />
+                          </div>
+                        )}
+                        <div className="absolute top-2 left-2 flex items-center gap-1.5">
+                          <Badge variant="secondary" className="bg-primary/90 text-white border-0 text-[10px]">
+                            <Snowflake className="h-3 w-3 mr-1" />
+                            {frozen.remainingPortions}/{frozen.totalPortions} portions
+                          </Badge>
+                        </div>
+                        {isExpired && (
+                          <div className="absolute top-2 right-2">
+                            <Badge variant="destructive" className="text-[10px]">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Expired
+                            </Badge>
+                          </div>
+                        )}
+                        {!isExpired && daysUntilExpiry !== null && daysUntilExpiry <= 7 && (
+                          <div className="absolute top-2 right-2">
+                            <Badge variant="outline" className="text-[10px] border-amber-400/60 text-amber-600 dark:text-amber-400 bg-background/80">
+                              {daysUntilExpiry}d left
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                      <CardContent className="flex-1 p-3 space-y-2">
+                        <h3 className="font-medium text-sm leading-tight">{meal?.name || `Meal #${frozen.mealId}`}</h3>
+                        {frozen.batchLabel && (
+                          <p className="text-xs text-muted-foreground">{frozen.batchLabel}</p>
+                        )}
+                        <div className="w-full bg-muted rounded-full h-1.5">
+                          <div
+                            className={`h-1.5 rounded-full transition-all ${portionPercent > 50 ? 'bg-blue-400' : portionPercent > 20 ? 'bg-amber-400' : 'bg-red-400'}`}
+                            style={{ width: `${portionPercent}%` }}
+                          />
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Frozen {new Date(frozen.frozenDate).toLocaleDateString()}
+                          {frozen.expiryDate && ` · Expires ${new Date(frozen.expiryDate).toLocaleDateString()}`}
+                        </p>
+                        {frozen.notes && <p className="text-[11px] text-muted-foreground italic">{frozen.notes}</p>}
+                      </CardContent>
+                      <CardFooter className="p-3 pt-0 flex items-center gap-2 flex-wrap">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="flex-1 text-xs"
+                          disabled={frozen.remainingPortions <= 0 || usePortionMutation.isPending}
+                          onClick={() => usePortionMutation.mutate(frozen.id)}
+                          data-testid={`button-use-portion-${frozen.id}`}
+                        >
+                          <Minus className="h-3 w-3 mr-1" />
+                          Use Portion
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-destructive"
+                          onClick={() => deleteFreezerMutation.mutate(frozen.id)}
+                          data-testid={`button-delete-freezer-${frozen.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       {!isLoading && filteredMeals && visibleCount < filteredMeals.length && (

@@ -1,0 +1,203 @@
+Use the existing implementation from the previous step. Do not rebuild or duplicate any logic already created. Only refine and enforce ranking, grouping, naming, and the related cookbook UI/navigation changes.
+
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- This is a strict ranking and UI correction, not a redesign.
+- Do not add new scoring systems, ML, or complex abstractions.
+- Reuse existing THA scoring, UPF, NOVA, ingredient signals, UI components, and navigation patterns.
+- Keep logic simple, deterministic, and easy to maintain.
+- Touch only ranking, grouping, naming, filter behaviour, and minimal UI/icon changes.
+- Do not refactor unrelated systems.
+- Do not run broad tests. Only minimal validation.
+
+--------------------------------------------------
+
+TASK: ENFORCE HEALTH-FIRST COOKBOOK BEHAVIOUR + CLEAN NAVIGATION
+
+--------------------------------------------------
+
+1. REMOVE “ALL MEALS” AND SIMPLIFY FILTER MODEL
+
+Remove “All Meals” completely as a visible tab/filter.
+
+The top filter/menu should now ONLY be:
+- My Cookbook
+- Recipes
+- My Freezer
+- Packaged & Processed
+
+Default state on load:
+- My Cookbook = selected
+- Recipes = selected
+- My Freezer = selected
+- Packaged & Processed = NOT selected
+
+This creates the default combined browse view.
+
+Implementation rules:
+- Reuse existing filter state logic
+- Do not build a new filtering system
+- Keep behaviour simple and predictable
+
+--------------------------------------------------
+
+2. TOP MENU ORDER + LABELS
+
+Ensure order is EXACTLY:
+1. My Cookbook
+2. Recipes
+3. My Freezer
+4. Packaged & Processed
+
+Rename:
+- “Freezer” → “My Freezer”
+- “thehealthyApples products” → “Packaged & Processed”
+- “ready meals” → “Packaged & Processed”
+
+Apply consistently across:
+- cookbook
+- analyser
+- grouped results
+
+--------------------------------------------------
+
+3. REMOVE “FROZEN MEALS” CATEGORY
+
+- Remove “Frozen Meals” as a separate category if it exists
+- Fold frozen packaged items into “Packaged & Processed”
+- Do NOT remove user freezer functionality (My Freezer remains)
+
+--------------------------------------------------
+
+4. HARD GROUP PRIORITY (NON-NEGOTIABLE)
+
+All results must ALWAYS be grouped and shown in this order:
+
+1. My Cookbook
+2. Recipes
+3. My Freezer
+4. Packaged & Processed
+
+Rules:
+- Group first, then sort within groups
+- Never rely on a single mixed list
+- Packaged items must NEVER appear above recipe-based results
+
+--------------------------------------------------
+
+5. WITHIN-GROUP SORTING (HEALTH-FIRST, SIMPLE)
+
+Sort items using ONLY existing signals:
+
+Priority:
+1. Lowest processing / whole food
+2. Fewer additives
+3. Existing THA score (if available)
+4. Shorter ingredient list (fallback)
+
+Rules:
+- Do NOT create a new scoring system
+- Use existing fields only
+- Keep logic deterministic and simple
+
+--------------------------------------------------
+
+6. PACKAGED & PROCESSED RULE (STRICT)
+
+Items in this group:
+- ALWAYS last
+- NEVER outrank recipes
+- Treated as fallback only
+
+Optional (only if cheap):
+- Slightly deprioritise high NOVA / high additive items
+
+--------------------------------------------------
+
+7. FAIL-SAFE GUARD (CRITICAL)
+
+If an item is:
+- packaged
+- processed
+- ready meal
+- from THA product DB
+
+Then:
+- FORCE group = Packaged & Processed
+- regardless of keyword match
+
+This prevents unhealthy items surfacing at the top.
+
+--------------------------------------------------
+
+8. SIDE PANEL ICON FIX
+
+Cookbook icon:
+- change from knife & fork → cookbook/book icon
+
+Diary icon:
+- ensure clearly different (calendar/journal style)
+- must not visually conflict with cookbook
+
+Rules:
+- reuse existing icon library
+- minimal change only
+- do not redesign sidebar
+
+--------------------------------------------------
+
+9. DEFAULT VIEW BEHAVIOUR
+
+On load:
+- show My Cookbook + Recipes + My Freezer
+- Packaged & Processed hidden by default
+
+When enabled:
+- appears as final group only
+
+--------------------------------------------------
+
+10. KEEP IMPLEMENTATION LIGHTWEIGHT
+
+- No new ranking engine
+- No new DB fields unless unavoidable
+- No UI redesign
+- No ingestion changes
+- Only adjust:
+  - grouping logic
+  - sorting logic
+  - labels
+  - filter defaults
+  - icon selection
+
+--------------------------------------------------
+
+VALIDATION (MINIMUM ONLY)
+
+Confirm:
+- “All Meals” removed
+- Menu order correct
+- Default = My Cookbook + Recipes + My Freezer
+- Packaged & Processed hidden by default
+- Frozen Meals removed
+- Group order enforced everywhere
+- Healthiest items appear first in each group
+- No packaged item appears above a recipe
+- Cookbook + Diary icons are clearly distinct
+
+Do not run broad tests.
+
+--------------------------------------------------
+
+OUTPUT
+
+After changes:
+- list files modified
+- explain how grouping is enforced
+- explain which signals are used for sorting
+- confirm where ordering appears in UI
+- confirm Frozen Meals removal
+- confirm icon changes
+- highlight any edge cases
