@@ -372,7 +372,7 @@ function GroupedMealDetail({ meal, allMeals, tab, mealId }: {
   );
 }
 
-function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, audience, isFreezerEligible, onFreezeClick, servings, sourceUrl, mealFormat, instructions }: {
+function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, audience, isFreezerEligible, onFreezeClick, servings, sourceUrl, mealFormat, instructions, hideEdit, hideBasket }: {
   mealId: number;
   mealName: string;
   ingredients: string[];
@@ -385,6 +385,8 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
   sourceUrl?: string | null;
   mealFormat?: string | null;
   instructions?: string[] | null;
+  hideEdit?: boolean;
+  hideBasket?: boolean;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -560,32 +562,34 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
               <TooltipContent><p className="text-xs">View original recipe</p></TooltipContent>
             </Tooltip>
           )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (mealFormat === "grouped") {
-                    navigate(`/meals/${mealId}`);
-                  } else {
-                    editCopyMutation.mutate();
-                  }
-                }}
-                disabled={editCopyMutation.isPending}
-                data-testid={`button-edit-recipe-${mealId}`}
-              >
-                {editCopyMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Pencil className="h-4 w-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p className="text-xs">Edit recipe</p></TooltipContent>
-          </Tooltip>
-          {mealFormat === "grouped" && (
+          {!hideEdit && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (mealFormat === "grouped") {
+                      navigate(`/meals/${mealId}`);
+                    } else {
+                      editCopyMutation.mutate();
+                    }
+                  }}
+                  disabled={editCopyMutation.isPending}
+                  data-testid={`button-edit-recipe-${mealId}`}
+                >
+                  {editCopyMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Pencil className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">Edit recipe</p></TooltipContent>
+            </Tooltip>
+          )}
+          {!hideEdit && mealFormat === "grouped" && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -603,28 +607,30 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
               <TooltipContent><p className="text-xs">Edit in Build a Meal</p></TooltipContent>
             </Tooltip>
           )}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  addToBasket({ mealId, quantity: qty });
-                  addToListMutation.mutate();
-                }}
-                disabled={addToListMutation.isPending}
-                data-testid={`button-add-basket-${mealId}`}
-              >
-                {addToListMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <ShoppingBasket className="h-4 w-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p className="text-xs">Add to shopping list</p></TooltipContent>
-          </Tooltip>
+          {!hideBasket && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addToBasket({ mealId, quantity: qty });
+                    addToListMutation.mutate();
+                  }}
+                  disabled={addToListMutation.isPending}
+                  data-testid={`button-add-basket-${mealId}`}
+                >
+                  {addToListMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ShoppingBasket className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">Add to shopping list</p></TooltipContent>
+            </Tooltip>
+          )}
 
         {!isReadyMeal && (
           <Tooltip>
@@ -2675,6 +2681,12 @@ export default function MealsPage() {
                         {frozen.batchLabel && (
                           <p className="text-xs text-muted-foreground">{frozen.batchLabel}</p>
                         )}
+                        {meal?.servings != null && meal.servings >= 1 && (
+                          <p className="flex items-center gap-1 text-[11px] text-muted-foreground" data-testid={`text-freezer-servings-${frozen.id}`}>
+                            <UtensilsCrossed className="h-3 w-3" />
+                            {meal.servings} {meal.servings === 1 ? 'serving' : 'servings'} per batch
+                          </p>
+                        )}
                         <div className="w-full bg-muted rounded-full h-1.5">
                           <div
                             className={`h-1.5 rounded-full transition-all ${portionPercent > 50 ? 'bg-blue-400' : portionPercent > 20 ? 'bg-amber-400' : 'bg-red-400'}`}
@@ -2686,12 +2698,13 @@ export default function MealsPage() {
                           {frozen.expiryDate && ` · Expires ${new Date(frozen.expiryDate).toLocaleDateString()}`}
                         </p>
                         {frozen.notes && <p className="text-[11px] text-muted-foreground italic">{frozen.notes}</p>}
+                        <NutritionBadges mealId={frozen.mealId} nutrition={nutritionMap.get(frozen.mealId)} />
                       </CardContent>
-                      <CardFooter className="p-3 pt-0 flex items-center gap-2 flex-wrap">
+                      <CardFooter className="p-3 pt-0 flex flex-col gap-2">
                         <Button
                           size="sm"
                           variant="outline"
-                          className="flex-1 text-xs"
+                          className="w-full text-xs"
                           disabled={frozen.remainingPortions <= 0 || usePortionMutation.isPending}
                           onClick={() => usePortionMutation.mutate(frozen.id)}
                           data-testid={`button-use-portion-${frozen.id}`}
@@ -2699,15 +2712,50 @@ export default function MealsPage() {
                           <Minus className="h-3 w-3 mr-1" />
                           Use Portion
                         </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-destructive"
-                          onClick={() => deleteFreezerMutation.mutate(frozen.id)}
-                          data-testid={`button-delete-freezer-${frozen.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {meal && (
+                          <div className="flex items-center w-full">
+                            <div className="flex-1">
+                              <MealActionBar
+                                mealId={meal.id}
+                                mealName={meal.name}
+                                ingredients={meal.ingredients}
+                                isReadyMeal={!!meal.isReadyMeal}
+                                isDrink={!!meal.isDrink}
+                                audience={meal.audience || "adult"}
+                                isFreezerEligible={!!meal.isFreezerEligible}
+                                onFreezeClick={() => setAddToFreezerMealId(meal.id)}
+                                servings={meal.servings}
+                                sourceUrl={meal.sourceUrl}
+                                mealFormat={meal.mealFormat}
+                                instructions={meal.instructions}
+                                hideEdit
+                                hideBasket
+                              />
+                            </div>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-destructive shrink-0"
+                              onClick={() => deleteFreezerMutation.mutate(frozen.id)}
+                              data-testid={`button-delete-freezer-${frozen.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                        {!meal && (
+                          <div className="flex justify-end">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="text-destructive"
+                              onClick={() => deleteFreezerMutation.mutate(frozen.id)}
+                              data-testid={`button-delete-freezer-${frozen.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
                       </CardFooter>
                     </Card>
                   </motion.div>

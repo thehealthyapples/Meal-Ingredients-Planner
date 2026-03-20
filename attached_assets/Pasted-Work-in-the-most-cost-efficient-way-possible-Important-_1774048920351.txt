@@ -1,0 +1,58 @@
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- This is a targeted My Freezer widget parity update, not a redesign.
+- Do not add extra features, abstractions, refactors, or unrelated UI changes.
+- Touch only the files and logic necessary for this task.
+- Reuse the existing standard widget layout, nutrition display, planner flow, and portion-size patterns wherever possible.
+- Keep implementation simple, targeted, and easy to maintain.
+- Minimise token usage, file churn, and unnecessary code generation.
+- Do not run broad tests. Only the minimum validation needed to avoid obvious breakage.
+- Preserve existing behaviour unless this task explicitly requires a change.
+
+Task:
+Update the My Freezer item widget so it has near-parity with the standard widget, while keeping freezer-specific behaviour appropriate.
+
+Requirements:
+
+1. Show nutrition
+- My Freezer items should display nutrition information in the same style/pattern as the standard widget wherever that data already exists or can be reused cheaply.
+- Reuse the current nutrition display component/logic if possible.
+- Do not build a new nutrition system.
+
+2. Show the same action buttons as the standard widget, EXCEPT:
+- do NOT show Edit
+- do NOT show Add to Basket
+
+3. Planner support
+- My Freezer items must be able to be added to the planner.
+- Reuse the existing planner add flow if present.
+- Do not create a separate planner system for freezer items.
+
+4. Portion sizes
+- My Freezer items should show portion sizes.
+- Reuse any existing portion-size field/display logic already used elsewhere in the app if available.
+- Keep this lightweight and consistent.
+
+Implementation rules:
+- Inspect the standard widget first and mirror only the useful parts.
+- Inspect the current My Freezer widget and extend it rather than replacing it.
+- Keep the UI consistent with the rest of THA.
+- Do not redesign cards/widgets globally.
+- Do not add basket actions back into My Freezer.
+- Do not add edit controls to My Freezer in this task.
+
+Validation:
+- Confirm My Freezer items now show nutrition
+- Confirm they show the standard widget buttons except Edit and Add to Basket
+- Confirm they can be added to the planner
+- Confirm portion sizes are visible
+- Do not run broad tests
+
+After changes:
+- summarise exactly what changed
+- list files changed
+- explain which standard widget elements were reused
+- confirm where planner support is now visible in the UI
+- note any data limitations where nutrition or portion sizes are missing
