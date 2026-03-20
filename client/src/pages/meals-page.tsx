@@ -1301,10 +1301,10 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
 
 const MEAL_CATEGORY_ORDER = ["user_meals", "from_web", "tha_meals", "drinks", "ready_meals"] as const;
 const SECTION_LABELS: Record<string, string> = {
-  user_meals: "Saved Recipes",
-  from_web: "From the Web",
-  tha_meals: "The Healthy Apples",
-  ready_meals: "Ready Meals",
+  user_meals: "My Recipes",
+  from_web: "Recipes from the Web",
+  tha_meals: "Wholefood Suggestions",
+  ready_meals: "Packaged & Processed",
   drinks: "Drinks",
 };
 const CATEGORY_DROPDOWN_ORDER = ["Drink", "Smoothie", "Baby Meal", "Kids Meal", "Frozen Meal"];
@@ -1881,7 +1881,7 @@ export default function MealsPage() {
             {([
               { value: "all" as const, label: "All" },
               { value: "recipes" as const, label: "Recipes" },
-              { value: "products" as const, label: "TheHealthyApples" },
+              { value: "products" as const, label: "Packaged & Processed" },
             ]).map(({ value, label }, idx) => (
               <Button
                 key={value}
@@ -1915,7 +1915,7 @@ export default function MealsPage() {
           {([
             { value: "all", label: "All Meals", icon: null, iconColor: "" },
             { value: "recipes", label: "Recipes", icon: null, iconColor: "" },
-            { value: "ready-meals", label: "Ready Meals", icon: null, iconColor: "" },
+            { value: "ready-meals", label: "Packaged & Processed", icon: null, iconColor: "" },
             { value: "frozen-meals", label: "Frozen Meals", icon: Snowflake, iconColor: "text-muted-foreground" },
             { value: "my-meals", label: "My Cookbook", icon: null, iconColor: "" },
             { value: "freezer", label: "Freezer", icon: Snowflake, iconColor: "text-muted-foreground" },
@@ -2211,6 +2211,7 @@ export default function MealsPage() {
                         data-testid={`section-header-${cat}`}
                       >
                         <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">{SECTION_LABELS[cat]}</span>
+                        {cat === "ready_meals" && <span className="text-xs text-muted-foreground/40 italic">Convenience options</span>}
                         <span className="text-xs text-muted-foreground/35">· {sectionCounts.get(cat) ?? 0}</span>
                       </div>
                     )}
@@ -2476,6 +2477,7 @@ export default function MealsPage() {
                         data-testid={`section-header-list-${cat}`}
                       >
                         <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">{SECTION_LABELS[cat]}</span>
+                        {cat === "ready_meals" && <span className="text-xs text-muted-foreground/40 italic">Convenience options</span>}
                         <span className="text-xs text-muted-foreground/35">· {sectionCounts.get(cat) ?? 0}</span>
                       </div>
                     )}
@@ -2710,7 +2712,7 @@ export default function MealsPage() {
         <div className="mt-8" data-testid="section-product-results">
           <div className="flex items-center gap-3 mb-4">
             <Leaf className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold tracking-tight">TheHealthyApples</h2>
+            <h2 className="text-lg font-semibold tracking-tight">Packaged & Processed</h2>
             {productIsSearching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
             {!productIsSearching && productResults.length > 0 && (
               <span className="text-sm text-muted-foreground">

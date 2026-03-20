@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, X, ShoppingBasket, Loader2, ChefHat, Leaf, Save, Globe, UtensilsCrossed, Snowflake, Check, ChevronDown, ChevronUp, Utensils, ImageOff } from "lucide-react";
+import { Plus, X, ShoppingBasket, Loader2, ChefHat, Leaf, Save, Globe, UtensilsCrossed, Snowflake, Check, ChevronDown, ChevronUp, Utensils, ImageOff, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { getWholeFoodAlternative } from "@/lib/whole-food-alternatives";
@@ -90,6 +90,8 @@ export default function QuickMealPage() {
   const [parts, setParts] = useState<MealPart[]>([]);
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [photoScanning, setPhotoScanning] = useState(false);
 
   const [expandedPartId, setExpandedPartId] = useState<string | null>(null);
   const [webResults, setWebResults] = useState<Record<string, WebSearchRecipe[]>>({});
@@ -221,6 +223,35 @@ export default function QuickMealPage() {
     setWebDisplayCount((prev) => ({ ...prev, [partId]: (prev[partId] ?? PAGE_SIZE) + PAGE_SIZE }));
   };
 
+  const handlePhotoScan = async (file: File) => {
+    setPhotoScanning(true);
+    const formData = new FormData();
+    formData.append("image", file);
+    try {
+      const res = await fetch("/api/scan", { method: "POST", body: formData, credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ variant: "destructive", title: "Scan failed", description: data.message || "Could not read image." });
+        return;
+      }
+      if (data.parsed?.type === "recipe" && Array.isArray(data.parsed.ingredients) && data.parsed.ingredients.length > 0) {
+        const newParts: MealPart[] = data.parsed.ingredients.map((label: string) => ({
+          id: makeId(), label, source: { type: "basic" as const },
+        }));
+        setParts((prev) => [...prev, ...newParts]);
+        if (!mealName && data.parsed.title) setMealName(data.parsed.title);
+        toast({ title: "Photo scanned", description: `${newParts.length} ingredient${newParts.length !== 1 ? "s" : ""} detected.` });
+      } else {
+        toast({ title: "No recipe detected", description: "Try adding meal components manually." });
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Scan failed", description: "Could not connect to server." });
+    } finally {
+      setPhotoScanning(false);
+      if (photoInputRef.current) photoInputRef.current.value = "";
+    }
+  };
+
   const buildInstructions = (currentParts: MealPart[]): string[] => {
     const hasSources = currentParts.some((p) => p.source.type !== "basic");
     if (!hasSources) return [];
@@ -332,6 +363,29 @@ export default function QuickMealPage() {
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
+
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                data-testid="input-photo-upload"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePhotoScan(f); }}
+              />
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={photoScanning}
+                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md border border-dashed border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-accent/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                data-testid="button-photo-upload"
+              >
+                {photoScanning ? (
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                ) : (
+                  <Camera className="h-4 w-4 shrink-0" />
+                )}
+                <span>{photoScanning ? "Scanning photo…" : "Upload a photo of your meal"}</span>
+              </button>
 
               {parts.length > 0 && (
                 <ul className="space-y-2" data-testid="list-quick-meal-items">

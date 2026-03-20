@@ -1853,7 +1853,7 @@ export default function WeeklyPlannerPage() {
                   onClick={() => setMealFilter(f)}
                   data-testid={`button-filter-${f}`}
                 >
-                  {f === "all" ? "All" : f === "recipes" ? "Recipes" : "Ready Meals"}
+                  {f === "all" ? "All" : f === "recipes" ? "Recipes" : "Packaged & Processed"}
                 </Button>
               ))}
             </div>
@@ -1929,7 +1929,7 @@ export default function WeeklyPlannerPage() {
                 <div className="flex gap-1">
                   {(["all", "recipes", "ready"] as const).map((f) => (
                     <Button key={f} variant={bulkMealFilter === f ? "default" : "outline"} size="sm" onClick={() => setBulkMealFilter(f)} data-testid={`button-bulk-filter-${f}`}>
-                      {f === "all" ? "All" : f === "recipes" ? "Recipes" : "Ready Meals"}
+                      {f === "all" ? "All" : f === "recipes" ? "Recipes" : "Packaged & Processed"}
                     </Button>
                   ))}
                 </div>
