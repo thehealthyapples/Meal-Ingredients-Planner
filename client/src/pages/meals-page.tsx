@@ -1331,7 +1331,12 @@ export default function MealsPage() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [activeGroups, setActiveGroups] = useState<Set<string>>(() => new Set(["cookbook", "recipes", "freezer"]));
   const toggleGroup = (group: string) => setActiveGroups(prev => { const n = new Set(prev); n.has(group) ? n.delete(group) : n.add(group); return n; });
-  const [audienceFilter, setAudienceFilter] = useState<string>("all-audience");
+  const [activeAudiences, setActiveAudiences] = useState<Set<string>>(() => new Set(["adult", "drinks"]));
+  const toggleAudience = (a: string) => setActiveAudiences(prev => {
+    const n = new Set(prev);
+    n.has(a) ? n.delete(a) : n.add(a);
+    return n.size === 0 ? new Set(["adult"]) : n; // fallback: never empty
+  });
   const [matchMyProfile, setMatchMyProfile] = useState<boolean>(false);
   const [mealsDietPattern, setMealsDietPattern] = useState<string>("");
   const [mealsDietRestrictions, setMealsDietRestrictions] = useState<string[]>([]);
@@ -1386,7 +1391,7 @@ export default function MealsPage() {
 
   useEffect(() => {
     setVisibleCount(48);
-  }, [searchTerm, categoryFilter, activeGroups, audienceFilter, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
+  }, [searchTerm, categoryFilter, activeGroups, activeAudiences, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
 
   const addToFreezerMutation = useMutation({
     mutationFn: async (data: { mealId: number; totalPortions: number; batchLabel?: string; notes?: string }) => {
@@ -1736,11 +1741,21 @@ export default function MealsPage() {
     else if (cat === "ready_meals") matchesGroup = activeGroups.has("packaged");
     // drinks follow cookbook/recipes visibility
     else if (cat === "drinks") matchesGroup = activeGroups.has("cookbook") || activeGroups.has("recipes");
-    let matchesAudience = true;
-    if (audienceFilter === "adult") matchesAudience = meal.audience === "adult" || meal.audience === "universal";
-    else if (audienceFilter === "baby") matchesAudience = meal.audience === "baby" || meal.audience === "universal";
-    else if (audienceFilter === "child") matchesAudience = meal.audience === "child" || meal.audience === "universal";
-    else if (audienceFilter === "drinks") matchesAudience = meal.isDrink === true;
+    // Audience multi-select — fallback to adult if nothing selected
+    const eff = activeAudiences.size === 0 ? new Set(["adult"]) : activeAudiences;
+    let matchesAudience = false;
+    if (meal.isDrink) {
+      matchesAudience = eff.has("drinks");
+    } else if (meal.audience === "adult") {
+      matchesAudience = eff.has("adult");
+    } else if (meal.audience === "baby") {
+      matchesAudience = eff.has("baby");
+    } else if (meal.audience === "child") {
+      matchesAudience = eff.has("child");
+    } else {
+      // universal — shows for any non-drink audience selection
+      matchesAudience = eff.has("adult") || eff.has("baby") || eff.has("child");
+    }
     const effectivePattern = mealsDietPattern.trim() || null;
     const ctx = { dietPattern: effectivePattern, dietRestrictions: mealsDietRestrictions };
     const mealText = [meal.name, ...(meal.ingredients ?? [])].join(' ').toLowerCase();
@@ -1761,7 +1776,7 @@ export default function MealsPage() {
       return ingA - ingB || a.name.localeCompare(b.name);
     }
     return orderA - orderB || a.name.localeCompare(b.name);
-  }), [meals, searchTerm, categoryFilter, allCategories, activeGroups, audienceFilter, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
+  }), [meals, searchTerm, categoryFilter, allCategories, activeGroups, activeAudiences, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
 
   const visibleMeals = useMemo(() => filteredMeals?.slice(0, visibleCount), [filteredMeals, visibleCount]);
 
@@ -1799,11 +1814,13 @@ export default function MealsPage() {
     return map;
   }, [bulkNutritionData]);
 
+  const audienceChanged = !["adult", "drinks"].every(a => activeAudiences.has(a)) || activeAudiences.size !== 2;
   const advancedFilterCount =
     (matchMyProfile ? 1 : 0) +
     (mealsDietPattern ? 1 : 0) +
     mealsDietRestrictions.length +
-    (mealsUpfFilter ? 1 : 0);
+    (mealsUpfFilter ? 1 : 0) +
+    (audienceChanged ? 1 : 0);
 
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
@@ -1946,27 +1963,6 @@ export default function MealsPage() {
             </Button>
           ))}
         </div>
-        <div className="flex border border-border rounded-md shrink-0">
-          {([
-            { value: "all-audience", label: "All", icon: null, iconColor: "" },
-            { value: "adult", label: "Adult", icon: null, iconColor: "" },
-            { value: "baby", label: "Baby", icon: Baby, iconColor: "text-muted-foreground" },
-            { value: "child", label: "Child", icon: PersonStanding, iconColor: "text-muted-foreground" },
-            { value: "drinks", label: "Drinks", icon: Wine, iconColor: "text-muted-foreground" },
-          ] as const).map(({ value, label, icon: Icon, iconColor }, idx) => (
-            <Button
-              key={value}
-              variant={audienceFilter === value ? "secondary" : "ghost"}
-              size="sm"
-              className={idx > 0 ? "border-l border-border rounded-none" : "rounded-r-none"}
-              onClick={() => setAudienceFilter(prev => prev === value && value !== "all-audience" ? "all-audience" : value)}
-              data-testid={`button-audience-${value}`}
-            >
-              {Icon && <Icon className={`h-3.5 w-3.5 mr-1 ${iconColor || ""}`} />}
-              {label}
-            </Button>
-          ))}
-        </div>
         <Button
           variant={showAdvancedFilters ? "secondary" : "outline"}
           size="sm"
@@ -2004,6 +2000,29 @@ export default function MealsPage() {
 
       {showAdvancedFilters && (
         <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-lg border border-border bg-card">
+          {/* Audience section */}
+          <div className="flex items-center gap-1.5 w-full mb-1">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Who is this for?</span>
+          </div>
+          {([
+            { id: "adult", label: "Adult", icon: null },
+            { id: "drinks", label: "Drinks", icon: Wine },
+            { id: "baby", label: "Baby", icon: Baby },
+            { id: "child", label: "Child", icon: PersonStanding },
+          ] as const).map(({ id, label, icon: Icon }) => (
+            <Button
+              key={id}
+              variant={activeAudiences.has(id) ? "secondary" : "outline"}
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => toggleAudience(id)}
+              data-testid={`button-audience-${id}`}
+            >
+              {Icon && <Icon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />}
+              {label}
+            </Button>
+          ))}
+          <div className="w-full border-t border-border/50 my-1" />
           <div className="flex items-center gap-2 mr-1">
             <Switch
               checked={matchMyProfile}
