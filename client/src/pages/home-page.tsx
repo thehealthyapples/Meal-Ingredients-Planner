@@ -127,7 +127,7 @@ export default function HomePage() {
                 </p>
 
                 <p
-                  className="text-[12px] text-muted-foreground/55 italic max-w-[400px] leading-relaxed"
+                  className="text-[12px] text-foreground/65 italic max-w-[400px] leading-relaxed"
                   data-testid="text-hero-story-line"
                 >
                   Born from our family's journey through health challenges and years of learning how food choices affect everyday life.
@@ -137,7 +137,7 @@ export default function HomePage() {
               {/* Right: lifecycle visual */}
               <div className="flex justify-center lg:justify-end">
                 <div
-                  className="rounded-2xl border border-border/40 bg-background/65 backdrop-blur-md p-10 shadow-none"
+                  className="rounded-2xl border border-border/40 bg-background/92 backdrop-blur-md p-10 shadow-none"
                   data-testid="card-lifecycle-visual"
                 >
                   <div style={{ transform: "scale(1.35)", transformOrigin: "center", width: 224, height: 224 }}>
@@ -157,7 +157,7 @@ export default function HomePage() {
               {VALUE_BLOCKS.map((block) => (
                 <div
                   key={block.title}
-                  className="rounded-xl border border-border/40 bg-background/70 backdrop-blur-md p-6"
+                  className="rounded-xl border border-border/40 bg-background/92 backdrop-blur-md p-6"
                   data-testid={`card-value-${block.title.toLowerCase().replace(/\s/g, "-")}`}
                 >
                   <div className="mb-3">{block.icon}</div>
@@ -172,7 +172,7 @@ export default function HomePage() {
         {/* ── Story section ── */}
         <section className="px-6 sm:px-10 py-16 border-t border-border/20">
           <div className="max-w-2xl mx-auto text-center">
-            <div className="rounded-2xl border border-border/30 bg-background/65 backdrop-blur-md p-10">
+            <div className="rounded-2xl border border-border/30 bg-background/92 backdrop-blur-md p-10">
               <p
                 className="text-base text-foreground/80 leading-relaxed"
                 data-testid="text-story-section"

@@ -193,7 +193,7 @@ export default function ProductFlowVisual() {
         ))}
       </div>
 
-      <p className="mt-1.5 text-[8px] font-semibold uppercase tracking-widest text-primary/30">
+      <p className="mt-1.5 text-[8px] font-semibold uppercase tracking-widest text-primary/65">
         Kitchen · Plan · Analyse · Basket
       </p>
     </div>
