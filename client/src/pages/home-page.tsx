@@ -119,7 +119,7 @@ export default function HomePage() {
                       <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                     </Button>
                     <p
-                      className="text-[15px] text-muted-foreground/70 tracking-wide pl-1"
+                      className="text-[11px] text-muted-foreground/70 tracking-wide pl-1"
                       data-testid="text-hero-microcopy"
                     >
                       Instant access &nbsp;·&nbsp; No signup &nbsp;·&nbsp; 20-minute demo
@@ -128,7 +128,7 @@ export default function HomePage() {
                 </div>
 
                 <p
-                  className="text-[12px] text-foreground/65 italic max-w-[400px] leading-relaxed"
+                  className="text-[16px] text-foreground/65 italic max-w-[400px] leading-relaxed"
                   data-testid="text-hero-story-line"
                 >
                   Born from our family's journey through health challenges and years of learning how food choices affect everyday life.
