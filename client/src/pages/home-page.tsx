@@ -47,7 +47,7 @@ export default function HomePage() {
 
         {/* ── Nav ── */}
         <header className="flex items-center justify-between px-6 sm:px-10 py-4 border-b border-border/20 bg-background/40 backdrop-blur-md">
-          <img src="/logo-long.png" alt="The Healthy Apples" className="h-9 sm:h-11" />
+          <img src="/logo-long.png" alt="The Healthy Apples" className="h-[72px] sm:h-[88px]" />
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -95,7 +95,7 @@ export default function HomePage() {
                   The Healthy Apples helps you make better food choices with less effort by combining meal planning, ingredient analysis, and practical alternatives for everyday life.
                 </p>
 
-                <div className="flex flex-wrap gap-3 mb-4">
+                <div className="flex flex-wrap items-start gap-3 mb-6">
                   <Button
                     size="lg"
                     onClick={() => setLocation("/auth?register=1")}
@@ -103,28 +103,29 @@ export default function HomePage() {
                   >
                     Create account
                   </Button>
-                  <Button
-                    size="lg"
-                    variant="ghost"
-                    className="group hover:shadow-sm hover:-translate-y-px transition-all"
-                    onClick={handleDemo}
-                    disabled={demoStarting}
-                    data-testid="button-hero-explore"
-                  >
-                    {demoStarting ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : null}
-                    Explore The Healthy Apples
-                    <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                  </Button>
+                  <div className="flex flex-col gap-1.5">
+                    <Button
+                      size="lg"
+                      variant="ghost"
+                      className="group hover:shadow-sm hover:-translate-y-px transition-all"
+                      onClick={handleDemo}
+                      disabled={demoStarting}
+                      data-testid="button-hero-explore"
+                    >
+                      {demoStarting ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : null}
+                      Explore The Healthy Apples
+                      <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                    </Button>
+                    <p
+                      className="text-[15px] text-muted-foreground/70 tracking-wide pl-1"
+                      data-testid="text-hero-microcopy"
+                    >
+                      Instant access &nbsp;·&nbsp; No signup &nbsp;·&nbsp; 20-minute demo
+                    </p>
+                  </div>
                 </div>
-
-                <p
-                  className="text-[11px] text-muted-foreground/60 tracking-wide mb-6"
-                  data-testid="text-hero-microcopy"
-                >
-                  Instant access &nbsp;·&nbsp; No signup &nbsp;·&nbsp; 20-minute demo
-                </p>
 
                 <p
                   className="text-[12px] text-foreground/65 italic max-w-[400px] leading-relaxed"
