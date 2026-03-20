@@ -1078,3 +1078,9 @@ export const foodKnowledge = pgTable("food_knowledge", {
 export const insertFoodKnowledgeSchema = createInsertSchema(foodKnowledge).omit({ id: true });
 export type FoodKnowledge = typeof foodKnowledge.$inferSelect;
 export type InsertFoodKnowledge = z.infer<typeof insertFoodKnowledgeSchema>;
+
+export const siteSettings = pgTable("site_settings", {
+  key: text("key").primaryKey(),
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

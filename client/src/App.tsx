@@ -11,6 +11,7 @@ import { TopBar, DesktopSidebar, MobileNav } from "@/components/nav-bar";
 import OrchardBackdrop from "@/components/layout/orchard-backdrop";
 import OrchardShell from "@/components/layout/orchard-shell";
 import DemoBanner from "@/components/DemoBanner";
+import SiteBanner from "@/components/SiteBanner";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import OnboardingPage from "@/pages/onboarding-page";
@@ -60,6 +61,7 @@ function HomeRoute() {
         <div className="relative z-10 flex flex-col h-[100dvh]">
           {user.isDemo && <DemoBanner />}
           <TopBar />
+          <SiteBanner />
           <div className="flex flex-1 overflow-hidden">
             <DesktopSidebar />
             <main className="flex-1 overflow-y-auto main-safe bg-background/25">
@@ -98,6 +100,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
       <div className="relative z-10 flex flex-col h-[100dvh]">
         {user?.isDemo && <DemoBanner />}
         <TopBar />
+        <SiteBanner />
         <div className="flex flex-1 overflow-hidden">
           <DesktopSidebar />
           <main className="flex-1 overflow-y-auto main-safe bg-background/25">

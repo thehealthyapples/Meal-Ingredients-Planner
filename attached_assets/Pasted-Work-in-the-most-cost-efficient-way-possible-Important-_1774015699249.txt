@@ -1,0 +1,82 @@
+Work in the most cost-efficient way possible.
+
+Important constraints:
+- Do not stray from this plan.
+- Do not add extra features, abstractions, settings systems, scheduling, analytics, targeting, dismissal logic, or “nice to have” improvements unless explicitly requested.
+- Touch only the files and logic necessary for this task.
+- Reuse existing patterns, admin structure, auth checks, layout components, page styling, form handling, and database conventions wherever possible.
+- Keep implementation simple, targeted, and easy to maintain.
+
+Task:
+Add a simple admin-controlled site banner that can be turned on/off and edited by admins.
+
+Requirements:
+1. Admins must be able to:
+   - enable or disable the banner
+   - edit the banner text
+2. The banner must appear:
+   - at the top of the page
+   - full width
+   - underneath the logo/header area
+3. Banner styling:
+   - green background
+   - white text
+   - clear and readable
+   - should fit the current site look
+4. Purpose:
+   - soft launch messaging
+   - promotions
+   - temporary announcements
+
+Implementation approach:
+1. Data/storage
+   - Add a very small persistent site settings mechanism for this feature only.
+   - Store:
+     - bannerEnabled: boolean
+     - bannerText: string
+   - Reuse any existing site-settings/admin-settings pattern if one already exists.
+   - If no such pattern exists, create the smallest possible table / config storage needed for this banner only.
+   - Do not create a large generic settings framework unless it already exists.
+
+2. Backend
+   - Add admin-only API endpoint(s) to:
+     - fetch current banner settings
+     - update banner settings
+   - Ensure only admins can update.
+   - Public read access is fine if needed for rendering.
+
+3. Admin UI
+   - Add a simple admin control area for this banner.
+   - Include:
+     - an on/off toggle (or checkbox)
+     - a text input / textarea for the banner message
+     - save/update action
+   - Keep this minimal and consistent with existing admin pages.
+
+4. Frontend rendering
+   - Render the banner globally so it appears across the site.
+   - Place it directly underneath the main logo/header area.
+   - Only show it when enabled and when text is present.
+   - Keep spacing clean so it does not break the layout.
+
+5. Styling
+   - Full width
+   - Green background
+   - White text
+   - Centered or neatly padded text
+   - Responsive on mobile and desktop
+
+Acceptance criteria:
+- Admin can switch banner on and save it.
+- Admin can enter/update banner text and save it.
+- Banner appears site-wide under the logo/header when enabled.
+- Banner disappears completely when disabled.
+- Banner is green with white text.
+- Changes persist after refresh / restart.
+- Non-admin users cannot edit banner settings.
+
+Deliverables:
+- Implement the feature
+- List exactly which files were changed
+- Briefly explain the data model, API route(s), and where the banner is rendered
+- Do not make unrelated changes

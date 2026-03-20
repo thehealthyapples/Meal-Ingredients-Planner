@@ -5175,6 +5175,31 @@ export async function registerRoutes(
     }
   });
 
+  // ── Site Banner Settings ─────────────────────────────────────────────────────
+  app.get("/api/site-settings/banner", async (_req, res) => {
+    try {
+      const raw = await storage.getSiteSetting("banner");
+      const parsed = raw ? JSON.parse(raw) : { enabled: false, text: "" };
+      res.json(parsed);
+    } catch {
+      res.json({ enabled: false, text: "" });
+    }
+  });
+
+  app.put("/api/admin/site-settings/banner", assertAdmin, async (req, res) => {
+    try {
+      const { enabled, text } = req.body;
+      if (typeof enabled !== "boolean" || typeof text !== "string") {
+        return res.status(400).json({ message: "Invalid banner data" });
+      }
+      await storage.setSiteSetting("banner", JSON.stringify({ enabled, text: text.trim() }));
+      res.json({ enabled, text: text.trim() });
+    } catch (err) {
+      console.error("[SiteSettings] banner update error:", err);
+      res.status(500).json({ message: "Failed to update banner" });
+    }
+  });
+
   // ── Pantry Staples ──────────────────────────────────────────────────────────
   app.get("/api/pantry", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { useUser } from "@/hooks/use-user";
@@ -83,6 +83,29 @@ export default function AdminUsersPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [onboardingDialog, setOnboardingDialog] = useState<{ userId: number; username: string } | null>(null);
+
+  const { data: bannerData } = useQuery<{ enabled: boolean; text: string }>({
+    queryKey: ["/api/site-settings/banner"],
+    refetchOnWindowFocus: false,
+  });
+  const [bannerEnabled, setBannerEnabled] = useState<boolean>(false);
+  const [bannerText, setBannerText] = useState<string>("");
+  useEffect(() => {
+    if (bannerData !== undefined) {
+      setBannerEnabled(bannerData.enabled);
+      setBannerText(bannerData.text);
+    }
+  }, [bannerData]);
+
+  const saveBannerMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("PUT", "/api/admin/site-settings/banner", { enabled: bannerEnabled, text: bannerText }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/site-settings/banner"] });
+      toast({ title: "Banner saved" });
+    },
+    onError: () => toast({ title: "Failed to save banner", variant: "destructive" }),
+  });
 
   if ((user as any)?.role !== "admin") {
     setLocation("/");
@@ -192,6 +215,43 @@ export default function AdminUsersPage() {
       <div className="flex items-center gap-3 mb-6">
         <ShieldCheck className="h-6 w-6 text-primary" />
         <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+      </div>
+
+      <div className="border rounded-lg p-4 mb-6 bg-card" data-testid="section-site-banner">
+        <h2 className="text-sm font-semibold mb-3">Site Banner</h2>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="banner-enabled"
+              checked={bannerEnabled}
+              onChange={e => setBannerEnabled(e.target.checked)}
+              className="h-4 w-4 accent-green-600"
+              data-testid="toggle-banner-enabled"
+            />
+            <Label htmlFor="banner-enabled" className="text-sm cursor-pointer">
+              {bannerEnabled ? "Banner enabled" : "Banner disabled"}
+            </Label>
+          </div>
+          <Input
+            placeholder="Banner message…"
+            value={bannerText}
+            onChange={e => setBannerText(e.target.value)}
+            maxLength={300}
+            data-testid="input-banner-text"
+          />
+          <div>
+            <Button
+              size="sm"
+              onClick={() => saveBannerMutation.mutate()}
+              disabled={saveBannerMutation.isPending}
+              data-testid="button-save-banner"
+            >
+              {saveBannerMutation.isPending && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+              Save Banner
+            </Button>
+          </div>
+        </div>
       </div>
 
       <div className="flex gap-2 mb-6">

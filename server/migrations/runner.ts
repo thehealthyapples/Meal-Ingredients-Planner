@@ -597,6 +597,20 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-20_add_site_settings",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS site_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `INSERT INTO site_settings (key, value)
+       VALUES ('banner', '{"enabled":false,"text":""}')
+       ON CONFLICT (key) DO NOTHING`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
