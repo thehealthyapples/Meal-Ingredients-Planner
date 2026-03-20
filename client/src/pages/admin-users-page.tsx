@@ -31,7 +31,18 @@ type SafeUser = {
   role: string;
   subscriptionTier: string;
   subscriptionStatus: string | null;
+  createdAt?: string | null;
+  lastLoginAt?: string | null;
 };
+
+function fmtDate(val: string | null | undefined): string {
+  if (!val) return "Never";
+  const d = new Date(val);
+  return d.toLocaleString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+}
 
 type UsersResponse = {
   users: SafeUser[];
@@ -210,20 +221,22 @@ export default function AdminUsersPage() {
               <TableHead className="w-20">Save</TableHead>
               <TableHead className="w-32">Password</TableHead>
               <TableHead className="w-36">Onboarding</TableHead>
+              <TableHead className="w-40">Created</TableHead>
+              <TableHead className="w-40">Last Login</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 8 }).map((_, j) => (
+                  {Array.from({ length: 10 }).map((_, j) => (
                     <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
                   ))}
                 </TableRow>
               ))
             ) : users_list.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-10 text-muted-foreground">
                   No users found
                 </TableCell>
               </TableRow>
@@ -301,6 +314,12 @@ export default function AdminUsersPage() {
                         <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
                         Onboarding
                       </Button>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap" data-testid={`text-created-${u.id}`}>
+                      {fmtDate(u.createdAt)}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap" data-testid={`text-last-login-${u.id}`}>
+                      {fmtDate(u.lastLoginAt)}
                     </TableCell>
                   </TableRow>
                 );

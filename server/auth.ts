@@ -216,6 +216,9 @@ export function setupAuth(app: Express) {
       }
       req.login(user, (loginErr) => {
         if (loginErr) return next(loginErr);
+        storage.updateLastLoginAt(user.id).catch(err =>
+          console.error("[Auth] Failed to update last_login_at:", err?.message)
+        );
         res.status(200).json(sanitizeUser(user));
       });
     })(req, res, next);

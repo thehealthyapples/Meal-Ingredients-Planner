@@ -24,7 +24,8 @@ export type SafeUser = {
   role: string;
   subscriptionTier: string;
   subscriptionStatus: string | null;
-  createdAt?: Date;
+  createdAt?: Date | null;
+  lastLoginAt?: Date | null;
 };
 
 export interface IStorage {
@@ -193,6 +194,7 @@ export interface IStorage {
   // ── Admin User Management ────────────────────────────────────────────────────
   searchUsers(query: string, limit: number, offset: number): Promise<{ users: SafeUser[]; total: number }>;
   setUserSubscriptionTier(userId: number, tier: "free" | "premium" | "friends_family"): Promise<SafeUser>;
+  updateLastLoginAt(userId: number): Promise<void>;
   createAuditLog(entry: { adminUserId: number; action: string; targetUserId?: number; metadata?: object }): Promise<void>;
 
   // ── Pantry Staples ───────────────────────────────────────────────────────────
@@ -1666,6 +1668,8 @@ export class DatabaseStorage implements IStorage {
       role: users.role,
       subscriptionTier: users.subscriptionTier,
       subscriptionStatus: users.subscriptionStatus,
+      createdAt: users.createdAt,
+      lastLoginAt: users.lastLoginAt,
     };
 
     let baseQuery = db.select(safeFields).from(users);
@@ -1698,9 +1702,18 @@ export class DatabaseStorage implements IStorage {
         role: users.role,
         subscriptionTier: users.subscriptionTier,
         subscriptionStatus: users.subscriptionStatus,
+        createdAt: users.createdAt,
+        lastLoginAt: users.lastLoginAt,
       });
     if (!updated) throw new Error(`User ${userId} not found`);
     return updated;
+  }
+
+  async updateLastLoginAt(userId: number): Promise<void> {
+    await db
+      .update(users)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(users.id, userId));
   }
 
   async createAuditLog(entry: { adminUserId: number; action: string; targetUserId?: number; metadata?: object }): Promise<void> {

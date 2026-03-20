@@ -1,0 +1,140 @@
+GOAL:
+Add reliable tracking for user account creation time and last login time.
+This must be production-safe, minimal, and aligned with the existing schema + auth flow.
+
+----------------------------------------
+
+STEP 1 — DATABASE SCHEMA
+
+Update the users table:
+
+Add the following columns if they do not already exist:
+
+- created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+- last_login_at TIMESTAMP WITH TIME ZONE
+
+IMPORTANT:
+- Do NOT remove or modify existing fields
+- Ensure backward compatibility with existing users
+- For existing rows, created_at should default to now()
+
+----------------------------------------
+
+STEP 2 — SHARED SCHEMA TYPES
+
+In shared/schema.ts:
+
+- Add createdAt and lastLoginAt to the User type
+- Ensure proper camelCase mapping if using Drizzle or similar
+
+Example:
+createdAt: timestamp("created_at").defaultNow().notNull(),
+lastLoginAt: timestamp("last_login_at"),
+
+Ensure SafeUser type includes:
+- createdAt
+- lastLoginAt
+
+----------------------------------------
+
+STEP 3 — USER CREATION FLOW
+
+In server/auth.ts (or wherever users are created):
+
+- Ensure created_at is automatically set (DB default is fine)
+- Do NOT manually override unless required
+
+----------------------------------------
+
+STEP 4 — LOGIN FLOW UPDATE
+
+In server/auth.ts:
+
+Find the login handler (where password is validated successfully)
+
+AFTER successful authentication:
+- Update last_login_at = NOW()
+
+IMPORTANT:
+- Only update on successful login
+- Do NOT update on failed attempts
+- Keep this lightweight (single DB update)
+
+Example logic:
+await db.update(users)
+  .set({ lastLoginAt: new Date() })
+  .where(eq(users.id, user.id));
+
+----------------------------------------
+
+STEP 5 — OPTIONAL (RECOMMENDED) LAST SEEN
+
+Add optional last_seen_at (for future use):
+
+- Column:
+  last_seen_at TIMESTAMP WITH TIME ZONE
+
+- Do NOT implement frequent updates yet
+- Leave hook ready for future middleware
+
+----------------------------------------
+
+STEP 6 — ADMIN USERS PAGE
+
+In client/src/pages/admin-users-page.tsx:
+
+Add two new columns to the users table:
+
+- Created
+- Last Login
+
+Display format:
+- Use readable format (e.g. "12 Mar 2026, 14:32")
+- If null → show "Never"
+
+Do NOT clutter UI:
+- Keep consistent with existing table style
+
+----------------------------------------
+
+STEP 7 — API / STORAGE LAYER
+
+Ensure storage layer (server/storage.ts):
+
+- Returns createdAt and lastLoginAt in user queries
+- Includes fields in SafeUser mapping
+
+----------------------------------------
+
+STEP 8 — TESTING
+
+Verify:
+
+1. New user:
+   - created_at is set
+   - last_login_at is NULL
+
+2. On login:
+   - last_login_at updates correctly
+
+3. Admin page:
+   - Values display correctly
+   - No crashes if null
+
+----------------------------------------
+
+CONSTRAINTS:
+
+- Do NOT refactor unrelated auth logic
+- Do NOT introduce new libraries
+- Keep changes minimal and targeted
+- Maintain existing coding style
+
+----------------------------------------
+
+OUTPUT:
+
+- Updated schema
+- Updated auth login flow
+- Updated admin UI
+- No regressions
