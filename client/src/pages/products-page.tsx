@@ -1234,32 +1234,35 @@ export default function ProductsPage() {
                               </div>
                             )}
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-start gap-1.5 flex-wrap">
-                                <h3 className="font-semibold text-sm leading-tight line-clamp-2" data-testid={`text-product-name-${product.barcode || index}`}>
-                                  {product.product_name}
-                                </h3>
-                                {product.isUK && (
-                                  <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 flex-shrink-0 border-blue-400 text-blue-600 dark:text-blue-400">UK</Badge>
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start gap-1 flex-wrap">
+                                    <h3 className="font-semibold text-sm leading-tight line-clamp-2" data-testid={`text-product-name-${product.barcode || index}`}>
+                                      {product.product_name}
+                                    </h3>
+                                    {product.isUK && (
+                                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 flex-shrink-0 border-blue-400 text-blue-600 dark:text-blue-400">UK</Badge>
+                                    )}
+                                  </div>
+                                  {product.brand && (
+                                    <p className="text-xs text-muted-foreground mt-0.5">{product.brand}</p>
+                                  )}
+                                  {product.availableStores && product.availableStores.length > 0 && (
+                                    <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                                      <Store className="h-3 w-3 flex-shrink-0" />
+                                      {product.availableStores.slice(0, 2).join(' · ')}
+                                    </p>
+                                  )}
+                                </div>
+                                {product.upfAnalysis && (
+                                  <div className="flex-shrink-0">
+                                    <ScoreBadge score={product.upfAnalysis.smpRating} size={34} isOrganic={product.upfAnalysis.isOrganic} />
+                                  </div>
                                 )}
                               </div>
-                              {product.brand && (
-                                <p className="text-xs text-muted-foreground mt-0.5">{product.brand}</p>
-                              )}
-                              {product.availableStores && product.availableStores.length > 0 && (
-                                <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
-                                  <Store className="h-3 w-3 flex-shrink-0" />
-                                  {product.availableStores.slice(0, 2).join(' · ')}
-                                </p>
-                              )}
-                              <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                                {nova && <NovaGroupBadge group={nova} />}
-                                {product.analysis && (
-                                  <HealthScoreCircle score={product.analysis.healthScore} size={28} />
-                                )}
-                              </div>
-                              {product.upfAnalysis && (
-                                <div className="mt-1.5">
-                                  <ScoreBadge score={product.upfAnalysis.smpRating} size={20} isOrganic={product.upfAnalysis.isOrganic} />
+                              {nova && (
+                                <div className="mt-2">
+                                  <NovaGroupBadge group={nova} />
                                 </div>
                               )}
                             </div>
@@ -1337,9 +1340,11 @@ export default function ProductsPage() {
                               size="sm"
                               variant={isInCompare(product) ? 'default' : 'outline'}
                               onClick={(e) => { e.stopPropagation(); toggleCompare(product); }}
+                              className="gap-1"
                               data-testid={`button-compare-${product.barcode || index}`}
                             >
                               <Scale className="h-3.5 w-3.5" />
+                              {isInCompare(product) ? 'Added' : 'Compare'}
                             </Button>
                           </div>
                         </Card>
