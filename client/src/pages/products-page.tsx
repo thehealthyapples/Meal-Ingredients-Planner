@@ -334,7 +334,7 @@ export default function ProductsPage() {
   const [compareProducts, setCompareProducts] = useState<ProductResult[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [showDetailWFRecipe, setShowDetailWFRecipe] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [hideUltraProcessed, setHideUltraProcessed] = useState(false);
   const [hideHighRiskAdditives, setHideHighRiskAdditives] = useState(false);
   const [hideEmulsifiers, setHideEmulsifiers] = useState(false);
@@ -1260,11 +1260,6 @@ export default function ProductsPage() {
                                   </div>
                                 )}
                               </div>
-                              {nova && (
-                                <div className="mt-2">
-                                  <NovaGroupBadge group={nova} />
-                                </div>
-                              )}
                             </div>
                           </div>
 

@@ -1110,7 +1110,7 @@ export async function registerRoutes(
         return res.json({ products: [], hasMore: false });
       }
 
-      const offFields = 'code,product_name,brands,image_url,image_front_url,image_front_small_url,nutriments,nutriscore_grade,nova_group,categories_tags,ingredients_text,quantity,serving_size,categories,stores_tags,stores,purchase_places_tags,countries_tags,languages_tags';
+      const offFields = 'code,product_name,product_name_en,brands,image_url,image_front_url,image_front_small_url,nutriments,nutriscore_grade,nova_group,categories_tags,ingredients_text,ingredients_text_en,quantity,serving_size,categories,stores_tags,stores,purchase_places_tags,countries_tags,languages_tags';
       const offHeaders = { timeout: 20000, headers: { 'User-Agent': 'SmartMealPlanner/1.0 (contact: smartmealplanner@replit.app)' } };
 
       const ukParams = new URLSearchParams({
@@ -1190,9 +1190,10 @@ export async function registerRoutes(
             salt: n.salt_100g != null ? `${Math.round(n.salt_100g * 10) / 10}g` : null,
           };
 
-          const ingredientsText = p.ingredients_text || '';
+          const ingredientsText = p.ingredients_text_en || p.ingredients_text || '';
           const categoriesTags = p.categories_tags || [];
           const novaGroup = p.nova_group || null;
+          const productNameDisplay = p.product_name_en || p.product_name;
 
           const upfResult = (ingredientsText || novaGroup)
             ? analyzeProductUPF(
@@ -1229,7 +1230,7 @@ export async function registerRoutes(
 
           return {
             barcode: p.code || null,
-            product_name: p.product_name,
+            product_name: productNameDisplay,
             brand: p.brands || null,
             image_url: p.image_front_url || p.image_front_small_url || p.image_url || null,
             ingredients_text: ingredientsText || null,
