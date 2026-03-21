@@ -1769,7 +1769,7 @@ export default function ProductsPage() {
               Product Comparison
             </DialogTitle>
             <p className="text-xs text-muted-foreground pt-1">
-              Apple rating is based purely on additive count — 5 apples = no additives, 1 apple = 5 or more additives.
+              Apple rating combines E-number additives, soft UPF ingredients (yeast extract, natural flavourings, maltodextrin…) and NOVA group — NOVA 4 products are capped at 3 apples or lower.
             </p>
           </DialogHeader>
           {compareProducts.length > 0 ? (
