@@ -1110,7 +1110,7 @@ export async function registerRoutes(
         return res.json({ products: [], hasMore: false });
       }
 
-      const offFields = 'code,product_name,brands,image_url,image_front_url,image_front_small_url,nutriments,nutriscore_grade,nova_group,categories_tags,ingredients_text,quantity,serving_size,categories,stores_tags,stores,purchase_places_tags,countries_tags';
+      const offFields = 'code,product_name,brands,image_url,image_front_url,image_front_small_url,nutriments,nutriscore_grade,nova_group,categories_tags,ingredients_text,quantity,serving_size,categories,stores_tags,stores,purchase_places_tags,countries_tags,languages_tags';
       const offHeaders = { timeout: 20000, headers: { 'User-Agent': 'SmartMealPlanner/1.0 (contact: smartmealplanner@replit.app)' } };
 
       const ukParams = new URLSearchParams({
@@ -1143,11 +1143,31 @@ export async function registerRoutes(
       const ukProducts: any[] = ukResult.status === 'fulfilled' ? (ukResult.value.data.products || []) : [];
       const globalProducts: any[] = globalResult.status === 'fulfilled' ? (globalResult.value.data.products || []) : [];
 
+      const ENGLISH_COUNTRY_TAGS = new Set([
+        'united-kingdom', 'en:united-kingdom', 'en:uk',
+        'united-states', 'en:united-states', 'en:us',
+        'canada', 'en:canada', 'australia', 'en:australia',
+        'ireland', 'en:ireland', 'new-zealand', 'en:new-zealand',
+      ]);
+
+      const isEnglishProduct = (p: any, isUK: boolean): boolean => {
+        if (isUK) return true;
+        const langTags: string[] = p.languages_tags || [];
+        if (langTags.some((t: string) => t.toLowerCase() === 'en:english')) return true;
+        const countryTags: string[] = p.countries_tags || [];
+        if (countryTags.some((t: string) => ENGLISH_COUNTRY_TAGS.has(t.toLowerCase()))) return true;
+        return false;
+      };
+
+      const ukCodes = new Set(ukProducts.map((p: any) => p.code || p.product_name).filter(Boolean));
+
       const seen = new Set<string>();
       const merged: any[] = [];
       for (const p of [...ukProducts, ...globalProducts]) {
         const key = p.code || p.product_name;
         if (!key || seen.has(key)) continue;
+        const isUK = ukCodes.has(key);
+        if (!isEnglishProduct(p, isUK)) continue;
         seen.add(key);
         merged.push(p);
       }

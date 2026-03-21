@@ -106,6 +106,7 @@ interface ProductResult {
   nutriscore_grade: string | null;
   categories_tags: string[];
   isUK?: boolean;
+  availableStores?: string[];
   nutriments: {
     calories: string | null;
     protein: string | null;
@@ -117,6 +118,7 @@ interface ProductResult {
   nutriments_raw: Record<string, any> | null;
   analysis: ProductAnalysis | null;
   upfAnalysis: UPFAnalysisInfo | null;
+  quantity?: string | null;
 }
 
 const NOVA_CONFIG: Record<number, { label: string; color: string; bg: string; description: string }> = {
@@ -679,8 +681,8 @@ export default function ProductsPage() {
     setCompareProducts(prev => {
       const exists = prev.find(p => p.barcode === product.barcode);
       if (exists) return prev.filter(p => p.barcode !== product.barcode);
-      if (prev.length >= 3) {
-        toast({ title: "Limit reached", description: "You can compare up to 3 products." });
+      if (prev.length >= 4) {
+        toast({ title: "Limit reached", description: "You can compare up to 4 products." });
         return prev;
       }
       return [...prev, product];
@@ -734,7 +736,7 @@ export default function ProductsPage() {
               <Settings2 className="h-4 w-4" />
               Intelligence
             </Button>
-            {compareProducts.length > 0 && (
+            {compareProducts.length >= 2 && (
               <Button
                 onClick={() => setShowCompare(true)}
                 className="gap-2"
@@ -1243,6 +1245,12 @@ export default function ProductsPage() {
                               {product.brand && (
                                 <p className="text-xs text-muted-foreground mt-0.5">{product.brand}</p>
                               )}
+                              {product.availableStores && product.availableStores.length > 0 && (
+                                <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
+                                  <Store className="h-3 w-3 flex-shrink-0" />
+                                  {product.availableStores.slice(0, 2).join(' · ')}
+                                </p>
+                              )}
                               <div className="flex flex-wrap items-center gap-1.5 mt-2">
                                 {nova && <NovaGroupBadge group={nova} />}
                                 {product.analysis && (
@@ -1299,6 +1307,20 @@ export default function ProductsPage() {
                               </div>
                             </div>
                           )}
+
+                          <div className="px-4 pb-2">
+                            {product.ingredients_text ? (
+                              <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
+                                {product.ingredients_text.split(',').map(i => i.trim()).filter(Boolean).slice(0, 6).join(', ')}
+                                {product.ingredients_text.split(',').length > 6 ? '…' : ''}
+                              </p>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600 dark:text-amber-400">
+                                <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                                Ingredient detail incomplete
+                              </Badge>
+                            )}
+                          </div>
 
                           <div className="px-4 pb-4 mt-auto flex gap-2">
                             <Button
@@ -1638,6 +1660,9 @@ export default function ProductsPage() {
               <Scale className="h-5 w-5" />
               Product Comparison
             </DialogTitle>
+            <p className="text-xs text-muted-foreground pt-1">
+              Apple rating is based purely on additive count — 5 apples = no additives, 1 apple = 5 or more additives.
+            </p>
           </DialogHeader>
           {compareProducts.length > 0 ? (
             <div className="overflow-x-auto">
@@ -1734,6 +1759,25 @@ export default function ProductsPage() {
                   <CompareRow label="Salt" products={compareProducts} render={(p) => (
                     <span>{p.nutriments?.salt || 'N/A'}</span>
                   )} />
+                  <CompareRow label="Retailer" products={compareProducts} render={(p) => (
+                    p.availableStores && p.availableStores.length > 0
+                      ? <span className="flex items-center justify-center gap-1"><Store className="h-3 w-3" />{p.availableStores.slice(0, 2).join(', ')}</span>
+                      : <span className="text-muted-foreground">Unknown</span>
+                  )} />
+                  <CompareRow label="Ingredients" products={compareProducts} render={(p) => {
+                    if (!p.ingredients_text) return (
+                      <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600">
+                        <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                        Missing
+                      </Badge>
+                    );
+                    const items = p.ingredients_text.split(',').map(i => i.trim()).filter(Boolean);
+                    return (
+                      <span className="text-[10px] text-left block leading-relaxed">
+                        {items.slice(0, 4).join(', ')}{items.length > 4 ? `… +${items.length - 4} more` : ''}
+                      </span>
+                    );
+                  }} />
                 </tbody>
               </table>
             </div>

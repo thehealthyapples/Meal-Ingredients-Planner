@@ -1,0 +1,281 @@
+#9 - Product Quality, Comparison UX & Apple Scoring Overhaul
+
+What & Why
+This is a focused upgrade to improve trust, clarity, and usability across product results and comparison in THA.
+
+The goals are:
+- make product cards more informative and trustworthy
+- ensure result quality (correct language, clear ingredient data)
+- introduce multi-product comparison (2–4 items)
+- replace the current apple scoring system with a simpler additive-based model
+
+This should be implemented cleanly without drifting into unrelated areas.
+
+---
+
+Done looks like
+
+Product cards
+- show concise ingredient summary
+- clearly indicate when ingredient detail is incomplete
+- display retailer/shop
+- display apple rating (new additive-based score)
+
+Result quality
+- only return products in the same language as the user
+- no foreign-language products in standard results
+
+Comparison UX
+- user can select 2–4 products
+- "Compare" button appears when ≥2 selected
+- comparison opens in a centered modal (NOT slide-over)
+- products displayed side-by-side
+
+Scoring
+- apple rating is based purely on additive count
+- simple, consistent, explainable
+
+---
+
+Core rules
+
+1. ingredient visibility must be clear and concise
+2. missing ingredient data must be clearly disclosed
+3. retailer must be visible on product cards
+4. results must match user language
+5. comparison must support 2–4 products
+6. modal must be centered (not a right slide panel)
+7. apple score must be based on additive count only
+
+---
+
+Out of scope
+
+- homepage/auth/demo/onboarding work
+- full UI redesign
+- heavy animation libraries
+- unrelated backend refactors
+
+---
+
+Tasks
+
+T001 — Inspect current product card and result flow
+
+Identify:
+- ingredient data source
+- retailer data source
+- language metadata availability
+- current modal/drawer implementation
+- current scoring logic
+
+---
+
+T002 — Add concise ingredient summary to product cards
+
+Requirements:
+- short, readable preview of ingredients
+- truncate long lists cleanly
+- maintain layout quality
+
+---
+
+T003 — Display missing ingredient detail clearly
+
+If ingredient data is incomplete:
+- show visible message:
+  - "Ingredient detail incomplete"
+  - "Full ingredient breakdown not available"
+- must be visible (not tooltip-only)
+
+---
+
+T004 — Display retailer/shop on product cards
+
+- show retailer name clearly
+- keep compact and consistent
+
+---
+
+T005 — Enforce same-language results
+
+Fix incorrect language results.
+
+Requirements:
+- only return products matching user/app language
+- exclude mismatched-language products
+- use best available metadata (not just string guessing)
+
+---
+
+T006 — Implement product selection (multi-select)
+
+Requirements:
+- selectable state on product cards
+- allow selection of 2–4 products
+- prevent selecting more than 4
+- clear visual feedback
+
+---
+
+T007 — Add "Compare" button
+
+- appears when ≥2 products selected
+- hidden/disabled when <2
+- placed clearly (top or sticky bar)
+
+---
+
+T008 — Build comparison modal (replace slide-over)
+
+Requirements:
+- centered modal (Dialog-style)
+- NOT slide-in drawer
+- light overlay backdrop
+- consistent with THA styling
+
+Layout:
+- desktop: side-by-side comparison (2–4 columns)
+- mobile: stacked layout
+
+Each product column includes:
+- product name
+- retailer
+- apple rating
+- ingredient preview
+- additive indicators (if available)
+- missing data warning if applicable
+
+---
+
+T009 — Modal usability
+
+- close via button and outside click (if consistent)
+- responsive layout
+- readable spacing
+
+---
+
+T010 — Introduce additive classification layer
+
+Create or reuse a shared structure for each product:
+
+- additiveCategories:
+  - emulsifiers
+  - preservatives
+  - acidityRegulators
+  - flavourings
+  - stabilisers
+  - modifiedStarches
+
+- additiveCodes (E-numbers)
+- additiveNames
+
+Requirements:
+- normalize values (E471, e471, E 471 → same)
+- used by scoring, filters, analyser
+
+---
+
+T011 — Replace apple rating system (additive-based)
+
+Remove existing scoring logic and replace with:
+
+- 5 apples = 0 additives
+- 4 apples = 1 additive
+- 3 apples = 2–3 additives
+- 2 apples = 4 additives
+- 1 apple = 5+ additives
+
+Rules:
+- do NOT penalise NOVA 3
+- do NOT use NOVA as scoring driver
+- scoring based purely on additive count
+
+---
+
+T012 — Ensure additive detection consistency
+
+- use shared additive classification layer
+- no duplicate detection logic
+- consistent across:
+  - scoring
+  - filters
+  - analyser
+
+---
+
+T013 — Update UI to reflect new scoring
+
+- ensure apple rating renders correctly everywhere
+- update explanation text:
+
+"The score is based on how many industrial-style additives are present in the ingredient list. Fewer additives = higher score."
+
+- remove legacy scoring logic
+
+---
+
+T014 — Handle incomplete ingredient data in scoring
+
+- if ingredient data is incomplete:
+  - flag clearly in UI
+  - avoid misleading confidence
+
+---
+
+T015 — Keep implementation tightly scoped
+
+Focus only on:
+- product cards
+- result quality
+- additive classification
+- scoring
+- comparison modal
+
+Avoid:
+- unrelated UI redesign
+- homepage/auth/demo work
+- unnecessary refactors
+
+---
+
+Relevant files
+
+- product card components
+- analyser and product result components
+- modal/dialog components
+- scoring logic files
+- additive parsing helpers
+- language filtering logic
+
+---
+
+Acceptance checklist
+
+- ingredient preview visible on cards
+- missing ingredient data clearly shown
+- retailer displayed
+- no wrong-language results
+- user can select 2–4 products
+- Compare button behaves correctly
+- modal opens centered (not slide-over)
+- products compare side-by-side
+- apple score reflects additive count
+- additive detection is consistent across system
+- no unrelated page drift
+
+---
+
+At the end, provide a concise implementation summary covering:
+
+- files changed
+- how ingredient previews are generated
+- how missing data is handled
+- how retailer display works
+- how language filtering was fixed
+- how product selection works
+- how comparison modal is structured
+- how additive classification works
+- how apple scoring was replaced
+- any small, relevant follow-up improvements

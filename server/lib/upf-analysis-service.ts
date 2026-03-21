@@ -152,6 +152,23 @@ export function calculateSMPRating(upfScore: number, healthScore: number): numbe
   return 1;
 }
 
+/**
+ * New additive-count-based apple rating.
+ * 5 apples = 0 additives
+ * 4 apples = 1 additive
+ * 3 apples = 2–3 additives
+ * 2 apples = 4 additives
+ * 1 apple  = 5+ additives
+ * NOVA is NOT used as a scoring driver.
+ */
+export function calculateAdditiveRating(additiveCount: number): number {
+  if (additiveCount === 0) return 5;
+  if (additiveCount === 1) return 4;
+  if (additiveCount <= 3) return 3;
+  if (additiveCount === 4) return 2;
+  return 1;
+}
+
 export interface ProductContext {
   productName: string;
   categoriesTags: string[];
@@ -225,7 +242,7 @@ export function analyzeProductUPF(
 
   return {
     upfScore,
-    smpRating: smpResult.smpRating,
+    smpRating: calculateAdditiveRating(additiveMatches.length),
     hasCape: smpResult.hasCape,
     smpScore: smpResult.score,
     isWholeFoodOverride: smpResult.isWholeFoodOverride,
