@@ -1,0 +1,98 @@
+This is not complete and it is still not doing what I asked.
+
+Two major issues remain:
+
+1. Granular additive filters are missing
+2. French-language products are still appearing in results (example: beef lasagne returning in French)
+
+Please treat this as a correction pass on the actual visible product result flow I am using.
+
+What is missing / incorrect
+
+A. Granular filters are missing
+We discussed and need BOTH:
+- category-level filters
+- granular additive/E-number filters
+
+The UI should support category-level exclusions such as:
+- seed oils
+- acidity regulators
+- flavourings
+- preservatives
+- emulsifiers
+- stabilisers
+- modified starches
+
+And it also needs granular filter support for specific additives / E-numbers where data exists.
+
+Example direction:
+- Exclude emulsifiers
+- Refine further:
+  - E471
+  - E322
+  - E472e
+
+This must not just exist in backend classification logic — it must be visible and usable in the actual UI.
+
+B. Wrong-language products are still appearing
+Beef lasagne is still returning in French.
+That means the language filtering is not fixed in the actual product result flow.
+
+This must be corrected on the exact visible result surface I am using, not just in a helper or secondary path.
+
+What must happen now
+
+1. Inspect the real rendered result surface
+Find the exact components/endpoints powering the live product results where I am seeing:
+- missing granular filters
+- French-language products
+
+Do not assume the earlier changes touched the correct surface.
+
+2. Implement visible granular filters in the actual UI
+Add visible filter controls for:
+- seed oils
+- acidity regulators
+- flavourings
+- preservatives
+- emulsifiers
+- stabilisers
+- modified starches
+
+Also add support for granular additive/E-number filtering where product data supports it.
+
+Requirements
+- category-level filters visible in UI
+- advanced/refined additive filtering available where possible
+- filters actually affect the visible result set
+- filtered result set recomputes immediately and correctly
+
+3. Fix language filtering in the actual product result path
+Requirements
+- results shown to an English user must only return English-language products
+- French products must be excluded from the real result list
+- if language metadata is unreliable, apply a stronger fallback heuristic on the actual returned product data
+- do not claim this is fixed unless the visible beef lasagne case is gone
+
+4. Confirm scoring/result/filter consistency
+The same product facts should drive:
+- apple scoring
+- additive filters
+- compare modal details
+- product cards
+
+5. Return proof tied to the real UI
+I need:
+- the exact files changed for the visible product result surface
+- the exact files changed for the filter UI
+- the exact files changed for the language filtering on the live result path
+- a precise description of what I should now see on-screen
+- confirmation that the beef lasagne French result no longer appears
+
+Acceptance criteria
+- visible additive category filters exist in the actual UI
+- granular additive/E-number filtering exists where data supports it
+- filters actually change the live result set
+- English users no longer see French products in the result surface I am using
+- the beef lasagne French result is gone
+- the implementation is on the actual visible result path, not a hidden or secondary one

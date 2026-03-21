@@ -96,6 +96,17 @@ function isBovaerRiskProduct(product: ProductResult): boolean {
   return BOVAER_KEYWORDS.some(kw => allText.includes(kw));
 }
 
+const SEED_OIL_TERMS = [
+  'sunflower oil', 'rapeseed oil', 'palm oil', 'vegetable oil',
+  'soybean oil', 'soya oil', 'corn oil', 'cottonseed oil',
+  'safflower oil', 'canola oil', 'rice bran oil',
+];
+
+function isSeedOilProduct(product: ProductResult): boolean {
+  const text = (product.ingredients_text || '').toLowerCase();
+  return SEED_OIL_TERMS.some(term => text.includes(term));
+}
+
 interface ProductResult {
   barcode: string | null;
   product_name: string;
@@ -334,13 +345,19 @@ export default function ProductsPage() {
   const [compareProducts, setCompareProducts] = useState<ProductResult[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [showDetailWFRecipe, setShowDetailWFRecipe] = useState(false);
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState(false);
   const [hideUltraProcessed, setHideUltraProcessed] = useState(false);
   const [hideHighRiskAdditives, setHideHighRiskAdditives] = useState(false);
   const [hideEmulsifiers, setHideEmulsifiers] = useState(false);
   const [hideAcidityRegulators, setHideAcidityRegulators] = useState(false);
+  const [hidePreservatives, setHidePreservatives] = useState(false);
+  const [hideFlavourings, setHideFlavourings] = useState(false);
+  const [hideStabilisers, setHideStabilisers] = useState(false);
+  const [hideModifiedStarches, setHideModifiedStarches] = useState(false);
+  const [hideSeedOils, setHideSeedOils] = useState(false);
   const [hideBovaer, setHideBovaer] = useState(false);
   const [minRating, setMinRating] = useState(0);
+  const [excludedAdditives, setExcludedAdditives] = useState<Set<string>>(new Set());
   const [mealCounts, setMealCounts] = useState<Record<number, number>>({});
   const [showMealSelector, setShowMealSelector] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
@@ -601,11 +618,49 @@ export default function ProductsPage() {
     if (hideUltraProcessed && p.analysis?.isUltraProcessed) return false;
     if (hideHighRiskAdditives && p.upfAnalysis?.additiveMatches.some(a => a.riskLevel === 'high')) return false;
     if (hideEmulsifiers && p.upfAnalysis?.additiveMatches.some(a => a.type === 'emulsifier')) return false;
-    if (hideAcidityRegulators && p.upfAnalysis?.additiveMatches.some(a => a.type === 'acidity regulator' || a.type === 'acidity_regulator')) return false;
+    if (hideAcidityRegulators && p.upfAnalysis?.additiveMatches.some(a =>
+      a.type === 'acidity regulator' || a.type === 'acidity_regulator')) return false;
+    if (hidePreservatives && p.upfAnalysis?.additiveMatches.some(a =>
+      a.type.toLowerCase().includes('preservative'))) return false;
+    if (hideFlavourings && (
+      p.upfAnalysis?.additiveMatches.some(a => a.type.toLowerCase().includes('flavour') || a.type.toLowerCase().includes('flavor')) ||
+      p.upfAnalysis?.processingIndicators.some(pi => pi.toLowerCase().includes('flavour') || pi.toLowerCase().includes('flavor'))
+    )) return false;
+    if (hideStabilisers && p.upfAnalysis?.additiveMatches.some(a =>
+      a.type.toLowerCase().includes('stabilis') || a.type.toLowerCase().includes('stabiliz'))) return false;
+    if (hideModifiedStarches && (
+      p.upfAnalysis?.processingIndicators.some(pi => pi.toLowerCase().includes('modified starch')) ||
+      /modified\s+\w*\s*starch/i.test(p.ingredients_text || '')
+    )) return false;
+    if (hideSeedOils && isSeedOilProduct(p)) return false;
     if (hideBovaer && isBovaerRiskProduct(p)) return false;
     if (minRating > 0 && (p.upfAnalysis?.smpRating ?? 0) < minRating) return false;
+    if (excludedAdditives.size > 0 && p.upfAnalysis?.additiveMatches.some(a => excludedAdditives.has(a.name))) return false;
     return true;
   });
+
+  const allDetectedAdditives = useMemo(() => {
+    const seen = new Map<string, AdditiveMatchInfo>();
+    for (const p of deduplicatedResults) {
+      for (const a of p.upfAnalysis?.additiveMatches || []) {
+        if (!seen.has(a.name)) seen.set(a.name, a);
+      }
+    }
+    return Array.from(seen.values()).sort((a, b) => {
+      if (a.riskLevel === 'high' && b.riskLevel !== 'high') return -1;
+      if (b.riskLevel === 'high' && a.riskLevel !== 'high') return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [deduplicatedResults]);
+
+  const toggleAdditiveExclusion = (name: string) => {
+    setExcludedAdditives(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  };
 
   const addToList = useMutation({
     mutationFn: async (product: ProductResult) => {
@@ -692,7 +747,11 @@ export default function ProductsPage() {
   const isInCompare = (product: ProductResult) =>
     compareProducts.some(p => p.barcode === product.barcode);
 
-  const activeFilterCount = [hideUltraProcessed, hideHighRiskAdditives, hideEmulsifiers, hideAcidityRegulators, hideBovaer, minRating > 0].filter(Boolean).length;
+  const activeFilterCount = [
+    hideUltraProcessed, hideHighRiskAdditives, hideEmulsifiers, hideAcidityRegulators,
+    hidePreservatives, hideFlavourings, hideStabilisers, hideModifiedStarches, hideSeedOils,
+    hideBovaer, minRating > 0, excludedAdditives.size > 0,
+  ].filter(Boolean).length;
 
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -791,56 +850,32 @@ export default function ProductsPage() {
               className="overflow-hidden"
             >
               <Card data-testid="card-filters">
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="hide-upf" className="text-sm cursor-pointer">Hide ultra-processed</Label>
-                      <Switch
-                        id="hide-upf"
-                        checked={hideUltraProcessed}
-                        onCheckedChange={setHideUltraProcessed}
-                        data-testid="switch-hide-upf"
-                      />
+                <CardContent className="pt-5 space-y-5">
+                  {/* ── Category Filters ─────────────────────────────── */}
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Category Filters</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {([
+                        { id: 'hide-upf', label: 'Ultra-processed (NOVA 4)', checked: hideUltraProcessed, set: setHideUltraProcessed, testId: 'switch-hide-upf' },
+                        { id: 'hide-additives', label: 'High-risk additives', checked: hideHighRiskAdditives, set: setHideHighRiskAdditives, testId: 'switch-hide-additives' },
+                        { id: 'hide-emulsifiers', label: 'Emulsifiers', checked: hideEmulsifiers, set: setHideEmulsifiers, testId: 'switch-hide-emulsifiers' },
+                        { id: 'hide-acidity', label: 'Acidity regulators', checked: hideAcidityRegulators, set: setHideAcidityRegulators, testId: 'switch-hide-acidity-regulators' },
+                        { id: 'hide-preservatives', label: 'Preservatives', checked: hidePreservatives, set: setHidePreservatives, testId: 'switch-hide-preservatives' },
+                        { id: 'hide-flavourings', label: 'Flavourings', checked: hideFlavourings, set: setHideFlavourings, testId: 'switch-hide-flavourings' },
+                        { id: 'hide-stabilisers', label: 'Stabilisers', checked: hideStabilisers, set: setHideStabilisers, testId: 'switch-hide-stabilisers' },
+                        { id: 'hide-modified-starches', label: 'Modified starches', checked: hideModifiedStarches, set: setHideModifiedStarches, testId: 'switch-hide-modified-starches' },
+                        { id: 'hide-seed-oils', label: 'Seed oils', checked: hideSeedOils, set: setHideSeedOils, testId: 'switch-hide-seed-oils' },
+                        { id: 'hide-bovaer', label: 'Bovaer-risk (dairy/meat)', checked: hideBovaer, set: setHideBovaer, testId: 'switch-hide-bovaer' },
+                      ] as const).map(f => (
+                        <div key={f.id} className="flex items-center justify-between gap-2">
+                          <Label htmlFor={f.id} className="text-sm cursor-pointer">{f.label}</Label>
+                          <Switch id={f.id} checked={f.checked} onCheckedChange={f.set} data-testid={f.testId} />
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="hide-additives" className="text-sm cursor-pointer">Hide high-risk additives</Label>
-                      <Switch
-                        id="hide-additives"
-                        checked={hideHighRiskAdditives}
-                        onCheckedChange={setHideHighRiskAdditives}
-                        data-testid="switch-hide-additives"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="hide-emulsifiers" className="text-sm cursor-pointer">Hide emulsifiers</Label>
-                      <Switch
-                        id="hide-emulsifiers"
-                        checked={hideEmulsifiers}
-                        onCheckedChange={setHideEmulsifiers}
-                        data-testid="switch-hide-emulsifiers"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="hide-acidity-regulators" className="text-sm cursor-pointer">Hide acidity regulators</Label>
-                      <Switch
-                        id="hide-acidity-regulators"
-                        checked={hideAcidityRegulators}
-                        onCheckedChange={setHideAcidityRegulators}
-                        data-testid="switch-hide-acidity-regulators"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="hide-bovaer" className="text-sm cursor-pointer">Exclude Bovaer-risk (dairy/meat)</Label>
-                      <Switch
-                        id="hide-bovaer"
-                        checked={hideBovaer}
-                        onCheckedChange={setHideBovaer}
-                        data-testid="switch-hide-bovaer"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-sm">Minimum SMP Rating</Label>
-                      <div className="flex items-center gap-2">
+                    <div className="mt-3 space-y-1.5">
+                      <Label className="text-sm">Minimum Apple Rating</Label>
+                      <div className="flex items-center gap-2 flex-wrap">
                         {[0, 1, 2, 3, 4, 5].map(r => (
                           <Button
                             key={r}
@@ -849,15 +884,62 @@ export default function ProductsPage() {
                             onClick={() => setMinRating(r)}
                             data-testid={`button-min-rating-${r}`}
                           >
-                            {r === 0 ? 'All' : r}
+                            {r === 0 ? 'All' : `${r}★`}
                           </Button>
                         ))}
                       </div>
                     </div>
                   </div>
+
+                  {/* ── Granular Additive / E-number Filters ─────────── */}
+                  {allDetectedAdditives.length > 0 && (
+                    <div className="pt-4 border-t border-border">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                        Exclude Specific Additives / E-numbers
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mb-3">
+                        Detected in your current results — click to exclude products containing that additive.
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {allDetectedAdditives.map(a => {
+                          const isExcluded = excludedAdditives.has(a.name);
+                          const riskCls = a.riskLevel === 'high'
+                            ? 'border-red-400 text-red-700 dark:text-red-400'
+                            : a.riskLevel === 'medium'
+                              ? 'border-orange-400 text-orange-700 dark:text-orange-400'
+                              : 'border-border text-muted-foreground';
+                          return (
+                            <button
+                              key={a.name}
+                              onClick={() => toggleAdditiveExclusion(a.name)}
+                              data-testid={`toggle-additive-${a.name}`}
+                              className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full border transition-colors ${
+                                isExcluded
+                                  ? 'bg-red-100 dark:bg-red-900/30 border-red-500 text-red-700 dark:text-red-300 line-through'
+                                  : riskCls + ' hover:border-primary hover:text-foreground bg-background'
+                              }`}
+                            >
+                              {isExcluded && <X className="h-3 w-3" />}
+                              <span className="font-medium">{a.name}</span>
+                              <span className="opacity-60">· {a.type}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {excludedAdditives.size > 0 && (
+                        <button
+                          className="mt-2 text-[11px] text-muted-foreground underline"
+                          onClick={() => setExcludedAdditives(new Set())}
+                        >
+                          Clear additive exclusions
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   {activeFilterCount > 0 && searchResults.length > 0 && (
-                    <p className="text-xs text-muted-foreground mt-3">
-                      Showing {filteredResults.length} of {searchResults.length} products
+                    <p className="text-xs text-muted-foreground">
+                      Showing {filteredResults.length} of {deduplicatedResults.length} products after filters
                     </p>
                   )}
                 </CardContent>

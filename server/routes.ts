@@ -1150,10 +1150,29 @@ export async function registerRoutes(
         'ireland', 'en:ireland', 'new-zealand', 'en:new-zealand',
       ]);
 
+      // Detect non-English (primarily French) ingredient text via lexical markers
+      const isLikelyFrenchText = (text: string): boolean => {
+        if (!text || text.length < 20) return false;
+        const t = text.toLowerCase();
+        const markers = [
+          'viande', 'lait ', 'fromage', 'semoule', 'pâtes', '(contient',
+          'huile de', 'farine de', 'beurre', 'crème', 'blé dur',
+          'eau potable', 'tomates pelées', 'sucre blanc',
+        ];
+        return markers.filter(m => t.includes(m)).length >= 2;
+      };
+
       const isEnglishProduct = (p: any, isUK: boolean): boolean => {
-        if (isUK) return true;
         const langTags: string[] = p.languages_tags || [];
+        // Explicitly tagged as English → always include
         if (langTags.some((t: string) => t.toLowerCase() === 'en:english')) return true;
+        // UK product: keep unless the only available ingredient text is clearly French
+        if (isUK) {
+          if (p.ingredients_text_en) return true; // English field exists
+          if (p.ingredients_text && isLikelyFrenchText(p.ingredients_text)) return false;
+          return true;
+        }
+        // Global products: must be from an English-speaking country
         const countryTags: string[] = p.countries_tags || [];
         if (countryTags.some((t: string) => ENGLISH_COUNTRY_TAGS.has(t.toLowerCase()))) return true;
         return false;
