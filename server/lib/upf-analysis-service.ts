@@ -153,22 +153,19 @@ export function calculateSMPRating(upfScore: number, healthScore: number): numbe
 }
 
 /**
- * Apple rating — considers E-number additives, "soft" UPF ingredients,
- * processing indicators, and NOVA group.
+ * Apple rating — pure additive-count model.
  *
- * Soft UPF ingredients (not E-numbers but indicative of UPF processing):
- *   yeast extract, natural flavouring/flavour, maltodextrin, dextrose,
- *   glucose syrup, hydrolysed protein, modified starch variants.
+ * "Additives" = E-number matches from the DB  +  soft UPF terms
+ * (yeast extract, natural flavouring, maltodextrin, dextrose, glucose syrup,
+ * hydrolysed, modified starch, invert sugar).
  *
- * NOVA hard caps:
- *   NOVA 4 → max 3 apples (reduced further to 2 if flavourings detected)
- *   NOVA 3 → max 4 apples
+ * NOVA does NOT influence this score.
  *
- * 5 apples = NOVA 1/2, 0 additives, 0 soft UPF
- * 4 apples = NOVA 1/2, 1 additive/soft; or NOVA 3, 0 additives
- * 3 apples = 2–3 combined; or NOVA 4 with no flavourings
- * 2 apples = 4–5 combined; or NOVA 4 with flavourings
- * 1 apple  = 6+ combined additives
+ * 5 apples = 0 additives
+ * 4 apples = 1 additive
+ * 3 apples = 2–3 additives
+ * 2 apples = 4 additives
+ * 1 apple  = 5+ additives
  */
 export function calculateAdditiveRating(
   additiveCount: number,
@@ -178,42 +175,29 @@ export function calculateAdditiveRating(
 ): number {
   const text = (ingredientsText ?? "").toLowerCase();
 
-  // Each term is distinct — "natural flavour" covers "natural flavouring",
-  // "natural flavours" etc. via substring match, so we list the root only.
+  // Soft UPF terms that count as additives even without an E-number.
+  // Roots only — "natural flavour" matches "natural flavouring/flavours" etc.
   const SOFT_UPF_TERMS = [
     "yeast extract",
-    "natural flavour",   // covers natural flavouring / natural flavours
-    "natural flavor",    // American spelling
+    "natural flavour",    // covers natural flavouring / natural flavours
+    "natural flavor",     // American spelling
     "maltodextrin",
     "dextrose",
     "glucose syrup",
     "hydrolysed",
-    "modified starch",   // covers modified corn/tapioca/potato/maize starch
+    "modified starch",    // covers modified corn/tapioca/potato/maize starch
     "invert sugar",
   ];
 
   const softCount = SOFT_UPF_TERMS.filter(term => text.includes(term)).length;
   const effectiveCount = additiveCount + softCount;
 
-  // Base score from combined additive count
-  let score: number;
-  if (effectiveCount === 0) score = 5;
-  else if (effectiveCount === 1) score = 4;
-  else if (effectiveCount <= 3) score = 3;
-  else if (effectiveCount <= 5) score = 2;
-  else score = 1;
-
-  // NOVA group hard caps
-  if (novaGroup === 4) score = Math.min(score, 3);
-  if (novaGroup === 3) score = Math.min(score, 4);
-
-  // Additional penalty: NOVA 4 + flavouring agents → cap at 2
-  const hasFlavouring = processingIndicators.some(i =>
-    i.toLowerCase().includes("flavour") || i.toLowerCase().includes("flavor")
-  );
-  if (novaGroup === 4 && hasFlavouring) score = Math.min(score, 2);
-
-  return Math.max(1, Math.min(5, score));
+  // Pure 5→1 mapping — NOVA is not a factor
+  if (effectiveCount === 0) return 5;
+  if (effectiveCount === 1) return 4;
+  if (effectiveCount <= 3) return 3;
+  if (effectiveCount === 4) return 2;
+  return 1;
 }
 
 export interface ProductContext {
