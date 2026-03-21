@@ -1,0 +1,132 @@
+#9B - Correction Pass — Visible Result UX, Sorting, Standard Modal, and No /100 Score
+
+What & Why
+This is a correction pass on the actual visible product result UI.
+
+Previous work is not complete from a user-facing perspective. The implementation must now focus on the exact live surface the user interacts with and deliver the missing visible behaviour with no ambiguity.
+
+Important
+Every missed requirement costs money. Do not interpret this loosely.
+Do not report this complete unless the visible UI on the real result surface clearly reflects every item below.
+
+Done looks like
+
+Visible result UI
+- users can sort/group results by shop
+- users can sort results by apple score
+- product cards/results no longer emphasise or show a score out of 100 as a user-facing metric
+- apple score is the primary visible score
+
+Modal behaviour
+- clicking a product opens a standard centered modal window
+- it does NOT open as a right-hand slide-over / drawer / sheet
+- the modal uses the same normal modal background/treatment as other THA modals
+- the modal can be closed cleanly in the normal way
+
+Comparison / result quality
+- visible product comparison and result quality work on the actual UI surface the user is using
+- if granular additive filters are part of this result surface, they must be visible and usable there
+- wrong-language products must not appear in that same surface
+
+Critical instruction
+You must inspect and modify the exact live component(s) that render the product results and product open/click interaction I am using.
+Do not make hidden/helper/backend-only changes and call the task complete.
+
+Out of scope
+- homepage/auth/demo/onboarding work
+- broad redesign of unrelated pages
+- heavy animation
+- backend redesign beyond what is necessary to support the visible UI correctly
+
+Tasks
+
+T001 — Identify the actual visible result surface
+Find the exact files/components responsible for:
+- the product cards/results I am interacting with
+- the current click-open behaviour that is still opening on the right
+- the actual sorting/filter controls on that screen
+
+You must name these exact files in the final summary.
+
+T002 — Add sort/group by shop
+Implement visible sorting/grouping by retailer/shop on the actual result surface.
+
+Requirements
+- user can sort by shop
+- if grouping is appropriate in the current UI, allow grouping by shop as well
+- keep the UI simple and understandable
+- retailer/shop names must match the retailer shown on cards
+
+T003 — Add sort by apple score
+Implement visible sorting by apple score on the actual result surface.
+
+Requirements
+- apple score sort must use the current additive-based apple score
+- sorting should be obvious and stable
+- apple score should be the primary rating users sort by
+
+T004 — Remove or de-emphasise /100 score
+The score out of 100 is no longer needed as a primary user-facing metric.
+
+Requirements
+- remove /100 score from the visible product cards/results and comparison modal unless there is a very strong reason it must remain
+- apple score must be the main visible score
+- NOVA and any legacy /100 score must not take centre stage
+
+T005 — Replace right-hand slide-over with standard centered modal
+The current click-open behaviour is still using a right-side slide panel. This must be replaced.
+
+Requirements
+- clicking a product opens a standard centered modal window
+- do NOT use Sheet/drawer/right slide-over behaviour
+- use the same normal modal/dialog treatment as other THA modals
+- standard overlay/background, consistent with the rest of the app
+- modal must be closable via close button and normal modal dismissal behaviour where appropriate
+
+T006 — Ensure product modal content uses the right hierarchy
+Within the modal, make sure the visible hierarchy is:
+1. product name
+2. apple score
+3. retailer/shop
+4. ingredient preview / ingredient detail
+5. additive / filter-related information
+6. warnings for incomplete data
+
+Requirements
+- no /100 score taking visual priority
+- no NOVA taking visual priority
+- keep the layout clean and readable
+
+T007 — Keep visible result quality fixes on the actual UI surface
+On the same live result surface:
+- same-language filtering must actually work
+- if French beef lasagne was previously appearing, it must no longer appear
+- granular additive filters, if included for this surface, must be visible and operational here, not elsewhere
+
+T008 — Prove the changes are visible
+At the end, do not just describe backend changes.
+
+Return:
+- the exact files changed for the visible result cards
+- the exact file changed for the click-open modal behaviour
+- the exact files changed for sorting/grouping controls
+- the exact files changed for same-language filtering on the live result path
+- a precise description of what I will now see on-screen
+
+Acceptance checklist
+- I can visibly sort/group by shop on the live result screen
+- I can visibly sort by apple score
+- /100 score is no longer the main visible metric
+- clicking a product opens a centered modal, not a right slide-over
+- the modal uses standard THA modal styling/background
+- apple score is visually primary
+- the live result surface no longer shows wrong-language products
+- the implementation clearly affects the actual screen I am using
+
+At the end, provide a concise implementation summary covering
+- exact files changed
+- what visible controls were added
+- how /100 score was removed or de-emphasised
+- how the right-side panel was replaced with a standard modal
+- how sorting/grouping works
+- confirmation that wrong-language results are gone from the live result surface

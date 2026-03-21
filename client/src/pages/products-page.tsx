@@ -358,6 +358,7 @@ export default function ProductsPage() {
   const [hideBovaer, setHideBovaer] = useState(false);
   const [minRating, setMinRating] = useState(0);
   const [excludedAdditives, setExcludedAdditives] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<'default' | 'score-desc' | 'score-asc' | 'shop'>('default');
   const [mealCounts, setMealCounts] = useState<Record<number, number>>({});
   const [showMealSelector, setShowMealSelector] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
@@ -661,6 +662,25 @@ export default function ProductsPage() {
       return next;
     });
   };
+
+  const displayResults = useMemo(() => {
+    const base = [...filteredResults];
+    if (sortBy === 'score-desc') return base.sort((a, b) => (b.upfAnalysis?.smpRating ?? 0) - (a.upfAnalysis?.smpRating ?? 0));
+    if (sortBy === 'score-asc') return base.sort((a, b) => (a.upfAnalysis?.smpRating ?? 0) - (b.upfAnalysis?.smpRating ?? 0));
+    if (sortBy === 'shop') return base.sort((a, b) => (a.availableStores?.[0] ?? 'zzz').localeCompare(b.availableStores?.[0] ?? 'zzz'));
+    return base;
+  }, [filteredResults, sortBy]);
+
+  const shopGroups = useMemo(() => {
+    if (sortBy !== 'shop') return null;
+    const groups = new Map<string, ProductResult[]>();
+    for (const p of filteredResults) {
+      const store = p.availableStores?.[0] || 'Other';
+      if (!groups.has(store)) groups.set(store, []);
+      groups.get(store)!.push(p);
+    }
+    return Array.from(groups.entries()).sort(([a], [b]) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b));
+  }, [filteredResults, sortBy]);
 
   const addToList = useMutation({
     mutationFn: async (product: ProductResult) => {
@@ -1276,12 +1296,124 @@ export default function ProductsPage() {
           </Card>
         )}
 
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div>
+          {/* ── Sort Controls ─────────────────────────────────────────────────── */}
+          {filteredResults.length > 0 && (
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              <span className="text-xs text-muted-foreground font-medium">Sort:</span>
+              {(
+                [
+                  { key: 'default', label: 'Default' },
+                  { key: 'score-desc', label: '★ Best first' },
+                  { key: 'score-asc', label: '★ Worst first' },
+                  { key: 'shop', label: 'By Shop' },
+                ] as const
+              ).map(opt => (
+                <Button
+                  key={opt.key}
+                  size="sm"
+                  variant={sortBy === opt.key ? 'default' : 'outline'}
+                  onClick={() => setSortBy(opt.key)}
+                  data-testid={`button-sort-${opt.key}`}
+                >
+                  {opt.label}
+                </Button>
+              ))}
+              <span className="text-xs text-muted-foreground ml-2">
+                {filteredResults.length} result{filteredResults.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
+
           <div className="flex-1">
-            {filteredResults.length > 0 && (
+            {shopGroups ? (
+              /* ── Grouped by shop ─────────────────────────────────────────── */
+              <div className="space-y-8">
+                {shopGroups.map(([store, products]) => (
+                  <div key={store}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Store className="h-4 w-4 text-muted-foreground" />
+                      <h3 className="font-semibold text-sm">{store}</h3>
+                      <span className="text-xs text-muted-foreground">({products.length})</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {products.map((product, index) => {
+                        const nova = product.nova_group || product.analysis?.novaGroup;
+                        return (
+                          <motion.div
+                            key={product.barcode || index}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            layout
+                          >
+                            <Card
+                              className={`overflow-visible h-full flex flex-col cursor-pointer transition-colors ${
+                                selectedProduct?.barcode === product.barcode ? 'ring-2 ring-primary' : ''
+                              }`}
+                              onClick={() => handleProductSelect(product)}
+                              data-testid={`card-product-${product.barcode || index}`}
+                            >
+                              <div className="flex gap-4 p-4">
+                                {product.image_url ? (
+                                  <div className="w-20 h-20 flex-shrink-0 rounded-md overflow-hidden bg-muted">
+                                    <img src={product.image_url} alt={product.product_name} className="w-full h-full object-contain" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                  </div>
+                                ) : (
+                                  <div className="w-20 h-20 flex-shrink-0 rounded-md bg-muted flex items-center justify-center">
+                                    <Package className="h-8 w-8 text-muted-foreground/50" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-start gap-1 flex-wrap">
+                                        <h3 className="font-semibold text-sm leading-tight line-clamp-2" data-testid={`text-product-name-${product.barcode || index}`}>{product.product_name}</h3>
+                                        {product.isUK && (<Badge variant="outline" className="text-[10px] px-1 py-0 h-4 flex-shrink-0 border-blue-400 text-blue-600 dark:text-blue-400">UK</Badge>)}
+                                      </div>
+                                      {product.brand && (<p className="text-xs text-muted-foreground mt-0.5">{product.brand}</p>)}
+                                      {product.availableStores && product.availableStores.length > 0 && (<p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1"><Store className="h-3 w-3 flex-shrink-0" />{product.availableStores.slice(0, 2).join(' · ')}</p>)}
+                                    </div>
+                                    {product.upfAnalysis && (<div className="flex-shrink-0"><ScoreBadge score={product.upfAnalysis.smpRating} size={34} isOrganic={product.upfAnalysis.isOrganic} /></div>)}
+                                  </div>
+                                </div>
+                              </div>
+                              {product.upfAnalysis && product.upfAnalysis.additiveMatches.length > 0 && (
+                                <div className="px-4 pb-2">
+                                  <div className="flex flex-wrap gap-1">
+                                    {product.upfAnalysis.additiveMatches.filter(a => a.riskLevel === 'high').slice(0, 2).map((a, i) => (
+                                      <Badge key={i} variant="outline" className="text-[10px] border-red-300 text-red-600 dark:text-red-400"><AlertTriangle className="h-2.5 w-2.5 mr-0.5" />{a.name}</Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              <div className="px-4 pb-2">
+                                {product.ingredients_text ? (
+                                  <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">{product.ingredients_text.split(',').map(i => i.trim()).filter(Boolean).slice(0, 6).join(', ')}{product.ingredients_text.split(',').length > 6 ? '…' : ''}</p>
+                                ) : (
+                                  <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600 dark:text-amber-400"><AlertTriangle className="h-2.5 w-2.5 mr-0.5" />Ingredient detail incomplete</Badge>
+                                )}
+                              </div>
+                              <div className="px-4 pb-4 mt-auto flex gap-2">
+                                <Button size="sm" className="flex-1 gap-1" onClick={(e) => { e.stopPropagation(); addToList.mutate(product); }} disabled={addToList.isPending} data-testid={`button-add-product-${product.barcode || index}`}>
+                                  <ShoppingCart className="h-3.5 w-3.5" />Add to List
+                                </Button>
+                                <Button size="sm" variant={isInCompare(product) ? 'default' : 'outline'} onClick={(e) => { e.stopPropagation(); toggleCompare(product); }} className="gap-1" data-testid={`button-compare-${product.barcode || index}`}>
+                                  <Scale className="h-3.5 w-3.5" />{isInCompare(product) ? 'Added' : 'Compare'}
+                                </Button>
+                              </div>
+                            </Card>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredResults.length > 0 ? (
+              /* ── Flat sorted grid ─────────────────────────────────────────── */
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <AnimatePresence mode="popLayout">
-                  {filteredResults.map((product, index) => {
+                  {displayResults.map((product, index) => {
                     const nova = product.nova_group || product.analysis?.novaGroup;
                     return (
                       <motion.div
@@ -1430,245 +1562,188 @@ export default function ProductsPage() {
                   })}
                 </AnimatePresence>
               </div>
-            )}
+            ) : null}
           </div>
+        </div>
 
-          {selectedProduct && (
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="w-full lg:w-[420px] flex-shrink-0"
-            >
-              <Card className="sticky top-20" data-testid="card-product-detail">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg leading-tight" data-testid="text-detail-name">
-                        {selectedProduct.product_name}
-                      </CardTitle>
-                      {selectedProduct.brand && (
-                        <p className="text-sm text-muted-foreground mt-1">{selectedProduct.brand}</p>
-                      )}
-                    </div>
-                    <Button size="icon" variant="ghost" onClick={() => setSelectedProduct(null)} data-testid="button-close-detail">
-                      <X className="h-4 w-4" />
-                    </Button>
+        {/* ── Product Detail Dialog ────────────────────────────────────────── */}
+        <Dialog open={selectedProduct !== null} onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}>
+          <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto" data-testid="dialog-product-detail">
+            {selectedProduct && (<>
+              <DialogHeader>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <DialogTitle className="text-xl leading-tight" data-testid="text-detail-name">
+                      {selectedProduct.product_name}
+                    </DialogTitle>
+                    {selectedProduct.brand && (
+                      <p className="text-sm text-muted-foreground mt-1">{selectedProduct.brand}</p>
+                    )}
+                    {selectedProduct.availableStores && selectedProduct.availableStores.length > 0 && (
+                      <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1">
+                        <Store className="h-3.5 w-3.5" />
+                        {selectedProduct.availableStores.join(' · ')}
+                      </p>
+                    )}
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4 max-h-[70vh] overflow-y-auto">
-                  {selectedProduct.image_url && (
-                    <div className="w-full h-40 bg-muted rounded-md overflow-hidden flex items-center justify-center">
-                      <img
-                        src={selectedProduct.image_url}
-                        alt={selectedProduct.product_name}
-                        className="h-full object-contain"
-                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                      />
-                    </div>
-                  )}
-
                   {selectedProduct.upfAnalysis && (
-                    <div className="space-y-3 p-3 rounded-md bg-muted/30 border border-border">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <div>
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">SMP Rating</p>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <ScoreBadge score={selectedProduct.upfAnalysis.smpRating} size={35} isOrganic={selectedProduct.upfAnalysis.isOrganic} />
-                            {selectedProduct.upfAnalysis.isWholeFoodOverride && (
-                              <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300 border border-green-200 dark:border-green-700">
-                                Whole Food
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {selectedProduct.analysis && (
-                          <div className="flex items-center gap-2">
-                            <HealthScoreCircle score={selectedProduct.analysis.healthScore} size={56} />
-                            <div className="text-right">
-                              <p className="text-xs text-muted-foreground">Health Score</p>
-                              <p className="text-lg font-bold" data-testid="text-detail-score">{selectedProduct.analysis.healthScore}/100</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <UPFScoreBar score={selectedProduct.upfAnalysis.upfScore} />
-
-                      <div className="flex gap-3 text-xs text-muted-foreground">
-                        <span>{selectedProduct.upfAnalysis.ingredientCount} ingredients</span>
-                        <span>{selectedProduct.upfAnalysis.upfIngredientCount} flagged</span>
-                        <span>{selectedProduct.upfAnalysis.additiveMatches.length} additives</span>
-                      </div>
-
-                      <RiskBreakdownPanel breakdown={selectedProduct.upfAnalysis.riskBreakdown} />
-                    </div>
+                    <ScoreBadge score={selectedProduct.upfAnalysis.smpRating} size={48} isOrganic={selectedProduct.upfAnalysis.isOrganic} />
                   )}
+                </div>
+              </DialogHeader>
 
-                  {!selectedProduct.upfAnalysis && selectedProduct.analysis && (
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <NovaGroupBadge group={selectedProduct.analysis.novaGroup} size="lg" />
-                      <div className="flex items-center gap-2">
-                        <HealthScoreCircle score={selectedProduct.analysis.healthScore} size={56} />
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground">Health Score</p>
-                          <p className="text-lg font-bold" data-testid="text-detail-score">{selectedProduct.analysis.healthScore}/100</p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedProduct.analysis && (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <NovaGroupBadge group={selectedProduct.analysis.novaGroup} size="lg" />
-                    </div>
-                  )}
-
-                  {selectedProduct.upfAnalysis && selectedProduct.upfAnalysis.additiveMatches.length > 0 && (
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                        Additives Detected ({selectedProduct.upfAnalysis.additiveMatches.length})
-                      </p>
-                      <AdditivesList additives={selectedProduct.upfAnalysis.additiveMatches} />
-                    </div>
-                  )}
-
-                  {selectedProduct.upfAnalysis && selectedProduct.upfAnalysis.processingIndicators.length > 0 && (
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                        Processing Indicators
-                      </p>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedProduct.upfAnalysis.processingIndicators.map((pi, i) => (
-                          <Badge key={i} variant="outline" className="text-xs border-orange-300 text-orange-600 dark:text-orange-400">
-                            <Beaker className="h-3 w-3 mr-1" />
-                            {pi}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedProduct.analysis && selectedProduct.analysis.warnings.length > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Warnings</p>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedProduct.analysis.warnings.map((w, i) => (
-                          <Badge key={i} variant="outline" className="text-xs border-red-300 text-red-600 dark:text-red-400" data-testid={`badge-warning-${i}`}>
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            {w}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedProduct.analysis && (
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                        Ingredients ({selectedProduct.analysis.totalIngredients})
-                        {selectedProduct.analysis.upfCount > 0 && (
-                          <span className="text-red-500 ml-1">
-                            - {selectedProduct.analysis.upfCount} flagged
-                          </span>
-                        )}
-                      </p>
-                      <IngredientsList ingredients={selectedProduct.analysis.ingredients} />
-                    </div>
-                  )}
-
-                  <NutritionPanel nutriments={selectedProduct.nutriments} />
-
-                  <div className="flex flex-col gap-2 pt-2">
-                    <Button
-                      className="w-full gap-2"
-                      onClick={() => addToList.mutate(selectedProduct)}
-                      disabled={addToList.isPending}
-                      data-testid="button-detail-add-to-list"
-                    >
-                      <ShoppingCart className="h-4 w-4" />
-                      Add to Basket
-                      {selectedProduct.analysis?.isUltraProcessed && (
-                        <Badge variant="outline" className="text-[10px] border-yellow-400 text-yellow-600 dark:text-yellow-400 ml-1">UPF</Badge>
-                      )}
-                    </Button>
-
-                    <Button
-                      variant="outline"
-                      className="w-full gap-2"
-                      onClick={() => linkToTemplate.mutate(selectedProduct)}
-                      disabled={linkToTemplate.isPending}
-                      data-testid="button-link-template"
-                    >
-                      {linkToTemplate.isPending ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Layers className="h-4 w-4" />
-                      )}
-                      Create Meal Template
-                    </Button>
-
+              <div className="space-y-4">
+                {selectedProduct.image_url && (
+                  <div className="w-full h-44 bg-muted rounded-md overflow-hidden flex items-center justify-center">
+                    <img
+                      src={selectedProduct.image_url}
+                      alt={selectedProduct.product_name}
+                      className="h-full object-contain"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
                   </div>
+                )}
 
-                  {/* ── Choose Better ──────────────────────────────────────── */}
-                  {(() => {
-                    const detailWFAlt = getWholeFoodAlternative(selectedProduct.product_name);
-                    const currentSmp = selectedProduct.upfAnalysis?.smpRating ?? null;
-                    const betterOptions = rankChoices(
-                      searchResults.filter(p => p.barcode !== selectedProduct.barcode),
-                      currentSmp
-                    ).slice(0, 3);
-                    return (
-                      <div className="space-y-3 pt-2 border-t border-border" data-testid="section-choose-better-detail">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                          <Sparkles className="h-3.5 w-3.5 text-primary" />
-                          Choose Better
+                {selectedProduct.upfAnalysis?.thaExplanation && (
+                  <p className="text-sm text-muted-foreground italic">
+                    {selectedProduct.upfAnalysis.thaExplanation}
+                  </p>
+                )}
+
+                <div>
+                  {selectedProduct.ingredients_text ? (
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {selectedProduct.ingredients_text}
+                    </p>
+                  ) : (
+                    <Badge variant="outline" className="text-xs border-amber-400 text-amber-600 dark:text-amber-400">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      Ingredient detail incomplete — data not available in Open Food Facts
+                    </Badge>
+                  )}
+                </div>
+
+                {selectedProduct.upfAnalysis && selectedProduct.upfAnalysis.additiveMatches.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      Additives Detected ({selectedProduct.upfAnalysis.additiveMatches.length})
+                    </p>
+                    <AdditivesList additives={selectedProduct.upfAnalysis.additiveMatches} />
+                  </div>
+                )}
+
+                {selectedProduct.upfAnalysis && selectedProduct.upfAnalysis.processingIndicators.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      Processing Indicators
+                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedProduct.upfAnalysis.processingIndicators.map((pi, i) => (
+                        <Badge key={i} variant="outline" className="text-xs border-orange-300 text-orange-600 dark:text-orange-400">
+                          <Beaker className="h-3 w-3 mr-1" />
+                          {pi}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedProduct.analysis && selectedProduct.analysis.warnings.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Warnings</p>
+                    <div className="flex flex-wrap gap-1">
+                      {selectedProduct.analysis.warnings.map((w, i) => (
+                        <Badge key={i} variant="outline" className="text-xs border-red-300 text-red-600 dark:text-red-400" data-testid={`badge-warning-${i}`}>
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          {w}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedProduct.analysis && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                      Ingredients ({selectedProduct.analysis.totalIngredients})
+                      {selectedProduct.analysis.upfCount > 0 && (
+                        <span className="text-red-500 ml-1">- {selectedProduct.analysis.upfCount} flagged</span>
+                      )}
+                    </p>
+                    <IngredientsList ingredients={selectedProduct.analysis.ingredients} />
+                  </div>
+                )}
+
+                <NutritionPanel nutriments={selectedProduct.nutriments} />
+
+                <div className="flex flex-col gap-2 pt-2">
+                  <Button
+                    className="w-full gap-2"
+                    onClick={() => addToList.mutate(selectedProduct)}
+                    disabled={addToList.isPending}
+                    data-testid="button-detail-add-to-list"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    Add to Basket
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => linkToTemplate.mutate(selectedProduct)}
+                    disabled={linkToTemplate.isPending}
+                    data-testid="button-link-template"
+                  >
+                    {linkToTemplate.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
+                    Create Meal Template
+                  </Button>
+                </div>
+
+                {/* ── Choose Better ─────────────────────────────────── */}
+                {(() => {
+                  const detailWFAlt = getWholeFoodAlternative(selectedProduct.product_name);
+                  const currentSmp = selectedProduct.upfAnalysis?.smpRating ?? null;
+                  const betterOptions = rankChoices(
+                    searchResults.filter(p => p.barcode !== selectedProduct.barcode),
+                    currentSmp
+                  ).slice(0, 3);
+                  return (
+                    <div className="space-y-3 pt-2 border-t border-border" data-testid="section-choose-better-detail">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                        <Sparkles className="h-3.5 w-3.5 text-primary" />
+                        Choose Better
+                      </p>
+                      <div data-testid="section-simply-made-detail">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600 dark:text-green-400 flex items-center gap-1 mb-1.5">
+                          <ChefHat className="h-3 w-3" />
+                          Simply Made
                         </p>
-
-                        {/* Simply Made — always shown */}
-                        <div data-testid="section-simply-made-detail">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600 dark:text-green-400 flex items-center gap-1 mb-1.5">
-                            <ChefHat className="h-3 w-3" />
-                            Simply Made
-                          </p>
-                          {detailWFAlt ? (
-                            <div className="rounded-md border border-green-200 dark:border-green-800 bg-green-50/40 dark:bg-green-950/20 p-3 space-y-2">
-                              <div className="flex items-start justify-between gap-2">
-                                <p className="font-medium text-sm flex items-center gap-1.5">
-                                  <span>{detailWFAlt.emoji}</span>
-                                  {detailWFAlt.title}
-                                </p>
-                                <div className="flex items-center gap-1.5 flex-shrink-0">
-                                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${effortColor(detailWFAlt.effort)}`}>
-                                    {effortLabel(detailWFAlt.effort)}
-                                  </span>
-                                  <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                                    <Clock className="h-3 w-3" />
-                                    {formatTime(detailWFAlt.timeMinutes)}
-                                  </span>
-                                </div>
+                        {detailWFAlt ? (
+                          <div className="rounded-md border border-green-200 dark:border-green-800 bg-green-50/40 dark:bg-green-950/20 p-3 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="font-medium text-sm flex items-center gap-1.5">
+                                <span>{detailWFAlt.emoji}</span>
+                                {detailWFAlt.title}
+                              </p>
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${effortColor(detailWFAlt.effort)}`}>{effortLabel(detailWFAlt.effort)}</span>
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Clock className="h-3 w-3" />{formatTime(detailWFAlt.timeMinutes)}</span>
                               </div>
-                              {showDetailWFRecipe && (
-                                <>
-                                  <ul className="space-y-0.5">
-                                    {detailWFAlt.ingredients.map((ing, i) => (
-                                      <li key={i} className="text-xs flex items-start gap-1.5">
-                                        <span className="text-muted-foreground mt-0.5 flex-shrink-0">·</span>
-                                        {ing}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                  <p className="text-xs leading-relaxed">{detailWFAlt.method}</p>
-                                  {detailWFAlt.tip && (
-                                    <p className="text-[11px] text-muted-foreground italic leading-relaxed border-t border-green-200 dark:border-green-800 pt-1.5">
-                                      💡 {detailWFAlt.tip}
-                                    </p>
-                                  )}
-                                </>
-                              )}
+                            </div>
+                            {showDetailWFRecipe && (
+                              <ul className="space-y-0.5">
+                                {detailWFAlt.ingredients.map((ing, i) => (
+                                  <li key={i} className="text-xs flex items-start gap-1.5">
+                                    <span className="text-green-500 mt-0.5">•</span>
+                                    <span>{ing}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            )}
+                            <div className="flex items-center justify-between">
+                              <p className="text-[10px] text-muted-foreground">{detailWFAlt.description}</p>
                               <Button
-                                size="sm"
                                 variant="ghost"
-                                className="h-6 text-xs px-2 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 hover:text-green-800 dark:hover:text-green-300"
+                                className="h-6 text-xs px-2 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40"
                                 onClick={() => setShowDetailWFRecipe(v => !v)}
                                 data-testid="button-detail-view-wf-recipe"
                               >
@@ -1676,63 +1751,51 @@ export default function ProductsPage() {
                                 {showDetailWFRecipe ? 'Hide Recipe' : 'View Recipe'}
                               </Button>
                             </div>
-                          ) : (
-                            <p className="text-xs text-muted-foreground italic">No whole-food route found for this item.</p>
-                          )}
-                        </div>
-
-                        {/* Confidently Choose */}
-                        {betterOptions.length > 0 && (
-                          <div data-testid="section-confidently-choose-detail">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 dark:text-blue-400 flex items-center gap-1 mb-1.5">
-                              <ShoppingCart className="h-3 w-3" />
-                              Confidently Choose
-                            </p>
-                            <div className="space-y-2">
-                              {betterOptions.map((choice, idx) => {
-                                const whyBetter = buildWhyBetter(choice, currentSmp);
-                                return (
-                                  <div
-                                    key={choice.barcode || idx}
-                                    className="flex items-start gap-3 p-2 rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/20"
-                                    data-testid={`confidently-choose-${idx}`}
-                                  >
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium leading-tight truncate">{choice.product_name}</p>
-                                      {choice.brand && <p className="text-xs text-muted-foreground">{choice.brand}</p>}
-                                      <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                        {choice.upfAnalysis && <ScoreBadge score={choice.upfAnalysis.smpRating} size={18} isOrganic={choice.upfAnalysis.isOrganic} />}
-                                        {whyBetter.slice(0, 2).map((r, i) => (
-                                          <Badge key={i} className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 no-default-hover-elevate">
-                                            <Sparkles className="h-2 w-2 mr-0.5" />
-                                            {r}
-                                          </Badge>
-                                        ))}
-                                      </div>
-                                    </div>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-7 w-7 flex-shrink-0"
-                                      onClick={() => handleProductSelect(choice)}
-                                      data-testid={`button-view-confidently-${idx}`}
-                                    >
-                                      <ArrowRight className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                );
-                              })}
-                            </div>
                           </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground italic">No whole-food route found for this item.</p>
                         )}
                       </div>
-                    );
-                  })()}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </div>
+                      {betterOptions.length > 0 && (
+                        <div data-testid="section-confidently-choose-detail">
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 dark:text-blue-400 flex items-center gap-1 mb-1.5">
+                            <ShoppingCart className="h-3 w-3" />
+                            Confidently Choose
+                          </p>
+                          <div className="space-y-2">
+                            {betterOptions.map((choice, idx) => {
+                              const whyBetter = buildWhyBetter(choice, currentSmp);
+                              return (
+                                <div key={choice.barcode || idx} className="flex items-start gap-3 p-2 rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/20" data-testid={`confidently-choose-${idx}`}>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium leading-tight truncate">{choice.product_name}</p>
+                                    {choice.brand && <p className="text-xs text-muted-foreground">{choice.brand}</p>}
+                                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                      {choice.upfAnalysis && <ScoreBadge score={choice.upfAnalysis.smpRating} size={18} isOrganic={choice.upfAnalysis.isOrganic} />}
+                                      {whyBetter.slice(0, 2).map((r, i) => (
+                                        <Badge key={i} className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 no-default-hover-elevate">
+                                          <Sparkles className="h-2 w-2 mr-0.5" />{r}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0" onClick={() => handleProductSelect(choice)} data-testid={`button-view-confidently-${idx}`}>
+                                    <ArrowRight className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            </>)}
+          </DialogContent>
+        </Dialog>
+
       </div>
 
       <Dialog open={showCompare} onOpenChange={setShowCompare}>
@@ -1795,13 +1858,6 @@ export default function ProductsPage() {
                   <CompareRow label="NOVA Group" products={compareProducts} render={(p) => {
                     const nova = p.nova_group || p.analysis?.novaGroup;
                     return nova ? <NovaGroupBadge group={nova} /> : <span className="text-muted-foreground">N/A</span>;
-                  }} />
-                  <CompareRow label="Health Score" products={compareProducts} render={(p) => {
-                    if (!p.analysis) return <span className="text-muted-foreground">N/A</span>;
-                    return <HealthScoreCircle score={p.analysis.healthScore} size={40} />;
-                  }} highlightBest={(products) => {
-                    const scores = products.map(p => p.analysis?.healthScore ?? -1);
-                    return scores.indexOf(Math.max(...scores));
                   }} />
                   <CompareRow label="Additives" products={compareProducts} render={(p) => {
                     if (!p.upfAnalysis) return <span className="text-muted-foreground">N/A</span>;
