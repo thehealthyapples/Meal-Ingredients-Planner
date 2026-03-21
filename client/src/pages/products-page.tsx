@@ -1028,43 +1028,6 @@ export default function ProductsPage() {
           )}
         </AnimatePresence>
 
-        {intelligenceSettings?.eliteTrackingEnabled !== false && streakData && (streakData.currentEliteStreak > 0 || streakData.weeklyEliteCount > 0) && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <Card data-testid="card-streak-current">
-              <CardContent className="pt-4 pb-4 flex items-center gap-3">
-                <div className="p-2 rounded-md bg-orange-100 dark:bg-orange-900/30">
-                  <Flame className="h-5 w-5 text-orange-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Elite Streak</p>
-                  <p className="text-xl font-bold tabular-nums" data-testid="text-current-streak">{streakData.currentEliteStreak} day{streakData.currentEliteStreak !== 1 ? 's' : ''}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card data-testid="card-streak-best">
-              <CardContent className="pt-4 pb-4 flex items-center gap-3">
-                <div className="p-2 rounded-md bg-yellow-100 dark:bg-yellow-900/30">
-                  <Award className="h-5 w-5 text-yellow-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Best Streak</p>
-                  <p className="text-xl font-bold tabular-nums" data-testid="text-best-streak">{streakData.bestEliteStreak} day{streakData.bestEliteStreak !== 1 ? 's' : ''}</p>
-                </div>
-              </CardContent>
-            </Card>
-            <Card data-testid="card-streak-weekly">
-              <CardContent className="pt-4 pb-4 flex items-center gap-3">
-                <div className="p-2 rounded-md bg-green-100 dark:bg-green-900/30">
-                  <Zap className="h-5 w-5 text-green-500" />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">This Week</p>
-                  <p className="text-xl font-bold tabular-nums" data-testid="text-weekly-elite">{streakData.weeklyEliteCount} elite pick{streakData.weeklyEliteCount !== 1 ? 's' : ''}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
 
         <AnimatePresence>
           {showMealSelector && (
