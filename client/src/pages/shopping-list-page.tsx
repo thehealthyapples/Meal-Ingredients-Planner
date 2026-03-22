@@ -835,16 +835,41 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader className="pb-1">
-          <DialogTitle className="flex items-center gap-2 text-base">
-            <Microscope className="h-4 w-4 text-primary flex-shrink-0" />
-            <span className="truncate">Analyser: {capitalizeWords(item.productName)}</span>
-          </DialogTitle>
-          <p className="text-xs text-muted-foreground">See how your current product scores, then explore better options: Simply Made (whole-food route) and Confidently Choose (ranked packaged alternatives).</p>
+          {/* ── 1. Product header + score + quick verdict ─────────────── */}
+          <div className="flex items-start gap-3" data-testid="section-product-header">
+            <Microscope className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="text-base leading-snug">{capitalizeWords(item.productName)}</DialogTitle>
+              <p className={`text-xs font-medium mt-0.5 ${ratingColor(item.smpRating ?? null)}`}>
+                {insight.headline}
+              </p>
+            </div>
+            <ScoreBadge score={item.smpRating ?? 0} size={32} />
+          </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 pr-1">
 
-          {/* ── Section 1: Current Product ──────────────────────────────── */}
+          {/* ── 2. Why this scores the way it does ─────────────────────── */}
+          <div data-testid="section-why-score">
+            <SectionHeader icon={Info} label="Why this scores the way it does" color="text-muted-foreground" />
+            <div className="rounded-lg border border-border/60 bg-muted/20 px-4 py-3 space-y-2">
+              <p className="text-xs leading-relaxed text-foreground/90">
+                The Healthy Apples score is based on something simple that helped our family:
+              </p>
+              <p className="text-xs leading-relaxed text-foreground/90">
+                looking at ingredients and asking — are these foods we recognise, or are they more industrial additions?
+              </p>
+              <p className="text-xs leading-relaxed text-foreground/90">
+                The closer a product is to real, familiar ingredients, the higher it scores.
+              </p>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                You can also go further — filtering out specific additives or E-numbers to match what works best for you.
+              </p>
+            </div>
+          </div>
+
+          {/* ── 3. Current Product ──────────────────────────────────────── */}
           <div data-testid="section-current-product">
             <SectionHeader icon={Package} label="Current product" color="text-muted-foreground" />
             <Card className="border-border/60">
@@ -857,7 +882,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <ScoreBadge score={item.smpRating ?? 0} size={30} />
+                    <ScoreBadge score={item.smpRating ?? 0} size={28} />
                     <button
                       className="text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setShowCurrentDetail(v => !v)}
@@ -896,188 +921,231 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
             </Card>
           </div>
 
-          {/* ── Choose Better ───────────────────────────────────────────── */}
-          <div data-testid="section-choose-better">
-            <SectionHeader icon={Sparkles} label="Choose Better" color="text-primary" />
-
-            {/* Simply Made */}
-            <div className="mb-3" data-testid="section-simply-made">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600 dark:text-green-400 flex items-center gap-1 mb-2">
-                <ChefHat className="h-3 w-3" />
-                Simply Made
-              </p>
-              {wholeFoodAlt ? (
-                <Card className="border-green-200 dark:border-green-800 bg-green-50/40 dark:bg-green-950/20" data-testid="card-wholefood-alternative">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-semibold text-sm flex items-center gap-1.5">
-                          <span>{wholeFoodAlt.emoji}</span>
-                          {wholeFoodAlt.title}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${effortColor(wholeFoodAlt.effort)}`}>
-                          {effortLabel(wholeFoodAlt.effort)}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
-                          <Clock className="h-3 w-3" />
-                          {formatTime(wholeFoodAlt.timeMinutes)}
-                        </span>
-                      </div>
-                    </div>
-                    {showWFRecipe && (
-                      <>
-                        <div>
-                          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Ingredients</p>
-                          <ul className="space-y-0.5">
-                            {wholeFoodAlt.ingredients.map((ing, i) => (
-                              <li key={i} className="text-xs text-foreground flex items-start gap-1.5">
-                                <span className="text-muted-foreground mt-0.5 flex-shrink-0">·</span>
-                                {ing}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Method</p>
-                          <p className="text-xs leading-relaxed">{wholeFoodAlt.method}</p>
-                        </div>
-                        {wholeFoodAlt.tip && (
-                          <p className="text-[11px] text-muted-foreground italic leading-relaxed border-t border-green-200 dark:border-green-800 pt-2">
-                            💡 {wholeFoodAlt.tip}
-                          </p>
-                        )}
-                      </>
-                    )}
-                    <div className="flex items-center gap-2 pt-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs px-3 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 hover:text-green-800 dark:hover:text-green-300"
-                        onClick={() => setShowWFRecipe(v => !v)}
-                        data-testid="button-view-wf-recipe"
-                      >
-                        <ChefHat className="h-3 w-3 mr-1" />
-                        {showWFRecipe ? 'Hide Recipe' : 'View Recipe'}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs px-3 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 hover:text-green-800 dark:hover:text-green-300"
-                        onClick={() => addWFToBasket.mutate(wholeFoodAlt.ingredients)}
-                        disabled={addWFToBasket.isPending}
-                        data-testid="button-add-wf-to-basket"
-                      >
-                        {addWFToBasket.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <ShoppingCart className="h-3 w-3 mr-1" />}
-                        Add to Basket
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="border-border/60 bg-muted/30">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground">No whole-food route mapped for this item yet.</p>
-                  </CardContent>
-                </Card>
+          {/* ── 4. Cleaner shop option ──────────────────────────────────── */}
+          <div data-testid="section-cleaner-shop">
+            <div className="flex items-center justify-between mb-2">
+              <SectionHeader icon={ShoppingCart} label="Cleaner shop option" color="text-blue-500 dark:text-blue-400" />
+              {preferredStore && (
+                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                  <Store className="h-2.5 w-2.5" />{preferredStore} first
+                </span>
               )}
             </div>
-
-            {/* Confidently Choose */}
-            <div data-testid="section-confidently-choose">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 dark:text-blue-400 flex items-center gap-1">
-                  <ShoppingCart className="h-3 w-3" />
-                  Confidently Choose
-                </p>
-                {preferredStore && (
-                  <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <Store className="h-2.5 w-2.5" />{preferredStore} first
-                  </span>
-                )}
-              </div>
-              {isSearching ? (
-                <Card className="border-border/60">
-                  <CardContent className="p-4 flex items-center gap-2 text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
-                    <span className="text-xs">Searching for alternatives…</span>
-                  </CardContent>
-                </Card>
-              ) : isWholeFood_ ? (
-                <Card className="border-border/60 bg-muted/30">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground">This is already a whole food — any packaged version would be a step down, not up.</p>
-                  </CardContent>
-                </Card>
-              ) : rankedChoices.length > 0 ? (
-                <div className="space-y-2">
-                  {rankedChoices.map((choice, idx) => {
-                    const whyBetter = buildWhyBetter(choice, item.smpRating ?? null);
-                    return (
-                      <Card key={choice.barcode || idx} className="border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/20" data-testid={`card-confidently-choose-${idx}`}>
-                        <CardContent className="p-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0 flex-1">
-                              <p className="font-semibold text-sm leading-snug truncate">{choice.product_name}</p>
-                              {choice.brand && <p className="text-xs text-muted-foreground">{choice.brand}</p>}
-                            </div>
-                            <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                              <ScoreBadge score={choice.upfAnalysis?.smpRating ?? 0} size={26} />
-                              <Button size="sm" className="h-7 text-xs" onClick={() => handleSelectProduct(choice)} data-testid={`button-select-confidently-${idx}`}>
-                                <Check className="h-3 w-3 mr-1" />
-                                Select
-                              </Button>
-                            </div>
+            {isSearching ? (
+              <Card className="border-border/60">
+                <CardContent className="p-4 flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />
+                  <span className="text-xs">Searching for alternatives…</span>
+                </CardContent>
+              </Card>
+            ) : isWholeFood_ ? (
+              <Card className="border-border/60 bg-muted/30">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">This is already a whole food — any packaged version would be a step down, not up.</p>
+                </CardContent>
+              </Card>
+            ) : rankedChoices.length > 0 ? (
+              <div className="space-y-2">
+                {rankedChoices.map((choice, idx) => {
+                  const whyBetter = buildWhyBetter(choice, item.smpRating ?? null);
+                  return (
+                    <Card key={choice.barcode || idx} className="border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/20" data-testid={`card-cleaner-shop-${idx}`}>
+                      <CardContent className="p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-sm leading-snug truncate">{choice.product_name}</p>
+                            {choice.brand && <p className="text-xs text-muted-foreground">{choice.brand}</p>}
+                            {whyBetter.length > 0 && (
+                              <div className="mt-1.5 flex flex-wrap gap-1">
+                                {whyBetter.map((reason, i) => (
+                                  <Badge key={i} className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 no-default-hover-elevate">
+                                    <Sparkles className="h-2.5 w-2.5 mr-1" />
+                                    {reason}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                            {choice.availableStores && choice.availableStores.length > 0 && (
+                              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                                <Store className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                {choice.availableStores.map((s: string) => (
+                                  <Badge key={s} variant="outline" className="text-[10px] no-default-hover-elevate">{s}</Badge>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                          {whyBetter.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {whyBetter.map((reason, i) => (
-                                <Badge key={i} className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 no-default-hover-elevate">
-                                  <Sparkles className="h-2.5 w-2.5 mr-1" />
-                                  {reason}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-                          {choice.availableStores && choice.availableStores.length > 0 && (
-                            <div className="flex items-center gap-1 mt-2 flex-wrap">
-                              <Store className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                              {choice.availableStores.map((s: string) => (
-                                <Badge key={s} variant="outline" className="text-[10px] no-default-hover-elevate">{s}</Badge>
-                              ))}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              ) : products.length > 0 ? (
-                <Card className="border-border/60 bg-muted/30">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground">No clearly better packaged alternative found. Browse all options below.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="border-border/60 bg-muted/30">
-                  <CardContent className="p-4">
-                    <p className="text-xs text-muted-foreground">No search results yet.</p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+                          <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                            <ScoreBadge score={choice.upfAnalysis?.smpRating ?? 0} size={26} />
+                            <Button size="sm" className="h-7 text-xs" onClick={() => handleSelectProduct(choice)} data-testid={`button-select-cleaner-shop-${idx}`}>
+                              <Check className="h-3 w-3 mr-1" />
+                              Select
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : products.length > 0 ? (
+              <Card className="border-border/60 bg-muted/30">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">No clearly better packaged alternative found — try refining by ingredients below.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-border/60 bg-muted/30">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">No search results yet.</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
-          {/* ── Browse all products (collapsible) ───────────────────────── */}
-          <div data-testid="section-browse-all">
+          {/* ── 5. Whole-food / from-scratch option ─────────────────────── */}
+          <div data-testid="section-wholefood">
+            <SectionHeader icon={ChefHat} label="Whole-food / from-scratch option" color="text-green-600 dark:text-green-400" />
+            {wholeFoodAlt ? (
+              <Card className="border-green-200 dark:border-green-800 bg-green-50/40 dark:bg-green-950/20" data-testid="card-wholefood-alternative">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-sm flex items-center gap-1.5">
+                        <span>{wholeFoodAlt.emoji}</span>
+                        {wholeFoodAlt.title}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${effortColor(wholeFoodAlt.effort)}`}>
+                        {effortLabel(wholeFoodAlt.effort)}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                        <Clock className="h-3 w-3" />
+                        {formatTime(wholeFoodAlt.timeMinutes)}
+                      </span>
+                    </div>
+                  </div>
+                  {showWFRecipe && (
+                    <>
+                      <div>
+                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Ingredients</p>
+                        <ul className="space-y-0.5">
+                          {wholeFoodAlt.ingredients.map((ing, i) => (
+                            <li key={i} className="text-xs text-foreground flex items-start gap-1.5">
+                              <span className="text-muted-foreground mt-0.5 flex-shrink-0">·</span>
+                              {ing}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-1">Method</p>
+                        <p className="text-xs leading-relaxed">{wholeFoodAlt.method}</p>
+                      </div>
+                      {wholeFoodAlt.tip && (
+                        <p className="text-[11px] text-muted-foreground italic leading-relaxed border-t border-green-200 dark:border-green-800 pt-2">
+                          {wholeFoodAlt.tip}
+                        </p>
+                      )}
+                    </>
+                  )}
+                  <div className="flex items-center gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs px-3 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 hover:text-green-800 dark:hover:text-green-300"
+                      onClick={() => setShowWFRecipe(v => !v)}
+                      data-testid="button-view-wf-recipe"
+                    >
+                      <ChefHat className="h-3 w-3 mr-1" />
+                      {showWFRecipe ? 'Hide recipe' : 'View recipe'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 text-xs px-3 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 hover:text-green-800 dark:hover:text-green-300"
+                      onClick={() => addWFToBasket.mutate(wholeFoodAlt.ingredients)}
+                      disabled={addWFToBasket.isPending}
+                      data-testid="button-add-wf-to-basket"
+                    >
+                      {addWFToBasket.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <ShoppingCart className="h-3 w-3 mr-1" />}
+                      Add to basket
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-border/60 bg-muted/30">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">No whole-food route mapped for this item yet.</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* ── 6. Compare your options ─────────────────────────────────── */}
+          {(rankedChoices.length > 0 || wholeFoodAlt) && (
+            <div data-testid="section-compare-options">
+              <SectionHeader icon={Sparkles} label="Compare your options" color="text-primary" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {/* Current */}
+                <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2" data-testid="compare-card-current">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Current</p>
+                  <div className="flex items-center gap-2">
+                    <ScoreBadge score={item.smpRating ?? 0} size={22} />
+                    <span className="text-xs font-medium truncate">{capitalizeWords(item.productName)}</span>
+                  </div>
+                  <div className="space-y-1 text-[11px] text-muted-foreground">
+                    <div className="flex justify-between"><span>Effort</span><span className="font-medium text-foreground">None</span></div>
+                    <div className="flex justify-between"><span>Convenience</span><span className="font-medium text-foreground">High</span></div>
+                    <div className="flex justify-between"><span>Ingredients</span><span className={`font-medium ${(item.smpRating ?? 0) >= 4 ? 'text-green-600' : (item.smpRating ?? 0) >= 3 ? 'text-yellow-600' : 'text-red-500'}`}>{(item.smpRating ?? 0) >= 4 ? 'Clean' : (item.smpRating ?? 0) >= 3 ? 'Mixed' : 'Industrial'}</span></div>
+                  </div>
+                </div>
+                {/* Cleaner shop option */}
+                {rankedChoices.length > 0 && (
+                  <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/20 p-3 space-y-2" data-testid="compare-card-shop">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 dark:text-blue-400">Cleaner shop option</p>
+                    <div className="flex items-center gap-2">
+                      <ScoreBadge score={rankedChoices[0].upfAnalysis?.smpRating ?? 0} size={22} />
+                      <span className="text-xs font-medium truncate">{rankedChoices[0].product_name}</span>
+                    </div>
+                    <div className="space-y-1 text-[11px] text-muted-foreground">
+                      <div className="flex justify-between"><span>Effort</span><span className="font-medium text-foreground">Low</span></div>
+                      <div className="flex justify-between"><span>Convenience</span><span className="font-medium text-foreground">High</span></div>
+                      <div className="flex justify-between"><span>Ingredients</span><span className="font-medium text-green-600 dark:text-green-400">Cleaner</span></div>
+                    </div>
+                  </div>
+                )}
+                {/* Whole-food option */}
+                {wholeFoodAlt && (
+                  <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/20 p-3 space-y-2" data-testid="compare-card-wholefood">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600 dark:text-green-400">Whole-food option</p>
+                    <div className="flex items-center gap-2">
+                      <ScoreBadge score={5} size={22} />
+                      <span className="text-xs font-medium truncate">{wholeFoodAlt.title}</span>
+                    </div>
+                    <div className="space-y-1 text-[11px] text-muted-foreground">
+                      <div className="flex justify-between"><span>Effort</span><span className="font-medium text-foreground">{effortLabel(wholeFoodAlt.effort)}</span></div>
+                      <div className="flex justify-between"><span>Convenience</span><span className="font-medium text-foreground">Low</span></div>
+                      <div className="flex justify-between"><span>Ingredients</span><span className="font-medium text-green-600 dark:text-green-400">Real</span></div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── 7. Refine by ingredients ────────────────────────────────── */}
+          <div data-testid="section-refine">
             <button
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full text-left py-1"
               onClick={() => setShowBrowse(!showBrowse)}
               data-testid="button-toggle-browse"
             >
-              {showBrowse ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-              Browse all products {products.length > 0 && `(${products.length} found)`}
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              <span className="font-medium">Refine by ingredients</span>
+              {products.length > 0 && <span className="text-muted-foreground/70">({products.length} products found)</span>}
+              {showBrowse ? <ChevronUp className="h-3.5 w-3.5 ml-auto" /> : <ChevronDown className="h-3.5 w-3.5 ml-auto" />}
             </button>
             <AnimatePresence>
               {showBrowse && (
@@ -1122,27 +1190,27 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                             <CardContent className="pt-3 pb-3">
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 <div className="flex items-center justify-between gap-2">
-                                  <Label htmlFor="analyse-hide-upf" className="text-xs cursor-pointer">Hide ultra-processed</Label>
+                                  <Label htmlFor="analyse-hide-upf" className="text-xs cursor-pointer">Avoid industrial ingredients</Label>
                                   <Switch id="analyse-hide-upf" checked={hideUltraProcessed} onCheckedChange={setHideUltraProcessed} data-testid="switch-analyse-hide-upf" />
                                 </div>
                                 <div className="flex items-center justify-between gap-2">
-                                  <Label htmlFor="analyse-hide-additives" className="text-xs cursor-pointer">Hide high-risk additives</Label>
+                                  <Label htmlFor="analyse-hide-additives" className="text-xs cursor-pointer">Avoid specific additives</Label>
                                   <Switch id="analyse-hide-additives" checked={hideHighRiskAdditives} onCheckedChange={setHideHighRiskAdditives} data-testid="switch-analyse-hide-additives" />
                                 </div>
                                 <div className="flex items-center justify-between gap-2">
-                                  <Label htmlFor="analyse-hide-emulsifiers" className="text-xs cursor-pointer">Hide emulsifiers</Label>
+                                  <Label htmlFor="analyse-hide-emulsifiers" className="text-xs cursor-pointer">Avoid emulsifiers</Label>
                                   <Switch id="analyse-hide-emulsifiers" checked={hideEmulsifiers} onCheckedChange={setHideEmulsifiers} data-testid="switch-analyse-hide-emulsifiers" />
                                 </div>
                                 <div className="flex items-center justify-between gap-2">
-                                  <Label htmlFor="analyse-hide-acidity" className="text-xs cursor-pointer">Hide acidity regulators</Label>
+                                  <Label htmlFor="analyse-hide-acidity" className="text-xs cursor-pointer">Avoid acidity regulators</Label>
                                   <Switch id="analyse-hide-acidity" checked={hideAcidityRegulators} onCheckedChange={setHideAcidityRegulators} data-testid="switch-analyse-hide-acidity" />
                                 </div>
                                 <div className="flex items-center justify-between gap-2">
-                                  <Label htmlFor="analyse-hide-bovaer" className="text-xs cursor-pointer">Exclude Bovaer-risk</Label>
+                                  <Label htmlFor="analyse-hide-bovaer" className="text-xs cursor-pointer">Avoid Bovaer-risk products</Label>
                                   <Switch id="analyse-hide-bovaer" checked={hideBovaer} onCheckedChange={setHideBovaer} data-testid="switch-analyse-hide-bovaer" />
                                 </div>
                                 <div className="space-y-1">
-                                  <Label className="text-xs">Min THA Score</Label>
+                                  <Label className="text-xs">Minimum THA score</Label>
                                   <div className="flex items-center gap-1">
                                     {[0, 1, 2, 3, 4, 5].map(r => (
                                       <Button key={r} size="sm" variant={minRating === r ? 'default' : 'outline'} onClick={() => setMinRating(r)} className="h-6 px-2 text-xs" data-testid={`button-analyse-min-rating-${r}`}>

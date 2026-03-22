@@ -1,0 +1,314 @@
+#6B - Analyser Page Restructure + Additive Classification Fix for THA Scoring
+
+What & Why
+Restructure the dedicated Analyser page into a clear decision-support page and align it with the current THA scoring philosophy.
+
+This pass has two linked goals:
+
+1. Rebuild the Analyser page around a clear comparison structure:
+- current product
+- cleaner shop option
+- whole-food / from-scratch option
+
+2. Update the additive/scoring logic so it reflects an important THA rule:
+- herb extracts and natural flavourings must be classified as additives
+
+This is important because the current behaviour is producing misleading equivalence in some products. For example, Heinz Tomato Ketchup was scoring the same as Wilkin & Sons ketchup, even though THA does not consider those products the same quality. We want the scoring and analysis system to reflect that difference more honestly.
+
+Core product principle
+The Analyser should help users answer:
+- what is this product?
+- why did it score like this?
+- what is a cleaner packaged option?
+- what is the whole-food option?
+- what should I do next?
+
+The scoring explanation should also align with the current THA philosophy:
+- real, familiar ingredients score better
+- industrial additions reduce the score
+- users can go further by filtering additives and E-numbers
+- at THA, herb extracts and natural flavourings are treated as additives
+
+Done looks like
+
+Analyser page structure
+- The dedicated Analyser page is clearly laid out in the following order:
+  1. Product header + score + quick verdict
+  2. Why this scores the way it does
+  3. Current product
+  4. Cleaner shop option
+  5. Whole-food / from-scratch option
+  6. Compare your options
+  7. Refine by ingredients
+  8. Action area
+
+Scoring philosophy placement
+- The full THA score explanation appears near the top of the Analyser page in a “Why this scores the way it does” section
+- It is not hidden in a tooltip only
+- It should feel like a trust-building explanation
+
+Scoring rule update
+- THA now classifies herb extracts and natural flavourings as additives
+- This classification is reflected consistently in:
+  - score calculation
+  - analyser explanations
+  - filtering where relevant
+- Heinz Tomato Ketchup and Wilkin & Sons ketchup should no longer incorrectly score the same if their ingredient quality differs due to these additive rules
+
+Language consistency
+- Use the agreed THA language system
+- Prefer terms like:
+  - real ingredients
+  - industrial ingredients
+  - refine by ingredients
+  - specific additives
+- Avoid overly technical or fragmented language where not needed
+
+Scope safety
+- Keep this pass focused on the dedicated Analyser page and directly related scoring/additive classification logic
+- Do not redesign unrelated pages
+- Do not rebuild the entire rating engine unless needed for this rule update
+- Do not drift into homepage/demo/onboarding/auth work
+
+Out of scope
+- Full landing page work
+- Demo mode work
+- Broad basket redesign
+- Full ratings system rewrite beyond the needed additive-classification update
+- Major backend architecture refactors
+- Full CMS/story/about content work
+
+Primary goal
+Turn the Analyser into a structured THA comparison page and ensure the score logic reflects THA’s actual ingredient philosophy, including classification of herb extracts and natural flavourings as additives.
+
+Tasks
+
+T001 — Inspect current Analyser page and current scoring/additive logic
+Inspect:
+- the dedicated Analyser page
+- current score explanation placement
+- current additive matching/classification logic
+- current alternative logic for shop swaps / whole-food options
+- how analysis is opened from basket/product contexts
+
+In the implementation summary, explain:
+- how the page worked before
+- where the score explanation previously lived (if anywhere)
+- how natural flavourings and herb extracts were previously treated
+
+T002 — Restructure the Analyser page into the agreed section order
+Refactor the page into this exact content order:
+
+1. Product header + score + quick verdict
+2. Why this scores the way it does
+3. Current product
+4. Cleaner shop option
+5. Whole-food / from-scratch option
+6. Compare your options
+7. Refine by ingredients
+8. Action area
+
+Requirements
+- make each section visually distinct
+- keep the page easy to scan
+- maintain responsive behaviour
+- preserve existing useful data where possible
+- do not overload the top of the page with too much text
+
+T003 — Add the full THA score explanation in the correct location
+Add a dedicated section near the top of the Analyser page titled something like:
+- "Why this scores the way it does"
+
+Use this wording as the full explanation block:
+
+"The Healthy Apples score is based on something simple that helped our family:
+
+looking at ingredients and asking — are these foods we recognise, or are they more industrial additions?
+
+The closer a product is to real, familiar ingredients, the higher it scores.
+
+You can also go further — filtering out specific additives or E-numbers to match what works best for you."
+
+Requirements
+- place this directly below the header/score/quick verdict area
+- style it as a trust-building information panel or expandable content block
+- do not hide it entirely behind a tooltip
+- keep it readable and premium
+
+T004 — Build the header + quick verdict section
+At the top of the Analyser page, show:
+- product image if available
+- product name
+- THA score / apple rating
+- a one-line quick verdict
+
+Example intent:
+- "This product is convenient, but contains some industrial ingredients that lower its score."
+or equivalent based on the actual product data
+
+Requirements
+- the user should understand the product verdict within seconds
+- keep this section concise
+
+T005 — Improve the Current product section
+Ensure the Current product section clearly explains:
+- THA view / score
+- what affects the score
+- any convenience/value upside where relevant
+
+Requirements
+- should not sound like punishment
+- should feel balanced and informative
+- should clearly call out relevant additive/processing concerns
+
+T006 — Improve the Cleaner shop option section
+Ensure the Cleaner shop option section shows a better packaged/shop alternative where available.
+
+Requirements
+- explain why it is cleaner/better
+- examples:
+  - fewer additives
+  - no flavourings / no herb extracts where relevant
+  - shorter ingredient list
+  - closer to simple kitchen ingredients
+  - better THA score
+- keep it practical and shopping-relevant
+
+T007 — Improve the Whole-food / from-scratch option section
+Ensure the page shows a whole-food or from-scratch option where relevant.
+
+Requirements
+- include:
+  - option title
+  - basic ingredients
+  - time
+  - effort
+  - quick method summary
+- be honest about effort/time
+- do not suppress more involved options; present them honestly
+- keep the section practical and calm
+
+T008 — Add a clear “Compare your options” section
+Add a compact comparison section that helps the user compare:
+- Current product
+- Cleaner shop option
+- Whole-food option
+
+Suggested comparison dimensions
+- THA score
+- effort
+- convenience
+- ingredient simplicity
+
+Requirements
+- desktop can use a compact comparison table or aligned cards
+- mobile should use stacked cards
+- keep this section fast to read
+
+T009 — Rename / align filter language to THA wording
+Where filters appear on the Analyser page, align them to the THA language system.
+
+Preferred visible wording
+- "Refine by ingredients"
+- "Avoid industrial ingredients"
+- "Avoid specific additives"
+
+Do not lead with overly technical wording where avoidable.
+
+If additive and E-number filters already exist, keep the capability but improve the labels.
+
+T010 — Update additive classification: herb extracts and natural flavourings must count as additives
+This is a required scoring/data rule change.
+
+At THA we are classifying:
+- herb extracts
+- natural flavourings / natural flavorings
+
+as additives.
+
+Requirements
+- update the relevant additive detection/classification logic
+- ensure this affects score calculation appropriately
+- ensure this affects analyser explanation appropriately
+- ensure this affects filtering where relevant and already supported
+- classification should be normalization-safe and case-insensitive
+- do not implement this as a fragile one-off ketchup exception
+
+Important product example
+- Heinz Tomato Ketchup should not score the same as Wilkin & Sons ketchup if the ingredient difference includes flavourings / herb extracts and THA considers those lower quality
+- The scoring system must reflect that distinction
+
+T011 — Sanity-check tomato ketchup comparison
+As a validation case, confirm that the updated classification logic distinguishes products like:
+- Heinz Tomato Ketchup
+- Wilkin & Sons ketchup
+
+where ingredient quality differs under THA philosophy.
+
+Requirements
+- do not hardcode brand-specific scores
+- ensure the distinction comes from the ingredient/additive rules
+- report in the implementation summary what changed and why
+
+T012 — Reuse existing logic where possible, keep v1 maintainable
+Requirements
+- reuse current THA scoring and analysis logic where sensible
+- add only the minimum needed updates to support:
+  - the new analyser structure
+  - herb extract / natural flavouring additive classification
+- prefer maintainable helper/mapping logic over one-off conditions
+
+T013 — Keep implementation tightly scoped
+Focus on:
+- dedicated Analyser page
+- related presentational components
+- additive classification / score explanation logic directly supporting this work
+- relevant filter labels in this surface if present
+
+Do not drift into:
+- homepage/auth/demo/onboarding work
+- broad basket redesign
+- complete rating-engine rewrite
+- unrelated page cleanup
+
+Implementation guidance
+- the Analyser should feel like a THA signature page
+- keep the page premium, structured, and easy to scan
+- keep the language human and consistent
+- use the score explanation as a trust layer
+- use the new additive classification to better reflect THA’s actual philosophy
+- do not hide meaningful trade-offs from the user
+
+Relevant files
+- the dedicated Analyser page component
+- current product analysis / basket analysis components and helpers
+- current THA scoring / additive analysis logic
+- any current filter-label or additive classification helper files
+- routing/navigation files connected to opening the Analyser
+- any shared UI components used for score display / comparison cards / filter sections
+
+Acceptance checklist
+- Analyser page follows the agreed section order
+- full THA score explanation is added near the top of the page
+- page clearly shows:
+  - current product
+  - cleaner shop option
+  - whole-food option
+- compare-your-options section exists
+- filter language is aligned toward:
+  - refine by ingredients
+  - industrial ingredients
+  - specific additives
+- herb extracts and natural flavourings are now classified as additives
+- this classification affects scoring and analysis consistently
+- products like Heinz ketchup and Wilkin & Sons ketchup no longer incorrectly collapse to the same THA quality judgement if ingredient quality differs
+- implementation remains tightly scoped
+
+At the end, provide a concise implementation summary covering
+- files changed
+- how the Analyser layout changed
+- where the score explanation was placed
+- how herb extracts and natural flavourings are now classified
+- how this changed score behaviour in the ketchup example
+- any existing logic reused
+- any sensible next-step recommendations strictly related to improving the Analyser / additive classification

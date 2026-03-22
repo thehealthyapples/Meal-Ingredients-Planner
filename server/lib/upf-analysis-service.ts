@@ -181,6 +181,7 @@ export function calculateAdditiveRating(
     "yeast extract",
     "natural flavour",    // covers natural flavouring / natural flavours
     "natural flavor",     // American spelling
+    "herb extract",       // covers herb extracts, spice and herb extracts
     "maltodextrin",
     "dextrose",
     "glucose syrup",
