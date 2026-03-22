@@ -181,7 +181,6 @@ export function calculateAdditiveRating(
     "yeast extract",
     "natural flavour",    // covers natural flavouring / natural flavours
     "natural flavor",     // American spelling
-    "herb extract",       // covers herb extracts, spice and herb extracts
     "maltodextrin",
     "dextrose",
     "glucose syrup",
@@ -190,8 +189,16 @@ export function calculateAdditiveRating(
     "invert sugar",
   ];
 
+  // Herb/spice/plant extract detection via normalised pattern matching.
+  // Matches: "herb extract(s)", "rosemary extract", "spice extract", "plant extract",
+  //          "botanical extract", "spice and herb extracts", etc.
+  // Guard: plain "herbs" alone does NOT match — the word must directly precede "extract(s)".
+  // Case-insensitive; singular and plural handled by `s?` quantifier.
+  const HERB_EXTRACT_PATTERN = /\b(?:herb|spice|plant|botanical|rosemary|thyme|oregano|basil|sage|bay|parsley|coriander|fennel|tarragon|mint|marjoram|lavender|chamomile|turmeric|ginger|paprika|celery|elderflower|elderberry|hibiscus)\s+extracts?\b/i;
+  const herbExtractHit = HERB_EXTRACT_PATTERN.test(text) ? 1 : 0;
+
   const softCount = SOFT_UPF_TERMS.filter(term => text.includes(term)).length;
-  const effectiveCount = additiveCount + softCount;
+  const effectiveCount = additiveCount + softCount + herbExtractHit;
 
   // Pure 5→1 mapping — NOVA is not a factor
   if (effectiveCount === 0) return 5;
