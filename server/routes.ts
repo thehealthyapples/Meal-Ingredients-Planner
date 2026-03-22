@@ -1306,7 +1306,42 @@ export async function registerRoutes(
           };
         });
 
-      res.json({ products: results, hasMore });
+      // ── Canonical product grouping ────────────────────────────────────────
+      // The same physical product (e.g. Heinz Ketchup 570g) can exist in OFF
+      // under multiple barcodes — one per retailer submission. Group them into
+      // a single canonical entry and merge retailer lists.
+      //
+      // Identity key: normalised(brand) | normalised(name) | normalised(size)
+      // Size must match so that 342g and 570g are never merged.
+      // Products with empty name or brand still get their own distinct key.
+      const _norm = (s: string | null | undefined) =>
+        (s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      const _canonicalKey = (p: any) =>
+        `${_norm(p.brand)}|${_norm(p.product_name)}|${_norm(p.quantity)}`;
+
+      const _groups = new Map<string, any[]>();
+      for (const p of results) {
+        const key = _canonicalKey(p);
+        if (!_groups.has(key)) _groups.set(key, []);
+        _groups.get(key)!.push(p);
+      }
+
+      const grouped = Array.from(_groups.values()).map(group => {
+        if (group.length === 1) return group[0];
+        // Prefer: UK product with image > any product with image > first entry
+        const best =
+          group.find((p: any) => p.isUK && p.image_url) ||
+          group.find((p: any) => p.image_url) ||
+          group[0];
+        // Merge availableStores across all entries for this canonical product
+        const mergedStores = Array.from(
+          new Set(group.flatMap((p: any) => p.availableStores || []))
+        );
+        return { ...best, availableStores: mergedStores };
+      });
+
+      res.json({ products: grouped, hasMore });
     } catch (error) {
       console.error('Product search error:', error);
       res.json({ products: [], hasMore: false });

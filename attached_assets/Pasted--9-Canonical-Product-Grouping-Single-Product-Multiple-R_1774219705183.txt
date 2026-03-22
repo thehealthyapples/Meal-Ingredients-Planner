@@ -1,0 +1,101 @@
+#9 - Canonical Product Grouping — Single Product, Multiple Retailers
+
+What & Why
+Currently, the analyser and product views show duplicate entries for the same product across different supermarkets (e.g. Heinz Tomato Ketchup appears multiple times — once per retailer).
+
+This creates clutter and weakens the product experience.
+
+We need to restructure this so that:
+- one product is shown once
+- all retailers selling that product are grouped inside it
+
+Core principle
+A product should be identified independently of retailer.
+
+Retailers are attributes of the product, not separate products.
+
+Done looks like
+
+- Heinz Tomato Ketchup appears once in the analyser
+- it has a single score and analysis
+- a "Available at" section lists all retailers and prices
+- duplicate product cards for each supermarket no longer appear
+
+Tasks
+
+T001 — Identify how products are currently keyed
+Inspect how products are currently identified in:
+- product search
+- analyser
+- basket
+
+Determine:
+- what fields differ per retailer
+- what fields are identical (name, ingredients, size)
+
+T002 — Define canonical product identity
+Group products using a normalized identity based on:
+- product name (normalized)
+- brand
+- size/weight
+
+Example:
+"heinz tomato ketchup 570g"
+
+Do not include retailer in this identity.
+
+T003 — Group retailer entries under a single product
+For matching products:
+- merge into one canonical product
+- attach retailer entries as a list:
+  - retailer name
+  - price
+  - URL if available
+
+T004 — Update analyser page UI
+Replace duplicate product cards with:
+
+Single product card:
+- name
+- score
+- analysis
+
+Add new section:
+"Available at"
+- list retailers and prices
+
+T005 — Ensure scoring runs once per product
+Ensure:
+- score is calculated once per canonical product
+- not per retailer
+
+T006 — Maintain correct behaviour for variants
+Do NOT merge:
+- different sizes (e.g. 342g vs 570g)
+- materially different variants
+
+Only merge true identical products.
+
+T007 — Keep implementation scoped
+Do not:
+- redesign the entire product system
+- change external APIs
+- introduce heavy new data models
+
+Focus on:
+- grouping logic
+- analyser display
+
+Acceptance checklist
+
+- duplicate retailer-specific products removed from analyser
+- one product shown with multiple retailers
+- score and analysis are consistent across retailers
+- UI clearly shows where product can be bought
+- no regressions in product selection or basket flow
+
+At the end, provide a summary:
+- how products were grouped
+- what fields were used for matching
+- how retailer data is attached
+- any limitations or edge cases
