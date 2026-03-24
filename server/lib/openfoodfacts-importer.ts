@@ -4,7 +4,7 @@ import { eq, and, or } from "drizzle-orm";
 import { log } from "../index";
 
 const SYSTEM_USER_ID = 0;
-const BASE_URL = "https://world.openfoodfacts.org";
+const BASE_URL = "https://world.openfoodfacts.net";
 
 interface OFFProduct {
   product_name?: string;

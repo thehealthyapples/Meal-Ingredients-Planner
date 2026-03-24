@@ -387,7 +387,7 @@ async function autoAnalyzeMeal(mealId: number) {
         try {
           const cleanIngredient = cleanIngredientForLookup(ingredient);
           const response = await axios.get(
-            `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(cleanIngredient)}&json=1&page_size=3`,
+            `https://world.openfoodfacts.net/cgi/search.pl?search_terms=${encodeURIComponent(cleanIngredient)}&json=1&page_size=3`,
             { timeout: 8000, headers: { 'User-Agent': 'SmartMealPlanner/1.0' } }
           );
 
@@ -1132,8 +1132,8 @@ export async function registerRoutes(
         fields: offFields,
       });
 
-      const ukUrl = `https://world.openfoodfacts.org/cgi/search.pl?${ukParams.toString()}`;
-      const globalUrl = `https://world.openfoodfacts.org/cgi/search.pl?${globalParams.toString()}`;
+      const ukUrl = `https://world.openfoodfacts.net/cgi/search.pl?${ukParams.toString()}`;
+      const globalUrl = `https://world.openfoodfacts.net/cgi/search.pl?${globalParams.toString()}`;
 
       const [ukResult, globalResult] = await Promise.allSettled([
         axios.get(ukUrl, offHeaders),
@@ -1911,8 +1911,8 @@ export async function registerRoutes(
       const altHeaders = { timeout: 15000, headers: { 'User-Agent': 'SmartMealPlanner/1.0 (contact: smartmealplanner@replit.app)' } };
 
       const [ukAltRes, globalAltRes] = await Promise.allSettled([
-        axios.get(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchTerms)}&json=1&page_size=12&fields=${altFields}&tagtype_0=countries&tag_contains_0=contains&tag_0=united-kingdom`, altHeaders),
-        axios.get(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(searchTerms)}&json=1&page_size=12&fields=${altFields}`, altHeaders),
+        axios.get(`https://world.openfoodfacts.net/cgi/search.pl?search_terms=${encodeURIComponent(searchTerms)}&json=1&page_size=12&fields=${altFields}&tagtype_0=countries&tag_contains_0=contains&tag_0=united-kingdom`, altHeaders),
+        axios.get(`https://world.openfoodfacts.net/cgi/search.pl?search_terms=${encodeURIComponent(searchTerms)}&json=1&page_size=12&fields=${altFields}`, altHeaders),
       ]);
 
       const ukAltProducts: any[] = ukAltRes.status === 'fulfilled' ? (ukAltRes.value.data.products || []) : [];
@@ -2085,7 +2085,7 @@ export async function registerRoutes(
             try {
               const cleanIngredient = cleanIngredientForLookup(ingredient);
               const response = await axios.get(
-                `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(cleanIngredient)}&json=1&page_size=3`,
+                `https://world.openfoodfacts.net/cgi/search.pl?search_terms=${encodeURIComponent(cleanIngredient)}&json=1&page_size=3`,
                 { timeout: 8000, headers: { 'User-Agent': 'SmartMealPlanner/1.0' } }
               );
 
@@ -2489,7 +2489,7 @@ export async function registerRoutes(
               return;
             }
 
-            const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(cleanName)}&json=1&page_size=5&fields=${OFF_FIELDS}&tagtype_0=countries&tag_contains_0=contains&tag_0=united-kingdom`;
+            const url = `https://world.openfoodfacts.net/cgi/search.pl?search_terms=${encodeURIComponent(cleanName)}&json=1&page_size=5&fields=${OFF_FIELDS}&tagtype_0=countries&tag_contains_0=contains&tag_0=united-kingdom`;
             const response = await axios.get(url, OFF_HEADERS);
             const products = response.data?.products || [];
             if (products.length === 0) {
@@ -4172,7 +4172,7 @@ export async function registerRoutes(
       }
 
       const OFF_FIELDS = 'code,product_name,product_name_en,brands,image_front_url,image_url,ingredients_text,ingredients_text_en,nutriments,nova_group,categories_tags,nutriscore_grade,countries_tags,stores_tags,stores,purchase_places_tags';
-      const offUrl = `https://world.openfoodfacts.org/api/v0/product/${barcode}.json?fields=${OFF_FIELDS}`;
+      const offUrl = `https://world.openfoodfacts.net/api/v0/product/${barcode}.json?fields=${OFF_FIELDS}`;
       const response = await axios.get(offUrl, {
         timeout: 15000,
         headers: { 'User-Agent': 'SmartMealPlanner/1.0 (contact: smartmealplanner@replit.app)' },
