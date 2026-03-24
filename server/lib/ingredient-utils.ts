@@ -99,7 +99,6 @@ const KEEP_PLURAL_COMPOUNDS = new Set([
   'lime leaves',
   'pandan leaves',
   'banana leaves',
-  'spring onions',
   'salad leaves',
   'mixed leaves',
   'baked beans',
@@ -507,6 +506,41 @@ export function parseIngredient(text: string): ParsedIngredient {
   };
 }
 
+const CANONICAL_ALIASES: Record<string, string> = {
+  'spring onion end': 'spring onion',
+  'spring onion ends': 'spring onion',
+  'spring onions end': 'spring onion',
+  'spring onions ends': 'spring onion',
+  'spring onion top': 'spring onion',
+  'spring onion tops': 'spring onion',
+  'spring onions top': 'spring onion',
+  'spring onions tops': 'spring onion',
+  'spring onion green': 'spring onion',
+  'spring onion greens': 'spring onion',
+  'spring onion trimmings': 'spring onion',
+  'sping onion': 'spring onion',
+  'sping onions': 'spring onion',
+  'sping onion end': 'spring onion',
+  'sping onion ends': 'spring onion',
+  'sping onions end': 'spring onion',
+  'spring opnion': 'spring onion',
+  'spring opnions': 'spring onion',
+  'spring opnion end': 'spring onion',
+  'spring opnions end': 'spring onion',
+  'scallion': 'spring onion',
+  'scallions': 'spring onion',
+  'green onion': 'spring onion',
+  'green onions': 'spring onion',
+  'plum tomatoes': 'plum tomato',
+  'can plum tomatoes': 'plum tomato',
+  'tinned plum tomato': 'plum tomato',
+  'tinned plum tomatoes': 'plum tomato',
+  'chopped tomatoes': 'chopped tomato',
+  'tinned chopped tomatoes': 'chopped tomato',
+  'tinned tomatoes': 'chopped tomato',
+  'canned tomatoes': 'chopped tomato',
+};
+
 export function normalizeName(name: string): string {
   let cleaned = name.toLowerCase().trim();
 
@@ -566,7 +600,8 @@ export function normalizeName(name: string): string {
     }
   }
 
-  return cleaned.trim();
+  cleaned = cleaned.trim();
+  return CANONICAL_ALIASES[cleaned] ?? cleaned;
 }
 
 export interface ConsolidatedItem {
