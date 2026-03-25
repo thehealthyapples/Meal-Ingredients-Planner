@@ -55,15 +55,12 @@ interface AdditiveMatchInfo {
   riskLevel: string;
   description: string | null;
   foundIn: string;
+  isRegulatory?: boolean;
 }
 
 interface UPFAnalysisInfo {
   upfScore: number;
-  smpRating: number;
-  hasCape: boolean;
-  smpScore: number;
-  isWholeFoodOverride?: boolean;
-  isOrganic?: boolean;
+  thaRating: number;
   additiveMatches: AdditiveMatchInfo[];
   processingIndicators: string[];
   ingredientCount: number;
@@ -72,18 +69,6 @@ interface UPFAnalysisInfo {
     additiveRisk: number;
     processingRisk: number;
     ingredientComplexityRisk: number;
-  };
-  smpPenalties?: {
-    nova: number;
-    highRiskAdditives: number;
-    emulsifiers: number;
-    acidityRegulators: number;
-    bovaerRisk: number;
-  };
-  smpBonuses?: {
-    organic: number;
-    superfoods: number;
-    simplicity: number;
   };
 }
 
@@ -227,27 +212,49 @@ function AdditivesList({ additives }: { additives: AdditiveMatchInfo[] }) {
     low: 'border-green-300 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20',
   };
 
-  return (
-    <div className="space-y-1.5" data-testid="additives-list">
-      {additives.map((a, i) => (
-        <div
-          key={i}
-          className={`flex items-start gap-2 text-xs p-2 rounded-md border ${riskColors[a.riskLevel] || riskColors.low}`}
-          data-testid={`additive-item-${i}`}
-        >
-          <Beaker className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="font-semibold">{a.name}</span>
-              <Badge variant="outline" className="text-[9px] py-0 px-1 border-current">{a.type}</Badge>
-              <Badge variant="outline" className="text-[9px] py-0 px-1 border-current">{a.riskLevel} risk</Badge>
-            </div>
-            {a.description && (
-              <p className="text-[11px] opacity-80 mt-0.5 leading-tight">{a.description}</p>
-            )}
-          </div>
+  const regulatory = additives.filter(a => a.isRegulatory);
+  const discretionary = additives.filter(a => !a.isRegulatory);
+
+  const AdditiveRow = ({ a, i }: { a: AdditiveMatchInfo; i: number }) => (
+    <div
+      key={i}
+      className={`flex items-start gap-2 text-xs p-2 rounded-md border ${riskColors[a.riskLevel] || riskColors.low}`}
+      data-testid={`additive-item-${i}`}
+    >
+      <Beaker className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="font-semibold">{a.name}</span>
+          <Badge variant="outline" className="text-[9px] py-0 px-1 border-current">{a.type}</Badge>
+          <Badge variant="outline" className="text-[9px] py-0 px-1 border-current">{a.riskLevel} risk</Badge>
         </div>
-      ))}
+        {a.description && (
+          <p className="text-[11px] opacity-80 mt-0.5 leading-tight">{a.description}</p>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="space-y-3" data-testid="additives-list">
+      {discretionary.length > 0 && (
+        <div className="space-y-1.5">
+          {regulatory.length > 0 && (
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Discretionary additives</p>
+          )}
+          {discretionary.map((a, i) => <AdditiveRow key={i} a={a} i={i} />)}
+        </div>
+      )}
+
+      {regulatory.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Regulatory requirement</p>
+          {regulatory.map((a, i) => <AdditiveRow key={i} a={a} i={i} />)}
+          <p className="text-[10px] text-muted-foreground leading-snug px-1">
+            Commonly added as part of UK food regulation (e.g. flour fortification), but still contributes to the overall ingredient profile.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -404,11 +411,11 @@ export default function ProductsPage() {
   });
 
   const recordStreakMutation = useMutation({
-    mutationFn: async (smpRating: number) => {
+    mutationFn: async (thaRating: number) => {
       const res = await fetch("/api/user/streak/record", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ smpRating }),
+        body: JSON.stringify({ thaRating }),
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed");
@@ -428,7 +435,7 @@ export default function ProductsPage() {
     imageUrl: string | null;
     novaGroup: number | null;
     nutriscoreGrade: string | null;
-    smpRating: number | null;
+    thaRating: number | null;
     upfScore: number | null;
     healthScore: number | null;
     scannedAt: string;
@@ -447,7 +454,7 @@ export default function ProductsPage() {
         imageUrl: product.image_url || null,
         novaGroup: product.nova_group || product.analysis?.novaGroup || null,
         nutriscoreGrade: product.nutriscore_grade || null,
-        smpRating: product.upfAnalysis?.smpRating || null,
+        thaRating: product.upfAnalysis?.thaRating || null,
         upfScore: product.upfAnalysis?.upfScore || null,
         healthScore: product.analysis?.healthScore || null,
         source,
@@ -491,10 +498,10 @@ export default function ProductsPage() {
 
         saveToHistoryMutation.mutate({ product: data.product, source: "barcode" });
 
-        if (data.product.upfAnalysis?.smpRating) {
-          playSound(data.product.upfAnalysis.smpRating);
+        if (data.product.upfAnalysis?.thaRating) {
+          playSound(data.product.upfAnalysis.thaRating);
           if (intelligenceSettings?.eliteTrackingEnabled !== false) {
-            recordStreakMutation.mutate(data.product.upfAnalysis.smpRating);
+            recordStreakMutation.mutate(data.product.upfAnalysis.thaRating);
           }
         }
 
@@ -513,11 +520,11 @@ export default function ProductsPage() {
     setSelectedProduct(product);
     setShowDetailWFRecipe(false);
     saveToHistoryMutation.mutate({ product, source: "search" });
-    if (product.upfAnalysis?.smpRating && soundEnabled) {
-      playSound(product.upfAnalysis.smpRating);
+    if (product.upfAnalysis?.thaRating && soundEnabled) {
+      playSound(product.upfAnalysis.thaRating);
     }
-    if (product.upfAnalysis?.smpRating && intelligenceSettings?.eliteTrackingEnabled !== false) {
-      recordStreakMutation.mutate(product.upfAnalysis.smpRating);
+    if (product.upfAnalysis?.thaRating && intelligenceSettings?.eliteTrackingEnabled !== false) {
+      recordStreakMutation.mutate(product.upfAnalysis.thaRating);
     }
   };
 
@@ -635,7 +642,7 @@ export default function ProductsPage() {
     )) return false;
     if (hideSeedOils && isSeedOilProduct(p)) return false;
     if (hideBovaer && isBovaerRiskProduct(p)) return false;
-    if (minRating > 0 && (p.upfAnalysis?.smpRating ?? 0) < minRating) return false;
+    if (minRating > 0 && (p.upfAnalysis?.thaRating ?? 0) < minRating) return false;
     if (excludedAdditives.size > 0 && p.upfAnalysis?.additiveMatches.some(a => excludedAdditives.has(a.name))) return false;
     return true;
   });
@@ -665,8 +672,8 @@ export default function ProductsPage() {
 
   const displayResults = useMemo(() => {
     const base = [...filteredResults];
-    if (sortBy === 'score-desc') return base.sort((a, b) => (b.upfAnalysis?.smpRating ?? 0) - (a.upfAnalysis?.smpRating ?? 0));
-    if (sortBy === 'score-asc') return base.sort((a, b) => (a.upfAnalysis?.smpRating ?? 0) - (b.upfAnalysis?.smpRating ?? 0));
+    if (sortBy === 'score-desc') return base.sort((a, b) => (b.upfAnalysis?.thaRating ?? 0) - (a.upfAnalysis?.thaRating ?? 0));
+    if (sortBy === 'score-asc') return base.sort((a, b) => (a.upfAnalysis?.thaRating ?? 0) - (b.upfAnalysis?.thaRating ?? 0));
     if (sortBy === 'shop') return base.sort((a, b) => (a.availableStores?.[0] ?? 'zzz').localeCompare(b.availableStores?.[0] ?? 'zzz'));
     return base;
   }, [filteredResults, sortBy]);
@@ -1220,8 +1227,8 @@ export default function ProductsPage() {
                           {item.brand && (
                             <span className="text-xs text-muted-foreground truncate">{item.brand}</span>
                           )}
-                          {item.smpRating !== null && (
-                            <ScoreBadge score={item.smpRating} size={20} />
+                          {item.thaRating !== null && (
+                            <ScoreBadge score={item.thaRating} size={20} />
                           )}
                           {novaConfig && (
                             <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${novaConfig.bg} ${novaConfig.color}`}>
@@ -1336,7 +1343,7 @@ export default function ProductsPage() {
                                       {product.brand && (<p className="text-xs text-muted-foreground mt-0.5">{product.brand}</p>)}
                                       {product.availableStores && product.availableStores.length > 0 && (<p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1"><Store className="h-3 w-3 flex-shrink-0" />{product.availableStores.slice(0, 2).join(' · ')}</p>)}
                                     </div>
-                                    {product.upfAnalysis && (<div className="flex-shrink-0"><ScoreBadge score={product.upfAnalysis.smpRating} size={34} isOrganic={product.upfAnalysis.isOrganic} /></div>)}
+                                    {product.upfAnalysis && (<div className="flex-shrink-0"><ScoreBadge score={product.upfAnalysis.thaRating} size={34}  /></div>)}
                                   </div>
                                 </div>
                               </div>
@@ -1433,7 +1440,7 @@ export default function ProductsPage() {
                                 </div>
                                 {product.upfAnalysis && (
                                   <div className="flex-shrink-0">
-                                    <ScoreBadge score={product.upfAnalysis.smpRating} size={34} isOrganic={product.upfAnalysis.isOrganic} />
+                                    <ScoreBadge score={product.upfAnalysis.thaRating} size={34}  />
                                   </div>
                                 )}
                               </div>
@@ -1550,7 +1557,7 @@ export default function ProductsPage() {
                     )}
                   </div>
                   {selectedProduct.upfAnalysis && (
-                    <ScoreBadge score={selectedProduct.upfAnalysis.smpRating} size={48} isOrganic={selectedProduct.upfAnalysis.isOrganic} />
+                    <ScoreBadge score={selectedProduct.upfAnalysis.thaRating} size={48} />
                   )}
                 </div>
               </DialogHeader>
@@ -1664,7 +1671,7 @@ export default function ProductsPage() {
                 {/* ── Choose Better ─────────────────────────────────── */}
                 {(() => {
                   const detailWFAlt = getWholeFoodAlternative(selectedProduct.product_name);
-                  const currentSmp = selectedProduct.upfAnalysis?.smpRating ?? null;
+                  const currentSmp = selectedProduct.upfAnalysis?.thaRating ?? null;
                   const betterOptions = rankChoices(
                     searchResults.filter(p => p.barcode !== selectedProduct.barcode),
                     currentSmp
@@ -1734,7 +1741,7 @@ export default function ProductsPage() {
                                     <p className="text-sm font-medium leading-tight truncate">{choice.product_name}</p>
                                     {choice.brand && <p className="text-xs text-muted-foreground">{choice.brand}</p>}
                                     <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                      {choice.upfAnalysis && <ScoreBadge score={choice.upfAnalysis.smpRating} size={18} isOrganic={choice.upfAnalysis.isOrganic} />}
+                                      {choice.upfAnalysis && <ScoreBadge score={choice.upfAnalysis.thaRating} size={18}  />}
                                       {whyBetter.slice(0, 2).map((r, i) => (
                                         <Badge key={i} className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 no-default-hover-elevate">
                                           <Sparkles className="h-2 w-2 mr-0.5" />{r}
@@ -1804,11 +1811,11 @@ export default function ProductsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <CompareRow label="SMP Rating" products={compareProducts} render={(p) => {
+                  <CompareRow label="THA Score" products={compareProducts} render={(p) => {
                     if (!p.upfAnalysis) return <span className="text-muted-foreground">N/A</span>;
-                    return <ScoreBadge score={p.upfAnalysis.smpRating} size={20} isOrganic={p.upfAnalysis.isOrganic} />;
+                    return <ScoreBadge score={p.upfAnalysis.thaRating} size={20} />;
                   }} highlightBest={(products) => {
-                    const ratings = products.map(p => p.upfAnalysis?.smpRating ?? -1);
+                    const ratings = products.map(p => p.upfAnalysis?.thaRating ?? -1);
                     return ratings.indexOf(Math.max(...ratings));
                   }} />
                   <CompareRow label="UPF Score" products={compareProducts} render={(p) => {

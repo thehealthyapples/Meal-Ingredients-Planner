@@ -79,7 +79,7 @@ export const api = {
         }),
         nutriscoreGrade: z.string().nullable(),
         novaGroup: z.number().nullable(),
-        smpRating: z.number(),
+        thaRating: z.number(),
         isDrink: z.boolean(),
         isBabyFood: z.boolean(),
         isReadyMeal: z.boolean(),

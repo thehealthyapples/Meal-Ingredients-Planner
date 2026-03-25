@@ -54,7 +54,7 @@ export interface IStorage {
   addShoppingListItem(userId: number, item: InsertShoppingListItem): Promise<ShoppingListItem>;
   addOrConsolidateShoppingListItem(userId: number, item: InsertShoppingListItem): Promise<ShoppingListItem>;
   updateShoppingListItemQuantity(id: number, quantity: number): Promise<ShoppingListItem | undefined>;
-  updateShoppingListItem(id: number, fields: Partial<Pick<ShoppingListItem, 'productName' | 'normalizedName' | 'quantityValue' | 'unit' | 'category' | 'quantity' | 'selectedTier' | 'checked' | 'quantityInGrams' | 'ingredientId' | 'matchedProductId' | 'matchedStore' | 'matchedPrice' | 'availableStores' | 'smpRating' | 'itemType' | 'variantSelections' | 'attributePreferences' | 'confidenceLevel' | 'confidenceReason' | 'basketLabel'>>): Promise<ShoppingListItem | undefined>;
+  updateShoppingListItem(id: number, fields: Partial<Pick<ShoppingListItem, 'productName' | 'normalizedName' | 'quantityValue' | 'unit' | 'category' | 'quantity' | 'selectedTier' | 'checked' | 'quantityInGrams' | 'ingredientId' | 'matchedProductId' | 'matchedStore' | 'matchedPrice' | 'availableStores' | 'thaRating' | 'itemType' | 'variantSelections' | 'attributePreferences' | 'confidenceLevel' | 'confidenceReason' | 'basketLabel'>>): Promise<ShoppingListItem | undefined>;
   removeShoppingListItem(id: number): Promise<void>;
   clearShoppingList(userId: number): Promise<void>;
   getMealPlans(userId: number): Promise<MealPlan[]>;
@@ -142,7 +142,7 @@ export interface IStorage {
   getUserStreak(userId: number): Promise<UserStreak | undefined>;
   upsertUserStreak(userId: number, data: Partial<UserStreak>): Promise<UserStreak>;
   getUserHealthTrends(userId: number, days: number): Promise<UserHealthTrend[]>;
-  upsertUserHealthTrend(userId: number, date: string, smpRating: number, isElite: boolean, isProcessed: boolean): Promise<UserHealthTrend>;
+  upsertUserHealthTrend(userId: number, date: string, thaRating: number, isElite: boolean, isProcessed: boolean): Promise<UserHealthTrend>;
   addProductHistory(userId: number, data: InsertProductHistory): Promise<ProductHistory>;
   getProductHistory(userId: number, limit?: number): Promise<ProductHistory[]>;
   deleteProductHistory(userId: number, id: number): Promise<void>;
@@ -495,7 +495,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async updateShoppingListItem(id: number, fields: Partial<Pick<ShoppingListItem, 'productName' | 'normalizedName' | 'quantityValue' | 'unit' | 'quantityInGrams' | 'category' | 'quantity' | 'selectedTier' | 'checked' | 'ingredientId' | 'matchedProductId' | 'matchedStore' | 'matchedPrice' | 'availableStores' | 'smpRating' | 'itemType' | 'variantSelections' | 'attributePreferences' | 'confidenceLevel' | 'confidenceReason' | 'basketLabel'>>): Promise<ShoppingListItem | undefined> {
+  async updateShoppingListItem(id: number, fields: Partial<Pick<ShoppingListItem, 'productName' | 'normalizedName' | 'quantityValue' | 'unit' | 'quantityInGrams' | 'category' | 'quantity' | 'selectedTier' | 'checked' | 'ingredientId' | 'matchedProductId' | 'matchedStore' | 'matchedPrice' | 'availableStores' | 'thaRating' | 'itemType' | 'variantSelections' | 'attributePreferences' | 'confidenceLevel' | 'confidenceReason' | 'basketLabel'>>): Promise<ShoppingListItem | undefined> {
     const [result] = await db.update(shoppingList).set(fields).where(eq(shoppingList.id, id)).returning();
     return result;
   }
@@ -1087,14 +1087,14 @@ export class DatabaseStorage implements IStorage {
       .orderBy(userHealthTrends.date);
   }
 
-  async upsertUserHealthTrend(userId: number, date: string, smpRating: number, isElite: boolean, isProcessed: boolean): Promise<UserHealthTrend> {
+  async upsertUserHealthTrend(userId: number, date: string, thaRating: number, isElite: boolean, isProcessed: boolean): Promise<UserHealthTrend> {
     const [existing] = await db.select().from(userHealthTrends)
       .where(and(eq(userHealthTrends.userId, userId), eq(userHealthTrends.date, date)));
     if (existing) {
       const newSampleCount = existing.sampleCount + 1;
-      const newAvg = ((existing.averageSmpRating * existing.sampleCount) + smpRating) / newSampleCount;
+      const newAvg = ((existing.averageThaRating * existing.sampleCount) + thaRating) / newSampleCount;
       const [result] = await db.update(userHealthTrends).set({
-        averageSmpRating: Math.round(newAvg * 100) / 100,
+        averageThaRating: Math.round(newAvg * 100) / 100,
         sampleCount: newSampleCount,
         eliteCount: existing.eliteCount + (isElite ? 1 : 0),
         processedCount: existing.processedCount + (isProcessed ? 1 : 0),
@@ -1104,7 +1104,7 @@ export class DatabaseStorage implements IStorage {
     const [result] = await db.insert(userHealthTrends).values({
       userId,
       date,
-      averageSmpRating: smpRating,
+      averageThaRating: thaRating,
       sampleCount: 1,
       eliteCount: isElite ? 1 : 0,
       processedCount: isProcessed ? 1 : 0,
@@ -2742,18 +2742,18 @@ export class DatabaseStorage implements IStorage {
     }
 
     const shoppingItems: Omit<InsertShoppingListItem, "userId">[] = [
-      { productName: "Free Range Eggs (12)", normalizedName: "eggs", quantity: 1, category: "dairy-eggs", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 2.49, smpRating: 4 },
-      { productName: "Oat Milk (1L)", normalizedName: "oat milk", quantity: 2, category: "dairy-eggs", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Waitrose", matchedPrice: 1.45, smpRating: 3 },
-      { productName: "Rolled Oats (1kg)", normalizedName: "rolled oats", quantity: 1, category: "grains", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.09, smpRating: 5 },
-      { productName: "Mixed Berries (400g)", normalizedName: "mixed berries", quantity: 1, category: "fruit", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 2.99, smpRating: 5 },
-      { productName: "Salmon Fillets (2 pack)", normalizedName: "salmon", quantity: 1, category: "fish", selectedTier: "premium", checked: false, needsReview: false, matchedStore: "Waitrose", matchedPrice: 5.49, smpRating: 5 },
-      { productName: "Chicken Breast (500g)", normalizedName: "chicken breast", quantity: 1, category: "meat", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 3.79, smpRating: 4 },
-      { productName: "Tenderstem Broccoli (200g)", normalizedName: "broccoli", quantity: 1, category: "vegetables", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.99, smpRating: 5 },
-      { productName: "Avocado (2 pack)", normalizedName: "avocado", quantity: 1, category: "fruit", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.89, smpRating: 5 },
-      { productName: "Red Split Lentils (500g)", normalizedName: "red lentils", quantity: 1, category: "pulses", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.29, smpRating: 5 },
-      { productName: "Baby Spinach (200g)", normalizedName: "spinach", quantity: 1, category: "vegetables", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.49, smpRating: 5 },
-      { productName: "Tinned Chopped Tomatoes (400g)", normalizedName: "chopped tomatoes", quantity: 2, category: "tinned", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 0.55, smpRating: 4 },
-      { productName: "Extra Virgin Olive Oil (500ml)", normalizedName: "olive oil", quantity: 1, category: "oils", selectedTier: "premium", checked: true, needsReview: false, matchedStore: "Waitrose", matchedPrice: 5.99, smpRating: 5 },
+      { productName: "Free Range Eggs (12)", normalizedName: "eggs", quantity: 1, category: "dairy-eggs", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 2.49, thaRating: 4 },
+      { productName: "Oat Milk (1L)", normalizedName: "oat milk", quantity: 2, category: "dairy-eggs", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Waitrose", matchedPrice: 1.45, thaRating: 3 },
+      { productName: "Rolled Oats (1kg)", normalizedName: "rolled oats", quantity: 1, category: "grains", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.09, thaRating: 5 },
+      { productName: "Mixed Berries (400g)", normalizedName: "mixed berries", quantity: 1, category: "fruit", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 2.99, thaRating: 5 },
+      { productName: "Salmon Fillets (2 pack)", normalizedName: "salmon", quantity: 1, category: "fish", selectedTier: "premium", checked: false, needsReview: false, matchedStore: "Waitrose", matchedPrice: 5.49, thaRating: 5 },
+      { productName: "Chicken Breast (500g)", normalizedName: "chicken breast", quantity: 1, category: "meat", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 3.79, thaRating: 4 },
+      { productName: "Tenderstem Broccoli (200g)", normalizedName: "broccoli", quantity: 1, category: "vegetables", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.99, thaRating: 5 },
+      { productName: "Avocado (2 pack)", normalizedName: "avocado", quantity: 1, category: "fruit", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.89, thaRating: 5 },
+      { productName: "Red Split Lentils (500g)", normalizedName: "red lentils", quantity: 1, category: "pulses", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.29, thaRating: 5 },
+      { productName: "Baby Spinach (200g)", normalizedName: "spinach", quantity: 1, category: "vegetables", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 1.49, thaRating: 5 },
+      { productName: "Tinned Chopped Tomatoes (400g)", normalizedName: "chopped tomatoes", quantity: 2, category: "tinned", selectedTier: "standard", checked: false, needsReview: false, matchedStore: "Tesco", matchedPrice: 0.55, thaRating: 4 },
+      { productName: "Extra Virgin Olive Oil (500ml)", normalizedName: "olive oil", quantity: 1, category: "oils", selectedTier: "premium", checked: true, needsReview: false, matchedStore: "Waitrose", matchedPrice: 5.99, thaRating: 5 },
     ];
 
     for (const item of shoppingItems) {

@@ -1223,8 +1223,7 @@ export async function registerRoutes(
               )
             : null;
 
-          const smpRating = upfResult?.smpRating ?? 3;
-          const smpScore = upfResult?.smpScore ?? 55;
+          const thaRating = upfResult?.thaRating ?? 3;
 
           const rawStoreTags: string[] = [
             ...(p.stores_tags || []),
@@ -1272,32 +1271,27 @@ export async function registerRoutes(
                 };
               }),
               novaGroup: novaGroup ? Number(novaGroup) : 4,
-              healthScore: Math.max(0, 100 - (smpScore > 50 ? 100 - smpScore : smpScore)),
-              isUltraProcessed: novaGroup === 4 || smpRating <= 2,
+              healthScore: Math.max(0, 100 - thaRating * 20),
+              isUltraProcessed: novaGroup === 4 || thaRating <= 2,
               warnings: [],
               upfCount: upfResult?.upfIngredientCount || 0,
               totalIngredients: ingredientsText.split(',').length,
             } : null,
             upfAnalysis: upfResult ? {
               upfScore: upfResult.upfScore,
-              smpRating: upfResult.smpRating,
-              hasCape: upfResult.hasCape,
-              smpScore: upfResult.smpScore,
-              isWholeFoodOverride: upfResult.isWholeFoodOverride,
-              isOrganic: upfResult.isOrganic,
+              thaRating: upfResult.thaRating,
               additiveMatches: upfResult.additiveMatches.map(m => ({
                 name: m.additive.name,
                 type: m.additive.type,
                 riskLevel: m.additive.riskLevel,
                 description: m.additive.description,
                 foundIn: m.foundIn,
+                isRegulatory: m.isRegulatory,
               })),
               processingIndicators: upfResult.processingIndicators || [],
               ingredientCount: upfResult.ingredientCount || 0,
               upfIngredientCount: upfResult.upfIngredientCount || 0,
               riskBreakdown: upfResult.riskBreakdown || { additiveRisk: 0, processingRisk: 0, ingredientComplexityRisk: 0 },
-              smpPenalties: upfResult.smpPenalties,
-              smpBonuses: upfResult.smpBonuses,
               thaExplanation: buildTHAExplanation(upfResult, novaGroup ? Number(novaGroup) : null),
             } : null,
             quantity: p.quantity || null,
@@ -1960,24 +1954,19 @@ export async function registerRoutes(
             analysis: analysis || null,
             upfAnalysis: altUpf ? {
               upfScore: altUpf.upfScore,
-              smpRating: altUpf.smpRating,
-              hasCape: altUpf.hasCape,
-              smpScore: altUpf.smpScore,
-              isWholeFoodOverride: altUpf.isWholeFoodOverride,
-              isOrganic: altUpf.isOrganic,
+              thaRating: altUpf.thaRating,
               additiveMatches: altUpf.additiveMatches.map(m => ({
                 name: m.additive.name,
                 type: m.additive.type,
                 riskLevel: m.additive.riskLevel,
                 description: m.additive.description,
                 foundIn: m.foundIn,
+                isRegulatory: m.isRegulatory,
               })),
               processingIndicators: altUpf.processingIndicators,
               ingredientCount: altUpf.ingredientCount,
               upfIngredientCount: altUpf.upfIngredientCount,
               riskBreakdown: altUpf.riskBreakdown,
-              smpPenalties: altUpf.smpPenalties,
-              smpBonuses: altUpf.smpBonuses,
               thaExplanation: buildTHAExplanation(altUpf, p.nova_group || null),
             } : null,
           };
@@ -2325,8 +2314,8 @@ export async function registerRoutes(
     if (req.body.availableStores !== undefined) {
       updates.availableStores = req.body.availableStores === null ? null : String(req.body.availableStores);
     }
-    if (req.body.smpRating !== undefined) {
-      updates.smpRating = req.body.smpRating === null ? null : Number(req.body.smpRating);
+    if (req.body.thaRating !== undefined) {
+      updates.thaRating = req.body.thaRating === null ? null : Number(req.body.thaRating);
     }
     if (req.body.itemType !== undefined) {
       updates.itemType = req.body.itemType === null ? null : String(req.body.itemType).trim();
@@ -2369,7 +2358,7 @@ export async function registerRoutes(
       const { productName, quantityValue, unit, category, updateRecipe } = req.body;
 
       // Build basket update — clear cached price matches when name changes
-      const updates: Record<string, any> = { smpRating: null };
+      const updates: Record<string, any> = { thaRating: null };
       if (productName !== undefined) {
         updates.productName = String(productName).trim();
         const { normalizeName } = await import('./lib/ingredient-utils');
@@ -2456,14 +2445,14 @@ export async function registerRoutes(
       const items = await storage.getShoppingListItems(req.user!.id);
       const needsSmp = force
         ? items
-        : items.filter(i => i.smpRating === null || i.smpRating === undefined);
-      console.log(`[auto-smp] ${items.length} total items, ${needsSmp.length} to score (force=${force})`);
+        : items.filter(i => i.thaRating === null || i.thaRating === undefined);
+      console.log(`[auto-score] ${items.length} total items, ${needsSmp.length} to score (force=${force})`);
       if (needsSmp.length === 0) return res.json({ updated: [] });
 
       const allAdditives = await storage.getAllAdditives();
       const OFF_FIELDS = 'code,product_name,brands,ingredients_text,ingredients_text_en,nutriments,nova_group';
       const OFF_HEADERS = { timeout: 10000, headers: { 'User-Agent': 'SmartMealPlanner/1.0 (contact: smartmealplanner@replit.app)' } };
-      const updated: { id: number; smpRating: number }[] = [];
+      const updated: { id: number; thaRating: number }[] = [];
       const skipped: string[] = [];
 
       // Matches items that might be in a packaged/processed form — these need
@@ -2483,9 +2472,9 @@ export async function registerRoutes(
             // Tinned/canned items still go through OFF so their ingredient list
             // can be validated before granting the override.
             if (isWholeFoodIngredient(cleanName) && !PACKAGED_INDICATOR_RX.test(cleanName)) {
-              await storage.updateShoppingListItem(item.id, { smpRating: 5 });
-              updated.push({ id: item.id, smpRating: 5 });
-              console.log(`[auto-smp] Whole-food short-circuit for "${cleanName}" → 5 apples`);
+              await storage.updateShoppingListItem(item.id, { thaRating: 5 });
+              updated.push({ id: item.id, thaRating: 5 });
+              console.log(`[auto-score] Whole-food short-circuit for "${cleanName}" → 5 apples`);
               return;
             }
 
@@ -2510,11 +2499,11 @@ export async function registerRoutes(
               categoriesTags: bestProduct.categories_tags || [],
               novaGroup: bestProduct.nova_group || null,
             }, analysis.ingredients);
-            if (upfResult && upfResult.smpRating > 0) {
-              await storage.updateShoppingListItem(item.id, { smpRating: upfResult.smpRating });
-              updated.push({ id: item.id, smpRating: upfResult.smpRating });
+            if (upfResult && upfResult.thaRating > 0) {
+              await storage.updateShoppingListItem(item.id, { thaRating: upfResult.thaRating });
+              updated.push({ id: item.id, thaRating: upfResult.thaRating });
             } else {
-              skipped.push(`${cleanName}: smpRating=0`);
+              skipped.push(`${cleanName}: thaRating=0`);
             }
           } catch (err: any) {
             skipped.push(`${item.productName}: error ${err.message || err}`);
@@ -2522,11 +2511,11 @@ export async function registerRoutes(
         }));
       }
 
-      console.log(`[auto-smp] Updated ${updated.length} items, skipped ${skipped.length}: ${skipped.slice(0, 5).join('; ')}`);
+      console.log(`[auto-score] Updated ${updated.length} items, skipped ${skipped.length}: ${skipped.slice(0, 5).join('; ')}`);
       res.json({ updated });
     } catch (err) {
-      console.error('[auto-smp] Error:', err);
-      res.status(500).json({ message: 'Failed to calculate SMP ratings' });
+      console.error('[auto-score] Error:', err);
+      res.status(500).json({ message: 'Failed to calculate THA ratings' });
     }
   });
 
@@ -2857,7 +2846,7 @@ export async function registerRoutes(
               currency: 'GBP',
               tier: 'standard',
               productWeight: null,
-              smpRating: item.smpRating || null,
+              thaRating: item.thaRating || null,
             });
             allMatches.push(match);
           }
@@ -4238,24 +4227,19 @@ export async function registerRoutes(
         analysis,
         upfAnalysis: upfAnalysis ? {
           upfScore: upfAnalysis.upfScore,
-          smpRating: upfAnalysis.smpRating,
-          hasCape: upfAnalysis.hasCape,
-          smpScore: upfAnalysis.smpScore,
-          isWholeFoodOverride: upfAnalysis.isWholeFoodOverride,
-          isOrganic: upfAnalysis.isOrganic,
+          thaRating: upfAnalysis.thaRating,
           additiveMatches: upfAnalysis.additiveMatches.map(m => ({
             name: m.additive.name,
             type: m.additive.type,
             riskLevel: m.additive.riskLevel,
             description: m.additive.description,
             foundIn: m.foundIn,
+            isRegulatory: m.isRegulatory,
           })),
           processingIndicators: upfAnalysis.processingIndicators,
           ingredientCount: upfAnalysis.ingredientCount,
           upfIngredientCount: upfAnalysis.upfIngredientCount,
           riskBreakdown: upfAnalysis.riskBreakdown,
-          smpPenalties: upfAnalysis.smpPenalties,
-          smpBonuses: upfAnalysis.smpBonuses,
           thaExplanation: buildTHAExplanation(upfAnalysis, p.nova_group || null),
         } : null,
         availableStores,
@@ -4285,15 +4269,15 @@ export async function registerRoutes(
   app.post("/api/user/streak/record", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const { smpRating } = req.body;
-      if (typeof smpRating !== 'number' || smpRating < 1 || smpRating > 5) {
-        return res.status(400).json({ message: "Invalid smpRating" });
+      const { thaRating } = req.body;
+      if (typeof thaRating !== 'number' || thaRating < 1 || thaRating > 5) {
+        return res.status(400).json({ message: "Invalid thaRating" });
       }
 
       const userId = req.user!.id;
       const today = new Date().toISOString().split('T')[0];
-      const isElite = smpRating === 5;
-      const isProcessed = smpRating <= 2;
+      const isElite = thaRating === 5;
+      const isProcessed = thaRating <= 2;
 
       const prefs = await storage.getUserPreferences(userId);
 
@@ -4351,7 +4335,7 @@ export async function registerRoutes(
       }
 
       if (prefs?.healthTrendEnabled !== false) {
-        await storage.upsertUserHealthTrend(userId, today, smpRating, isElite, isProcessed);
+        await storage.upsertUserHealthTrend(userId, today, thaRating, isElite, isProcessed);
       }
 
       const updatedStreak = await storage.getUserStreak(userId);
@@ -4495,7 +4479,7 @@ export async function registerRoutes(
   app.post("/api/user/product-history", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const { barcode, productName, brand, imageUrl, novaGroup, nutriscoreGrade, smpRating, upfScore, healthScore, source } = req.body;
+      const { barcode, productName, brand, imageUrl, novaGroup, nutriscoreGrade, thaRating, upfScore, healthScore, source } = req.body;
       if (!productName) return res.status(400).json({ message: "productName is required" });
       const result = await storage.addProductHistory(req.user!.id, {
         barcode: barcode || null,
@@ -4504,7 +4488,7 @@ export async function registerRoutes(
         imageUrl: imageUrl || null,
         novaGroup: novaGroup ?? null,
         nutriscoreGrade: nutriscoreGrade || null,
-        smpRating: smpRating ?? null,
+        thaRating: thaRating ?? null,
         upfScore: upfScore ?? null,
         healthScore: healthScore ?? null,
         scannedAt: new Date().toISOString(),

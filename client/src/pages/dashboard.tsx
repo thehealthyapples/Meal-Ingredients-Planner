@@ -105,10 +105,10 @@ export default function Dashboard() {
 
   const avgThaScore = useMemo(() => {
     const rated = shoppingListItems.filter(
-      (i: any) => i.smpRating !== null && i.smpRating !== undefined && (i.smpRating as number) > 0
+      (i: any) => i.thaRating !== null && i.thaRating !== undefined && (i.thaRating as number) > 0
     );
     if (!rated.length) return null;
-    return rated.reduce((sum: number, i: any) => sum + (i.smpRating as number), 0) / rated.length;
+    return rated.reduce((sum: number, i: any) => sum + (i.thaRating as number), 0) / rated.length;
   }, [shoppingListItems]);
 
   const displayName = user?.displayName || user?.username || "there";

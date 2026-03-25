@@ -76,7 +76,7 @@ export const mealTemplateProducts = pgTable("meal_template_products", {
   qualityTier: text("quality_tier").notNull().default("standard"),
   estimatedPrice: real("estimated_price"),
   upfScore: integer("upf_score"),
-  smpRating: integer("smp_rating"),
+  thaRating: integer("smp_rating"),
   imageUrl: text("image_url"),
   barcode: text("barcode"),
 });
@@ -162,7 +162,7 @@ export const shoppingList = pgTable("shopping_list", {
   matchedStore: text("matched_store"),
   matchedPrice: real("matched_price"),
   availableStores: text("available_stores"),
-  smpRating: integer("smp_rating"),
+  thaRating: integer("smp_rating"),
   checked: boolean("checked").notNull().default(false),
   needsReview: boolean("needs_review").notNull().default(false),
   validationNote: text("validation_note"),
@@ -190,7 +190,7 @@ export const productMatches = pgTable("product_matches", {
   tescoProductId: text("tesco_product_id"),
   sainsburysProductId: text("sainsburys_product_id"),
   ocadoProductId: text("ocado_product_id"),
-  smpRating: integer("smp_rating"),
+  thaRating: integer("smp_rating"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -291,7 +291,7 @@ export const insertShoppingListItemSchema = createInsertSchema(shoppingList).pic
   matchedStore: true,
   matchedPrice: true,
   availableStores: true,
-  smpRating: true,
+  thaRating: true,
   checked: true,
   needsReview: true,
   validationNote: true,
@@ -313,7 +313,7 @@ export const insertProductMatchSchema = createInsertSchema(productMatches).pick(
   tescoProductId: true,
   sainsburysProductId: true,
   ocadoProductId: true,
-  smpRating: true,
+  thaRating: true,
 });
 
 export const insertMealAllergenSchema = createInsertSchema(mealAllergens).pick({
@@ -537,6 +537,7 @@ export const additives = pgTable("additives", {
   type: text("type").notNull(),
   riskLevel: text("risk_level").notNull().default("low"),
   description: text("description"),
+  isRegulatory: boolean("is_regulatory").default(false),
 });
 
 export const productAdditives = pgTable("product_additives", {
@@ -658,7 +659,7 @@ export const userHealthTrends = pgTable("user_health_trends", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
   date: text("date").notNull(),
-  averageSmpRating: real("average_smp_rating").notNull(),
+  averageThaRating: real("average_smp_rating").notNull(),
   eliteCount: integer("elite_count").notNull().default(0),
   processedCount: integer("processed_count").notNull().default(0),
   sampleCount: integer("sample_count").notNull().default(0),
@@ -666,7 +667,7 @@ export const userHealthTrends = pgTable("user_health_trends", {
 
 export const insertUserHealthTrendSchema = createInsertSchema(userHealthTrends).pick({
   date: true,
-  averageSmpRating: true,
+  averageThaRating: true,
   eliteCount: true,
   processedCount: true,
   sampleCount: true,
@@ -684,7 +685,7 @@ export const productHistory = pgTable("product_history", {
   imageUrl: text("image_url"),
   novaGroup: integer("nova_group"),
   nutriscoreGrade: text("nutriscore_grade"),
-  smpRating: integer("smp_rating"),
+  thaRating: integer("smp_rating"),
   upfScore: integer("upf_score"),
   healthScore: integer("health_score"),
   scannedAt: text("scanned_at").notNull(),

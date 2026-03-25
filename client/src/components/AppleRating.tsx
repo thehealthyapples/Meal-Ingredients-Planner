@@ -3,7 +3,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 
 interface AppleRatingProps {
   rating: number;
-  hasCape?: boolean;
   size?: "small" | "medium" | "large";
   sizePx?: number;
   showTooltip?: boolean;
@@ -75,7 +74,7 @@ export default function AppleRating({
     <Tooltip>
       <TooltipTrigger asChild>{content}</TooltipTrigger>
       <TooltipContent side="top" className="text-xs">
-        <span>SMP Rating: {Math.round(clamped)} — {label}</span>
+        <span>THA Score: {Math.round(clamped)}/5 — {label}</span>
       </TooltipContent>
     </Tooltip>
   );

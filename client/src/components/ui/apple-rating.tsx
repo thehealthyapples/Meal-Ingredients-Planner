@@ -4,17 +4,15 @@ type Props = {
   rating: number;
   size?: number;
   className?: string;
-  isOrganic?: boolean;
 };
 
 const OVERLAP = 0.38;
 
-export default function AppleRating({ rating, size = 25, isOrganic = false }: Props) {
+export default function AppleRating({ rating, size = 25 }: Props) {
   const clamped = Math.max(0, Math.min(5, rating || 0));
   const fullCount = Math.floor(clamped);
   const hasHalf = clamped % 1 >= 0.5;
   const overlap = Math.round(size * OVERLAP);
-  const showOrg = isOrganic && clamped >= 5;
 
   return (
     <div className="inline-flex items-center gap-1" data-testid={`apple-rating-icons-${rating}`}>
@@ -36,15 +34,6 @@ export default function AppleRating({ rating, size = 25, isOrganic = false }: Pr
           </div>
         )}
       </div>
-      {showOrg && (
-        <span
-          className="inline-flex items-center rounded px-1 text-white font-semibold leading-none"
-          style={{ fontSize: Math.max(8, Math.round(size * 0.42)), backgroundColor: "hsl(90,40%,38%)", paddingTop: 2, paddingBottom: 2 }}
-          title="Organic"
-        >
-          Org
-        </span>
-      )}
     </div>
   );
 }

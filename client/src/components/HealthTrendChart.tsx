@@ -19,7 +19,7 @@ interface HealthTrendData {
   id: number;
   userId: number;
   date: string;
-  averageSmpRating: number;
+  averageThaRating: number;
   eliteCount: number;
   processedCount: number;
   sampleCount: number;
@@ -41,7 +41,7 @@ export default function HealthTrendChart() {
 
   const chartData = trends.map((t) => ({
     date: new Date(t.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
-    rating: t.averageSmpRating,
+    rating: t.averageThaRating,
     elite: t.eliteCount,
     processed: t.processedCount,
     samples: t.sampleCount,

@@ -1,6 +1,6 @@
 export function buildWhyBetter(product: any, currentScore: number | null): string[] {
   const reasons: string[] = [];
-  const smp = product.upfAnalysis?.smpRating ?? 0;
+  const smp = product.upfAnalysis?.thaRating ?? 0;
   if (currentScore !== null && smp > currentScore) {
     reasons.push(`Higher THA score (${smp}/5)`);
   }
@@ -11,13 +11,12 @@ export function buildWhyBetter(product: any, currentScore: number | null): strin
   if (highRisk === 0 && (currentScore ?? 5) <= 3) reasons.push('No high-risk additives');
   const nova = product.nova_group ?? product.analysis?.novaGroup ?? null;
   if (nova !== null && nova <= 2) reasons.push(`Lower processing (NOVA ${nova})`);
-  if (product.upfAnalysis?.isOrganic) reasons.push('Organic');
   return reasons.slice(0, 3);
 }
 
 export function rankChoices(products: any[], currentScore: number | null, preferredStore?: string): any[] {
   const filtered = products.filter(p => {
-    const smp = p.upfAnalysis?.smpRating ?? 0;
+    const smp = p.upfAnalysis?.thaRating ?? 0;
     return currentScore === null || smp > currentScore;
   });
   return [...filtered].sort((a, b) => {
@@ -27,8 +26,8 @@ export function rankChoices(products: any[], currentScore: number | null, prefer
       if (aInStore && !bInStore) return -1;
       if (!aInStore && bInStore) return 1;
     }
-    const aSmp = a.upfAnalysis?.smpRating ?? 0;
-    const bSmp = b.upfAnalysis?.smpRating ?? 0;
+    const aSmp = a.upfAnalysis?.thaRating ?? 0;
+    const bSmp = b.upfAnalysis?.thaRating ?? 0;
     if (bSmp !== aSmp) return bSmp - aSmp;
     const aNova = a.nova_group ?? a.analysis?.novaGroup ?? 9;
     const bNova = b.nova_group ?? b.analysis?.novaGroup ?? 9;

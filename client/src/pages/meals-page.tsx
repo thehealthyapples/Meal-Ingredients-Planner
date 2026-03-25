@@ -1029,9 +1029,7 @@ interface ProductSearchResult {
   analysis: any | null;
   upfAnalysis: {
     upfScore: number;
-    smpRating: number;
-    hasCape: boolean;
-    smpScore: number;
+    thaRating: number;
     additiveMatches: any[];
     processingIndicators: string[];
     ingredientCount: number;
@@ -1655,7 +1653,7 @@ export default function MealsPage() {
         nutrition: product.nutriments,
         nutriscoreGrade: product.nutriscore_grade,
         novaGroup: product.nova_group,
-        smpRating: product.upfAnalysis?.smpRating ?? 3,
+        thaRating: product.upfAnalysis?.thaRating ?? 3,
         isDrink,
         isBabyFood,
         isReadyMeal,
@@ -2817,8 +2815,7 @@ export default function MealsPage() {
                     const cats = product.categories_tags || [];
                     const isDrink = cats.some((c: string) => c.includes('beverages') || c.includes('drinks'));
                     const isReadyMeal = cats.some((c: string) => c.includes('meals') || c.includes('ready') || c.includes('prepared'));
-                    const smpRating = product.upfAnalysis?.smpRating ?? 3;
-                    const hasCape = product.upfAnalysis?.hasCape ?? false;
+                    const thaRating = product.upfAnalysis?.thaRating ?? 3;
                     return (
                       <motion.div
                         key={productKey}
@@ -2868,7 +2865,7 @@ export default function MealsPage() {
                                 )}
                               </div>
                               <div className="mt-2" data-testid={`rating-product-${productKey}`}>
-                                <ScoreBadge score={smpRating} size={20} />
+                                <ScoreBadge score={thaRating} size={20} />
                               </div>
                               {product.nutriments?.calories && (
                                 <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2" data-testid={`nutrition-product-${productKey}`}>

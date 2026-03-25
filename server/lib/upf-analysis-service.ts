@@ -1,6 +1,5 @@
 import { Additive } from "@shared/schema";
 import { ParsedIngredient, parseProductIngredients } from "./product-analysis";
-import { calculateStrictSMPRating, type SMPRatingResult } from "./smp-rating-service";
 
 const E_NUMBER_PATTERN = /\bE\d{3,4}[a-z]?\b/gi;
 
@@ -30,15 +29,16 @@ const RISK_LEVEL_SCORES: Record<string, number> = {
 export interface AdditiveMatch {
   additive: Additive;
   foundIn: string;
+  /** True when this additive is present due to a legal/regulatory requirement
+   *  (e.g. UK flour fortification) rather than a discretionary manufacturing
+   *  choice.  Still counted in the THA apple score — just labelled separately
+   *  in explanations. */
+  isRegulatory: boolean;
 }
 
 export interface UPFAnalysisResult {
   upfScore: number;
-  smpRating: number;
-  hasCape: boolean;
-  smpScore: number;
-  isWholeFoodOverride: boolean;
-  isOrganic: boolean;
+  thaRating: number;
   additiveMatches: AdditiveMatch[];
   processingIndicators: string[];
   ingredientCount: number;
@@ -48,37 +48,105 @@ export interface UPFAnalysisResult {
     processingRisk: number;
     ingredientComplexityRisk: number;
   };
-  smpPenalties: SMPRatingResult["penalties"];
-  smpBonuses: SMPRatingResult["bonuses"];
 }
+
+// Extract detection pattern — module-scope so tests can import it directly.
+// Each match represents one distinct extract declaration in the ingredient text.
+// Grouped phrases (e.g. "spice and herb extracts") produce one match because
+// only the qualifying word immediately before "extract(s)" is captured.
+// Plain "spice", "spices", "herbs" without "extract" do NOT match.
+// "yeast extract" is intentionally absent — handled by SOFT_UPF_TERMS.
+// Global flag is required for counted matching via String.prototype.match().
+export const EXTRACT_PATTERN = /\b(?:herb|spice|plant|botanical|mixed|vegetable|fruit|natural|rosemary|thyme|oregano|basil|sage|bay|parsley|coriander|fennel|tarragon|mint|marjoram|lavender|chamomile|turmeric|ginger|paprika|celery|elderflower|elderberry|hibiscus|lemon|orange|lime|garlic|onion|pepper|chilli|chili)\s+extracts?\b/gi;
+
+// Pattern that identifies a fortified-flour context surrounding a match.
+// When E170 (Calcium Carbonate) appears inside "fortified wheat flour (…)"
+// we flag it as regulatory rather than discretionary.
+const FORTIFIED_FLOUR_PATTERN = /fortif(?:ied|ication)/i;
 
 export function detectAdditives(ingredientsText: string, additiveDb: Additive[]): AdditiveMatch[] {
   if (!ingredientsText) return [];
   const text = ingredientsText.toLowerCase();
+  const isFortifiedFlourContext = FORTIFIED_FLOUR_PATTERN.test(ingredientsText);
   const matches: AdditiveMatch[] = [];
   const seen = new Set<number>();
 
+  // Tracks character ranges already claimed by a successful match.
+  // Prevents shorter/generic terms (e.g. "fatty acids") from matching
+  // within a range already covered by a more-specific term (e.g.
+  // "mono- and diglycerides of fatty acids").
+  const consumed: Array<{ start: number; end: number }> = [];
+
+  function overlapsConsumed(start: number, end: number): boolean {
+    return consumed.some(r => start < r.end && end > r.start);
+  }
+
+  // Pass 1: E-number matches — highest priority, always win.
   const eNumbers = text.match(E_NUMBER_PATTERN) || [];
   for (const eNum of eNumbers) {
     const normalized = eNum.toUpperCase();
     const additive = additiveDb.find(a => a.name.toUpperCase() === normalized);
     if (additive && !seen.has(additive.id)) {
       seen.add(additive.id);
-      matches.push({ additive, foundIn: eNum });
+      const idx = text.indexOf(eNum.toLowerCase());
+      if (idx !== -1) consumed.push({ start: idx, end: idx + eNum.length });
+      const isRegulatory = !!additive.isRegulatory || (additive.name === "E170" && isFortifiedFlourContext);
+      matches.push({ additive, foundIn: eNum, isRegulatory });
     }
   }
 
-  for (const additive of additiveDb) {
+  // Pass 2: Name-based matching.
+  //
+  // Rules:
+  //   1. Longer commonNames are processed first (more specific wins).
+  //   2. A match is only accepted if the phrase appears as a standalone
+  //      ingredient token — preceded and followed by a separator character
+  //      (, ; ( ) [ ] or start/end of string).  This prevents generic
+  //      sub-phrases like "fatty acids" from matching inside the longer
+  //      compound phrase "mono- and diglycerides of fatty acids".
+  //   3. Consumed ranges block any later match that overlaps them.
+
+  // Separators that bound individual ingredient tokens.
+  const SEP = /[,;()\[\]]/;
+
+  function isStandaloneMatch(t: string, term: string): number {
+    // Escape regex special chars in the term.
+    const escaped = term.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&");
+    // LEADING boundary only: start-of-string OR a delimiter (, ; ( [).
+    // Spaces are intentionally excluded as a leading boundary — a term
+    // preceded only by a space is embedded mid-phrase (e.g. "of fatty
+    // acids") and must NOT match.
+    // No trailing restriction: "Mono- and Diglycerides" legitimately
+    // has " of Fatty Acids" after it before the closing paren.
+    const rx = new RegExp(`(?:^|[,;(\\[])\\s*${escaped}`, "i");
+    const m = rx.exec(t);
+    if (!m) return -1;
+    // Return the index where the term itself starts within the match.
+    const termStart = t.toLowerCase().indexOf(term, m.index);
+    return termStart;
+  }
+
+  const candidates = additiveDb
+    .filter(a => !seen.has(a.id))
+    .map(a => {
+      const commonName = (a.description?.toLowerCase().split(" - ")[0] ?? "")
+        .replace(/\(.*?\)/g, "")
+        .trim();
+      return { additive: a, commonName };
+    })
+    .filter(({ commonName }) => commonName.length > 3)
+    .sort((a, b) => b.commonName.length - a.commonName.length);
+
+  for (const { additive, commonName } of candidates) {
     if (seen.has(additive.id)) continue;
-    const desc = additive.description?.toLowerCase() || "";
-    const nameParts = desc.split(" - ");
-    if (nameParts.length > 0) {
-      const commonName = nameParts[0].replace(/\(.*?\)/g, "").trim();
-      if (commonName.length > 3 && text.includes(commonName)) {
-        seen.add(additive.id);
-        matches.push({ additive, foundIn: commonName });
-      }
-    }
+    const idx = isStandaloneMatch(text, commonName);
+    if (idx === -1) continue;
+    if (overlapsConsumed(idx, idx + commonName.length)) continue;
+
+    seen.add(additive.id);
+    consumed.push({ start: idx, end: idx + commonName.length });
+    const isRegulatory = !!additive.isRegulatory || (additive.name === "E170" && isFortifiedFlourContext);
+    matches.push({ additive, foundIn: commonName, isRegulatory });
   }
 
   return matches;
@@ -142,16 +210,6 @@ export function calculateUPFScore(
   return Math.min(100, Math.max(0, score));
 }
 
-export function calculateSMPRating(upfScore: number, healthScore: number): number {
-  const combined = (healthScore * 0.6) + ((100 - upfScore) * 0.4);
-
-  if (combined >= 80) return 5;
-  if (combined >= 65) return 4;
-  if (combined >= 50) return 3;
-  if (combined >= 35) return 2;
-  return 1;
-}
-
 /**
  * Apple rating — pure additive-count model.
  *
@@ -167,7 +225,7 @@ export function calculateSMPRating(upfScore: number, healthScore: number): numbe
  * 2 apples = 4 additives
  * 1 apple  = 5+ additives
  */
-export function calculateAdditiveRating(
+export function calculateTHAAppleRating(
   additiveCount: number,
   processingIndicators: string[] = [],
   novaGroup?: number | null,
@@ -189,16 +247,13 @@ export function calculateAdditiveRating(
     "invert sugar",
   ];
 
-  // Herb/spice/plant extract detection via normalised pattern matching.
-  // Matches: "herb extract(s)", "rosemary extract", "spice extract", "plant extract",
-  //          "botanical extract", "spice and herb extracts", etc.
-  // Guard: plain "herbs" alone does NOT match — the word must directly precede "extract(s)".
-  // Case-insensitive; singular and plural handled by `s?` quantifier.
-  const HERB_EXTRACT_PATTERN = /\b(?:herb|spice|plant|botanical|rosemary|thyme|oregano|basil|sage|bay|parsley|coriander|fennel|tarragon|mint|marjoram|lavender|chamomile|turmeric|ginger|paprika|celery|elderflower|elderberry|hibiscus)\s+extracts?\b/i;
-  const herbExtractHit = HERB_EXTRACT_PATTERN.test(text) ? 1 : 0;
+  // EXTRACT_PATTERN is module-level (exported). Reset lastIndex before use
+  // because the global flag makes the RegExp object stateful.
+  EXTRACT_PATTERN.lastIndex = 0;
+  const extractHit = (text.match(EXTRACT_PATTERN) ?? []).length;
 
   const softCount = SOFT_UPF_TERMS.filter(term => text.includes(term)).length;
-  const effectiveCount = additiveCount + softCount + herbExtractHit;
+  const effectiveCount = additiveCount + softCount + extractHit;
 
   // Pure 5→1 mapping — NOVA is not a factor
   if (effectiveCount === 0) return 5;
@@ -217,9 +272,6 @@ export interface ProductContext {
 // Converts a UPFAnalysisResult into a concise, plain-English phrase for display in THA.
 // Intended as a single-line summary shown next to a product card.
 export function buildTHAExplanation(result: UPFAnalysisResult, novaGroup?: number | null): string {
-  if (result.isWholeFoodOverride) return "Minimally processed — mostly whole-food ingredients";
-  if (result.isOrganic && result.additiveMatches.length === 0) return "Organic with no detected additives";
-
   const nova = novaGroup ?? (result.upfScore >= 50 ? 4 : result.upfScore >= 25 ? 3 : result.upfScore >= 10 ? 2 : 1);
   const addCount = result.additiveMatches.length;
   const highRiskCount = result.additiveMatches.filter(m => m.additive.riskLevel === "high").length;
@@ -233,12 +285,25 @@ export function buildTHAExplanation(result: UPFAnalysisResult, novaGroup?: numbe
     return "Low processing — minimal additives detected";
   }
 
+  const regulatoryCount = result.additiveMatches.filter(m => m.isRegulatory).length;
+  const discretionaryCount = addCount - regulatoryCount;
+
   if (addCount === 0 && result.processingIndicators.length === 0) {
     parts.push("no additives detected");
   } else {
-    if (addCount > 0) {
-      const topTypes = Array.from(new Set(result.additiveMatches.slice(0, 3).map(m => m.additive.type))).join(", ");
-      parts.push(`${addCount} additive${addCount !== 1 ? "s" : ""} (${topTypes})`);
+    if (discretionaryCount > 0) {
+      const topTypes = Array.from(
+        new Set(
+          result.additiveMatches
+            .filter(m => !m.isRegulatory)
+            .slice(0, 3)
+            .map(m => m.additive.type),
+        ),
+      ).join(", ");
+      parts.push(`${discretionaryCount} additive${discretionaryCount !== 1 ? "s" : ""} (${topTypes})`);
+    }
+    if (regulatoryCount > 0) {
+      parts.push(`${regulatoryCount} regulatory`);
     }
     if (highRiskCount > 0) {
       parts.push(`${highRiskCount} high-risk`);
@@ -270,22 +335,9 @@ export function analyzeProductUPF(
 
   const novaGroup = productContext?.novaGroup ?? (upfScore >= 50 ? 4 : upfScore >= 25 ? 3 : upfScore >= 10 ? 2 : 1);
 
-  const smpResult = calculateStrictSMPRating({
-    novaGroup,
-    additiveMatches,
-    ingredientsText,
-    ingredientCount: ingredients.length,
-    productName: productContext?.productName ?? "",
-    categoriesTags: productContext?.categoriesTags ?? [],
-  });
-
   return {
     upfScore,
-    smpRating: calculateAdditiveRating(additiveMatches.length, processingIndicators, novaGroup, ingredientsText),
-    hasCape: smpResult.hasCape,
-    smpScore: smpResult.score,
-    isWholeFoodOverride: smpResult.isWholeFoodOverride,
-    isOrganic: smpResult.isOrganic,
+    thaRating: calculateTHAAppleRating(additiveMatches.length, processingIndicators, novaGroup, ingredientsText),
     additiveMatches,
     processingIndicators,
     ingredientCount: ingredients.length,
@@ -295,7 +347,5 @@ export function analyzeProductUPF(
       processingRisk: Math.min(30, processingIndicators.length * 6),
       ingredientComplexityRisk: ingredients.length > 20 ? 10 : ingredients.length > 15 ? 7 : ingredients.length > 10 ? 5 : 0,
     },
-    smpPenalties: smpResult.penalties,
-    smpBonuses: smpResult.bonuses,
   };
 }

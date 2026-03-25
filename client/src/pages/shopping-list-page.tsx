@@ -455,7 +455,7 @@ function isBovaerRisk(product: any): boolean {
 }
 
 function getVerdict(product: any): string {
-  const smp = product.upfAnalysis?.smpRating ?? 0;
+  const smp = product.upfAnalysis?.thaRating ?? 0;
   const additives = product.upfAnalysis?.additiveMatches?.length ?? 0;
   const emulsifiers = product.upfAnalysis?.additiveMatches?.filter((a: any) => a.type === 'emulsifier').length ?? 0;
   const highRisk = product.upfAnalysis?.additiveMatches?.filter((a: any) => a.riskLevel === 'high').length ?? 0;
@@ -617,7 +617,7 @@ function EditItemModal({ item, sources, onClose }: {
 }
 
 function getCurrentProductInsight(item: ShoppingListItem): { headline: string; detail: string } {
-  const rating = item.smpRating;
+  const rating = item.thaRating;
   const isWF = item.itemType === 'whole_food';
   const cat = item.category || 'other';
 
@@ -733,10 +733,10 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
   };
 
   const handleSelectProduct = (product: any) => {
-    const smpRating = product.upfAnalysis?.smpRating ?? 0;
+    const thaRating = product.upfAnalysis?.thaRating ?? 0;
     const additives = product.upfAnalysis?.additiveMatches?.length ?? 0;
     const nova = product.nova_group ?? null;
-    if (smpRating <= 1 || (nova === 4 && additives > 5)) {
+    if (thaRating <= 1 || (nova === 4 && additives > 5)) {
       setBadAppleProduct(product);
       return;
     }
@@ -748,7 +748,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
       const url = buildUrl(api.shoppingList.update.path, { id: item.id });
       const productDisplayName = [product.brand, product.product_name].filter(Boolean).join(' - ');
       const storesArray: string[] = product.availableStores || [];
-      const productSmpRating = product.upfAnalysis?.smpRating ?? null;
+      const productThaRating = product.upfAnalysis?.thaRating ?? null;
       const res = await fetch(url, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -758,7 +758,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
           matchedStore: product.availableStores?.[0] || null,
           matchedPrice: null,
           availableStores: storesArray.length > 0 ? JSON.stringify(storesArray) : null,
-          smpRating: productSmpRating,
+          thaRating: productThaRating,
         }),
         credentials: 'include',
       });
@@ -801,7 +801,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
       if (hideEmulsifiers && p.upfAnalysis?.additiveMatches?.some((a: any) => a.type === 'emulsifier')) return false;
       if (hideAcidityRegulators && p.upfAnalysis?.additiveMatches?.some((a: any) => a.type === 'acidity regulator' || a.type === 'acidity_regulator')) return false;
       if (hideBovaer && isBovaerRisk(p)) return false;
-      if (minRating > 0 && (p.upfAnalysis?.smpRating ?? 0) < minRating) return false;
+      if (minRating > 0 && (p.upfAnalysis?.thaRating ?? 0) < minRating) return false;
       return true;
     });
   }, [products, hideUltraProcessed, hideHighRiskAdditives, hideEmulsifiers, hideAcidityRegulators, hideBovaer, minRating]);
@@ -810,8 +810,8 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
 
   const insight = getCurrentProductInsight(item);
   const rankedChoices = useMemo(
-    () => rankChoices(products, item.smpRating ?? null, preferredStore).slice(0, 3),
-    [products, item.smpRating, preferredStore]
+    () => rankChoices(products, item.thaRating ?? null, preferredStore).slice(0, 3),
+    [products, item.thaRating, preferredStore]
   );
   const wholeFoodAlt = useMemo(() => getWholeFoodAlternative(item.productName), [item.productName]);
   const isWholeFood_ = item.itemType === 'whole_food';
@@ -840,11 +840,11 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
             <Microscope className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
             <div className="min-w-0 flex-1">
               <DialogTitle className="text-base leading-snug">{capitalizeWords(item.productName)}</DialogTitle>
-              <p className={`text-xs font-medium mt-0.5 ${ratingColor(item.smpRating ?? null)}`}>
+              <p className={`text-xs font-medium mt-0.5 ${ratingColor(item.thaRating ?? null)}`}>
                 {insight.headline}
               </p>
             </div>
-            <ScoreBadge score={item.smpRating ?? 0} size={32} />
+            <ScoreBadge score={item.thaRating ?? 0} size={32} />
           </div>
         </DialogHeader>
 
@@ -877,12 +877,12 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-sm leading-snug">{capitalizeWords(item.productName)}</p>
-                    <p className={`text-xs font-medium mt-0.5 ${ratingColor(item.smpRating ?? null)}`}>
+                    <p className={`text-xs font-medium mt-0.5 ${ratingColor(item.thaRating ?? null)}`}>
                       {insight.headline}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <ScoreBadge score={item.smpRating ?? 0} size={28} />
+                    <ScoreBadge score={item.thaRating ?? 0} size={28} />
                     <button
                       className="text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setShowCurrentDetail(v => !v)}
@@ -904,7 +904,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                           <Leaf className="h-2.5 w-2.5 mr-1" />Whole food
                         </Badge>
                       )}
-                      {item.itemType === 'packaged' && item.smpRating !== null && item.smpRating <= 2 && (
+                      {item.itemType === 'packaged' && item.thaRating !== null && item.thaRating <= 2 && (
                         <Badge className="text-[10px] bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 no-default-hover-elevate">
                           Worth reconsidering
                         </Badge>
@@ -947,7 +947,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
             ) : rankedChoices.length > 0 ? (
               <div className="space-y-2">
                 {rankedChoices.map((choice, idx) => {
-                  const whyBetter = buildWhyBetter(choice, item.smpRating ?? null);
+                  const whyBetter = buildWhyBetter(choice, item.thaRating ?? null);
                   return (
                     <Card key={choice.barcode || idx} className="border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/20" data-testid={`card-cleaner-shop-${idx}`}>
                       <CardContent className="p-3">
@@ -975,7 +975,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                             )}
                           </div>
                           <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-                            <ScoreBadge score={choice.upfAnalysis?.smpRating ?? 0} size={26} />
+                            <ScoreBadge score={choice.upfAnalysis?.thaRating ?? 0} size={26} />
                             <Button size="sm" className="h-7 text-xs" onClick={() => handleSelectProduct(choice)} data-testid={`button-select-cleaner-shop-${idx}`}>
                               <Check className="h-3 w-3 mr-1" />
                               Select
@@ -1092,13 +1092,13 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                 <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2" data-testid="compare-card-current">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Current</p>
                   <div className="flex items-center gap-2">
-                    <ScoreBadge score={item.smpRating ?? 0} size={22} />
+                    <ScoreBadge score={item.thaRating ?? 0} size={22} />
                     <span className="text-xs font-medium truncate">{capitalizeWords(item.productName)}</span>
                   </div>
                   <div className="space-y-1 text-[11px] text-muted-foreground">
                     <div className="flex justify-between"><span>Effort</span><span className="font-medium text-foreground">None</span></div>
                     <div className="flex justify-between"><span>Convenience</span><span className="font-medium text-foreground">High</span></div>
-                    <div className="flex justify-between"><span>Ingredients</span><span className={`font-medium ${(item.smpRating ?? 0) >= 4 ? 'text-green-600' : (item.smpRating ?? 0) >= 3 ? 'text-yellow-600' : 'text-red-500'}`}>{(item.smpRating ?? 0) >= 4 ? 'Clean' : (item.smpRating ?? 0) >= 3 ? 'Mixed' : 'Industrial'}</span></div>
+                    <div className="flex justify-between"><span>Ingredients</span><span className={`font-medium ${(item.thaRating ?? 0) >= 4 ? 'text-green-600' : (item.thaRating ?? 0) >= 3 ? 'text-yellow-600' : 'text-red-500'}`}>{(item.thaRating ?? 0) >= 4 ? 'Clean' : (item.thaRating ?? 0) >= 3 ? 'Mixed' : 'Industrial'}</span></div>
                   </div>
                 </div>
                 {/* Cleaner shop option */}
@@ -1106,7 +1106,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                   <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/20 p-3 space-y-2" data-testid="compare-card-shop">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 dark:text-blue-400">Cleaner shop option</p>
                     <div className="flex items-center gap-2">
-                      <ScoreBadge score={rankedChoices[0].upfAnalysis?.smpRating ?? 0} size={22} />
+                      <ScoreBadge score={rankedChoices[0].upfAnalysis?.thaRating ?? 0} size={22} />
                       <span className="text-xs font-medium truncate">{rankedChoices[0].product_name}</span>
                     </div>
                     <div className="space-y-1 text-[11px] text-muted-foreground">
@@ -1238,7 +1238,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                       </div>
                     )}
                     {filteredProducts.map((product, idx) => {
-                      const smpRating = product.upfAnalysis?.smpRating ?? 0;
+                      const thaRating = product.upfAnalysis?.thaRating ?? 0;
                       const additiveCount = product.upfAnalysis?.additiveMatches?.length ?? 0;
                       const emulsifierCount = product.upfAnalysis?.additiveMatches?.filter((a: any) => a.type === 'emulsifier').length ?? 0;
                       const highRiskCount = product.upfAnalysis?.additiveMatches?.filter((a: any) => a.riskLevel === 'high').length ?? 0;
@@ -1257,7 +1257,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                                     {product.brand && <p className="text-[10px] text-muted-foreground">{product.brand}</p>}
                                   </div>
                                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                                    <ScoreBadge score={smpRating} size={22} />
+                                    <ScoreBadge score={thaRating} size={22} />
                                     <Button size="sm" className="h-6 text-xs px-2" onClick={() => handleSelectProduct(product)} data-testid={`button-select-product-${idx}`}>
                                       <Check className="h-3 w-3 mr-1" />Select
                                     </Button>
@@ -1581,9 +1581,9 @@ export default function ShoppingListPage() {
 
   const autoSmpRef = useRef<{ done: boolean; running: boolean }>({ done: false, running: false });
   const itemCount = savedItems.length;
-  const missingSmpCount = savedItems.filter(i => i.smpRating === null || i.smpRating === undefined).length;
+  const missingThaCount = savedItems.filter(i => i.thaRating === null || i.thaRating === undefined).length;
   useEffect(() => {
-    if (loadingSaved || itemCount === 0 || missingSmpCount === 0) return;
+    if (loadingSaved || itemCount === 0 || missingThaCount === 0) return;
     if (autoSmpRef.current.done || autoSmpRef.current.running) return;
     autoSmpRef.current.running = true;
     const timer = setTimeout(async () => {
@@ -1600,7 +1600,7 @@ export default function ShoppingListPage() {
       autoSmpRef.current.done = true;
     }, 2000);
     return () => { clearTimeout(timer); autoSmpRef.current.running = false; };
-  }, [loadingSaved, itemCount, missingSmpCount, queryClient]);
+  }, [loadingSaved, itemCount, missingThaCount, queryClient]);
 
   const getItemTier = useCallback((item: ShoppingListItem): PriceTier => {
     const catTier = getCategoryDefault(item.category || 'other').tier;
@@ -1886,21 +1886,21 @@ export default function ShoppingListPage() {
     return cheapest;
   }, [pricesByItem]);
 
-  const getItemSmpRating = useCallback((itemId: number, item?: ShoppingListItem): number => {
-    if (item?.smpRating !== null && item?.smpRating !== undefined && item.smpRating > 0) {
-      return item.smpRating;
+  const getItemThaRating = useCallback((itemId: number, item?: ShoppingListItem): number => {
+    if (item?.thaRating !== null && item?.thaRating !== undefined && item.thaRating > 0) {
+      return item.thaRating;
     }
     const itemPrices = pricesByItem.get(itemId);
     if (!itemPrices) return 0;
     const store = item?.selectedStore || getCheapestForItem(itemId)?.supermarket;
     if (store) {
       const match = itemPrices.get(store);
-      if (match?.smpRating !== null && match?.smpRating !== undefined) return match.smpRating;
+      if (match?.thaRating !== null && match?.thaRating !== undefined) return match.thaRating;
     }
     let maxSmp = 0;
     itemPrices.forEach(match => {
-      if (match.smpRating !== null && match.smpRating !== undefined && match.smpRating > maxSmp) {
-        maxSmp = match.smpRating;
+      if (match.thaRating !== null && match.thaRating !== undefined && match.thaRating > maxSmp) {
+        maxSmp = match.thaRating;
       }
     });
     return maxSmp;
@@ -1938,10 +1938,10 @@ export default function ShoppingListPage() {
     return total;
   }, [hasPrices, savedItems, allPriceMatches, selectedRetailers, getCategoryDefault, currentTier]);
 
-  const avgSmpRating = useMemo(() => {
-    const rated = savedItems.filter(i => i.smpRating !== null && i.smpRating !== undefined && (i.smpRating as number) > 0);
+  const avgThaRating = useMemo(() => {
+    const rated = savedItems.filter(i => i.thaRating !== null && i.thaRating !== undefined && (i.thaRating as number) > 0);
     if (rated.length === 0) return null;
-    return rated.reduce((sum, i) => sum + (i.smpRating as number), 0) / rated.length;
+    return rated.reduce((sum, i) => sum + (i.thaRating as number), 0) / rated.length;
   }, [savedItems]);
 
   const overallConfidence = useMemo((): 'high' | 'medium' | 'low' | null => {
@@ -2112,8 +2112,8 @@ export default function ShoppingListPage() {
           break;
         }
         case 'smp': {
-          const aSmp = getItemSmpRating(a.id, a);
-          const bSmp = getItemSmpRating(b.id, b);
+          const aSmp = getItemThaRating(a.id, a);
+          const bSmp = getItemThaRating(b.id, b);
           if (aSmp === 0 && bSmp === 0) cmp = 0;
           else if (aSmp === 0) cmp = 1;
           else if (bSmp === 0) cmp = -1;
@@ -2124,7 +2124,7 @@ export default function ShoppingListPage() {
       return sortDirection === 'desc' ? -cmp : cmp;
     });
     return sorted;
-  }, [savedItems, sortColumn, sortDirection, pricesByItem, getCheapestForItem, getItemTier, getItemSmpRating, sourcesByItem, splitByShop]);
+  }, [savedItems, sortColumn, sortDirection, pricesByItem, getCheapestForItem, getItemTier, getItemThaRating, sourcesByItem, splitByShop]);
 
   // Initialise collapsed-category state once data has loaded
   useEffect(() => {
@@ -2626,9 +2626,9 @@ export default function ShoppingListPage() {
                                         <div className="flex items-center gap-1 flex-wrap">
                                           <span className="font-medium text-foreground cursor-pointer" onClick={() => startEdit(item.id, 'productName', item.productName)} data-testid={`text-item-name-${item.id}`}>{capitalizeWords(item.productName)}</span>
                                           {(() => {
-                                            const smp = getItemSmpRating(item.id, item);
+                                            const smp = getItemThaRating(item.id, item);
                                             if (smp === 0) return null;
-                                            return <span className="sm:hidden" data-testid={`text-smp-mobile-${item.id}`}><AppleRating rating={smp} sizePx={26} hasCape={smp === 5} /></span>;
+                                            return <span className="sm:hidden" data-testid={`text-smp-mobile-${item.id}`}><AppleRating rating={smp} sizePx={26} /></span>;
                                           })()}
                                           {item.quantity > 1 && <Badge variant="secondary" className="text-[10px]" data-testid={`badge-quantity-${item.id}`}>x{item.quantity}</Badge>}
                                           {mergedCount > 1 && <Badge variant="outline" className="text-[10px] text-blue-500 dark:text-blue-400 border-blue-300 dark:border-blue-600" data-testid={`badge-merged-${item.id}`}>×{mergedCount}</Badge>}
@@ -2893,9 +2893,9 @@ export default function ShoppingListPage() {
 
                                     <td className="px-1.5 py-1 text-center hidden sm:table-cell" data-testid={`text-smp-${item.id}`}>
                                       {hasPrices ? (() => {
-                                        const smp = getItemSmpRating(item.id, item);
+                                        const smp = getItemThaRating(item.id, item);
                                         if (smp === 0) return <span className="text-muted-foreground">—</span>;
-                                        return <AppleRating rating={smp} size="small" hasCape={smp === 5} />;
+                                        return <AppleRating rating={smp} size="small" />;
                                       })() : <span className="text-muted-foreground">—</span>}
                                     </td>
 
@@ -3005,7 +3005,7 @@ export default function ShoppingListPage() {
                                 const match = selStore ? pricesByItem.get(itm.id)?.get(selStore) : null;
                                 return sum + (match?.price ?? 0);
                               }, 0) : null;
-                              const catRatings = catItems.map(i => getItemSmpRating(i.id, i)).filter(r => r > 0);
+                              const catRatings = catItems.map(i => getItemThaRating(i.id, i)).filter(r => r > 0);
                               const catAvgRating = catRatings.length > 0 ? catRatings.reduce((a, b) => a + b, 0) / catRatings.length : null;
                               const totalCount = catItems.length + catExtras.length;
                               return (
@@ -3249,7 +3249,7 @@ export default function ShoppingListPage() {
                         {clientBestTotal !== null ? `£${clientBestTotal.toFixed(2)}` : <span className="text-muted-foreground font-normal">—</span>}
                       </td>
                       <td className="px-1.5 py-1.5 text-center" data-testid="text-basket-avg-smp">
-                        {avgSmpRating !== null ? <AppleRating rating={avgSmpRating} size="small" showTooltip={false} /> : <span className="text-muted-foreground font-normal">—</span>}
+                        {avgThaRating !== null ? <AppleRating rating={avgThaRating} size="small" showTooltip={false} /> : <span className="text-muted-foreground font-normal">—</span>}
                       </td>
                       <td colSpan={2} className="sticky right-0 z-10 bg-muted/30" />
                     </tr>

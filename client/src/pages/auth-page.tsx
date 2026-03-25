@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight, Lock, UserPlus, CheckCircle2, AlertTriangle, Mail,
   Loader2, RefreshCw, KeyRound, CalendarDays, Search, ShoppingBasket, ChevronDown,
+  Eye, EyeOff,
 } from "lucide-react";
 import { useLocation, useSearch } from "wouter";
 import KitchenToBasketVisual from "@/components/KitchenToBasketVisual";
@@ -516,6 +517,7 @@ export default function AuthPage() {
                     submitLabel="Sign in"
                     isSubmitting={isLoggingIn}
                     testIdPrefix="login"
+                    showPasswordToggle
                   />
                   <div className="space-y-1.5">
                     <div className="text-center">
@@ -635,13 +637,15 @@ export default function AuthPage() {
   );
 }
 
-function AuthForm({ onSubmit, submitLabel, isSubmitting, testIdPrefix, isRegister }: {
+function AuthForm({ onSubmit, submitLabel, isSubmitting, testIdPrefix, isRegister, showPasswordToggle }: {
   onSubmit: (data: InsertUser) => void;
   submitLabel: string;
   isSubmitting: boolean;
   testIdPrefix: string;
   isRegister?: boolean;
+  showPasswordToggle?: boolean;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
   const form = useForm<InsertUser>({
     resolver: zodResolver(insertUserSchema),
     defaultValues: { username: "", password: "" },
@@ -677,13 +681,29 @@ function AuthForm({ onSubmit, submitLabel, isSubmitting, testIdPrefix, isRegiste
                 <FormItem>
                   <FormLabel className="text-sm font-medium text-foreground/80">Password</FormLabel>
                   <FormControl>
-                    <Input
-                      type="password"
-                      placeholder={isRegister ? "Create a password (min 6 characters)" : "Enter your password"}
-                      className="h-12 bg-background/50 border-border/70 focus-visible:ring-primary/30"
-                      {...field}
-                      data-testid={`input-${testIdPrefix}-password`}
-                    />
+                    <div className="relative">
+                      <Input
+                        type={showPasswordToggle && showPassword ? "text" : "password"}
+                        placeholder={isRegister ? "Create a password (min 6 characters)" : "Enter your password"}
+                        className={`h-12 bg-background/50 border-border/70 focus-visible:ring-primary/30${showPasswordToggle ? " pr-12" : ""}`}
+                        {...field}
+                        data-testid={`input-${testIdPrefix}-password`}
+                      />
+                      {showPasswordToggle && (
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((v) => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          tabIndex={0}
+                        >
+                          {showPassword
+                            ? <EyeOff className="h-5 w-5" aria-hidden="true" />
+                            : <Eye className="h-5 w-5" aria-hidden="true" />
+                          }
+                        </button>
+                      )}
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
