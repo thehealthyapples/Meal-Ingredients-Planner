@@ -355,10 +355,7 @@ export function calculateStrictSMPRating(input: SMPRatingInput): SMPRatingResult
     if (match.additive.riskLevel === "high") highRiskCount++;
     const type = match.additive.type.toLowerCase();
     if (type === "emulsifier") emulsifierCount++;
-    // Only penalise acidity regulators that are moderate or high risk.
-    // Low-risk examples like citric acid (E330) and sodium citrate (E331)
-    // occur naturally in many whole foods and should not be penalised.
-    if (type === "acidity regulator" && match.additive.riskLevel !== "low") acidityRegulatorCount++;
+    if (type === "acidity regulator") acidityRegulatorCount++;
   }
 
   const highRiskPenalty = highRiskCount * 8;
