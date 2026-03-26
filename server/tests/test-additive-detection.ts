@@ -17,6 +17,8 @@ import {
   detectAdditives,
   calculateTHAAppleRating,
   detectProcessingIndicators,
+  SOFT_UPF_TERMS,
+  EXTRACT_PATTERN as EXTRACT_PATTERN_PROD,
 } from "../lib/upf-analysis-service.js";
 import type { Additive } from "../../shared/schema.js";
 
@@ -32,24 +34,6 @@ const db = drizzle(pool);
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const SOFT_UPF_TERMS = [
-  "yeast extract",
-  "natural flavour",
-  "natural flavor",
-  "maltodextrin",
-  "dextrose",
-  "glucose syrup",
-  "hydrolysed",
-  "modified starch",
-  "invert sugar",
-];
-
-// Keep in sync with EXTRACT_PATTERN in upf-analysis-service.ts.
-// Returns 0 or 1 — grouped phrases (e.g. "spice and herb extracts") count
-// as a SINGLE additive hit regardless of how many extract words appear.
-// Plain "spice", "spices", "herbs" without "extract" → 0 hits.
-const EXTRACT_PATTERN = /\b(?:herb|spice|plant|botanical|mixed|vegetable|fruit|natural|rosemary|thyme|oregano|basil|sage|bay|parsley|coriander|fennel|tarragon|mint|marjoram|lavender|chamomile|turmeric|ginger|paprika|celery|elderflower|elderberry|hibiscus|lemon|orange|lime|garlic|onion|pepper|chilli|chili)\s+extracts?\b/gi;
-
 function getSoftMatches(text: string): string[] {
   const lower = text.toLowerCase();
   return SOFT_UPF_TERMS.filter(t => lower.includes(t));
@@ -58,7 +42,8 @@ function getSoftMatches(text: string): string[] {
 // Returns each matched extract phrase. Grouped phrases count once each;
 // separate declarations count separately.
 function getExtractMatches(text: string): string[] {
-  return text.match(EXTRACT_PATTERN) ?? [];
+  EXTRACT_PATTERN_PROD.lastIndex = 0;
+  return text.match(EXTRACT_PATTERN_PROD) ?? [];
 }
 
 const PASS = "✅";
@@ -216,6 +201,18 @@ const CASES: TestCase[] = [
     expect: {
       exactApples: 5,
       exactExtractCount: 0,
+      noDoubleCount: true,
+    },
+  },
+  {
+    id: 14,
+    label: "Pizza with salami/pepperoni — colon separators + smoke flavour",
+    ingredients:
+      "Wheat Flour, Tomato Passata, Water, Mozzarella Cheese (12.3%) (Cow's Milk). Ventricina Smoked Salami (5.6%) (Pork Meat, Pork Fat, Salt, Preservative: Sodium Nitrite, Spices, Dextrose, Antioxidant: Ascorbic Acid), Calabrese Spicy Salami (5.3%) (Pork Meat, Chilli, Salt, Flavourings, Dextrose, Sugar, Spices, Smoke Flavour, Antioxidant: Ascorbic Acid, Preservatives: Sodium Nitrite, Potassium Nitrate). Crumbled Pepperoni (4.5%) (Pork Meat, Pork Fat, Salt, Chilli, Spices, Sugar, Antioxidant: Ascorbic Acid, Preservative: Sodium Nitrite), Sunflower Oil, Salt, Extra Virgin Olive Oil, Roasted Garlic, Paprika, Oregano, Black Pepper, Yeast, Chilli.",
+    expect: {
+      maxApples: 2,
+      mustDetect: ["e250", "e252", "e300"],
+      mustDetectSoft: ["dextrose", "flavour"],
       noDoubleCount: true,
     },
   },

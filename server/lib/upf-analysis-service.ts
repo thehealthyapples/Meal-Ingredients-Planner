@@ -59,6 +59,21 @@ export interface UPFAnalysisResult {
 // Global flag is required for counted matching via String.prototype.match().
 export const EXTRACT_PATTERN = /\b(?:herb|spice|plant|botanical|mixed|vegetable|fruit|natural|rosemary|thyme|oregano|basil|sage|bay|parsley|coriander|fennel|tarragon|mint|marjoram|lavender|chamomile|turmeric|ginger|paprika|celery|elderflower|elderberry|hibiscus|lemon|orange|lime|garlic|onion|pepper|chilli|chili)\s+extracts?\b/gi;
 
+// Soft UPF terms counted as additives even without an E-number.
+// Roots only — "flavour" matches "flavouring", "smoke flavour", "flavourings", etc.
+// Exported so tests can import the single source of truth instead of duplicating.
+export const SOFT_UPF_TERMS = [
+  "yeast extract",
+  "flavour",         // covers: natural flavouring, smoke flavour, flavourings, artificial flavour
+  "flavor",          // American spelling
+  "maltodextrin",
+  "dextrose",
+  "glucose syrup",
+  "hydrolysed",
+  "modified starch", // covers modified corn/tapioca/potato/maize starch
+  "invert sugar",
+];
+
 // Pattern that identifies a fortified-flour context surrounding a match.
 // When E170 (Calcium Carbonate) appears inside "fortified wheat flour (…)"
 // we flag it as regulatory rather than discretionary.
@@ -112,13 +127,15 @@ export function detectAdditives(ingredientsText: string, additiveDb: Additive[])
   function isStandaloneMatch(t: string, term: string): number {
     // Escape regex special chars in the term.
     const escaped = term.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&");
-    // LEADING boundary only: start-of-string OR a delimiter (, ; ( [).
+    // LEADING boundary only: start-of-string OR a delimiter (, ; ( [ :).
+    // Colon is included so "Preservative: Sodium Nitrite" and
+    // "Antioxidant: Ascorbic Acid" are matched inside compound sections.
     // Spaces are intentionally excluded as a leading boundary — a term
     // preceded only by a space is embedded mid-phrase (e.g. "of fatty
     // acids") and must NOT match.
     // No trailing restriction: "Mono- and Diglycerides" legitimately
     // has " of Fatty Acids" after it before the closing paren.
-    const rx = new RegExp(`(?:^|[,;(\\[])\\s*${escaped}`, "i");
+    const rx = new RegExp(`(?:^|[,;(:\\[])\\s*${escaped}`, "i");
     const m = rx.exec(t);
     if (!m) return -1;
     // Return the index where the term itself starts within the match.
@@ -232,20 +249,6 @@ export function calculateTHAAppleRating(
   ingredientsText?: string,
 ): number {
   const text = (ingredientsText ?? "").toLowerCase();
-
-  // Soft UPF terms that count as additives even without an E-number.
-  // Roots only — "natural flavour" matches "natural flavouring/flavours" etc.
-  const SOFT_UPF_TERMS = [
-    "yeast extract",
-    "natural flavour",    // covers natural flavouring / natural flavours
-    "natural flavor",     // American spelling
-    "maltodextrin",
-    "dextrose",
-    "glucose syrup",
-    "hydrolysed",
-    "modified starch",    // covers modified corn/tapioca/potato/maize starch
-    "invert sugar",
-  ];
 
   // EXTRACT_PATTERN is module-level (exported). Reset lastIndex before use
   // because the global flag makes the RegExp object stateful.
