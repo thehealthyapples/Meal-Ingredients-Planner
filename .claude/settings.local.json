@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -rn --include=*.ts --include=*.tsx \"smpRating\\\\|smpScore\\\\|smpPenalties\\\\|smpBonuses\\\\|hasCape\\\\|isWholeFoodOverride\\\\|calculateStrictSMPRating\\\\|SMPRatingResult\\\\|SMPRatingInput\\\\|calculateSMPRating\\\\|calculateAdditiveRating\\\\|averageSmpRating\\\\|SMP Rating\" --exclude-dir=node_modules --exclude-dir=.git)",
+      "Bash(npm run:*)",
+      "Bash(psql:*)"
+    ]
+  }
+}

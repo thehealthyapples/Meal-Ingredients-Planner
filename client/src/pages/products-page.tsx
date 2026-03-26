@@ -1543,35 +1543,38 @@ export default function ProductsPage() {
         <Dialog open={selectedProduct !== null} onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}>
           <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto" data-testid="dialog-product-detail">
             {selectedProduct && (<>
-              <DialogHeader>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <DialogTitle className="text-xl leading-tight" data-testid="text-detail-name">
-                      {selectedProduct.product_name}
-                    </DialogTitle>
-                    {selectedProduct.brand && (
-                      <p className="text-sm text-muted-foreground mt-1">{selectedProduct.brand}</p>
-                    )}
-                    {selectedProduct.availableStores && selectedProduct.availableStores.length > 0 && (
-                      <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1">
-                        <Store className="h-3.5 w-3.5" />
-                        {selectedProduct.availableStores.join(' · ')}
-                      </p>
-                    )}
-                  </div>
-                  {selectedProduct.upfAnalysis && (
-                    <AppleRatingWithTooltip
-                      rating={selectedProduct.upfAnalysis.thaRating}
-                      sizePx={48}
-                      additiveContext={{
-                        total: selectedProduct.upfAnalysis.additiveCount ?? selectedProduct.upfAnalysis.additiveMatches.length,
-                        regulatory: selectedProduct.upfAnalysis.regulatoryCount ?? 0,
-                        topType: selectedProduct.upfAnalysis.additiveMatches.find(a => !a.isRegulatory)?.type,
-                      }}
-                    />
-                  )}
-                </div>
-              </DialogHeader>
+                  <DialogHeader>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <DialogTitle className="text-xl leading-tight" data-testid="text-detail-name">
+                          {selectedProduct.product_name}
+                        </DialogTitle>
+                        {selectedProduct.brand && (
+                          <p className="text-sm text-muted-foreground mt-1">{selectedProduct.brand}</p>
+                        )}
+                        {selectedProduct.availableStores && selectedProduct.availableStores.length > 0 && (
+                          <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1">
+                            <Store className="h-3.5 w-3.5" />
+                            {selectedProduct.availableStores.join(' · ')}
+                          </p>
+                        )}
+                      </div>
+
+                      {selectedProduct.upfAnalysis && (
+                        <div className="shrink-0 min-w-[140px] flex justify-end pt-1">
+                          <AppleRatingWithTooltip
+                            rating={selectedProduct.upfAnalysis.thaRating}
+                            sizePx={48}
+                            additiveContext={{
+                              total: selectedProduct.upfAnalysis.additiveCount ?? selectedProduct.upfAnalysis.additiveMatches.length,
+                              regulatory: selectedProduct.upfAnalysis.regulatoryCount ?? 0,
+                              topType: selectedProduct.upfAnalysis.additiveMatches.find(a => !a.isRegulatory)?.type,
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </DialogHeader>
 
               <div className="space-y-4">
                 {selectedProduct.image_url && (

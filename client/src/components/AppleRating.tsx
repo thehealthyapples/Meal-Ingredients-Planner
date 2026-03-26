@@ -113,7 +113,7 @@ export default function AppleRating({
   return (
     <Tooltip>
       <TooltipTrigger asChild>{content}</TooltipTrigger>
-      <TooltipContent side="top" className="text-xs max-w-[220px]">
+      <TooltipContent side="top" align="end" sideOffset={8} className="text-xs max-w-[220px]">
         {tooltipLines.map((line, i) => (
           <p key={i} className={i === 0 ? "font-medium" : "text-muted-foreground mt-0.5"}>
             {line}
