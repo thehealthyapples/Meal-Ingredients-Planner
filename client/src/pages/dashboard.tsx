@@ -126,7 +126,8 @@ export default function Dashboard() {
         <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ height: 90, opacity: 0.45 }}>
           <OrchardHero />
         </div>
-        <div className="relative z-10" style={{ padding: "var(--space-5) var(--space-6) 56px" }}>
+        <div className="relative z-10" style={{ padding: "var(--space-5) 0 56px" }}>
+          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
             <div className="flex items-center gap-1.5 mb-0.5">
               <Leaf className="h-3.5 w-3.5" style={{ color: GREEN_DEEP }} />
@@ -145,6 +146,7 @@ export default function Dashboard() {
                   : "Start building your healthy meal collection"}
             </p>
           </motion.div>
+          </div>
         </div>
         <div className="relative z-10">
           <svg viewBox="0 0 1440 24" fill="none" xmlns="http://www.w3.org/2000/svg"

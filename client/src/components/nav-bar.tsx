@@ -6,12 +6,18 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   LayoutDashboard, CalendarDays, ShoppingBasket,
-  User, LogOut, ShieldCheck, Star,
-  Mail, Sliders, Search, Menu, ChevronLeft, ChevronRight,
+  LogOut, ShieldCheck, Star,
+  Mail, Sliders, Search, ChevronLeft, ChevronRight,
   MoreHorizontal, Microscope, BookOpen, Heart, ScrollText,
+  User,
 } from "lucide-react";
 import { api } from "@shared/routes";
+import thaAppleSrc from "@/assets/icons/tha-apple.png";
 
 function PantryIcon({ className }: { className?: string }) {
   return (
@@ -27,35 +33,21 @@ function PantryIcon({ className }: { className?: string }) {
   );
 }
 
-const NAV_ITEMS_TOP = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-];
-
+// Sidebar nav — high-frequency items (Dashboard, Search, Basket, Profile) live in the top bar
 const NAV_ITEMS_MAIN = [
   { href: "/meals", label: "Cookbook", icon: BookOpen },
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/products", label: "Analyser", icon: Microscope },
-  { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
   { href: "/diary", label: "My Diary", icon: ScrollText },
-  { href: "/partners", label: "Partners", icon: Heart },
-  { href: "/profile", label: "Profile", icon: User },
 ];
 
-const NAV_ITEMS = [...NAV_ITEMS_TOP, ...NAV_ITEMS_MAIN];
-
-const ADMIN_ITEMS = [
-  { href: "/admin/users", label: "Users", icon: ShieldCheck },
-  { href: "/admin/ingredient-products", label: "THA Picks", icon: Star },
-  { href: "/admin/recipe-sources", label: "Recipe Sources", icon: Sliders },
-];
-
+// Mobile bottom nav — 4 core tools
 const MOBILE_BOTTOM_ITEMS = [
-  { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
   { href: "/meals", label: "Cookbook", icon: BookOpen },
+  { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
-  { href: "/analyse-basket", label: "Basket", icon: ShoppingBasket },
-  { href: "/profile", label: "Profile", icon: User },
+  { href: "/products", label: "Analyser", icon: Microscope },
 ];
 
 export type SidebarContextValue = { isCollapsed: boolean };
@@ -148,22 +140,6 @@ function SidebarBody({
   onSearchOpen: () => void; itemCount: number;
   logout: () => void;
 }) {
-  const searchBtn = (
-    <button
-      onClick={() => { onClose?.(); onSearchOpen(); }}
-      className={`flex items-center gap-3 w-full rounded-lg text-sm transition-colors text-muted-foreground hover:bg-accent/60 hover:text-foreground ${
-        isCollapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"
-      }`}
-      data-testid="sidebar-button-search"
-      aria-label="Search meals"
-    >
-      <span className="flex items-center justify-center min-w-[24px] flex-shrink-0">
-        <Search className="h-4 w-4" />
-      </span>
-      {!isCollapsed && <span className="truncate">Search</span>}
-    </button>
-  );
-
   const logoutBtn = (
     <button
       onClick={() => { onClose?.(); logout(); }}
@@ -184,30 +160,6 @@ function SidebarBody({
     <div className="flex flex-col flex-1 min-h-0 py-3">
       {/* Main nav */}
       <nav className="flex flex-col gap-0.5 px-2 flex-1 overflow-y-auto">
-        {/* Dashboard — always first */}
-        {NAV_ITEMS_TOP.map((item) => (
-          <SidebarNavItem
-            key={item.href}
-            href={item.href}
-            label={item.label}
-            icon={item.icon}
-            isCollapsed={isCollapsed}
-            isActive={location === item.href}
-            onClick={onClose}
-          />
-        ))}
-
-        {/* Search — sits directly under Dashboard */}
-        {isCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>{searchBtn}</TooltipTrigger>
-            <TooltipContent side="right">Search meals</TooltipContent>
-          </Tooltip>
-        ) : searchBtn}
-
-        <div className="my-1 border-t border-border/40" />
-
-        {/* Remaining nav items */}
         {NAV_ITEMS_MAIN.map((item) => (
           <SidebarNavItem
             key={item.href}
@@ -217,61 +169,13 @@ function SidebarBody({
             isCollapsed={isCollapsed}
             isActive={location === item.href}
             onClick={onClose}
-            badge={item.href === "/analyse-basket" ? itemCount : undefined}
           />
         ))}
 
-        {isAdmin && (
-          <>
-            <div className="my-2 border-t border-border" />
-            {!isCollapsed && (
-              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1">
-                Admin
-              </p>
-            )}
-            {ADMIN_ITEMS.map((item) => (
-              <SidebarNavItem
-                key={item.href}
-                href={item.href}
-                label={item.label}
-                icon={item.icon}
-                isCollapsed={isCollapsed}
-                isActive={location === item.href}
-                onClick={onClose}
-              />
-            ))}
-          </>
-        )}
       </nav>
 
-      {/* Bottom section: support + logout */}
+      {/* Bottom section: logout */}
       <div className="px-2 pt-2 border-t border-border flex flex-col gap-0.5">
-        {/* Support */}
-        {isCollapsed ? (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <a
-                href={`mailto:${support}`}
-                className="flex items-center justify-center p-2.5 rounded-lg text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors"
-                data-testid="sidebar-link-support"
-              >
-                <Mail className="h-4 w-4" />
-              </a>
-            </TooltipTrigger>
-            <TooltipContent side="right">Support: {support}</TooltipContent>
-          </Tooltip>
-        ) : (
-          <a
-            href={`mailto:${support}`}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors"
-            data-testid="sidebar-link-support"
-          >
-            <Mail className="h-4 w-4 shrink-0" />
-            <span className="truncate">{support}</span>
-          </a>
-        )}
-
-        {/* Logout — pinned to very bottom */}
         {isCollapsed ? (
           <Tooltip>
             <TooltipTrigger asChild>{logoutBtn}</TooltipTrigger>
@@ -336,25 +240,73 @@ function SearchModal({ open, onClose }: { open: boolean; onClose: () => void }) 
   );
 }
 
+/* ── Apple Menu ── */
+function AppleMenu({ location, isAdmin }: { location: string; isAdmin: boolean }) {
+  const [, navigate] = useLocation();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="flex items-center justify-center h-11 w-11 rounded-lg transition-colors text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+          aria-label="Menu"
+          data-testid="button-apple-menu"
+        >
+          <img src={thaAppleSrc} alt="Menu" className="h-[60px] w-[60px] object-contain" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem asChild>
+          <Link href="/profile" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-profile">
+            <User className="h-4 w-4" />
+            Profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/partners" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-partners">
+            <Heart className="h-4 w-4" />
+            Partners
+          </Link>
+        </DropdownMenuItem>
+        {isAdmin && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/admin/users" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-admin-users">
+                <ShieldCheck className="h-4 w-4" />
+                Users
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/admin/ingredient-products" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-admin-picks">
+                <Star className="h-4 w-4" />
+                THA Picks
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/admin/recipe-sources" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-admin-sources">
+                <Sliders className="h-4 w-4" />
+                Recipe Sources
+              </Link>
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 /* ── TopBar — logo only on desktop, hamburger + logo + search on mobile ── */
 export function TopBar() {
   const [location] = useLocation();
   const { user } = useUser();
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [, navigate] = useLocation();
-  const { data: config } = useQuery<{ supportEmail?: string }>({
-    queryKey: ["/api/config"],
-    enabled: !!user,
-  });
   const { data: shoppingListItems = [] } = useQuery<any[]>({
     queryKey: [api.shoppingList.list.path],
     enabled: !!user,
   });
   const itemCount = shoppingListItems.length;
-  const support = config?.supportEmail || "support@thehealthyapples.com";
-  const { logout } = useUser();
   const isAdmin = (user as any)?.role === "admin";
 
   if (!user) return null;
@@ -368,105 +320,161 @@ export function TopBar() {
   };
 
   return (
-    <>
-      <div className="sticky top-0 z-50 shrink-0" data-testid="top-nav-bar">
-        {/* Desktop: pure logo bar */}
-        <header className="w-full bg-card/60 backdrop-blur-md border-b border-border py-0.5">
-          <div className="hidden md:flex items-center justify-center px-4">
-            <Link href="/" data-testid="link-logo" className="flex items-center">
-              <img
-                src="/logo-long.png"
-                alt="The Healthy Apples"
-                className="h-auto max-h-[108px] w-auto max-w-[900px]"
-              />
-            </Link>
+    <div className="sticky top-0 z-50 shrink-0" data-testid="top-nav-bar">
+      <header className="w-full bg-card/60 backdrop-blur-md border-b border-border py-0.5">
+
+        {/* Desktop: [Dashboard, Search, Diary] | logo (center) | [Basket, Partners, Profile] */}
+        <div className="hidden md:grid items-center px-4" style={{ gridTemplateColumns: "1fr auto 1fr" }}>
+          {/* Left: Dashboard + Search + Diary */}
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/"
+                  className={`flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/" ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+                  aria-label="Dashboard"
+                  data-testid="button-topbar-dashboard"
+                >
+                  <LayoutDashboard className="h-5 w-5" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>Dashboard</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-accent/60 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setMobileSearchOpen((v) => !v)}
+                  aria-label="Search"
+                  data-testid="button-topbar-search"
+                >
+                  <Search className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Search</TooltipContent>
+            </Tooltip>
           </div>
 
-          {/* Mobile: hamburger | logo | search toggle */}
-          <div className="md:hidden grid grid-cols-[auto_1fr_auto] items-center px-2 gap-2">
-            <button
-              className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
-              onClick={() => setMobileOpen(true)}
-              data-testid="button-mobile-menu"
-              aria-label="Open menu"
+          {/* Center: logo */}
+          <Link href="/" data-testid="link-logo" className="flex items-center justify-center">
+            <img
+              src="/logo-long.png"
+              alt="The Healthy Apples"
+              className="h-auto max-h-[88px] w-auto max-w-[700px]"
+            />
+          </Link>
+
+          {/* Right: Basket + Apple menu */}
+          <div className="flex items-center gap-1 justify-end">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/analyse-basket"
+                  className={`relative flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/analyse-basket" ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+                  aria-label="Basket"
+                  data-testid="button-topbar-basket"
+                >
+                  <ShoppingBasket className="h-5 w-5" />
+                  {itemCount > 0 && (
+                    <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none pointer-events-none">
+                      {itemCount > 99 ? "99+" : itemCount}
+                    </span>
+                  )}
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>Basket{itemCount > 0 ? ` (${itemCount})` : ""}</TooltipContent>
+            </Tooltip>
+            <AppleMenu location={location} isAdmin={isAdmin} data-testid="button-topbar-apple-menu" />
+          </div>
+        </div>
+
+        {/* Mobile: [Dashboard, Search] | logo | [Basket, Profile] */}
+        <div className="md:hidden flex items-center justify-between px-1 h-14">
+
+          {/* Left: Dashboard + Search + Diary */}
+          <div className="flex items-center">
+            <Link
+              href="/"
+              className={`flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/" ? "text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+              aria-label="Dashboard"
+              data-testid="button-topbar-dashboard"
             >
-              <Menu className="h-5 w-5" />
-            </button>
-            <Link href="/" className="flex justify-center items-center" data-testid="link-logo-mobile">
-              <img
-                src="/logo-long.png"
-                alt="The Healthy Apples"
-                className="h-auto max-h-[72px] w-auto max-w-[520px]"
-              />
+              <LayoutDashboard className="h-5 w-5" />
             </Link>
             <button
-              className="flex items-center justify-center h-9 w-9 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
+              className="flex items-center justify-center h-11 w-11 rounded-lg hover:bg-accent/60 text-muted-foreground transition-colors"
               onClick={() => setMobileSearchOpen((v) => !v)}
+              aria-label="Search"
               data-testid="button-mobile-search"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Center: logo */}
+          <Link href="/" data-testid="link-logo-mobile" className="flex items-center">
+            <img
+              src="/logo-long.png"
+              alt="The Healthy Apples"
+              className="h-auto max-h-[44px] w-auto max-w-[160px]"
+            />
+          </Link>
+
+          {/* Right: Basket + Apple menu */}
+          <div className="flex items-center">
+            <Link
+              href="/analyse-basket"
+              className={`relative flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/analyse-basket" ? "text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+              aria-label="Basket"
+              data-testid="button-topbar-basket"
+            >
+              <ShoppingBasket className="h-5 w-5" />
+              {itemCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none pointer-events-none">
+                  {itemCount > 99 ? "99+" : itemCount}
+                </span>
+              )}
+            </Link>
+            <AppleMenu location={location} isAdmin={isAdmin} />
+          </div>
+
+        </div>
+      </header>
+
+      {/* Mobile search panel */}
+      {mobileSearchOpen && (
+        <div className="md:hidden bg-card/90 backdrop-blur-md border-b border-border px-3 py-2 flex items-center gap-2">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              placeholder="Search meals…"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleMobileSearch();
+                if (e.key === "Escape") setMobileSearchOpen(false);
+              }}
+              autoFocus
+              className="w-full h-9 pl-3 pr-8 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              data-testid="input-search"
+            />
+            <button
+              onClick={handleMobileSearch}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               aria-label="Search"
             >
               <Search className="h-4 w-4" />
             </button>
           </div>
-        </header>
-
-        {/* Mobile search panel */}
-        {mobileSearchOpen && (
-          <div className="md:hidden bg-card/80 backdrop-blur-md border-b border-border px-3 py-2 flex items-center gap-2">
-            <div className="relative flex-1">
-              <input
-                type="text"
-                placeholder="Search meals…"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleMobileSearch();
-                  if (e.key === "Escape") setMobileSearchOpen(false);
-                }}
-                autoFocus
-                className="w-full h-8 pl-3 pr-8 rounded-lg border border-border bg-background text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                data-testid="input-search"
-              />
-              <button
-                onClick={handleMobileSearch}
-                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Search"
-              >
-                <Search className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <button
-              className="text-muted-foreground hover:text-foreground text-sm shrink-0"
-              onClick={() => setMobileSearchOpen(false)}
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Mobile sidebar sheet */}
-      <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-        <SheetContent side="left" className="w-[260px] p-0" data-testid="sheet-mobile-sidebar">
-          <SheetHeader className="px-4 pt-4 pb-2">
-            <SheetTitle className="flex items-center gap-2 text-sm font-semibold">
-              <img src="/favicon.png" alt="THA" className="h-6 w-6 rounded" />
-              The Healthy Apples
-            </SheetTitle>
-          </SheetHeader>
-          <SidebarBody
-            isCollapsed={false}
-            location={location}
-            isAdmin={isAdmin}
-            support={support}
-            onClose={() => setMobileOpen(false)}
-            onSearchOpen={() => {}}
-            itemCount={itemCount}
-            logout={logout}
-          />
-        </SheetContent>
-      </Sheet>
-    </>
+          <button
+            className="text-muted-foreground hover:text-foreground text-sm shrink-0 px-1"
+            onClick={() => setMobileSearchOpen(false)}
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -538,14 +546,8 @@ export function DesktopSidebar() {
 /* ── Mobile Bottom Nav ── */
 export function MobileNav() {
   const [location] = useLocation();
-  const { user, logout } = useUser();
+  const { user } = useUser();
   const [moreOpen, setMoreOpen] = useState(false);
-  const { data: config } = useQuery<{ supportEmail?: string }>({
-    queryKey: ["/api/config"],
-    enabled: !!user,
-  });
-  const support = config?.supportEmail || "support@thehealthyapples.com";
-  const isAdmin = (user as any)?.role === "admin";
 
   if (!user) return null;
 
@@ -553,9 +555,10 @@ export function MobileNav() {
     <>
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border"
+        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
         data-testid="mobile-bottom-nav"
       >
-        <div className="flex items-center justify-around px-2 py-1.5 max-w-lg mx-auto">
+        <div className="flex items-center justify-around px-2 py-1 max-w-lg mx-auto">
           {MOBILE_BOTTOM_ITEMS.map((item) => {
             const isActive = location === item.href;
             const Icon = item.icon;
@@ -563,7 +566,7 @@ export function MobileNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[56px] ${
+                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors min-w-[60px] min-h-[44px] justify-center ${
                   isActive ? "text-primary" : "text-muted-foreground"
                 }`}
                 data-testid={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
@@ -574,7 +577,7 @@ export function MobileNav() {
             );
           })}
           <button
-            className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors min-w-[56px] text-muted-foreground"
+            className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors min-w-[60px] min-h-[44px] justify-center text-muted-foreground"
             onClick={() => setMoreOpen(true)}
             data-testid="mobile-nav-more"
           >
@@ -591,64 +594,15 @@ export function MobileNav() {
           </SheetHeader>
           <div className="flex flex-col gap-1">
             <Link
-              href="/"
+              href="/diary"
               onClick={() => setMoreOpen(false)}
-              className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/" ? "text-primary font-medium" : ""}`}
-              data-testid="more-link-dashboard"
+              className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/diary" ? "text-primary font-medium" : ""}`}
+              data-testid="more-link-diary"
             >
-              <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
-              <span className="font-medium">Dashboard</span>
-            </Link>
-            <Link
-              href="/products"
-              onClick={() => setMoreOpen(false)}
-              className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/products" ? "text-primary font-medium" : ""}`}
-              data-testid="more-link-products"
-            >
-              <Microscope className="h-5 w-5 text-muted-foreground" />
-              <span className="font-medium">Analyser</span>
+              <ScrollText className="h-5 w-5 text-muted-foreground" />
+              <span className="font-medium">My Diary</span>
             </Link>
 
-            {isAdmin && (
-              <>
-                <div className="border-t border-border my-1" />
-                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1">Admin</p>
-                {ADMIN_ITEMS.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setMoreOpen(false)}
-                      className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === item.href ? "text-primary font-medium" : ""}`}
-                      data-testid={`more-link-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                    >
-                      <Icon className="h-5 w-5 text-muted-foreground" />
-                      <span className="font-medium">{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </>
-            )}
-
-            <div className="border-t border-border my-1" />
-            <a
-              href={`mailto:${support}`}
-              className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm hover:bg-muted transition-colors"
-              data-testid="more-link-support"
-            >
-              <Mail className="h-5 w-5 text-muted-foreground" />
-              <span className="text-muted-foreground">{support}</span>
-            </a>
-
-            <button
-              className="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors text-destructive"
-              onClick={() => { setMoreOpen(false); logout(); }}
-              data-testid="more-button-logout"
-            >
-              <LogOut className="h-5 w-5" />
-              <span className="font-medium">Log out</span>
-            </button>
           </div>
         </SheetContent>
       </Sheet>

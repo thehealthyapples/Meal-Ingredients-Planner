@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CalendarDays, Search, ShoppingBasket, Loader2 } from "lucide-react";
+import { ArrowRight, CalendarDays, Search, ShoppingBasket, Loader2, ChevronDown } from "lucide-react";
 import OrchardBackdrop from "@/components/layout/orchard-backdrop";
 import ProductFlowVisual from "@/components/KitchenToBasketVisual";
 
@@ -26,6 +26,7 @@ const VALUE_BLOCKS = [
 export default function HomePage() {
   const [, setLocation] = useLocation();
   const [demoStarting, setDemoStarting] = useState(false);
+  const valueSectionRef = useRef<HTMLElement>(null);
 
   const handleDemo = async () => {
     if (demoStarting) return;
@@ -68,7 +69,7 @@ export default function HomePage() {
         </header>
 
         {/* ── Hero ── */}
-        <section className="flex-1 flex items-center px-6 sm:px-10 py-16 sm:py-24">
+        <section className="flex-1 flex flex-col justify-center px-6 sm:px-10 py-16 sm:py-24">
           <div className="w-full max-w-6xl mx-auto">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
 
@@ -95,36 +96,34 @@ export default function HomePage() {
                   The Healthy Apples helps you make better food choices with less effort by combining meal planning, ingredient analysis, and practical alternatives for everyday life.
                 </p>
 
-                <div className="flex flex-wrap items-start gap-3 mb-6">
+                <div className="flex flex-col items-stretch sm:items-start gap-3 mb-6 w-full sm:w-auto">
+                  {/* Primary CTA */}
                   <Button
                     size="lg"
+                    className="h-auto py-3 px-7 flex flex-col items-center justify-center gap-0.5 w-full sm:min-w-[280px]"
+                    onClick={handleDemo}
+                    disabled={demoStarting}
+                    data-testid="button-hero-explore"
+                  >
+                    {demoStarting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span className="font-semibold">Explore The Healthy Apples →</span>
+                        <span className="text-xs opacity-75">Instant access · No signup · 20-minute demo</span>
+                      </>
+                    )}
+                  </Button>
+                  {/* Secondary CTA */}
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full sm:min-w-[280px]"
                     onClick={() => setLocation("/auth?register=1")}
                     data-testid="button-hero-create-account"
                   >
                     Create account
                   </Button>
-                  <div className="flex flex-col gap-1.5">
-                    <Button
-                      size="lg"
-                      variant="ghost"
-                      className="group hover:shadow-sm hover:-translate-y-px transition-all"
-                      onClick={handleDemo}
-                      disabled={demoStarting}
-                      data-testid="button-hero-explore"
-                    >
-                      {demoStarting ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : null}
-                      Explore The Healthy Apples
-                      <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                    </Button>
-                    <p
-                      className="text-[11px] text-muted-foreground/70 tracking-wide pl-1"
-                      data-testid="text-hero-microcopy"
-                    >
-                      Instant access &nbsp;·&nbsp; No signup &nbsp;·&nbsp; 20-minute demo
-                    </p>
-                  </div>
                 </div>
 
                 <p
@@ -149,10 +148,22 @@ export default function HomePage() {
 
             </div>
           </div>
+
+          {/* Scroll chevron — centered, inline with end of left copy */}
+          <div className="flex justify-center mt-2">
+            <button
+              onClick={() => valueSectionRef.current?.scrollIntoView({ behavior: "smooth" })}
+              className="text-foreground/40 hover:text-foreground/70 transition-colors animate-bounce"
+              aria-label="Scroll to learn more"
+            >
+              <ChevronDown className="h-9 w-9" />
+            </button>
+          </div>
+
         </section>
 
         {/* ── Three value blocks ── */}
-        <section className="px-6 sm:px-10 py-16 border-t border-border/20">
+        <section ref={valueSectionRef} className="px-6 sm:px-10 py-16 border-t border-border/20">
           <div className="max-w-6xl mx-auto">
             <div className="grid sm:grid-cols-3 gap-5">
               {VALUE_BLOCKS.map((block) => (

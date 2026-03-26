@@ -234,3 +234,125 @@
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+
+/* ── Shopping List Print View ── */
+@media print {
+  @page { size: A4 portrait; margin: 10mm 14mm; }
+
+  /* Force background colours to print (category headers) */
+  #tha-shopping-print-area {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    color-scheme: light;
+    background: white !important;
+  }
+
+  /* When the shopping view is open, hide every other direct child of body,
+     then make the print area static so it flows naturally on paper */
+  body.tha-shopping-open > * {
+    display: none !important;
+  }
+  body.tha-shopping-open > #tha-shopping-print-area {
+    display: block !important;
+    position: static !important;
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    z-index: auto !important;
+  }
+
+  /* Hide interactive chrome inside the print area */
+  #tha-shopping-print-area .tha-print-hide {
+    display: none !important;
+  }
+
+  /* Reveal print-only elements */
+  #tha-shopping-print-area .tha-print-show {
+    display: flex !important;
+  }
+
+  /* Compact header */
+  #tha-shopping-print-area .tha-print-header-block {
+    padding: 0 0 5px !important;
+    margin-bottom: 8px !important;
+    border-bottom: 1.5px solid #d1d5db !important;
+    gap: 10px !important;
+  }
+  #tha-shopping-print-area .tha-print-header-block img {
+    height: 24px !important;
+  }
+  #tha-shopping-print-area .tha-print-header-block h1 {
+    font-size: 13pt !important;
+    margin: 0 !important;
+  }
+  #tha-shopping-print-area .tha-print-header-block p {
+    font-size: 7.5pt !important;
+    margin: 0 !important;
+  }
+
+  /* 2-column grid — fill all available width, tight gap */
+  #tha-shopping-print-area [data-print-grid] {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 5px !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    /* Reset Tailwind space-y utility used in screen mode */
+    row-gap: 5px !important;
+  }
+
+  /* Category cards */
+  #tha-shopping-print-area [data-print-cat] {
+    border-radius: 2px !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 0.75pt solid #d1d5db !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    background: white !important;
+  }
+
+  /* Category header — strip colour, keep subtle tint */
+  #tha-shopping-print-area [data-print-cat-header] {
+    padding: 2px 6px !important;
+    font-size: 7.5pt !important;
+    font-weight: 700 !important;
+    border-bottom: 0.75pt solid #e5e7eb !important;
+    gap: 4px !important;
+    background: #f9fafb !important;
+  }
+
+  /* Item rows — minimal padding, no background */
+  #tha-shopping-print-area [data-print-item] {
+    padding: 1.5px 6px !important;
+    gap: 4px !important;
+    background: transparent !important;
+    min-height: 0 !important;
+  }
+
+  /* All item text at 7.5pt, tight leading */
+  #tha-shopping-print-area [data-print-item] * {
+    font-size: 7.5pt !important;
+    line-height: 1.35 !important;
+  }
+
+  /* Dividers between items are noise in print */
+  #tha-shopping-print-area [data-print-items] > * + * {
+    border-top: 0.5pt solid #f3f4f6 !important;
+  }
+
+  /* Footer */
+  #tha-shopping-print-area .tha-print-footer {
+    margin-top: 6px !important;
+    padding-top: 4px !important;
+    border-top: 1px solid #e5e7eb !important;
+  }
+  #tha-shopping-print-area .tha-print-footer img {
+    height: 18px !important;
+  }
+  #tha-shopping-print-area .tha-print-footer p {
+    font-size: 7.5pt !important;
+    margin: 0 !important;
+  }
+}

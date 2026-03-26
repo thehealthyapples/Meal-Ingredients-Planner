@@ -612,20 +612,22 @@ export default function AuthPage() {
                 <p className="text-xs text-muted-foreground/50">Secure login. Your data stays private.</p>
               </div>
 
-              {/* Demo CTA */}
+              {/* Explore CTA — secondary route, below main auth flow */}
               <div className="pt-3 border-t border-border/40">
                 <button
                   onClick={handleDemoStart}
                   disabled={demoStarting}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-primary/25 bg-primary/5 text-primary text-sm font-semibold hover:bg-primary/10 transition-colors disabled:opacity-60"
+                  className="w-full flex flex-col items-center justify-center gap-0.5 px-4 py-3 rounded-xl border border-primary/25 bg-primary/5 text-primary hover:bg-primary/10 transition-colors disabled:opacity-60"
                   data-testid="button-explore-demo"
                 >
                   {demoStarting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <ArrowRight className="h-4 w-4" />
+                    <>
+                      <span className="text-sm font-semibold">Explore The Healthy Apples →</span>
+                      <span className="text-xs opacity-70">Instant access · No signup · 20-minute demo</span>
+                    </>
                   )}
-                  {demoStarting ? "Starting…" : "Explore The Healthy Apples"}
                 </button>
               </div>
             </>

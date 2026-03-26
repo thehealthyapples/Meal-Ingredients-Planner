@@ -39,7 +39,7 @@ import {
   CircleDot, Plus, Minus, Info, Layers, Crown, Sprout, Tag,
   Download, UtensilsCrossed, Store, Maximize2, Minimize2,
   ChevronDown, ChevronUp, AlertTriangle, Microscope, Filter, SlidersHorizontal,
-  Snowflake, Home, EllipsisVertical, Columns2, Clock, ChefHat, Sparkles,
+  Snowflake, Home, EllipsisVertical, Columns2, Clock, ChefHat, Sparkles, ListChecks,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -62,6 +62,7 @@ import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@
 import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import FoodKnowledgeModal from "@/components/food-knowledge-modal";
 import WholeFoodSelector from "@/components/whole-food-selector";
+import ShoppingListView from "@/components/ShoppingListView";
 
 type ShoppingListItemExtended = ShoppingListItem & {
   addedByDisplayName?: string | null;
@@ -1497,6 +1498,7 @@ export default function ShoppingListPage() {
   const [alwaysAddModal, setAlwaysAddModal] = useState<{ extraId: number; extraName: string } | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const collapsedInitRef = useRef(false);
+  const [shoppingViewOpen, setShoppingViewOpen] = useState(false);
   const prevExtrasLenRef = useRef(0);
 
   const toggleNeededThisWeek = (id: number) => {
@@ -2445,6 +2447,18 @@ export default function ShoppingListPage() {
                       </PopoverContent>
                     </Popover>
                   </>
+                )}
+                {savedItems.length > 0 && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={() => setShoppingViewOpen(true)}
+                    className="gap-1.5"
+                    data-testid="button-shopping-view"
+                  >
+                    <ListChecks className="h-3.5 w-3.5" />
+                    <span>Shop View</span>
+                  </Button>
                 )}
                 {!isFullscreen && (
                   <Button
@@ -3628,6 +3642,18 @@ export default function ShoppingListPage() {
           onOpenChange={(v) => { if (!v) setAnalyseItem(null); }}
           item={analyseItem}
           preferredStore={globalStore !== 'auto' ? globalStore : undefined}
+        />
+      )}
+
+      {shoppingViewOpen && (
+        <ShoppingListView
+          items={savedItems}
+          extras={shoppingExtras}
+          sourcesByItem={sourcesByItem}
+          pantryKeySet={pantryKeySet}
+          measurementPref={measurementPref}
+          onToggleBought={(id, checked) => toggleChecked.mutate({ id, checked })}
+          onClose={() => setShoppingViewOpen(false)}
         />
       )}
     </div>
