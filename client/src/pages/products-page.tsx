@@ -27,6 +27,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@shared/routes";
 import ScoreBadge from "@/components/ui/score-badge";
+import AppleRatingWithTooltip from "@/components/AppleRating";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
 import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
@@ -61,6 +62,8 @@ interface AdditiveMatchInfo {
 interface UPFAnalysisInfo {
   upfScore: number;
   thaRating: number;
+  additiveCount: number;
+  regulatoryCount: number;
   additiveMatches: AdditiveMatchInfo[];
   processingIndicators: string[];
   ingredientCount: number;
@@ -1557,7 +1560,15 @@ export default function ProductsPage() {
                     )}
                   </div>
                   {selectedProduct.upfAnalysis && (
-                    <ScoreBadge score={selectedProduct.upfAnalysis.thaRating} size={48} />
+                    <AppleRatingWithTooltip
+                      rating={selectedProduct.upfAnalysis.thaRating}
+                      sizePx={48}
+                      additiveContext={{
+                        total: selectedProduct.upfAnalysis.additiveCount ?? selectedProduct.upfAnalysis.additiveMatches.length,
+                        regulatory: selectedProduct.upfAnalysis.regulatoryCount ?? 0,
+                        topType: selectedProduct.upfAnalysis.additiveMatches.find(a => !a.isRegulatory)?.type,
+                      }}
+                    />
                   )}
                 </div>
               </DialogHeader>
@@ -1595,9 +1606,28 @@ export default function ProductsPage() {
 
                 {selectedProduct.upfAnalysis && selectedProduct.upfAnalysis.additiveMatches.length > 0 && (
                   <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                      Additives Detected ({selectedProduct.upfAnalysis.additiveMatches.length})
-                    </p>
+                    <div className="mb-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Additives Detected ({selectedProduct.upfAnalysis.additiveCount ?? selectedProduct.upfAnalysis.additiveMatches.length})
+                        {(selectedProduct.upfAnalysis.regulatoryCount ?? 0) > 0 && (
+                          <span className="font-normal normal-case tracking-normal ml-1.5 text-muted-foreground">
+                            · {selectedProduct.upfAnalysis.regulatoryCount} regulatory
+                          </span>
+                        )}
+                      </p>
+                      {(selectedProduct.upfAnalysis.regulatoryCount ?? 0) > 0 &&
+                        (selectedProduct.upfAnalysis.regulatoryCount ?? 0) === selectedProduct.upfAnalysis.additiveMatches.length && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          All additives are regulatory requirements (e.g. UK flour fortification). Scoring still reflects their presence.
+                        </p>
+                      )}
+                      {(selectedProduct.upfAnalysis.regulatoryCount ?? 0) > 0 &&
+                        (selectedProduct.upfAnalysis.regulatoryCount ?? 0) < selectedProduct.upfAnalysis.additiveMatches.length && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          Includes {selectedProduct.upfAnalysis.regulatoryCount} regulatory additive{(selectedProduct.upfAnalysis.regulatoryCount ?? 0) > 1 ? 's' : ''} (e.g. flour fortification) — still counted in score.
+                        </p>
+                      )}
+                    </div>
                     <AdditivesList additives={selectedProduct.upfAnalysis.additiveMatches} />
                   </div>
                 )}

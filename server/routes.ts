@@ -1280,6 +1280,8 @@ export async function registerRoutes(
             upfAnalysis: upfResult ? {
               upfScore: upfResult.upfScore,
               thaRating: upfResult.thaRating,
+              additiveCount: upfResult.additiveCount,
+              regulatoryCount: upfResult.regulatoryCount,
               additiveMatches: upfResult.additiveMatches.map(m => ({
                 name: m.additive.name,
                 type: m.additive.type,
@@ -1955,6 +1957,8 @@ export async function registerRoutes(
             upfAnalysis: altUpf ? {
               upfScore: altUpf.upfScore,
               thaRating: altUpf.thaRating,
+              additiveCount: altUpf.additiveCount,
+              regulatoryCount: altUpf.regulatoryCount,
               additiveMatches: altUpf.additiveMatches.map(m => ({
                 name: m.additive.name,
                 type: m.additive.type,
@@ -4228,6 +4232,8 @@ export async function registerRoutes(
         upfAnalysis: upfAnalysis ? {
           upfScore: upfAnalysis.upfScore,
           thaRating: upfAnalysis.thaRating,
+          additiveCount: upfAnalysis.additiveCount,
+          regulatoryCount: upfAnalysis.regulatoryCount,
           additiveMatches: upfAnalysis.additiveMatches.map(m => ({
             name: m.additive.name,
             type: m.additive.type,

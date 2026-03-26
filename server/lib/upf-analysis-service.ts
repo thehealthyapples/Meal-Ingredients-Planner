@@ -40,6 +40,12 @@ export interface UPFAnalysisResult {
   upfScore: number;
   thaRating: number;
   additiveMatches: AdditiveMatch[];
+  /** Total number of detected DB additives (= additiveMatches.length). */
+  additiveCount: number;
+  /** Subset of additiveMatches flagged as regulatory (e.g. UK flour fortification). */
+  regulatoryAdditives: AdditiveMatch[];
+  /** Count of regulatory additives for quick access. */
+  regulatoryCount: number;
   processingIndicators: string[];
   ingredientCount: number;
   upfIngredientCount: number;
@@ -338,10 +344,15 @@ export function analyzeProductUPF(
 
   const novaGroup = productContext?.novaGroup ?? (upfScore >= 50 ? 4 : upfScore >= 25 ? 3 : upfScore >= 10 ? 2 : 1);
 
+  const regulatoryAdditives = additiveMatches.filter(m => m.isRegulatory);
+
   return {
     upfScore,
     thaRating: calculateTHAAppleRating(additiveMatches.length, processingIndicators, novaGroup, ingredientsText),
     additiveMatches,
+    additiveCount: additiveMatches.length,
+    regulatoryAdditives,
+    regulatoryCount: regulatoryAdditives.length,
     processingIndicators,
     ingredientCount: ingredients.length,
     upfIngredientCount: ingredients.filter(i => i.isUPF || i.isENumber).length,

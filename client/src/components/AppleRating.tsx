@@ -1,12 +1,23 @@
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
+interface AdditiveContext {
+  /** Total DB-matched additives (does not include soft UPF terms). */
+  total: number;
+  /** How many of those are regulatory (e.g. flour fortification). */
+  regulatory: number;
+  /** Most common additive type for display hint (e.g. "preservative"). */
+  topType?: string;
+}
+
 interface AppleRatingProps {
   rating: number;
   size?: "small" | "medium" | "large";
   sizePx?: number;
   showTooltip?: boolean;
   animate?: boolean;
+  /** When provided, the tooltip includes an additive breakdown line. */
+  additiveContext?: AdditiveContext;
 }
 
 const RATING_LABELS = [
@@ -34,6 +45,7 @@ export default function AppleRating({
   sizePx: sizePxProp,
   showTooltip = true,
   animate = true,
+  additiveContext,
 }: AppleRatingProps) {
   const clamped = Math.max(1, Math.min(5, rawRating || 1));
   const fullCount = Math.floor(clamped);
@@ -70,11 +82,43 @@ export default function AppleRating({
 
   if (!showTooltip) return content;
 
+  const tooltipLines: string[] = [`THA Score: ${Math.round(clamped)}/5 — ${label}`];
+
+  if (additiveContext) {
+    const { total, regulatory, topType } = additiveContext;
+    if (total === 0) {
+      tooltipLines.push("No additives detected");
+    } else {
+      const typeHint = topType ? ` (${topType})` : "";
+      const discretionary = total - regulatory;
+      if (discretionary > 0 && regulatory > 0) {
+        tooltipLines.push(
+          `${discretionary} discretionary additive${discretionary !== 1 ? "s" : ""}${typeHint} · ${regulatory} regulatory`,
+        );
+      } else if (regulatory === total) {
+        tooltipLines.push(
+          `${total} regulatory additive${total !== 1 ? "s" : ""} (e.g. flour fortification)`,
+        );
+      } else {
+        tooltipLines.push(
+          `${total} additive${total !== 1 ? "s" : ""}${typeHint}`,
+        );
+      }
+      if (regulatory > 0) {
+        tooltipLines.push("Regulatory additives still count toward score");
+      }
+    }
+  }
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>{content}</TooltipTrigger>
-      <TooltipContent side="top" className="text-xs">
-        <span>THA Score: {Math.round(clamped)}/5 — {label}</span>
+      <TooltipContent side="top" className="text-xs max-w-[220px]">
+        {tooltipLines.map((line, i) => (
+          <p key={i} className={i === 0 ? "font-medium" : "text-muted-foreground mt-0.5"}>
+            {line}
+          </p>
+        ))}
       </TooltipContent>
     </Tooltip>
   );
