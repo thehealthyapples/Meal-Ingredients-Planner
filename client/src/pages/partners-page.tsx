@@ -217,7 +217,7 @@ function ApplicationModal({
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">Partner with THA</DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground">
-            Tell us about your wellness service or brand. We review all applications personally and aim to respond within 5–7 working days.
+            Tell us about your wellness service or brand. We review all applications personally and aim to respond within 5-7 working days.
           </DialogDescription>
         </DialogHeader>
 
@@ -277,7 +277,7 @@ function ApplicationModal({
               <textarea
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="Tell us what you offer and who it's for (2–4 sentences)"
+                placeholder="Tell us what you offer and who it's for (2-4 sentences)"
                 required
                 rows={3}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
@@ -398,7 +398,7 @@ export default function PartnersPage() {
           Support your health<br className="hidden sm:block" /> beyond the basket
         </h1>
         <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
-          Discover trusted wellness partners and resources that complement your journey with THA — from yoga teachers and nutritionists to mindfulness coaches and healthy cooking guides.
+          Discover trusted wellness partners and resources that complement your journey with THA - from yoga teachers and nutritionists to mindfulness coaches and healthy cooking guides.
         </p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center pt-1">
           <Button
@@ -585,13 +585,13 @@ export default function PartnersPage() {
         </div>
         <div className="space-y-3 text-sm text-muted-foreground leading-relaxed">
           <p>
-            Healthy living goes far beyond what you put in your basket. We believe that movement, rest, mindfulness, and community are just as important as the food we eat — and so we curate a small, thoughtful selection of partners who share our values.
+            Healthy living goes far beyond what you put in your basket. We believe that movement, rest, mindfulness, and community are just as important as the food we eat - and so we curate a small, thoughtful selection of partners who share our values.
           </p>
           <p>
             Every partner featured here has been reviewed by the THA team. We look for aligned values, genuine quality, and services that we'd be happy to recommend to a close friend.
           </p>
           <p className="text-muted-foreground/70 text-xs border-t border-border pt-3 mt-3">
-            <strong className="text-muted-foreground">A note on transparency:</strong> Some links on this page may be affiliate links — meaning THA may receive a small commission if you make a purchase, at no extra cost to you. Some partners may also receive featured placement. We only feature services we genuinely believe in, and we encourage you to do your own research before engaging any professional health service.
+            <strong className="text-muted-foreground">A note on transparency:</strong> Some links on this page may be affiliate links - meaning THA may receive a small commission if you make a purchase, at no extra cost to you. Some partners may also receive featured placement. We only feature services we genuinely believe in, and we encourage you to do your own research before engaging any professional health service.
           </p>
         </div>
       </section>
@@ -620,7 +620,7 @@ export default function PartnersPage() {
           <ChevronRight className="h-4 w-4" />
         </Button>
         <p className="text-xs text-muted-foreground/60 mt-2">
-          We personally review every application and aim to respond within 5–7 working days.
+          We personally review every application and aim to respond within 5-7 working days.
         </p>
       </section>
 

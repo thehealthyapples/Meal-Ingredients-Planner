@@ -168,7 +168,7 @@ function TemplatePreview({ templateId, importMode, onImport, isImporting, canImp
                           return (
                             <div key={slot} className="flex items-center gap-0.5">
                               <span className={`text-[10px] truncate flex-1 ${hasMeal ? "text-foreground" : "text-muted-foreground/40"}`}>
-                                {hasMeal ? `M${cells[slot]}` : "—"}
+                                {hasMeal ? `M${cells[slot]}` : "-"}
                               </span>
                               {canImport && hasMeal && (
                                 <button

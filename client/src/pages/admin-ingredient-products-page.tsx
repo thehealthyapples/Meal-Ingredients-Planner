@@ -191,7 +191,7 @@ export default function AdminIngredientProductsPage() {
     <div className="container mx-auto max-w-5xl py-8 px-4">
       <div className="flex items-center gap-3 mb-6">
         <Star className="h-6 w-6 text-amber-500" />
-        <h1 className="text-2xl font-bold" data-testid="heading-tha-picks">THA Picks — Preferred Products</h1>
+        <h1 className="text-2xl font-bold" data-testid="heading-tha-picks">THA Picks - Preferred Products</h1>
       </div>
 
       <div className="flex items-center gap-2 mb-6">
@@ -256,7 +256,7 @@ export default function AdminIngredientProductsPage() {
                     </div>
                   </TableCell>
                   <TableCell data-testid={`text-retailer-${pick.id}`}>{pick.retailer}</TableCell>
-                  <TableCell data-testid={`text-size-${pick.id}`}>{pick.size ?? "—"}</TableCell>
+                  <TableCell data-testid={`text-size-${pick.id}`}>{pick.size ?? "-"}</TableCell>
                   <TableCell className="text-center" data-testid={`text-priority-${pick.id}`}>{pick.priority}</TableCell>
                   <TableCell className="text-center">
                     <Badge

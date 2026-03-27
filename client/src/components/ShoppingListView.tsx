@@ -495,7 +495,7 @@ export default function ShoppingListView({
       style={{ backgroundColor: "hsl(var(--background))" }}
     >
 
-      {/* ── Orchard background — screen only, full bleed, never scrolls ── */}
+      {/* ── Orchard background - screen only, full bleed, never scrolls ── */}
       <div
         aria-hidden
         className="tha-print-hide fixed inset-0 pointer-events-none"
@@ -517,7 +517,7 @@ export default function ShoppingListView({
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════
-          SCREEN CONTENT  (flex column — nothing outside item list scrolls)
+          SCREEN CONTENT  (flex column - nothing outside item list scrolls)
       ══════════════════════════════════════════════════════════════════ */}
 
       {/* ── 1. THA Branded Header ─────────────────────────────────────────
@@ -536,7 +536,7 @@ export default function ShoppingListView({
 
       {/* ── 2. Shop View Toolbar ──────────────────────────────────────────
           Title + progress summary. Print + Close actions.
-          No logo here — branding is handled by the header above.
+          No logo here - branding is handled by the header above.
       ─────────────────────────────────────────────────────────────────── */}
       <header
         className="tha-print-hide relative z-20 flex-shrink-0"
@@ -702,9 +702,9 @@ export default function ShoppingListView({
 
       {/* ── 4. Category Panel ─────────────────────────────────────────────
           Fills all remaining viewport height (flex-1).
-          Category header is PINNED — user always knows which aisle they're in.
+          Category header is PINNED - user always knows which aisle they're in.
           ONLY the item list scrolls, via overflow-y-auto on the inner div.
-          No full-page scroll — the orchard background stays fixed behind.
+          No full-page scroll - the orchard background stays fixed behind.
       ─────────────────────────────────────────────────────────────────── */}
       <div className="tha-print-hide relative z-10 flex-1 overflow-hidden flex flex-col px-3 sm:px-5 pt-3 pb-3 w-full max-w-3xl mx-auto">
         {activeCat ? (() => {
@@ -722,7 +722,7 @@ export default function ShoppingListView({
                 boxShadow: "0 6px 36px rgba(0,0,0,0.09), 0 1px 6px rgba(0,0,0,0.05)",
               }}
             >
-              {/* Category header — pinned, never scrolls */}
+              {/* Category header - pinned, never scrolls */}
               <div
                 className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b"
                 style={{
@@ -752,7 +752,7 @@ export default function ShoppingListView({
                 )}
               </div>
 
-              {/* Item list — the ONLY thing that scrolls */}
+              {/* Item list - the ONLY thing that scrolls */}
               <div
                 ref={itemsScrollRef}
                 className="flex-1 overflow-y-auto"
@@ -769,7 +769,7 @@ export default function ShoppingListView({
                   </div>
                 )}
 
-                {/* All-sorted celebration — at the bottom of the scroll area */}
+                {/* All-sorted celebration - at the bottom of the scroll area */}
                 {allSorted && (
                   <div
                     className="mx-3 my-3 text-center py-4 rounded-xl border border-primary/15"
@@ -777,7 +777,7 @@ export default function ShoppingListView({
                   >
                     <p className="font-medium text-sm text-primary" style={{ fontFamily: "var(--font-display)" }}>
                       {notFoundCount > 0
-                        ? `Almost there — ${notFoundCount} item${notFoundCount > 1 ? "s" : ""} to find next time`
+                        ? `Almost there - ${notFoundCount} item${notFoundCount > 1 ? "s" : ""} to find next time`
                         : "All sorted! Happy shopping 🌿"}
                     </p>
                   </div>
@@ -809,7 +809,7 @@ export default function ShoppingListView({
       </div>
 
       {/* ══════════════════════════════════════════════════════════════════
-          PRINT CONTENT — hidden on screen, shown via CSS in @media print
+          PRINT CONTENT - hidden on screen, shown via CSS in @media print
           Uses existing CSS hooks: data-print-grid, data-print-cat, etc.
       ══════════════════════════════════════════════════════════════════ */}
 
@@ -881,7 +881,7 @@ export default function ShoppingListView({
       {/* Print footer */}
       <div className="tha-print-show tha-print-footer hidden flex-col items-center gap-1.5 mt-8 pt-4 border-t-2 border-gray-200 px-0 pb-0">
         <img src="/apple-logo.png" alt="The Healthy Apples" style={{ height: 22, width: "auto" }} />
-        <p style={{ fontSize: 9, color: "#9ca3af", margin: 0 }}>Happy shopping! — The Healthy Apples</p>
+        <p style={{ fontSize: 9, color: "#9ca3af", margin: 0 }}>Happy shopping! - The Healthy Apples</p>
       </div>
 
     </div>

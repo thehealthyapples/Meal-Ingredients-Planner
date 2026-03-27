@@ -290,7 +290,7 @@
     margin: 0 !important;
   }
 
-  /* 2-column grid — fill all available width, tight gap */
+  /* 2-column grid - fill all available width, tight gap */
   #tha-shopping-print-area [data-print-grid] {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
@@ -313,7 +313,7 @@
     background: white !important;
   }
 
-  /* Category header — strip colour, keep subtle tint */
+  /* Category header - strip colour, keep subtle tint */
   #tha-shopping-print-area [data-print-cat-header] {
     padding: 2px 6px !important;
     font-size: 7.5pt !important;
@@ -323,7 +323,7 @@
     background: #f9fafb !important;
   }
 
-  /* Item rows — minimal padding, no background */
+  /* Item rows - minimal padding, no background */
   #tha-shopping-print-area [data-print-item] {
     padding: 1.5px 6px !important;
     gap: 4px !important;

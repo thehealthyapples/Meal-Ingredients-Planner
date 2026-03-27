@@ -19,13 +19,13 @@ export default function DemoPlannerPage() {
       {modal}
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold tracking-tight" data-testid="demo-planner-title">
-          Demo Planner — Week 1
+          Demo Planner - Week 1
         </h1>
         <Lock className="h-4 w-4 text-muted-foreground" />
         <Badge variant="secondary" className="text-xs">Read-only</Badge>
       </div>
 
-      {/* Desktop grid — columns = days, rows = meal slots */}
+      {/* Desktop grid - columns = days, rows = meal slots */}
       <div
         className="overflow-x-auto rounded-xl border border-border bg-card/60 backdrop-blur-sm"
         data-testid="demo-planner-grid"

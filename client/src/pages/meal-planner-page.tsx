@@ -715,7 +715,7 @@ export default function MealPlannerPage() {
                   <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Sparkles className="h-4 w-4 text-primary" />
-                      Plan My Week — Preferences
+                      Plan My Week - Preferences
                     </CardTitle>
                     <Button size="icon" variant="ghost" onClick={() => setSmartControlsOpen(false)} data-testid="button-close-smart-controls">
                       <X className="h-4 w-4" />

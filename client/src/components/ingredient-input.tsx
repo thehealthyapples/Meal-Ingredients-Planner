@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { X } from "lucide-react";
 
 export const COMMON_UNITS = [
-  { value: "",      label: "—" },
+  { value: "",      label: "-" },
   { value: "g",     label: "g" },
   { value: "kg",    label: "kg" },
   { value: "ml",    label: "ml" },
@@ -96,10 +96,10 @@ export function IngredientRow({
           className="w-[72px] shrink-0"
           data-testid={`select-ingredient-unit-${index}`}
         >
-          <SelectValue placeholder="—" />
+          <SelectValue placeholder="-" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="__none__">—</SelectItem>
+          <SelectItem value="__none__">-</SelectItem>
           {COMMON_UNITS.filter(u => u.value).map(u => (
             <SelectItem key={u.value} value={u.value}>
               {u.label}

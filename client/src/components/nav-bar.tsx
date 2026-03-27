@@ -33,7 +33,7 @@ function PantryIcon({ className }: { className?: string }) {
   );
 }
 
-// Sidebar nav — high-frequency items (Dashboard, Search, Basket, Profile) live in the top bar
+// Sidebar nav - high-frequency items (Dashboard, Search, Basket, Profile) live in the top bar
 const NAV_ITEMS_MAIN = [
   { href: "/meals", label: "Cookbook", icon: BookOpen },
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
@@ -42,7 +42,7 @@ const NAV_ITEMS_MAIN = [
   { href: "/diary", label: "My Diary", icon: ScrollText },
 ];
 
-// Mobile bottom nav — 4 core tools
+// Mobile bottom nav - 4 core tools
 const MOBILE_BOTTOM_ITEMS = [
   { href: "/meals", label: "Cookbook", icon: BookOpen },
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
@@ -295,7 +295,7 @@ function AppleMenu({ location, isAdmin }: { location: string; isAdmin: boolean }
   );
 }
 
-/* ── TopBar — logo only on desktop, hamburger + logo + search on mobile ── */
+/* ── TopBar - logo only on desktop, hamburger + logo + search on mobile ── */
 export function TopBar() {
   const [location] = useLocation();
   const { user } = useUser();

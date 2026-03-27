@@ -7,7 +7,7 @@
  * All matching is case-insensitive and operates on a single pre-lowercased text
  * blob (recipe name + ingredients + description concatenated by the caller).
  *
- * This file is an identical copy of server/lib/dietRules.ts — pure TypeScript
+ * This file is an identical copy of server/lib/dietRules.ts - pure TypeScript
  * with no Node.js dependencies so it runs safely in the browser.
  */
 
@@ -68,7 +68,7 @@ const LOW_CARB_EXCLUDE = [
   "oats", "cereal", "tortilla", "pita", "pitta",
 ];
 
-// Paleo excludes grains, dairy, legumes — but NOT sweet potato (a Paleo staple).
+// Paleo excludes grains, dairy, legumes - but NOT sweet potato (a Paleo staple).
 // We list grains explicitly here rather than spreading HIGH_CARB_KEYWORDS so we
 // can omit "potato"/"potatoes" which would incorrectly catch "sweet potato".
 const PALEO_EXCLUDE = [
@@ -207,7 +207,7 @@ export function shouldExcludeRecipe(
     case "Carnivore":
       return containsAny(lower, CARNIVORE_PLANT_KEYWORDS);
 
-    // Mediterranean, DASH, MIND, Flexitarian — no hard exclusions, only scoring
+    // Mediterranean, DASH, MIND, Flexitarian - no hard exclusions, only scoring
     default:
       return false;
   }

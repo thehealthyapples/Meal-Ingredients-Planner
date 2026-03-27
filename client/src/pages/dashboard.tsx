@@ -165,7 +165,7 @@ export default function Dashboard() {
               {mealsPlannedThisWeek > 0
                 ? `${mealsPlannedThisWeek} meal${mealsPlannedThisWeek !== 1 ? "s" : ""} planned this week · ${userMeals.length} in your collection`
                 : userMeals.length > 0
-                  ? `${userMeals.length} meal${userMeals.length !== 1 ? "s" : ""} in your collection — ready to plan your week?`
+                  ? `${userMeals.length} meal${userMeals.length !== 1 ? "s" : ""} in your collection - ready to plan your week?`
                   : "Start building your healthy meal collection"}
             </p>
           </motion.div>
@@ -205,7 +205,7 @@ export default function Dashboard() {
                 </Card>
               </Link>
 
-              {/* Basket — neutral blue, not a warning colour */}
+              {/* Basket - neutral blue, not a warning colour */}
               <Link href="/analyse-basket" aria-label="Go to Basket">
                 <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-basket-items"
                   style={{ background: BASKET_BG, borderColor: BASKET_BORDER }}>
@@ -281,7 +281,7 @@ export default function Dashboard() {
                       </>
                     ) : (
                       <>
-                        <div className="text-numeric" style={{ color: APPLE_FG }}>—</div>
+                        <div className="text-numeric" style={{ color: APPLE_FG }}>-</div>
                         <p className="text-xs mt-1" style={{ color: APPLE_FG, opacity: 0.75 }}>
                           {shoppingListItems.length > 0 ? "Analyse basket to score" : "Add items to basket"}
                         </p>
@@ -310,7 +310,7 @@ export default function Dashboard() {
                   <div className="flex flex-col items-center py-7 gap-3">
                     <CalendarDays className="h-8 w-8 text-muted-foreground/25" />
                     <p className="text-sm text-muted-foreground text-center max-w-xs">
-                      No meals planned yet — head to the planner to map out your week.
+                      No meals planned yet - head to the planner to map out your week.
                     </p>
                     <Link href="/weekly-planner">
                       <Button variant="outline" size="sm" data-testid="button-start-planning">Start planning</Button>

@@ -220,7 +220,7 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
           </AvatarFallback>
         </Avatar>
 
-        {/* Name area — stable height whether editing or not */}
+        {/* Name area - stable height whether editing or not */}
         <div className="flex-1 min-w-0">
           {editing ? (
             <div className="flex items-center gap-1.5">
@@ -258,7 +258,7 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
               </button>
             </div>
           )}
-          {/* Username / email — tiny, faded, always rendered so layout doesn't shift */}
+          {/* Username / email - tiny, faded, always rendered so layout doesn't shift */}
           <p className="text-[11px] text-muted-foreground/45 truncate mt-0.5 leading-tight" data-testid="text-username">
             {editing ? "\u00A0" : subtitleText}
           </p>
@@ -300,13 +300,13 @@ function HealthSnapshot({ profile }: { profile: ProfileData }) {
 
       <div className="grid grid-cols-3 gap-4 text-center">
         <div data-testid="metric-bmi">
-          <p className={`text-2xl font-bold ${bmiColor}`}>{bmi ?? "—"}</p>
+          <p className={`text-2xl font-bold ${bmiColor}`}>{bmi ?? "-"}</p>
           <p className="text-xs text-muted-foreground mt-0.5">BMI</p>
           <p className={`text-[11px] font-medium ${bmiColor}`}>{bmiCategory || "Not set"}</p>
         </div>
         <div data-testid="metric-calories">
           <p className="text-2xl font-bold text-foreground">
-            {dailyCalories ? dailyCalories.toLocaleString() : "—"}
+            {dailyCalories ? dailyCalories.toLocaleString() : "-"}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">kcal / day</p>
           <p className="text-[11px] font-medium text-green-600 dark:text-green-400">
@@ -414,7 +414,7 @@ function HouseholdSettings({ household, onSave }: { household: ProfileData["hous
             <Input
               type="number"
               min={0}
-              placeholder="—"
+              placeholder="-"
               value={maxExtraPrep}
               onChange={(e) => { setMaxExtraPrep(e.target.value); setDirty(true); }}
               className="mt-1 h-8 text-sm"
@@ -426,7 +426,7 @@ function HouseholdSettings({ household, onSave }: { household: ProfileData["hous
             <Input
               type="number"
               min={0}
-              placeholder="—"
+              placeholder="-"
               value={maxCookTime}
               onChange={(e) => { setMaxCookTime(e.target.value); setDirty(true); }}
               className="mt-1 h-8 text-sm"
@@ -584,7 +584,7 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
 
       {/* Invite Code */}
       <div className="space-y-1">
-        <p className="text-xs text-muted-foreground">Invite code — share this to invite someone to your household</p>
+        <p className="text-xs text-muted-foreground">Invite code - share this to invite someone to your household</p>
         <div className="flex items-center gap-2">
           <code className="bg-muted px-3 py-1.5 rounded text-sm font-mono tracking-wider" data-testid="text-invite-code">{household.inviteCode}</code>
           <Button size="sm" variant="outline" onClick={copyInviteCode} data-testid="button-copy-invite-code">

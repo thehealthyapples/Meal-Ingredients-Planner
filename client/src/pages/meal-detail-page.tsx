@@ -775,7 +775,7 @@ export default function MealDetailPage() {
                       s.type !== "basic" && s.type !== "fresh" && s.type !== "frozen"
                     );
                     if (webEntries.length === 0) {
-                      return <p className="text-sm text-muted-foreground">No method steps — all components are fresh/frozen ingredients.</p>;
+                      return <p className="text-sm text-muted-foreground">No method steps - all components are fresh/frozen ingredients.</p>;
                     }
                     const schedule = generateSchedule(groupedSources.sources, componentDurations, serveTime);
                     const serveLabel = minsToTimeStr((() => { const [h,m] = serveTime.split(":").map(Number); return h*60+(m||0); })());

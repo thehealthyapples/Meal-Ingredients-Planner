@@ -14,7 +14,7 @@ const VALUE_BLOCKS = [
   {
     icon: <Search className="h-5 w-5 text-primary" />,
     title: "Analyse ingredients",
-    body: "Understand what's in your food — NOVA scores, additives, and clear health guidance shown at a glance.",
+    body: "Understand what's in your food - NOVA scores, additives, and clear health guidance shown at a glance.",
   },
   {
     icon: <ShoppingBasket className="h-5 w-5 text-primary" />,
@@ -149,7 +149,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Scroll chevron — centered, inline with end of left copy */}
+          {/* Scroll chevron - centered, inline with end of left copy */}
           <div className="flex justify-center mt-2">
             <button
               onClick={() => valueSectionRef.current?.scrollIntoView({ behavior: "smooth" })}
@@ -189,7 +189,7 @@ export default function HomePage() {
                 className="text-base text-foreground/80 leading-relaxed"
                 data-testid="text-story-section"
               >
-                The Healthy Apples was built out of a genuine need — helping a family navigate confusing food choices during a period of serious health challenges. We believe that better food knowledge should be simple, practical, and within reach for everyone.
+                The Healthy Apples was built out of a genuine need - helping a family navigate confusing food choices during a period of serious health challenges. We believe that better food knowledge should be simple, practical, and within reach for everyone.
               </p>
             </div>
           </div>

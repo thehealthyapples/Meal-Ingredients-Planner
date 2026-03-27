@@ -8,7 +8,7 @@ export const PARTNERS: Partner[] = [
     category: "Yoga & Movement",
     tagline: "Root deeply. Move gently. Breathe freely.",
     shortDescription:
-      "A warm, inclusive yoga studio offering classes for all bodies and abilities — from beginner hatha to restorative yin. Seasonal themes and mindful movement are woven into every session.",
+      "A warm, inclusive yoga studio offering classes for all bodies and abilities - from beginner hatha to restorative yin. Seasonal themes and mindful movement are woven into every session.",
     websiteUrl: "https://example.com/calm-orchard-yoga",
     initials: "CO",
     accentColor: "#6B8F71",
@@ -18,7 +18,7 @@ export const PARTNERS: Partner[] = [
     featured: true,
     affiliateType: "reciprocal",
     whyTHARecommends:
-      "Their seasonal approach to movement mirrors how we think about seasonal eating — both are about living in tune with nature's rhythms.",
+      "Their seasonal approach to movement mirrors how we think about seasonal eating - both are about living in tune with nature's rhythms.",
     isActive: true,
     displayOrder: 1,
   },
@@ -29,7 +29,7 @@ export const PARTNERS: Partner[] = [
     category: "Nutritionists & Diet Support",
     tagline: "Evidence-based nutrition for real, everyday life.",
     shortDescription:
-      "A team of registered nutritionists offering personalised consultations, group programmes, and family nutrition plans. They specialise in sustainable healthy eating — no fads, no quick fixes.",
+      "A team of registered nutritionists offering personalised consultations, group programmes, and family nutrition plans. They specialise in sustainable healthy eating - no fads, no quick fixes.",
     websiteUrl: "https://example.com/rooted-nutrition",
     initials: "RN",
     accentColor: "#A67C52",
@@ -39,7 +39,7 @@ export const PARTNERS: Partner[] = [
     featured: true,
     affiliateType: "reciprocal",
     whyTHARecommends:
-      "Rooted shares our belief that healthy eating should be joyful, flexible, and grounded in real food — not restriction.",
+      "Rooted shares our belief that healthy eating should be joyful, flexible, and grounded in real food - not restriction.",
     isActive: true,
     displayOrder: 2,
   },
@@ -120,7 +120,7 @@ export const PARTNERS: Partner[] = [
     featured: false,
     affiliateType: "reciprocal",
     whyTHARecommends:
-      "Their ethos of 'sustainable over intense' perfectly matches how we approach nutrition — small, consistent steps over dramatic overhauls.",
+      "Their ethos of 'sustainable over intense' perfectly matches how we approach nutrition - small, consistent steps over dramatic overhauls.",
     isActive: true,
     displayOrder: 6,
   },
@@ -140,7 +140,7 @@ export const PARTNERS: Partner[] = [
     featured: false,
     affiliateType: "affiliate",
     whyTHARecommends:
-      "The Mindful Kitchen helps our users build confidence in the kitchen — the perfect partner to THA's smart shopping tools.",
+      "The Mindful Kitchen helps our users build confidence in the kitchen - the perfect partner to THA's smart shopping tools.",
     isActive: true,
     displayOrder: 7,
   },
@@ -161,7 +161,7 @@ export const PARTNERS: Partner[] = [
     featured: false,
     affiliateType: "reciprocal",
     whyTHARecommends:
-      "Bloom's integrative approach to women's health is evidence-based and deeply compassionate — we're proud to highlight their work.",
+      "Bloom's integrative approach to women's health is evidence-based and deeply compassionate - we're proud to highlight their work.",
     isActive: true,
     displayOrder: 8,
   },
@@ -172,7 +172,7 @@ export const PARTNERS: Partner[] = [
     category: "Natural Living",
     tagline: "Simple swaps for a more natural home.",
     shortDescription:
-      "Guides, courses, and a curated product shop helping families reduce toxins in their home environment — from cleaning products to skincare and plastics. Practical, non-alarmist approach.",
+      "Guides, courses, and a curated product shop helping families reduce toxins in their home environment - from cleaning products to skincare and plastics. Practical, non-alarmist approach.",
     websiteUrl: "https://example.com/natural-roots",
     initials: "NR",
     accentColor: "#7BA05B",
@@ -201,7 +201,7 @@ export const PARTNERS: Partner[] = [
     featured: false,
     affiliateType: "standard",
     whyTHARecommends:
-      "Building healthy habits in childhood is one of the most powerful investments a family can make — and Little Wellbeing Co makes it genuinely fun.",
+      "Building healthy habits in childhood is one of the most powerful investments a family can make - and Little Wellbeing Co makes it genuinely fun.",
     isActive: true,
     displayOrder: 10,
   },
@@ -210,7 +210,7 @@ export const PARTNERS: Partner[] = [
     name: "Clear Head Coaching",
     slug: "clear-head-coaching",
     category: "Meditation & Mindfulness",
-    tagline: "Clarity, calm, and confidence — from the inside out.",
+    tagline: "Clarity, calm, and confidence - from the inside out.",
     shortDescription:
       "One-to-one mindfulness coaching and group programmes for professionals managing stress, overwhelm, and anxious eating. Combines CBT-informed techniques with mindfulness practice.",
     websiteUrl: "https://example.com/clear-head",

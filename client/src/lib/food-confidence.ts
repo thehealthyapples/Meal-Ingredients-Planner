@@ -75,7 +75,7 @@ export function calcConfidence(
       level: "close",
       reason: selectedRetailers.length > 1
         ? "Close match available across your selected supermarkets."
-        : "Close match available — consider adding more supermarkets.",
+        : "Close match available - consider adding more supermarkets.",
     };
   }
 

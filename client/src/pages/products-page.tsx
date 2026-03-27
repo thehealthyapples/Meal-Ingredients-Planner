@@ -32,6 +32,7 @@ import BarcodeScanner from "@/components/BarcodeScanner";
 import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
 import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import { useSoundEffects } from "@/hooks/use-sound-effects";
+import AnalyserDetailV2 from "@/components/analyser/AnalyserDetailV2";
 
 interface ParsedIngredient {
   name: string;
@@ -928,7 +929,7 @@ export default function ProductsPage() {
                         Exclude Specific Additives / E-numbers
                       </p>
                       <p className="text-[10px] text-muted-foreground mb-3">
-                        Detected in your current results — click to exclude products containing that additive.
+                        Detected in your current results - click to exclude products containing that additive.
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {allDetectedAdditives.map(a => {
@@ -1542,260 +1543,20 @@ export default function ProductsPage() {
         {/* ── Product Detail Dialog ────────────────────────────────────────── */}
         <Dialog open={selectedProduct !== null} onOpenChange={(open) => { if (!open) setSelectedProduct(null); }}>
           <DialogContent className="max-w-2xl max-h-[88vh] overflow-y-auto" data-testid="dialog-product-detail">
-            {selectedProduct && (<>
-                  <DialogHeader>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <DialogTitle className="text-xl leading-tight" data-testid="text-detail-name">
-                          {selectedProduct.product_name}
-                        </DialogTitle>
-                        {selectedProduct.brand && (
-                          <p className="text-sm text-muted-foreground mt-1">{selectedProduct.brand}</p>
-                        )}
-                        {selectedProduct.availableStores && selectedProduct.availableStores.length > 0 && (
-                          <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-1">
-                            <Store className="h-3.5 w-3.5" />
-                            {selectedProduct.availableStores.join(' · ')}
-                          </p>
-                        )}
-                      </div>
-
-                      {selectedProduct.upfAnalysis && (
-                        <div className="shrink-0 min-w-[140px] flex justify-end pt-1">
-                          <AppleRatingWithTooltip
-                            rating={selectedProduct.upfAnalysis.thaRating}
-                            sizePx={48}
-                            additiveContext={{
-                              total: selectedProduct.upfAnalysis.additiveCount ?? selectedProduct.upfAnalysis.additiveMatches.length,
-                              regulatory: selectedProduct.upfAnalysis.regulatoryCount ?? 0,
-                              topType: selectedProduct.upfAnalysis.additiveMatches.find(a => !a.isRegulatory)?.type,
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </DialogHeader>
-
-              <div className="space-y-4">
-                {selectedProduct.image_url && (
-                  <div className="w-full h-44 bg-muted rounded-md overflow-hidden flex items-center justify-center">
-                    <img
-                      src={selectedProduct.image_url}
-                      alt={selectedProduct.product_name}
-                      className="h-full object-contain"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                  </div>
-                )}
-
-                {selectedProduct.upfAnalysis?.thaExplanation && (
-                  <p className="text-sm text-muted-foreground italic">
-                    {selectedProduct.upfAnalysis.thaExplanation}
-                  </p>
-                )}
-
-                <div>
-                  {selectedProduct.ingredients_text ? (
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {selectedProduct.ingredients_text}
-                    </p>
-                  ) : (
-                    <Badge variant="outline" className="text-xs border-amber-400 text-amber-600 dark:text-amber-400">
-                      <AlertTriangle className="h-3 w-3 mr-1" />
-                      Ingredient detail incomplete — data not available in Open Food Facts
-                    </Badge>
-                  )}
-                </div>
-
-                {selectedProduct.upfAnalysis && selectedProduct.upfAnalysis.additiveMatches.length > 0 && (
-                  <div>
-                    <div className="mb-2">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        Additives Detected ({selectedProduct.upfAnalysis.additiveCount ?? selectedProduct.upfAnalysis.additiveMatches.length})
-                        {(selectedProduct.upfAnalysis.regulatoryCount ?? 0) > 0 && (
-                          <span className="font-normal normal-case tracking-normal ml-1.5 text-muted-foreground">
-                            · {selectedProduct.upfAnalysis.regulatoryCount} regulatory
-                          </span>
-                        )}
-                      </p>
-                      {(selectedProduct.upfAnalysis.regulatoryCount ?? 0) > 0 &&
-                        (selectedProduct.upfAnalysis.regulatoryCount ?? 0) === selectedProduct.upfAnalysis.additiveMatches.length && (
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          All additives are regulatory requirements (e.g. UK flour fortification). Scoring still reflects their presence.
-                        </p>
-                      )}
-                      {(selectedProduct.upfAnalysis.regulatoryCount ?? 0) > 0 &&
-                        (selectedProduct.upfAnalysis.regulatoryCount ?? 0) < selectedProduct.upfAnalysis.additiveMatches.length && (
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          Includes {selectedProduct.upfAnalysis.regulatoryCount} regulatory additive{(selectedProduct.upfAnalysis.regulatoryCount ?? 0) > 1 ? 's' : ''} (e.g. flour fortification) — still counted in score.
-                        </p>
-                      )}
-                    </div>
-                    <AdditivesList additives={selectedProduct.upfAnalysis.additiveMatches} />
-                  </div>
-                )}
-
-                {selectedProduct.upfAnalysis && selectedProduct.upfAnalysis.processingIndicators.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                      Processing Indicators
-                    </p>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedProduct.upfAnalysis.processingIndicators.map((pi, i) => (
-                        <Badge key={i} variant="outline" className="text-xs border-orange-300 text-orange-600 dark:text-orange-400">
-                          <Beaker className="h-3 w-3 mr-1" />
-                          {pi}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {selectedProduct.analysis && selectedProduct.analysis.warnings.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">Warnings</p>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedProduct.analysis.warnings.map((w, i) => (
-                        <Badge key={i} variant="outline" className="text-xs border-red-300 text-red-600 dark:text-red-400" data-testid={`badge-warning-${i}`}>
-                          <AlertTriangle className="h-3 w-3 mr-1" />
-                          {w}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {selectedProduct.analysis && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                      Ingredients ({selectedProduct.analysis.totalIngredients})
-                      {selectedProduct.analysis.upfCount > 0 && (
-                        <span className="text-red-500 ml-1">- {selectedProduct.analysis.upfCount} flagged</span>
-                      )}
-                    </p>
-                    <IngredientsList ingredients={selectedProduct.analysis.ingredients} />
-                  </div>
-                )}
-
-                <NutritionPanel nutriments={selectedProduct.nutriments} />
-
-                <div className="flex flex-col gap-2 pt-2">
-                  <Button
-                    className="w-full gap-2"
-                    onClick={() => addToList.mutate(selectedProduct)}
-                    disabled={addToList.isPending}
-                    data-testid="button-detail-add-to-list"
-                  >
-                    <ShoppingCart className="h-4 w-4" />
-                    Add to Basket
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2"
-                    onClick={() => linkToTemplate.mutate(selectedProduct)}
-                    disabled={linkToTemplate.isPending}
-                    data-testid="button-link-template"
-                  >
-                    {linkToTemplate.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Layers className="h-4 w-4" />}
-                    Create Meal Template
-                  </Button>
-                </div>
-
-                {/* ── Choose Better ─────────────────────────────────── */}
-                {(() => {
-                  const detailWFAlt = getWholeFoodAlternative(selectedProduct.product_name);
-                  const currentSmp = selectedProduct.upfAnalysis?.thaRating ?? null;
-                  const betterOptions = rankChoices(
-                    searchResults.filter(p => p.barcode !== selectedProduct.barcode),
-                    currentSmp
-                  ).slice(0, 3);
-                  return (
-                    <div className="space-y-3 pt-2 border-t border-border" data-testid="section-choose-better-detail">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-                        <Sparkles className="h-3.5 w-3.5 text-primary" />
-                        Choose Better
-                      </p>
-                      <div data-testid="section-simply-made-detail">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600 dark:text-green-400 flex items-center gap-1 mb-1.5">
-                          <ChefHat className="h-3 w-3" />
-                          Simply Made
-                        </p>
-                        {detailWFAlt ? (
-                          <div className="rounded-md border border-green-200 dark:border-green-800 bg-green-50/40 dark:bg-green-950/20 p-3 space-y-2">
-                            <div className="flex items-start justify-between gap-2">
-                              <p className="font-medium text-sm flex items-center gap-1.5">
-                                <span>{detailWFAlt.emoji}</span>
-                                {detailWFAlt.title}
-                              </p>
-                              <div className="flex items-center gap-1.5 flex-shrink-0">
-                                <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${effortColor(detailWFAlt.effort)}`}>{effortLabel(detailWFAlt.effort)}</span>
-                                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5"><Clock className="h-3 w-3" />{formatTime(detailWFAlt.timeMinutes)}</span>
-                              </div>
-                            </div>
-                            {showDetailWFRecipe && (
-                              <ul className="space-y-0.5">
-                                {detailWFAlt.ingredients.map((ing, i) => (
-                                  <li key={i} className="text-xs flex items-start gap-1.5">
-                                    <span className="text-green-500 mt-0.5">•</span>
-                                    <span>{ing}</span>
-                                  </li>
-                                ))}
-                              </ul>
-                            )}
-                            <div className="flex items-center justify-between">
-                              <p className="text-[10px] text-muted-foreground">{detailWFAlt.description}</p>
-                              <Button
-                                variant="ghost"
-                                className="h-6 text-xs px-2 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40"
-                                onClick={() => setShowDetailWFRecipe(v => !v)}
-                                data-testid="button-detail-view-wf-recipe"
-                              >
-                                <ChefHat className="h-3 w-3 mr-1" />
-                                {showDetailWFRecipe ? 'Hide Recipe' : 'View Recipe'}
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground italic">No whole-food route found for this item.</p>
-                        )}
-                      </div>
-                      {betterOptions.length > 0 && (
-                        <div data-testid="section-confidently-choose-detail">
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 dark:text-blue-400 flex items-center gap-1 mb-1.5">
-                            <ShoppingCart className="h-3 w-3" />
-                            Confidently Choose
-                          </p>
-                          <div className="space-y-2">
-                            {betterOptions.map((choice, idx) => {
-                              const whyBetter = buildWhyBetter(choice, currentSmp);
-                              return (
-                                <div key={choice.barcode || idx} className="flex items-start gap-3 p-2 rounded-md border border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/20" data-testid={`confidently-choose-${idx}`}>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium leading-tight truncate">{choice.product_name}</p>
-                                    {choice.brand && <p className="text-xs text-muted-foreground">{choice.brand}</p>}
-                                    <div className="flex items-center gap-1 mt-1 flex-wrap">
-                                      {choice.upfAnalysis && <ScoreBadge score={choice.upfAnalysis.thaRating} size={18}  />}
-                                      {whyBetter.slice(0, 2).map((r, i) => (
-                                        <Badge key={i} className="text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700 no-default-hover-elevate">
-                                          <Sparkles className="h-2 w-2 mr-0.5" />{r}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <Button size="icon" variant="ghost" className="h-7 w-7 flex-shrink-0" onClick={() => handleProductSelect(choice)} data-testid={`button-view-confidently-${idx}`}>
-                                    <ArrowRight className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-            </>)}
+            <DialogTitle className="sr-only">
+              {selectedProduct?.product_name ?? "Product detail"}
+            </DialogTitle>
+            {selectedProduct && (
+              <AnalyserDetailV2
+                product={selectedProduct}
+                otherProducts={searchResults}
+                onAddToBasket={() => addToList.mutate(selectedProduct)}
+                onLinkToTemplate={() => linkToTemplate.mutate(selectedProduct)}
+                onViewProduct={(p) => handleProductSelect(p as ProductResult)}
+                addToBasketPending={addToList.isPending}
+                linkToTemplatePending={linkToTemplate.isPending}
+              />
+            )}
           </DialogContent>
         </Dialog>
 
@@ -1809,7 +1570,7 @@ export default function ProductsPage() {
               Product Comparison
             </DialogTitle>
             <p className="text-xs text-muted-foreground pt-1">
-              Apple rating combines E-number additives, soft UPF ingredients (yeast extract, natural flavourings, maltodextrin…) and NOVA group — NOVA 4 products are capped at 3 apples or lower.
+              Apple rating combines E-number additives, soft UPF ingredients (yeast extract, natural flavourings, maltodextrin…) and NOVA group - NOVA 4 products are capped at 3 apples or lower.
             </p>
           </DialogHeader>
           {compareProducts.length > 0 ? (

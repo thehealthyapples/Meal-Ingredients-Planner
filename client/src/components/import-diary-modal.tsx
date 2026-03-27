@@ -16,8 +16,8 @@ const THA_FIELDS = [
   { value: "date", label: "Date" },
   { value: "weightKg", label: "Weight (kg)" },
   { value: "sleepHours", label: "Sleep (hours)" },
-  { value: "moodApples", label: "Mood (1–5)" },
-  { value: "energyApples", label: "Energy (1–5)" },
+  { value: "moodApples", label: "Mood (1-5)" },
+  { value: "energyApples", label: "Energy (1-5)" },
   { value: "notes", label: "Notes" },
   { value: "stuckToPlan", label: "Stuck to Plan" },
   { value: "calories", label: "Calories" },
@@ -243,7 +243,7 @@ export function ImportDiaryModal({
                       <p className="text-muted-foreground font-medium mb-1">Supported file types:</p>
                       <ul className="text-muted-foreground list-disc list-inside space-y-0.5">
                         <li>.csv (comma-separated)</li>
-                        <li>.txt (comma, tab, or pipe-separated — auto-detected)</li>
+                        <li>.txt (comma, tab, or pipe-separated - auto-detected)</li>
                       </ul>
                     </div>
                     <div>

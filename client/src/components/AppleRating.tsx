@@ -82,7 +82,7 @@ export default function AppleRating({
 
   if (!showTooltip) return content;
 
-  const tooltipLines: string[] = [`THA Score: ${Math.round(clamped)}/5 — ${label}`];
+  const tooltipLines: string[] = [`THA Score: ${Math.round(clamped)}/5 - ${label}`];
 
   if (additiveContext) {
     const { total, regulatory, topType } = additiveContext;

@@ -96,7 +96,7 @@ function getInsightText(trends: DiaryMetrics[], range: ProgressRange): string {
   const rangeDays = RANGE_DAYS[range];
   const consistency = daysWithData / rangeDays;
 
-  if (consistency >= 0.8) return "You've been logging consistently — great work building this habit.";
+  if (consistency >= 0.8) return "You've been logging consistently - great work building this habit.";
   if (consistency >= 0.5) return "Good momentum. Small steps add up to a useful picture over time.";
   if (daysWithData >= 3) return "Every entry helps. Keep logging and your trends will become clearer.";
   return "You're just getting started. A few more entries will reveal useful patterns.";
@@ -138,7 +138,7 @@ function ThaAppleScorePicker({
 // ── THA Apple Score Display ─────────────────────────────────────────────────
 
 function ThaAppleScoreDisplay({ value }: { value: number | null; max?: number }) {
-  if (value === null) return <span className="text-muted-foreground text-xs">—</span>;
+  if (value === null) return <span className="text-muted-foreground text-xs">-</span>;
   return <AppleRating rating={value} sizePx={52} showTooltip={false} animate={false} />;
 }
 
@@ -151,7 +151,7 @@ function MetricStatCard({
     <div className="text-center px-3 py-2 rounded-md bg-muted/40 border border-border/50">
       <p className="text-[10px] text-muted-foreground uppercase tracking-wide leading-none mb-1">{label}</p>
       <p className="text-sm font-semibold text-foreground leading-tight" data-testid={`stat-${label.toLowerCase().replace(/\s+/g, "-")}`}>
-        {value !== null && value !== undefined ? `${value}${unit ? ` ${unit}` : ""}` : "—"}
+        {value !== null && value !== undefined ? `${value}${unit ? ` ${unit}` : ""}` : "-"}
       </p>
     </div>
   );
@@ -593,7 +593,7 @@ export default function FoodDiaryPage() {
               </Button>
               <Button
                 variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground"
-                onClick={() => toast({ title: "Import Data", description: "Coming soon — import from CSV or another source." })}
+                onClick={() => toast({ title: "Import Data", description: "Coming soon - import from CSV or another source." })}
                 data-testid="button-import-data"
               >
                 Import Data

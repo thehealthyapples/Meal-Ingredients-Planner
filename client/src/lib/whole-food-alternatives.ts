@@ -28,8 +28,8 @@ const ALTERNATIVES: PatternEntry[] = [
         '1 tbsp olive oil',
       ],
       method:
-        'Mix flour, salt, oil and water into a soft dough. Rest 10 minutes, then divide into 4–6 balls and roll thin. Dry-fry in a hot pan for 1–2 minutes each side until lightly charred.',
-      tip: 'Stack with baking paper and freeze — reheat in a pan in 2 minutes. Far fewer additives than any shop version.',
+        'Mix flour, salt, oil and water into a soft dough. Rest 10 minutes, then divide into 4-6 balls and roll thin. Dry-fry in a hot pan for 1-2 minutes each side until lightly charred.',
+      tip: 'Stack with baking paper and freeze - reheat in a pan in 2 minutes. Far fewer additives than any shop version.',
     },
   },
   {
@@ -47,8 +47,8 @@ const ALTERNATIVES: PatternEntry[] = [
         'pinch of salt',
       ],
       method:
-        'Combine all ingredients into a soft dough. Rest 20 minutes. Divide, roll thin, and cook in a very hot dry pan or under a hot grill for 1–2 minutes each side.',
-      tip: 'No yeast needed. Works well from frozen — reheat in a hot pan from frozen.',
+        'Combine all ingredients into a soft dough. Rest 20 minutes. Divide, roll thin, and cook in a very hot dry pan or under a hot grill for 1-2 minutes each side.',
+      tip: 'No yeast needed. Works well from frozen - reheat in a hot pan from frozen.',
     },
   },
   {
@@ -66,7 +66,7 @@ const ALTERNATIVES: PatternEntry[] = [
         '1 tbsp olive oil',
       ],
       method:
-        'Mix into a dough and knead 10 minutes. Prove 1 hour until doubled. Divide into 4 balls, roll very thin. Top and bake at maximum oven temperature for 8–12 minutes.',
+        'Mix into a dough and knead 10 minutes. Prove 1 hour until doubled. Divide into 4 balls, roll very thin. Top and bake at maximum oven temperature for 8-12 minutes.',
       tip: 'Freeze as balls of dough after the first prove. Defrost overnight in the fridge for great pizza any day.',
     },
   },
@@ -82,7 +82,7 @@ const ALTERNATIVES: PatternEntry[] = [
         '30g pine nuts or walnuts',
         '30g parmesan (or nutritional yeast)',
         '1 clove garlic',
-        '4–5 tbsp extra-virgin olive oil',
+        '4-5 tbsp extra-virgin olive oil',
         'squeeze of lemon',
         'salt to taste',
       ],
@@ -120,7 +120,7 @@ const ALTERNATIVES: PatternEntry[] = [
       ingredients: [
         '2 tsp each: ground cumin, coriander',
         '1 tsp turmeric',
-        '1–2 tsp chilli powder',
+        '1-2 tsp chilli powder',
         '1 thumb-sized piece of fresh ginger',
         '3 cloves garlic',
         '1 tbsp neutral oil',
@@ -165,7 +165,7 @@ const ALTERNATIVES: PatternEntry[] = [
         'optional: 1 chilli, small bunch coriander, 1 diced tomato',
       ],
       method:
-        'Halve and scoop avocados. Mash with a fork — leave slightly chunky. Stir in lime, onion and seasoning. Taste and adjust.',
+        'Halve and scoop avocados. Mash with a fork - leave slightly chunky. Stir in lime, onion and seasoning. Taste and adjust.',
       tip: 'Best eaten the same day. Press cling film directly onto the surface to slow browning.',
     },
   },
@@ -223,7 +223,7 @@ const ALTERNATIVES: PatternEntry[] = [
         'salt',
       ],
       method:
-        'Whisk egg yolk and mustard together. Add the oil drop by drop at first, whisking constantly — as it thickens, pour in a slow thin stream. Season with lemon and salt.',
+        'Whisk egg yolk and mustard together. Add the oil drop by drop at first, whisking constantly - as it thickens, pour in a slow thin stream. Season with lemon and salt.',
       tip: 'Use a stick blender with a wide-mouthed jar for a near-foolproof emulsion in under 60 seconds.',
     },
   },
@@ -243,7 +243,7 @@ const ALTERNATIVES: PatternEntry[] = [
         'optional: dried fruit, added after baking',
       ],
       method:
-        'Mix oats, syrup, oil and cinnamon. Spread in a thin layer on a baking tray. Bake at 160°C for 20–25 minutes, stirring halfway. Cool completely before storing.',
+        'Mix oats, syrup, oil and cinnamon. Spread in a thin layer on a baking tray. Bake at 160°C for 20-25 minutes, stirring halfway. Cool completely before storing.',
       tip: 'Must cool fully to get a crisp texture. Keeps 2 weeks in an airtight jar. Far less sugar than most shop versions.',
     },
   },
@@ -262,7 +262,7 @@ const ALTERNATIVES: PatternEntry[] = [
       ],
       method:
         'Simply combine all ingredients in a jar or container. No cooking required.',
-      tip: 'Use unsweetened dried fruit — they add enough natural sweetness. Control your own sugar level completely.',
+      tip: 'Use unsweetened dried fruit - they add enough natural sweetness. Control your own sugar level completely.',
     },
   },
   {
@@ -292,10 +292,10 @@ const ALTERNATIVES: PatternEntry[] = [
       effort: 'easy',
       timeMinutes: 15,
       ingredients: [
-        'Stale bread — any type',
+        'Stale bread - any type',
       ],
       method:
-        'Blitz in a food processor or grate coarsely. For dried breadcrumbs, spread on a tray and bake at 150°C for 10–15 minutes until just golden.',
+        'Blitz in a food processor or grate coarsely. For dried breadcrumbs, spread on a tray and bake at 150°C for 10-15 minutes until just golden.',
       tip: 'Never throw away stale bread. Freeze fresh breadcrumbs in a bag and use straight from frozen. Zero additives.',
     },
   },
@@ -330,7 +330,7 @@ const ALTERNATIVES: PatternEntry[] = [
         'cold water to cover',
       ],
       method:
-        'Put everything in a large pot, cover with cold water and bring to the boil. Reduce heat and simmer for 45–60 minutes. Strain through a sieve and season lightly.',
+        'Put everything in a large pot, cover with cold water and bring to the boil. Reduce heat and simmer for 45-60 minutes. Strain through a sieve and season lightly.',
       tip: 'Freeze in ice cube trays for easy portioning. Dramatically lower in salt than most stock cubes and no added flavour enhancers.',
     },
   },
@@ -351,8 +351,8 @@ const ALTERNATIVES: PatternEntry[] = [
         'oil for frying or baking',
       ],
       method:
-        'Blitz chickpeas, onion, garlic and spices to a rough paste in a food processor — not too smooth. Mix in flour and season. Shape into balls or patties. Fry in shallow oil, or bake at 190°C for 20–25 minutes.',
-      tip: 'Baked falafel is leaner and less messy. Make a big batch — cooked falafel freezes well and reheats in the oven in 10 minutes.',
+        'Blitz chickpeas, onion, garlic and spices to a rough paste in a food processor - not too smooth. Mix in flour and season. Shape into balls or patties. Fry in shallow oil, or bake at 190°C for 20-25 minutes.',
+      tip: 'Baked falafel is leaner and less messy. Make a big batch - cooked falafel freezes well and reheats in the oven in 10 minutes.',
     },
   },
   {
@@ -367,7 +367,7 @@ const ALTERNATIVES: PatternEntry[] = [
         '2 tbsp live plain yoghurt (as starter)',
       ],
       method:
-        'Heat milk to 85°C, then cool to 43°C. Stir in the live yoghurt thoroughly. Pour into a pre-warmed vacuum flask or a bowl in a very low oven (50°C max). Leave undisturbed for 6–8 hours until set. Refrigerate.',
+        'Heat milk to 85°C, then cool to 43°C. Stir in the live yoghurt thoroughly. Pour into a pre-warmed vacuum flask or a bowl in a very low oven (50°C max). Leave undisturbed for 6-8 hours until set. Refrigerate.',
       tip: 'You need a thermometer, but once the method is routine it is practically hands-off. Rich in live cultures with no added sugars, thickeners or stabilisers.',
     },
   },
@@ -386,8 +386,8 @@ const ALTERNATIVES: PatternEntry[] = [
         '1 tbsp oil (optional)',
       ],
       method:
-        'Combine into a dough and knead for 10 minutes. Prove in a covered bowl for 1 hour until doubled. Shape, transfer to a tin, prove 30 minutes. Bake at 220°C for 25–30 minutes until hollow when tapped.',
-      tip: 'Takes about 2 hours total but mostly waiting. Slice and freeze — just pop slices straight in the toaster from frozen.',
+        'Combine into a dough and knead for 10 minutes. Prove in a covered bowl for 1 hour until doubled. Shape, transfer to a tin, prove 30 minutes. Bake at 220°C for 25-30 minutes until hollow when tapped.',
+      tip: 'Takes about 2 hours total but mostly waiting. Slice and freeze - just pop slices straight in the toaster from frozen.',
     },
   },
 ];

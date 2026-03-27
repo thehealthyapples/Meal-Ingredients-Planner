@@ -633,7 +633,7 @@ function getCurrentProductInsight(item: ShoppingListItem): { headline: string; d
   if (isWF) {
     return {
       headline: 'Already a whole food',
-      detail: 'This ingredient is a whole or minimally processed food — no additives, no unnecessary processing. About as good as it gets.',
+      detail: 'This ingredient is a whole or minimally processed food - no additives, no unnecessary processing. About as good as it gets.',
     };
   }
   if (rating === null || rating === undefined) {
@@ -651,7 +651,7 @@ function getCurrentProductInsight(item: ShoppingListItem): { headline: string; d
   if (rating >= 4) {
     const catNote: Record<string, string> = {
       dairy: 'Dairy products at this level typically contain few or no stabilisers.',
-      grains: 'A reasonably clean grain product — fewer emulsifiers and dough improvers than lower-rated options.',
+      grains: 'A reasonably clean grain product - fewer emulsifiers and dough improvers than lower-rated options.',
       condiments: 'A good sauce or condiment with limited additives and a shorter ingredient list.',
     };
     return {
@@ -867,13 +867,13 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                 The Healthy Apples score is based on something simple that helped our family:
               </p>
               <p className="text-xs leading-relaxed text-foreground/90">
-                looking at ingredients and asking — are these foods we recognise, or are they more industrial additions?
+                looking at ingredients and asking - are these foods we recognise, or are they more industrial additions?
               </p>
               <p className="text-xs leading-relaxed text-foreground/90">
                 The closer a product is to real, familiar ingredients, the higher it scores.
               </p>
               <p className="text-xs leading-relaxed text-muted-foreground">
-                You can also go further — filtering out specific additives or E-numbers to match what works best for you.
+                You can also go further - filtering out specific additives or E-numbers to match what works best for you.
               </p>
             </div>
           </div>
@@ -950,7 +950,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
             ) : isWholeFood_ ? (
               <Card className="border-border/60 bg-muted/30">
                 <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground">This is already a whole food — any packaged version would be a step down, not up.</p>
+                  <p className="text-xs text-muted-foreground">This is already a whole food - any packaged version would be a step down, not up.</p>
                 </CardContent>
               </Card>
             ) : rankedChoices.length > 0 ? (
@@ -999,7 +999,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
             ) : products.length > 0 ? (
               <Card className="border-border/60 bg-muted/30">
                 <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground">No clearly better packaged alternative found — try refining by ingredients below.</p>
+                  <p className="text-xs text-muted-foreground">No clearly better packaged alternative found - try refining by ingredients below.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -1243,7 +1243,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                     {!isSearching && filteredProducts.length === 0 && products.length > 0 && (
                       <div className="text-center py-4 text-muted-foreground">
                         <Filter className="h-6 w-6 mx-auto mb-1 opacity-30" />
-                        <p className="text-xs">All products filtered out — adjust your filters</p>
+                        <p className="text-xs">All products filtered out - adjust your filters</p>
                       </div>
                     )}
                     {filteredProducts.map((product, idx) => {
@@ -2406,7 +2406,7 @@ export default function ShoppingListPage() {
                     <span>Shop View</span>
                   </Button>
                 )}
-                {/* Apple overflow menu — far right */}
+                {/* Apple overflow menu - far right */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -2611,7 +2611,7 @@ export default function ShoppingListPage() {
                                 const confShortLabel: Record<string, string> = { high: 'Exact', medium: 'Close', low: 'Sub.' };
                                 const variantSummary = (isWF && wfDef && Object.keys(rowVariantSelections).length > 0)
                                   ? Object.values(rowVariantSelections).filter(Boolean).join(' · ')
-                                  : '—';
+                                  : '-';
                                 const tierShort = EXTENDED_TIER_LABELS[itemTier]?.short || itemTier;
                                 const shopDisplay = item.selectedStore || catDef.supermarket || 'Auto';
                                 const choiceSummary = `${variantSummary} · ${tierShort} · ${shopDisplay}`;
@@ -2687,7 +2687,7 @@ export default function ShoppingListPage() {
                                     </td>
 
                                     {(() => {
-                                      if (!isPantry) return <td className="px-1.5 py-1 text-muted-foreground hidden sm:table-cell" data-testid={`optimizer-cell-${item.id}`}>—</td>;
+                                      if (!isPantry) return <td className="px-1.5 py-1 text-muted-foreground hidden sm:table-cell" data-testid={`optimizer-cell-${item.id}`}>-</td>;
                                       const optName = item.normalizedName ?? item.productName;
                                       const optCategory = (item.category || 'other').toLowerCase();
                                       const optKeys = getOptimizerOptions(optName, optCategory);
@@ -2847,7 +2847,7 @@ export default function ShoppingListPage() {
                                           </div>
                                         ) : (
                                           <div className="flex items-center gap-1.5">
-                                            <span className="text-muted-foreground">—</span>
+                                            <span className="text-muted-foreground">-</span>
                                             {isWF && wfConfLabel && (
                                               <Tooltip>
                                                 <TooltipTrigger asChild>
@@ -2862,7 +2862,7 @@ export default function ShoppingListPage() {
                                             )}
                                           </div>
                                         )
-                                      ) : <span className="text-muted-foreground">—</span>}
+                                      ) : <span className="text-muted-foreground">-</span>}
                                       {hasPrices && showHint && (
                                         <div className="flex items-center gap-1 mt-0.5">
                                           <span className="text-[10px] text-amber-600 dark:text-amber-400" data-testid={`text-tha-pick-${item.id}`}>⭐ {topPick.productName}</span>
@@ -2901,19 +2901,19 @@ export default function ShoppingListPage() {
                                           {selectedPrice !== null && selectedPrice !== undefined ? (
                                             <span className={`tabular-nums cursor-pointer ${isBestPrice ? 'text-primary font-semibold' : 'text-foreground'}`} onClick={() => setComparisonItem(item)}>£{selectedPrice.toFixed(2)}</span>
                                           ) : (
-                                            <span className="text-muted-foreground cursor-pointer" onClick={() => setComparisonItem(item)}>—</span>
+                                            <span className="text-muted-foreground cursor-pointer" onClick={() => setComparisonItem(item)}>-</span>
                                           )}
                                           {isBestPrice && <span className="text-[9px] bg-secondary text-secondary-foreground px-1 py-0.5 rounded font-semibold">Best</span>}
                                         </div>
-                                      ) : <span className="text-muted-foreground">—</span>}
+                                      ) : <span className="text-muted-foreground">-</span>}
                                     </td>
 
                                     <td className="px-1.5 py-1 text-center hidden sm:table-cell" data-testid={`text-smp-${item.id}`}>
                                       {hasPrices ? (() => {
                                         const smp = getItemThaRating(item.id, item);
-                                        if (smp === 0) return <span className="text-muted-foreground">—</span>;
+                                        if (smp === 0) return <span className="text-muted-foreground">-</span>;
                                         return <AppleRating rating={smp} size="small" />;
-                                      })() : <span className="text-muted-foreground">—</span>}
+                                      })() : <span className="text-muted-foreground">-</span>}
                                     </td>
 
                                     <td className="px-1.5 py-1 text-center hidden sm:table-cell" data-testid={`meal-count-${item.id}`}>
@@ -2958,7 +2958,7 @@ export default function ShoppingListPage() {
                                             </Tooltip>
                                           );
                                         }
-                                        return <span className="text-muted-foreground">—</span>;
+                                        return <span className="text-muted-foreground">-</span>;
                                       })()}
                                     </td>
 
@@ -2992,13 +2992,13 @@ export default function ShoppingListPage() {
                                     >Always in Basket</button>
                                   </div>
                                 </td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">—</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">—</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">—</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">-</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">-</td>
+                                <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">-</td>
                                 <td className="px-1.5 py-1.5 sticky right-0 z-10">
                                   <div className="flex items-center justify-end gap-0.5">
                                     <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" data-testid={`checkbox-extra-${extra.id}`} />
@@ -3032,10 +3032,10 @@ export default function ShoppingListPage() {
                                   </td>
                                   <td className="px-1.5 py-1" />
                                   <td className="px-1.5 py-1 text-right tabular-nums text-xs">
-                                    {catPriceTotal !== null && catPriceTotal > 0 ? `£${catPriceTotal.toFixed(2)}` : <span className="text-muted-foreground font-normal">—</span>}
+                                    {catPriceTotal !== null && catPriceTotal > 0 ? `£${catPriceTotal.toFixed(2)}` : <span className="text-muted-foreground font-normal">-</span>}
                                   </td>
                                   <td className="px-1.5 py-1 text-center">
-                                    {catAvgRating !== null ? <AppleRating rating={catAvgRating} size="small" showTooltip={false} /> : <span className="text-muted-foreground font-normal">—</span>}
+                                    {catAvgRating !== null ? <AppleRating rating={catAvgRating} size="small" showTooltip={false} /> : <span className="text-muted-foreground font-normal">-</span>}
                                   </td>
                                   <td colSpan={2} className="sticky right-0 z-10 bg-muted/20" />
                                 </tr>
@@ -3125,13 +3125,13 @@ export default function ShoppingListPage() {
                                         <span className={`font-medium ${item.checked ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{capitalizeWords(item.productName)}</span>
                                         {item.quantity > 1 && <Badge variant="secondary" className="text-[10px] ml-1">x{item.quantity}</Badge>}
                                       </td>
-                                      <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                      <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                      <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                      <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                      <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                      <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
                                       <td className="px-1.5 py-1.5 text-right text-muted-foreground tabular-nums whitespace-nowrap">{qty} {unitLabel}</td>
-                                      <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                      <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                      <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                      <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                      <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                      <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
                                       <td className="px-1.5 py-1.5 sticky right-0 z-10">
                                         <div className="flex items-center justify-end gap-0.5">
                                           <Checkbox checked={item.checked || false} onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })} className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" data-testid={`checkbox-household-${item.id}`} />
@@ -3153,13 +3153,13 @@ export default function ShoppingListPage() {
                                         >Always in Basket</button>
                                       </div>
                                     </td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
+                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
                                     <td className="px-1.5 py-1.5 sticky right-0 z-10">
                                       <div className="flex items-center justify-end gap-0.5">
                                         <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" />
@@ -3202,7 +3202,7 @@ export default function ShoppingListPage() {
                   <div className="mt-1 border-t border-border/40">
                     <button className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground w-full text-left px-3 py-2" onClick={() => setStaplesOpen(o => !o)} data-testid="button-toggle-staples">
                       {staplesOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                      Staples — usually in stock ({sortedItems.filter(i => isStaple(i)).length})
+                      Staples - usually in stock ({sortedItems.filter(i => isStaple(i)).length})
                     </button>
                     {staplesOpen && (
                       <table className="w-full text-xs">
@@ -3236,7 +3236,7 @@ export default function ShoppingListPage() {
               </div>
             )}
 
-            {/* Basket Totals — integrated table footer using same grid */}
+            {/* Basket Totals - integrated table footer using same grid */}
             {savedItems.length > 0 && (
               <div className="overflow-x-auto border-t-2 border-border" data-testid="section-basket-totals">
                 <table className="w-full text-xs table-fixed">
@@ -3263,10 +3263,10 @@ export default function ShoppingListPage() {
                       </td>
                       <td className="px-1.5 py-1.5" />
                       <td className="px-1.5 py-1.5 text-right tabular-nums" data-testid="text-basket-total-price">
-                        {clientBestTotal !== null ? `£${clientBestTotal.toFixed(2)}` : <span className="text-muted-foreground font-normal">—</span>}
+                        {clientBestTotal !== null ? `£${clientBestTotal.toFixed(2)}` : <span className="text-muted-foreground font-normal">-</span>}
                       </td>
                       <td className="px-1.5 py-1.5 text-center" data-testid="text-basket-avg-smp">
-                        {avgThaRating !== null ? <AppleRating rating={avgThaRating} size="small" showTooltip={false} /> : <span className="text-muted-foreground font-normal">—</span>}
+                        {avgThaRating !== null ? <AppleRating rating={avgThaRating} size="small" showTooltip={false} /> : <span className="text-muted-foreground font-normal">-</span>}
                       </td>
                       <td colSpan={2} className="sticky right-0 z-10 bg-muted/30" />
                     </tr>
@@ -3306,10 +3306,10 @@ export default function ShoppingListPage() {
                         <td className="px-3 py-2 font-medium text-foreground whitespace-nowrap sticky left-0 z-10 bg-background border-b border-r border-border/50 group-hover:bg-muted/20">{retailer}</td>
                         {(['budget', 'standard', 'premium', 'organic'] as const).map(tier => {
                           const val = comparisonMatrix[retailer]?.[tier] ?? 0;
-                          return <td key={tier} className="px-3 py-2 text-right tabular-nums text-foreground border-b border-border/50">{val > 0 ? `£${val.toFixed(2)}` : '—'}</td>;
+                          return <td key={tier} className="px-3 py-2 text-right tabular-nums text-foreground border-b border-border/50">{val > 0 ? `£${val.toFixed(2)}` : '-'}</td>;
                         })}
                         <td className="px-3 py-2 text-right tabular-nums font-semibold text-foreground whitespace-nowrap sticky right-0 z-10 bg-background border-b border-l border-border/50 group-hover:bg-muted/20">
-                          {(currentByRetailer[retailer] ?? 0) > 0 ? `£${(currentByRetailer[retailer] ?? 0).toFixed(2)}` : '—'}
+                          {(currentByRetailer[retailer] ?? 0) > 0 ? `£${(currentByRetailer[retailer] ?? 0).toFixed(2)}` : '-'}
                         </td>
                       </tr>
                     ))}
@@ -3317,7 +3317,7 @@ export default function ShoppingListPage() {
                       <td className="px-3 py-2 font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/20 border-b border-r border-border/50">vs Current</td>
                       {(['budget', 'standard', 'premium', 'organic'] as const).map(tier => {
                         const minVal = Math.min(...selectedRetailers.map(r => comparisonMatrix[r]?.[tier] ?? 0).filter(v => v > 0));
-                        if (!isFinite(minVal)) return <td key={tier} className="px-3 py-2 text-right tabular-nums text-muted-foreground border-b border-border/50">—</td>;
+                        if (!isFinite(minVal)) return <td key={tier} className="px-3 py-2 text-right tabular-nums text-muted-foreground border-b border-border/50">-</td>;
                         const diff = minVal - currentTotal;
                         const isPositive = diff > 0;
                         return (
@@ -3327,7 +3327,7 @@ export default function ShoppingListPage() {
                         );
                       })}
                       <td className="px-3 py-2 text-right tabular-nums font-bold sticky right-0 z-10 bg-muted/20 border-b border-l border-border/50">
-                        {currentTotal > 0 ? `£${currentTotal.toFixed(2)}` : '—'}
+                        {currentTotal > 0 ? `£${currentTotal.toFixed(2)}` : '-'}
                       </td>
                     </tr>
                   </tbody>

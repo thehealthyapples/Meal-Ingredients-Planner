@@ -89,7 +89,7 @@ function RecipeForm({ parsed, rawText, onClose }: {
       {parsed.confidence === "low" && (
         <div className="flex items-start gap-2 rounded-lg border border-yellow-300 bg-yellow-50 dark:bg-yellow-950/30 px-3 py-2.5 text-sm text-yellow-800 dark:text-yellow-300">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>The scan quality was low — please review and correct the fields below.</span>
+          <span>The scan quality was low - please review and correct the fields below.</span>
         </div>
       )}
 
@@ -302,7 +302,7 @@ function MealPlanForm({ parsed, onClose }: {
       {parsed.confidence === "low" && (
         <div className="flex items-start gap-2 rounded-lg border border-yellow-300 bg-yellow-50 dark:bg-yellow-950/30 px-3 py-2.5 text-sm text-yellow-800 dark:text-yellow-300">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-          <span>The scan quality was low — please review the days and meals below before importing.</span>
+          <span>The scan quality was low - please review the days and meals below before importing.</span>
         </div>
       )}
 
@@ -353,7 +353,7 @@ function MealPlanForm({ parsed, onClose }: {
 function UnknownForm({ rawText, onClose }: { rawText: string; onClose: () => void }) {
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">We couldn't parse this — you can copy the text manually.</p>
+      <p className="text-sm text-muted-foreground">We couldn't parse this - you can copy the text manually.</p>
       <textarea
         readOnly
         value={rawText}

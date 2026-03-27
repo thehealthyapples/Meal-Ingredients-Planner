@@ -1741,11 +1741,11 @@ export default function MealsPage() {
     let matchesGroup = true;
     if (cat === "user_meals") matchesGroup = activeGroups.has("cookbook");
     else if (cat === "from_web" || cat === "tha_meals") matchesGroup = activeGroups.has("recipes");
-    // Packaged & Processed — only shown when explicitly enabled (hidden by default)
+    // Packaged & Processed - only shown when explicitly enabled (hidden by default)
     else if (cat === "ready_meals") matchesGroup = activeGroups.has("packaged");
     // drinks follow cookbook/recipes visibility
     else if (cat === "drinks") matchesGroup = activeGroups.has("cookbook") || activeGroups.has("recipes");
-    // Audience multi-select — fallback to adult if nothing selected
+    // Audience multi-select - fallback to adult if nothing selected
     const eff = activeAudiences.size === 0 ? new Set(["adult"]) : activeAudiences;
     let matchesAudience = false;
     if (meal.isDrink) {
@@ -1757,7 +1757,7 @@ export default function MealsPage() {
     } else if (meal.audience === "child") {
       matchesAudience = eff.has("child");
     } else {
-      // universal — shows for any non-drink audience selection
+      // universal - shows for any non-drink audience selection
       matchesAudience = eff.has("adult") || eff.has("baby") || eff.has("child");
     }
     const effectivePattern = mealsDietPattern.trim() || null;
@@ -1941,7 +1941,7 @@ export default function MealsPage() {
         </div>
       )}
 
-      {/* Row C: filters + view toggle — horizontally scrollable on mobile */}
+      {/* Row C: filters + view toggle - horizontally scrollable on mobile */}
       <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
         <div className="flex border border-border rounded-md shrink-0">
           {([
@@ -2609,7 +2609,7 @@ export default function MealsPage() {
         </AnimatePresence>
       )}
 
-      {/* My Freezer section — appears after My Cookbook + Recipes, before Packaged & Processed */}
+      {/* My Freezer section - appears after My Cookbook + Recipes, before Packaged & Processed */}
       {activeGroups.has("freezer") && (
         <div className="space-y-4 mt-6">
           <div className="flex items-center gap-2 pb-1 border-b border-border/50">

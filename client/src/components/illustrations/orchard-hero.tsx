@@ -20,7 +20,7 @@ export default function OrchardHero() {
         fill="hsl(var(--primary) / 0.06)"
       />
 
-      {/* Tree silhouettes – left cluster */}
+      {/* Tree silhouettes - left cluster */}
       <g fill="hsl(var(--primary) / 0.18)">
         <ellipse cx="80" cy="72" rx="18" ry="22" />
         <rect x="78" y="88" width="4" height="12" />
@@ -30,7 +30,7 @@ export default function OrchardHero() {
         <rect x="53" y="90" width="4" height="10" />
       </g>
 
-      {/* Tree silhouettes – centre-right cluster */}
+      {/* Tree silhouettes - centre-right cluster */}
       <g fill="hsl(var(--primary) / 0.14)">
         <ellipse cx="820" cy="60" rx="20" ry="24" />
         <rect x="818" y="80" width="4" height="14" />
@@ -40,7 +40,7 @@ export default function OrchardHero() {
         <rect x="793" y="84" width="4" height="10" />
       </g>
 
-      {/* Tree silhouettes – far right */}
+      {/* Tree silhouettes - far right */}
       <g fill="hsl(var(--primary) / 0.16)">
         <ellipse cx="1320" cy="68" rx="18" ry="21" />
         <rect x="1318" y="85" width="4" height="12" />

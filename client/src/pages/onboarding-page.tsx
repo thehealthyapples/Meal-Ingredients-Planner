@@ -231,7 +231,7 @@ export default function OnboardingPage() {
                     className="w-full"
                   >
 
-                    {/* Step 0 — Name */}
+                    {/* Step 0 - Name */}
                     {step === 0 && (
                       <div className="space-y-6">
                         <div>
@@ -255,12 +255,12 @@ export default function OnboardingPage() {
                               data-testid="input-first-name"
                             />
                           </div>
-                          <p className="text-xs text-muted-foreground mt-2">You can skip this — it's optional.</p>
+                          <p className="text-xs text-muted-foreground mt-2">You can skip this - it's optional.</p>
                         </div>
                       </div>
                     )}
 
-                    {/* Step 1 — Diet */}
+                    {/* Step 1 - Diet */}
                     {step === 1 && (
                       <div className="space-y-6">
                         <div>
@@ -269,7 +269,7 @@ export default function OnboardingPage() {
                         </div>
 
                         <div>
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Diet style — pick one</p>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Diet style - pick one</p>
                           <div className="grid grid-cols-2 gap-2">
                             <button
                               onClick={() => setDietPattern(null)}
@@ -361,7 +361,7 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {/* Step 2 — Goals */}
+                    {/* Step 2 - Goals */}
                     {step === 2 && (
                       <div className="space-y-5">
                         <div>
@@ -394,12 +394,12 @@ export default function OnboardingPage() {
                           })}
                         </div>
                         {healthGoals.length >= 3 && (
-                          <p className="text-xs text-muted-foreground text-center">Up to 3 selected — deselect one to change your choices</p>
+                          <p className="text-xs text-muted-foreground text-center">Up to 3 selected - deselect one to change your choices</p>
                         )}
                       </div>
                     )}
 
-                    {/* Step 3 — Shopping */}
+                    {/* Step 3 - Shopping */}
                     {step === 3 && (
                       <div className="space-y-5">
                         <div>
@@ -431,7 +431,7 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {/* Step 4 — Stores */}
+                    {/* Step 4 - Stores */}
                     {step === 4 && (
                       <div className="space-y-5">
                         <div>
@@ -458,7 +458,7 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {/* Step 5 — Food approach (UPF) */}
+                    {/* Step 5 - Food approach (UPF) */}
                     {step === 5 && (
                       <div className="space-y-5">
                         <div>

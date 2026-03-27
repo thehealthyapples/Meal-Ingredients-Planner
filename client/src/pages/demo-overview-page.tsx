@@ -14,7 +14,7 @@ export default function DemoOverviewPage() {
         </h1>
         <p className="text-muted-foreground max-w-xl mx-auto text-base leading-relaxed">
           Plan healthy meals for your whole family, build shopping lists automatically, and
-          track what you eat — all in one place. This is a read-only demo showing what THA
+          track what you eat - all in one place. This is a read-only demo showing what THA
           looks like with a real household.
         </p>
       </div>

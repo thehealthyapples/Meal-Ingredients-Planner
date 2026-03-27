@@ -262,7 +262,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
           <button onClick={onRefresh} disabled={smartLoading} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors disabled:opacity-40" title="Get a different meal for this slot" data-testid={`button-refresh-${key}`}>
             <RefreshCw className="h-3.5 w-3.5" />
           </button>
-          <button onClick={onLock} className={`p-1.5 rounded-md transition-colors ${locked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent/40"}`} title={locked ? "Locked — kept on regenerate" : "Click to lock"} data-testid={`button-lock-${key}`}>
+          <button onClick={onLock} className={`p-1.5 rounded-md transition-colors ${locked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent/40"}`} title={locked ? "Locked - kept on regenerate" : "Click to lock"} data-testid={`button-lock-${key}`}>
             <Lock className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -1101,7 +1101,7 @@ export default function WeeklyPlannerPage() {
           </p>
         </div>
         <div className="flex items-center gap-1">
-          {/* Week chooser — left of Plan My Week */}
+          {/* Week chooser - left of Plan My Week */}
           {renameWeekId === activeWeekData?.id ? (
             <input
               value={renameValue}
@@ -1223,7 +1223,7 @@ export default function WeeklyPlannerPage() {
                 <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-primary" />
-                    Plan My Week — Preferences
+                    Plan My Week - Preferences
                   </CardTitle>
                   <Button size="icon" variant="ghost" onClick={() => setSmartControlsOpen(false)} data-testid="button-close-smart-controls">
                     <X className="h-4 w-4" />
@@ -1325,7 +1325,7 @@ export default function WeeklyPlannerPage() {
                   <ChevronLeft className="h-5 w-5" />
                 </button>
                 <span className="text-base font-semibold" data-testid="text-mobile-day-name">
-                  {sortedDays[mobileDayIndex] ? DAY_NAMES[sortedDays[mobileDayIndex].dayOfWeek] : "—"}
+                  {sortedDays[mobileDayIndex] ? DAY_NAMES[sortedDays[mobileDayIndex].dayOfWeek] : "-"}
                 </span>
                 <button
                   className="p-1.5 rounded-md hover:bg-accent/40 disabled:opacity-30 transition-colors"
@@ -1450,7 +1450,7 @@ export default function WeeklyPlannerPage() {
                       const RowIcon = row.icon;
                       return (
                         <>
-                          {/* Row label — sticky left */}
+                          {/* Row label - sticky left */}
                           <div
                             key={row.id + "-label"}
                             className={`flex flex-col justify-center px-2 py-1.5 border-r border-border sticky left-0 z-10 group ${!isLastRow ? "border-b border-border" : ""}`}
@@ -1556,10 +1556,10 @@ export default function WeeklyPlannerPage() {
                       );
                     })}
 
-                    {/* ── Summary row — same grid, aligned under day columns ── */}
+                    {/* ── Summary row - same grid, aligned under day columns ── */}
                     {sortedDays.length > 0 && (
                       <>
-                        {/* Summary label cell — sticky left */}
+                        {/* Summary label cell - sticky left */}
                         <div
                           className="flex items-center gap-1.5 px-2 py-2.5 border-t-2 border-border sticky left-0 z-10"
                           style={{ backgroundColor: "hsl(var(--muted) / 0.3)" }}
@@ -1599,7 +1599,7 @@ export default function WeeklyPlannerPage() {
                               <p className="text-[10px] text-muted-foreground/60">
                                 {dayMealCount > 0
                                   ? `${dayMealCount} meal${dayMealCount !== 1 ? 's' : ''}`
-                                  : '—'}
+                                  : '-'}
                               </p>
                             </div>
                           );
@@ -2207,7 +2207,7 @@ export default function WeeklyPlannerPage() {
 
               {lockedEntries.size > 0 && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Lock className="h-3 w-3 text-primary" />{lockedEntries.size} meal{lockedEntries.size !== 1 ? "s" : ""} locked — they'll be kept when you regenerate.
+                  <Lock className="h-3 w-3 text-primary" />{lockedEntries.size} meal{lockedEntries.size !== 1 ? "s" : ""} locked - they'll be kept when you regenerate.
                 </p>
               )}
             </div>

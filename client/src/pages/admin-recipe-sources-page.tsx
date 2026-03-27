@@ -181,7 +181,7 @@ export default function AdminRecipeSourcesPage() {
                 <Badge variant="secondary" className="text-xs">{officialSources.length}</Badge>
               </CardTitle>
               <CardDescription className="text-xs">
-                Require API keys — configure credentials via environment variables before enabling.
+                Require API keys - configure credentials via environment variables before enabling.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -209,7 +209,7 @@ export default function AdminRecipeSourcesPage() {
                 <Badge variant="secondary" className="text-xs">{scrapedSources.length}</Badge>
               </CardTitle>
               <CardDescription className="text-xs">
-                Web scrapers — toggle off to stop requests to these sites.
+                Web scrapers - toggle off to stop requests to these sites.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -288,7 +288,7 @@ export default function AdminRecipeSourcesPage() {
                             </Badge>
                           </td>
                           <td className="py-2 max-w-[180px] truncate text-muted-foreground" title={log.urlOrQuery ?? ""}>
-                            {log.urlOrQuery ?? "—"}
+                            {log.urlOrQuery ?? "-"}
                           </td>
                         </tr>
                       ))}

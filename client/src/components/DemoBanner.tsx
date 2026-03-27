@@ -90,7 +90,7 @@ export default function DemoBanner() {
             </span>
           ) : (
             <>
-              <span className="opacity-90 whitespace-nowrap">— Save your progress &amp; get 25% off your first 6 months:</span>
+              <span className="opacity-90 whitespace-nowrap">- Save your progress &amp; get 25% off your first 6 months:</span>
               <form onSubmit={handleSaveEmail} className="flex items-center gap-1.5">
                 <input
                   ref={inputRef}
@@ -125,7 +125,7 @@ export default function DemoBanner() {
       ) : (
         <span className="flex-1 min-w-0">
           <span className="font-semibold">Demo account</span>
-          {" — "}
+          {" - "}
           <span className="opacity-90">
             Some features are limited. Changes are temporary and not saved permanently.
           </span>

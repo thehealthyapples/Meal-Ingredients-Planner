@@ -308,7 +308,7 @@ export default function AdminUsersPage() {
                 return (
                   <TableRow key={u.id} data-testid={`row-user-${u.id}`}>
                     <TableCell className="font-mono text-sm">{u.username}</TableCell>
-                    <TableCell className="text-muted-foreground">{u.displayName || "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{u.displayName || "-"}</TableCell>
                     <TableCell>
                       {u.role === "admin" ? (
                         <Badge variant="default" className="gap-1">
@@ -392,7 +392,7 @@ export default function AdminUsersPage() {
       {total > 0 && (
         <div className="flex items-center justify-between mt-4">
           <span className="text-sm text-muted-foreground" data-testid="text-pagination-info">
-            Showing {start}–{end} of {total} users
+            Showing {start}-{end} of {total} users
           </span>
           <div className="flex gap-2">
             <Button

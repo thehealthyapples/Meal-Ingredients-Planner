@@ -170,8 +170,8 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
   };
 
   const emptyLabel: Record<FoodCategory, string> = {
-    larder: "No larder staples yet — try adding olive oil or pasta.",
-    fridge: "No fridge staples yet — try adding milk or eggs.",
+    larder: "No larder staples yet - try adding olive oil or pasta.",
+    fridge: "No fridge staples yet - try adding milk or eggs.",
     freezer: "No freezer items yet.",
     pet: "No pet food or care items yet.",
   };

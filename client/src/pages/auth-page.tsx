@@ -222,7 +222,7 @@ export default function AuthPage() {
           <div className="mb-1 -ml-2">
             <img
               src={brandLogoUrl}
-              alt="The Healthy Apples — Confidently Choose Better, Simply"
+              alt="The Healthy Apples - Confidently Choose Better, Simply"
               className="h-56 w-auto object-contain"
               draggable={false}
               data-testid="img-brand-logo"
@@ -239,7 +239,7 @@ export default function AuthPage() {
               <span className="text-primary">Build smarter baskets.</span>
             </h1>
             <p className="text-xs text-muted-foreground leading-relaxed max-w-md" data-testid="text-hero-sub-copy">
-              A calmer way to review your meals, understand every ingredient, and make more confident grocery choices — with far less effort.
+              A calmer way to review your meals, understand every ingredient, and make more confident grocery choices - with far less effort.
             </p>
           </div>
 
@@ -271,7 +271,7 @@ export default function AuthPage() {
             })}
           </div>
 
-          {/* Flow visual — always visible */}
+          {/* Flow visual - always visible */}
           <div className="flex-1 min-h-0">
             <KitchenToBasketVisual />
           </div>
@@ -293,7 +293,7 @@ export default function AuthPage() {
           {verified && (
             <div className="flex items-center gap-3 p-4 rounded-xl bg-green-50 border border-green-200 text-green-800" data-testid="banner-email-verified">
               <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
-              <p className="text-sm font-medium">Email verified — you can log in now.</p>
+              <p className="text-sm font-medium">Email verified - you can log in now.</p>
             </div>
           )}
           {verifyError && (
@@ -324,7 +324,7 @@ export default function AuthPage() {
               {resendState === "sent" ? (
                 <div className="flex items-center justify-center gap-2 text-sm text-primary font-medium" data-testid="text-resend-sent">
                   <CheckCircle2 className="h-4 w-4" />
-                  Email resent — check your inbox
+                  Email resent - check your inbox
                 </div>
               ) : (
                 <Button
@@ -357,7 +357,7 @@ export default function AuthPage() {
                     <Mail className="h-7 w-7 text-primary" />
                   </div>
                   <p className="text-sm font-medium text-foreground">
-                    Check your inbox — if your email is registered, a reset link is on its way.
+                    Check your inbox - if your email is registered, a reset link is on its way.
                   </p>
                 </div>
               ) : (
@@ -405,7 +405,7 @@ export default function AuthPage() {
                     <CheckCircle2 className="h-7 w-7 text-green-600" />
                   </div>
                   <p className="text-sm font-medium text-foreground">
-                    Verification email sent — please check your inbox.
+                    Verification email sent - please check your inbox.
                   </p>
                 </div>
               ) : (
@@ -549,7 +549,7 @@ export default function AuthPage() {
                       {resendState === "sent" ? (
                         <div className="flex items-center gap-2 text-sm text-primary font-medium" data-testid="text-resend-sent-login">
                           <CheckCircle2 className="h-4 w-4" />
-                          Verification email sent — check your inbox
+                          Verification email sent - check your inbox
                         </div>
                       ) : (
                         <Button
@@ -612,7 +612,7 @@ export default function AuthPage() {
                 <p className="text-xs text-muted-foreground/50">Secure login. Your data stays private.</p>
               </div>
 
-              {/* Explore CTA — secondary route, below main auth flow */}
+              {/* Explore CTA - secondary route, below main auth flow */}
               <div className="pt-3 border-t border-border/40">
                 <button
                   onClick={handleDemoStart}

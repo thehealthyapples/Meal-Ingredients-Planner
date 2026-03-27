@@ -29,7 +29,7 @@ export function DemoReadOnlyModal({
             <div className="flex items-center justify-center h-8 w-8 rounded-full bg-amber-100">
               <Lock className="h-4 w-4 text-amber-700" />
             </div>
-            <DialogTitle>Demo Mode — Read Only</DialogTitle>
+            <DialogTitle>Demo Mode - Read Only</DialogTitle>
           </div>
           <DialogDescription>
             You're exploring THA in demo mode. Create a free account to save meals, build
