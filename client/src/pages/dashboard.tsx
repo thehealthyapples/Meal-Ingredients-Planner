@@ -1,16 +1,20 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useUser } from "@/hooks/use-user";
 import { useMealsSummary } from "@/hooks/use-meals-summary";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   Utensils, ShoppingBasket, Plus, ArrowRight,
-  CalendarDays, Leaf, CheckCircle2, Circle, Apple,
+  CalendarDays, Leaf, CheckCircle2, Circle, Apple, Scale,
 } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { api } from "@shared/routes";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import OrchardHero from "@/components/illustrations/orchard-hero";
 import AppleRating from "@/components/ui/apple-rating";
 import {
@@ -63,6 +67,8 @@ const item = {
 export default function Dashboard() {
   const { user } = useUser();
   const { meals } = useMealsSummary();
+  const { toast } = useToast();
+  const qc = useQueryClient();
 
   const { data: shoppingListItems = [] } = useQuery<any[]>({
     queryKey: [api.shoppingList.list.path],
@@ -72,6 +78,23 @@ export default function Dashboard() {
   const { data: plannerFull = [] } = useQuery<any[]>({
     queryKey: ["/api/planner/full"],
     enabled: !!user,
+  });
+
+  const [weightOpen, setWeightOpen] = useState(false);
+  const [weightInput, setWeightInput] = useState("");
+
+  const saveWeightMutation = useMutation({
+    mutationFn: async (weightKg: number) => {
+      const res = await apiRequest("PUT", "/api/profile", { weightKg });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/profile"] });
+      toast({ title: "Weight saved", description: `${weightInput} kg logged for today.` });
+      setWeightOpen(false);
+      setWeightInput("");
+    },
+    onError: () => toast({ title: "Failed to save weight", variant: "destructive" }),
   });
 
   const userMeals = meals?.filter(m => !m.isSystemMeal) || [];
@@ -396,8 +419,8 @@ export default function Dashboard() {
                   <Link href="/meals">
                     <Card className="group cursor-pointer hover-elevate transition-all duration-200" data-testid="action-add-meal">
                       <CardContent className="p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: GREEN_PALE }}>
-                          <Plus className="h-5 w-5" style={{ color: GREEN_DEEP }} />
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                          <Plus className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div>
                           <p className="title-card">Add Recipe</p>
@@ -410,7 +433,7 @@ export default function Dashboard() {
                   <Link href="/weekly-planner">
                     <Card className="group cursor-pointer hover-elevate transition-all duration-200" data-testid="action-view-planner">
                       <CardContent className="p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: SAGE }}>
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
                           <CalendarDays className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div>
@@ -424,8 +447,8 @@ export default function Dashboard() {
                   <Link href="/analyse-basket">
                     <Card className="group cursor-pointer hover-elevate transition-all duration-200" data-testid="action-analyse-basket">
                       <CardContent className="p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: BASKET_BG }}>
-                          <ShoppingBasket className="h-5 w-5" style={{ color: BASKET_FG }} />
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                          <ShoppingBasket className="h-5 w-5 text-muted-foreground" />
                         </div>
                         <div>
                           <p className="title-card">Analyse Basket</p>
@@ -435,6 +458,18 @@ export default function Dashboard() {
                       </CardContent>
                     </Card>
                   </Link>
+                  <Card className="group cursor-pointer hover-elevate transition-all duration-200" data-testid="action-log-weight" onClick={() => setWeightOpen(true)}>
+                    <CardContent className="p-4 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                        <Scale className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="title-card">Log Today's Weight</p>
+                        <p className="text-xs text-muted-foreground">Keep track of your progress</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground/40 ml-auto shrink-0" />
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
 
@@ -509,6 +544,48 @@ export default function Dashboard() {
 
         </motion.div>
       </div>
+
+      <Dialog open={weightOpen} onOpenChange={(v) => { if (!v) { setWeightOpen(false); setWeightInput(""); } }}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Scale className="h-5 w-5 text-primary" />
+              Log Today's Weight
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <p className="text-xs text-muted-foreground mb-3">Enter your current weight in kilograms.</p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                placeholder="e.g. 74.5"
+                value={weightInput}
+                onChange={(e) => setWeightInput(e.target.value)}
+                className="flex-1"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && weightInput && !saveWeightMutation.isPending) {
+                    saveWeightMutation.mutate(Number(weightInput));
+                  }
+                }}
+                data-testid="input-quick-weight"
+              />
+              <span className="text-sm text-muted-foreground shrink-0">kg</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => { setWeightOpen(false); setWeightInput(""); }}>Cancel</Button>
+            <Button
+              size="sm"
+              onClick={() => saveWeightMutation.mutate(Number(weightInput))}
+              disabled={!weightInput || Number(weightInput) <= 0 || saveWeightMutation.isPending}
+              data-testid="button-save-quick-weight"
+            >
+              {saveWeightMutation.isPending ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -8,12 +8,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AnimatePresence, motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { TemplatesPanel } from "@/components/templates-panel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
 import { DayViewDrawer } from "@/components/day-view-drawer";
@@ -1089,112 +1091,124 @@ export default function WeeklyPlannerPage() {
   return (
     <div className="w-full px-3 py-6">
       {/* ── Page Header ── */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-6">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
         <div className="flex-1 min-w-[160px]">
           <h1 className="text-[28px] font-semibold tracking-tight" data-testid="text-weekly-planner-title">
-            Weekly Planner
+            Planner
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Plan 6 weeks of meals with breakfast, lunch, dinner, and snacks
+          <p className="text-sm text-muted-foreground mt-0.5" data-testid="text-week-progress">
+            {weekStats.filled} meals planned out of {weekStats.total} this week
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex items-center gap-1">
+          {/* Week chooser — left of Plan My Week */}
+          {renameWeekId === activeWeekData?.id ? (
+            <input
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              className="h-8 text-sm border border-border rounded-md px-2.5 w-32 bg-background outline-none focus:ring-1 focus:ring-primary"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && renameValue.trim()) {
+                  renameMutation.mutate({ weekId: activeWeekData!.id, weekName: renameValue.trim() });
+                }
+                if (e.key === "Escape") setRenameWeekId(null);
+              }}
+              onBlur={() => {
+                if (renameValue.trim() && renameValue.trim() !== activeWeekData?.weekName) {
+                  renameMutation.mutate({ weekId: activeWeekData!.id, weekName: renameValue.trim() });
+                } else {
+                  setRenameWeekId(null);
+                }
+              }}
+              data-testid="input-rename-week"
+            />
+          ) : (
+            <Select value={activeWeek} onValueChange={setActiveWeek}>
+              <SelectTrigger className="w-32 h-8 text-sm" data-testid="tabs-weeks">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {fullPlanner
+                  .slice()
+                  .sort((a, b) => a.weekNumber - b.weekNumber)
+                  .map((week) => (
+                    <SelectItem key={week.id} value={String(week.weekNumber)} data-testid={`tab-week-${week.weekNumber}`}>
+                      {week.weekName}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          )}
+          {!renameWeekId && activeWeekData && (
+            <button
+              className="p-1.5 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent/40 transition-colors"
+              onClick={() => { setRenameWeekId(activeWeekData.id); setRenameValue(activeWeekData.weekName); }}
+              title="Rename week"
+              data-testid={`button-rename-week-${activeWeek}`}
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+          )}
+          <div className="h-4 w-px bg-border" />
           <Button
             size="sm"
+            className="px-2.5 text-xs"
             onClick={() => setSmartControlsOpen(!smartControlsOpen)}
             disabled={smartLoading}
             data-testid="button-plan-my-week"
           >
-            {smartLoading ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
-            {smartLoading ? "Planning..." : "Plan My Week"}
+            {smartLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
+            {smartLoading ? "Planning…" : "Plan"}
           </Button>
-          <Badge variant="outline" className="h-8 px-3 flex items-center" data-testid="badge-week-progress">
-            {weekStats.filled} / {weekStats.total} meals
-          </Badge>
-          <Button size="sm" onClick={() => setTemplatesOpen(true)} data-testid="button-open-templates">
-            <LayoutGrid className="h-3.5 w-3.5 mr-1.5" />
+          <Button size="sm" className="px-2.5 text-xs" onClick={() => setTemplatesOpen(true)} data-testid="button-open-templates">
+            <LayoutGrid className="h-3 w-3 mr-1" />
             Templates
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setSettingsOpen(true)} data-testid="button-planner-settings">
-            <Settings className="h-3.5 w-3.5 mr-1.5" />
-            Options
+          <Button size="sm" className="px-2.5 text-xs" onClick={addAllToBasket} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
+            <ShoppingBasket className="h-3 w-3 mr-1" />
+            {addToBasketMutation.isPending ? "…" : "+Week"}
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setBulkAssignOpen(true)} data-testid="button-bulk-assign">
-            <Copy className="h-3.5 w-3.5 mr-1.5" />
-            Bulk Assign
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => setSharePlanOpen(true)} data-testid="button-share-plan">
-            <Share2 className="h-3.5 w-3.5 mr-1.5" />
-            Share Plan
-          </Button>
-          <Button size="sm" onClick={addAllToBasket} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
-            <ShoppingBasket className="h-3.5 w-3.5 mr-1.5" />
-            {addToBasketMutation.isPending ? "Adding..." : "Add All to Basket"}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center justify-center h-11 w-11 rounded-lg transition-colors text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                title="More options"
+                data-testid="button-planner-overflow-menu"
+              >
+                <img src={thaAppleSrc} alt="Menu" className="h-[60px] w-[60px] object-contain" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem onClick={() => setSettingsOpen(true)} data-testid="button-planner-settings">
+                <Settings className="h-4 w-4 mr-2" />
+                Options
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setBulkAssignOpen(true)} data-testid="button-bulk-assign">
+                <Copy className="h-4 w-4 mr-2" />
+                Bulk Assign
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSharePlanOpen(true)} data-testid="button-share-plan">
+                <Share2 className="h-4 w-4 mr-2" />
+                Share Plan
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => activeWeekData && setClearWeekId(activeWeekData.id)}
+                className="text-destructive focus:text-destructive"
+                data-testid={`button-clear-week-${activeWeek}`}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Clear This Week
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
-      {/* ── Week Tabs ── */}
+      {/* ── Week Content ── */}
       <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full">
-        <div className="flex items-center gap-2 mb-4 overflow-x-auto">
-          <TabsList
-            className="flex-shrink-0 bg-card border border-border shadow-sm h-auto p-1 gap-0.5"
-            data-testid="tabs-weeks"
-          >
-            {fullPlanner
-              .slice()
-              .sort((a, b) => a.weekNumber - b.weekNumber)
-              .map((week) => (
-                <TabsTrigger
-                  key={week.id}
-                  value={String(week.weekNumber)}
-                  className="group relative gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow font-medium px-3 py-1.5"
-                  data-testid={`tab-week-${week.weekNumber}`}
-                >
-                  {renameWeekId === week.id ? (
-                    <input
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      className="bg-transparent border-none outline-none text-sm w-20 min-w-0 font-medium"
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => {
-                        e.stopPropagation();
-                        if (e.key === "Enter" && renameValue.trim()) {
-                          renameMutation.mutate({ weekId: week.id, weekName: renameValue.trim() });
-                        }
-                        if (e.key === "Escape") setRenameWeekId(null);
-                      }}
-                      onBlur={() => {
-                        if (renameValue.trim() && renameValue.trim() !== week.weekName) {
-                          renameMutation.mutate({ weekId: week.id, weekName: renameValue.trim() });
-                        } else {
-                          setRenameWeekId(null);
-                        }
-                      }}
-                      data-testid="input-rename-week"
-                    />
-                  ) : (
-                    <>
-                      <span>{week.weekName}</span>
-                      <button
-                        className="invisible group-hover:visible opacity-50 hover:opacity-100 transition-opacity flex-shrink-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setRenameWeekId(week.id);
-                          setRenameValue(week.weekName);
-                        }}
-                        title="Rename week"
-                        data-testid={`button-rename-week-${week.weekNumber}`}
-                      >
-                        <Pencil className="h-2.5 w-2.5" />
-                      </button>
-                    </>
-                  )}
-                </TabsTrigger>
-              ))}
-          </TabsList>
-        </div>
 
         <AnimatePresence>
           {smartControlsOpen && (
@@ -1295,48 +1309,6 @@ export default function WeeklyPlannerPage() {
         {fullPlanner.map((week) => (
           <TabsContent key={week.id} value={String(week.weekNumber)} className="mt-0">
 
-            {/* ── Week sub-header: slot basket buttons + add all ── */}
-            <div className="flex items-center gap-2 mb-4 flex-wrap">
-              <Button
-                size="sm"
-                onClick={addAllToBasket}
-                disabled={addToBasketMutation.isPending}
-                data-testid="button-add-all-week-basket"
-                className="h-7 text-xs"
-              >
-                <ShoppingBasket className="h-3 w-3 mr-1.5" />
-                {addToBasketMutation.isPending ? "Adding…" : "Add All"}
-              </Button>
-              <div className="h-4 w-px bg-border mx-0.5" />
-              {MEAL_TYPES.map((slot) => {
-                const SlotIcon = slot.icon;
-                return (
-                  <Button
-                    key={slot.key}
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs text-muted-foreground"
-                    onClick={() => addSlotToBasket(slot.key)}
-                    disabled={addToBasketMutation.isPending}
-                    data-testid={`button-add-slot-${slot.key}-basket`}
-                  >
-                    <SlotIcon className={`h-3 w-3 mr-1 ${slot.color}`} />
-                    Add {slot.label}s
-                  </Button>
-                );
-              })}
-              <div className="h-4 w-px bg-border mx-0.5" />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs text-muted-foreground hover:text-destructive"
-                onClick={() => setClearWeekId(week.id)}
-                data-testid={`button-clear-week-${week.weekNumber}`}
-              >
-                <Trash2 className="h-3 w-3 mr-1" />
-                Clear This Week
-              </Button>
-            </div>
 
 
             {/* ── Mobile: single-day view (hidden on sm+) ── */}
@@ -1449,7 +1421,7 @@ export default function WeeklyPlannerPage() {
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "88px repeat(7, 1fr)",
+                      gridTemplateColumns: "100px repeat(7, 1fr)",
                     }}
                   >
                     {/* ── Header row: corner + day names ── */}
@@ -1481,11 +1453,28 @@ export default function WeeklyPlannerPage() {
                           {/* Row label — sticky left */}
                           <div
                             key={row.id + "-label"}
-                            className={`flex items-center gap-1.5 px-2 py-2 border-r border-border sticky left-0 z-10 ${!isLastRow ? "border-b border-border" : ""}`}
+                            className={`flex flex-col justify-center px-2 py-1.5 border-r border-border sticky left-0 z-10 group ${!isLastRow ? "border-b border-border" : ""}`}
                             style={{ backgroundColor: "hsl(var(--background))" }}
                           >
-                            <RowIcon className={`h-3 w-3 flex-shrink-0 ${row.iconColor}`} />
-                            <span className="text-xs font-medium text-muted-foreground">{row.label}</span>
+                            <div className="flex items-center gap-1">
+                              <RowIcon className={`h-3 w-3 flex-shrink-0 ${row.iconColor}`} />
+                              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{row.label}</span>
+                            </div>
+                            {row.mealType && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    className="mt-1 rounded transition-colors text-muted-foreground hover:text-foreground self-center"
+                                    onClick={() => addSlotToBasket(row.mealType!)}
+                                    disabled={addToBasketMutation.isPending}
+                                    data-testid={`button-add-slot-${row.mealType}-basket`}
+                                  >
+                                    <ShoppingBasket className="h-5 w-5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent side="right"><p className="text-xs">Add {row.label}s to basket</p></TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
 
                           {/* Day cells for this row */}

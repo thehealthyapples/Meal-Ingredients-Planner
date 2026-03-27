@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -587,17 +585,18 @@ export function TemplatesPanel({ open, onClose, user }: TemplatePanelProps) {
 
   return (
     <>
-      <Sheet open={open} onOpenChange={(v) => !v && onClose()} data-testid="sheet-templates">
-        <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col">
-          <SheetHeader className="px-6 py-4 border-b">
-            <SheetTitle className="flex items-center gap-2">
-              <LayoutGrid className="h-4 w-4" />
+      <Dialog open={open} onOpenChange={(v) => !v && onClose()} data-testid="sheet-templates">
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LayoutGrid className="h-5 w-5 text-primary" />
               Meal Plan Templates
-            </SheetTitle>
-          </SheetHeader>
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground">Browse THA templates or manage your own saved plans.</p>
+          </DialogHeader>
 
           <Tabs defaultValue="tha" className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="mx-6 mt-4 shrink-0">
+            <TabsList className="w-full shrink-0">
               <TabsTrigger value="tha" className="flex-1" data-testid="tab-tha-templates">
                 <Globe className="h-3.5 w-3.5 mr-1.5" />
                 THA Templates
@@ -608,8 +607,8 @@ export function TemplatesPanel({ open, onClose, user }: TemplatePanelProps) {
               </TabsTrigger>
             </TabsList>
 
-            <ScrollArea className="flex-1">
-              <TabsContent value="tha" className="px-6 py-4 space-y-3 mt-0">
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <TabsContent value="tha" className="py-4 space-y-3 mt-0">
                 {libraryLoading || adminLoading ? (
                   <div className="space-y-3">
                     {[1, 2].map(i => <Skeleton key={i} className="h-20 w-full" />)}
@@ -636,7 +635,7 @@ export function TemplatesPanel({ open, onClose, user }: TemplatePanelProps) {
                 )}
               </TabsContent>
 
-              <TabsContent value="mine" className="px-6 py-4 space-y-3 mt-0">
+              <TabsContent value="mine" className="py-4 space-y-3 mt-0">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium">Your saved plans</p>
@@ -676,10 +675,10 @@ export function TemplatesPanel({ open, onClose, user }: TemplatePanelProps) {
                   myTemplates.map(renderPrivateTemplateCard)
                 )}
               </TabsContent>
-            </ScrollArea>
+            </div>
           </Tabs>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
         <DialogContent>

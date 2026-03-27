@@ -31,6 +31,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import thaAppleSrc from "@/assets/icons/tha-apple.png";
+import {
   ShoppingCart, Copy, Trash2, RefreshCw, Scale,
   Search, ExternalLink, PoundSterling, TrendingDown, Loader2,
   ArrowUpDown, ArrowUp, ArrowDown, Pencil, Check, X,
@@ -39,7 +47,7 @@ import {
   CircleDot, Plus, Minus, Info, Layers, Crown, Sprout, Tag,
   Download, UtensilsCrossed, Store, Maximize2, Minimize2,
   ChevronDown, ChevronUp, AlertTriangle, Microscope, Filter, SlidersHorizontal,
-  Snowflake, Home, EllipsisVertical, Columns2, Clock, ChefHat, Sparkles, ListChecks,
+  Snowflake, Home, Columns2, Clock, ChefHat, Sparkles, ListChecks,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -2307,20 +2315,16 @@ export default function ShoppingListPage() {
   );
 
   return (
-    <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-background overflow-auto flex flex-col' : 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`}>
+    <div
+      className={`${isFullscreen ? 'fixed inset-0 z-50 overflow-auto flex flex-col' : 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`}
+      style={isFullscreen ? { backgroundImage: "url('/orchard-bg.png')", backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+    >
 
       {/* Fullscreen branding bar */}
       {isFullscreen && (
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-background/95 backdrop-blur-sm shrink-0" data-testid="fullscreen-header">
-          <div className="flex items-center gap-2">
-            <Apple className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-sm text-foreground">The Healthy Apples</span>
-            <span className="text-muted-foreground text-sm">· Basket</span>
-          </div>
-          <Button variant="outline" size="sm" className="gap-1" onClick={() => setIsFullscreen(false)} data-testid="button-exit-fullscreen">
-            <Minimize2 className="h-3.5 w-3.5" />
-            Exit Fullscreen
-          </Button>
+        <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-background/80 backdrop-blur-sm shrink-0" data-testid="fullscreen-header">
+          <img src="/logo-long.png" alt="The Healthy Apples" className="h-10 w-auto" />
+          <span className="text-sm text-muted-foreground font-medium">Basket</span>
         </div>
       )}
 
@@ -2359,7 +2363,7 @@ export default function ShoppingListPage() {
                   })()}
                 </div>
               </div>
-              <div className="flex items-center gap-1 flex-wrap">
+              <div className="flex items-center gap-1 flex-wrap justify-end">
                 {/* Split by shop toggle */}
                 {(savedItems.length > 0) && (
                   <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1" data-testid="toggle-split-by-shop">
@@ -2373,80 +2377,22 @@ export default function ShoppingListPage() {
                     />
                   </div>
                 )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => togglePreference.mutate()}
-                  disabled={togglePreference.isPending}
-                  data-testid="button-toggle-units"
-                  className="gap-1"
-                >
-                  <Scale className="h-3 w-3" />
-                  <span className="hidden sm:inline">{measurementPref === 'metric' ? 'Metric' : 'Imperial'}</span>
-                </Button>
                 {(savedItems.length > 0 || shoppingExtras.some(e => e.inBasket || e.alwaysAdd)) && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => lookupPrices.mutate()}
-                      disabled={lookupPrices.isPending}
-                      data-testid="button-lookup-prices"
-                      className="gap-1"
-                    >
-                      {lookupPrices.isPending ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Search className="h-3 w-3" />
-                      )}
-                      <span className="hidden sm:inline">Match Products</span>
-                    </Button>
-                    {/* More actions popover */}
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="icon" data-testid="button-more-actions">
-                          <EllipsisVertical className="h-4 w-4" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="end" className="w-52 p-1.5">
-                        <button
-                          className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/60 transition-colors"
-                          onClick={() => setBasketDialogOpen(true)}
-                          data-testid="button-send-to-supermarket"
-                        >
-                          <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                          Send to Supermarket
-                        </button>
-                        <button
-                          className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/60 transition-colors"
-                          onClick={() => setExportDialogOpen(true)}
-                          data-testid="button-export-list"
-                        >
-                          <Download className="h-4 w-4 text-muted-foreground" />
-                          Export / Download
-                        </button>
-                        <button
-                          className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/60 transition-colors"
-                          onClick={() => recalculateScores.mutate()}
-                          disabled={recalculateScores.isPending}
-                          data-testid="button-recalculate-scores"
-                        >
-                          <RefreshCw className={`h-4 w-4 text-muted-foreground ${recalculateScores.isPending ? 'animate-spin' : ''}`} />
-                          {recalculateScores.isPending ? 'Recalculating…' : 'Recalculate Scores'}
-                        </button>
-                        <div className="my-1 border-t border-border" />
-                        <button
-                          className="flex items-center gap-2 w-full px-2 py-1.5 text-sm rounded hover:bg-muted/60 transition-colors text-destructive"
-                          onClick={() => clearAll.mutate()}
-                          disabled={clearAll.isPending}
-                          data-testid="button-clear-all"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Clear Basket
-                        </button>
-                      </PopoverContent>
-                    </Popover>
-                  </>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => lookupPrices.mutate()}
+                    disabled={lookupPrices.isPending}
+                    data-testid="button-lookup-prices"
+                    className="gap-1"
+                  >
+                    {lookupPrices.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Search className="h-3 w-3" />
+                    )}
+                    <span className="hidden sm:inline">Match Products</span>
+                  </Button>
                 )}
                 {savedItems.length > 0 && (
                   <Button
@@ -2460,16 +2406,66 @@ export default function ShoppingListPage() {
                     <span>Shop View</span>
                   </Button>
                 )}
-                {!isFullscreen && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setIsFullscreen(true)}
-                    data-testid="button-fullscreen-toggle"
-                  >
-                    <Maximize2 className="h-4 w-4" />
-                  </Button>
-                )}
+                {/* Apple overflow menu — far right */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="flex items-center justify-center h-11 w-11 rounded-lg transition-colors text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                      data-testid="button-more-actions"
+                    >
+                      <img src={thaAppleSrc} alt="Menu" className="h-[60px] w-[60px] object-contain" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52">
+                    <DropdownMenuItem
+                      onClick={() => setIsFullscreen(!isFullscreen)}
+                      data-testid="button-fullscreen-toggle"
+                    >
+                      {isFullscreen ? <Minimize2 className="h-4 w-4 mr-2" /> : <Maximize2 className="h-4 w-4 mr-2" />}
+                      {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => togglePreference.mutate()}
+                      disabled={togglePreference.isPending}
+                      data-testid="button-toggle-units"
+                    >
+                      <Scale className="h-4 w-4 mr-2" />
+                      {measurementPref === 'metric' ? 'Switch to Imperial' : 'Switch to Metric'}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    {(savedItems.length > 0 || shoppingExtras.some(e => e.inBasket || e.alwaysAdd)) && (
+                      <>
+                        <DropdownMenuItem onClick={() => setBasketDialogOpen(true)} data-testid="button-send-to-supermarket">
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          Send to Supermarket
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setExportDialogOpen(true)} data-testid="button-export-list">
+                          <Download className="h-4 w-4 mr-2" />
+                          Export / Download
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => recalculateScores.mutate()}
+                          disabled={recalculateScores.isPending}
+                          data-testid="button-recalculate-scores"
+                        >
+                          <RefreshCw className={`h-4 w-4 mr-2 ${recalculateScores.isPending ? 'animate-spin' : ''}`} />
+                          {recalculateScores.isPending ? 'Recalculating…' : 'Recalculate Scores'}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          onClick={() => clearAll.mutate()}
+                          disabled={clearAll.isPending}
+                          className="text-destructive focus:text-destructive"
+                          data-testid="button-clear-all"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Clear Basket
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </CardHeader>
@@ -2551,7 +2547,7 @@ export default function ShoppingListPage() {
                           </colgroup>
                           <thead>
                             <tr className="border-b border-border/40 bg-muted/10">
-                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle sticky left-0 z-10 bg-background">Ingredient</th>
+                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle sticky left-0 z-10">Ingredient</th>
                               <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle hidden sm:table-cell">Optimizer</th>
                               <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle">Choice</th>
                               <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle">Match</th>
@@ -2559,7 +2555,7 @@ export default function ShoppingListPage() {
                               <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap align-middle">Price</th>
                               <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap align-middle hidden sm:table-cell">THA Rating</th>
                               <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap align-middle hidden sm:table-cell">Meal</th>
-                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap align-middle sticky right-0 z-10 bg-background">Actions</th>
+                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap align-middle sticky right-0 z-10">Actions</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -2629,7 +2625,7 @@ export default function ShoppingListPage() {
                                     className={`group border-b border-border/40 ${item.checked ? 'opacity-50' : ''}`}
                                     data-testid={`shopping-item-${item.id}`}
                                   >
-                                    <td className="px-1.5 py-1 sticky left-0 z-10 bg-background">
+                                    <td className="px-1.5 py-1 sticky left-0 z-10">
                                       {isEditing && editState?.field === 'productName' ? (
                                         <div className="flex items-center gap-1">
                                           <Input value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-6 text-xs" autoFocus data-testid={`input-edit-name-${item.id}`} />
@@ -2637,13 +2633,9 @@ export default function ShoppingListPage() {
                                           <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
                                         </div>
                                       ) : (
-                                        <div className="flex items-center gap-1 flex-wrap">
+                                        <div className="flex items-center justify-between gap-3">
+                                          <div className="flex items-center gap-1 flex-wrap min-w-0 flex-1">
                                           <span className="font-medium text-foreground cursor-pointer" onClick={() => startEdit(item.id, 'productName', item.productName)} data-testid={`text-item-name-${item.id}`}>{capitalizeWords(item.productName)}</span>
-                                          {(() => {
-                                            const smp = getItemThaRating(item.id, item);
-                                            if (smp === 0) return null;
-                                            return <span className="sm:hidden" data-testid={`text-smp-mobile-${item.id}`}><AppleRating rating={smp} sizePx={26} /></span>;
-                                          })()}
                                           {item.quantity > 1 && <Badge variant="secondary" className="text-[10px]" data-testid={`badge-quantity-${item.id}`}>x{item.quantity}</Badge>}
                                           {mergedCount > 1 && <Badge variant="outline" className="text-[10px] text-blue-500 dark:text-blue-400 border-blue-300 dark:border-blue-600" data-testid={`badge-merged-${item.id}`}>×{mergedCount}</Badge>}
                                           {sources.some(s => frozenMealIds.has(s.mealId)) && (
@@ -2677,6 +2669,17 @@ export default function ShoppingListPage() {
                                               <Badge variant="outline" className={`text-[10px] ${cfg.className}`} data-testid={`badge-basket-label-${item.id}`}>
                                                 {cfg.text}
                                               </Badge>
+                                            );
+                                          })()}
+                                          </div>
+                                          {(() => {
+                                            const smp = getItemThaRating(item.id, item);
+                                            if (smp === 0) return null;
+                                            return (
+                                              <span className="sm:hidden flex-shrink-0 flex items-center gap-0.5 whitespace-nowrap" data-testid={`text-smp-mobile-${item.id}`}>
+                                                <img src={thaAppleSrc} alt="" className="h-8 w-8 object-contain" />
+                                                <span className="text-[11px] font-semibold text-foreground/70">{Math.round(smp)}</span>
+                                              </span>
                                             );
                                           })()}
                                         </div>
@@ -2959,7 +2962,7 @@ export default function ShoppingListPage() {
                                       })()}
                                     </td>
 
-                                    <td className="px-1.5 py-1 sticky right-0 z-10 bg-background">
+                                    <td className="px-1.5 py-1 sticky right-0 z-10">
                                       <div className={`flex items-center justify-end gap-0.5 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100${item.checked ? ' md:opacity-100' : ''}`}>
                                         <Checkbox
                                           checked={item.checked || false}
@@ -2979,7 +2982,7 @@ export default function ShoppingListPage() {
                             {/* Extras rows for this category */}
                             {catExtras.map(extra => (
                               <tr key={`extra-${extra.id}`} className={`border-b border-border/30 ${extra.alwaysAdd ? 'bg-primary/3' : ''}`} data-testid={`row-extra-${extra.id}`}>
-                                <td className="px-1.5 py-1.5 sticky left-0 z-10 bg-background">
+                                <td className="px-1.5 py-1.5 sticky left-0 z-10">
                                   <div className="flex flex-col gap-0.5">
                                     <span className="font-medium text-foreground/80" data-testid={`text-extra-name-${extra.id}`}>{capitalizeWords(extra.name)}</span>
                                     <button
@@ -2996,7 +2999,7 @@ export default function ShoppingListPage() {
                                 <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                 <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">—</td>
                                 <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">—</td>
-                                <td className="px-1.5 py-1.5 sticky right-0 z-10 bg-background">
+                                <td className="px-1.5 py-1.5 sticky right-0 z-10">
                                   <div className="flex items-center justify-end gap-0.5">
                                     <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" data-testid={`checkbox-extra-${extra.id}`} />
                                     <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
@@ -3118,7 +3121,7 @@ export default function ShoppingListPage() {
                                   const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
                                   return (
                                     <tr key={`hh-saved-${item.id}`} className={`border-b border-border/30 ${item.checked ? 'opacity-50' : ''}`} data-testid={`row-household-${item.id}`}>
-                                      <td className="px-1.5 py-1.5 sticky left-0 z-10 bg-background">
+                                      <td className="px-1.5 py-1.5 sticky left-0 z-10">
                                         <span className={`font-medium ${item.checked ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{capitalizeWords(item.productName)}</span>
                                         {item.quantity > 1 && <Badge variant="secondary" className="text-[10px] ml-1">x{item.quantity}</Badge>}
                                       </td>
@@ -3129,7 +3132,7 @@ export default function ShoppingListPage() {
                                       <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                       <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                       <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                      <td className="px-1.5 py-1.5 sticky right-0 z-10 bg-background">
+                                      <td className="px-1.5 py-1.5 sticky right-0 z-10">
                                         <div className="flex items-center justify-end gap-0.5">
                                           <Checkbox checked={item.checked || false} onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })} className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" data-testid={`checkbox-household-${item.id}`} />
                                           <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-remove-household-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
@@ -3140,7 +3143,7 @@ export default function ShoppingListPage() {
                                 })}
                                 {subcatExtras.map(extra => (
                                   <tr key={`hh-extra-${extra.id}`} className="border-b border-border/30" data-testid={`row-hh-extra-${extra.id}`}>
-                                    <td className="px-1.5 py-1.5 sticky left-0 z-10 bg-background">
+                                    <td className="px-1.5 py-1.5 sticky left-0 z-10">
                                       <div className="flex flex-col gap-0.5">
                                         <span className="font-medium text-foreground/80">{capitalizeWords(extra.name)}</span>
                                         <button
@@ -3157,7 +3160,7 @@ export default function ShoppingListPage() {
                                     <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                     <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
                                     <td className="px-1.5 py-1.5 text-muted-foreground">—</td>
-                                    <td className="px-1.5 py-1.5 sticky right-0 z-10 bg-background">
+                                    <td className="px-1.5 py-1.5 sticky right-0 z-10">
                                       <div className="flex items-center justify-end gap-0.5">
                                         <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" />
                                         <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-hh-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
