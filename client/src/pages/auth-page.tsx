@@ -232,7 +232,7 @@ export default function AuthPage() {
           {/* Headline + copy */}
           <div className="max-w-lg mb-1">
             <h1
-              className="text-base font-bold font-display text-foreground leading-[1.3] mb-0.5"
+              className="text-base font-semibold font-display text-foreground leading-[1.3] mb-0.5"
               data-testid="text-hero-headline"
             >
               Plan meals. Analyse ingredients.<br />
@@ -316,7 +316,7 @@ export default function AuthPage() {
                 <Mail className="h-8 w-8 text-primary" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold tracking-tight font-display" data-testid="text-check-email-title">Check your email</h2>
+                <h2 className="text-2xl font-semibold tracking-tight" data-testid="text-check-email-title">Check your email</h2>
                 <p className="text-muted-foreground mt-2 text-sm">
                   We've sent a verification link to your email address. Please click the link to verify your account before logging in.
                 </p>
@@ -346,7 +346,7 @@ export default function AuthPage() {
           ) : mode === "forgot" ? (
             <div className="space-y-6" data-testid="panel-forgot-password">
               <div>
-                <h2 className="text-2xl font-bold font-display tracking-tight">Forgot your password?</h2>
+                <h2 className="text-2xl font-semibold tracking-tight">Forgot your password?</h2>
                 <p className="text-muted-foreground mt-2 text-sm">
                   Enter your email and we'll send you a reset link.
                 </p>
@@ -394,7 +394,7 @@ export default function AuthPage() {
                 <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                   <Mail className="h-7 w-7 text-primary" />
                 </div>
-                <h2 className="text-2xl font-bold font-display tracking-tight">Resend verification email</h2>
+                <h2 className="text-2xl font-semibold tracking-tight">Resend verification email</h2>
                 <p className="text-muted-foreground mt-2 text-sm">
                   Enter your email and we'll send you a new verification link.
                 </p>
@@ -442,7 +442,7 @@ export default function AuthPage() {
                 <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                   <KeyRound className="h-7 w-7 text-primary" />
                 </div>
-                <h2 className="text-2xl font-bold font-display tracking-tight">Set a new password</h2>
+                <h2 className="text-2xl font-semibold tracking-tight">Set a new password</h2>
                 <p className="text-muted-foreground mt-2 text-sm">Choose a strong password with at least 6 characters.</p>
               </div>
               {resetState === "success" ? (
@@ -492,7 +492,7 @@ export default function AuthPage() {
                   )}
                 </div>
                 <h2
-                  className="text-2xl font-bold font-display text-foreground leading-snug"
+                  className="text-2xl font-semibold text-foreground leading-snug"
                   data-testid="text-auth-title"
                 >
                   {mode === "login"

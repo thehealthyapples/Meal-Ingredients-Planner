@@ -270,7 +270,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
 
       {mealId && (
         <div className="px-3 pb-2">
-          <p className="text-[11px] font-semibold text-muted-foreground mb-1">Nutrition (per serving)</p>
+          <p className="text-xs font-medium text-muted-foreground mb-1">Nutrition (per serving)</p>
           {nutritionLoading && !nutritionItems.length ? (
             <div className="grid grid-cols-3 gap-1">
               {[...Array(6)].map((_, i) => (
@@ -282,7 +282,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
               {nutritionItems.map(({ label, value, Icon, color }) => (
                 <div key={label} className="flex items-center gap-1 rounded-md bg-muted/50 px-1.5 py-0.5">
                   <Icon className={`h-3 w-3 shrink-0 ${color}`} />
-                  <span className="text-[11px] font-medium truncate">{value}</span>
+                  <span className="text-xs font-medium truncate">{value}</span>
                 </div>
               ))}
             </div>
@@ -1497,7 +1497,7 @@ export default function WeeklyPlannerPage() {
                                   return (
                                     <button
                                       key={entry.id}
-                                      className="w-full text-left text-[11px] leading-snug text-foreground hover:text-primary transition-colors group flex items-start gap-0.5"
+                                      className="w-full text-left text-xs leading-snug text-foreground hover:text-primary transition-colors group flex items-start gap-0.5"
                                       onClick={() => setMealDetail({
                                         entry,
                                         meal,
@@ -1726,7 +1726,7 @@ export default function WeeklyPlannerPage() {
                         <ol className="space-y-2">
                           {instructions.map((step, idx) => (
                             <li key={idx} className="text-sm flex items-start gap-2 text-foreground/80">
-                              <span className="shrink-0 w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-bold flex items-center justify-center mt-0.5">
+                              <span className="shrink-0 w-5 h-5 rounded-full bg-primary/15 text-primary text-[10px] font-semibold flex items-center justify-center mt-0.5">
                                 {idx + 1}
                               </span>
                               <span className="leading-relaxed">{step}</span>

@@ -32,7 +32,7 @@ export default function DemoBasketPage() {
       {modal}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="demo-basket-title">
+          <h1 className="text-2xl font-semibold tracking-tight" data-testid="demo-basket-title">
             Demo Shopping Basket
           </h1>
           <Badge data-testid="demo-basket-count">{DEMO_BASKET.length} items</Badge>

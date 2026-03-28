@@ -214,7 +214,7 @@ export default function AdminUsersPage() {
     <div className="max-w-5xl mx-auto px-4 py-8" data-testid="page-admin-users">
       <div className="flex items-center gap-3 mb-6">
         <ShieldCheck className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">User Management</h1>
       </div>
 
       <div className="border rounded-lg p-4 mb-6 bg-card" data-testid="section-site-banner">

@@ -13,7 +13,7 @@ export default function DemoMealsPage() {
       {modal}
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="demo-meals-title">
+          <h1 className="text-2xl font-semibold tracking-tight" data-testid="demo-meals-title">
             Demo Meals
           </h1>
           <Badge data-testid="demo-meals-badge">{DEMO_MEALS.length}</Badge>

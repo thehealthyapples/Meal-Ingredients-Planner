@@ -554,7 +554,7 @@ export default function QuickMealPage() {
                                           </div>
                                           {/* Caption */}
                                           <div className="px-1.5 py-1.5 bg-background">
-                                            <p className="text-[11px] font-medium leading-tight line-clamp-2">{r.name}</p>
+                                            <p className="text-xs font-medium leading-tight line-clamp-2">{r.name}</p>
                                             {r.source && (
                                               <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{r.source}</p>
                                             )}
@@ -577,7 +577,7 @@ export default function QuickMealPage() {
                                   )}
                                 </>
                               ) : (
-                                <p className="text-[11px] text-muted-foreground text-center py-3">No recipes found for "{part.label}".</p>
+                                <p className="text-xs text-muted-foreground text-center py-3">No recipes found for "{part.label}".</p>
                               )}
                             </div>
 

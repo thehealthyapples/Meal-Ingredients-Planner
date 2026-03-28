@@ -181,7 +181,7 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <PantryIcon className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold text-base">Food Pantry</h2>
+          <h2 className="text-base font-medium">Food Pantry</h2>
         </div>
         <div className="flex items-center gap-2">
           {selected.size > 0 && (
@@ -423,7 +423,7 @@ function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <Home className="h-4 w-4 text-primary" />
-          <h2 className="font-semibold text-base">Household Essentials</h2>
+          <h2 className="text-base font-medium">Household Essentials</h2>
         </div>
         {selected.size > 0 && (
           <Button
@@ -520,7 +520,7 @@ export default function PantryPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="text-pantry-title">My Pantry</h1>
+        <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-pantry-title">My Pantry</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Manage your food staples and household essentials.
         </p>

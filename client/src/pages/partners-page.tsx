@@ -91,7 +91,7 @@ function PartnerCard({ partner }: { partner: Partner }) {
           <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
             {partner.tagline}
           </p>
-          <div className="flex items-center gap-1.5 mt-1.5 text-[11px] text-muted-foreground/70">
+          <div className="flex items-center gap-1.5 mt-1.5 text-xs text-muted-foreground/70">
             {partner.location ? (
               <>
                 <MapPin className="h-3 w-3 flex-shrink-0" />
@@ -113,7 +113,7 @@ function PartnerCard({ partner }: { partner: Partner }) {
 
       {partner.whyTHARecommends && (
         <div className="bg-primary/5 border border-primary/10 rounded-lg px-3 py-2">
-          <p className="text-[11px] text-primary/80 leading-relaxed">
+          <p className="text-xs text-primary/80 leading-relaxed">
             <span className="font-semibold">Why THA likes them: </span>
             <span className="italic">{partner.whyTHARecommends}</span>
           </p>
@@ -167,7 +167,7 @@ function FeaturedCard({ partner }: { partner: Partner }) {
 
       {partner.whyTHARecommends && (
         <div className="bg-primary/5 border border-primary/10 rounded-lg px-3 py-2">
-          <p className="text-[11px] text-primary/80 leading-relaxed italic">
+          <p className="text-xs text-primary/80 leading-relaxed italic">
             "{partner.whyTHARecommends}"
           </p>
         </div>
@@ -394,7 +394,7 @@ export default function PartnersPage() {
           <Leaf className="h-3.5 w-3.5" />
           Curated Wellness Partners
         </div>
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground leading-snug" data-testid="partners-hero-heading">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-semibold tracking-tight text-foreground leading-snug" data-testid="partners-hero-heading">
           Support your health<br className="hidden sm:block" /> beyond the basket
         </h1>
         <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
@@ -604,7 +604,7 @@ export default function PartnersPage() {
         <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto border border-primary/20">
           <Heart className="h-6 w-6 text-primary" />
         </div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+        <h2 className="text-2xl sm:text-3xl font-semibold text-foreground tracking-tight">
           Partner with THA
         </h2>
         <p className="text-muted-foreground max-w-xl mx-auto text-base leading-relaxed">

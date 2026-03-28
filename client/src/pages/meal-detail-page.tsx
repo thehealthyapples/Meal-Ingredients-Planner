@@ -738,7 +738,7 @@ export default function MealDetailPage() {
                   <div className="space-y-3">
                     {editInstructions.map((step, idx) => (
                       <div key={idx} className="flex gap-2 items-start" data-testid={`edit-instruction-${idx}`}>
-                        <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center mt-2">
+                        <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center mt-2">
                           {idx + 1}
                         </span>
                         <Textarea
@@ -829,7 +829,7 @@ export default function MealDetailPage() {
                                     <ol className="space-y-2">
                                       {componentMeal.instructions.map((step, i) => (
                                         <li key={i} className="text-sm flex gap-3">
-                                          <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                                          <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">{i + 1}</span>
                                           <span className="flex-1 leading-relaxed">{step}</span>
                                         </li>
                                       ))}
@@ -855,7 +855,7 @@ export default function MealDetailPage() {
                                     <ol className="space-y-2">
                                       {componentMeal.instructions.map((step, i) => (
                                         <li key={i} className="text-sm flex gap-3">
-                                          <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                                          <span className="shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">{i + 1}</span>
                                           <span className="flex-1 leading-relaxed">{step}</span>
                                         </li>
                                       ))}
@@ -939,7 +939,7 @@ export default function MealDetailPage() {
                   <ol className="space-y-3">
                     {instructions.map((step, idx) => (
                       <li key={idx} className="text-sm flex gap-3" data-testid={`text-instruction-${idx}`}>
-                        <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
+                        <span className="shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center">
                           {idx + 1}
                         </span>
                         <span className="flex-1">{step}</span>

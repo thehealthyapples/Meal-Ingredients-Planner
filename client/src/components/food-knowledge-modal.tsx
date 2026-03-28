@@ -53,7 +53,7 @@ export default function FoodKnowledgeModal({ slug, onClose }: Props) {
               if (!value) return null;
               return (
                 <div key={key}>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mb-1">{label}</p>
                   <p className="text-sm leading-relaxed">{value}</p>
                 </div>
               );

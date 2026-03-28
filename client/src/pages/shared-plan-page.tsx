@@ -62,7 +62,7 @@ function ReadOnlyGrid({ items }: { items: SharedItem[] }) {
                           slots.has(slot) ? (
                             <span
                               key={slot}
-                              className="inline-block w-5 h-5 rounded-sm bg-primary/15 text-primary font-bold leading-5"
+                              className="inline-block w-5 h-5 rounded-sm bg-primary/15 text-primary font-medium leading-5"
                             >
                               {SLOT_LABELS[slot]}
                             </span>
@@ -80,9 +80,9 @@ function ReadOnlyGrid({ items }: { items: SharedItem[] }) {
         </tbody>
       </table>
       <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1"><span className="inline-block w-4 h-4 rounded-sm bg-primary/15 text-center text-primary font-bold leading-4">B</span> Breakfast</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-4 h-4 rounded-sm bg-primary/15 text-center text-primary font-bold leading-4">L</span> Lunch</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-4 h-4 rounded-sm bg-primary/15 text-center text-primary font-bold leading-4">D</span> Dinner</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-4 h-4 rounded-sm bg-primary/15 text-center text-primary font-medium leading-4">B</span> Breakfast</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-4 h-4 rounded-sm bg-primary/15 text-center text-primary font-medium leading-4">L</span> Lunch</span>
+        <span className="flex items-center gap-1"><span className="inline-block w-4 h-4 rounded-sm bg-primary/15 text-center text-primary font-medium leading-4">D</span> Dinner</span>
         <span className="flex items-center gap-1"><span className="inline-block w-4 h-4 rounded-sm bg-muted/40" /> Empty</span>
       </div>
     </div>
@@ -158,7 +158,7 @@ export default function SharedPlanPage() {
             <img src="/favicon.ico" alt="" className="h-4 w-4" onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
             The Healthy Apples
           </div>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-shared-plan-name">{plan.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-shared-plan-name">{plan.name}</h1>
           <div className="flex items-center gap-2 flex-wrap">
             {plan.season && SeasonIcon && (
               <Badge variant="secondary" className="gap-1">

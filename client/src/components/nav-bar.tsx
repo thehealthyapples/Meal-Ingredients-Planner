@@ -110,7 +110,7 @@ function SidebarNavItem({
       <span className="relative flex items-center justify-center min-w-[24px] flex-shrink-0">
         <Icon className="h-4 w-4" />
         {badge != null && badge > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none">
+          <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground text-[10px] font-semibold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none">
             {badge > 99 ? "99+" : badge}
           </span>
         )}
@@ -376,7 +376,7 @@ export function TopBar() {
                 >
                   <ShoppingBasket className="h-5 w-5" />
                   {itemCount > 0 && (
-                    <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none pointer-events-none">
+                    <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-semibold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none pointer-events-none">
                       {itemCount > 99 ? "99+" : itemCount}
                     </span>
                   )}
@@ -430,7 +430,7 @@ export function TopBar() {
             >
               <ShoppingBasket className="h-5 w-5" />
               {itemCount > 0 && (
-                <span className="absolute top-1.5 right-1.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none pointer-events-none">
+                <span className="absolute top-1.5 right-1.5 bg-primary text-primary-foreground text-[10px] font-semibold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none pointer-events-none">
                   {itemCount > 99 ? "99+" : itemCount}
                 </span>
               )}

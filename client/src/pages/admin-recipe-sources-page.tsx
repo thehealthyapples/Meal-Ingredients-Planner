@@ -148,7 +148,7 @@ export default function AdminRecipeSourcesPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold" data-testid="heading-recipe-sources">Recipe Sources</h1>
+        <h1 className="text-2xl font-semibold tracking-tight" data-testid="heading-recipe-sources">Recipe Sources</h1>
         <p className="text-muted-foreground text-sm mt-1">
           Control which external recipe sources are active. Toggle a source off to stop fetching from it immediately.
         </p>

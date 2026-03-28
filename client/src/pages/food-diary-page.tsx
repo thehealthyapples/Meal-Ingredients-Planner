@@ -149,7 +149,7 @@ function MetricStatCard({
 }: { label: string; value: string | number | null; unit?: string }) {
   return (
     <div className="text-center px-3 py-2 rounded-md bg-muted/40 border border-border/50">
-      <p className="text-[10px] text-muted-foreground uppercase tracking-wide leading-none mb-1">{label}</p>
+      <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 leading-none mb-1">{label}</p>
       <p className="text-sm font-semibold text-foreground leading-tight" data-testid={`stat-${label.toLowerCase().replace(/\s+/g, "-")}`}>
         {value !== null && value !== undefined ? `${value}${unit ? ` ${unit}` : ""}` : "-"}
       </p>
@@ -214,7 +214,7 @@ function CopyFromPlannerModal({
           >
             <input type="radio" name="copy-slot" disabled />
             <span className="text-sm text-muted-foreground">Import from Cookbook</span>
-            <Badge variant="outline" className="ml-auto text-[9px]">Soon</Badge>
+            <Badge variant="outline" className="ml-auto text-[10px]">Soon</Badge>
           </label>
         </div>
         <DialogFooter className="gap-2">
@@ -544,7 +544,7 @@ export default function FoodDiaryPage() {
 
       {/* ── Compact header ────────────────────────────────────────── */}
       <div className="mb-4">
-        <h1 className="text-xl font-semibold tracking-tight flex items-center gap-2 mb-2">
+        <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2 mb-2">
           <BookOpen className="h-5 w-5 text-primary" />
           My Diary
         </h1>
@@ -553,10 +553,10 @@ export default function FoodDiaryPage() {
         <div className="flex flex-wrap items-center gap-2">
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "diary" | "progress")}>
-            <TabsList className="h-8" data-testid="tabs-diary">
-              <TabsTrigger value="diary" className="text-xs px-3 h-7" data-testid="tab-diary">Daily Log</TabsTrigger>
-              <TabsTrigger value="progress" className="text-xs px-3 h-7" data-testid="tab-progress">
-                <TrendingUp className="h-3 w-3 mr-1" />Progress
+            <TabsList data-testid="tabs-diary">
+              <TabsTrigger value="diary" data-testid="tab-diary">Daily Log</TabsTrigger>
+              <TabsTrigger value="progress" data-testid="tab-progress">
+                <TrendingUp className="h-3.5 w-3.5 mr-1.5" />Progress
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -690,7 +690,7 @@ export default function FoodDiaryPage() {
                                 <>
                                   <span className="flex-1 text-sm text-foreground" data-testid={`text-entry-name-${entry.id}`}>{entry.name}</span>
                                   {entry.sourceType === "copied_from_planner" && (
-                                    <Badge variant="outline" className="text-[9px] py-0 px-1 text-muted-foreground border-muted-foreground/30">Planner</Badge>
+                                    <Badge variant="outline" className="text-[10px] py-0 px-1 text-muted-foreground border-muted-foreground/30">Planner</Badge>
                                   )}
                                   <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5">
                                     <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setEditingEntry({ id: entry.id, name: entry.name })} data-testid={`button-edit-entry-${entry.id}`}>

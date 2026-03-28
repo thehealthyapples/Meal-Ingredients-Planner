@@ -3,13 +3,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   ShoppingCart, Layers, Loader2, ChevronDown, ChevronUp,
-  Clock, ArrowRight,
+  Clock, ArrowRight, Info,
 } from "lucide-react";
 import AppleRatingWithTooltip from "@/components/AppleRating";
 import { buildAnalyserViewModel } from "@/lib/analyser-view-model";
 import type { InputProduct, PackagedSwap, WholeFoodSwap } from "@/lib/analyser-view-model";
 import { effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
+import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
+
+type DietProfile = {
+  dietPattern: string | null;
+  dietRestrictions: string[];
+};
 
 interface Props {
   product: InputProduct;
@@ -19,6 +25,7 @@ interface Props {
   onViewProduct: (product: InputProduct) => void;
   addToBasketPending?: boolean;
   linkToTemplatePending?: boolean;
+  dietProfile?: DietProfile | null;
 }
 
 const RISK_TEXT: Record<string, string> = {
@@ -29,6 +36,67 @@ const RISK_TEXT: Record<string, string> = {
 
 const SECTION_LABEL = "text-[10px] font-medium tracking-[0.12em] uppercase text-muted-foreground/70";
 
+const CONCERN_CHECKS: Array<{
+  id: string;
+  keywords: string[];
+  label: string;
+  relevantFor: (p: DietProfile) => boolean;
+}> = [
+  {
+    id: "dairy",
+    keywords: ["milk", "cream", "butter", "cheese", "yogurt", "yoghurt", "whey", "casein", "lactose", "ghee"],
+    label: "dairy",
+    relevantFor: (p) => p.dietRestrictions.includes("Dairy-Free") || p.dietPattern === "Vegan",
+  },
+  {
+    id: "gluten",
+    keywords: ["wheat", "flour", "gluten", "barley", "rye", "spelt", "semolina"],
+    label: "gluten",
+    relevantFor: (p) => p.dietRestrictions.includes("Gluten-Free"),
+  },
+  {
+    id: "meat",
+    keywords: ["chicken", "beef", "pork", "lamb", "turkey", "duck", "bacon", "ham", "sausage", "mince", "venison"],
+    label: "meat",
+    relevantFor: (p) => p.dietPattern === "Vegan" || p.dietPattern === "Vegetarian",
+  },
+  {
+    id: "fish",
+    keywords: ["fish", "salmon", "tuna", "cod", "haddock", "prawn", "shrimp", "anchovy", "mackerel"],
+    label: "fish",
+    relevantFor: (p) => p.dietPattern === "Vegan" || p.dietPattern === "Vegetarian",
+  },
+  {
+    id: "eggs",
+    keywords: ["egg", "eggs", "egg yolk", "egg white", "whole egg"],
+    label: "eggs",
+    relevantFor: (p) => p.dietPattern === "Vegan",
+  },
+];
+
+function checkDietConcerns(ingredientsText: string | null, dietProfile: DietProfile | null): string[] {
+  if (!ingredientsText || !dietProfile) return [];
+  const text = ingredientsText.toLowerCase();
+  const concerns: string[] = [];
+  for (const check of CONCERN_CHECKS) {
+    if (check.relevantFor(dietProfile) && check.keywords.some(kw => text.includes(kw))) {
+      concerns.push(check.label);
+    }
+  }
+  return concerns;
+}
+
+function hasDietPreferences(dietProfile: DietProfile | null): boolean {
+  if (!dietProfile) return false;
+  return (dietProfile.dietRestrictions.length > 0) || (dietProfile.dietPattern !== null);
+}
+
+function formatConcernList(items: string[]): string {
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+}
+
 export default function AnalyserDetailV2({
   product,
   otherProducts,
@@ -37,18 +105,40 @@ export default function AnalyserDetailV2({
   onViewProduct,
   addToBasketPending,
   linkToTemplatePending,
+  dietProfile = null,
 }: Props) {
   const vm = buildAnalyserViewModel(product, otherProducts);
 
   const [showRawIngredients, setShowRawIngredients] = useState(false);
   const [showNutrition, setShowNutrition] = useState(false);
   const [showRecipeIndex, setShowRecipeIndex] = useState<number | null>(null);
+  const [showMoreAlternatives, setShowMoreAlternatives] = useState(false);
 
   const wholeFoodSwaps = vm.swaps.filter((s): s is WholeFoodSwap => s.type === "whole-food");
   const packagedSwaps = vm.swaps.filter((s): s is PackagedSwap => s.type === "packaged");
 
+  // ── Shop alternative ────────────────────────────────────────────────────
+  const primaryStore = (product as any).availableStores?.[0] ?? null;
+  const currentScore = (product as any).upfAnalysis?.thaRating ?? null;
+  let topOptions: any[] = [];
+  if (primaryStore) {
+    const storeProducts = otherProducts.filter((p: any) =>
+      p.barcode !== product.barcode &&
+      (p.availableStores ?? []).includes(primaryStore)
+    );
+    const ranked = rankChoices(storeProducts, currentScore);
+    topOptions = ranked.slice(0, 5);
+  }
+  const bestOption = topOptions[0] ?? null;
+  const bestOptionReason = bestOption
+    ? (buildWhyBetter(bestOption, currentScore)[0] ?? null)
+    : null;
+
+  const dietConcerns = checkDietConcerns(product.ingredients_text ?? null, dietProfile);
+  const showDietBanner = hasDietPreferences(dietProfile);
+
   return (
-    <div className="space-y-5" data-testid="analyser-detail-v2">
+    <div className="space-y-6" data-testid="analyser-detail-v2">
 
       {/* ── Card 1: Product identity + THA score ─────────────────────── */}
       <Card className="border-border shadow-none" data-testid="card-header">
@@ -74,15 +164,45 @@ export default function AnalyserDetailV2({
             {vm.product.brand && (
               <p className="text-sm text-muted-foreground">{vm.product.brand}</p>
             )}
-            {vm.product.packSize && (
+            {vm.product.packVariants.length > 1 ? (
+              <p className="text-xs text-muted-foreground/70">Available in {vm.product.packVariants.join(' · ')}</p>
+            ) : vm.product.packSize ? (
               <p className="text-xs text-muted-foreground/70">{vm.product.packSize}</p>
+            ) : null}
+            {vm.product.confirmedRetailers.length > 0 && (
+              <p className="text-xs text-muted-foreground/70 pt-0.5">
+                Available at {vm.product.confirmedRetailers.join(" · ")}
+              </p>
             )}
-            {vm.product.retailers.length > 0 && (
+            {vm.product.inferredRetailers.length > 0 && (
+              <p className="text-xs text-muted-foreground/70 pt-0.5">
+                Likely at {vm.product.inferredRetailers.slice(0, 4).join(" · ")}
+              </p>
+            )}
+            {vm.product.confirmedRetailers.length === 0 && vm.product.inferredRetailers.length === 0 && vm.product.retailers.length > 0 && (
               <p className="text-xs text-muted-foreground/70 pt-0.5">
                 {vm.product.retailers.join(" · ")}
               </p>
             )}
           </div>
+
+          {/* Diet / allergen banner */}
+          {showDietBanner && (
+            <div data-testid="diet-concern-banner">
+              {dietConcerns.length > 0 ? (
+                <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-lg bg-amber-50 dark:bg-amber-950/25 border border-amber-200/70 dark:border-amber-800/40">
+                  <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-px" />
+                  <p className="text-sm text-amber-800 dark:text-amber-300 leading-snug">
+                    Contains {formatConcernList(dietConcerns)} — may not suit your diet
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground/60" data-testid="text-no-allergen-concerns">
+                  No allergen concerns for your diet
+                </p>
+              )}
+            </div>
+          )}
 
           {/* THA score block */}
           <div className="flex items-start justify-between gap-4 pt-5 border-t border-border">
@@ -132,6 +252,97 @@ export default function AnalyserDetailV2({
 
         </CardContent>
       </Card>
+
+      {/* ── Shop alternative ─────────────────────────────────────────── */}
+      {bestOption && (
+        <Card className="border-border shadow-none" data-testid="card-shop-alternative">
+          <CardContent className="p-5 space-y-4">
+            <p className={SECTION_LABEL}>Best swap in {primaryStore}</p>
+
+            {/* Best option — always visible */}
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-foreground leading-snug" data-testid="text-shop-alt-name">
+                  {bestOption.product_name}
+                </p>
+                {bestOption.brand && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{bestOption.brand}</p>
+                )}
+                <div className="flex items-center gap-2.5 mt-1.5">
+                  <AppleRatingWithTooltip
+                    rating={bestOption.upfAnalysis?.thaRating ?? 0}
+                    sizePx={18}
+                    additiveContext={undefined}
+                  />
+                  {bestOptionReason && (
+                    <span className="text-xs text-muted-foreground">{bestOptionReason}</span>
+                  )}
+                </div>
+              </div>
+              <button
+                className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors pt-0.5"
+                onClick={() => onViewProduct(bestOption)}
+                data-testid="button-shop-alternative-view"
+                aria-label={`View ${bestOption.product_name}`}
+              >
+                View <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Expand toggle — only when more than 1 option */}
+            {topOptions.length > 1 && (
+              <button
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setShowMoreAlternatives((v) => !v)}
+                data-testid="button-view-more-alternatives"
+              >
+                {showMoreAlternatives ? "Hide options" : "View more options"}
+                {showMoreAlternatives
+                  ? <ChevronUp className="h-3 w-3" />
+                  : <ChevronDown className="h-3 w-3" />}
+              </button>
+            )}
+
+            {/* Expanded list — options 2–5 */}
+            {showMoreAlternatives && topOptions.length > 1 && (
+              <div className="space-y-4 pt-1 border-t border-border/60" data-testid="section-more-alternatives">
+                {topOptions.slice(1).map((opt, idx) => {
+                  const reason = buildWhyBetter(opt, currentScore)[0] ?? null;
+                  return (
+                    <div key={opt.barcode ?? idx} className="flex items-start gap-3 pt-3 first:pt-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground leading-snug">
+                          {opt.product_name}
+                        </p>
+                        {opt.brand && (
+                          <p className="text-xs text-muted-foreground mt-0.5">{opt.brand}</p>
+                        )}
+                        <div className="flex items-center gap-2.5 mt-1.5">
+                          <AppleRatingWithTooltip
+                            rating={opt.upfAnalysis?.thaRating ?? 0}
+                            sizePx={16}
+                            additiveContext={undefined}
+                          />
+                          {reason && (
+                            <span className="text-xs text-muted-foreground">{reason}</span>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        className="flex-shrink-0 text-muted-foreground hover:text-foreground transition-colors pt-0.5"
+                        onClick={() => onViewProduct(opt)}
+                        aria-label={`View ${opt.product_name}`}
+                      >
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* ── Card 2: Why this score ────────────────────────────────────── */}
       {vm.scoreDrivers.length > 0 && (
@@ -233,7 +444,11 @@ export default function AnalyserDetailV2({
             )}
 
             {/* Raw ingredient text - progressive disclosure */}
-            {vm.ingredients.rawText && (
+            {vm.ingredients.unavailable ? (
+              <p className="text-xs text-muted-foreground/60 italic" data-testid="text-v2-ingredients-unavailable">
+                Ingredient detail unavailable in English
+              </p>
+            ) : vm.ingredients.rawText ? (
               <div data-testid="section-v2-raw-ingredients">
                 <button
                   className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -251,7 +466,7 @@ export default function AnalyserDetailV2({
                   </p>
                 )}
               </div>
-            )}
+            ) : null}
 
           </CardContent>
         </Card>
@@ -278,7 +493,7 @@ export default function AnalyserDetailV2({
                         <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${effortColor(swap.effort)}`}>
                           {effortLabel(swap.effort)}
                         </span>
-                        <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
+                        <span className="text-xs text-muted-foreground flex items-center gap-0.5">
                           <Clock className="h-3 w-3" />
                           {formatTime(swap.timeMinutes)}
                         </span>

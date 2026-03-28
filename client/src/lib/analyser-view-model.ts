@@ -8,11 +8,16 @@ export interface InputProduct {
   brand: string | null;
   image_url: string | null;
   ingredients_text: string | null;
+  ingredientsUnavailable?: boolean;
   nova_group: number | null;
   nutriscore_grade: string | null;
   categories_tags: string[];
   isUK?: boolean;
   availableStores?: string[];
+  confirmedStores?: string[];
+  inferredStores?: string[];
+  storeConfidence?: Record<string, number>;
+  packVariants?: string[];
   quantity?: string | null;
   barcode?: string | null;
   nutriments: {
@@ -110,7 +115,10 @@ export interface AnalyserViewModel {
     barcode: string | null;
     isUK: boolean;
     retailers: string[];
+    confirmedRetailers: string[];
+    inferredRetailers: string[];
     novaGroup: number | null;
+    packVariants: string[];
   };
   score: {
     rating: number;
@@ -126,6 +134,7 @@ export interface AnalyserViewModel {
   thaReview: string;
   ingredients: {
     rawText: string | null;
+    unavailable: boolean;
     parsed: AnalyserIngredient[];
     additives: AnalyserAdditive[];
     processingIndicators: string[];
@@ -382,7 +391,10 @@ export function buildAnalyserViewModel(
       barcode: product.barcode ?? null,
       isUK: product.isUK ?? false,
       retailers: product.availableStores ?? [],
+      confirmedRetailers: product.confirmedStores ?? [],
+      inferredRetailers: product.inferredStores ?? [],
       novaGroup: novaGroup ?? null,
+      packVariants: product.packVariants ?? [],
     },
     score: {
       rating,
@@ -398,6 +410,7 @@ export function buildAnalyserViewModel(
     thaReview: generateTHAReview(product),
     ingredients: {
       rawText: product.ingredients_text,
+      unavailable: product.ingredientsUnavailable ?? false,
       parsed,
       additives,
       processingIndicators: upf?.processingIndicators ?? [],
@@ -417,7 +430,7 @@ export function buildAnalyserViewModel(
       : null,
     swaps,
     uiMeta: {
-      hasIngredients: !!(product.ingredients_text || parsed.length > 0),
+      hasIngredients: !!(product.ingredients_text || parsed.length > 0 || product.ingredientsUnavailable),
       hasAdditives: additives.length > 0,
       hasNutrition,
       hasSwaps: swaps.length > 0,

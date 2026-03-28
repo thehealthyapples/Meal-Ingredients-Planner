@@ -73,7 +73,7 @@ function AppleProgressIndicator({ step, total }: { step: number; total: number }
             }}
           />
           {i === step && (
-            <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[9px] font-medium text-primary whitespace-nowrap leading-none">
+            <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[10px] font-medium text-primary whitespace-nowrap leading-none">
               {STEP_LABELS[i]}
             </span>
           )}
@@ -206,7 +206,7 @@ export default function OnboardingPage() {
         <div className="text-center mb-6">
           <div className="inline-flex items-center gap-3 mb-3">
             <FiveApplesLogo size={26} />
-            <h1 className="text-2xl font-bold tracking-tight" data-testid="text-onboarding-title">The Healthy Apples</h1>
+            <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-onboarding-title">The Healthy Apples</h1>
           </div>
           <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
             A few quick preferences and we'll tailor meals, baskets, and better choices around you.
@@ -269,7 +269,7 @@ export default function OnboardingPage() {
                         </div>
 
                         <div>
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Diet style - pick one</p>
+                          <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mb-3">Diet style - pick one</p>
                           <div className="grid grid-cols-2 gap-2">
                             <button
                               onClick={() => setDietPattern(null)}
@@ -307,7 +307,7 @@ export default function OnboardingPage() {
                         </div>
 
                         <div>
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Are there any foods you prefer to avoid?</p>
+                          <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mb-3">Are there any foods you prefer to avoid?</p>
                           <p className="text-xs text-muted-foreground mb-2">Select any that matter to you.</p>
                           <div className="grid grid-cols-2 gap-2">
                             {DIET_RESTRICTIONS.map((opt) => {
@@ -333,7 +333,7 @@ export default function OnboardingPage() {
                         </div>
 
                         <div>
-                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Does your eating routine have a rhythm to it?</p>
+                          <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mb-3">Does your eating routine have a rhythm to it?</p>
                           <div className="grid grid-cols-2 gap-2">
                             {EATING_SCHEDULES.map((opt) => {
                               const Icon = SCHEDULE_ICONS[opt.value] ?? Clock;

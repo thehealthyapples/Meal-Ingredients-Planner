@@ -145,7 +145,7 @@ export default function ProfilePage() {
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-        <h1 className="text-xl font-semibold" data-testid="text-profile-title">Profile</h1>
+        <h1 className="text-xl font-semibold tracking-tight" data-testid="text-profile-title">Profile</h1>
       </div>
 
       <ProfileHeader
@@ -215,7 +215,7 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
       <div className="flex items-center gap-4">
         {/* Avatar */}
         <Avatar className="h-14 w-14 shrink-0" data-testid="avatar-profile">
-          <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold">
+          <AvatarFallback className="bg-primary/10 text-primary text-xl font-semibold">
             {userInitial}
           </AvatarFallback>
         </Avatar>
@@ -259,7 +259,7 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
             </div>
           )}
           {/* Username / email - tiny, faded, always rendered so layout doesn't shift */}
-          <p className="text-[11px] text-muted-foreground/45 truncate mt-0.5 leading-tight" data-testid="text-username">
+          <p className="text-xs text-muted-foreground/45 truncate mt-0.5 leading-tight" data-testid="text-username">
             {editing ? "\u00A0" : subtitleText}
           </p>
         </div>
@@ -295,28 +295,28 @@ function HealthSnapshot({ profile }: { profile: ProfileData }) {
     <Card className="p-5" data-testid="card-health-snapshot">
       <div className="flex items-center gap-2 mb-4">
         <Heart className="h-4 w-4 text-muted-foreground" />
-        <h3 className="font-semibold text-sm">Health Snapshot</h3>
+        <h3 className="text-sm font-medium">Health Snapshot</h3>
       </div>
 
       <div className="grid grid-cols-3 gap-4 text-center">
         <div data-testid="metric-bmi">
-          <p className={`text-2xl font-bold ${bmiColor}`}>{bmi ?? "-"}</p>
+          <p className={`text-2xl font-semibold ${bmiColor}`}>{bmi ?? "-"}</p>
           <p className="text-xs text-muted-foreground mt-0.5">BMI</p>
-          <p className={`text-[11px] font-medium ${bmiColor}`}>{bmiCategory || "Not set"}</p>
+          <p className={`text-xs font-medium ${bmiColor}`}>{bmiCategory || "Not set"}</p>
         </div>
         <div data-testid="metric-calories">
-          <p className="text-2xl font-bold text-foreground">
+          <p className="text-2xl font-semibold text-foreground">
             {dailyCalories ? dailyCalories.toLocaleString() : "-"}
           </p>
           <p className="text-xs text-muted-foreground mt-0.5">kcal / day</p>
-          <p className="text-[11px] font-medium text-green-600 dark:text-green-400">
+          <p className="text-xs font-medium text-green-600 dark:text-green-400">
             {dailyCalories ? "Target aligned" : "Not set"}
           </p>
         </div>
         <div data-testid="metric-activity">
-          <p className={`text-2xl font-bold ${activityColor}`}>{activityLabel}</p>
+          <p className={`text-2xl font-semibold ${activityColor}`}>{activityLabel}</p>
           <p className="text-xs text-muted-foreground mt-0.5">Activity</p>
-          <p className={`text-[11px] font-medium ${activityColor}`}>
+          <p className={`text-xs font-medium ${activityColor}`}>
             {activityLevel === "moderate" || activityLevel === "high" ? "Optimal" : "Could improve"}
           </p>
         </div>
@@ -370,7 +370,7 @@ function HouseholdSettings({ household, onSave }: { household: ProfileData["hous
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
           <Home className="h-4 w-4 text-muted-foreground" />
-          <h3 className="font-semibold text-sm">Household</h3>
+          <h3 className="text-sm font-medium">Household</h3>
         </div>
         {dirty && (
           <Button size="sm" onClick={save} data-testid="button-save-household">
@@ -545,7 +545,7 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
       {/* Header */}
       <div className="flex items-center gap-2">
         <Users className="h-4 w-4 text-muted-foreground" />
-        <h3 className="font-semibold text-sm">Household Management</h3>
+        <h3 className="text-sm font-medium">Household Management</h3>
         <Badge variant="secondary" className="ml-auto text-xs capitalize" data-testid="badge-my-role">{household.myRole}</Badge>
       </div>
 
@@ -595,7 +595,7 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
 
       {/* Members */}
       <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Members</p>
+        <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Members</p>
         {household.members.map(member => (
           <div key={member.userId} className="flex items-center gap-3" data-testid={`row-member-${member.userId}`}>
             <Avatar className="h-7 w-7">
@@ -724,7 +724,7 @@ function CalorieSettings({ profile, onSave }: { profile: ProfileData; onSave: (p
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
           <Flame className="h-4 w-4 text-muted-foreground" />
-          <h3 className="font-semibold text-sm">Nutrition Targets</h3>
+          <h3 className="text-sm font-medium">Nutrition Targets</h3>
         </div>
         {dirty && (
           <Button size="sm" onClick={save} data-testid="button-save-calories">
@@ -797,7 +797,7 @@ function CalorieSettings({ profile, onSave }: { profile: ProfileData; onSave: (p
                 className="max-w-[140px]"
                 data-testid="input-manual-calories"
               />
-              <p className="text-[11px] text-muted-foreground mt-1">kcal per day</p>
+              <p className="text-xs text-muted-foreground mt-1">kcal per day</p>
             </div>
           )}
 
@@ -859,7 +859,7 @@ function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
           <Target className="h-4 w-4 text-muted-foreground" />
-          <h3 className="font-semibold text-sm">Goals & Diet</h3>
+          <h3 className="text-sm font-medium">Goals & Diet</h3>
         </div>
         {dirty && (
           <Button size="sm" onClick={save} data-testid="button-save-goals">
@@ -1010,7 +1010,7 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
           <Store className="h-4 w-4 text-muted-foreground" />
-          <h3 className="font-semibold text-sm">Shopping & UPF</h3>
+          <h3 className="text-sm font-medium">Shopping & UPF</h3>
         </div>
         {dirty && (
           <Button size="sm" onClick={save} data-testid="button-save-shopping">
@@ -1102,7 +1102,7 @@ function ContactSection() {
     <Card className="p-5" data-testid="card-contact">
       <div className="flex items-center gap-2 mb-4">
         <Mail className="h-4 w-4 text-muted-foreground" />
-        <h3 className="font-semibold text-sm">Contact</h3>
+        <h3 className="text-sm font-medium">Contact</h3>
       </div>
       <div className="space-y-2">
         <div className="flex items-center justify-between">
@@ -1159,7 +1159,7 @@ function MealPlanSection() {
     <Card className="p-5" data-testid="card-meal-plan">
       <div className="flex items-center gap-2 mb-4">
         <Sparkles className="h-4 w-4 text-muted-foreground" />
-        <h3 className="font-semibold text-sm">Meal Plan</h3>
+        <h3 className="text-sm font-medium">Meal Plan</h3>
       </div>
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">
@@ -1192,7 +1192,7 @@ function FeatureToggles({ prefs, onToggle }: { prefs: any; onToggle: (field: str
     <Card className="p-5" data-testid="card-feature-toggles">
       <div className="flex items-center gap-2 mb-4">
         <Settings className="h-4 w-4 text-muted-foreground" />
-        <h3 className="font-semibold text-sm">Features</h3>
+        <h3 className="text-sm font-medium">Features</h3>
       </div>
 
       <div className="space-y-3">
@@ -1270,7 +1270,7 @@ function AccountSettings({ profile }: { profile: ProfileData }) {
     <Card className="p-5" data-testid="card-account">
       <div className="flex items-center gap-2 mb-4">
         <Shield className="h-4 w-4 text-muted-foreground" />
-        <h3 className="font-semibold text-sm">Account</h3>
+        <h3 className="text-sm font-medium">Account</h3>
       </div>
 
       <div className="space-y-3">

@@ -18,7 +18,7 @@ export default function DemoPlannerPage() {
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       {modal}
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold tracking-tight" data-testid="demo-planner-title">
+        <h1 className="text-2xl font-semibold tracking-tight" data-testid="demo-planner-title">
           Demo Planner - Week 1
         </h1>
         <Lock className="h-4 w-4 text-muted-foreground" />

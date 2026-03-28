@@ -1,14 +1,12 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { useMeals } from "@/hooks/use-meals";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -19,10 +17,12 @@ import {
   Search, Loader2, ShoppingCart, Package, AlertTriangle, Heart,
   Leaf, ArrowRight, X, ChevronDown, ChevronUp, Shield,
   Scale, Beaker, Star, Filter, Info, Layers,
-  Plus, Minus, Save, RefreshCw, UtensilsCrossed, ScanLine, Flame,
-  Settings2, Volume2, VolumeX, Award, Zap, History, Trash2,
+  ScanLine,
+  Award, Zap, History, Trash2,
   ChefHat, Check, Sparkles, Store, Clock,
 } from "lucide-react";
+import thaAppleSrc from "@/assets/icons/tha-apple.png";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@shared/routes";
@@ -96,17 +96,56 @@ function isSeedOilProduct(product: ProductResult): boolean {
   return SEED_OIL_TERMS.some(term => text.includes(term));
 }
 
+// ── Canonical size grouping ───────────────────────────────────────────────────
+
+function getCanonicalName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\s*\d+(\s*)(ml|l|g|kg|oz|lb)[^\s,]*/gi, '')
+    .replace(/\s*\b(\d+\s*)?(pack|x\d+|bottle|can|tin|jar|pouch|sachet)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getDisplayName(name: string): string {
+  return name
+    .replace(/\s*\d+(\s*)(ml|l|g|kg|oz|lb)[^\s,]*/gi, '')
+    .replace(/\s*\b(\d+\s*)?(pack|x\d+|bottle|can|tin|jar|pouch|sachet)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+interface CanonicalGroup {
+  key: string;
+  representative: ProductResult;
+  variants: ProductResult[];
+  mergedStores: string[];
+  mergedConfirmedStores: string[];
+  mergedInferredStores: string[];
+}
+
 interface ProductResult {
   barcode: string | null;
   product_name: string;
   brand: string | null;
   image_url: string | null;
   ingredients_text: string | null;
+  ingredientsUnavailable?: boolean;
   nova_group: number | null;
   nutriscore_grade: string | null;
   categories_tags: string[];
   isUK?: boolean;
   availableStores?: string[];
+  confirmedStores?: string[];
+  inferredStores?: string[];
+  storeConfidence?: Record<string, number>;
+  packVariants?: string[];
+  /** Set when this result represents a canonical product group (e.g. "Cherry Coke") */
+  canonicalProductName?: string;
+  /** How many raw OFF variants were merged into this result */
+  variantCount?: number;
+  /** Original raw product names before canonicalisation — for detail views */
+  nameVariants?: string[];
   nutriments: {
     calories: string | null;
     protein: string | null;
@@ -178,7 +217,7 @@ function HealthScoreCircle({ score, size = 48 }: { score: number; size?: number 
           cy={size / 2}
         />
       </svg>
-      <span className={`absolute text-xs font-bold ${color}`} data-testid="text-health-score">
+      <span className={`absolute text-xs font-semibold ${color}`} data-testid="text-health-score">
         {score}
       </span>
     </div>
@@ -229,11 +268,11 @@ function AdditivesList({ additives }: { additives: AdditiveMatchInfo[] }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="font-semibold">{a.name}</span>
-          <Badge variant="outline" className="text-[9px] py-0 px-1 border-current">{a.type}</Badge>
-          <Badge variant="outline" className="text-[9px] py-0 px-1 border-current">{a.riskLevel} risk</Badge>
+          <Badge variant="outline" className="text-[10px] py-0 px-1 border-current">{a.type}</Badge>
+          <Badge variant="outline" className="text-[10px] py-0 px-1 border-current">{a.riskLevel} risk</Badge>
         </div>
         {a.description && (
-          <p className="text-[11px] opacity-80 mt-0.5 leading-tight">{a.description}</p>
+          <p className="text-xs text-muted-foreground/80 mt-0.5 leading-tight">{a.description}</p>
         )}
       </div>
     </div>
@@ -244,7 +283,7 @@ function AdditivesList({ additives }: { additives: AdditiveMatchInfo[] }) {
       {discretionary.length > 0 && (
         <div className="space-y-1.5">
           {regulatory.length > 0 && (
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Discretionary additives</p>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Discretionary additives</p>
           )}
           {discretionary.map((a, i) => <AdditiveRow key={i} a={a} i={i} />)}
         </div>
@@ -252,7 +291,7 @@ function AdditivesList({ additives }: { additives: AdditiveMatchInfo[] }) {
 
       {regulatory.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Regulatory requirement</p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Regulatory requirement</p>
           {regulatory.map((a, i) => <AdditiveRow key={i} a={a} i={i} />)}
           <p className="text-[10px] text-muted-foreground leading-snug px-1">
             Commonly added as part of UK food regulation (e.g. flour fortification), but still contributes to the overall ingredient profile.
@@ -347,7 +386,6 @@ function RiskBreakdownPanel({ breakdown }: { breakdown: UPFAnalysisInfo['riskBre
 export default function ProductsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { meals } = useMeals();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ProductResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -356,7 +394,6 @@ export default function ProductsPage() {
   const [compareProducts, setCompareProducts] = useState<ProductResult[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [showDetailWFRecipe, setShowDetailWFRecipe] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   const [hideUltraProcessed, setHideUltraProcessed] = useState(false);
   const [hideHighRiskAdditives, setHideHighRiskAdditives] = useState(false);
   const [hideEmulsifiers, setHideEmulsifiers] = useState(false);
@@ -370,11 +407,16 @@ export default function ProductsPage() {
   const [minRating, setMinRating] = useState(0);
   const [excludedAdditives, setExcludedAdditives] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<'default' | 'score-desc' | 'score-asc' | 'shop'>('default');
-  const [mealCounts, setMealCounts] = useState<Record<number, number>>({});
-  const [showMealSelector, setShowMealSelector] = useState(false);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [barcodeLoading, setBarcodeLoading] = useState(false);
-  const [showIntelligence, setShowIntelligence] = useState(false);
+
+  const { data: userProfile } = useQuery<{
+    dietPattern: string | null;
+    dietRestrictions: string[];
+  }>({
+    queryKey: ["/api/profile"],
+    select: (d: any) => ({ dietPattern: d.dietPattern ?? null, dietRestrictions: d.dietRestrictions ?? [] }),
+  });
 
   const { data: intelligenceSettings } = useQuery<{
     soundEnabled: boolean;
@@ -497,6 +539,12 @@ export default function ProductsPage() {
       if (data.product) {
         setSearchResults([data.product]);
         setSelectedProduct(data.product);
+        // DEBUG: log store fields for barcode scan result
+        console.log('[THA-STORE-DEBUG] Barcode scan result:', data.product.product_name, {
+          confirmedStores: data.product.confirmedStores ?? [],
+          inferredStores: data.product.inferredStores ?? [],
+          availableStores: data.product.availableStores ?? [],
+        });
         setHasSearched(true);
         setSearchQuery(data.product.product_name || barcode);
 
@@ -529,88 +577,6 @@ export default function ProductsPage() {
     }
     if (product.upfAnalysis?.thaRating && intelligenceSettings?.eliteTrackingEnabled !== false) {
       recordStreakMutation.mutate(product.upfAnalysis.thaRating);
-    }
-  };
-
-  const selectedMealIds = useMemo(() => {
-    return Object.keys(mealCounts).map(Number).filter(id => mealCounts[id] > 0);
-  }, [mealCounts]);
-
-  const totalSelectedMeals = useMemo(() => {
-    return Object.values(mealCounts).reduce((sum, c) => sum + c, 0);
-  }, [mealCounts]);
-
-  const previewList = useMemo(() => {
-    if (!meals) return [];
-    const allIngredients: string[] = [];
-    for (const [mealId, count] of Object.entries(mealCounts)) {
-      const meal = meals.find(m => m.id === Number(mealId));
-      if (meal && count > 0) {
-        for (let i = 0; i < count; i++) {
-          allIngredients.push(...meal.ingredients);
-        }
-      }
-    }
-    return Array.from(new Set(allIngredients.map(i => i.toLowerCase().trim())))
-      .map(key => allIngredients.find(i => i.toLowerCase().trim() === key) || key)
-      .sort();
-  }, [meals, mealCounts]);
-
-  const setMealCount = (mealId: number, delta: number) => {
-    setMealCounts(prev => {
-      const current = prev[mealId] || 0;
-      const next = Math.max(0, current + delta);
-      const updated = { ...prev };
-      if (next === 0) {
-        delete updated[mealId];
-      } else {
-        updated[mealId] = next;
-      }
-      return updated;
-    });
-  };
-
-  const toggleMeal = (mealId: number) => {
-    setMealCounts(prev => {
-      if (prev[mealId] && prev[mealId] > 0) {
-        const updated = { ...prev };
-        delete updated[mealId];
-        return updated;
-      }
-      return { ...prev, [mealId]: 1 };
-    });
-  };
-
-  const saveToBasket = useMutation({
-    mutationFn: async (selections: { mealId: number; count: number }[]) => {
-      const res = await fetch(api.shoppingList.generateFromMeals.path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mealSelections: selections }),
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to save');
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
-      queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
-      queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
-      queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
-      setMealCounts({});
-      toast({ title: "Added to basket", description: "Ingredients consolidated and added to your basket." });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Could not add to basket.", variant: "destructive" });
-    },
-  });
-
-  const handleSaveMeals = () => {
-    const selections = Object.entries(mealCounts)
-      .filter(([_, count]) => count > 0)
-      .map(([mealId, count]) => ({ mealId: Number(mealId), count }));
-    if (selections.length > 0) {
-      saveToBasket.mutate(selections);
     }
   };
 
@@ -674,24 +640,58 @@ export default function ProductsPage() {
     });
   };
 
-  const displayResults = useMemo(() => {
-    const base = [...filteredResults];
-    if (sortBy === 'score-desc') return base.sort((a, b) => (b.upfAnalysis?.thaRating ?? 0) - (a.upfAnalysis?.thaRating ?? 0));
-    if (sortBy === 'score-asc') return base.sort((a, b) => (a.upfAnalysis?.thaRating ?? 0) - (b.upfAnalysis?.thaRating ?? 0));
-    if (sortBy === 'shop') return base.sort((a, b) => (a.availableStores?.[0] ?? 'zzz').localeCompare(b.availableStores?.[0] ?? 'zzz'));
+  const canonicalGroups = useMemo(() => {
+    const acc: Record<string, CanonicalGroup> = {};
+    for (const product of filteredResults) {
+      const key = getCanonicalName(product.product_name) + '||' + (product.brand || '').toLowerCase().trim();
+      if (!acc[key]) {
+        acc[key] = {
+          key,
+          representative: product,
+          variants: [product],
+          mergedStores: [...(product.availableStores ?? [])],
+          mergedConfirmedStores: [...(product.confirmedStores ?? [])],
+          mergedInferredStores: [...(product.inferredStores ?? [])],
+        };
+      } else {
+        acc[key].variants.push(product);
+        for (const s of product.availableStores ?? []) {
+          if (!acc[key].mergedStores.includes(s)) acc[key].mergedStores.push(s);
+        }
+        for (const s of product.confirmedStores ?? []) {
+          if (!acc[key].mergedConfirmedStores.includes(s)) acc[key].mergedConfirmedStores.push(s);
+        }
+        for (const s of product.inferredStores ?? []) {
+          if (!acc[key].mergedInferredStores.includes(s)) acc[key].mergedInferredStores.push(s);
+        }
+        const newRating = product.upfAnalysis?.thaRating ?? 0;
+        const repRating = acc[key].representative.upfAnalysis?.thaRating ?? 0;
+        if (newRating > repRating || (!acc[key].representative.image_url && product.image_url)) {
+          acc[key].representative = product;
+        }
+      }
+    }
+    return Object.values(acc);
+  }, [filteredResults]);
+
+  const canonicalDisplayResults = useMemo(() => {
+    const base = [...canonicalGroups];
+    if (sortBy === 'score-desc') return base.sort((a, b) => (b.representative.upfAnalysis?.thaRating ?? 0) - (a.representative.upfAnalysis?.thaRating ?? 0));
+    if (sortBy === 'score-asc') return base.sort((a, b) => (a.representative.upfAnalysis?.thaRating ?? 0) - (b.representative.upfAnalysis?.thaRating ?? 0));
+    if (sortBy === 'shop') return base.sort((a, b) => (a.mergedStores[0] ?? 'zzz').localeCompare(b.mergedStores[0] ?? 'zzz'));
     return base;
-  }, [filteredResults, sortBy]);
+  }, [canonicalGroups, sortBy]);
 
   const shopGroups = useMemo(() => {
     if (sortBy !== 'shop') return null;
-    const groups = new Map<string, ProductResult[]>();
-    for (const p of filteredResults) {
-      const store = p.availableStores?.[0] || 'Other';
+    const groups = new Map<string, CanonicalGroup[]>();
+    for (const g of canonicalGroups) {
+      const store = g.mergedStores[0] || 'Other';
       if (!groups.has(store)) groups.set(store, []);
-      groups.get(store)!.push(p);
+      groups.get(store)!.push(g);
     }
     return Array.from(groups.entries()).sort(([a], [b]) => a === 'Other' ? 1 : b === 'Other' ? -1 : a.localeCompare(b));
-  }, [filteredResults, sortBy]);
+  }, [canonicalGroups, sortBy]);
 
   const addToList = useMutation({
     mutationFn: async (product: ProductResult) => {
@@ -753,8 +753,27 @@ export default function ProductsPage() {
       const res = await fetch(`/api/search-products?q=${encodeURIComponent(searchQuery.trim())}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Search failed');
       const data = await res.json();
-      setSearchResults(data.products || []);
+      const products: ProductResult[] = data.products || [];
+      setSearchResults(products);
       setHasSearched(true);
+
+      // DEBUG: log store fields for key test products
+      const debugTargets = products.filter(p => {
+        const n = (p.product_name || '').toLowerCase();
+        const b = (p.brand || '').toLowerCase();
+        return n.includes('cherry') || n.includes('nairn') || b.includes('ben') || n.includes('cookie dough');
+      });
+      if (debugTargets.length > 0) {
+        console.group('[THA-STORE-DEBUG] Search results store data:');
+        debugTargets.forEach(p => {
+          console.log(`${p.product_name} (${p.brand})`, {
+            confirmedStores: p.confirmedStores ?? [],
+            inferredStores: p.inferredStores ?? [],
+            availableStores: p.availableStores ?? [],
+          });
+        });
+        console.groupEnd();
+      }
     } catch {
       toast({ title: "Search Error", description: "Could not search products.", variant: "destructive" });
     } finally {
@@ -787,45 +806,12 @@ export default function ProductsPage() {
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex justify-between items-start gap-4">
           <div>
-            <h1 className="text-[28px] font-semibold tracking-tight" data-testid="text-products-title">Analyser</h1>
+            <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-products-title">Analyser</h1>
             <p className="text-sm text-muted-foreground mt-1">Search packaged foods, detect ultra-processed ingredients, and find healthier alternatives</p>
           </div>
-          <div className="flex gap-2 flex-wrap">
-            <Button
-              variant={showMealSelector ? 'default' : 'outline'}
-              onClick={() => setShowMealSelector(!showMealSelector)}
-              className="gap-2"
-              data-testid="button-toggle-meal-selector"
-            >
-              <UtensilsCrossed className="h-4 w-4" />
-              Select Meals
-              {totalSelectedMeals > 0 && (
-                <Badge variant="secondary" className="text-[10px] px-1.5">{totalSelectedMeals}</Badge>
-              )}
-            </Button>
-            <Button
-              variant={showFilters ? 'default' : 'outline'}
-              onClick={() => setShowFilters(!showFilters)}
-              className="gap-2"
-              data-testid="button-toggle-filters"
-            >
-              <Filter className="h-4 w-4" />
-              Filters
-              {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="text-[10px] px-1.5">{activeFilterCount}</Badge>
-              )}
-            </Button>
-            <Button
-              variant={showIntelligence ? 'default' : 'outline'}
-              onClick={() => setShowIntelligence(!showIntelligence)}
-              className="gap-2"
-              data-testid="button-toggle-intelligence"
-            >
-              <Settings2 className="h-4 w-4" />
-              Intelligence
-            </Button>
+          <div className="flex items-center gap-2 mt-1 shrink-0">
             {compareProducts.length >= 2 && (
               <Button
                 onClick={() => setShowCompare(true)}
@@ -836,6 +822,89 @@ export default function ProductsPage() {
                 Compare ({compareProducts.length})
               </Button>
             )}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="relative flex items-center justify-center p-1 rounded-md hover:bg-accent/40 transition-colors"
+                  aria-label="Filters"
+                  data-testid="button-filters-menu"
+                >
+                  <img src={thaAppleSrc} alt="Healthy Apples" className="h-9 w-9 object-contain" />
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center leading-none">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-0" data-testid="panel-filters-menu">
+                <div className="max-h-[70vh] overflow-y-auto p-5 space-y-5">
+                  <div className="space-y-3">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Filters</p>
+                    {([
+                      { id: 'hide-upf', label: 'Hide ultra-processed foods', checked: hideUltraProcessed, set: setHideUltraProcessed, testId: 'switch-hide-upf' },
+                      { id: 'hide-additives', label: 'Hide high-risk additives', checked: hideHighRiskAdditives, set: setHideHighRiskAdditives, testId: 'switch-hide-additives' },
+                      { id: 'hide-emulsifiers', label: 'Hide emulsifiers', checked: hideEmulsifiers, set: setHideEmulsifiers, testId: 'switch-hide-emulsifiers' },
+                      { id: 'hide-acidity', label: 'Hide acidity regulators', checked: hideAcidityRegulators, set: setHideAcidityRegulators, testId: 'switch-hide-acidity-regulators' },
+                      { id: 'hide-preservatives', label: 'Hide preservatives', checked: hidePreservatives, set: setHidePreservatives, testId: 'switch-hide-preservatives' },
+                      { id: 'hide-flavourings', label: 'Hide flavourings', checked: hideFlavourings, set: setHideFlavourings, testId: 'switch-hide-flavourings' },
+                      { id: 'hide-stabilisers', label: 'Hide stabilisers', checked: hideStabilisers, set: setHideStabilisers, testId: 'switch-hide-stabilisers' },
+                      { id: 'hide-modified-starches', label: 'Hide modified starches', checked: hideModifiedStarches, set: setHideModifiedStarches, testId: 'switch-hide-modified-starches' },
+                      { id: 'hide-seed-oils', label: 'Hide seed oils', checked: hideSeedOils, set: setHideSeedOils, testId: 'switch-hide-seed-oils' },
+                      { id: 'hide-bovaer', label: 'Hide Bovaer-risk products', checked: hideBovaer, set: setHideBovaer, testId: 'switch-hide-bovaer' },
+                    ] as const).map(f => (
+                      <div key={f.id} className="flex items-center justify-between gap-3">
+                        <Label htmlFor={f.id} className="text-sm font-normal cursor-pointer text-foreground/80">{f.label}</Label>
+                        <Switch id={f.id} checked={f.checked} onCheckedChange={f.set} data-testid={f.testId} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="pt-4 border-t border-border/40 space-y-3">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Minimum Apple Rating</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[0, 1, 2, 3, 4, 5].map(r => (
+                        <Button
+                          key={r}
+                          size="sm"
+                          variant={minRating === r ? 'default' : 'outline'}
+                          onClick={() => setMinRating(r)}
+                          className="h-8 px-3 text-xs"
+                          data-testid={`button-min-rating-${r}`}
+                        >
+                          {r === 0 ? 'All' : `${r}★`}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t border-border/40 space-y-3">
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Settings</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <Label htmlFor="menu-sound" className="text-sm font-normal cursor-pointer text-foreground/80">Sound effects</Label>
+                      <Switch
+                        id="menu-sound"
+                        checked={intelligenceSettings?.soundEnabled !== false}
+                        onCheckedChange={(v) => updateSettingsMutation.mutate({ soundEnabled: v })}
+                        data-testid="switch-sound-enabled"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <Label htmlFor="menu-barcode" className="text-sm font-normal cursor-pointer text-foreground/80">Barcode scanner</Label>
+                      <Switch
+                        id="menu-barcode"
+                        checked={intelligenceSettings?.barcodeScannerEnabled !== false}
+                        onCheckedChange={(v) => updateSettingsMutation.mutate({ barcodeScannerEnabled: v })}
+                        data-testid="switch-barcode-enabled"
+                      />
+                    </div>
+                  </div>
+                  {activeFilterCount > 0 && searchResults.length > 0 && (
+                    <p className="text-xs text-muted-foreground pt-1">
+                      Showing {canonicalGroups.length} of {deduplicatedResults.length} products
+                    </p>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
 
@@ -852,311 +921,27 @@ export default function ProductsPage() {
               {intelligenceSettings?.barcodeScannerEnabled !== false && (
                 <Button
                   variant="outline"
+                  size="icon"
                   onClick={() => setShowBarcodeScanner(true)}
                   disabled={barcodeLoading}
+                  aria-label="Scan barcode"
                   data-testid="button-barcode-scan"
                 >
-                  {barcodeLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ScanLine className="mr-2 h-4 w-4" />}
-                  Scan
+                  {barcodeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
                 </Button>
               )}
               <Button
+                size="icon"
                 onClick={handleSearch}
                 disabled={isSearching || !searchQuery.trim()}
+                aria-label="Analyse"
                 data-testid="button-search-products"
               >
-                {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                Analyse
+                {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               </Button>
             </div>
           </CardContent>
         </Card>
-
-        <AnimatePresence>
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <Card data-testid="card-filters">
-                <CardContent className="pt-5 space-y-5">
-                  {/* ── Category Filters ─────────────────────────────── */}
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Category Filters</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {([
-                        { id: 'hide-upf', label: 'Ultra-processed (NOVA 4)', checked: hideUltraProcessed, set: setHideUltraProcessed, testId: 'switch-hide-upf' },
-                        { id: 'hide-additives', label: 'High-risk additives', checked: hideHighRiskAdditives, set: setHideHighRiskAdditives, testId: 'switch-hide-additives' },
-                        { id: 'hide-emulsifiers', label: 'Emulsifiers', checked: hideEmulsifiers, set: setHideEmulsifiers, testId: 'switch-hide-emulsifiers' },
-                        { id: 'hide-acidity', label: 'Acidity regulators', checked: hideAcidityRegulators, set: setHideAcidityRegulators, testId: 'switch-hide-acidity-regulators' },
-                        { id: 'hide-preservatives', label: 'Preservatives', checked: hidePreservatives, set: setHidePreservatives, testId: 'switch-hide-preservatives' },
-                        { id: 'hide-flavourings', label: 'Flavourings', checked: hideFlavourings, set: setHideFlavourings, testId: 'switch-hide-flavourings' },
-                        { id: 'hide-stabilisers', label: 'Stabilisers', checked: hideStabilisers, set: setHideStabilisers, testId: 'switch-hide-stabilisers' },
-                        { id: 'hide-modified-starches', label: 'Modified starches', checked: hideModifiedStarches, set: setHideModifiedStarches, testId: 'switch-hide-modified-starches' },
-                        { id: 'hide-seed-oils', label: 'Seed oils', checked: hideSeedOils, set: setHideSeedOils, testId: 'switch-hide-seed-oils' },
-                        { id: 'hide-bovaer', label: 'Bovaer-risk (dairy/meat)', checked: hideBovaer, set: setHideBovaer, testId: 'switch-hide-bovaer' },
-                      ] as const).map(f => (
-                        <div key={f.id} className="flex items-center justify-between gap-2">
-                          <Label htmlFor={f.id} className="text-sm cursor-pointer">{f.label}</Label>
-                          <Switch id={f.id} checked={f.checked} onCheckedChange={f.set} data-testid={f.testId} />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-3 space-y-1.5">
-                      <Label className="text-sm">Minimum Apple Rating</Label>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {[0, 1, 2, 3, 4, 5].map(r => (
-                          <Button
-                            key={r}
-                            size="sm"
-                            variant={minRating === r ? 'default' : 'outline'}
-                            onClick={() => setMinRating(r)}
-                            data-testid={`button-min-rating-${r}`}
-                          >
-                            {r === 0 ? 'All' : `${r}★`}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* ── Granular Additive / E-number Filters ─────────── */}
-                  {allDetectedAdditives.length > 0 && (
-                    <div className="pt-4 border-t border-border">
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                        Exclude Specific Additives / E-numbers
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mb-3">
-                        Detected in your current results - click to exclude products containing that additive.
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {allDetectedAdditives.map(a => {
-                          const isExcluded = excludedAdditives.has(a.name);
-                          const riskCls = a.riskLevel === 'high'
-                            ? 'border-red-400 text-red-700 dark:text-red-400'
-                            : a.riskLevel === 'medium'
-                              ? 'border-orange-400 text-orange-700 dark:text-orange-400'
-                              : 'border-border text-muted-foreground';
-                          return (
-                            <button
-                              key={a.name}
-                              onClick={() => toggleAdditiveExclusion(a.name)}
-                              data-testid={`toggle-additive-${a.name}`}
-                              className={`inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full border transition-colors ${
-                                isExcluded
-                                  ? 'bg-red-100 dark:bg-red-900/30 border-red-500 text-red-700 dark:text-red-300 line-through'
-                                  : riskCls + ' hover:border-primary hover:text-foreground bg-background'
-                              }`}
-                            >
-                              {isExcluded && <X className="h-3 w-3" />}
-                              <span className="font-medium">{a.name}</span>
-                              <span className="opacity-60">· {a.type}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {excludedAdditives.size > 0 && (
-                        <button
-                          className="mt-2 text-[11px] text-muted-foreground underline"
-                          onClick={() => setExcludedAdditives(new Set())}
-                        >
-                          Clear additive exclusions
-                        </button>
-                      )}
-                    </div>
-                  )}
-
-                  {activeFilterCount > 0 && searchResults.length > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Showing {filteredResults.length} of {deduplicatedResults.length} products after filters
-                    </p>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {showIntelligence && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <Card data-testid="card-intelligence-settings">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Settings2 className="h-5 w-5" />
-                    Intelligence Features
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="toggle-sound" className="text-sm cursor-pointer flex items-center gap-2">
-                        {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                        Sound Effects
-                      </Label>
-                      <Switch
-                        id="toggle-sound"
-                        checked={intelligenceSettings?.soundEnabled !== false}
-                        onCheckedChange={(v) => updateSettingsMutation.mutate({ soundEnabled: v })}
-                        data-testid="switch-sound-enabled"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="toggle-streak" className="text-sm cursor-pointer flex items-center gap-2">
-                        <Flame className="h-4 w-4" />
-                        Elite Streak Tracking
-                      </Label>
-                      <Switch
-                        id="toggle-streak"
-                        checked={intelligenceSettings?.eliteTrackingEnabled !== false}
-                        onCheckedChange={(v) => updateSettingsMutation.mutate({ eliteTrackingEnabled: v })}
-                        data-testid="switch-streak-enabled"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-2">
-                      <Label htmlFor="toggle-barcode" className="text-sm cursor-pointer flex items-center gap-2">
-                        <ScanLine className="h-4 w-4" />
-                        Barcode Scanner
-                      </Label>
-                      <Switch
-                        id="toggle-barcode"
-                        checked={intelligenceSettings?.barcodeScannerEnabled !== false}
-                        onCheckedChange={(v) => updateSettingsMutation.mutate({ barcodeScannerEnabled: v })}
-                        data-testid="switch-barcode-enabled"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-
-        <AnimatePresence>
-          {showMealSelector && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <Card data-testid="card-meal-selector">
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-center gap-2 flex-wrap">
-                    <CardTitle className="text-lg" data-testid="text-selected-count">
-                      Select Meals ({totalSelectedMeals})
-                    </CardTitle>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {selectedMealIds.length > 0 && (
-                        <>
-                          <Button
-                            className="gap-2"
-                            size="sm"
-                            onClick={handleSaveMeals}
-                            disabled={saveToBasket.isPending}
-                            data-testid="button-save-to-basket"
-                          >
-                            {saveToBasket.isPending ? (
-                              <RefreshCw className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Save className="h-4 w-4" />
-                            )}
-                            Add to Basket
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setMealCounts({})} data-testid="button-clear-selection">
-                            Clear
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  {selectedMealIds.length > 0 && (
-                    <p className="text-sm text-muted-foreground mt-1" data-testid="text-preview-count">
-                      {previewList.length} unique ingredients from {totalSelectedMeals} meal servings
-                    </p>
-                  )}
-                </CardHeader>
-                <CardContent className="p-0 max-h-[300px] overflow-y-auto">
-                  {meals?.length === 0 ? (
-                    <div className="p-8 text-center text-muted-foreground">
-                      No meals available. Go create some!
-                    </div>
-                  ) : (
-                    <div className="divide-y divide-border/50">
-                      {meals?.map((meal) => {
-                        const count = mealCounts[meal.id] || 0;
-                        const isSelected = count > 0;
-                        return (
-                          <div
-                            key={meal.id}
-                            className={`px-4 py-3 flex items-center gap-3 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}
-                            data-testid={`meal-select-${meal.id}`}
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => toggleMeal(meal.id)}
-                              className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                            />
-                            <div className="flex items-center gap-3 flex-1 cursor-pointer" onClick={() => toggleMeal(meal.id)}>
-                              {meal.imageUrl && (
-                                <img
-                                  src={meal.imageUrl}
-                                  alt={meal.name}
-                                  className="w-8 h-8 rounded-md object-cover"
-                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                />
-                              )}
-                              <div className="flex-1 min-w-0">
-                                <p className={`font-medium truncate ${isSelected ? 'text-primary' : 'text-foreground'}`}>
-                                  {meal.name}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {meal.ingredients.length} ingredients
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setMealCount(meal.id, -1)}
-                                disabled={count === 0}
-                                data-testid={`button-meal-minus-${meal.id}`}
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <span className="w-6 text-center text-sm font-medium tabular-nums" data-testid={`text-meal-count-${meal.id}`}>
-                                {count}
-                              </span>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setMealCount(meal.id, 1)}
-                                data-testid={`button-meal-plus-${meal.id}`}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {hasSearched && searchResults.length === 0 && !isSearching && (
           <div className="text-center py-12 text-muted-foreground">
@@ -1272,7 +1057,7 @@ export default function ProductsPage() {
 
         <div>
           {/* ── Sort Controls ─────────────────────────────────────────────────── */}
-          {filteredResults.length > 0 && (
+          {canonicalGroups.length > 0 && (
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               <span className="text-xs text-muted-foreground font-medium">Sort:</span>
               {(
@@ -1294,7 +1079,7 @@ export default function ProductsPage() {
                 </Button>
               ))}
               <span className="text-xs text-muted-foreground ml-2">
-                {filteredResults.length} result{filteredResults.length !== 1 ? 's' : ''}
+                {canonicalGroups.length} result{canonicalGroups.length !== 1 ? 's' : ''}
               </span>
             </div>
           )}
@@ -1303,26 +1088,29 @@ export default function ProductsPage() {
             {shopGroups ? (
               /* ── Grouped by shop ─────────────────────────────────────────── */
               <div className="space-y-8">
-                {shopGroups.map(([store, products]) => (
+                {shopGroups.map(([store, groups]) => (
                   <div key={store}>
                     <div className="flex items-center gap-2 mb-3">
                       <Store className="h-4 w-4 text-muted-foreground" />
                       <h3 className="font-semibold text-sm">{store}</h3>
-                      <span className="text-xs text-muted-foreground">({products.length})</span>
+                      <span className="text-xs text-muted-foreground">({groups.length})</span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {products.map((product, index) => {
-                        const nova = product.nova_group || product.analysis?.novaGroup;
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      {groups.map((group, index) => {
+                        const product = group.representative;
+                        const displayName = getDisplayName(product.product_name);
+                        const isSelected = group.variants.some(v => v.barcode === selectedProduct?.barcode);
+                        const variantSizes = group.variants.map(v => v.quantity || '').filter(Boolean).filter((v, i, arr) => arr.indexOf(v) === i);
                         return (
                           <motion.div
-                            key={product.barcode || index}
+                            key={group.key || index}
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
                             layout
                           >
                             <Card
                               className={`overflow-visible h-full flex flex-col cursor-pointer transition-colors ${
-                                selectedProduct?.barcode === product.barcode ? 'ring-2 ring-primary' : ''
+                                isSelected ? 'ring-2 ring-primary' : ''
                               }`}
                               onClick={() => handleProductSelect(product)}
                               data-testid={`card-product-${product.barcode || index}`}
@@ -1330,7 +1118,7 @@ export default function ProductsPage() {
                               <div className="flex gap-4 p-4">
                                 {product.image_url ? (
                                   <div className="w-20 h-20 flex-shrink-0 rounded-md overflow-hidden bg-muted">
-                                    <img src={product.image_url} alt={product.product_name} className="w-full h-full object-contain" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                    <img src={product.image_url} alt={displayName} className="w-full h-full object-contain" loading="lazy" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                                   </div>
                                 ) : (
                                   <div className="w-20 h-20 flex-shrink-0 rounded-md bg-muted flex items-center justify-center">
@@ -1341,11 +1129,28 @@ export default function ProductsPage() {
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-start gap-1 flex-wrap">
-                                        <h3 className="font-semibold text-sm leading-tight line-clamp-2" data-testid={`text-product-name-${product.barcode || index}`}>{product.product_name}</h3>
+                                        <h3 className="font-semibold text-sm leading-tight line-clamp-2" data-testid={`text-product-name-${product.barcode || index}`}>{displayName}</h3>
                                         {product.isUK && (<Badge variant="outline" className="text-[10px] px-1 py-0 h-4 flex-shrink-0 border-blue-400 text-blue-600 dark:text-blue-400">UK</Badge>)}
+                                        {group.variants.length > 1 && (
+                                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 flex-shrink-0 border-muted-foreground/40 text-muted-foreground gap-0.5">
+                                            <Layers className="h-2.5 w-2.5" />
+                                            {group.variants.length}
+                                          </Badge>
+                                        )}
                                       </div>
                                       {product.brand && (<p className="text-xs text-muted-foreground mt-0.5">{product.brand}</p>)}
-                                      {product.availableStores && product.availableStores.length > 0 && (<p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1"><Store className="h-3 w-3 flex-shrink-0" />{product.availableStores.slice(0, 2).join(' · ')}</p>)}
+                                      {variantSizes.length > 0 && (
+                                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">{variantSizes.join(' · ')}</p>
+                                      )}
+                                      {group.mergedConfirmedStores.length > 0 && (
+                                        <p className="text-[10px] text-muted-foreground mt-0.5">Available at {group.mergedConfirmedStores.slice(0, 3).join(' · ')}</p>
+                                      )}
+                                      {group.mergedInferredStores.length > 0 && (
+                                        <p className="text-[10px] text-muted-foreground/60 mt-0.5">Likely at {group.mergedInferredStores.slice(0, 3).join(' · ')}</p>
+                                      )}
+                                      {!group.mergedConfirmedStores.length && !group.mergedInferredStores.length && group.mergedStores.length > 0 && (
+                                        <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1"><Store className="h-3 w-3 flex-shrink-0" />{group.mergedStores.slice(0, 2).join(' · ')}</p>
+                                      )}
                                     </div>
                                     {product.upfAnalysis && (<div className="flex-shrink-0"><ScoreBadge score={product.upfAnalysis.thaRating} size={34}  /></div>)}
                                   </div>
@@ -1364,7 +1169,7 @@ export default function ProductsPage() {
                                 {product.ingredients_text ? (
                                   <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">{product.ingredients_text.split(',').map(i => i.trim()).filter(Boolean).slice(0, 6).join(', ')}{product.ingredients_text.split(',').length > 6 ? '…' : ''}</p>
                                 ) : (
-                                  <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600 dark:text-amber-400"><AlertTriangle className="h-2.5 w-2.5 mr-0.5" />Ingredient detail incomplete</Badge>
+                                  <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600 dark:text-amber-400"><AlertTriangle className="h-2.5 w-2.5 mr-0.5" />{product.ingredientsUnavailable ? 'Ingredient detail unavailable in English' : 'Ingredient detail incomplete'}</Badge>
                                 )}
                               </div>
                               <div className="px-4 pb-4 mt-auto flex gap-2">
@@ -1383,24 +1188,25 @@ export default function ProductsPage() {
                   </div>
                 ))}
               </div>
-            ) : filteredResults.length > 0 ? (
+            ) : canonicalGroups.length > 0 ? (
               /* ── Flat sorted grid ─────────────────────────────────────────── */
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <AnimatePresence mode="popLayout">
-                  {displayResults.map((product, index) => {
-                    const nova = product.nova_group || product.analysis?.novaGroup;
+                  {canonicalDisplayResults.map((group, index) => {
+                    const product = group.representative;
+                    const displayName = getDisplayName(product.product_name);
+                    const isSelected = group.variants.some(v => v.barcode === selectedProduct?.barcode);
+                    const variantSizes = group.variants.map(v => v.quantity || '').filter(Boolean).filter((v, i, arr) => arr.indexOf(v) === i);
                     return (
                       <motion.div
-                        key={product.barcode || index}
+                        key={group.key || index}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         layout
                       >
                         <Card
                           className={`overflow-visible h-full flex flex-col cursor-pointer transition-colors ${
-                            selectedProduct?.barcode === product.barcode
-                              ? 'ring-2 ring-primary'
-                              : ''
+                            isSelected ? 'ring-2 ring-primary' : ''
                           }`}
                           onClick={() => handleProductSelect(product)}
                           data-testid={`card-product-${product.barcode || index}`}
@@ -1410,7 +1216,7 @@ export default function ProductsPage() {
                               <div className="w-20 h-20 flex-shrink-0 rounded-md overflow-hidden bg-muted">
                                 <img
                                   src={product.image_url}
-                                  alt={product.product_name}
+                                  alt={displayName}
                                   className="w-full h-full object-contain"
                                   loading="lazy"
                                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
@@ -1426,19 +1232,34 @@ export default function ProductsPage() {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-start gap-1 flex-wrap">
                                     <h3 className="font-semibold text-sm leading-tight line-clamp-2" data-testid={`text-product-name-${product.barcode || index}`}>
-                                      {product.product_name}
+                                      {displayName}
                                     </h3>
                                     {product.isUK && (
                                       <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 flex-shrink-0 border-blue-400 text-blue-600 dark:text-blue-400">UK</Badge>
+                                    )}
+                                    {group.variants.length > 1 && (
+                                      <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 flex-shrink-0 border-muted-foreground/40 text-muted-foreground gap-0.5">
+                                        <Layers className="h-2.5 w-2.5" />
+                                        {group.variants.length}
+                                      </Badge>
                                     )}
                                   </div>
                                   {product.brand && (
                                     <p className="text-xs text-muted-foreground mt-0.5">{product.brand}</p>
                                   )}
-                                  {product.availableStores && product.availableStores.length > 0 && (
+                                  {variantSizes.length > 0 && (
+                                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">{variantSizes.join(' · ')}</p>
+                                  )}
+                                  {group.mergedConfirmedStores.length > 0 && (
+                                    <p className="text-[10px] text-muted-foreground mt-0.5">Available at {group.mergedConfirmedStores.slice(0, 3).join(' · ')}</p>
+                                  )}
+                                  {group.mergedInferredStores.length > 0 && (
+                                    <p className="text-[10px] text-muted-foreground/60 mt-0.5">Likely at {group.mergedInferredStores.slice(0, 3).join(' · ')}</p>
+                                  )}
+                                  {!group.mergedConfirmedStores.length && !group.mergedInferredStores.length && group.mergedStores.length > 0 && (
                                     <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
                                       <Store className="h-3 w-3 flex-shrink-0" />
-                                      {product.availableStores.slice(0, 2).join(' · ')}
+                                      {group.mergedStores.slice(0, 2).join(' · ')}
                                     </p>
                                   )}
                                 </div>
@@ -1503,7 +1324,7 @@ export default function ProductsPage() {
                             ) : (
                               <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600 dark:text-amber-400">
                                 <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
-                                Ingredient detail incomplete
+                                {product.ingredientsUnavailable ? 'Ingredient detail unavailable in English' : 'Ingredient detail incomplete'}
                               </Badge>
                             )}
                           </div>
@@ -1555,6 +1376,7 @@ export default function ProductsPage() {
                 onViewProduct={(p) => handleProductSelect(p as ProductResult)}
                 addToBasketPending={addToList.isPending}
                 linkToTemplatePending={linkToTemplate.isPending}
+                dietProfile={userProfile ?? null}
               />
             )}
           </DialogContent>
@@ -1662,15 +1484,19 @@ export default function ProductsPage() {
                     <span>{p.nutriments?.salt || 'N/A'}</span>
                   )} />
                   <CompareRow label="Retailer" products={compareProducts} render={(p) => (
-                    p.availableStores && p.availableStores.length > 0
-                      ? <span className="flex items-center justify-center gap-1"><Store className="h-3 w-3" />{p.availableStores.slice(0, 2).join(', ')}</span>
-                      : <span className="text-muted-foreground">Unknown</span>
+                    p.confirmedStores && p.confirmedStores.length > 0
+                      ? <span>Available at {p.confirmedStores.slice(0, 2).join(', ')}</span>
+                      : p.inferredStores && p.inferredStores.length > 0
+                        ? <span className="text-muted-foreground/70">Likely at {p.inferredStores.slice(0, 2).join(', ')}</span>
+                        : p.availableStores && p.availableStores.length > 0
+                          ? <span className="flex items-center justify-center gap-1"><Store className="h-3 w-3" />{p.availableStores.slice(0, 2).join(', ')}</span>
+                          : <span className="text-muted-foreground">Unknown</span>
                   )} />
                   <CompareRow label="Ingredients" products={compareProducts} render={(p) => {
                     if (!p.ingredients_text) return (
                       <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600">
                         <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
-                        Missing
+                        {p.ingredientsUnavailable ? 'Not in English' : 'Missing'}
                       </Badge>
                     );
                     const items = p.ingredients_text.split(',').map(i => i.trim()).filter(Boolean);
@@ -1709,7 +1535,7 @@ function CompareRow({ label, products, render, highlightBest }: {
   const bestIdx = highlightBest ? highlightBest(products) : -1;
   return (
     <tr className="border-b border-border/50">
-      <td className="p-3 font-medium text-muted-foreground text-xs uppercase tracking-wider">{label}</td>
+      <td className="p-3 text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">{label}</td>
       {products.map((p, i) => (
         <td key={i} className={`p-3 text-center ${i === bestIdx ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
           {render(p)}

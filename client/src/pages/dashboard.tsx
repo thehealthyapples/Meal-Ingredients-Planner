@@ -154,7 +154,7 @@ export default function Dashboard() {
           <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
             <div className="flex items-center gap-1.5 mb-0.5">
               <Leaf className="h-3.5 w-3.5" style={{ color: GREEN_DEEP }} />
-              <span className="text-[11px] font-semibold uppercase tracking-widest" style={{ color: GREEN_DEEP, opacity: 0.65 }}>
+              <span className="text-[10px] uppercase tracking-[0.12em]" style={{ color: GREEN_DEEP, opacity: 0.65 }}>
                 The Healthy Apples
               </span>
             </div>
@@ -192,7 +192,7 @@ export default function Dashboard() {
                   style={{ background: GREEN_PALE, borderColor: "hsl(132,18%,85%)" }}>
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: GREEN_MID }}>Cookbook</span>
+                      <span className="text-[10px] uppercase tracking-[0.12em]" style={{ color: GREEN_MID }}>Cookbook</span>
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: "hsl(132,18%,88%)" }}>
                         <Utensils className="h-4 w-4" style={{ color: GREEN_DEEP }} />
                       </div>
@@ -211,7 +211,7 @@ export default function Dashboard() {
                   style={{ background: BASKET_BG, borderColor: BASKET_BORDER }}>
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: BASKET_FG }}>Basket</span>
+                      <span className="text-[10px] uppercase tracking-[0.12em]" style={{ color: BASKET_FG }}>Basket</span>
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: BASKET_ICON_BG }}>
                         <ShoppingBasket className="h-4 w-4" style={{ color: BASKET_FG }} />
                       </div>
@@ -230,7 +230,7 @@ export default function Dashboard() {
                   style={{ background: SAGE, borderColor: "hsl(118,14%,84%)" }}>
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">This Week</span>
+                      <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">This Week</span>
                       <div className="w-8 h-8 rounded-lg bg-white/50 flex items-center justify-center">
                         <CalendarDays className="h-4 w-4 text-muted-foreground" />
                       </div>
@@ -258,7 +258,7 @@ export default function Dashboard() {
                   style={{ background: APPLE_BG, borderColor: APPLE_BORDER }}>
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: APPLE_FG }}>THA Score</span>
+                      <span className="text-[10px] uppercase tracking-[0.12em]" style={{ color: APPLE_FG }}>THA Score</span>
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: APPLE_ICON_BG }}>
                         <Apple className="h-4 w-4" style={{ color: APPLE_FG }} />
                       </div>

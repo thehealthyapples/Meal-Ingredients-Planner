@@ -9,7 +9,7 @@ export default function DemoOverviewPage() {
     <div className="p-6 max-w-4xl mx-auto space-y-10">
       {/* Hero */}
       <div className="text-center space-y-3 pt-4">
-        <h1 className="text-3xl font-bold tracking-tight" data-testid="demo-overview-title">
+        <h1 className="text-3xl font-semibold tracking-tight" data-testid="demo-overview-title">
           Welcome to The Healthy Apples
         </h1>
         <p className="text-muted-foreground max-w-xl mx-auto text-base leading-relaxed">

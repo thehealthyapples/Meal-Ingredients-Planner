@@ -523,7 +523,7 @@ export default function MealPlannerPage() {
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight" data-testid="text-planner-title">Meal Planner</h1>
+          <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-planner-title">Meal Planner</h1>
           <p className="text-sm text-muted-foreground mt-1">Plan your weekly meals and rotate recipes</p>
         </div>
 
@@ -660,7 +660,7 @@ export default function MealPlannerPage() {
           <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
             <Calendar className="h-10 w-10 text-muted-foreground" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">No meal plans yet</h3>
+          <h3 className="text-base font-medium mb-2">No meal plans yet</h3>
           <p className="text-muted-foreground mb-4">Create a weekly plan to start organizing your meals.</p>
         </div>
       ) : (
@@ -920,7 +920,7 @@ export default function MealPlannerPage() {
               transition={{ duration: 0.3 }}
             >
               <div className="mb-4 flex items-center gap-2 flex-wrap">
-                <h2 className="text-xl font-semibold tracking-tight">{selectedPlan.name}</h2>
+                <h2 className="text-base font-semibold tracking-tight">{selectedPlan.name}</h2>
                 <Badge variant="outline" className="text-xs">
                   {formatWeekLabel(selectedPlan.weekStart)}
                 </Badge>
@@ -939,7 +939,7 @@ export default function MealPlannerPage() {
 
                         return (
                           <div key={slot} className="space-y-1" data-testid={`slot-${dayIdx}-${slot}`}>
-                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">
                               {SLOT_LABELS[slot]}
                             </p>
                             {entry && meal ? (
@@ -1164,7 +1164,7 @@ export default function MealPlannerPage() {
 
               {suggestion.stats.sharedIngredients.length > 0 && (
                 <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
-                  <p className="text-xs font-semibold text-foreground mb-1.5">Common Ingredients:</p>
+                  <p className="text-xs font-medium text-foreground mb-1.5">Common Ingredients:</p>
                   <div className="flex flex-wrap gap-1">
                     {suggestion.stats.sharedIngredients.map((ing, i) => (
                       <Badge key={i} variant="outline" className="text-xs capitalize">
@@ -1181,10 +1181,10 @@ export default function MealPlannerPage() {
                   if (dayEntries.length === 0) return null;
                   return (
                     <div key={day} className="space-y-1">
-                      <p className="text-xs font-semibold text-center text-foreground">{day.slice(0, 3)}</p>
+                      <p className="text-xs font-medium text-center text-foreground">{day.slice(0, 3)}</p>
                       {dayEntries.map((entry, i) => (
                         <div key={i} className="p-1.5 rounded-md bg-muted/50 text-center">
-                          <p className="text-[10px] text-muted-foreground uppercase">{entry.slot}</p>
+                          <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">{entry.slot}</p>
                           <p className="text-xs font-medium truncate" title={entry.mealName}>{entry.mealName}</p>
                         </div>
                       ))}
@@ -1255,7 +1255,7 @@ export default function MealPlannerPage() {
 
               {Object.keys(smartResult.stats.proteinDistribution).length > 0 && (
                 <div className="p-3 rounded-md bg-muted/50">
-                  <p className="text-xs font-semibold text-foreground mb-1.5">Protein Distribution:</p>
+                  <p className="text-xs font-medium text-foreground mb-1.5">Protein Distribution:</p>
                   <div className="flex gap-2 flex-wrap">
                     {Object.entries(smartResult.stats.proteinDistribution).map(([protein, count]) => (
                       <Badge key={protein} variant="outline" className="text-xs capitalize">
@@ -1268,7 +1268,7 @@ export default function MealPlannerPage() {
 
               {smartResult.stats.sharedIngredients.length > 0 && (
                 <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
-                  <p className="text-xs font-semibold text-foreground mb-1.5">Shared Ingredients (buy in bulk):</p>
+                  <p className="text-xs font-medium text-foreground mb-1.5">Shared Ingredients (buy in bulk):</p>
                   <div className="flex flex-wrap gap-1">
                     {smartResult.stats.sharedIngredients.map((ing, i) => (
                       <Badge key={i} variant="outline" className="text-xs capitalize">
@@ -1285,7 +1285,7 @@ export default function MealPlannerPage() {
                   if (dayEntries.length === 0) return null;
                   return (
                     <div key={day} className="space-y-1.5">
-                      <p className="text-xs font-semibold text-center text-foreground">{day}</p>
+                      <p className="text-xs font-medium text-center text-foreground">{day}</p>
                       {dayEntries.map((entry, i) => {
                         const entryKey = `${dayIdx}-${entry.slot}`;
                         const isLocked = lockedEntries.has(entryKey);
@@ -1297,13 +1297,13 @@ export default function MealPlannerPage() {
                             }`}
                             data-testid={`smart-entry-${dayIdx}-${entry.slot}`}
                           >
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{entry.slot}</p>
+                            <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">{entry.slot}</p>
                             <p className="text-xs font-medium leading-snug" title={entry.candidate.name}>
                               {entry.candidate.name}
                             </p>
                             <div className="flex items-center justify-center gap-1 mt-0.5 flex-wrap">
                               {entry.candidate.isExternal && (
-                                <Badge variant="outline" className="text-[9px] px-1 py-0 leading-tight">
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 leading-tight">
                                   {entry.candidate.source || "web"}
                                 </Badge>
                               )}
@@ -1320,7 +1320,7 @@ export default function MealPlannerPage() {
                             )}
                             {entry.explanation && entry.explanation.reasons.length > 0 && (
                               <button
-                                className="mt-0.5 text-[9px] text-primary/70 flex items-center justify-center gap-0.5 w-full"
+                                className="mt-0.5 text-[10px] text-primary/70 flex items-center justify-center gap-0.5 w-full"
                                 onClick={() => setExpandedExplanation(expandedExplanation === entryKey ? null : entryKey)}
                                 data-testid={`button-why-${dayIdx}-${entry.slot}`}
                               >
@@ -1332,7 +1332,7 @@ export default function MealPlannerPage() {
                             {expandedExplanation === entryKey && entry.explanation && (
                               <div className="mt-1 text-left space-y-0.5 bg-background/80 rounded p-1 border border-border/50">
                                 {entry.explanation.reasons.map((reason, ri) => (
-                                  <p key={ri} className="text-[9px] text-muted-foreground leading-tight">
+                                  <p key={ri} className="text-[10px] text-muted-foreground leading-tight">
                                     {reason}
                                   </p>
                                 ))}

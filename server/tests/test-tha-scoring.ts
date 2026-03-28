@@ -6,14 +6,17 @@
  * a stable score. Any scoring-logic change that breaks a case must be
  * a deliberate, reviewed decision.
  *
- * Effective-count = DB-additive matches + soft-UPF-term hits + extract hits
+ * Scoring model — 3 buckets combined:
+ *   Bucket 1 (additive signals, cap 5): DB matches + SOFT_UPF_TERMS + extracts
+ *   Bucket 2 (industrial ingredients, cap 5): palm fat/oil, milk powders, etc.
+ *   Bucket 3 (UPF patterns, cap 3): sugar+glucose syrup, dairy fractions, etc.
  *
- * Scoring ladder:
- *   0 additives → 5 apples
- *   1 additive  → 4 apples
- *   2–3         → 3 apples
- *   4           → 2 apples
- *   5+          → 1 apple
+ * Total (0–13) → apple rating:
+ *   0   → 5 apples
+ *   1   → 4 apples
+ *   2–3 → 3 apples
+ *   4–5 → 2 apples
+ *   6+  → 1 apple
  *
  * Run with:  npm run test:scoring
  */
@@ -25,6 +28,8 @@ import {
   analyzeProductUPF,
   SOFT_UPF_TERMS,
   EXTRACT_PATTERN,
+  INDUSTRIAL_INGREDIENT_TERMS,
+  UPF_PATTERN_RULES,
 } from "../lib/upf-analysis-service.js";
 import type { Additive } from "../../shared/schema.js";
 
@@ -53,6 +58,12 @@ interface RegressionCase {
     exactScore?: number;
     /** Apple rating must be ≤ this value. */
     maxScore?: number;
+    /** Apple rating must be ≥ this value. */
+    minScore?: number;
+    /** Industrial ingredients that must be detected. */
+    mustDetectIndustrial?: string[];
+    /** UPF patterns that must fire. */
+    mustDetectPatterns?: string[];
   };
   note?: string;
 }
@@ -105,6 +116,63 @@ const CASES: RegressionCase[] = [
     ingredients: "Tomatoes",
     expect: { exactAdditives: 0, exactScore: 5 },
   },
+
+  // ── New cases: 3-bucket model ─────────────────────────────────────────────
+
+  {
+    id: 7,
+    label: "A — Chocolate-style confection — heavily industrial, should score 1–2",
+    ingredients:
+      "sugar, glucose syrup, wheat flour (17%), palm fat, cocoa butter, skimmed milk powder, " +
+      "cocoa mass, lactose, milk fat, whey powder (from milk), fat reduced cocoa, salt, " +
+      "emulsifier (soya lecithin), raising agent (e500), natural vanilla extract",
+    expect: {
+      maxScore: 2,
+      // glucose syrup is in SOFT_UPF_TERMS (Bucket 1), not INDUSTRIAL_INGREDIENT_TERMS (Bucket 2)
+      mustDetectIndustrial: ["palm fat", "skimmed milk powder", "lactose", "whey powder"],
+      mustDetectPatterns: ["sugar + glucose syrup", "sugar + palm fat/oil", "multiple dairy fractions"],
+    },
+    note:
+      "Bucket 1 (additive signals): glucose syrup (soft term) + E500 (DB). " +
+      "Bucket 2 (industrial): palm fat, skimmed milk powder, lactose, whey powder = 4pts. " +
+      "Bucket 3 (patterns): sugar+glucose, sugar+palm, dairy fractions = 3pts (capped). " +
+      "Total ≥ 8 → 1 apple.",
+  },
+  {
+    id: 8,
+    label: "B — Single-ingredient whole foods — should score 5",
+    ingredients: "rolled oats",
+    expect: { exactScore: 5 },
+    note: "No additives, no industrial ingredients, no UPF patterns.",
+  },
+  {
+    id: 9,
+    label: "B — Peanuts — should score 5",
+    ingredients: "peanuts",
+    expect: { exactScore: 5 },
+  },
+  {
+    id: 10,
+    label: "B — Milk — should score 5",
+    ingredients: "milk",
+    expect: { exactScore: 5 },
+  },
+  {
+    id: 11,
+    label: "C — Tomatoes + water + salt + citric acid — middling, not catastrophically bad",
+    ingredients: "tomatoes, water, salt, citric acid",
+    expect: { minScore: 3 },
+    note: "Citric acid (E330) = 1 additive → 4 apples. Should not score below 3.",
+  },
+  {
+    id: 12,
+    label: "D — Chicken + water + dextrose + modified starch + flavouring — worse than plain",
+    ingredients: "chicken breast, water, dextrose, modified starch, flavouring",
+    expect: { maxScore: 4, minScore: 2 },
+    note:
+      "Soft terms: dextrose, modified starch, flavour → additive bucket = 3 → 3 apples. " +
+      "Should score worse than plain chicken (5 apples) but not catastrophically.",
+  },
 ];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -155,6 +223,8 @@ async function run() {
     const effectiveCount =
       result.additiveMatches.length + softMatches.length + extractMatches.length;
 
+    const breakdown = result.thaBreakdown;
+
     // ── Print findings ──────────────────────────────────────────────────────
     if (result.additiveMatches.length > 0) {
       console.log(
@@ -172,8 +242,14 @@ async function run() {
     if (extractMatches.length > 0) {
       console.log(`  Extracts     (${extractMatches.length}): ${extractMatches.join(", ")}`);
     }
+    if (breakdown.industrialIngredientsFound.length > 0) {
+      console.log(`  Industrial   (${breakdown.industrialIngredientsFound.length}): ${breakdown.industrialIngredientsFound.join(", ")}`);
+    }
+    if (breakdown.upfPatternsFound.length > 0) {
+      console.log(`  Patterns     (${breakdown.upfPatternsFound.length}): ${breakdown.upfPatternsFound.join(", ")}`);
+    }
     console.log(
-      `  Effective count: ${effectiveCount}  →  THA rating: ${result.thaRating}/5`,
+      `  Effective count: ${effectiveCount}  |  Total penalty: ${breakdown.totalProcessingPenalty}  →  THA rating: ${result.thaRating}/5`,
     );
 
     // ── Assertions ──────────────────────────────────────────────────────────
@@ -219,6 +295,24 @@ async function run() {
         )
       )
         casePassed = false;
+    }
+    if (tc.expect.minScore !== undefined) {
+      if (
+        !check(
+          `Apple rating ≥ ${tc.expect.minScore}`,
+          result.thaRating >= tc.expect.minScore,
+          `got ${result.thaRating}`,
+        )
+      )
+        casePassed = false;
+    }
+    for (const term of (tc.expect.mustDetectIndustrial ?? [])) {
+      const found = breakdown.industrialIngredientsFound.includes(term);
+      if (!check(`Industrial detected: "${term}"`, found)) casePassed = false;
+    }
+    for (const pattern of (tc.expect.mustDetectPatterns ?? [])) {
+      const found = breakdown.upfPatternsFound.includes(pattern);
+      if (!check(`Pattern detected: "${pattern}"`, found)) casePassed = false;
     }
 
     console.log(`  → ${casePassed ? `${PASS} PASS` : `${FAIL} FAIL`}`);

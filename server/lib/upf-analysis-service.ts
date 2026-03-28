@@ -1,7 +1,8 @@
 import { Additive } from "@shared/schema";
 import { ParsedIngredient, parseProductIngredients } from "./product-analysis";
 
-const E_NUMBER_PATTERN = /\bE\d{3,4}[a-z]?\b/gi;
+// Allow optional single space between E and the digits, e.g. "E 500" or "E500".
+const E_NUMBER_PATTERN = /\bE\s?\d{3,4}[a-z]?\b/gi;
 
 const ADDITIVE_TYPE_RISK: Record<string, number> = {
   colouring: 3,
@@ -54,6 +55,8 @@ export interface UPFAnalysisResult {
     processingRisk: number;
     ingredientComplexityRisk: number;
   };
+  /** Transparent breakdown of the 3-bucket THA processing score. */
+  thaBreakdown: ProcessingBreakdown;
 }
 
 // Extract detection pattern — module-scope so tests can import it directly.
@@ -65,7 +68,7 @@ export interface UPFAnalysisResult {
 // Global flag is required for counted matching via String.prototype.match().
 export const EXTRACT_PATTERN = /\b(?:herb|spice|plant|botanical|mixed|vegetable|fruit|natural|rosemary|thyme|oregano|basil|sage|bay|parsley|coriander|fennel|tarragon|mint|marjoram|lavender|chamomile|turmeric|ginger|paprika|celery|elderflower|elderberry|hibiscus|lemon|orange|lime|garlic|onion|pepper|chilli|chili)\s+extracts?\b/gi;
 
-// Soft UPF terms counted as additives even without an E-number.
+// Soft UPF terms counted as additive signals even without an E-number.
 // Roots only — "flavour" matches "flavouring", "smoke flavour", "flavourings", etc.
 // Exported so tests can import the single source of truth instead of duplicating.
 export const SOFT_UPF_TERMS = [
@@ -80,14 +83,106 @@ export const SOFT_UPF_TERMS = [
   "invert sugar",
 ];
 
+// Additive function-word declarations — for explanation display.
+// Covers the full vocabulary of additive roles that may appear in ingredient lists.
+export const HARD_ADDITIVE_TERMS = [
+  "emulsifier", "emulsifiers",
+  "preservative", "preservatives",
+  "antioxidant",
+  "acidity regulator",
+  "sweetener", "sweeteners",
+  "flavouring", "flavourings", "flavoring", "flavorings",
+  "colouring", "colourings", "coloring", "colorings",
+  "stabiliser", "stabilisers", "stabilizer", "stabilizers",
+  "thickener", "thickeners",
+  "gelling agent",
+  "raising agent",
+  "anti-caking agent",
+  "humectant",
+  "glazing agent",
+  "flavour enhancer",
+];
+
+// Industrial/refined ingredients that indicate ultra-processing.
+// Intentionally excludes terms already in SOFT_UPF_TERMS (dextrose, maltodextrin,
+// glucose syrup, modified starch, hydrolysed, invert sugar) to prevent double-counting.
+export const INDUSTRIAL_INGREDIENT_TERMS = [
+  "glucose-fructose syrup",
+  "fructose syrup",
+  "palm fat",
+  "palm oil",
+  "hydrogenated",           // covers "partially hydrogenated" too
+  "skimmed milk powder",
+  "whey powder",
+  "whey protein",
+  "milk proteins",
+  "milk solids",
+  "lactose",
+  "soy protein isolate",
+  "whey protein isolate",
+  "protein isolate",
+  "mechanically separated",
+];
+
+// UPF pattern rules — identify ingredient combinations typical of confectionery,
+// industrial baked goods, and heavily formulated products.
+// Each rule fires at most once; total capped at 3 in the scoring function.
+export const UPF_PATTERN_RULES: Array<{
+  id: string;
+  label: string;
+  test: (text: string) => boolean;
+}> = [
+  {
+    id: "sugar_glucose_syrup",
+    label: "sugar + glucose syrup",
+    test: (t) => t.includes("sugar") && t.includes("glucose syrup"),
+  },
+  {
+    id: "sugar_palm",
+    label: "sugar + palm fat/oil",
+    test: (t) => t.includes("sugar") && (t.includes("palm fat") || t.includes("palm oil")),
+  },
+  {
+    id: "sugar_milk_powder",
+    label: "sugar + milk powder/whey",
+    test: (t) =>
+      t.includes("sugar") &&
+      (t.includes("skimmed milk powder") || t.includes("whey powder")),
+  },
+  {
+    id: "sugar_emulsifier_flavour",
+    label: "sugar + emulsifier/flavouring",
+    test: (t) =>
+      t.includes("sugar") &&
+      (t.includes("emulsifier") || t.includes("flavour") || t.includes("flavor")),
+  },
+  {
+    id: "dairy_fractions",
+    label: "multiple dairy fractions",
+    test: (t) => {
+      const fractions = [
+        "skimmed milk powder", "whey powder", "lactose",
+        "milk proteins", "milk solids", "whey protein",
+      ];
+      return fractions.filter(f => t.includes(f)).length >= 2;
+    },
+  },
+];
+
 // Pattern that identifies a fortified-flour context surrounding a match.
 // When E170 (Calcium Carbonate) appears inside "fortified wheat flour (…)"
 // we flag it as regulatory rather than discretionary.
 const FORTIFIED_FLOUR_PATTERN = /fortif(?:ied|ication)/i;
 
+// Normalise text before matching: collapse soya→soy so DB entries in either
+// spelling match ingredient labels in either spelling.
+function normaliseForMatching(raw: string): string {
+  return raw.toLowerCase().replace(/\bsoya\b/g, "soy");
+}
+
 export function detectAdditives(ingredientsText: string, additiveDb: Additive[]): AdditiveMatch[] {
   if (!ingredientsText) return [];
-  const text = ingredientsText.toLowerCase();
+  const text = normaliseForMatching(ingredientsText);
   const isFortifiedFlourContext = FORTIFIED_FLOUR_PATTERN.test(ingredientsText);
   const matches: AdditiveMatch[] = [];
   const seen = new Set<number>();
@@ -105,7 +200,8 @@ export function detectAdditives(ingredientsText: string, additiveDb: Additive[])
   // Pass 1: E-number matches — highest priority, always win.
   const eNumbers = text.match(E_NUMBER_PATTERN) || [];
   for (const eNum of eNumbers) {
-    const normalized = eNum.toUpperCase();
+    // Strip any internal space (e.g. "E 500" → "E500") before DB lookup.
+    const normalized = eNum.replace(/\s/g, "").toUpperCase();
     const additive = additiveDb.find(a => a.name.toUpperCase() === normalized);
     if (additive && !seen.has(additive.id)) {
       seen.add(additive.id);
@@ -152,9 +248,9 @@ export function detectAdditives(ingredientsText: string, additiveDb: Additive[])
   const candidates = additiveDb
     .filter(a => !seen.has(a.id))
     .map(a => {
-      const commonName = (a.description?.toLowerCase().split(" - ")[0] ?? "")
-        .replace(/\(.*?\)/g, "")
-        .trim();
+      const commonName = normaliseForMatching(
+        (a.description?.split(" - ")[0] ?? "").replace(/\(.*?\)/g, "").trim()
+      );
       return { additive: a, commonName };
     })
     .filter(({ commonName }) => commonName.length > 3)
@@ -233,20 +329,73 @@ export function calculateUPFScore(
   return Math.min(100, Math.max(0, score));
 }
 
+export interface ProcessingBreakdown {
+  additiveTermsFound: string[];
+  industrialIngredientsFound: string[];
+  upfPatternsFound: string[];
+  totalProcessingPenalty: number;
+}
+
 /**
- * Apple rating — pure additive-count model.
+ * Returns a transparent breakdown of processing signals found in an ingredient list.
+ * Used internally by calculateTHAAppleRating and externally by buildTHAExplanation.
+ */
+export function buildProcessingBreakdown(
+  additiveMatches: AdditiveMatch[],
+  ingredientsText: string,
+): ProcessingBreakdown {
+  const text = (ingredientsText ?? "").toLowerCase();
+
+  // Bucket 1: additive signals — DB matches + soft terms + extract phrases
+  EXTRACT_PATTERN.lastIndex = 0;
+  const extractHits = (text.match(EXTRACT_PATTERN) ?? []) as string[];
+  const softHits = SOFT_UPF_TERMS.filter(term => text.includes(term));
+  const additivePenalty = Math.min(5, additiveMatches.length + softHits.length + extractHits.length);
+
+  // Bucket 2: industrial ingredients (no overlap with SOFT_UPF_TERMS)
+  const industrialIngredientsFound = INDUSTRIAL_INGREDIENT_TERMS.filter(term => text.includes(term));
+  const industrialPenalty = Math.min(5, industrialIngredientsFound.length);
+
+  // Bucket 3: UPF pattern signals — ingredient combinations typical of ultra-processing
+  const upfPatternsFound = UPF_PATTERN_RULES
+    .filter(rule => rule.test(text))
+    .map(rule => rule.label);
+  const patternPenalty = Math.min(3, upfPatternsFound.length);
+
+  return {
+    additiveTermsFound: [
+      ...additiveMatches.map(m => m.foundIn),
+      ...softHits,
+      ...extractHits,
+    ],
+    industrialIngredientsFound,
+    upfPatternsFound,
+    totalProcessingPenalty: additivePenalty + industrialPenalty + patternPenalty,
+  };
+}
+
+/**
+ * Apple rating — 3-bucket processing model.
  *
- * "Additives" = E-number matches from the DB  +  soft UPF terms
- * (yeast extract, natural flavouring, maltodextrin, dextrose, glucose syrup,
- * hydrolysed, modified starch, invert sugar).
+ * Bucket 1 – Additive signals (capped at 5 pts):
+ *   DB additive matches + soft UPF terms (SOFT_UPF_TERMS) + extract phrases
  *
- * NOVA does NOT influence this score.
+ * Bucket 2 – Industrial ingredients (capped at 5 pts):
+ *   Refined/fractionated industrial ingredients not already in SOFT_UPF_TERMS
+ *   e.g. palm fat/oil, skimmed milk powder, whey powder, lactose, hydrogenated fats
  *
- * 5 apples = 0 additives
- * 4 apples = 1 additive
- * 3 apples = 2–3 additives
- * 2 apples = 4 additives
- * 1 apple  = 5+ additives
+ * Bucket 3 – UPF pattern signals (capped at 3 pts):
+ *   Ingredient combinations typical of confectionery / industrial baked goods
+ *   e.g. sugar + glucose syrup, multiple dairy fractions, sugar + palm fat
+ *
+ * Total (0–13) → rating:
+ *   0   = 5 apples  (minimal industrial processing)
+ *   1   = 4 apples  (mild concern)
+ *   2–3 = 3 apples  (moderate industrial processing)
+ *   4–5 = 2 apples  (clearly ultra-processed)
+ *   6+  = 1 apple   (highly formulated / heavily industrial)
+ *
+ * NOVA is not a factor. Score is deterministic and ingredient-text-driven.
  */
 export function calculateTHAAppleRating(
   additiveCount: number,
@@ -256,19 +405,30 @@ export function calculateTHAAppleRating(
 ): number {
   const text = (ingredientsText ?? "").toLowerCase();
 
-  // EXTRACT_PATTERN is module-level (exported). Reset lastIndex before use
-  // because the global flag makes the RegExp object stateful.
+  // Bucket 1 — additive signals (same effective-count as the legacy model)
   EXTRACT_PATTERN.lastIndex = 0;
-  const extractHit = (text.match(EXTRACT_PATTERN) ?? []).length;
-
+  const extractHits = (text.match(EXTRACT_PATTERN) ?? []).length;
   const softCount = SOFT_UPF_TERMS.filter(term => text.includes(term)).length;
-  const effectiveCount = additiveCount + softCount + extractHit;
+  const additivePenalty = Math.min(5, additiveCount + softCount + extractHits);
 
-  // Pure 5→1 mapping — NOVA is not a factor
-  if (effectiveCount === 0) return 5;
-  if (effectiveCount === 1) return 4;
-  if (effectiveCount <= 3) return 3;
-  if (effectiveCount === 4) return 2;
+  // Bucket 2 — industrial ingredients
+  const industrialPenalty = Math.min(
+    5,
+    INDUSTRIAL_INGREDIENT_TERMS.filter(term => text.includes(term)).length,
+  );
+
+  // Bucket 3 — UPF pattern signals
+  const patternPenalty = Math.min(
+    3,
+    UPF_PATTERN_RULES.filter(rule => rule.test(text)).length,
+  );
+
+  const total = additivePenalty + industrialPenalty + patternPenalty;
+
+  if (total === 0) return 5;
+  if (total === 1) return 4;
+  if (total <= 3) return 3;
+  if (total <= 5) return 2;
   return 1;
 }
 
@@ -281,25 +441,41 @@ export interface ProductContext {
 // Converts a UPFAnalysisResult into a concise, plain-English phrase for display in THA.
 // Intended as a single-line summary shown next to a product card.
 export function buildTHAExplanation(result: UPFAnalysisResult, novaGroup?: number | null): string {
-  const nova = novaGroup ?? (result.upfScore >= 50 ? 4 : result.upfScore >= 25 ? 3 : result.upfScore >= 10 ? 2 : 1);
-  const addCount = result.additiveMatches.length;
-  const highRiskCount = result.additiveMatches.filter(m => m.additive.riskLevel === "high").length;
+  const breakdown = result.thaBreakdown;
+  const total = breakdown.totalProcessingPenalty;
   const parts: string[] = [];
 
-  if (nova === 4) {
-    parts.push("Ultra-processed (NOVA 4)");
-  } else if (nova === 3) {
-    parts.push("Moderately processed (NOVA 3)");
-  } else if (nova <= 2 && addCount === 0 && result.processingIndicators.length === 0) {
-    return "Low processing — minimal additives detected";
+  // Clean product — nothing to flag
+  if (total === 0) {
+    return "Low processing — minimal industrial ingredients detected";
   }
 
+  // UPF pattern detected — lead with the strongest signal
+  if (breakdown.upfPatternsFound.length > 0) {
+    const topPattern = breakdown.upfPatternsFound[0];
+    const industrialHighlights = breakdown.industrialIngredientsFound.slice(0, 3).join(", ");
+    if (industrialHighlights) {
+      parts.push(`Ultra-processed pattern detected · ${industrialHighlights}`);
+    } else {
+      parts.push(`Ultra-processed pattern detected · ${topPattern}`);
+    }
+  } else if (breakdown.industrialIngredientsFound.length > 0) {
+    // Industrial ingredients without a strong pattern
+    if (breakdown.industrialIngredientsFound.length >= 3) {
+      parts.push(`Multiple industrial ingredients detected · ${breakdown.industrialIngredientsFound.slice(0, 3).join(", ")}`);
+    } else {
+      parts.push(`Industrial ingredients detected · ${breakdown.industrialIngredientsFound.join(", ")}`);
+    }
+  }
+
+  // Additive signals
+  const addCount = result.additiveMatches.length;
   const regulatoryCount = result.additiveMatches.filter(m => m.isRegulatory).length;
   const discretionaryCount = addCount - regulatoryCount;
+  const highRiskCount = result.additiveMatches.filter(m => m.additive.riskLevel === "high").length;
 
-  if (addCount === 0 && result.processingIndicators.length === 0) {
-    parts.push("no additives detected");
-  } else {
+  if (parts.length === 0) {
+    // No industrial/pattern signals — additive-only explanation
     if (discretionaryCount > 0) {
       const topTypes = Array.from(
         new Set(
@@ -310,19 +486,22 @@ export function buildTHAExplanation(result: UPFAnalysisResult, novaGroup?: numbe
         ),
       ).join(", ");
       parts.push(`${discretionaryCount} additive${discretionaryCount !== 1 ? "s" : ""} (${topTypes})`);
+    } else if (regulatoryCount > 0) {
+      parts.push(`${regulatoryCount} regulatory additive${regulatoryCount !== 1 ? "s" : ""} (required by law)`);
+    } else {
+      // Soft-term only (flavourings, yeast extract etc.)
+      parts.push("Processing indicators detected");
     }
-    if (regulatoryCount > 0) {
-      parts.push(`${regulatoryCount} regulatory`);
-    }
+  } else {
+    // Append additive detail if meaningful
     if (highRiskCount > 0) {
-      parts.push(`${highRiskCount} high-risk`);
-    }
-    if (result.processingIndicators.length > 0) {
-      parts.push(result.processingIndicators.slice(0, 2).map(s => s.toLowerCase()).join(", "));
+      parts.push(`${highRiskCount} high-concern additive${highRiskCount !== 1 ? "s" : ""}`);
+    } else if (discretionaryCount > 0) {
+      parts.push(`${discretionaryCount} additive${discretionaryCount !== 1 ? "s" : ""}`);
     }
   }
 
-  return parts.length > 0 ? parts.join(" · ") : "Processing level unknown";
+  return parts.join(" · ");
 }
 
 export function analyzeProductUPF(
@@ -345,6 +524,27 @@ export function analyzeProductUPF(
   const novaGroup = productContext?.novaGroup ?? (upfScore >= 50 ? 4 : upfScore >= 25 ? 3 : upfScore >= 10 ? 2 : 1);
 
   const regulatoryAdditives = additiveMatches.filter(m => m.isRegulatory);
+  const thaBreakdown = buildProcessingBreakdown(additiveMatches, ingredientsText);
+
+  // DEBUG — remove after investigation
+  if (process.env.THA_SCORE_DEBUG === "1") {
+    const softHits = SOFT_UPF_TERMS.filter(t => ingredientsText.toLowerCase().includes(t));
+    EXTRACT_PATTERN.lastIndex = 0;
+    const extractHits = ingredientsText.toLowerCase().match(EXTRACT_PATTERN) ?? [];
+    console.log("[THA-DEBUG] ──────────────────────────────────────");
+    console.log("[THA-DEBUG] input text    :", ingredientsText);
+    console.log("[THA-DEBUG] DB matches    :", additiveMatches.map(m => `${m.additive.name}[${m.foundIn}]`).join(", ") || "none");
+    console.log("[THA-DEBUG] soft hits     :", softHits.join(", ") || "none");
+    console.log("[THA-DEBUG] extract hits  :", extractHits.join(", ") || "none");
+    console.log("[THA-DEBUG] industrial    :", thaBreakdown.industrialIngredientsFound.join(", ") || "none");
+    console.log("[THA-DEBUG] patterns      :", thaBreakdown.upfPatternsFound.join(", ") || "none");
+    console.log("[THA-DEBUG] total penalty :", thaBreakdown.totalProcessingPenalty);
+    console.log("[THA-DEBUG] thaRating     : will be", (() => {
+      const t = thaBreakdown.totalProcessingPenalty;
+      return t === 0 ? 5 : t === 1 ? 4 : t <= 3 ? 3 : t <= 5 ? 2 : 1;
+    })());
+    console.log("[THA-DEBUG] ──────────────────────────────────────");
+  }
 
   return {
     upfScore,
@@ -361,5 +561,6 @@ export function analyzeProductUPF(
       processingRisk: Math.min(30, processingIndicators.length * 6),
       ingredientComplexityRisk: ingredients.length > 20 ? 10 : ingredients.length > 15 ? 7 : ingredients.length > 10 ? 5 : 0,
     },
+    thaBreakdown,
   };
 }

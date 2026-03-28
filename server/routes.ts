@@ -24,10 +24,65 @@ import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreeze
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
 import { sanitizeUser } from "./lib/sanitizeUser";
 import { isAdmin, hasPremiumAccess, assertAdmin } from "./lib/access";
+import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/retailIntelligence";
+import { getCanonicalProduct } from "./lib/productCanonicaliser";
 import { getHouseholdForUser } from "./lib/household";
 import multer from "multer";
 import { extractTextFromImage, OcrError } from "./services/ocr";
 import { parseScannedText } from "./services/recipeParser";
+
+// ---------------------------------------------------------------------------
+// Ingredient language helpers (module-scope so all product pipelines can use them)
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true if the raw ingredient text appears to be in a language other
+ * than English. Uses non-ASCII character density and known German/French lexical
+ * markers. False-positive rate is low; false-negatives (undetected languages)
+ * are caught by the stricter hasEnglishIngredients rule.
+ */
+function isLikelyNonEnglishIngredients(text: string): boolean {
+  if (!text || text.length < 15) return false;
+
+  // Non-ASCII chars typical of German/French/Spanish/Italian — rare in English ingredient lists
+  const nonAsciiCount = (text.match(/[àáâäæãåçćèéêëîïíìłńñôöòóœøśšûüùúÿžżÄÖÜß]/g) || []).length;
+  if (nonAsciiCount >= 2) return true;
+
+  const t = text.toLowerCase();
+
+  // German-specific ingredient terms
+  const germanTerms = [
+    'zucker', 'emulgator', 'weizenmehl', 'magermilch', 'vollmilch',
+    'kakaobutter', 'glukosesirup', 'molkenpulver', 'pflanzenfett',
+    'maisstärke', 'wasser', 'salz',
+  ];
+  if (germanTerms.filter(m => t.includes(m)).length >= 2) return true;
+
+  // French-specific ingredient terms
+  const frenchTerms = [
+    'viande', 'lait ', 'fromage', 'semoule', 'pâtes', '(contient',
+    'huile de', 'farine de', 'beurre', 'crème', 'blé dur',
+    'eau potable', 'tomates pelées', 'sucre blanc',
+  ];
+  if (frenchTerms.filter(m => t.includes(m)).length >= 2) return true;
+
+  return false;
+}
+
+/**
+ * Returns true only when a product has usable English ingredient text.
+ * This is the single gate for all user-facing product pipelines:
+ *   - ingredients_text_en exists and non-empty → eligible
+ *   - ingredients_text exists, long enough, and not detected as non-English → eligible
+ *   - no ingredient text, or text is non-English only → ineligible
+ */
+function hasEnglishIngredients(p: any): boolean {
+  if (p.ingredients_text_en && p.ingredients_text_en.trim().length > 0) return true;
+  if (!p.ingredients_text || p.ingredients_text.trim().length < 15) return false;
+  return !isLikelyNonEnglishIngredients(p.ingredients_text);
+}
+
+// ---------------------------------------------------------------------------
 
 function ingredientMatchesMeal(consolidatedName: string, mealIngredients: string[]): boolean {
   const target = consolidatedName.toLowerCase().trim();
@@ -1105,6 +1160,12 @@ export async function registerRoutes(
       const q = (req.query.q as string || '').trim();
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
       const perPage = 12;
+      // Fetch more records than we display so that retailer-specific barcodes
+      // (which are separate OFF entries for the same physical product) are
+      // included in the deduplication/merge step even if they rank lower.
+      // 4x: canonical grouping can collapse many naming/size variants into 1-2
+      // results — we need enough raw records to cover all the naming variants.
+      const offFetchSize = perPage * 4; // 48
 
       if (!q) {
         return res.json({ products: [], hasMore: false });
@@ -1117,7 +1178,7 @@ export async function registerRoutes(
         search_terms: q,
         json: '1',
         page: String(page),
-        page_size: String(perPage + 1),
+        page_size: String(offFetchSize + 1),
         tagtype_0: 'countries',
         tag_contains_0: 'contains',
         tag_0: 'united-kingdom',
@@ -1128,7 +1189,7 @@ export async function registerRoutes(
         search_terms: q,
         json: '1',
         page: String(page),
-        page_size: String(perPage + 1),
+        page_size: String(offFetchSize + 1),
         fields: offFields,
       });
 
@@ -1150,26 +1211,14 @@ export async function registerRoutes(
         'ireland', 'en:ireland', 'new-zealand', 'en:new-zealand',
       ]);
 
-      // Detect non-English (primarily French) ingredient text via lexical markers
-      const isLikelyFrenchText = (text: string): boolean => {
-        if (!text || text.length < 20) return false;
-        const t = text.toLowerCase();
-        const markers = [
-          'viande', 'lait ', 'fromage', 'semoule', 'pâtes', '(contient',
-          'huile de', 'farine de', 'beurre', 'crème', 'blé dur',
-          'eau potable', 'tomates pelées', 'sucre blanc',
-        ];
-        return markers.filter(m => t.includes(m)).length >= 2;
-      };
-
       const isEnglishProduct = (p: any, isUK: boolean): boolean => {
         const langTags: string[] = p.languages_tags || [];
         // Explicitly tagged as English → always include
         if (langTags.some((t: string) => t.toLowerCase() === 'en:english')) return true;
-        // UK product: keep unless the only available ingredient text is clearly French
+        // UK product: keep unless the only available ingredient text is clearly non-English
         if (isUK) {
           if (p.ingredients_text_en) return true; // English field exists
-          if (p.ingredients_text && isLikelyFrenchText(p.ingredients_text)) return false;
+          if (p.ingredients_text && isLikelyNonEnglishIngredients(p.ingredients_text)) return false;
           return true;
         }
         // Global products: must be from an English-speaking country
@@ -1180,19 +1229,62 @@ export async function registerRoutes(
 
       const ukCodes = new Set(ukProducts.map((p: any) => p.code || p.product_name).filter(Boolean));
 
+      // DEBUG: trace store data for key products
+      const _debugNairns = q.toLowerCase().includes('nairn');
+      const _qLower = q.toLowerCase();
+      const _debugCoke = _qLower.includes('cherry') || _qLower.includes('coke') || _qLower.includes('coca');
+      const _debugBenJerry = _qLower.includes('ben') && _qLower.includes('jerr');
+
+      if (_debugNairns) {
+        console.log(`[DEBUG-NAIRNS] Query: "${q}" | UK results: ${ukProducts.length} | Global results: ${globalProducts.length}`);
+        for (const p of [...ukProducts, ...globalProducts]) {
+          const isUK = ukCodes.has(p.code || p.product_name);
+          console.log(`[DEBUG-NAIRNS] RAW | barcode:${p.code} | name:"${p.product_name}" | brand:"${p.brands}" | qty:"${p.quantity}" | isUK:${isUK} | stores_tags:${JSON.stringify(p.stores_tags)} | purchase_places_tags:${JSON.stringify(p.purchase_places_tags)} | stores:"${p.stores}"`);
+        }
+      }
+      if (_debugCoke) {
+        console.log(`[DEBUG-COKE] Query: "${q}" | UK results: ${ukProducts.length} | Global results: ${globalProducts.length}`);
+        for (const p of [...ukProducts, ...globalProducts]) {
+          const isUK = ukCodes.has(p.code || p.product_name);
+          console.log(`[DEBUG-COKE] RAW | barcode:${p.code} | name:"${p.product_name}" | brand:"${p.brands}" | qty:"${p.quantity}" | isUK:${isUK} | countries_tags:${JSON.stringify(p.countries_tags)} | languages_tags:${JSON.stringify(p.languages_tags)} | stores_tags:${JSON.stringify(p.stores_tags)} | purchase_places_tags:${JSON.stringify(p.purchase_places_tags)} | stores:"${p.stores}"`);
+        }
+      }
+
       const seen = new Set<string>();
       const merged: any[] = [];
       for (const p of [...ukProducts, ...globalProducts]) {
         const key = p.code || p.product_name;
         if (!key || seen.has(key)) continue;
         const isUK = ukCodes.has(key);
-        if (!isEnglishProduct(p, isUK)) continue;
+        // Primary gate: product must have usable English ingredient text.
+        // Products with foreign-only or missing ingredients are excluded entirely —
+        // they must not appear in results, affect rankings, or influence grouping.
+        if (!hasEnglishIngredients(p)) {
+          console.log(`[LANG-FILTER] Excluded (no English ingredients): barcode:${p.code} | name:"${p.product_name}"`);
+          continue;
+        }
+        // Secondary gate: product must be from an English-speaking country or
+        // carry an English language tag (reduces noise from off-market products).
+        if (!isEnglishProduct(p, isUK)) {
+          if (_debugNairns && (p.product_name || '').toLowerCase().includes('nairn')) {
+            console.log(`[DEBUG-NAIRNS] FILTERED OUT (non-English country): barcode:${p.code} | name:"${p.product_name}"`);
+          }
+          if (_debugCoke) {
+            const pn = (p.product_name || '').toLowerCase();
+            if (pn.includes('cherry') || pn.includes('coke') || pn.includes('coca')) {
+              console.log(`[DEBUG-COKE] FILTERED OUT (non-English country): barcode:${p.code} | name:"${p.product_name}" | languages:${JSON.stringify(p.languages_tags)}`);
+            }
+          }
+          continue;
+        }
         seen.add(key);
         merged.push(p);
       }
 
-      const hasMore = merged.length > perPage;
-      const products = hasMore ? merged.slice(0, perPage) : merged;
+      // Don't slice here — pass all fetched records through enrichment and
+      // canonical grouping so retailer duplicates (different barcodes for the
+      // same product) can be merged before we apply the user-facing page limit.
+      const products = merged;
 
       const additiveDb = await storage.getAllAdditives();
 
@@ -1209,7 +1301,18 @@ export async function registerRoutes(
             salt: n.salt_100g != null ? `${Math.round(n.salt_100g * 10) / 10}g` : null,
           };
 
-          const ingredientsText = p.ingredients_text_en || p.ingredients_text || '';
+          // Prefer the dedicated English field; fall back to the generic field only
+          // when it is actually English.  Non-English text (German, French, etc.)
+          // is passed to the scoring function so E-number detection still works,
+          // but is never sent to the client for display.
+          const ingredientsTextRaw = p.ingredients_text_en || p.ingredients_text || '';
+          const ingredientsTextForeign =
+            !p.ingredients_text_en &&
+            isLikelyNonEnglishIngredients(p.ingredients_text || '');
+          // Full text used for scoring (E-numbers are language-agnostic)
+          const ingredientsText = ingredientsTextRaw;
+          // Display text — null when foreign so UI shows a fallback
+          const ingredientsTextDisplay = ingredientsTextForeign ? null : (ingredientsTextRaw || null);
           const categoriesTags = p.categories_tags || [];
           const novaGroup = p.nova_group || null;
           const productNameDisplay = p.product_name_en || p.product_name;
@@ -1230,20 +1333,27 @@ export async function registerRoutes(
             ...(p.purchase_places_tags || []),
             ...((p.stores || '').split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean)),
           ];
-          const searchStoreMapping: Record<string, string> = {
-            'tesco': 'Tesco', 'en:tesco': 'Tesco',
-            "sainsbury's": "Sainsbury's", "en:sainsbury-s": "Sainsbury's", "sainsburys": "Sainsbury's",
-            'asda': 'Asda', 'en:asda': 'Asda',
-            'morrisons': 'Morrisons', 'en:morrisons': 'Morrisons',
-            'aldi': 'Aldi', 'en:aldi': 'Aldi',
-            'lidl': 'Lidl', 'en:lidl': 'Lidl',
-            'waitrose': 'Waitrose', 'en:waitrose': 'Waitrose',
-            'ocado': 'Ocado', 'en:ocado': 'Ocado',
-          };
-          const availableStores: string[] = [];
-          for (const s of rawStoreTags) {
-            const mapped = searchStoreMapping[s.toLowerCase()];
-            if (mapped && !availableStores.includes(mapped)) availableStores.push(mapped);
+          const retailEnrichment = enrichRetailData({
+            storeTags: rawStoreTags,
+            brand: p.brands,
+            categoryTags: categoriesTags,
+            barcode: p.code || null,
+          });
+          const availableStores = retailEnrichment.availableStores;
+          const storeConfidence = retailEnrichment.storeConfidence;
+          const confirmedStores = retailEnrichment.confirmedStores;
+          const inferredStores = retailEnrichment.inferredStores;
+
+          // DEBUG: store enrichment stage for Nairn's investigation
+          if (_debugNairns && (productNameDisplay || p.product_name || '').toLowerCase().includes('nairn')) {
+            console.log(`[DEBUG-NAIRNS] STORE-ENRICH | barcode:${p.code} | name:"${productNameDisplay}" | qty:"${p.quantity}" | rawStoreTags:${JSON.stringify(rawStoreTags)} | unmappedTags:${JSON.stringify(rawStoreTags.filter((s: string) => !STORE_TAG_MAP[s.toLowerCase()]))} | availableStores:${JSON.stringify(availableStores)} | source:${retailEnrichment.inferenceSource}`);
+          }
+          // DEBUG: store enrichment stage for Cherry Coke investigation
+          if (_debugCoke) {
+            const pnl = (productNameDisplay || p.product_name || '').toLowerCase();
+            if (pnl.includes('cherry') || pnl.includes('coke') || pnl.includes('coca')) {
+              console.log(`[DEBUG-COKE] STORE-ENRICH | barcode:${p.code} | name:"${productNameDisplay}" | brand:"${p.brands}" | qty:"${p.quantity}" | rawStoreTags:${JSON.stringify(rawStoreTags)} | unmappedTags:${JSON.stringify(rawStoreTags.filter((s: string) => !STORE_TAG_MAP[s.toLowerCase()]))} | availableStores:${JSON.stringify(availableStores)} | source:${retailEnrichment.inferenceSource}`);
+            }
           }
 
           return {
@@ -1251,16 +1361,20 @@ export async function registerRoutes(
             product_name: productNameDisplay,
             brand: p.brands || null,
             image_url: p.image_front_url || p.image_front_small_url || p.image_url || null,
-            ingredients_text: ingredientsText || null,
+            ingredients_text: ingredientsTextDisplay,
+            ingredientsUnavailable: ingredientsTextForeign,
             nutriments: nutrition,
             nutriscore_grade: p.nutriscore_grade || null,
             nova_group: novaGroup ? Number(novaGroup) : null,
             categories_tags: categoriesTags,
             availableStores,
+            storeConfidence,
+            confirmedStores,
+            inferredStores,
             isUK: ukProducts.some((up: any) => (up.code || up.product_name) === (p.code || p.product_name)),
             nutriments_raw: p.nutriments || null,
-            analysis: ingredientsText ? {
-              ingredients: ingredientsText.split(',').map((ing: string) => {
+            analysis: ingredientsTextDisplay ? {
+              ingredients: ingredientsTextDisplay.split(',').map((ing: string) => {
                 const trimmed = ing.trim();
                 const isENumber = /e\s?\d{3}/i.test(trimmed);
                 return {
@@ -1275,7 +1389,7 @@ export async function registerRoutes(
               isUltraProcessed: novaGroup === 4 || thaRating <= 2,
               warnings: [],
               upfCount: upfResult?.upfIngredientCount || 0,
-              totalIngredients: ingredientsText.split(',').length,
+              totalIngredients: ingredientsTextDisplay.split(',').length,
             } : null,
             upfAnalysis: upfResult ? {
               upfScore: upfResult.upfScore,
@@ -1313,14 +1427,79 @@ export async function registerRoutes(
       const _norm = (s: string | null | undefined) =>
         (s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
+      // Normalise quantity strings so unit-spelling variants don't split groups.
+      // "200 g", "200g", "200 gr", "200 grams" all become "200g".
+      // "500 ml", "500ml", "500 millilitres" all become "500ml".
+      // This only touches unit labels — the numeric part is untouched, so
+      // genuinely different sizes (200g vs 400g) will still produce distinct keys.
+      const _normQty = (s: string | null | undefined): string => {
+        if (!s) return '';
+        return s
+          .toLowerCase()
+          .trim()
+          // collapse internal whitespace
+          .replace(/\s+/g, ' ')
+          // weight: grams variants → g
+          .replace(/\b(\d+)\s*(?:grams?|grammes?|gr)\b/g, '$1g')
+          // weight: kilograms variants → kg
+          .replace(/\b(\d+)\s*(?:kilograms?|kilogrammes?|kgs?)\b/g, '$1kg')
+          // volume: millilitres variants → ml
+          .replace(/\b(\d+)\s*(?:millilitres?|milliliters?|mls?)\b/g, '$1ml')
+          // volume: litres variants → l
+          .replace(/\b(\d+)\s*(?:litres?|liters?|lts?)\b/g, '$1l')
+          // strip remaining non-alphanumeric so "200 g" → "200g"
+          .replace(/[^a-z0-9]/g, '');
+      };
+
+      // Strip the brand token from the start or end of the product name before
+      // building the key.  This collapses retailer-submitted name variants like
+      // "Coca-Cola Cherry" and "Cherry Coca-Cola" into the same bucket while
+      // keeping genuinely different products (e.g. "Cherry Zero") distinct.
+      // Falls back to the full normalised name if stripping would empty it.
+      const _normNameForKey = (brand: string | null, name: string | null): string => {
+        const nb = _norm(brand);
+        const nn = _norm(name);
+        if (!nb) return nn;
+        if (nn.startsWith(nb)) return nn.slice(nb.length) || nn;
+        if (nn.endsWith(nb)) return nn.slice(0, nn.length - nb.length) || nn;
+        return nn;
+      };
+
       const _canonicalKey = (p: any) =>
-        `${_norm(p.brand)}|${_norm(p.product_name)}|${_norm(p.quantity)}`;
+        `${_norm(p.brand)}|${_normNameForKey(p.brand, p.product_name)}|${_normQty(p.quantity)}`;
 
       const _groups = new Map<string, any[]>();
       for (const p of results) {
         const key = _canonicalKey(p);
         if (!_groups.has(key)) _groups.set(key, []);
         _groups.get(key)!.push(p);
+      }
+
+      // DEBUG: canonical grouping stage for Nairn's investigation
+      if (_debugNairns) {
+        for (const [key, group] of _groups.entries()) {
+          if (group.some((p: any) => (p.product_name || '').toLowerCase().includes('nairn'))) {
+            console.log(`[DEBUG-NAIRNS] CANONICAL-GROUP key:"${key}" | members:${group.length}`);
+            for (const p of group) {
+              console.log(`[DEBUG-NAIRNS]   -> barcode:${p.barcode} | name:"${p.product_name}" | qty:"${p.quantity}" | stores:${JSON.stringify(p.availableStores)}`);
+            }
+          }
+        }
+      }
+      // DEBUG: canonical grouping stage for Cherry Coke investigation
+      if (_debugCoke) {
+        for (const [key, group] of _groups.entries()) {
+          const isCokeGroup = group.some((p: any) => {
+            const pn = (p.product_name || '').toLowerCase();
+            return pn.includes('cherry') || pn.includes('coke') || pn.includes('coca');
+          });
+          if (isCokeGroup) {
+            console.log(`[DEBUG-COKE] CANONICAL-GROUP key:"${key}" | members:${group.length}`);
+            for (const p of group) {
+              console.log(`[DEBUG-COKE]   -> barcode:${p.barcode} | name:"${p.product_name}" | brand:"${p.brand}" | qty:"${p.quantity}" | isUK:${p.isUK} | stores:${JSON.stringify(p.availableStores)}`);
+            }
+          }
+        }
       }
 
       const grouped = Array.from(_groups.values()).map(group => {
@@ -1330,14 +1509,209 @@ export async function registerRoutes(
           group.find((p: any) => p.isUK && p.image_url) ||
           group.find((p: any) => p.image_url) ||
           group[0];
-        // Merge availableStores across all entries for this canonical product
-        const mergedStores = Array.from(
-          new Set(group.flatMap((p: any) => p.availableStores || []))
-        );
-        return { ...best, availableStores: mergedStores };
+        // Merge store arrays across all entries for this canonical product
+        const mergedAvailable = Array.from(new Set(group.flatMap((p: any) => p.availableStores || [])));
+        const mergedConfirmed = Array.from(new Set(group.flatMap((p: any) => p.confirmedStores || [])));
+        const mergedInferred = Array.from(new Set(
+          group.flatMap((p: any) => p.inferredStores || []).filter((s: string) => !mergedConfirmed.includes(s))
+        ));
+        return { ...best, availableStores: mergedAvailable, confirmedStores: mergedConfirmed, inferredStores: mergedInferred };
       });
 
-      res.json({ products: grouped, hasMore });
+      // ── Stage 1.5: Canonical product identity ────────────────────────────────
+      // Build a lookup Map from each product's stable identity → canonical
+      // product descriptor.  Using a Map (rather than mutating the objects)
+      // makes the lookup explicit, avoids accidental property shadowing, and
+      // works correctly even if the Stage-1 objects come from frozen spreads.
+      //
+      // Key: barcode when present, otherwise "brand|name" composite.
+      // Value: { name, brand } canonical descriptor from the rule matcher.
+      //
+      // Collapses naming/word-order variations (Cherry Coke / Coke Cherry /
+      // Coca-Cola Cherry / Cherry cola / Coca-ColaCherry) into the same canonical
+      // identity so Stage-2 groups them under a single consumable key.
+      //
+      // Diet/Zero/No-Sugar formulations map to a SEPARATE canonical identity
+      // ("Cherry Coke Zero") and are never merged with full-sugar variants.
+      //
+      // Only soft drinks currently matched — no regression for other categories.
+      const _canonicalLookup = new Map<string, { name: string; brand: string }>();
+      const _productIdent = (p: any): string =>
+        p.barcode ? `b:${p.barcode}` : `n:${_norm(p.brand)}|${_norm(p.product_name)}`;
+
+      for (const p of grouped) {
+        const canonical = getCanonicalProduct(p.product_name, p.brand);
+        if (canonical) {
+          _canonicalLookup.set(_productIdent(p), canonical);
+        }
+      }
+
+      if (_debugCoke) {
+        const canonicalEntries = Array.from(_canonicalLookup.entries());
+        console.log(`[DEBUG-COKE] STAGE-1.5 | ${canonicalEntries.length} product(s) resolved to canonical identity:`);
+        for (const [ident, can] of canonicalEntries) {
+          const p = grouped.find((x: any) => _productIdent(x) === ident);
+          console.log(`[DEBUG-COKE]   ident:"${ident}" | raw:"${p?.product_name}" | brand:"${p?.brand}" → canonical:"${can.name}" / "${can.brand}"`);
+        }
+        const ungrouped = grouped.filter((p: any) => !_canonicalLookup.has(_productIdent(p)));
+        console.log(`[DEBUG-COKE] STAGE-1.5 | ${ungrouped.length} product(s) NOT matched by any canonical rule`);
+        for (const p of ungrouped) {
+          console.log(`[DEBUG-COKE]   not-matched | name:"${p.product_name}" | brand:"${p.brand}"`);
+        }
+      }
+
+      // ── Stage 2: Consumable grouping ────────────────────────────────────────
+      // Collapse pack-size variants of the same consumable product into a single
+      // result with merged retailer availability and a packVariants list.
+      // e.g. Cherry Coke 330ml / 500ml / 2L → one result with packVariants.
+      //
+      // Crucially, formulation variants (Zero / Diet / No Sugar / Light) are kept
+      // separate — they are genuinely different products.
+      //
+      // Key: normBrandConsumable(brand) | consumableNameKey(brand, name)
+      // Corporate suffixes (Ltd, PLC, GB, UK, Foods…) stripped from brand.
+      // Size and pack-count tokens stripped from name.
+      const _CORP_RE = /\s+(?:ltd\.?|plc\.?|inc\.?|llc\.?|gb|uk|group|foods|beverages?|company|co\.?)(?:\s|$)/gi;
+      const _normBrandConsumable = (brand: string | null | undefined): string =>
+        _norm(((brand ?? '').split(',')[0]).replace(_CORP_RE, '').trim());
+
+      const _SIZE_RE = /\b[\d.]+\s*(?:x\s*[\d.]+\s*)?(?:m(?:illilitres?|illiliters?|ls?)?|cl|litres?|liters?|l|g(?:rams?|rammes?|r)?|kg(?:ilograms?|ilogrammes?)?|mg|oz)\b/gi;
+      const _PACK_RE = /\b(?:\d+\s*(?:pack|cans?|bottles?|cartons?)|pack\s+of\s+\d+|multipack|multi-pack)\b/gi;
+
+      const _consumableNameKey = (brand: string | null, name: string | null): string => {
+        const cleaned = (name ?? '').replace(_SIZE_RE, '').replace(_PACK_RE, '').replace(/\s+/g, ' ').trim();
+        return _normNameForKey(brand, cleaned || name);
+      };
+
+      const _consumableKey2 = (p: any): string => {
+        // Canonical identity takes priority: all variants of e.g. "Cherry Coke"
+        // share a stable key regardless of word order, brand spelling, or size.
+        // Look up via the Map built in Stage 1.5 (Map-based, no object mutation).
+        // The "_c:" prefix prevents accidental collisions with organic keys.
+        const canonical = _canonicalLookup.get(_productIdent(p));
+        if (canonical) {
+          const cb = _norm(canonical.brand);
+          const cn = _norm(canonical.name);
+          return `_c:${cb}|${cn}`;
+        }
+        const b = _normBrandConsumable(p.brand);
+        const n = _consumableNameKey(p.brand, p.product_name);
+        if (!b && !n) return _norm(p.product_name) || `_unknown_${p.barcode ?? ''}`;
+        return `${b}|${n}`;
+      };
+
+      const _consumableGroups2 = new Map<string, any[]>();
+      for (const p of grouped) {
+        const ck = _consumableKey2(p);
+        if (!_consumableGroups2.has(ck)) _consumableGroups2.set(ck, []);
+        _consumableGroups2.get(ck)!.push(p);
+      }
+
+      // DEBUG: consumable grouping for Cherry Coke
+      if (_debugCoke) {
+        for (const [ck, cgroup] of Array.from(_consumableGroups2.entries())) {
+          const isCokeGroup = cgroup.some((p: any) => {
+            const pn = (p.product_name || '').toLowerCase();
+            return pn.includes('cherry') || pn.includes('coke') || pn.includes('coca');
+          });
+          if (isCokeGroup) {
+            console.log(`[DEBUG-COKE] CONSUMABLE-GROUP key:"${ck}" | members:${cgroup.length}`);
+            for (const p of cgroup) {
+              console.log(`[DEBUG-COKE]   -> barcode:${p.barcode} | name:"${p.product_name}" | qty:"${p.quantity}"`);
+            }
+          }
+        }
+      }
+
+      const consumableGrouped = Array.from(_consumableGroups2.values()).map(cgroup => {
+        const best =
+          cgroup.find((p: any) => p.isUK && p.image_url) ||
+          cgroup.find((p: any) => p.image_url) ||
+          cgroup[0];
+
+        // Resolve canonical identity for this group via the Stage-1.5 Map.
+        // All members of a canonical group share the same canonical key, so
+        // checking the first member is sufficient.
+        const canonicalInfo = _canonicalLookup.get(_productIdent(cgroup[0]));
+        const canonicalName: string | undefined = canonicalInfo?.name;
+        const canonicalBrand: string | undefined = canonicalInfo?.brand;
+
+        const mergedAvailable = Array.from(new Set(cgroup.flatMap((p: any) => p.availableStores || [])));
+        const mergedConfirmed = Array.from(new Set(cgroup.flatMap((p: any) => p.confirmedStores || [])));
+        const mergedInferred = Array.from(new Set(
+          cgroup.flatMap((p: any) => p.inferredStores || []).filter((s: string) => !mergedConfirmed.includes(s))
+        ));
+        const mergedStoreConfidence: Record<string, number> = {};
+        for (const p of cgroup) {
+          for (const [store, conf] of Object.entries(p.storeConfidence || {})) {
+            mergedStoreConfidence[store] = Math.max(mergedStoreConfidence[store] ?? 0, conf as number);
+          }
+        }
+        const packVariants = cgroup
+          .map((p: any) => p.quantity as string | null)
+          .filter((q): q is string => !!q)
+          .filter((v, i, arr) => arr.indexOf(v) === i)
+          .sort();
+
+        // Collect the original naming variants for provenance / client display.
+        // Deduplicate; these are the raw OFF product names before canonicalisation.
+        const nameVariants: string[] = canonicalName
+          ? Array.from(new Set(cgroup.map((p: any) => p.product_name).filter(Boolean)))
+          : [];
+
+        return {
+          ...best,
+          // Apply canonical name+brand so the client always receives a clean,
+          // consistent product title regardless of which OFF entry won "best".
+          ...(canonicalName ? {
+            product_name: canonicalName,
+            brand: canonicalBrand ?? best.brand,
+            canonicalProductName: canonicalName,
+          } : {}),
+          quantity: packVariants.length > 1 ? null : best.quantity,
+          availableStores: mergedAvailable,
+          confirmedStores: mergedConfirmed,
+          inferredStores: mergedInferred,
+          storeConfidence: mergedStoreConfidence,
+          packVariants: packVariants.length > 1 ? packVariants : [],
+          // Variant provenance — useful for detail views and debugging
+          nameVariants: nameVariants.length > 1 ? nameVariants : [],
+          variantCount: cgroup.length,
+        };
+      });
+
+      // Apply the user-facing page limit after merging so retailer duplicates
+      // don't consume slots before they get a chance to be consolidated.
+      const hasMore = consumableGrouped.length > perPage;
+      const pagedProducts = hasMore ? consumableGrouped.slice(0, perPage) : consumableGrouped;
+
+      // DEBUG: final response shape — confirmed+inferred stores for key test products
+      const _logFinalStores = (label: string, p: any) => {
+        console.log(`[DEBUG-${label}] FINAL | barcode:${p.barcode} | name:"${p.product_name}" | brand:"${p.brand}" | inferenceSource:${p.storeConfidence ? 'present' : 'absent'}`);
+        console.log(`[DEBUG-${label}]   confirmedStores:${JSON.stringify(p.confirmedStores ?? [])} (${(p.confirmedStores ?? []).length})`);
+        console.log(`[DEBUG-${label}]   inferredStores:${JSON.stringify(p.inferredStores ?? [])} (${(p.inferredStores ?? []).length})`);
+        console.log(`[DEBUG-${label}]   availableStores:${JSON.stringify(p.availableStores ?? [])} (${(p.availableStores ?? []).length})`);
+      };
+      if (_debugNairns) {
+        const hits = pagedProducts.filter((p: any) => (p.product_name || '').toLowerCase().includes('nairn'));
+        console.log(`[DEBUG-NAIRNS] FINAL | ${hits.length} Nairn's product(s) in response:`);
+        hits.forEach((p: any) => _logFinalStores('NAIRNS', p));
+      }
+      if (_debugCoke) {
+        const hits = pagedProducts.filter((p: any) => {
+          const pn = (p.product_name || '').toLowerCase();
+          return pn.includes('cherry') || pn.includes('coke') || pn.includes('coca');
+        });
+        console.log(`[DEBUG-COKE] FINAL | ${hits.length} Cherry Coke product(s) in response:`);
+        hits.forEach((p: any) => _logFinalStores('COKE', p));
+      }
+      if (_debugBenJerry) {
+        const hits = pagedProducts.filter((p: any) => (p.product_name || '').toLowerCase().includes('ben'));
+        console.log(`[DEBUG-BENJERRY] FINAL | ${hits.length} Ben & Jerry's product(s) in response:`);
+        hits.forEach((p: any) => _logFinalStores('BENJERRY', p));
+      }
+
+      res.json({ products: pagedProducts, hasMore });
     } catch (error) {
       console.error('Product search error:', error);
       res.json({ products: [], hasMore: false });
@@ -1919,13 +2293,16 @@ export async function registerRoutes(
       for (const p of [...ukAltProducts, ...globalAltProducts]) {
         const key = `${p.code || ''}:${(p.product_name || '').toLowerCase()}:${(p.brands || '').toLowerCase()}`;
         if (altSeen.has(key)) continue;
+        // Exclude products without usable English ingredient text — they must not
+        // appear as recommended alternatives or affect swap rankings.
+        if (!hasEnglishIngredients(p)) continue;
         altSeen.add(key);
         mergedAlts.push(p);
       }
 
       const alternatives = mergedAlts
         .map((p: any) => {
-          const ingredientsText = p.ingredients_text || p.ingredients_text_en || '';
+          const ingredientsText = p.ingredients_text_en || p.ingredients_text || '';
           // TODO [PREMIUM]: hasPremiumAccess(user) — enforce analysis limit for free users
           const analysis = ingredientsText ? analyzeProduct(ingredientsText, p.nutriments || null, p.nova_group || null) : null;
           const altUpf = ingredientsText && analysis ? analyzeProductUPF(ingredientsText, allAdditives, analysis.healthScore, {
@@ -4176,7 +4553,16 @@ export async function registerRoutes(
       }
 
       const p = response.data.product;
-      const ingredientsText = p.ingredients_text || p.ingredients_text_en || '';
+
+      // Reject products whose ingredient text is not available in English.
+      // Consistent with all other product pipelines — we only surface products
+      // we can reliably explain to the user.
+      if (!hasEnglishIngredients(p)) {
+        console.log(`[LANG-FILTER] Barcode ${barcode} excluded: no English ingredient text`);
+        return res.status(404).json({ message: "Product found but ingredient information is not available in English" });
+      }
+
+      const ingredientsText = p.ingredients_text_en || p.ingredients_text || '';
       const analysis = ingredientsText ? analyzeProduct(ingredientsText, p.nutriments || null, p.nova_group || null) : null;
       const allAdditives = await storage.getAllAdditives();
       const upfAnalysis = ingredientsText && analysis ? analyzeProductUPF(ingredientsText, allAdditives, analysis.healthScore, {
@@ -4193,21 +4579,12 @@ export async function registerRoutes(
         ...(p.purchase_places_tags || []),
         ...((p.stores || '').split(',').map((s: string) => s.trim().toLowerCase()).filter(Boolean)),
       ];
-      const storeMapping: Record<string, string> = {
-        'tesco': 'Tesco', 'en:tesco': 'Tesco',
-        "sainsbury's": "Sainsbury's", "en:sainsbury-s": "Sainsbury's", "sainsburys": "Sainsbury's",
-        'asda': 'Asda', 'en:asda': 'Asda',
-        'morrisons': 'Morrisons', 'en:morrisons': 'Morrisons',
-        'aldi': 'Aldi', 'en:aldi': 'Aldi',
-        'lidl': 'Lidl', 'en:lidl': 'Lidl',
-        'waitrose': 'Waitrose', 'en:waitrose': 'Waitrose',
-        'ocado': 'Ocado', 'en:ocado': 'Ocado',
-      };
-      const availableStores: string[] = [];
-      for (const s of rawStores) {
-        const mapped = storeMapping[s.toLowerCase()];
-        if (mapped && !availableStores.includes(mapped)) availableStores.push(mapped);
-      }
+      const barcodeRetail = enrichRetailData({
+        storeTags: rawStores,
+        brand: p.brands,
+        categoryTags: p.categories_tags || [],
+        barcode: p.code || barcode,
+      });
 
       const product = {
         barcode: p.code || barcode,
@@ -4248,7 +4625,10 @@ export async function registerRoutes(
           riskBreakdown: upfAnalysis.riskBreakdown,
           thaExplanation: buildTHAExplanation(upfAnalysis, p.nova_group || null),
         } : null,
-        availableStores,
+        availableStores: barcodeRetail.availableStores,
+        storeConfidence: barcodeRetail.storeConfidence,
+        confirmedStores: barcodeRetail.confirmedStores,
+        inferredStores: barcodeRetail.inferredStores,
       };
 
       res.json({ product });

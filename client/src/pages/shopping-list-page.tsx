@@ -835,7 +835,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
   const SectionHeader = ({ icon: Icon, label, color }: { icon: any; label: string; color: string }) => (
     <div className={`flex items-center gap-1.5 mb-2`}>
       <Icon className={`h-3.5 w-3.5 ${color}`} />
-      <span className={`text-[10px] font-semibold uppercase tracking-wider ${color}`}>{label}</span>
+      <span className={`text-[10px] uppercase tracking-[0.12em] ${color}`}>{label}</span>
     </div>
   );
 
@@ -1052,7 +1052,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                         <p className="text-xs leading-relaxed">{wholeFoodAlt.method}</p>
                       </div>
                       {wholeFoodAlt.tip && (
-                        <p className="text-[11px] text-muted-foreground italic leading-relaxed border-t border-green-200 dark:border-green-800 pt-2">
+                        <p className="text-xs text-muted-foreground italic leading-relaxed border-t border-green-200 dark:border-green-800 pt-2">
                           {wholeFoodAlt.tip}
                         </p>
                       )}
@@ -1099,12 +1099,12 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 {/* Current */}
                 <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2" data-testid="compare-card-current">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Current</p>
+                  <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Current</p>
                   <div className="flex items-center gap-2">
                     <ScoreBadge score={item.thaRating ?? 0} size={22} />
                     <span className="text-xs font-medium truncate">{capitalizeWords(item.productName)}</span>
                   </div>
-                  <div className="space-y-1 text-[11px] text-muted-foreground">
+                  <div className="space-y-1 text-xs text-muted-foreground">
                     <div className="flex justify-between"><span>Effort</span><span className="font-medium text-foreground">None</span></div>
                     <div className="flex justify-between"><span>Convenience</span><span className="font-medium text-foreground">High</span></div>
                     <div className="flex justify-between"><span>Ingredients</span><span className={`font-medium ${(item.thaRating ?? 0) >= 4 ? 'text-green-600' : (item.thaRating ?? 0) >= 3 ? 'text-yellow-600' : 'text-red-500'}`}>{(item.thaRating ?? 0) >= 4 ? 'Clean' : (item.thaRating ?? 0) >= 3 ? 'Mixed' : 'Industrial'}</span></div>
@@ -1113,12 +1113,12 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                 {/* Cleaner shop option */}
                 {rankedChoices.length > 0 && (
                   <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/30 dark:bg-blue-950/20 p-3 space-y-2" data-testid="compare-card-shop">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-blue-500 dark:text-blue-400">Cleaner shop option</p>
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-blue-500 dark:text-blue-400">Cleaner shop option</p>
                     <div className="flex items-center gap-2">
                       <ScoreBadge score={rankedChoices[0].upfAnalysis?.thaRating ?? 0} size={22} />
                       <span className="text-xs font-medium truncate">{rankedChoices[0].product_name}</span>
                     </div>
-                    <div className="space-y-1 text-[11px] text-muted-foreground">
+                    <div className="space-y-1 text-xs text-muted-foreground">
                       <div className="flex justify-between"><span>Effort</span><span className="font-medium text-foreground">Low</span></div>
                       <div className="flex justify-between"><span>Convenience</span><span className="font-medium text-foreground">High</span></div>
                       <div className="flex justify-between"><span>Ingredients</span><span className="font-medium text-green-600 dark:text-green-400">Cleaner</span></div>
@@ -1128,12 +1128,12 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                 {/* Whole-food option */}
                 {wholeFoodAlt && (
                   <div className="rounded-lg border border-green-200 dark:border-green-800 bg-green-50/30 dark:bg-green-950/20 p-3 space-y-2" data-testid="compare-card-wholefood">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-green-600 dark:text-green-400">Whole-food option</p>
+                    <p className="text-[10px] uppercase tracking-[0.12em] text-green-600 dark:text-green-400">Whole-food option</p>
                     <div className="flex items-center gap-2">
                       <ScoreBadge score={5} size={22} />
                       <span className="text-xs font-medium truncate">{wholeFoodAlt.title}</span>
                     </div>
-                    <div className="space-y-1 text-[11px] text-muted-foreground">
+                    <div className="space-y-1 text-xs text-muted-foreground">
                       <div className="flex justify-between"><span>Effort</span><span className="font-medium text-foreground">{effortLabel(wholeFoodAlt.effort)}</span></div>
                       <div className="flex justify-between"><span>Convenience</span><span className="font-medium text-foreground">Low</span></div>
                       <div className="flex justify-between"><span>Ingredients</span><span className="font-medium text-green-600 dark:text-green-400">Real</span></div>
@@ -1186,7 +1186,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                       >
                         <SlidersHorizontal className="h-3.5 w-3.5" />
                         {activeFilterCount > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                          <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] font-semibold rounded-full w-4 h-4 flex items-center justify-center">
                             {activeFilterCount}
                           </span>
                         )}
@@ -2351,7 +2351,7 @@ export default function ShoppingListPage() {
                     const memberCount = savedItems.filter(i => i.basketLabel && i.basketLabel !== 'shared').length;
                     if (sharedCount === 0 && memberCount === 0) return null;
                     return (
-                      <div className="mt-1.5 text-[11px] text-muted-foreground leading-tight space-y-0.5" data-testid="banner-basket-summary">
+                      <div className="mt-1.5 text-xs text-muted-foreground leading-tight space-y-0.5" data-testid="banner-basket-summary">
                         {sharedCount > 0 && (
                           <div data-testid="text-shared-count">{sharedCount} ingredient{sharedCount !== 1 ? 's' : ''} shared across all plates</div>
                         )}
@@ -2502,7 +2502,7 @@ export default function ShoppingListPage() {
                         </button>
                         {!collapsedCategories.has(cat) && <>
                           <select
-                            className="h-6 text-[11px] border border-border rounded px-1.5 bg-background cursor-pointer"
+                            className="h-6 text-xs border border-border rounded px-1.5 bg-background cursor-pointer"
                             value={catDefault.supermarket}
                             onChange={e => setCategoryDefault(cat, 'supermarket', e.target.value)}
                             data-testid={`select-cat-supermarket-${cat}`}
@@ -2510,10 +2510,10 @@ export default function ShoppingListPage() {
                             <option value="">Auto</option>
                             {SUPERMARKET_NAMES.map(s => <option key={s} value={s}>{s}</option>)}
                           </select>
-                          <div className="ml-auto flex items-center gap-1.5 text-[11px]">
+                          <div className="ml-auto flex items-center gap-1.5 text-xs">
                             {isMixed && <span className="text-amber-600 dark:text-amber-400 font-medium">Mixed</span>}
                             <select
-                              className="h-6 text-[11px] border border-border rounded px-1.5 bg-background cursor-pointer"
+                              className="h-6 text-xs border border-border rounded px-1.5 bg-background cursor-pointer"
                               value={catDefault.tier}
                               onChange={e => setCategoryDefault(cat, 'tier', e.target.value)}
                               data-testid={`select-cat-tier-${cat}`}
@@ -2678,7 +2678,7 @@ export default function ShoppingListPage() {
                                             return (
                                               <span className="sm:hidden flex-shrink-0 flex items-center gap-0.5 whitespace-nowrap" data-testid={`text-smp-mobile-${item.id}`}>
                                                 <img src={thaAppleSrc} alt="" className="h-8 w-8 object-contain" />
-                                                <span className="text-[11px] font-semibold text-foreground/70">{Math.round(smp)}</span>
+                                                <span className="text-xs font-semibold text-foreground/70">{Math.round(smp)}</span>
                                               </span>
                                             );
                                           })()}
@@ -2788,7 +2788,7 @@ export default function ShoppingListPage() {
                                             {hasPrices && (
                                               <div className="flex items-center gap-1" data-testid={`select-shop-${item.id}`}>
                                                 <Select value={item.selectedStore || 'auto'} onValueChange={(val) => { updateItem.mutate({ id: item.id, fields: { selectedStore: val === 'auto' ? null : val } }); setGlobalStore('auto'); }}>
-                                                  <SelectTrigger className={`h-6 text-[11px] ${item.selectedStore ? 'border-amber-400' : ''}`} data-testid={`select-store-${item.id}`}>
+                                                  <SelectTrigger className={`h-6 text-xs ${item.selectedStore ? 'border-amber-400' : ''}`} data-testid={`select-store-${item.id}`}>
                                                     <SelectValue />
                                                   </SelectTrigger>
                                                   <SelectContent>
@@ -2903,7 +2903,7 @@ export default function ShoppingListPage() {
                                           ) : (
                                             <span className="text-muted-foreground cursor-pointer" onClick={() => setComparisonItem(item)}>-</span>
                                           )}
-                                          {isBestPrice && <span className="text-[9px] bg-secondary text-secondary-foreground px-1 py-0.5 rounded font-semibold">Best</span>}
+                                          {isBestPrice && <span className="text-[10px] bg-secondary text-secondary-foreground px-1 py-0.5 rounded font-semibold">Best</span>}
                                         </div>
                                       ) : <span className="text-muted-foreground">-</span>}
                                     </td>
@@ -2924,7 +2924,7 @@ export default function ShoppingListPage() {
                                           return (
                                             <Tooltip>
                                               <TooltipTrigger asChild>
-                                                <span className="cursor-default text-[11px] text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🏠 + 🍽 {sources.length}</span>
+                                                <span className="cursor-default text-xs text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🏠 + 🍽 {sources.length}</span>
                                               </TooltipTrigger>
                                               <TooltipContent side="bottom" className="max-w-[220px]">
                                                 <p className="text-xs font-medium mb-1">Pantry item also used in {sources.length} recipe(s):</p>
@@ -2937,7 +2937,7 @@ export default function ShoppingListPage() {
                                           return (
                                             <Tooltip>
                                               <TooltipTrigger asChild>
-                                                <span className="cursor-default text-[11px] text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🏠</span>
+                                                <span className="cursor-default text-xs text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🏠</span>
                                               </TooltipTrigger>
                                               <TooltipContent side="bottom">
                                                 <p className="text-xs">Added from pantry</p>
@@ -2949,7 +2949,7 @@ export default function ShoppingListPage() {
                                           return (
                                             <Tooltip>
                                               <TooltipTrigger asChild>
-                                                <span className="cursor-default text-[11px] text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🍽 {sources.length}</span>
+                                                <span className="cursor-default text-xs text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🍽 {sources.length}</span>
                                               </TooltipTrigger>
                                               <TooltipContent side="bottom" className="max-w-[220px]">
                                                 <p className="text-xs font-medium mb-1">Used in {sources.length} recipe(s):</p>
@@ -2986,7 +2986,7 @@ export default function ShoppingListPage() {
                                   <div className="flex flex-col gap-0.5">
                                     <span className="font-medium text-foreground/80" data-testid={`text-extra-name-${extra.id}`}>{capitalizeWords(extra.name)}</span>
                                     <button
-                                      className={`self-start inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`}
+                                      className={`self-start inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`}
                                       onClick={() => extra.alwaysAdd ? setAlwaysAddModal({ extraId: extra.id, extraName: extra.name }) : updateExtraMutation.mutate({ id: extra.id, alwaysAdd: true })}
                                       data-testid={`pill-always-${extra.id}`}
                                     >Always in Basket</button>
@@ -3010,7 +3010,7 @@ export default function ShoppingListPage() {
                             {/* Empty state row when no items at all */}
                             {!hasContent && (
                               <tr>
-                                <td colSpan={9} className="px-3 py-2 text-[11px] text-muted-foreground/50 italic">No {capitalizeWords(cat)} items yet</td>
+                                <td colSpan={9} className="px-3 py-2 text-xs text-muted-foreground/50 italic">No {capitalizeWords(cat)} items yet</td>
                               </tr>
                             )}
                             {/* Category totals row */}
@@ -3147,7 +3147,7 @@ export default function ShoppingListPage() {
                                       <div className="flex flex-col gap-0.5">
                                         <span className="font-medium text-foreground/80">{capitalizeWords(extra.name)}</span>
                                         <button
-                                          className={`self-start inline-flex items-center gap-0.5 text-[9px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`}
+                                          className={`self-start inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`}
                                           onClick={() => extra.alwaysAdd ? setAlwaysAddModal({ extraId: extra.id, extraName: extra.name }) : updateExtraMutation.mutate({ id: extra.id, alwaysAdd: true })}
                                           data-testid={`pill-always-hh-${extra.id}`}
                                         >Always in Basket</button>
@@ -3287,7 +3287,7 @@ export default function ShoppingListPage() {
           {/* Comparison Strip */}
           {hasPrices && selectedRetailers.length > 0 && savedItems.length > 0 && (
             <div className="border-t border-border px-4 py-4 bg-muted/5" data-testid="section-comparison-strip">
-              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">Price Comparison</p>
+              <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mb-3">Price Comparison</p>
               <div className="overflow-x-auto rounded-md border border-border">
                 <table className="text-xs" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: '480px' }} data-testid="table-comparison-strip">
                   <thead>
@@ -3326,7 +3326,7 @@ export default function ShoppingListPage() {
                           </td>
                         );
                       })}
-                      <td className="px-3 py-2 text-right tabular-nums font-bold sticky right-0 z-10 bg-muted/20 border-b border-l border-border/50">
+                      <td className="px-3 py-2 text-right tabular-nums font-semibold sticky right-0 z-10 bg-muted/20 border-b border-l border-border/50">
                         {currentTotal > 0 ? `£${currentTotal.toFixed(2)}` : '-'}
                       </td>
                     </tr>
@@ -3413,7 +3413,7 @@ export default function ShoppingListPage() {
                                     )}
                                   </div>
                                   <div className="flex items-center justify-between mt-2">
-                                    <span className={`text-lg font-bold tabular-nums ${match.tier === itemTier ? 'text-primary' : 'text-foreground'}`}>
+                                    <span className={`text-lg font-semibold tabular-nums ${match.tier === itemTier ? 'text-primary' : 'text-foreground'}`}>
                                       {match.price !== null ? `\u00A3${match.price.toFixed(2)}` : '-'}
                                     </span>
                                     {match.pricePerUnit && (
@@ -3476,7 +3476,7 @@ export default function ShoppingListPage() {
 
             {primarySupermarkets.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Direct Basket</p>
+                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/70">Direct Basket</p>
                 <div className="grid grid-cols-3 gap-3">
                   {primarySupermarkets.map(store => (
                     <Button
@@ -3491,7 +3491,7 @@ export default function ShoppingListPage() {
                         <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (
                         <span
-                          className="flex items-center justify-center h-8 w-8 rounded-md text-white text-sm font-bold shrink-0"
+                          className="flex items-center justify-center h-8 w-8 rounded-md text-white text-sm font-semibold shrink-0"
                           style={{ backgroundColor: store.color }}
                         >
                           {store.name.charAt(0)}
@@ -3506,7 +3506,7 @@ export default function ShoppingListPage() {
 
             {otherSupermarkets.length > 0 && (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Search Pages</p>
+                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/70">Search Pages</p>
                 <div className="grid grid-cols-3 gap-2">
                   {otherSupermarkets.map(store => (
                     <Button

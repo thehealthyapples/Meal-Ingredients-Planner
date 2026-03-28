@@ -105,7 +105,7 @@ function HealthScoreRing({ score }: { score: number }) {
           <circle cx="40" cy="40" r={radius} fill="none" stroke={strokeColor} strokeWidth="6" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-700" />
         </svg>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className={`text-lg font-bold ${color}`} data-testid="text-health-score">{score}</span>
+          <span className={`text-lg font-semibold ${color}`} data-testid="text-health-score">{score}</span>
         </div>
       </div>
       <span className="text-xs text-muted-foreground font-medium">Health Score</span>
@@ -169,7 +169,7 @@ function NutritionBadges({ mealId, nutrition }: { mealId: number; nutrition?: Nu
         {items.map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="flex items-center gap-1 rounded-md bg-muted/50 px-1.5 py-0.5" data-testid={`text-nutrition-widget-${label.toLowerCase()}-${mealId}`}>
             <Icon className={`h-3 w-3 flex-shrink-0 ${color}`} />
-            <span className="text-[11px] font-medium truncate">{value || 'N/A'}</span>
+            <span className="text-xs font-medium truncate">{value || 'N/A'}</span>
           </div>
         ))}
       </div>
@@ -322,7 +322,7 @@ function GroupedMealDetail({ meal, allMeals, tab, mealId }: {
       <div className="space-y-3 pb-2" data-testid={`expanded-ingredients-${mealId}`}>
         {components.map(({ label, src, componentMeal }) => (
           <div key={label}>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
+            <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mb-1">{label}</p>
             {componentMeal && (componentMeal.ingredients ?? []).length > 0 ? (
               <div className="space-y-0.5 pl-2">
                 {componentMeal.ingredients!.map((ing, i) => {
@@ -353,7 +353,7 @@ function GroupedMealDetail({ meal, allMeals, tab, mealId }: {
     <div className="space-y-3 pb-2" data-testid={`expanded-method-${mealId}`}>
       {components.map(({ label, componentMeal }) => (
         <div key={label}>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{label}</p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mb-1">{label}</p>
           {componentMeal && (componentMeal.instructions ?? []).length > 0 ? (
             <div className="space-y-1 pl-2">
               {componentMeal.instructions!.map((step, i) => (
@@ -1830,7 +1830,7 @@ export default function MealsPage() {
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
       {/* Row A: compact title + action buttons */}
       <div className="flex justify-between items-center gap-4 mb-3">
-        <h1 className="text-xl font-semibold tracking-tight" data-testid="text-meals-title">Cookbook</h1>
+        <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-meals-title">Cookbook</h1>
         <div className="flex items-center gap-2 shrink-0">
           <input
             ref={scanFileRef}
@@ -2006,7 +2006,7 @@ export default function MealsPage() {
         <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-lg border border-border bg-card">
           {/* Audience section */}
           <div className="flex items-center gap-1.5 w-full mb-1">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Who is this for?</span>
+            <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Who is this for?</span>
           </div>
           {([
             { id: "adult", label: "Adult", icon: null },
@@ -2138,7 +2138,7 @@ export default function MealsPage() {
                         className={`col-span-full flex items-center gap-2 ${index > 0 ? "mt-4 pt-4 border-t border-border/50" : ""}`}
                         data-testid={`section-header-${cat}`}
                       >
-                        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">{SECTION_LABELS[cat]}</span>
+                        <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">{SECTION_LABELS[cat]}</span>
                         {cat === "ready_meals" && <span className="text-xs text-muted-foreground/40 italic">Convenience options</span>}
                         <span className="text-xs text-muted-foreground/35">· {sectionCounts.get(cat) ?? 0}</span>
                       </div>
@@ -2162,7 +2162,7 @@ export default function MealsPage() {
                           ) : null}
                           <UtensilsCrossed className="h-10 w-10 relative z-10 text-muted-foreground/40" />
                           <span className="text-sm font-semibold text-center leading-tight relative z-10 text-foreground">{meal.name}</span>
-                          <span className="text-[10px] font-bold tracking-wider uppercase relative z-10 text-muted-foreground/60">
+                          <span className="text-[10px] uppercase tracking-[0.12em] relative z-10 text-muted-foreground/70">
                             {meal.isDrink ? 'Drink' : meal.audience === 'baby' ? 'Baby Meal' : meal.audience === 'child' ? 'Kids Meal' : 'Ready Meal'}
                           </span>
                         </div>
@@ -2170,7 +2170,7 @@ export default function MealsPage() {
                         <div className="w-full h-full flex flex-col items-center justify-center bg-primary/5 relative" data-testid={`placeholder-grouped-${meal.id}`}>
                           <img src={thaAppleLogo} alt="THA" className="h-40 w-40 object-contain" />
                           <span className="text-sm font-semibold text-center px-3 mt-1 leading-tight text-foreground">{meal.name}</span>
-                          <span className="text-[10px] font-medium tracking-wider uppercase text-muted-foreground/60 mt-0.5">Grouped Meal</span>
+                          <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mt-0.5">Grouped Meal</span>
                         </div>
                       ) : meal.imageUrl ? (
                         <>
@@ -2217,7 +2217,7 @@ export default function MealsPage() {
                       )}
                       {!meal.isReadyMeal && meal.imageUrl && (
                         <div className="absolute bottom-1.5 left-1.5 z-10 flex items-center gap-1.5" data-testid={`name-overlay-meal-${meal.id}`}>
-                          <span className="bg-black/65 backdrop-blur-sm text-white text-[13px] font-medium px-2 py-1 rounded-md leading-tight inline-block">
+                          <span className="bg-black/65 backdrop-blur-sm text-white text-xs font-medium px-2 py-1 rounded-md leading-tight inline-block">
                             {meal.name}
                           </span>
                         </div>
@@ -2404,7 +2404,7 @@ export default function MealsPage() {
                         className={`flex items-center gap-2 ${index > 0 ? "mt-4 pt-4 border-t border-border/50" : ""}`}
                         data-testid={`section-header-list-${cat}`}
                       >
-                        <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">{SECTION_LABELS[cat]}</span>
+                        <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">{SECTION_LABELS[cat]}</span>
                         {cat === "ready_meals" && <span className="text-xs text-muted-foreground/40 italic">Convenience options</span>}
                         <span className="text-xs text-muted-foreground/35">· {sectionCounts.get(cat) ?? 0}</span>
                       </div>
@@ -2427,7 +2427,7 @@ export default function MealsPage() {
                             <MealWatermark type="drink" size="sm" className="inset-0 m-auto flex items-center justify-center" />
                           ) : null}
                           <UtensilsCrossed className="h-6 w-6 relative z-10 text-muted-foreground/40" />
-                          <span className="text-[9px] font-bold tracking-wider uppercase relative z-10 text-muted-foreground/60">
+                          <span className="text-[10px] uppercase tracking-[0.12em] relative z-10 text-muted-foreground/70">
                             {meal.audience === 'baby' ? 'Baby Meal' : meal.audience === 'child' ? 'Kids Meal' : 'Ready Meal'}
                           </span>
                         </div>
@@ -2614,7 +2614,7 @@ export default function MealsPage() {
         <div className="space-y-4 mt-6">
           <div className="flex items-center gap-2 pb-1 border-b border-border/50">
             <Snowflake className="h-4 w-4 text-blue-400" />
-            <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">My Freezer</span>
+            <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">My Freezer</span>
             {freezerMeals.length > 0 && (
               <span className="text-xs text-muted-foreground/35">· {freezerMeals.reduce((s, f) => s + f.remainingPortions, 0)} portions</span>
             )}
@@ -2680,7 +2680,7 @@ export default function MealsPage() {
                           <p className="text-xs text-muted-foreground">{frozen.batchLabel}</p>
                         )}
                         {meal?.servings != null && meal.servings >= 1 && (
-                          <p className="flex items-center gap-1 text-[11px] text-muted-foreground" data-testid={`text-freezer-servings-${frozen.id}`}>
+                          <p className="flex items-center gap-1 text-xs text-muted-foreground" data-testid={`text-freezer-servings-${frozen.id}`}>
                             <UtensilsCrossed className="h-3 w-3" />
                             {meal.servings} {meal.servings === 1 ? 'serving' : 'servings'} per batch
                           </p>
@@ -2691,11 +2691,11 @@ export default function MealsPage() {
                             style={{ width: `${portionPercent}%` }}
                           />
                         </div>
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                           Frozen {new Date(frozen.frozenDate).toLocaleDateString()}
                           {frozen.expiryDate && ` · Expires ${new Date(frozen.expiryDate).toLocaleDateString()}`}
                         </p>
-                        {frozen.notes && <p className="text-[11px] text-muted-foreground italic">{frozen.notes}</p>}
+                        {frozen.notes && <p className="text-xs text-muted-foreground italic">{frozen.notes}</p>}
                         <NutritionBadges mealId={frozen.mealId} nutrition={nutritionMap.get(frozen.mealId)} />
                       </CardContent>
                       <CardFooter className="p-3 pt-0 flex flex-col gap-2">
@@ -2781,7 +2781,7 @@ export default function MealsPage() {
           <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
             <ChefHat className="h-10 w-10 text-muted-foreground" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">No meals found</h3>
+          <h3 className="text-base font-medium mb-2">No meals found</h3>
           <p className="text-muted-foreground">
             {searchTerm.trim().length >= 2 
               ? "No local matches. Web results will appear below if found."
@@ -2795,7 +2795,7 @@ export default function MealsPage() {
         <div className="mt-8" data-testid="section-product-results">
           <div className="flex items-center gap-3 mb-4">
             <Leaf className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold tracking-tight">Packaged & Processed</h2>
+            <h2 className="text-base font-medium">Packaged & Processed</h2>
             {productIsSearching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
             {!productIsSearching && productResults.length > 0 && (
               <span className="text-sm text-muted-foreground">
@@ -2848,7 +2848,7 @@ export default function MealsPage() {
                                   </Badge>
                                 )}
                                 {product.nutriscore_grade && (
-                                  <Badge className={`text-xs font-bold uppercase ${NUTRISCORE_COLORS[product.nutriscore_grade.toLowerCase()] || 'bg-muted'}`} data-testid={`badge-nutriscore-${productKey}`}>
+                                  <Badge className={`text-xs font-semibold uppercase ${NUTRISCORE_COLORS[product.nutriscore_grade.toLowerCase()] || 'bg-muted'}`} data-testid={`badge-nutriscore-${productKey}`}>
                                     Nutri-Score {product.nutriscore_grade.toUpperCase()}
                                   </Badge>
                                 )}
@@ -2963,7 +2963,7 @@ export default function MealsPage() {
         <div className="mt-8" data-testid="section-web-results">
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <Globe className="h-5 w-5 text-primary" />
-            <h2 className="text-lg font-semibold tracking-tight">From the Web</h2>
+            <h2 className="text-base font-medium">From the Web</h2>
             {webIsSearching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
             {webSearchQuery && !webIsSearching && (
               <span className="text-sm text-muted-foreground">

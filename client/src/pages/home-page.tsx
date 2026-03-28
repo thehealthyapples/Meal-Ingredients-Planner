@@ -76,7 +76,7 @@ export default function HomePage() {
               {/* Left: copy + CTAs */}
               <div>
                 <p
-                  className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary/80 mb-5"
+                  className="text-[10px] uppercase tracking-[0.12em] text-primary/80 mb-5"
                   data-testid="text-hero-brand-line"
                 >
                   Confidently better choices, simply
