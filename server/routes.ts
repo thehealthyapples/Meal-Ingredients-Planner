@@ -25,62 +25,12 @@ import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer
 import { sanitizeUser } from "./lib/sanitizeUser";
 import { isAdmin, hasPremiumAccess, assertAdmin } from "./lib/access";
 import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/retailIntelligence";
-import { getCanonicalProduct } from "./lib/productCanonicaliser";
+import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
 import { getHouseholdForUser } from "./lib/household";
 import multer from "multer";
 import { extractTextFromImage, OcrError } from "./services/ocr";
 import { parseScannedText } from "./services/recipeParser";
-
-// ---------------------------------------------------------------------------
-// Ingredient language helpers (module-scope so all product pipelines can use them)
-// ---------------------------------------------------------------------------
-
-/**
- * Returns true if the raw ingredient text appears to be in a language other
- * than English. Uses non-ASCII character density and known German/French lexical
- * markers. False-positive rate is low; false-negatives (undetected languages)
- * are caught by the stricter hasEnglishIngredients rule.
- */
-function isLikelyNonEnglishIngredients(text: string): boolean {
-  if (!text || text.length < 15) return false;
-
-  // Non-ASCII chars typical of German/French/Spanish/Italian — rare in English ingredient lists
-  const nonAsciiCount = (text.match(/[àáâäæãåçćèéêëîïíìłńñôöòóœøśšûüùúÿžżÄÖÜß]/g) || []).length;
-  if (nonAsciiCount >= 2) return true;
-
-  const t = text.toLowerCase();
-
-  // German-specific ingredient terms
-  const germanTerms = [
-    'zucker', 'emulgator', 'weizenmehl', 'magermilch', 'vollmilch',
-    'kakaobutter', 'glukosesirup', 'molkenpulver', 'pflanzenfett',
-    'maisstärke', 'wasser', 'salz',
-  ];
-  if (germanTerms.filter(m => t.includes(m)).length >= 2) return true;
-
-  // French-specific ingredient terms
-  const frenchTerms = [
-    'viande', 'lait ', 'fromage', 'semoule', 'pâtes', '(contient',
-    'huile de', 'farine de', 'beurre', 'crème', 'blé dur',
-    'eau potable', 'tomates pelées', 'sucre blanc',
-  ];
-  if (frenchTerms.filter(m => t.includes(m)).length >= 2) return true;
-
-  return false;
-}
-
-/**
- * Returns true only when a product has usable English ingredient text.
- * This is the single gate for all user-facing product pipelines:
- *   - ingredients_text_en exists and non-empty → eligible
- *   - ingredients_text exists, long enough, and not detected as non-English → eligible
- *   - no ingredient text, or text is non-English only → ineligible
- */
-function hasEnglishIngredients(p: any): boolean {
-  if (p.ingredients_text_en && p.ingredients_text_en.trim().length > 0) return true;
-  if (!p.ingredients_text || p.ingredients_text.trim().length < 15) return false;
-  return !isLikelyNonEnglishIngredients(p.ingredients_text);
-}
+import { isLikelyNonEnglishIngredients, hasEnglishIngredients } from "./lib/ingredient-language";
 
 // ---------------------------------------------------------------------------
 
@@ -1234,6 +1184,7 @@ export async function registerRoutes(
       const _qLower = q.toLowerCase();
       const _debugCoke = _qLower.includes('cherry') || _qLower.includes('coke') || _qLower.includes('coca');
       const _debugBenJerry = _qLower.includes('ben') && _qLower.includes('jerr');
+      const _debugDD = _qLower.includes('double') && _qLower.includes('decker');
 
       if (_debugNairns) {
         console.log(`[DEBUG-NAIRNS] Query: "${q}" | UK results: ${ukProducts.length} | Global results: ${globalProducts.length}`);
@@ -1285,6 +1236,14 @@ export async function registerRoutes(
       // canonical grouping so retailer duplicates (different barcodes for the
       // same product) can be merged before we apply the user-facing page limit.
       const products = merged;
+
+      if (_debugDD) {
+        const ddRaw = products.filter((p: any) => (p.product_name || '').toLowerCase().includes('decker'));
+        console.log(`[DEBUG-DD] AFTER-LANG-GATE | ${ddRaw.length} double-decker product(s) survived:`);
+        for (const p of ddRaw) {
+          console.log(`[DEBUG-DD]   barcode:${p.code} | name:"${p.product_name}" | brand:"${p.brands}"`);
+        }
+      }
 
       const additiveDb = await storage.getAllAdditives();
 
@@ -1468,6 +1427,28 @@ export async function registerRoutes(
       const _canonicalKey = (p: any) =>
         `${_norm(p.brand)}|${_normNameForKey(p.brand, p.product_name)}|${_normQty(p.quantity)}`;
 
+      // Score a product entry for use as the "best" representative of a group.
+      // Higher = preferred. Criteria in order of weight:
+      //   1. UK-sourced product (most likely to have clean, English-market data)
+      //   2. Has a product image
+      //   3. Title is clean (mixed-case, reasonable length) vs garbled/ALL-CAPS
+      const _titleScore = (p: any): number => {
+        let score = 0;
+        if (p.isUK) score += 8;
+        if (p.image_url) score += 4;
+        const name: string = p.product_name || '';
+        if (name.length >= 3 && name.length <= 80) score += 2;
+        // Penalise ALL-CAPS-heavy titles (OCR garble / bad OFF submissions)
+        const alphaWords = name.split(/\s+/).filter((w: string) => /[a-zA-Z]{3,}/.test(w));
+        if (alphaWords.length > 0) {
+          const capsRatio = alphaWords.filter(
+            (w: string) => w === w.toUpperCase() && /[A-Z]/.test(w)
+          ).length / alphaWords.length;
+          if (capsRatio <= 0.35) score += 2; // mostly lower/mixed-case → clean
+        }
+        return score;
+      };
+
       const _groups = new Map<string, any[]>();
       for (const p of results) {
         const key = _canonicalKey(p);
@@ -1477,7 +1458,7 @@ export async function registerRoutes(
 
       // DEBUG: canonical grouping stage for Nairn's investigation
       if (_debugNairns) {
-        for (const [key, group] of _groups.entries()) {
+        for (const [key, group] of Array.from(_groups.entries())) {
           if (group.some((p: any) => (p.product_name || '').toLowerCase().includes('nairn'))) {
             console.log(`[DEBUG-NAIRNS] CANONICAL-GROUP key:"${key}" | members:${group.length}`);
             for (const p of group) {
@@ -1488,7 +1469,7 @@ export async function registerRoutes(
       }
       // DEBUG: canonical grouping stage for Cherry Coke investigation
       if (_debugCoke) {
-        for (const [key, group] of _groups.entries()) {
+        for (const [key, group] of Array.from(_groups.entries())) {
           const isCokeGroup = group.some((p: any) => {
             const pn = (p.product_name || '').toLowerCase();
             return pn.includes('cherry') || pn.includes('coke') || pn.includes('coca');
@@ -1504,11 +1485,8 @@ export async function registerRoutes(
 
       const grouped = Array.from(_groups.values()).map(group => {
         if (group.length === 1) return group[0];
-        // Prefer: UK product with image > any product with image > first entry
-        const best =
-          group.find((p: any) => p.isUK && p.image_url) ||
-          group.find((p: any) => p.image_url) ||
-          group[0];
+        // Pick the highest-scored representative (UK + image + clean title).
+        const best = [...group].sort((a: any, b: any) => _titleScore(b) - _titleScore(a))[0];
         // Merge store arrays across all entries for this canonical product
         const mergedAvailable = Array.from(new Set(group.flatMap((p: any) => p.availableStores || [])));
         const mergedConfirmed = Array.from(new Set(group.flatMap((p: any) => p.confirmedStores || [])));
@@ -1546,6 +1524,16 @@ export async function registerRoutes(
         }
       }
 
+      if (_debugDD) {
+        const ddGrouped = grouped.filter((p: any) => (p.product_name || '').toLowerCase().includes('decker'));
+        console.log(`[DEBUG-DD] STAGE-1 | ${ddGrouped.length} double-decker group(s) after canonical grouping:`);
+        for (const p of ddGrouped) {
+          const ident = _productIdent(p);
+          const canonical = _canonicalLookup.get(ident);
+          console.log(`[DEBUG-DD]   ident:"${ident}" | name:"${p.product_name}" | brand:"${p.brand}" | canonical:${JSON.stringify(canonical)}`);
+        }
+      }
+
       if (_debugCoke) {
         const canonicalEntries = Array.from(_canonicalLookup.entries());
         console.log(`[DEBUG-COKE] STAGE-1.5 | ${canonicalEntries.length} product(s) resolved to canonical identity:`);
@@ -1576,10 +1564,22 @@ export async function registerRoutes(
         _norm(((brand ?? '').split(',')[0]).replace(_CORP_RE, '').trim());
 
       const _SIZE_RE = /\b[\d.]+\s*(?:x\s*[\d.]+\s*)?(?:m(?:illilitres?|illiliters?|ls?)?|cl|litres?|liters?|l|g(?:rams?|rammes?|r)?|kg(?:ilograms?|ilogrammes?)?|mg|oz)\b/gi;
-      const _PACK_RE = /\b(?:\d+\s*(?:pack|cans?|bottles?|cartons?)|pack\s+of\s+\d+|multipack|multi-pack)\b/gi;
+      // Matches pack-count tokens: "4 pack", "6 cans", "multipack", and also
+      // "4 bars", "4 bar", "2 sticks", "3 bags" which are common in confectionery.
+      const _PACK_RE = /\b(?:\d+\s*(?:pack|packs?|cans?|bottles?|cartons?|bars?|sticks?|pieces?|pouches?|bags?)|pack\s+of\s+\d+|multipack|multi-pack)\b/gi;
+      // Strips common merchandising / sourcing suffixes that vary across retailer
+      // submissions of the same product:
+      //   "Sustainably Sourced", "Sustainably Sourced Cocoa", "Sourced Cocoa",
+      //   "Responsibly Sourced", "Rainforest Alliance Certified", etc.
+      const _MERCH_RE = /\b(?:sustainably[\s-]*sourced?(?:\s+cocoa)?|responsibly[\s-]*sourced?(?:\s+cocoa)?|sourced?\s+cocoa|rainforest\s+alliance(?:\s+certified)?|sustainably|responsibly)\b/gi;
 
       const _consumableNameKey = (brand: string | null, name: string | null): string => {
-        const cleaned = (name ?? '').replace(_SIZE_RE, '').replace(_PACK_RE, '').replace(/\s+/g, ' ').trim();
+        const cleaned = (name ?? '')
+          .replace(_SIZE_RE, '')
+          .replace(_PACK_RE, '')
+          .replace(_MERCH_RE, '')
+          .replace(/\s+/g, ' ')
+          .trim();
         return _normNameForKey(brand, cleaned || name);
       };
 
@@ -1624,10 +1624,8 @@ export async function registerRoutes(
       }
 
       const consumableGrouped = Array.from(_consumableGroups2.values()).map(cgroup => {
-        const best =
-          cgroup.find((p: any) => p.isUK && p.image_url) ||
-          cgroup.find((p: any) => p.image_url) ||
-          cgroup[0];
+        // Pick the highest-scored representative (UK + image + clean title).
+        const best = [...cgroup].sort((a: any, b: any) => _titleScore(b) - _titleScore(a))[0];
 
         // Resolve canonical identity for this group via the Stage-1.5 Map.
         // All members of a canonical group share the same canonical key, so
@@ -1679,6 +1677,17 @@ export async function registerRoutes(
           variantCount: cgroup.length,
         };
       });
+
+      if (_debugDD) {
+        const ddFinal = consumableGrouped.filter((p: any) =>
+          (p.product_name || '').toLowerCase().includes('decker') ||
+          (p.canonicalProductName || '').toLowerCase().includes('decker')
+        );
+        console.log(`[DEBUG-DD] STAGE-2 FINAL | ${ddFinal.length} double-decker result(s) after consumable grouping:`);
+        for (const p of ddFinal) {
+          console.log(`[DEBUG-DD]   name:"${p.product_name}" | brand:"${p.brand}" | canonical:"${p.canonicalProductName}" | variants:${p.variantCount} | nameVariants:${JSON.stringify(p.nameVariants)}`);
+        }
+      }
 
       // Apply the user-facing page limit after merging so retailer duplicates
       // don't consume slots before they get a chance to be consolidated.
@@ -2520,7 +2529,10 @@ export async function registerRoutes(
       for (const ing of meal.ingredients) {
         const ingLower = ing.toLowerCase();
         for (const swap of allSwaps) {
-          if (ingLower.includes(swap.original.toLowerCase())) {
+          if (
+            ingLower.includes(swap.original.toLowerCase()) &&
+            isCompatibleSwap(ing, swap.healthier)
+          ) {
             applicableSwaps.push({ ingredient: ing, original: swap.original, healthier: swap.healthier });
           }
         }
@@ -5526,7 +5538,7 @@ export async function registerRoutes(
 
   app.put("/api/admin/users/:id/subscription", assertAdmin, async (req, res) => {
     try {
-      const targetId = parseInt(req.params.id, 10);
+      const targetId = parseInt(String(req.params.id), 10);
       if (isNaN(targetId)) return res.status(400).json({ message: "Invalid user id" });
 
       if (targetId === req.user!.id) {
@@ -5562,7 +5574,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/users/:id/reset-password", assertAdmin, async (req, res) => {
     try {
-      const targetId = parseInt(req.params.id, 10);
+      const targetId = parseInt(String(req.params.id), 10);
       if (isNaN(targetId)) return res.status(400).json({ message: "Invalid user id" });
 
       if (targetId === req.user!.id) {
@@ -5597,7 +5609,7 @@ export async function registerRoutes(
 
   app.post("/api/admin/users/:id/run-onboarding", assertAdmin, async (req, res) => {
     try {
-      const targetId = parseInt(req.params.id, 10);
+      const targetId = parseInt(String(req.params.id), 10);
       if (isNaN(targetId)) return res.status(400).json({ message: "Invalid user id" });
 
       const targetUser = await storage.getUser(targetId);

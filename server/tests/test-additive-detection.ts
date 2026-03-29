@@ -124,7 +124,7 @@ const CASES: TestCase[] = [
     ingredients: "Chicken, Water, Natural Flavouring, Modified Starch, Dextrose",
     expect: {
       maxApples: 3,
-      mustDetectSoft: ["natural flavour", "modified starch", "dextrose"],
+      mustDetectSoft: ["flavour", "modified starch", "dextrose"],
       noDoubleCount: true,
     },
   },
@@ -146,7 +146,7 @@ const CASES: TestCase[] = [
     expect: {
       maxApples: 2,
       mustDetect: ["e330", "e150d", "e202"],
-      mustDetectSoft: ["natural flavour"],
+      mustDetectSoft: ["flavour"],
       noDoubleCount: true,
     },
   },

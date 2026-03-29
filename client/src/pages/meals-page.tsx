@@ -2332,7 +2332,7 @@ export default function MealsPage() {
                             </div>
                             <div className="max-h-52 overflow-y-auto">
                               {meal.mealFormat === "grouped" ? (
-                                <GroupedMealDetail meal={meal} allMeals={meals} tab={expandedTab} mealId={meal.id} />
+                                <GroupedMealDetail meal={meal} allMeals={meals ?? []} tab={expandedTab} mealId={meal.id} />
                               ) : expandedTab === "ingredients" ? (
                                 <div className="space-y-1 pb-2" data-testid={`expanded-ingredients-${meal.id}`}>
                                   {meal.ingredients.length > 0 ? meal.ingredients.map((ing, i) => {
@@ -2567,7 +2567,7 @@ export default function MealsPage() {
                             </div>
                             <div className="max-h-64 overflow-y-auto">
                               {meal.mealFormat === "grouped" ? (
-                                <GroupedMealDetail meal={meal} allMeals={meals} tab={expandedTab} mealId={meal.id} />
+                                <GroupedMealDetail meal={meal} allMeals={meals ?? []} tab={expandedTab} mealId={meal.id} />
                               ) : expandedTab === "ingredients" ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 pb-2" data-testid={`expanded-ingredients-${meal.id}`}>
                                   {meal.ingredients.length > 0 ? meal.ingredients.map((ing, i) => {

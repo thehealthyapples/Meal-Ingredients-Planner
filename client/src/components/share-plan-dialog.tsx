@@ -58,7 +58,7 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
   });
 
   const shareMutation = useMutation({
-    mutationFn: (id: string) => apiRequest("POST", `/api/plan-templates/mine/${id}/share`),
+    mutationFn: (id: string) => apiRequest("POST", `/api/plan-templates/mine/${id}/share`).then(r => r.json() as Promise<{ shareToken: string; url: string }>),
     onSuccess: (data: { shareToken: string; url: string }) => {
       setShareUrl(data.url);
       queryClient.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });

@@ -1357,6 +1357,8 @@ export class DatabaseStorage implements IStorage {
         publishedAt: mealPlanTemplates.publishedAt,
         createdAt: mealPlanTemplates.createdAt,
         updatedAt: mealPlanTemplates.updatedAt,
+        shareToken: mealPlanTemplates.shareToken,
+        visibility: mealPlanTemplates.visibility,
         itemCount: sql<number>`(SELECT COUNT(*) FROM meal_plan_template_items WHERE template_id = meal_plan_templates.id)`.mapWith(Number),
       })
       .from(mealPlanTemplates)
@@ -1386,6 +1388,8 @@ export class DatabaseStorage implements IStorage {
         publishedAt: mealPlanTemplates.publishedAt,
         createdAt: mealPlanTemplates.createdAt,
         updatedAt: mealPlanTemplates.updatedAt,
+        shareToken: mealPlanTemplates.shareToken,
+        visibility: mealPlanTemplates.visibility,
         itemCount: sql<number>`(SELECT COUNT(*) FROM meal_plan_template_items WHERE template_id = meal_plan_templates.id)`.mapWith(Number),
       })
       .from(mealPlanTemplates)
@@ -1408,6 +1412,8 @@ export class DatabaseStorage implements IStorage {
         publishedAt: mealPlanTemplates.publishedAt,
         createdAt: mealPlanTemplates.createdAt,
         updatedAt: mealPlanTemplates.updatedAt,
+        shareToken: mealPlanTemplates.shareToken,
+        visibility: mealPlanTemplates.visibility,
         itemCount: sql<number>`(SELECT COUNT(*) FROM meal_plan_template_items WHERE template_id = meal_plan_templates.id)`.mapWith(Number),
       })
       .from(mealPlanTemplates)
@@ -2293,7 +2299,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async removeHouseholdMember(actorUserId: number, targetUserId: number): Promise<{
-    member: HouseholdMember; user: { id: number; displayName: string | null; username: string; email: string };
+    member: HouseholdMember; user: { id: number; displayName: string | null; username: string };
   }[]> {
     let householdId: number;
 
@@ -2389,7 +2395,7 @@ export class DatabaseStorage implements IStorage {
     if (items.length === 0) return [];
     const sources = await db.select({ mealId: ingredientSources.mealId }).from(ingredientSources)
       .where(inArray(ingredientSources.shoppingListItemId, items.map(i => i.id)));
-    return [...new Set(sources.map(s => s.mealId))];
+    return Array.from(new Set(sources.map(s => s.mealId)));
   }
 
   async getHouseholdDietaryContext(userId: number): Promise<HouseholdDietaryContext> {
@@ -2415,9 +2421,9 @@ export class DatabaseStorage implements IStorage {
     return {
       members: memberProfiles,
       aggregated: {
-        unionDietTypes: [...new Set(memberProfiles.flatMap(m => m.dietTypes))],
-        unionRestrictions: [...new Set(memberProfiles.flatMap(m => m.dietRestrictions))],
-        unionExclusions: [...new Set(memberProfiles.flatMap(m => m.excludedIngredients))],
+        unionDietTypes: Array.from(new Set(memberProfiles.flatMap(m => m.dietTypes))),
+        unionRestrictions: Array.from(new Set(memberProfiles.flatMap(m => m.dietRestrictions))),
+        unionExclusions: Array.from(new Set(memberProfiles.flatMap(m => m.excludedIngredients))),
       },
     };
   }

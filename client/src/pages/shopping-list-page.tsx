@@ -1970,8 +1970,8 @@ export default function ShoppingListPage() {
       const itemCandidates = allPriceMatches.filter(m => m.shoppingListItemId === item.id);
       const intent: WholeFoodIntent = { ingredientName: item.normalizedName ?? item.productName, variantSelections: rowVariantSelections, attributePreferences: rowAttrPreferences, tier: effectiveTier, selectedRetailers };
       const conf = calcConfidence(intent, itemCandidates, selectedRetailers);
-      if (conf.level === 'high') highCount++;
-      else if (conf.level === 'medium') medCount++;
+      if (conf.level === 'exact') highCount++;
+      else if (conf.level === 'close') medCount++;
     }
     const score = (highCount * 2 + medCount) / (wfItems.length * 2);
     if (score >= 0.7) return 'high';
