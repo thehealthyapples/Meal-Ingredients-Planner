@@ -29,6 +29,7 @@ const UPF_INDICATORS = [
   'dimethylpolysiloxane',
   'cellulose',
   'invert sugar',
+  'soya flour', 'soy flour',  // industrial bun/pastry ingredient — protein extender
 ];
 
 const E_NUMBER_PATTERN = /\bE\d{3,4}[a-z]?\b/i;

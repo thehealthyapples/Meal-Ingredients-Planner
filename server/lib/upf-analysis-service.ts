@@ -122,6 +122,7 @@ export const INDUSTRIAL_INGREDIENT_TERMS = [
   "whey protein isolate",
   "protein isolate",
   "mechanically separated",
+  "soy flour",       // soya/soy flour — industrial bun ingredient (normaliseForMatching maps soya→soy)
 ];
 
 // UPF pattern rules — identify ingredient combinations typical of confectionery,

@@ -5,13 +5,21 @@
  * canonical identity using deterministic token + rule-based matching.
  * No external dependencies; no NLP.
  *
- * Scoped to soft drinks only for safe rollout.
+ * Examples resolved by category:
  *
- * Examples resolved to "Cherry Coke":
+ * Soft drinks:
  *   "Cherry coke", "Coke cherry", "Coca-Cola Cherry",
  *   "Cherry cola", "Coca-ColaCherry" (malformed/concatenated)
+ *   → "Cherry Coke"
  *
- * "Cherry Coke Zero" remains a separate canonical identity.
+ * Confectionery:
+ *   "Double Decker", "Cadbury Double Decker",
+ *   "Cadbury double DECKER 4BAR BARS SUSTAINABLY SOURCE",
+ *   "Cadbury double decker chocolate",
+ *   "Cadbury double DECKER 4BARS SOURCED COCOA ..."
+ *   → "Cadbury Double Decker"
+ *
+ *   "Rustlers The Mighty Double Decker" (brand: Rustlers) → NOT matched (different brand)
  */
 
 export interface CanonicalProduct {
@@ -118,6 +126,105 @@ function matchSoftDrinkRules(
   return null;
 }
 
+// ── Confectionery rules ───────────────────────────────────────────────────────
+
+/**
+ * Brands known to make a non-Cadbury "Double Decker" product.
+ */
+const NON_CADBURY_DOUBLE_DECKER_BRANDS = ['rustlers', 'rollover'] as const;
+
+/**
+ * Tokens that indicate a product is clearly NOT the Cadbury chocolate bar,
+ * even though it carries the words "double decker" in its name.
+ * e.g. "Double Decker cheese pizza", "Double Decker Oatmeal Creme Pie",
+ *      "Cheesy double decker taco", "Double Decker New York-Style Cheesecake"
+ */
+const NON_CHOCOLATE_SIGNALS = [
+  'pizza', 'burger', 'taco', 'pie', 'pies', 'cheesecake', 'cookie', 'cookies',
+  'licorice', 'liquorice', 'banana', 'oatmeal', 'fudge', 'creme', 'sandwich',
+  'cheese', 'meatball', 'pepperoni', 'cheeseburger', 'wrapped', 'moonpie',
+] as const;
+
+/**
+ * Match confectionery products against canonical identity rules.
+ *
+ * Double Decker rule:
+ *  - Explicit Cadbury brand → always match (handles all branded variants)
+ *  - No brand / brand missing in OFF → match only if the name has no
+ *    non-chocolate signals ("pizza", "pie", "burger", etc.)
+ *    This captures the common OFF data quality issue where the Cadbury
+ *    chocolate bar is submitted without a brand field.
+ *  - Known competing brands (Rustlers, Rollover) → never match
+ */
+function matchConfectioneryRules(
+  tokens: Set<string>,
+  _phrase: string,
+): CanonicalProduct | null {
+  // ── Cadbury Double Decker ──────────────────────────────────────────────────
+  if (
+    tokenHas(tokens, 'double') &&
+    tokenHas(tokens, 'decker') &&
+    !NON_CADBURY_DOUBLE_DECKER_BRANDS.some(b => tokenHas(tokens, b))
+  ) {
+    // Explicit Cadbury brand → definite match
+    if (tokenHas(tokens, 'cadbury')) {
+      return { name: 'Cadbury Double Decker', brand: 'Cadbury' };
+    }
+    // No competing brand token, and no non-chocolate signals → likely the
+    // Cadbury bar submitted without a brand field in OFF
+    if (!NON_CHOCOLATE_SIGNALS.some(s => tokenHas(tokens, s))) {
+      return { name: 'Cadbury Double Decker', brand: 'Cadbury' };
+    }
+  }
+
+  return null;
+}
+
+// ── Broad food-type classification for swap compatibility ─────────────────────
+
+/**
+ * Tokens that strongly indicate a product is a savory/fast-food item.
+ * Used to prevent confectionery ingredients being paired with savory swap
+ * suggestions (e.g. chocolate bar → burger).
+ */
+const SAVORY_FOOD_SIGNALS = [
+  'burger', 'pizza', 'taco', 'sandwich', 'kebab', 'hotdog', 'sausage',
+  'meatball', 'cheeseburger', 'pepperoni', 'rustlers', 'rollover',
+  'wrap', 'burrito', 'quesadilla', 'nachos', 'fries',
+] as const;
+
+/**
+ * Tokens that strongly indicate a product is a sweet/confectionery item.
+ */
+const CONFECTIONERY_SIGNALS = [
+  'chocolate', 'cadbury', 'candy', 'sweet', 'biscuit', 'brownie',
+  'nestle', 'kitkat', 'twix', 'snickers', 'bounty', 'milkyway',
+  'haribo', 'caramel', 'nougat', 'truffle', 'praline', 'fudge',
+] as const;
+
+type BroadFoodType = 'confectionery' | 'savory';
+
+function getBroadFoodType(tokens: Set<string>): BroadFoodType | null {
+  if (SAVORY_FOOD_SIGNALS.some(s => tokenHas(tokens, s))) return 'savory';
+  if (CONFECTIONERY_SIGNALS.some(s => tokenHas(tokens, s))) return 'confectionery';
+  return null;
+}
+
+/**
+ * Returns false when the healthier swap suggestion is clearly in a different
+ * broad food category than the ingredient — e.g. a chocolate bar should not
+ * be swapped for a burger product just because they share a product name fragment.
+ *
+ * Only rejects when BOTH sides have a detectable food type AND they differ.
+ * If either side is ambiguous (type = null), the swap is allowed through.
+ */
+export function isCompatibleSwap(ingredient: string, healthierAlternative: string): boolean {
+  const ingType = getBroadFoodType(tokenise(ingredient, null));
+  const altType = getBroadFoodType(tokenise(healthierAlternative, null));
+  if (ingType !== null && altType !== null && ingType !== altType) return false;
+  return true;
+}
+
 // ── Public API ───────────────────────────────────────────────────────────────
 
 /**
@@ -127,8 +234,6 @@ function matchSoftDrinkRules(
  *
  * This function is pure and deterministic — same inputs always yield the same
  * output. It introduces no I/O and no external dependencies.
- *
- * Currently scoped to soft drinks only for safe rollout.
  */
 export function getCanonicalProduct(
   productName: string | null,
@@ -136,5 +241,9 @@ export function getCanonicalProduct(
 ): CanonicalProduct | null {
   const tokens = tokenise(productName, brand);
   const phrase = normPhrase(productName, brand);
-  return matchSoftDrinkRules(tokens, phrase);
+
+  return (
+    matchSoftDrinkRules(tokens, phrase) ??
+    matchConfectioneryRules(tokens, phrase)
+  );
 }
