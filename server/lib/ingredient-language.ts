@@ -142,6 +142,15 @@ export function isLikelyNonEnglishIngredients(text: string): boolean {
     'zucker', 'emulgator', 'weizenmehl', 'magermilch', 'vollmilch',
     'kakaobutter', 'glukosesirup', 'molkenpulver', 'pflanzenfett',
     'maisstärke', 'wasser', 'salz', 'mehl', 'milchpulver', 'sojalecithin',
+    // Confectionery-specific German terms absent from the original list —
+    // these appear in short ingredient declarations where the classic markers
+    // (zucker, weizenmehl, etc.) may be absent.
+    'aromen',        // "flavourings" in German; English always says "flavourings"/"natural flavours"
+    'kakaomasse',    // "cocoa mass" in German; English says "cocoa mass"/"cocoa solids"
+    'palmfett',      // "palm fat" in German; English says "palm fat"/"palm oil"
+    'saccharose',    // German/French for sucrose; English labelling uses "sucrose" or "sugar"
+    'laktose',       // German for lactose; English spelling is "lactose" (different token)
+    'butterreinfett',// German for anhydrous milk fat; no English equivalent spelling
   ];
   if (germanTerms.filter(m => t.includes(m)).length >= 2) return true;
 
@@ -235,7 +244,9 @@ export function isUsableEnglishIngredients(text: string): boolean {
  *  3. No ingredient text → ineligible
  */
 export function hasEnglishIngredients(p: any): boolean {
-  if (p.ingredients_text_en && p.ingredients_text_en.trim().length > 0) return true;
+  if (p.ingredients_text_en && p.ingredients_text_en.trim().length > 0) {
+    return isUsableEnglishIngredients(p.ingredients_text_en);
+  }
   if (!p.ingredients_text || p.ingredients_text.trim().length < 20) return false;
   return isUsableEnglishIngredients(p.ingredients_text);
 }
