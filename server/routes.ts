@@ -1430,11 +1430,17 @@ export async function registerRoutes(
       // Score a product entry for use as the "best" representative of a group.
       // Higher = preferred. Criteria in order of weight:
       //   1. UK-sourced product (most likely to have clean, English-market data)
-      //   2. Has a product image
-      //   3. Title is clean (mixed-case, reasonable length) vs garbled/ALL-CAPS
+      //   2. Has usable English ingredient text (displayable, not withheld as foreign)
+      //   3. Has a product image
+      //   4. Title is clean (mixed-case, reasonable length) vs garbled/ALL-CAPS
       const _titleScore = (p: any): number => {
         let score = 0;
         if (p.isUK) score += 8;
+        // Prefer products with displayable English ingredient text.
+        // ingredientsUnavailable is set when the only available text is non-English;
+        // ingredients_text is null in that case. Both checks guard the same condition
+        // but are explicit for clarity.
+        if (p.ingredients_text && !p.ingredientsUnavailable) score += 5;
         if (p.image_url) score += 4;
         const name: string = p.product_name || '';
         if (name.length >= 3 && name.length <= 80) score += 2;
@@ -1560,8 +1566,16 @@ export async function registerRoutes(
       // Corporate suffixes (Ltd, PLC, GB, UK, Foods…) stripped from brand.
       // Size and pack-count tokens stripped from name.
       const _CORP_RE = /\s+(?:ltd\.?|plc\.?|inc\.?|llc\.?|gb|uk|group|foods|beverages?|company|co\.?)(?:\s|$)/gi;
-      const _normBrandConsumable = (brand: string | null | undefined): string =>
-        _norm(((brand ?? '').split(',')[0]).replace(_CORP_RE, '').trim());
+      const _normBrandConsumable = (brand: string | null | undefined, productName: string): string => {
+        const tokens = (brand ?? '')
+          .split(',')
+          .map(b => _norm(b.replace(_CORP_RE, '').trim()))
+          .filter(Boolean);
+        if (tokens.length <= 1) return tokens[0] ?? '';
+        const nameNorm = _norm(productName);
+        const matched = tokens.find(t => t.length > 3 && nameNorm.includes(t));
+        return matched ?? tokens[0];
+      };
 
       const _SIZE_RE = /\b[\d.]+\s*(?:x\s*[\d.]+\s*)?(?:m(?:illilitres?|illiliters?|ls?)?|cl|litres?|liters?|l|g(?:rams?|rammes?|r)?|kg(?:ilograms?|ilogrammes?)?|mg|oz)\b/gi;
       // Matches pack-count tokens: "4 pack", "6 cans", "multipack", and also
@@ -1594,8 +1608,8 @@ export async function registerRoutes(
           const cn = _norm(canonical.name);
           return `_c:${cb}|${cn}`;
         }
-        const b = _normBrandConsumable(p.brand);
-        const n = _consumableNameKey(p.brand, p.product_name);
+        const b = _normBrandConsumable(p.brand, p.product_name);
+        const n = _consumableNameKey(b, p.product_name);
         if (!b && !n) return _norm(p.product_name) || `_unknown_${p.barcode ?? ''}`;
         return `${b}|${n}`;
       };
