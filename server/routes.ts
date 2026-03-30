@@ -1578,9 +1578,21 @@ export async function registerRoutes(
       };
 
       const _SIZE_RE = /\b[\d.]+\s*(?:x\s*[\d.]+\s*)?(?:m(?:illilitres?|illiliters?|ls?)?|cl|litres?|liters?|l|g(?:rams?|rammes?|r)?|kg(?:ilograms?|ilogrammes?)?|mg|oz)\b/gi;
-      // Matches pack-count tokens: "4 pack", "6 cans", "multipack", and also
-      // "4 bars", "4 bar", "2 sticks", "3 bags" which are common in confectionery.
-      const _PACK_RE = /\b(?:\d+\s*(?:pack|packs?|cans?|bottles?|cartons?|bars?|sticks?|pieces?|pouches?|bags?)|pack\s+of\s+\d+|multipack|multi-pack)\b/gi;
+      // Matches pack-count, container-format and packaging-descriptor tokens that
+      // do not carry product identity.  Stripping these before the consumable key
+      // is built allows pack/format variants of the same product to collapse into
+      // one group.
+      //
+      // Digit-preceded counts:  "4 bars", "9pk", "16pk", "6 cans", "4 fingers"
+      // Named pack descriptors: "multipack", "pack of 12", "twin", "single"
+      // Standalone format words: "Fingers", "Bar", "Sticks" (confectionery shape)
+      // Packaging language:     "individually wrapped", "4 individually wrapped"
+      // Size-tier words:        "mini", "minis", "miniatures", "snack size",
+      //                         "fun size", "sharing bag"
+      //
+      // NOT stripped: flavour/formulation signals — white, dark, salted caramel,
+      // gluten free, protein, vegan, zero, diet, original, extra (kept as-is).
+      const _PACK_RE = /\b(?:\d+\s*(?:pk|pack|packs?|cans?|bottles?|cartons?|bars?|fingers?|sticks?|pieces?|pouches?|bags?)|pack\s+of\s+\d+|multipack|multi-pack|(?:\d+\s*)?individually\s+wrapped|twin|single|mini(?:atures?|s)?|snack\s+size|fun\s+size|sharing\s+bag|fingers?|bars?|sticks?)\b/gi;
       // Strips common merchandising / sourcing suffixes that vary across retailer
       // submissions of the same product:
       //   "Sustainably Sourced", "Sustainably Sourced Cocoa", "Sourced Cocoa",

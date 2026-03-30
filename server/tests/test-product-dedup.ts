@@ -48,7 +48,7 @@ const _normBrand = (brand: string | null | undefined): string =>
   _norm(((brand ?? '').split(',')[0]).replace(/\s+(?:ltd\.?|plc\.?|inc\.?|gb|uk|group|foods|beverages?|company|co\.?)(?:\s|$)/gi, '').trim());
 
 const _SIZE_RE = /\b[\d.]+\s*(?:x\s*[\d.]+\s*)?(?:m(?:illilitres?|illiliters?|ls?)?|cl|litres?|liters?|l|g(?:rams?|rammes?|r)?|kg(?:ilograms?|ilogrammes?)?|mg|oz)\b/gi;
-const _PACK_RE = /\b(?:\d+\s*(?:pack|packs?|cans?|bottles?|cartons?|bars?|sticks?|pieces?|pouches?|bags?)|pack\s+of\s+\d+|multipack|multi-pack)\b/gi;
+const _PACK_RE = /\b(?:\d+\s*(?:pk|pack|packs?|cans?|bottles?|cartons?|bars?|fingers?|sticks?|pieces?|pouches?|bags?)|pack\s+of\s+\d+|multipack|multi-pack|(?:\d+\s*)?individually\s+wrapped|twin|single|mini(?:atures?|s)?|snack\s+size|fun\s+size|sharing\s+bag|fingers?|bars?|sticks?)\b/gi;
 const _MERCH_RE = /\b(?:sustainably[\s-]*sourced?(?:\s+cocoa)?|responsibly[\s-]*sourced?(?:\s+cocoa)?|sourced?\s+cocoa|rainforest\s+alliance(?:\s+certified)?|sustainably|responsibly)\b/gi;
 
 const _normNameForKey = (brand: string | null, name: string | null): string => {
@@ -353,6 +353,184 @@ expect(
   "Cadbury Double Decker key !== Rustlers Double Decker key",
   ddKey !== rustlersKey,
   true,
+);
+
+// ---------------------------------------------------------------------------
+// 9. Twix — pack/format variants collapse; flavour variants stay separate
+// ---------------------------------------------------------------------------
+
+section("consumable key — Twix pack/format variants collapse into one family");
+
+const twixBase = consumableKey("Mars", "Twix");
+
+expect(
+  '"Twix Twin" → same as "Twix" (twin is a pack descriptor)',
+  consumableKey("Mars", "Twix Twin"),
+  twixBase,
+);
+
+expect(
+  '"Twix 16pk" → same as "Twix" (16pk is a count descriptor)',
+  consumableKey("Mars", "Twix 16pk"),
+  twixBase,
+);
+
+expect(
+  '"Twix 9pk" → same as "Twix"',
+  consumableKey("Mars", "Twix 9pk"),
+  twixBase,
+);
+
+expect(
+  '"Twix Fingers" → same as "Twix" (fingers is a shape/format word)',
+  consumableKey("Mars", "Twix Fingers"),
+  twixBase,
+);
+
+expect(
+  '"Twix Bar" → same as "Twix"',
+  consumableKey("Mars", "Twix Bar"),
+  twixBase,
+);
+
+section("consumable key — Twix flavour/formulation variants remain separate");
+
+expect(
+  '"Twix White" stays separate (white = formulation)',
+  consumableKey("Mars", "Twix White") !== twixBase,
+  true,
+);
+
+expect(
+  '"Twix White" and "Twix White" are self-consistent',
+  consumableKey("Mars", "Twix White") === consumableKey("Mars", "Twix White"),
+  true,
+);
+
+expect(
+  '"TWIX GLUTEN FREE 4 INDIVIDUALLY WRAPPED Chocolate" strips count+wrapping but keeps gluten free',
+  consumableKey("Mars", "TWIX GLUTEN FREE 4 INDIVIDUALLY WRAPPED Chocolate") !== twixBase,
+  true,
+);
+
+// ---------------------------------------------------------------------------
+// 10. KitKat — pack/count variants collapse; Chunky stays separate
+// ---------------------------------------------------------------------------
+
+section("consumable key — KitKat pack variants collapse");
+
+const kkBase = consumableKey("Nestlé", "Kit Kat");
+
+expect(
+  '"Kit Kat 4 Finger" → same as "Kit Kat" (4 finger = count+format)',
+  consumableKey("Nestlé", "Kit Kat 4 Finger"),
+  kkBase,
+);
+
+expect(
+  '"Kit Kat Fingers" → same as "Kit Kat" (standalone format word)',
+  consumableKey("Nestlé", "Kit Kat Fingers"),
+  kkBase,
+);
+
+expect(
+  '"Kit Kat Mini" → same as "Kit Kat"',
+  consumableKey("Nestlé", "Kit Kat Mini"),
+  kkBase,
+);
+
+expect(
+  '"Kit Kat Minis" → same as "Kit Kat"',
+  consumableKey("Nestlé", "Kit Kat Minis"),
+  kkBase,
+);
+
+expect(
+  '"Kit Kat 6 pack" → same as "Kit Kat"',
+  consumableKey("Nestlé", "Kit Kat 6 pack"),
+  kkBase,
+);
+
+expect(
+  '"Kit Kat Chunky" stays separate (distinct product variant)',
+  consumableKey("Nestlé", "Kit Kat Chunky") !== kkBase,
+  true,
+);
+
+// ---------------------------------------------------------------------------
+// 11. Snickers — pack/format variants collapse; Salted Caramel stays separate
+// ---------------------------------------------------------------------------
+
+section("consumable key — Snickers pack variants collapse");
+
+const snickersBase = consumableKey("Mars", "Snickers");
+
+expect(
+  '"Snickers Bar" → same as "Snickers"',
+  consumableKey("Mars", "Snickers Bar"),
+  snickersBase,
+);
+
+expect(
+  '"Snickers Fun Size" → same as "Snickers"',
+  consumableKey("Mars", "Snickers Fun Size"),
+  snickersBase,
+);
+
+expect(
+  '"Snickers Mini" → same as "Snickers"',
+  consumableKey("Mars", "Snickers Mini"),
+  snickersBase,
+);
+
+expect(
+  '"Snickers Minis" → same as "Snickers"',
+  consumableKey("Mars", "Snickers Minis"),
+  snickersBase,
+);
+
+expect(
+  '"Snickers 4 pack" → same as "Snickers"',
+  consumableKey("Mars", "Snickers 4 pack"),
+  snickersBase,
+);
+
+expect(
+  '"Snickers Sharing Bag" → same as "Snickers"',
+  consumableKey("Mars", "Snickers Sharing Bag"),
+  snickersBase,
+);
+
+expect(
+  '"Snickers Salted Caramel" stays separate (formulation variant)',
+  consumableKey("Mars", "Snickers Salted Caramel") !== snickersBase,
+  true,
+);
+
+expect(
+  '"Snickers Protein" stays separate (formulation variant)',
+  consumableKey("Mars", "Snickers Protein") !== snickersBase,
+  true,
+);
+
+// ---------------------------------------------------------------------------
+// 12. Individually-wrapped stripping (with and without count prefix)
+// ---------------------------------------------------------------------------
+
+section("consumable key — individually-wrapped stripping");
+
+const twixGFBase = consumableKey("Mars", "Twix Gluten Free");
+
+expect(
+  '"Twix Gluten Free 4 Individually Wrapped" → same as "Twix Gluten Free"',
+  consumableKey("Mars", "Twix Gluten Free 4 Individually Wrapped"),
+  twixGFBase,
+);
+
+expect(
+  '"Twix Gluten Free Individually Wrapped" → same as "Twix Gluten Free"',
+  consumableKey("Mars", "Twix Gluten Free Individually Wrapped"),
+  twixGFBase,
 );
 
 // ---------------------------------------------------------------------------
