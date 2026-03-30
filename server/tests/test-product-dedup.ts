@@ -534,6 +534,132 @@ expect(
 );
 
 // ---------------------------------------------------------------------------
+// 13. Canonical key — descriptive Twix names all collapse to one canonical group
+// ---------------------------------------------------------------------------
+
+section("canonical key — Twix descriptive name variants collapse");
+
+const twixCanonical = canonicalKey("Mars", "Twix");
+
+expect(
+  '"Twix Caramel Biscuit Bar" collapses to canonical Twix',
+  canonicalKey("Mars", "Twix Caramel Biscuit Bar"),
+  twixCanonical,
+);
+
+expect(
+  '"Twix Biscuit Bar" collapses to canonical Twix',
+  canonicalKey("Mars", "Twix Biscuit Bar"),
+  twixCanonical,
+);
+
+expect(
+  '"Twix Chocolate Biscuit" collapses to canonical Twix',
+  canonicalKey("Mars", "Twix Chocolate Biscuit"),
+  twixCanonical,
+);
+
+expect(
+  '"Twix Caramel" collapses to canonical Twix',
+  canonicalKey("Mars", "Twix Caramel"),
+  twixCanonical,
+);
+
+expect(
+  '"Twix Twin" collapses to canonical Twix',
+  canonicalKey("Mars", "Twix Twin"),
+  twixCanonical,
+);
+
+expect(
+  '"Twix White" stays separate from canonical Twix',
+  canonicalKey("Mars", "Twix White") !== twixCanonical,
+  true,
+);
+
+expect(
+  '"Twix Gluten Free" stays separate from canonical Twix',
+  canonicalKey("Mars", "Twix Gluten Free") !== twixCanonical,
+  true,
+);
+
+// ---------------------------------------------------------------------------
+// 14. Canonical key — Snickers descriptive name variants collapse
+// ---------------------------------------------------------------------------
+
+section("canonical key — Snickers descriptive name variants collapse");
+
+const snickersCanonical = canonicalKey("Mars", "Snickers");
+
+expect(
+  '"Snickers Peanut Caramel Nougat" collapses to canonical Snickers',
+  canonicalKey("Mars", "Snickers Peanut Caramel Nougat"),
+  snickersCanonical,
+);
+
+expect(
+  '"Snickers Caramel" collapses to canonical Snickers',
+  canonicalKey("Mars", "Snickers Caramel"),
+  snickersCanonical,
+);
+
+expect(
+  '"Snickers Chocolate Bar" collapses to canonical Snickers',
+  canonicalKey("Mars", "Snickers Chocolate Bar"),
+  snickersCanonical,
+);
+
+expect(
+  '"Snickers Protein" stays separate from canonical Snickers',
+  canonicalKey("Mars", "Snickers Protein") !== snickersCanonical,
+  true,
+);
+
+expect(
+  '"Snickers Almond" stays separate from canonical Snickers',
+  canonicalKey("Mars", "Snickers Almond") !== snickersCanonical,
+  true,
+);
+
+// ---------------------------------------------------------------------------
+// 15. Canonical key — Kit Kat descriptive name variants collapse
+// ---------------------------------------------------------------------------
+
+section("canonical key — Kit Kat descriptive name variants collapse");
+
+const kitkatCanonical = canonicalKey("Nestlé", "Kit Kat");
+
+expect(
+  '"Kit Kat 4 Finger Milk Chocolate" collapses to canonical Kit Kat',
+  canonicalKey("Nestlé", "Kit Kat 4 Finger Milk Chocolate"),
+  kitkatCanonical,
+);
+
+expect(
+  '"KitKat Milk Chocolate Bar" collapses to canonical Kit Kat',
+  canonicalKey("Nestlé", "KitKat Milk Chocolate Bar"),
+  kitkatCanonical,
+);
+
+expect(
+  '"Kit Kat Chunky" stays separate from canonical Kit Kat',
+  canonicalKey("Nestlé", "Kit Kat Chunky") !== kitkatCanonical,
+  true,
+);
+
+expect(
+  '"Kit Kat Gold" stays separate from canonical Kit Kat',
+  canonicalKey("Nestlé", "Kit Kat Gold") !== kitkatCanonical,
+  true,
+);
+
+expect(
+  '"Kit Kat Dark" stays separate from canonical Kit Kat',
+  canonicalKey("Nestlé", "Kit Kat Dark") !== kitkatCanonical,
+  true,
+);
+
+// ---------------------------------------------------------------------------
 // Summary
 // ---------------------------------------------------------------------------
 

@@ -146,7 +146,29 @@ const NON_CHOCOLATE_SIGNALS = [
 ] as const;
 
 /**
+ * Genuine formulation variants for each brand — these keep a separate canonical
+ * identity from the standard bar.  E.g. "Twix White" ≠ "Twix".
+ */
+const TWIX_DISTINCT_TOKENS = ['white', 'dark', 'peanut', 'hazelnut', 'orange', 'mint', 'protein', 'gluten', 'ice'] as const;
+const SNICKERS_DISTINCT_TOKENS = ['white', 'dark', 'almond', 'hazelnut', 'protein', 'ice'] as const;
+const BOUNTY_DISTINCT_TOKENS = ['dark'] as const;
+const MILKYWAY_DISTINCT_TOKENS = ['dark', 'crispy'] as const;
+// KitKat genuine variants: Chunky (different shape/recipe), Gold, Ruby, Dark, White
+const KITKAT_DISTINCT_TOKENS = ['chunky', 'gold', 'ruby', 'dark', 'white', 'orange', 'mint', 'matcha', 'sakura', 'protein'] as const;
+
+function isKitKat(tokens: Set<string>): boolean {
+  // "Kit Kat" → tokens {"kit","kat"}, "KitKat" → token "kitkat"
+  return tokenHas(tokens, 'kitkat') || (tokenHas(tokens, 'kit') && tokenHas(tokens, 'kat'));
+}
+
+/**
  * Match confectionery products against canonical identity rules.
+ *
+ * Rules follow the same structure as the Double Decker rule:
+ *  - The brand/product name identifier uniquely identifies the product family.
+ *  - Known genuine formulation variants get their own canonical identity.
+ *  - Everything else (pack size, count, format, marketing descriptors) collapses
+ *    to the standard bar canonical identity.
  *
  * Double Decker rule:
  *  - Explicit Cadbury brand → always match (handles all branded variants)
@@ -156,9 +178,29 @@ const NON_CHOCOLATE_SIGNALS = [
  *    chocolate bar is submitted without a brand field.
  *  - Known competing brands (Rustlers, Rollover) → never match
  */
+/**
+ * Returns true when the brand is consistent with the Mars product family.
+ * Accepts an explicit Mars/Masterfoods brand OR a missing/unknown brand
+ * (many OFF entries omit the brand field for well-known products).
+ * Returns false when a non-Mars brand is explicitly present.
+ */
+function isMarsCompatible(tokens: Set<string>, brand: string | null): boolean {
+  if (!brand || !brand.trim()) return true; // no brand info → don't exclude
+  return tokenHas(tokens, 'mars') || tokenHas(tokens, 'masterfoods');
+}
+
+/**
+ * Returns true when the brand is consistent with the Nestlé product family.
+ */
+function isNestleCompatible(tokens: Set<string>, brand: string | null): boolean {
+  if (!brand || !brand.trim()) return true;
+  return tokenHas(tokens, 'nestle') || tokenHas(tokens, 'nestl');
+}
+
 function matchConfectioneryRules(
   tokens: Set<string>,
   _phrase: string,
+  brand: string | null,
 ): CanonicalProduct | null {
   // ── Cadbury Double Decker ──────────────────────────────────────────────────
   if (
@@ -175,6 +217,58 @@ function matchConfectioneryRules(
     if (!NON_CHOCOLATE_SIGNALS.some(s => tokenHas(tokens, s))) {
       return { name: 'Cadbury Double Decker', brand: 'Cadbury' };
     }
+  }
+
+  // ── Twix (Mars) ───────────────────────────────────────────────────────────
+  // Collapses: "Twix Caramel Biscuit Bar", "Twix Biscuit Bar", "Twix Twin",
+  //            "Twix 9pk", "Twix Bar", "Twix Fingers" → {name:"Twix"}
+  // Keeps separate: Twix White, Twix Dark, Twix Peanut Butter, Twix Gluten Free
+  if (tokenHas(tokens, 'twix') && isMarsCompatible(tokens, brand)) {
+    if (tokenHas(tokens, 'white')) return { name: 'Twix White', brand: 'Mars' };
+    if (tokenHas(tokens, 'dark')) return { name: 'Twix Dark', brand: 'Mars' };
+    if (tokenHas(tokens, 'peanut')) return { name: 'Twix Peanut Butter', brand: 'Mars' };
+    // Distinct formulations left un-canonicalised (still benefit from pack stripping)
+    if (TWIX_DISTINCT_TOKENS.some(t => tokenHas(tokens, t))) return null;
+    return { name: 'Twix', brand: 'Mars' };
+  }
+
+  // ── Snickers (Mars) ───────────────────────────────────────────────────────
+  // Collapses: "Snickers Bar", "Snickers Caramel Nougat", "Snickers Fun Size",
+  //            "Snickers Peanut Caramel Nougat Chocolate Bar" → {name:"Snickers"}
+  // Keeps separate: Snickers Almond, Snickers White, Snickers Protein, Snickers Ice Cream
+  if (tokenHas(tokens, 'snickers') && isMarsCompatible(tokens, brand)) {
+    if (tokenHas(tokens, 'almond')) return { name: 'Snickers Almond', brand: 'Mars' };
+    if (tokenHas(tokens, 'white')) return { name: 'Snickers White', brand: 'Mars' };
+    if (SNICKERS_DISTINCT_TOKENS.some(t => tokenHas(tokens, t))) return null;
+    return { name: 'Snickers', brand: 'Mars' };
+  }
+
+  // ── Bounty (Mars) ─────────────────────────────────────────────────────────
+  // Collapses: "Bounty Coconut Bar", "Bounty Milk Chocolate" → {name:"Bounty"}
+  // Keeps separate: Bounty Dark
+  if (tokenHas(tokens, 'bounty') && isMarsCompatible(tokens, brand) && !NON_CHOCOLATE_SIGNALS.some(s => tokenHas(tokens, s))) {
+    if (tokenHas(tokens, 'dark')) return { name: 'Bounty Dark', brand: 'Mars' };
+    if (BOUNTY_DISTINCT_TOKENS.some(t => tokenHas(tokens, t))) return null;
+    return { name: 'Bounty', brand: 'Mars' };
+  }
+
+  // ── Milky Way (Mars) ──────────────────────────────────────────────────────
+  if ((tokenHas(tokens, 'milkyway') || (tokenHas(tokens, 'milky') && tokenHas(tokens, 'way'))) && isMarsCompatible(tokens, brand)) {
+    if (MILKYWAY_DISTINCT_TOKENS.some(t => tokenHas(tokens, t))) return null;
+    return { name: 'Milky Way', brand: 'Mars' };
+  }
+
+  // ── Kit Kat (Nestlé) ──────────────────────────────────────────────────────
+  // Collapses: "Kit Kat 4 Finger", "KitKat Fingers", "Kit Kat Mini",
+  //            "Kit Kat Milk Chocolate" → {name:"Kit Kat"}
+  // Keeps separate: Kit Kat Chunky, Kit Kat Gold, Kit Kat Dark, Kit Kat White
+  if (isKitKat(tokens) && isNestleCompatible(tokens, brand)) {
+    if (tokenHas(tokens, 'chunky')) return { name: 'Kit Kat Chunky', brand: 'Nestlé' };
+    if (tokenHas(tokens, 'gold')) return { name: 'Kit Kat Gold', brand: 'Nestlé' };
+    if (tokenHas(tokens, 'dark')) return { name: 'Kit Kat Dark', brand: 'Nestlé' };
+    if (tokenHas(tokens, 'white')) return { name: 'Kit Kat White', brand: 'Nestlé' };
+    if (KITKAT_DISTINCT_TOKENS.some(t => tokenHas(tokens, t))) return null;
+    return { name: 'Kit Kat', brand: 'Nestlé' };
   }
 
   return null;
@@ -244,6 +338,6 @@ export function getCanonicalProduct(
 
   return (
     matchSoftDrinkRules(tokens, phrase) ??
-    matchConfectioneryRules(tokens, phrase)
+    matchConfectioneryRules(tokens, phrase, brand)
   );
 }
