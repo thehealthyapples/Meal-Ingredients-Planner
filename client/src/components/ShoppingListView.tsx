@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { normalizeIngredientKey } from "@shared/normalize";
-import { Printer, X } from "lucide-react";
+import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ShoppingListItem, IngredientSource } from "@shared/schema";
 
@@ -53,6 +53,40 @@ function saveNotInShop(ids: Set<number>, items: SLItem[]) {
       JSON.stringify(Array.from(ids).map((id) => ({ id, name: nameMap.get(id) ?? "" }))),
     );
   } catch {}
+}
+
+// ── Shop session persistence (future notification support) ─────────────────
+// When the user finishes a shopping trip, we record the session here so that
+// future in-app reminder/notification logic can surface "you still need X items".
+
+const SHOP_SESSION_KEY = "tha-sl-last-shop-session";
+
+interface ShopSession {
+  /** ISO timestamp of when the trip was marked complete */
+  completedAt: string;
+  /** How many items were bought at this shop */
+  boughtCount: number;
+  /** How many items are still outstanding after this trip */
+  remainingCount: number;
+  /** The outstanding items with display names and quantities */
+  remainingItems: Array<{ id: number; name: string; qty: string }>;
+  /**
+   * Future hook: set to true when the user explicitly requests a pickup reminder.
+   * In-app notification logic can poll this flag to surface an alert.
+   */
+  needsPickup: boolean;
+}
+
+function saveShopSession(session: ShopSession) {
+  try { localStorage.setItem(SHOP_SESSION_KEY, JSON.stringify(session)); } catch {}
+}
+
+/** Read the most recent shop session — useful for future in-app reminder logic. */
+export function getLastShopSession(): ShopSession | null {
+  try {
+    const raw = localStorage.getItem(SHOP_SESSION_KEY);
+    return raw ? (JSON.parse(raw) as ShopSession) : null;
+  } catch { return null; }
 }
 
 // ── Category definitions ───────────────────────────────────────────────────
@@ -261,6 +295,8 @@ export default function ShoppingListView({
   const [notInShop, setNotInShop] = useState<Set<number>>(() => loadNotInShop());
   const [extraStates, setExtraStates] = useState<Map<number, "in_basket" | "not_in_shop">>(new Map());
   const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [shopSession, setShopSession] = useState<ShopSession | null>(null);
+  const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
   const itemsScrollRef = useRef<HTMLDivElement>(null);
   const tabStripRef = useRef<HTMLDivElement>(null);
   const activeTabElRef = useRef<HTMLButtonElement>(null);
@@ -322,6 +358,51 @@ export default function ShoppingListView({
 
   const needCount = totalItems - inBasketCount - notFoundCount;
   const allSorted = totalItems > 0 && needCount === 0;
+
+  // ── Shopping trip completion ──────────────────────────────────────────────
+
+  function handleFinishShop() {
+    const remainingListItems = items.filter((i) => getItemState(i) !== "in_basket");
+    const remainingExtras = activeExtras.filter((e) => getExtraState(e.id) !== "in_basket");
+
+    const remainingItems: ShopSession["remainingItems"] = [
+      ...remainingListItems.map((i) => ({
+        id: i.id,
+        name: capWords(i.productName),
+        qty: fmtQty(i.quantityValue, i.unit, i.quantityInGrams, measurementPref),
+      })),
+      ...remainingExtras.map((e) => ({ id: e.id, name: capWords(e.name), qty: "" })),
+    ];
+
+    const session: ShopSession = {
+      completedAt: new Date().toISOString(),
+      boughtCount: inBasketCount,
+      remainingCount: remainingItems.length,
+      remainingItems,
+      needsPickup: remainingItems.length > 0,
+    };
+
+    saveShopSession(session);
+    setShopSession(session);
+  }
+
+  async function handleShareRemaining() {
+    if (!shopSession || shopSession.remainingCount === 0) return;
+    const lines = shopSession.remainingItems.map((i) =>
+      i.qty ? `- ${i.name} (${i.qty})` : `- ${i.name}`,
+    );
+    const text = `Still needed from the shopping list:\n${lines.join("\n")}\n\nCan you pick these up if you're out?`;
+
+    if (typeof navigator.share === "function") {
+      try { await navigator.share({ title: "Still needed – shopping list", text }); } catch { /* cancelled */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(text);
+        setShareStatus("copied");
+        setTimeout(() => setShareStatus("idle"), 2200);
+      } catch { /* clipboard unavailable */ }
+    }
+  }
 
   // ── Category grouping ─────────────────────────────────────────────────────
 
@@ -582,6 +663,17 @@ export default function ShoppingListView({
 
           {/* Right: Print + Close */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            {inBasketCount > 0 && !shopSession && (
+              <Button
+                size="sm"
+                onClick={handleFinishShop}
+                className="gap-1.5 h-8 px-2.5 text-xs"
+                data-testid="button-done-at-shop"
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                <span>Done here</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -700,13 +792,144 @@ export default function ShoppingListView({
         </div>
       )}
 
-      {/* ── 4. Category Panel ─────────────────────────────────────────────
+      {/* ── 4a. Shopping trip summary (shown after "Done here") ──────────── */}
+      {shopSession && (
+        <div className="tha-print-hide relative z-10 flex-1 overflow-y-auto px-3 sm:px-5 pt-4 pb-6 w-full max-w-3xl mx-auto">
+          {/* Header card */}
+          <div
+            className="rounded-xl p-5 mb-4"
+            style={{
+              background: "hsl(var(--card) / 0.75)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              border: "1px solid hsl(var(--border) / 0.45)",
+              boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+            }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0" />
+              <div>
+                <h2 className="font-semibold text-[17px] leading-tight" style={{ fontFamily: "var(--font-display)" }}>
+                  Shopping done at this shop
+                </h2>
+                <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                  {new Date(shopSession.completedAt).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+                </p>
+              </div>
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div
+                className="rounded-lg px-4 py-3"
+                style={{ background: "hsl(var(--primary) / 0.07)", border: "1px solid hsl(var(--primary) / 0.15)" }}
+              >
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <ShoppingBag className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[11px] text-muted-foreground/70 font-medium uppercase tracking-wide">Bought</span>
+                </div>
+                <p className="text-[22px] font-bold text-primary leading-none">{shopSession.boughtCount}</p>
+                <p className="text-[11px] text-muted-foreground/60 mt-0.5">item{shopSession.boughtCount !== 1 ? "s" : ""} ✓</p>
+              </div>
+              <div
+                className="rounded-lg px-4 py-3"
+                style={{
+                  background: shopSession.remainingCount > 0 ? "hsl(var(--amber-50, 45 100% 97%) / 0.8)" : "hsl(var(--primary) / 0.04)",
+                  border: shopSession.remainingCount > 0 ? "1px solid rgba(217,119,6,0.2)" : "1px solid hsl(var(--border) / 0.3)",
+                }}
+              >
+                <div className="flex items-center gap-1.5 mb-0.5">
+                  <span className="text-[13px] leading-none">📋</span>
+                  <span className="text-[11px] text-muted-foreground/70 font-medium uppercase tracking-wide">Still needed</span>
+                </div>
+                <p className={`text-[22px] font-bold leading-none ${shopSession.remainingCount > 0 ? "text-amber-600" : "text-primary"}`}>
+                  {shopSession.remainingCount}
+                </p>
+                <p className="text-[11px] text-muted-foreground/60 mt-0.5">
+                  {shopSession.remainingCount === 0 ? "all done!" : `item${shopSession.remainingCount !== 1 ? "s" : ""} remaining`}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Remaining items list */}
+          {shopSession.remainingCount > 0 && (
+            <div
+              className="rounded-xl overflow-hidden mb-4"
+              style={{
+                background: "hsl(var(--card) / 0.72)",
+                backdropFilter: "blur(12px)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid hsl(var(--border) / 0.45)",
+                boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+              }}
+            >
+              <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-border/30"
+                style={{ background: "rgba(217,119,6,0.06)" }}
+              >
+                <span className="text-[12px] font-semibold text-amber-700 dark:text-amber-400">
+                  Still needed — on your list for next time
+                </span>
+              </div>
+              <div className="divide-y divide-border/20">
+                {shopSession.remainingItems.map((item) => (
+                  <div key={item.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <span className="text-amber-500/70 text-[11px] flex-shrink-0">○</span>
+                    <span className="text-[13.5px] font-medium text-foreground flex-1 min-w-0">{item.name}</span>
+                    {item.qty && (
+                      <span className="text-[11.5px] text-muted-foreground/60 tabular-nums flex-shrink-0">{item.qty}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Share + navigation actions */}
+          <div className="flex flex-col gap-2.5">
+            {shopSession.remainingCount > 0 && (
+              <Button
+                size="default"
+                className="w-full gap-2 h-11"
+                onClick={handleShareRemaining}
+                data-testid="button-share-remaining"
+              >
+                {shareStatus === "copied" ? (
+                  <><Check className="h-4 w-4" /><span>Copied to clipboard!</span></>
+                ) : (
+                  <>{typeof navigator.share === "function" ? <Share2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  <span>Send remaining items</span></>
+                )}
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="default"
+              className="w-full gap-2 h-10"
+              onClick={() => setShopSession(null)}
+              data-testid="button-continue-shopping"
+            >
+              <span>Continue shopping</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-muted-foreground/70 text-xs h-8"
+              onClick={onClose}
+            >
+              Close shopping view
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── 4b. Category Panel ────────────────────────────────────────────────
           Fills all remaining viewport height (flex-1).
           Category header is PINNED - user always knows which aisle they're in.
           ONLY the item list scrolls, via overflow-y-auto on the inner div.
           No full-page scroll - the orchard background stays fixed behind.
       ─────────────────────────────────────────────────────────────────── */}
-      <div className="tha-print-hide relative z-10 flex-1 overflow-hidden flex flex-col px-3 sm:px-5 pt-3 pb-3 w-full max-w-3xl mx-auto">
+      {!shopSession && <div className="tha-print-hide relative z-10 flex-1 overflow-hidden flex flex-col px-3 sm:px-5 pt-3 pb-3 w-full max-w-3xl mx-auto">
         {activeCat ? (() => {
           const { total, got, allDone } = getCatProgress(activeCat);
           return (
@@ -777,9 +1000,17 @@ export default function ShoppingListView({
                   >
                     <p className="font-medium text-sm text-primary" style={{ fontFamily: "var(--font-display)" }}>
                       {notFoundCount > 0
-                        ? `Almost there - ${notFoundCount} item${notFoundCount > 1 ? "s" : ""} to find next time`
+                        ? `Almost there — ${notFoundCount} item${notFoundCount > 1 ? "s" : ""} not found`
                         : "All sorted! Happy shopping 🌿"}
                     </p>
+                    {!shopSession && (
+                      <button
+                        onClick={handleFinishShop}
+                        className="mt-2 text-[11px] text-primary/70 underline underline-offset-2"
+                      >
+                        Tap "Done here" to finish this trip
+                      </button>
+                    )}
                   </div>
                 )}
                 {notFoundCount > 0 && (
@@ -806,7 +1037,7 @@ export default function ShoppingListView({
             <p className="text-sm text-muted-foreground/50">Add items to your basket first.</p>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ══════════════════════════════════════════════════════════════════
           PRINT CONTENT - hidden on screen, shown via CSS in @media print

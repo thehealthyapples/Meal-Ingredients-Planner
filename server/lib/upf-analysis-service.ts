@@ -47,6 +47,8 @@ export interface UPFAnalysisResult {
   regulatoryAdditives: AdditiveMatch[];
   /** Count of regulatory additives for quick access. */
   regulatoryCount: number;
+  /** True when the thaRating and upfScore were computed excluding regulatory additives. */
+  scoringExcludesRegulatory?: boolean;
   processingIndicators: string[];
   ingredientCount: number;
   upfIngredientCount: number;
@@ -488,7 +490,7 @@ export function buildTHAExplanation(result: UPFAnalysisResult, novaGroup?: numbe
       ).join(", ");
       parts.push(`${discretionaryCount} additive${discretionaryCount !== 1 ? "s" : ""} (${topTypes})`);
     } else if (regulatoryCount > 0) {
-      parts.push(`${regulatoryCount} regulatory additive${regulatoryCount !== 1 ? "s" : ""} (required by law)`);
+      parts.push(`${regulatoryCount} mandatory fortification additive${regulatoryCount !== 1 ? "s" : ""}`);
     } else {
       // Soft-term only (flavourings, yeast extract etc.)
       parts.push("Processing indicators detected");
@@ -511,11 +513,19 @@ export function analyzeProductUPF(
   healthScore: number,
   productContext?: ProductContext,
   preParseIngredients?: ParsedIngredient[],
+  excludeRegulatoryFromScoring?: boolean,
 ): UPFAnalysisResult {
   const ingredients = preParseIngredients ?? parseProductIngredients(ingredientsText);
   const additiveMatches = detectAdditives(ingredientsText, additiveDb);
   const processingIndicators = detectProcessingIndicators(ingredientsText);
-  const upfScore = calculateUPFScore(ingredients, additiveMatches, processingIndicators);
+
+  const regulatoryAdditives = additiveMatches.filter(m => m.isRegulatory);
+  // When the user has opted to exclude regulatory additives from scoring,
+  // compute scores against a filtered set (regulatory additives still shown in display).
+  const scoringMatches = excludeRegulatoryFromScoring
+    ? additiveMatches.filter(m => !m.isRegulatory)
+    : additiveMatches;
+  const upfScore = calculateUPFScore(ingredients, scoringMatches, processingIndicators);
 
   let additiveRisk = 0;
   for (const match of additiveMatches) {
@@ -524,7 +534,6 @@ export function analyzeProductUPF(
 
   const novaGroup = productContext?.novaGroup ?? (upfScore >= 50 ? 4 : upfScore >= 25 ? 3 : upfScore >= 10 ? 2 : 1);
 
-  const regulatoryAdditives = additiveMatches.filter(m => m.isRegulatory);
   const thaBreakdown = buildProcessingBreakdown(additiveMatches, ingredientsText);
 
   // DEBUG — remove after investigation
@@ -549,11 +558,12 @@ export function analyzeProductUPF(
 
   return {
     upfScore,
-    thaRating: calculateTHAAppleRating(additiveMatches.length, processingIndicators, novaGroup, ingredientsText),
+    thaRating: calculateTHAAppleRating(scoringMatches.length, processingIndicators, novaGroup, ingredientsText),
     additiveMatches,
     additiveCount: additiveMatches.length,
     regulatoryAdditives,
     regulatoryCount: regulatoryAdditives.length,
+    scoringExcludesRegulatory: excludeRegulatoryFromScoring === true && regulatoryAdditives.length > 0,
     processingIndicators,
     ingredientCount: ingredients.length,
     upfIngredientCount: ingredients.filter(i => i.isUPF || i.isENumber).length,

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -291,10 +291,10 @@ function AdditivesList({ additives }: { additives: AdditiveMatchInfo[] }) {
 
       {regulatory.length > 0 && (
         <div className="space-y-1.5">
-          <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Regulatory requirement</p>
+          <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Mandatory fortification</p>
           {regulatory.map((a, i) => <AdditiveRow key={i} a={a} i={i} />)}
           <p className="text-[10px] text-muted-foreground leading-snug px-1">
-            Commonly added as part of UK food regulation (e.g. flour fortification), but still contributes to the overall ingredient profile.
+            Mandatory fortification (e.g. added iron or folic acid required in some foods), but still contributes to the overall ingredient profile.
           </p>
         </div>
       )}
@@ -409,6 +409,11 @@ export default function ProductsPage() {
   const [sortBy, setSortBy] = useState<'default' | 'score-desc' | 'score-asc' | 'shop'>('default');
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [barcodeLoading, setBarcodeLoading] = useState(false);
+  // Tracks the barcode used by the last scan so we can re-fetch it if settings change.
+  // null means the last fetch was a text search (not a barcode scan).
+  const [lastBarcode, setLastBarcode] = useState<string | null>(null);
+  // Ref to detect genuine toggle changes vs. the setting loading for the first time.
+  const prevRegulatoryRef = useRef<boolean | undefined>(undefined);
 
   const { data: userProfile } = useQuery<{
     dietPattern: string | null;
@@ -423,6 +428,7 @@ export default function ProductsPage() {
     eliteTrackingEnabled: boolean;
     healthTrendEnabled: boolean;
     barcodeScannerEnabled: boolean;
+    includeRegulatoryAdditivesInScoring: boolean;
   }>({
     queryKey: ["/api/user/intelligence-settings"],
   });
@@ -441,7 +447,7 @@ export default function ProductsPage() {
   const { playSound } = useSoundEffects({ enabled: soundEnabled });
 
   const updateSettingsMutation = useMutation({
-    mutationFn: async (settings: Partial<{ soundEnabled: boolean; eliteTrackingEnabled: boolean; healthTrendEnabled: boolean; barcodeScannerEnabled: boolean }>) => {
+    mutationFn: async (settings: Partial<{ soundEnabled: boolean; eliteTrackingEnabled: boolean; healthTrendEnabled: boolean; barcodeScannerEnabled: boolean; includeRegulatoryAdditivesInScoring: boolean }>) => {
       const res = await fetch("/api/user/intelligence-settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -450,6 +456,17 @@ export default function ProductsPage() {
       });
       if (!res.ok) throw new Error("Failed to update");
       return res.json();
+    },
+    onMutate: async (settings) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/user/intelligence-settings"] });
+      const previous = queryClient.getQueryData(["/api/user/intelligence-settings"]);
+      queryClient.setQueryData(["/api/user/intelligence-settings"], (old: any) => ({ ...old, ...settings }));
+      return { previous };
+    },
+    onError: (_err, _settings, context: any) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["/api/user/intelligence-settings"], context.previous);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/intelligence-settings"] });
@@ -529,14 +546,52 @@ export default function ProductsPage() {
     },
   });
 
+  // Auto-refresh visible results when the regulatory scoring preference is toggled.
+  // Uses a ref to distinguish a genuine toggle change from the setting loading on first render.
+  useEffect(() => {
+    const current = intelligenceSettings?.includeRegulatoryAdditivesInScoring;
+    const prev = prevRegulatoryRef.current;
+    prevRegulatoryRef.current = current;
+
+    // First load: setting arrives for the first time — record and skip.
+    if (prev === undefined) return;
+    // No actual change (re-render without toggle) — skip.
+    if (prev === current) return;
+    // Nothing visible to refresh.
+    if (!hasSearched) return;
+
+    const includeRegulatory = current ?? true;
+
+    if (lastBarcode) {
+      // Last result came from a barcode scan — re-fetch that single product silently.
+      setBarcodeLoading(true);
+      fetch(`/api/products/barcode/${lastBarcode}?includeRegulatoryInScoring=${includeRegulatory}`, { credentials: 'include' })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data?.product) {
+            setSearchResults([data.product]);
+            setSelectedProduct(prev => prev ? data.product : null);
+          }
+        })
+        .catch(() => {})
+        .finally(() => setBarcodeLoading(false));
+    } else if (searchQuery.trim()) {
+      // Last result came from a text search — re-run it silently.
+      handleSearch();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [intelligenceSettings?.includeRegulatoryAdditivesInScoring]);
+
   const handleBarcodeScan = useCallback(async (barcode: string) => {
     setShowBarcodeScanner(false);
     setBarcodeLoading(true);
     try {
-      const res = await fetch(`/api/products/barcode/${barcode}`, { credentials: "include" });
+      const includeRegulatory = intelligenceSettings?.includeRegulatoryAdditivesInScoring ?? true;
+      const res = await fetch(`/api/products/barcode/${barcode}?includeRegulatoryInScoring=${includeRegulatory}`, { credentials: "include" });
       if (!res.ok) throw new Error("Product not found");
       const data = await res.json();
       if (data.product) {
+        setLastBarcode(barcode);
         setSearchResults([data.product]);
         setSelectedProduct(data.product);
         // DEBUG: log store fields for barcode scan result
@@ -747,10 +802,12 @@ export default function ProductsPage() {
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
+    setLastBarcode(null);
     setIsSearching(true);
     setSelectedProduct(null);
     try {
-      const res = await fetch(`/api/search-products?q=${encodeURIComponent(searchQuery.trim())}`, { credentials: 'include' });
+      const includeRegulatory = intelligenceSettings?.includeRegulatoryAdditivesInScoring ?? true;
+      const res = await fetch(`/api/search-products?q=${encodeURIComponent(searchQuery.trim())}&includeRegulatoryInScoring=${includeRegulatory}`, { credentials: 'include' });
       if (!res.ok) throw new Error('Search failed');
       const data = await res.json();
       const products: ProductResult[] = data.products || [];
@@ -878,6 +935,18 @@ export default function ProductsPage() {
                   </div>
                   <div className="pt-4 border-t border-border/40 space-y-3">
                     <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Settings</p>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <Label htmlFor="menu-regulatory-scoring" className="text-sm font-normal cursor-pointer text-foreground/80">Include mandatory fortification in scoring</Label>
+                        <p className="text-[11px] text-muted-foreground/60 mt-0.5 leading-snug">Some products contain nutrients added as part of mandatory fortification (e.g. iron, folic acid). You can choose whether these affect your score.</p>
+                      </div>
+                      <Switch
+                        id="menu-regulatory-scoring"
+                        checked={intelligenceSettings?.includeRegulatoryAdditivesInScoring !== false}
+                        onCheckedChange={(v) => updateSettingsMutation.mutate({ includeRegulatoryAdditivesInScoring: v })}
+                        data-testid="switch-regulatory-scoring"
+                      />
+                    </div>
                     <div className="flex items-center justify-between gap-3">
                       <Label htmlFor="menu-sound" className="text-sm font-normal cursor-pointer text-foreground/80">Sound effects</Label>
                       <Switch

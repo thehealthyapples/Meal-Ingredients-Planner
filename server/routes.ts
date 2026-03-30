@@ -303,6 +303,120 @@ function extractJsonLdNutrition(nutrition: Record<string, any> | undefined): Rec
   return result;
 }
 
+/** Per-unit weight in grams (liquids treated as density ≈ 1 g/ml). */
+const UNIT_GRAMS: Record<string, number> = {
+  g: 1, gram: 1, grams: 1,
+  kg: 1000, kilogram: 1000, kilograms: 1000,
+  mg: 0.001,
+  ml: 1, milliliter: 1, millilitre: 1, milliliters: 1, millilitres: 1,
+  l: 1000, liter: 1000, litre: 1000, liters: 1000, litres: 1000,
+  tsp: 5, tsps: 5, teaspoon: 5, teaspoons: 5,
+  tbsp: 15, tbsps: 15, tablespoon: 15, tablespoons: 15,
+  cup: 240, cups: 240,
+  oz: 28.35, ounce: 28.35, ounces: 28.35,
+  lb: 453.59, lbs: 453.59, pound: 453.59, pounds: 453.59,
+  'fl oz': 29.57,
+  pinch: 0.5, dash: 0.6, handful: 30,
+};
+
+/** Normalises vulgar fractions (½, ¼, …) and slash fractions (1/2) to decimal strings. */
+function normalizeFractions(text: string): string {
+  const VULGAR: Record<string, string> = {
+    '½': '0.5', '¼': '0.25', '¾': '0.75',
+    '⅓': '0.333', '⅔': '0.667', '⅛': '0.125',
+    '⅜': '0.375', '⅝': '0.625', '⅞': '0.875',
+  };
+  let r = text;
+  for (const [f, d] of Object.entries(VULGAR)) r = r.split(f).join(d);
+  // "1/2" → "0.5"
+  r = r.replace(/\b(\d+)\/(\d+)\b/g, (_, n, d) => String(Number(n) / Number(d)));
+  // mixed number: "1 0.5" (after vulgar substitution) → "1.5"
+  r = r.replace(/\b(\d+)\s+(0\.\d+)\b/g, (_, w, f) => String(Number(w) + Number(f)));
+  return r;
+}
+
+/** Parses an ingredient string and returns the quantity in grams (or ml for liquids).
+ *  Returns null when no recognisable quantity + unit is present. */
+function parseIngredientGrams(ingredient: string): number | null {
+  const text = normalizeFractions(ingredient);
+  const unitAlt = Object.keys(UNIT_GRAMS)
+    .sort((a, b) => b.length - a.length)                        // longest first
+    .map(u => u.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))        // regex-escape
+    .join('|');
+  const m = text.match(new RegExp(`(\\d+\\.?\\d*)\\s*(${unitAlt})\\b`, 'i'));
+  if (!m) return null;
+  return parseFloat(m[1]) * (UNIT_GRAMS[m[2].toLowerCase()] ?? 1);
+}
+
+/**
+ * Returns a sensible fallback gram weight for an ingredient when no explicit
+ * quantity could be parsed. First matching category wins.
+ *
+ * Gram targets are intentionally conservative — they reflect a realistic
+ * single-recipe usage amount for each ingredient class, not a serving size.
+ */
+function fallbackIngredientGrams(ingredient: string): number {
+  const s = ingredient.toLowerCase();
+
+  // ── Spices, ground spices, dried herbs ── ~½–1 tsp (≈2 g)
+  if (
+    /\b(turmeric|paprika|cumin|coriander|cinnamon|cardamom|nutmeg|cayenne|oregano|thyme|rosemary|sage|dill|tarragon|fenugreek|allspice|sumac|garam\s+masala|curry\s+powder|ras\s+el\s+hanout|smoked\s+paprika|chilli?\s+flakes?|dried\s+herbs?|mixed\s+herbs?|herb\s+mix|spice\s+mix|bay\s+lea(f|ves))\b/.test(s) ||
+    (/\bpepper\b/.test(s) && !/\b(bell|sweet|chilli?)\s+pepper\b/.test(s)) ||
+    (/\bginger\b/.test(s) && /\bpowder\b/.test(s))
+  ) return 2;
+
+  // ── Garlic (whole / minced, not powder) ── ~1 clove (≈6 g)
+  if (/\bgarlic\b/.test(s) && !/\bgarlic\s+powder\b/.test(s)) return 6;
+
+  // ── Superfood / supplement powders ── ~1 tsp (≈5 g)
+  if (
+    /\b(spirulina|matcha|cacao\s+powder|cocoa\s+powder|protein\s+powder|whey|pea\s+protein|collagen|beetroot\s+powder|mushroom\s+powder|wheatgrass|barley\s+grass|maca|moringa|acai|chlorella|spinach\s+powder|kale\s+powder|greens?\s+powder|superfood\s+powder)\b/.test(s)
+  ) return 5;
+
+  // ── Extracts, essences, flavourings ── a few drops / ml (≈3 g)
+  if (/\b(extract|essence|flavou?ring|vanilla\s+(bean|pod)|food\s+colou?r(ing)?)\b/.test(s)) return 3;
+
+  // ── Oils ── ~1 tsp (≈5 g)
+  if (/\b(olive\s+oil|coconut\s+oil|vegetable\s+oil|sunflower\s+oil|sesame\s+oil|rapeseed\s+oil|avocado\s+oil|oil)\b/.test(s)) return 5;
+
+  // ── Small-volume sauces and condiment liquids ── ~2 tsp (≈10 g)
+  if (/\b(soy\s+sauce|tamari|fish\s+sauce|worcestershire|hot\s+sauce|vinegar|lemon\s+juice|lime\s+juice)\b/.test(s)) return 10;
+
+  // ── Nut butters, spreads, pastes ── ~1 tbsp (≈15 g)
+  if (
+    /\b(peanut\s+butter|almond\s+butter|cashew\s+butter|tahini|miso|harissa|sriracha|ketchup|mayonnaise|mayo|mustard|jam|marmalade|maple\s+syrup|agave|chutney|pesto|hummus|honey|syrup)\b/.test(s)
+  ) return 15;
+
+  // ── Nuts and seeds ── small handful (≈20 g)
+  if (
+    /\b(almond|cashew|walnut|pecan|pistachio|hazelnut|macadamia|brazil\s+nut|pine\s+nut|peanut|sunflower\s+seed|pumpkin\s+seed|sesame|chia|flax(seed)?|hemp\s+seed|poppy\s+seed)\b/.test(s)
+  ) return 20;
+
+  // ── Oats, wholegrains, cereals ── small dry portion (≈40 g)
+  if (/\b(oats?|rolled\s+oat|porridge|quinoa|couscous|barley|millet|buckwheat|bulgur|polenta|cornmeal|bran|granola|muesli)\b/.test(s)) return 40;
+
+  // ── Berries and frozen fruit ── good handful (≈80 g)
+  if (
+    /\b(raspberry|raspberries|blueberr(y|ies)|strawberr(y|ies)|blackberr(y|ies)|cherr(y|ies)|frozen\s+fruit|mixed\s+berr)\b/.test(s)
+  ) return 80;
+
+  // ── Fresh / whole fruit ── medium piece (≈80 g)
+  if (/\b(mango|banana|apple|pear|peach|plum|apricot|melon|watermelon|grape|kiwi|pineapple)\b/.test(s)) return 80;
+
+  // ── Dairy / plant milks, stock, juice, yoghurt ── small glass (≈100 g)
+  if (
+    /\b(milk|almond\s+milk|oat\s+milk|soy\s+milk|coconut\s+milk|coconut\s+cream|cream|stock|broth|juice|yoghurt|yogurt|kefir|buttermilk)\b/.test(s)
+  ) return 100;
+
+  // ── Vegetables ── modest portion (≈80 g)
+  if (
+    /\b(spinach|kale|lettuce|chard|cabbage|broccoli|cauliflower|courgette|zucchini|carrot|onion|shallot|leek|celery|tomato|cucumber|avocado|sweet\s+potato|potato|butternut|squash|pumpkin|beetroot|beet|parsnip|turnip|aubergine|eggplant|mushroom|corn|pea|bean|lentil|chickpea|tofu)\b/.test(s)
+  ) return 80;
+
+  // ── Generic fallback ──
+  return 50;
+}
+
 function cleanIngredientForLookup(ingredient: string): string {
   return ingredient
     .replace(/\(.*?\)/g, '')
@@ -381,11 +495,16 @@ async function autoAnalyzeMeal(mealId: number) {
     }
 
     const existingNutrition = await storage.getNutrition(mealId);
-    const hasValidNutrition = existingNutrition && existingNutrition.calories && parseFloat(existingNutrition.calories) > 0;
+    // 'openfoodfacts' (no suffix) is the pre-fix format that did not scale by quantity — always re-calculate it.
+    const hasValidNutrition = existingNutrition &&
+      existingNutrition.calories &&
+      parseFloat(existingNutrition.calories) > 0 &&
+      existingNutrition.source !== 'openfoodfacts';
     if (hasValidNutrition) return;
 
     const nutritionTotals = { calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, salt: 0 };
     let validResults = 0;
+    let anyEstimated = false;
 
     await Promise.all(
       meal.ingredients.map(async (ingredient) => {
@@ -405,25 +524,33 @@ async function autoAnalyzeMeal(mealId: number) {
           for (const p of products) {
             const n = p.nutriments;
             if (!n) continue;
-            const cal = n['energy-kcal_100g'] || n['energy-kcal'];
+            // Always use the explicit _100g fields to avoid accidentally picking up
+            // per-serving or whole-product values from the non-suffixed fields.
+            const cal = n['energy-kcal_100g'];
             if (cal) {
               totals.calories += Number(cal) || 0;
-              totals.protein += Number(n.proteins_100g || n.proteins) || 0;
-              totals.carbs += Number(n.carbohydrates_100g || n.carbohydrates) || 0;
-              totals.fat += Number(n.fat_100g || n.fat) || 0;
-              totals.sugar += Number(n.sugars_100g || n.sugars) || 0;
-              totals.salt += Number(n.salt_100g || n.salt) || 0;
+              totals.protein += Number(n.proteins_100g) || 0;
+              totals.carbs += Number(n.carbohydrates_100g) || 0;
+              totals.fat += Number(n.fat_100g) || 0;
+              totals.sugar += Number(n.sugars_100g) || 0;
+              totals.salt += Number(n.salt_100g) || 0;
               count++;
             }
           }
 
           if (count > 0) {
-            nutritionTotals.calories += totals.calories / count;
-            nutritionTotals.protein += totals.protein / count;
-            nutritionTotals.carbs += totals.carbs / count;
-            nutritionTotals.fat += totals.fat / count;
-            nutritionTotals.sugar += totals.sugar / count;
-            nutritionTotals.salt += totals.salt / count;
+            // Scale from per-100 g to the actual quantity used in the recipe.
+            const quantityGrams = parseIngredientGrams(ingredient);
+            if (quantityGrams === null) anyEstimated = true;
+            const grams = quantityGrams ?? fallbackIngredientGrams(ingredient);
+            const scale = grams / 100;
+
+            nutritionTotals.calories += (totals.calories / count) * scale;
+            nutritionTotals.protein += (totals.protein / count) * scale;
+            nutritionTotals.carbs += (totals.carbs / count) * scale;
+            nutritionTotals.fat += (totals.fat / count) * scale;
+            nutritionTotals.sugar += (totals.sugar / count) * scale;
+            nutritionTotals.salt += (totals.salt / count) * scale;
             validResults++;
           }
         } catch {}
@@ -440,7 +567,8 @@ async function autoAnalyzeMeal(mealId: number) {
         fat: `${Math.round(nutritionTotals.fat / servings * 10) / 10}g`,
         sugar: `${Math.round(nutritionTotals.sugar / servings * 10) / 10}g`,
         salt: `${Math.round(nutritionTotals.salt / servings * 10) / 10}g`,
-        source: 'openfoodfacts',
+        // Distinguish estimated (fallback quantities used) from quantity-derived results.
+        source: anyEstimated ? 'openfoodfacts_estimated' : 'openfoodfacts_quantities',
       };
 
       await storage.upsertNutrition(nutritionData);
@@ -1064,17 +1192,23 @@ export async function registerRoutes(
     }
 
     let n = await storage.getNutrition(meal.id);
-    
+
     const hasNoNutrition = !n || !n.calories;
-    const hasOFEstimateButSourceAvailable = n && n.calories && meal.sourceUrl && (!n.source || n.source === 'openfoodfacts');
-    
-    if (hasNoNutrition || hasOFEstimateButSourceAvailable) {
+    // 'openfoodfacts' (no suffix) is the pre-fix format: re-run so quantities are applied correctly.
+    const isOldBuggyFormat = n?.source === 'openfoodfacts';
+    // If we only have estimated data but a source URL exists, try to scrape authoritative values.
+    const hasEstimatedAndSourceAvailable = !!(n?.calories && meal.sourceUrl &&
+      (n.source === 'openfoodfacts_estimated' || n.source === 'openfoodfacts_quantities'));
+
+    if (hasNoNutrition || isOldBuggyFormat || hasEstimatedAndSourceAvailable) {
       (async () => {
         try {
-          if (meal.sourceUrl && hasOFEstimateButSourceAvailable) {
+          // Clear session-level cache so old-format meals are not skipped inside autoAnalyzeMeal.
+          if (isOldBuggyFormat) analyzedMealIds.delete(meal.id);
+          if (meal.sourceUrl && (hasEstimatedAndSourceAvailable || isOldBuggyFormat)) {
             await scrapeNutritionFromSource(meal);
           }
-          if (!n || !n.calories) {
+          if (hasNoNutrition || isOldBuggyFormat) {
             await autoAnalyzeMeal(meal.id);
           }
         } catch {}
@@ -1109,6 +1243,7 @@ export async function registerRoutes(
     try {
       const q = (req.query.q as string || '').trim();
       const page = Math.max(1, parseInt(req.query.page as string) || 1);
+      const includeRegulatoryInScoring = req.query.includeRegulatoryInScoring !== 'false';
       const perPage = 12;
       // Fetch more records than we display so that retailer-specific barcodes
       // (which are separate OFF entries for the same physical product) are
@@ -1282,6 +1417,8 @@ export async function registerRoutes(
                 additiveDb,
                 50,
                 { productName: p.product_name, categoriesTags, novaGroup: novaGroup ? Number(novaGroup) : null },
+                undefined,
+                !includeRegulatoryInScoring,
               )
             : null;
 
@@ -1368,6 +1505,7 @@ export async function registerRoutes(
               upfIngredientCount: upfResult.upfIngredientCount || 0,
               riskBreakdown: upfResult.riskBreakdown || { additiveRisk: 0, processingRisk: 0, ingredientComplexityRisk: 0 },
               thaExplanation: buildTHAExplanation(upfResult, novaGroup ? Number(novaGroup) : null),
+              scoringExcludesRegulatory: upfResult.scoringExcludesRegulatory ?? false,
             } : null,
             quantity: p.quantity || null,
             servingSize: p.serving_size || null,
@@ -2484,6 +2622,7 @@ export async function registerRoutes(
       if (!savedNutrition) {
         const nutritionTotals = { calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, salt: 0 };
         let validResults = 0;
+        let anyEstimated = false;
 
         await Promise.all(
           meal.ingredients.map(async (ingredient) => {
@@ -2503,25 +2642,30 @@ export async function registerRoutes(
               for (const p of products) {
                 const n = p.nutriments;
                 if (!n) continue;
-                const cal = n['energy-kcal_100g'] || n['energy-kcal'];
+                const cal = n['energy-kcal_100g'];
                 if (cal) {
                   totals.calories += Number(cal) || 0;
-                  totals.protein += Number(n.proteins_100g || n.proteins) || 0;
-                  totals.carbs += Number(n.carbohydrates_100g || n.carbohydrates) || 0;
-                  totals.fat += Number(n.fat_100g || n.fat) || 0;
-                  totals.sugar += Number(n.sugars_100g || n.sugars) || 0;
-                  totals.salt += Number(n.salt_100g || n.salt) || 0;
+                  totals.protein += Number(n.proteins_100g) || 0;
+                  totals.carbs += Number(n.carbohydrates_100g) || 0;
+                  totals.fat += Number(n.fat_100g) || 0;
+                  totals.sugar += Number(n.sugars_100g) || 0;
+                  totals.salt += Number(n.salt_100g) || 0;
                   count++;
                 }
               }
 
               if (count > 0) {
-                nutritionTotals.calories += totals.calories / count;
-                nutritionTotals.protein += totals.protein / count;
-                nutritionTotals.carbs += totals.carbs / count;
-                nutritionTotals.fat += totals.fat / count;
-                nutritionTotals.sugar += totals.sugar / count;
-                nutritionTotals.salt += totals.salt / count;
+                const quantityGrams = parseIngredientGrams(ingredient);
+                if (quantityGrams === null) anyEstimated = true;
+                const grams = quantityGrams ?? fallbackIngredientGrams(ingredient);
+                const scale = grams / 100;
+
+                nutritionTotals.calories += (totals.calories / count) * scale;
+                nutritionTotals.protein += (totals.protein / count) * scale;
+                nutritionTotals.carbs += (totals.carbs / count) * scale;
+                nutritionTotals.fat += (totals.fat / count) * scale;
+                nutritionTotals.sugar += (totals.sugar / count) * scale;
+                nutritionTotals.salt += (totals.salt / count) * scale;
                 validResults++;
               }
             } catch {
@@ -2539,7 +2683,7 @@ export async function registerRoutes(
             fat: `${Math.round(nutritionTotals.fat / analyzeServings * 10) / 10}g`,
             sugar: `${Math.round(nutritionTotals.sugar / analyzeServings * 10) / 10}g`,
             salt: `${Math.round(nutritionTotals.salt / analyzeServings * 10) / 10}g`,
-            source: 'openfoodfacts',
+            source: anyEstimated ? 'openfoodfacts_estimated' : 'openfoodfacts_quantities',
           };
           savedNutrition = await storage.upsertNutrition(nutritionData);
         } else {
@@ -4575,6 +4719,7 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const barcode = req.params.barcode.trim();
+      const includeRegulatoryInScoring = req.query.includeRegulatoryInScoring !== 'false';
       if (!barcode || !/^\d{8,14}$/.test(barcode)) {
         return res.status(400).json({ message: "Invalid barcode format" });
       }
@@ -4607,7 +4752,7 @@ export async function registerRoutes(
         productName: p.product_name || p.product_name_en || '',
         categoriesTags: p.categories_tags || [],
         novaGroup: p.nova_group || null,
-      }, analysis.ingredients) : null;
+      }, analysis.ingredients, !includeRegulatoryInScoring) : null;
 
       const countriesTags: string[] = p.countries_tags || [];
       const isUK = countriesTags.some((c: string) => c === 'en:united-kingdom' || c === 'en:uk');
@@ -4662,6 +4807,7 @@ export async function registerRoutes(
           upfIngredientCount: upfAnalysis.upfIngredientCount,
           riskBreakdown: upfAnalysis.riskBreakdown,
           thaExplanation: buildTHAExplanation(upfAnalysis, p.nova_group || null),
+          scoringExcludesRegulatory: upfAnalysis.scoringExcludesRegulatory ?? false,
         } : null,
         availableStores: barcodeRetail.availableStores,
         storeConfidence: barcodeRetail.storeConfidence,
@@ -4794,6 +4940,7 @@ export async function registerRoutes(
         eliteTrackingEnabled: prefs?.eliteTrackingEnabled ?? true,
         healthTrendEnabled: prefs?.healthTrendEnabled ?? true,
         barcodeScannerEnabled: prefs?.barcodeScannerEnabled ?? true,
+        includeRegulatoryAdditivesInScoring: prefs?.includeRegulatoryAdditivesInScoring ?? true,
       });
     } catch (err) {
       console.error("Error fetching intelligence settings:", err);
@@ -4804,7 +4951,7 @@ export async function registerRoutes(
   app.patch("/api/user/intelligence-settings", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const allowedFields = ['soundEnabled', 'eliteTrackingEnabled', 'healthTrendEnabled', 'barcodeScannerEnabled'];
+      const allowedFields = ['soundEnabled', 'eliteTrackingEnabled', 'healthTrendEnabled', 'barcodeScannerEnabled', 'includeRegulatoryAdditivesInScoring'];
       const updates: Record<string, boolean> = {};
       for (const field of allowedFields) {
         if (typeof req.body[field] === 'boolean') {

@@ -173,6 +173,9 @@ function NutritionBadges({ mealId, nutrition }: { mealId: number; nutrition?: Nu
           </div>
         ))}
       </div>
+      {(nutrition.source === 'openfoodfacts_estimated' || nutrition.source === 'openfoodfacts_quantities') && (
+        <p className="text-[10px] text-muted-foreground/50 leading-snug">Estimated from available ingredient quantities</p>
+      )}
     </div>
   );
 }

@@ -43,6 +43,7 @@ export interface InputProduct {
     thaRating: number;
     additiveCount: number;
     regulatoryCount: number;
+    scoringExcludesRegulatory?: boolean;
     additiveMatches: Array<{
       name: string;
       type: string;
@@ -204,7 +205,7 @@ function buildScoreDrivers(product: InputProduct): ScoreDriver[] {
 
   if (upf.regulatoryCount > 0 && upf.regulatoryCount === upf.additiveMatches.length) {
     drivers.push({
-      text: "Additives present are regulatory requirements, not manufacturing choices",
+      text: "Additives present are mandatory fortification, not manufacturing choices",
       polarity: "positive",
     });
   }

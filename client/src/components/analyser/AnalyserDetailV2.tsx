@@ -223,6 +223,12 @@ export default function AnalyserDetailV2({
             </div>
           </div>
 
+          {product.upfAnalysis?.scoringExcludesRegulatory && (product.upfAnalysis?.regulatoryCount ?? 0) > 0 && (
+            <p className="text-xs text-muted-foreground/60 leading-snug -mt-2" data-testid="text-regulatory-scoring-note">
+              Scoring has been adjusted to exclude mandatory fortification based on your analyser settings.
+            </p>
+          )}
+
           {/* Action buttons */}
           <div className="flex flex-col gap-2.5">
             <Button
@@ -404,7 +410,7 @@ export default function AnalyserDetailV2({
 
                 {vm.ingredients.allAdditivesRegulatory && (
                   <p className="text-xs text-muted-foreground leading-snug">
-                    All additives present are regulatory requirements (e.g. UK flour fortification), not manufacturing choices.
+                    All additives present are mandatory fortification (e.g. added iron or folic acid required in some foods), not manufacturing choices.
                   </p>
                 )}
 

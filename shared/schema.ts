@@ -596,6 +596,7 @@ export const userPreferences = pgTable("user_preferences", {
   maxExtraPrepMinutes: integer("max_extra_prep_minutes"),
   maxTotalCookTime: integer("max_total_cook_time"),
   preferLessProcessed: boolean("prefer_less_processed").notNull().default(false),
+  includeRegulatoryAdditivesInScoring: boolean("include_regulatory_additives_in_scoring").notNull().default(true),
 });
 
 export const insertUserPreferencesSchema = createInsertSchema(userPreferences).pick({
@@ -629,6 +630,7 @@ export const insertUserPreferencesSchema = createInsertSchema(userPreferences).p
   maxExtraPrepMinutes: true,
   maxTotalCookTime: true,
   preferLessProcessed: true,
+  includeRegulatoryAdditivesInScoring: true,
 });
 
 export type UserPreferences = typeof userPreferences.$inferSelect;

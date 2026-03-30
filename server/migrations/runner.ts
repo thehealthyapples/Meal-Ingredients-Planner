@@ -611,6 +611,13 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-03-30_add_include_regulatory_additives_in_scoring",
+    statements: [
+      `ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS include_regulatory_additives_in_scoring BOOLEAN NOT NULL DEFAULT TRUE`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

@@ -614,6 +614,11 @@ export default function MealDetailPage() {
                     </div>
                   ))}
                 </div>
+                {(nutritionData.source === 'openfoodfacts_estimated' || nutritionData.source === 'openfoodfacts_quantities') && (
+                  <p className="text-[11px] text-muted-foreground/60 leading-snug" data-testid="text-nutrition-estimated-note">
+                    Estimated from available ingredient quantities
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}

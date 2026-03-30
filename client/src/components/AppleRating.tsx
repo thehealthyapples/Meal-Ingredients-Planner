@@ -93,11 +93,11 @@ export default function AppleRating({
       const discretionary = total - regulatory;
       if (discretionary > 0 && regulatory > 0) {
         tooltipLines.push(
-          `${discretionary} discretionary additive${discretionary !== 1 ? "s" : ""}${typeHint} · ${regulatory} regulatory`,
+          `${discretionary} discretionary additive${discretionary !== 1 ? "s" : ""}${typeHint} · ${regulatory} mandatory fortification`,
         );
       } else if (regulatory === total) {
         tooltipLines.push(
-          `${total} regulatory additive${total !== 1 ? "s" : ""} (e.g. flour fortification)`,
+          `${total} mandatory fortification additive${total !== 1 ? "s" : ""} (e.g. added iron or folic acid)`,
         );
       } else {
         tooltipLines.push(
