@@ -2,12 +2,47 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, Flashlight, FlashlightOff } from "lucide-react";
 
 interface BarcodeScannerProps {
   onScan: (barcode: string) => void;
   onClose: () => void;
   isOpen: boolean;
+}
+
+// Camera constraints used by both decode paths.
+// facingMode: { ideal: 'environment' } reliably selects the rear camera on
+// all mobile browsers without relying on device-label heuristics (which fail
+// on iOS until camera permission is already granted).
+const VIDEO_CONSTRAINTS: MediaStreamConstraints = {
+  video: {
+    facingMode: { ideal: "environment" },
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+  },
+};
+
+// ZXing formats: EAN-13, UPC-A, UPC-E only.
+// Removing EAN-8 reduces decode work — supermarket products don't use it.
+const ZXING_FORMATS = [
+  BarcodeFormat.EAN_13,
+  BarcodeFormat.UPC_A,
+  BarcodeFormat.UPC_E,
+];
+
+// BarcodeDetector API uses lowercase format strings.
+const NATIVE_FORMATS = ["ean_13", "upc_a", "upc_e"];
+
+// Preserve the UPC-A → EAN-13 normalisation fix: UPC-A (12 digits) needs a
+// leading '0' prepended to match the 13-digit EAN-13 code stored in OFF.
+function normaliseBarcode(rawText: string, formatName: string): string {
+  if (
+    (formatName === "upc_a" || formatName === "UPC_A") &&
+    rawText.length === 12
+  ) {
+    return "0" + rawText;
+  }
+  return rawText;
 }
 
 export default function BarcodeScanner({
@@ -17,22 +52,74 @@ export default function BarcodeScanner({
 }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
+  const rafRef = useRef<number | null>(null);
   const hasScannedRef = useRef(false);
+  const torchTrackRef = useRef<MediaStreamTrack | null>(null);
+
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [torchAvailable, setTorchAvailable] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
 
   const stopScanning = useCallback(() => {
     hasScannedRef.current = false;
+    if (rafRef.current !== null) {
+      cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    }
     if (controlsRef.current) {
       controlsRef.current.stop();
       controlsRef.current = null;
     }
-    if (videoRef.current && videoRef.current.srcObject) {
+    if (videoRef.current?.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
+      stream.getTracks().forEach((t) => t.stop());
       videoRef.current.srcObject = null;
     }
+    torchTrackRef.current = null;
+    setTorchAvailable(false);
+    setTorchOn(false);
   }, []);
+
+  // Probe the video stream for torch support and store the track reference.
+  // Called once the camera stream is live.
+  const probeTorch = useCallback((stream: MediaStream) => {
+    const track = stream.getVideoTracks()[0];
+    if (!track) return;
+    torchTrackRef.current = track;
+    const capabilities = (track as any).getCapabilities?.() ?? {};
+    if (capabilities.torch) {
+      setTorchAvailable(true);
+      console.log("[SCAN-CAMERA] torch=available");
+    }
+  }, []);
+
+  const toggleTorch = useCallback(async () => {
+    const track = torchTrackRef.current;
+    if (!track) return;
+    try {
+      const next = !torchOn;
+      await (track as any).applyConstraints({ advanced: [{ torch: next }] });
+      setTorchOn(next);
+    } catch {
+      // Torch reported as available but applyConstraints failed — ignore.
+    }
+  }, [torchOn]);
+
+  const handleResult = useCallback(
+    (rawText: string, formatName: string) => {
+      if (hasScannedRef.current) return;
+      const normalised = normaliseBarcode(rawText, formatName);
+      const expanded = normalised !== rawText;
+      console.log(
+        `[SCAN-FRONTEND] raw="${rawText}" format=${formatName}` +
+          ` normalised="${normalised}" upc_a_expanded=${expanded}`
+      );
+      hasScannedRef.current = true;
+      onScan(normalised);
+    },
+    [onScan]
+  );
 
   const initializeScanner = useCallback(async () => {
     if (!isOpen || !videoRef.current) return;
@@ -40,73 +127,103 @@ export default function BarcodeScanner({
     setIsInitializing(true);
     setError(null);
 
+    const useNative =
+      typeof (window as any).BarcodeDetector !== "undefined";
+    console.log(`[SCAN-INIT] native_BarcodeDetector=${useNative}`);
+
     try {
-      const hints = new Map();
-      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-        BarcodeFormat.EAN_13,
-        BarcodeFormat.EAN_8,
-        BarcodeFormat.UPC_A,
-        BarcodeFormat.UPC_E,
-      ]);
+      if (useNative) {
+        // ── Native BarcodeDetector path ────────────────────────────────────
+        // Available on Chrome Android ≥90 and Safari iOS 17+.
+        // Hardware-accelerated: significantly faster than ZXing JS decoding.
+        const detector = new (window as any).BarcodeDetector({
+          formats: NATIVE_FORMATS,
+        });
 
-      const reader = new BrowserMultiFormatReader(hints);
-
-      const videoInputDevices = await BrowserMultiFormatReader.listVideoInputDevices();
-
-      if (videoInputDevices.length === 0) {
-        setError("No camera available on this device");
-        setIsInitializing(false);
-        return;
-      }
-
-      let selectedDeviceId = videoInputDevices[0].deviceId;
-      if (videoInputDevices.length > 1) {
-        const backCamera = videoInputDevices.find(
-          (device) =>
-            device.label.toLowerCase().includes("back") ||
-            device.label.toLowerCase().includes("rear")
+        const stream = await navigator.mediaDevices.getUserMedia(
+          VIDEO_CONSTRAINTS
         );
-        if (backCamera) {
-          selectedDeviceId = backCamera.deviceId;
-        }
-      }
+        probeTorch(stream);
 
-      const controls = await reader.decodeFromVideoDevice(
-        selectedDeviceId,
-        videoRef.current,
-        (result) => {
-          if (!result || !result.getText()) return;
+        const video = videoRef.current;
+        video.setAttribute("playsinline", "true");
+        video.srcObject = stream;
+        await video.play();
+
+        const DETECT_INTERVAL_MS = 120; // ~8 fps — sufficient for 1D barcodes
+        let lastDetectTime = 0;
+
+        const detect = async (now: number) => {
           if (hasScannedRef.current) return;
+          if (
+            now - lastDetectTime >= DETECT_INTERVAL_MS &&
+            video.readyState >= video.HAVE_ENOUGH_DATA
+          ) {
+            lastDetectTime = now;
+            try {
+              const barcodes: Array<{ rawValue: string; format: string }> =
+                await detector.detect(video);
+              if (barcodes.length > 0) {
+                handleResult(barcodes[0].rawValue, barcodes[0].format);
+                return;
+              }
+            } catch {
+              // Normal: frame decode failed (e.g. video not ready). Continue.
+            }
+          }
+          rafRef.current = requestAnimationFrame(detect);
+        };
+        rafRef.current = requestAnimationFrame(detect);
+        setIsInitializing(false);
+      } else {
+        // ── ZXing fallback path ────────────────────────────────────────────
+        // Used on browsers without BarcodeDetector (older Safari, Firefox).
+        console.log("[SCAN-INIT] ZXing fallback");
 
-          const rawText = result.getText();
-          const format = result.getBarcodeFormat();
+        const hints = new Map();
+        hints.set(DecodeHintType.POSSIBLE_FORMATS, ZXING_FORMATS);
+        // TRY_HARDER improves lock-on for partially obscured or angled 1D barcodes.
+        hints.set(DecodeHintType.TRY_HARDER, true);
 
-          // UPC-A barcodes are 12 digits. The OFF database (and all European
-          // product databases) stores products under their 13-digit EAN-13
-          // barcode, which is UPC-A with a leading zero prepended.
-          // If zxing reads the barcode as UPC_A format (value 14), normalise
-          // it to EAN-13 by prepending '0' before sending to the backend.
-          const isUpcA = format === BarcodeFormat.UPC_A && rawText.length === 12;
-          const normalisedBarcode = isUpcA ? '0' + rawText : rawText;
+        // delayBetweenScanAttempts default is 500 ms (2 attempts/sec — too slow).
+        // 150 ms gives ~6-7 attempts/sec without excessive CPU.
+        const reader = new BrowserMultiFormatReader(hints, {
+          delayBetweenScanAttempts: 150,
+          delayBetweenScanSuccess: 500,
+        });
 
-          console.log(
-            `[SCAN-FRONTEND] raw="${rawText}" format=${format}(${BarcodeFormat[format]})` +
-            ` normalised="${normalisedBarcode}" upc_a_expanded=${isUpcA}`
-          );
+        // decodeFromConstraints passes facingMode/resolution directly to
+        // getUserMedia, replacing the unreliable device-label camera selection.
+        const controls = await reader.decodeFromConstraints(
+          VIDEO_CONSTRAINTS,
+          videoRef.current,
+          (result, _err, _controls) => {
+            if (!result) return;
+            const rawText = result.getText();
+            if (!rawText) return;
+            // Probe torch once the stream is live (first successful frame).
+            if (!torchTrackRef.current && videoRef.current?.srcObject) {
+              probeTorch(videoRef.current.srcObject as MediaStream);
+            }
+            handleResult(rawText, BarcodeFormat[result.getBarcodeFormat()]);
+          }
+        );
 
-          hasScannedRef.current = true;
-          onScan(normalisedBarcode);
-        }
-      );
-
-      controlsRef.current = controls;
-      setIsInitializing(false);
+        controlsRef.current = controls;
+        setIsInitializing(false);
+      }
     } catch (err) {
       let errorMessage = "Failed to access camera";
       if (err instanceof Error) {
-        if (err.name === "NotAllowedError" || err.message.includes("Permission denied")) {
+        if (
+          err.name === "NotAllowedError" ||
+          err.message.includes("Permission denied")
+        ) {
           errorMessage = "Camera permission denied. Please allow camera access.";
-        } else if (err.name === "NotFoundError" || err.message.includes("No camera found")) {
+        } else if (
+          err.name === "NotFoundError" ||
+          err.message.includes("No camera found")
+        ) {
           errorMessage = "No camera available";
         } else {
           errorMessage = err.message;
@@ -115,7 +232,7 @@ export default function BarcodeScanner({
       setError(errorMessage);
       setIsInitializing(false);
     }
-  }, [isOpen, onScan]);
+  }, [isOpen, handleResult, probeTorch]);
 
   useEffect(() => {
     if (isOpen) {
@@ -146,26 +263,32 @@ export default function BarcodeScanner({
       </Button>
 
       <div className="w-full max-w-sm flex flex-col items-center gap-4">
-        <div className="relative w-full aspect-square overflow-hidden rounded-lg shadow-2xl">
+        {/* 4:3 container — wider than square, matches camera output better for
+            horizontal barcodes without going full 16:9 landscape. */}
+        <div className="relative w-full overflow-hidden rounded-lg shadow-2xl" style={{ aspectRatio: "4/3" }}>
           <video
             ref={videoRef}
             className="w-full h-full object-cover"
+            playsInline
+            muted
             data-testid="video-barcode-scanner"
           />
 
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative w-4/5 h-4/5">
-              <div className="absolute inset-0 border-2 border-transparent pointer-events-none">
-                <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-cyan-400/80" />
-                <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-cyan-400/80" />
-                <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-cyan-400/80" />
-                <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-cyan-400/80" />
-              </div>
-
-              <div className="absolute inset-0 overflow-hidden rounded-sm">
+          {/* Scan overlay: narrow horizontal strip guides the user to hold
+              the barcode horizontally, which is the natural orientation for
+              EAN-13 / UPC-A linear barcodes. */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="relative w-4/5" style={{ height: "28%" }}>
+              {/* Corner marks */}
+              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-cyan-400/90" />
+              <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-cyan-400/90" />
+              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-cyan-400/90" />
+              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-cyan-400/90" />
+              {/* Scan line */}
+              <div className="absolute inset-0 overflow-hidden">
                 <div
-                  className="absolute w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent"
-                  style={{ animation: "scan 2s linear infinite", top: "50%" }}
+                  className="absolute w-full h-0.5 bg-gradient-to-r from-transparent via-cyan-400 to-transparent"
+                  style={{ animation: "scan 1.5s ease-in-out infinite" }}
                 />
               </div>
             </div>
@@ -190,8 +313,21 @@ export default function BarcodeScanner({
 
         {!error && (
           <p className="text-center text-white text-sm">
-            Point camera at barcode
+            Align barcode within the frame
           </p>
+        )}
+
+        {torchAvailable && !error && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={toggleTorch}
+            className="text-white border-white/50 gap-2"
+            data-testid="button-torch"
+          >
+            {torchOn ? <FlashlightOff className="h-4 w-4" /> : <Flashlight className="h-4 w-4" />}
+            {torchOn ? "Torch off" : "Torch"}
+          </Button>
         )}
 
         {error && (
@@ -207,10 +343,9 @@ export default function BarcodeScanner({
 
       <style>{`
         @keyframes scan {
-          0% { transform: translateY(-100%); opacity: 0; }
-          20% { opacity: 1; }
-          80% { opacity: 1; }
-          100% { transform: translateY(100%); opacity: 0; }
+          0%   { transform: translateY(0);    opacity: 0.5; }
+          50%  { opacity: 1; }
+          100% { transform: translateY(550%); opacity: 0.5; }
         }
       `}</style>
     </div>
