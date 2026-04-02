@@ -8,8 +8,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine } from "lucide-react";
 import { ScanConfirmDialog } from "@/components/scan-confirm-dialog";
+import BarcodeScanner from "@/components/BarcodeScanner";
+import { MealCompletionDialog, type CompletionMeal } from "@/components/meal-completion-dialog";
 import { IngredientRow, buildIngredientString } from "@/components/ingredient-input";
 import { CameraModal } from "@/components/camera-modal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1319,6 +1321,7 @@ const CATEGORY_DROPDOWN_ORDER = ["Drink", "Smoothie", "Baby Meal", "Kids Meal", 
 function getMealDisplayCategory(meal: Meal): string {
   if (meal.isDrink || meal.mealFormat === "drink") return "drinks";
   if (meal.isReadyMeal || meal.mealFormat === "ready-meal") return "ready_meals";
+  if (meal.mealSourceType === "openfoodfacts") return "ready_meals";
   if (meal.isSystemMeal) return "tha_meals";
   if (meal.sourceUrl) return "from_web";
   return "user_meals";
@@ -1374,6 +1377,11 @@ export default function MealsPage() {
   const [productSavedIds, setProductSavedIds] = useState<Set<string>>(new Set());
   const [productSavedMealMap, setProductSavedMealMap] = useState<Map<string, number>>(new Map());
   const [productCategoryMap, setProductCategoryMap] = useState<Record<string, number | undefined>>({});
+  const [barcodeScanOpen, setBarcodeScanOpen] = useState(false);
+  const [barcodeFetching, setBarcodeFetching] = useState(false);
+  const [barcodeProduct, setBarcodeProduct] = useState<ProductSearchResult | null>(null);
+  const [barcodeProductOpen, setBarcodeProductOpen] = useState(false);
+  const [barcodeSaving, setBarcodeSaving] = useState(false);
   const { data: allCategories = [] } = useQuery<MealCategory[]>({
     queryKey: ['/api/categories'],
   });
@@ -1679,6 +1687,72 @@ export default function MealsPage() {
     }
   };
 
+  const handleCookbookBarcodeScan = async (barcode: string) => {
+    setBarcodeScanOpen(false);
+    setBarcodeFetching(true);
+    try {
+      const res = await fetch(`/api/products/barcode/${barcode}`, { credentials: "include" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const scanStatus = body.scanStatus as string | undefined;
+        if (scanStatus === 'timeout' || res.status === 504) {
+          toast({ title: "Timeout", description: "The lookup timed out. Please try again.", variant: "destructive" });
+        } else if (res.status === 404) {
+          toast({ title: "Not found", description: "This barcode wasn't found in Open Food Facts.", variant: "destructive" });
+        } else {
+          toast({ title: "Scan error", description: "Something went wrong during barcode lookup.", variant: "destructive" });
+        }
+        return;
+      }
+      const data = await res.json();
+      if (data.product) {
+        setBarcodeProduct(data.product);
+        setBarcodeProductOpen(true);
+      } else {
+        toast({ title: "Not found", description: "This barcode wasn't found in Open Food Facts.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Scan error", description: "Something went wrong during barcode lookup.", variant: "destructive" });
+    } finally {
+      setBarcodeFetching(false);
+    }
+  };
+
+  const handleSaveBarcodeProduct = async () => {
+    if (!barcodeProduct) return;
+    setBarcodeSaving(true);
+    try {
+      const cats = barcodeProduct.categories_tags || [];
+      const isDrink = cats.some((c: string) => c.includes('beverages') || c.includes('drinks') || c.includes('waters') || c.includes('juices') || c.includes('sodas') || c.includes('teas') || c.includes('coffees'));
+      const isBabyFood = cats.some((c: string) => c.includes('baby') || c.includes('infant'));
+      const isReadyMeal = cats.some((c: string) => c.includes('meals') || c.includes('ready') || c.includes('prepared') || c.includes('frozen'));
+      await apiRequest('POST', api.meals.saveProduct.path, {
+        barcode: barcodeProduct.barcode,
+        name: barcodeProduct.product_name,
+        brand: barcodeProduct.brand,
+        imageUrl: barcodeProduct.image_url,
+        nutrition: barcodeProduct.nutriments,
+        nutriscoreGrade: barcodeProduct.nutriscore_grade,
+        novaGroup: barcodeProduct.nova_group,
+        thaRating: barcodeProduct.upfAnalysis?.thaRating ?? 3,
+        isDrink,
+        isBabyFood,
+        isReadyMeal,
+        quantity: barcodeProduct.quantity,
+        categoryId: null,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/meals'] });
+      setActiveGroups(prev => { const n = new Set(prev); n.add("packaged"); return n; });
+      toast({ title: "Product saved", description: `${barcodeProduct.product_name} added to your Cookbook.` });
+      setBarcodeProductOpen(false);
+      setBarcodeProduct(null);
+    } catch {
+      toast({ title: "Save failed", description: "Could not save product. Please try again.", variant: "destructive" });
+    } finally {
+      setBarcodeSaving(false);
+    }
+  };
+
   const handleWebImport = async (recipe: WebSearchRecipe): Promise<number | null> => {
     setWebImportingIds(prev => new Set(prev).add(recipe.id));
     try {
@@ -1852,6 +1926,20 @@ export default function MealsPage() {
           >
             <Zap className="h-4 w-4 mr-1.5" />
             Build a Meal
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setBarcodeScanOpen(true)}
+            disabled={barcodeFetching}
+            data-testid="button-scan-product"
+          >
+            {barcodeFetching ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : (
+              <ScanLine className="h-4 w-4 mr-1.5" />
+            )}
+            Scan Product
           </Button>
           <AddMealGatewayDialog onScan={() => setCameraModalOpen(true)} />
           {(!importStatus || importStatus.totalImported === 0) && (
@@ -3358,6 +3446,81 @@ export default function MealsPage() {
         onOpenChange={setScanDialogOpen}
         scanData={scanData}
       />
+
+      <BarcodeScanner
+        isOpen={barcodeScanOpen}
+        onScan={handleCookbookBarcodeScan}
+        onClose={() => setBarcodeScanOpen(false)}
+      />
+
+      <Dialog open={barcodeProductOpen} onOpenChange={(v) => { setBarcodeProductOpen(v); if (!v) setBarcodeProduct(null); }}>
+        <DialogContent className="sm:max-w-sm" data-testid="dialog-barcode-product">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-primary" />
+              Save to Cookbook
+            </DialogTitle>
+            <DialogDescription>
+              Review this product before saving it to your Packaged &amp; Processed list.
+            </DialogDescription>
+          </DialogHeader>
+          {barcodeProduct && (
+            <div className="space-y-3 py-1">
+              {barcodeProduct.image_url && (
+                <div className="flex justify-center">
+                  <img
+                    src={barcodeProduct.image_url}
+                    alt={barcodeProduct.product_name}
+                    className="h-28 w-auto object-contain rounded-md"
+                  />
+                </div>
+              )}
+              <div>
+                <p className="font-semibold text-base leading-tight" data-testid="text-barcode-product-name">{barcodeProduct.product_name}</p>
+                {barcodeProduct.brand && (
+                  <p className="text-sm text-muted-foreground">{barcodeProduct.brand}</p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {barcodeProduct.nutriscore_grade && (
+                  <Badge className={`text-xs font-semibold uppercase ${NUTRISCORE_COLORS[barcodeProduct.nutriscore_grade.toLowerCase()] || 'bg-muted'}`}>
+                    Nutri-Score {barcodeProduct.nutriscore_grade.toUpperCase()}
+                  </Badge>
+                )}
+                {barcodeProduct.nova_group && (
+                  <Badge variant="outline" className="text-xs">NOVA {barcodeProduct.nova_group}</Badge>
+                )}
+                {barcodeProduct.upfAnalysis?.thaRating && (
+                  <ScoreBadge score={barcodeProduct.upfAnalysis.thaRating} size={20} />
+                )}
+              </div>
+              {barcodeProduct.nutriments?.calories && (
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1"><Flame className="h-3 w-3 text-orange-500" />{Math.round(Number(barcodeProduct.nutriments.calories))} kcal</span>
+                  {barcodeProduct.nutriments.protein && <span className="flex items-center gap-1"><Beef className="h-3 w-3 text-red-500" />{Number(barcodeProduct.nutriments.protein).toFixed(1)}g protein</span>}
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setBarcodeProductOpen(false); setBarcodeProduct(null); }} data-testid="button-barcode-cancel">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveBarcodeProduct}
+              disabled={barcodeSaving}
+              data-testid="button-barcode-save"
+            >
+              {barcodeSaving ? (
+                <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-1.5" />
+              )}
+              Save to Cookbook
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -3607,6 +3770,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange, socialMode }: 
   const [isImporting, setIsImporting] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
+  const [completionMeal, setCompletionMeal] = useState<CompletionMeal | null>(null);
   const { createMeal } = useMeals();
   const { toast } = useToast();
 
@@ -3656,7 +3820,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange, socialMode }: 
 
     setIsSaving(true);
     try {
-      await createMeal.mutateAsync({
+      const savedMeal = await createMeal.mutateAsync({
         name: preview.title,
         ingredients: preview.ingredients.length > 0 ? preview.ingredients : ["(no ingredients extracted)"],
         instructions: preview.instructions || [],
@@ -3666,10 +3830,10 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange, socialMode }: 
         servings: preview.servings || 1,
       });
 
-      toast({ title: "Saved", description: `"${preview.title}" added to your meals.` });
       setPreview(null);
       setUrl("");
       setOpen(false);
+      setCompletionMeal({ id: savedMeal.id, name: savedMeal.name, isDrink: savedMeal.isDrink ?? false, audience: savedMeal.audience ?? "adult" });
     } catch (err: any) {
       toast({
         title: "Save Failed",
@@ -3707,6 +3871,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange, socialMode }: 
   ].filter(i => i.value) : [];
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
       {externalOpen === undefined && (
         <DialogTrigger asChild>
@@ -3849,6 +4014,14 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange, socialMode }: 
         )}
       </DialogContent>
     </Dialog>
+    {completionMeal && (
+      <MealCompletionDialog
+        open={true}
+        onClose={() => setCompletionMeal(null)}
+        meal={completionMeal}
+      />
+    )}
+    </>
   );
 }
 
@@ -3863,6 +4036,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: {
   };
   const [selectedDiets, setSelectedDiets] = useState<number[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | undefined>(undefined);
+  const [completionMeal, setCompletionMeal] = useState<CompletionMeal | null>(null);
   const { user } = useUser();
   
   const { data: allDiets = [] } = useQuery<Diet[]>({
@@ -3932,11 +4106,13 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: {
         setSelectedDiets([]);
         setSelectedCategory(undefined);
         form.reset();
+        setCompletionMeal({ id: meal.id, name: meal.name, isDrink: isDrink, audience });
       }
     });
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       {externalOpen === undefined && (
         <DialogTrigger asChild>
@@ -4119,5 +4295,14 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: {
         </Form>
       </DialogContent>
     </Dialog>
+
+    {completionMeal && (
+      <MealCompletionDialog
+        open={true}
+        onClose={() => setCompletionMeal(null)}
+        meal={completionMeal}
+      />
+    )}
+    </>
   );
 }

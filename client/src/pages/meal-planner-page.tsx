@@ -15,6 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import type { Meal, MealPlan, MealPlanEntry, Diet, MealCategory } from "@shared/schema";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
+import { MealCompletionDialog, type CompletionMeal } from "@/components/meal-completion-dialog";
 
 interface ExternalRecipe {
   id: string;
@@ -124,6 +125,7 @@ export default function MealPlannerPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+  const [completionMeal, setCompletionMeal] = useState<CompletionMeal | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
   const [suggestDialogOpen, setSuggestDialogOpen] = useState(false);
@@ -369,7 +371,7 @@ export default function MealPlannerPage() {
     },
     onSuccess: (meal) => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
-      toast({ title: "Recipe imported!", description: `"${meal.name}" has been added to your meals.` });
+      setCompletionMeal({ id: meal.id, name: meal.name, isDrink: meal.isDrink ?? false, audience: meal.audience ?? "adult" });
     },
     onError: (err: Error) => {
       toast({ title: "Import failed", description: err.message, variant: "destructive" });
@@ -1388,6 +1390,14 @@ export default function MealPlannerPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {completionMeal && (
+        <MealCompletionDialog
+          open={true}
+          onClose={() => setCompletionMeal(null)}
+          meal={completionMeal}
+        />
+      )}
     </div>
   );
 }

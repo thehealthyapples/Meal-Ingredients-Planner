@@ -4,17 +4,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { X } from "lucide-react";
 
 export const COMMON_UNITS = [
-  { value: "",      label: "-" },
-  { value: "g",     label: "g" },
-  { value: "kg",    label: "kg" },
-  { value: "ml",    label: "ml" },
-  { value: "l",     label: "l" },
-  { value: "tbsp",  label: "tbsp" },
-  { value: "tsp",   label: "tsp" },
-  { value: "cup",   label: "cup" },
-  { value: "oz",    label: "oz" },
-  { value: "lb",    label: "lb" },
-  { value: "pinch", label: "pinch" },
+  { value: "",        label: "-" },
+  { value: "g",       label: "g" },
+  { value: "kg",      label: "kg" },
+  { value: "ml",      label: "ml" },
+  { value: "l",       label: "l" },
+  { value: "tbsp",    label: "tbsp" },
+  { value: "tsp",     label: "tsp" },
+  { value: "cup",     label: "cup" },
+  { value: "oz",      label: "oz" },
+  { value: "lb",      label: "lb" },
+  { value: "pinch",   label: "pinch" },
+  { value: "slice",   label: "slice" },
+  { value: "piece",   label: "piece" },
+  { value: "breast",  label: "breast" },
+  { value: "fillet",  label: "fillet" },
+  { value: "clove",   label: "clove" },
+  { value: "handful", label: "handful" },
+  { value: "serving", label: "serving" },
+  { value: "tin",     label: "tin" },
+  { value: "can",     label: "can" },
+  { value: "pack",    label: "pack" },
 ];
 
 const UNIT_VALUES = COMMON_UNITS.map(u => u.value).filter(Boolean);

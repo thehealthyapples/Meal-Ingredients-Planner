@@ -11,6 +11,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { getWholeFoodAlternative } from "@/lib/whole-food-alternatives";
 import { api } from "@shared/routes";
 import type { Meal } from "@shared/schema";
+import { MealCompletionDialog, type CompletionMeal } from "@/components/meal-completion-dialog";
 
 interface WebSearchRecipe {
   id: string;
@@ -94,6 +95,7 @@ export default function QuickMealPage() {
   const [photoScanning, setPhotoScanning] = useState(false);
 
   const [expandedPartId, setExpandedPartId] = useState<string | null>(null);
+  const [completionMeal, setCompletionMeal] = useState<CompletionMeal | null>(null);
   const [webResults, setWebResults] = useState<Record<string, WebSearchRecipe[]>>({});
   const [webLoading, setWebLoading] = useState<Record<string, boolean>>({});
   const [webDisplayCount, setWebDisplayCount] = useState<Record<string, number>>({});
@@ -304,10 +306,15 @@ export default function QuickMealPage() {
 
   const saveToMealsMutation = useMutation({
     mutationFn: async () => saveMealMutation.mutateAsync(),
-    onSuccess: () => {
+    onSuccess: (meal: Meal) => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
-      toast({ title: editId ? "Meal updated" : "Meal saved", description: `${mealName.trim() || "Build a Meal"} added to Cookbook.` });
-      navigate("/meals");
+      toast({ title: editId ? "Meal updated" : "Meal saved", description: `${meal.name} added to Cookbook.` });
+      setCompletionMeal({
+        id:       meal.id,
+        name:     meal.name,
+        isDrink:  meal.isDrink ?? false,
+        audience: meal.audience ?? "adult",
+      });
     },
     onError: () => {
       toast({ title: "Failed to save meal", variant: "destructive" });
@@ -627,6 +634,17 @@ export default function QuickMealPage() {
             </Button>
           </div>
         </>
+      )}
+
+      {completionMeal && (
+        <MealCompletionDialog
+          open={true}
+          onClose={() => {
+            setCompletionMeal(null);
+            navigate("/meals");
+          }}
+          meal={completionMeal}
+        />
       )}
     </div>
   );

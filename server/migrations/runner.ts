@@ -618,6 +618,28 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-04-02_add_barcode_lookup_events",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS barcode_lookup_events (
+        id              SERIAL PRIMARY KEY,
+        user_id         INTEGER,
+        barcode         TEXT NOT NULL,
+        lookup_source   TEXT NOT NULL DEFAULT 'off',
+        status          TEXT NOT NULL,
+        http_status     INTEGER NOT NULL,
+        off_product_code  TEXT,
+        off_product_name  TEXT,
+        failure_reason  TEXT,
+        request_url     TEXT,
+        created_at      TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_barcode_lookup_events_barcode ON barcode_lookup_events (barcode)`,
+      `CREATE INDEX IF NOT EXISTS idx_barcode_lookup_events_user_id ON barcode_lookup_events (user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_barcode_lookup_events_status ON barcode_lookup_events (status)`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

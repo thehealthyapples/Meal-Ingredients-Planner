@@ -17,10 +17,12 @@ export default function BarcodeScanner({
 }: BarcodeScannerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const controlsRef = useRef<{ stop: () => void } | null>(null);
+  const hasScannedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
 
   const stopScanning = useCallback(() => {
+    hasScannedRef.current = false;
     if (controlsRef.current) {
       controlsRef.current.stop();
       controlsRef.current = null;
@@ -73,10 +75,27 @@ export default function BarcodeScanner({
         selectedDeviceId,
         videoRef.current,
         (result) => {
-          if (result && result.getText()) {
-            const barcode = result.getText();
-            onScan(barcode);
-          }
+          if (!result || !result.getText()) return;
+          if (hasScannedRef.current) return;
+
+          const rawText = result.getText();
+          const format = result.getBarcodeFormat();
+
+          // UPC-A barcodes are 12 digits. The OFF database (and all European
+          // product databases) stores products under their 13-digit EAN-13
+          // barcode, which is UPC-A with a leading zero prepended.
+          // If zxing reads the barcode as UPC_A format (value 14), normalise
+          // it to EAN-13 by prepending '0' before sending to the backend.
+          const isUpcA = format === BarcodeFormat.UPC_A && rawText.length === 12;
+          const normalisedBarcode = isUpcA ? '0' + rawText : rawText;
+
+          console.log(
+            `[SCAN-FRONTEND] raw="${rawText}" format=${format}(${BarcodeFormat[format]})` +
+            ` normalised="${normalisedBarcode}" upc_a_expanded=${isUpcA}`
+          );
+
+          hasScannedRef.current = true;
+          onScan(normalisedBarcode);
         }
       );
 

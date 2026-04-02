@@ -27,6 +27,7 @@ import { isAdmin, hasPremiumAccess, assertAdmin } from "./lib/access";
 import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/retailIntelligence";
 import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
 import { getHouseholdForUser } from "./lib/household";
+import { pool } from "./db";
 import multer from "multer";
 import { extractTextFromImage, OcrError } from "./services/ocr";
 import { parseScannedText } from "./services/recipeParser";
@@ -4717,32 +4718,109 @@ export async function registerRoutes(
 
   app.get("/api/products/barcode/:barcode", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    try {
-      const barcode = req.params.barcode.trim();
-      const includeRegulatoryInScoring = req.query.includeRegulatoryInScoring !== 'false';
-      if (!barcode || !/^\d{8,14}$/.test(barcode)) {
-        return res.status(400).json({ message: "Invalid barcode format" });
-      }
 
-      const OFF_FIELDS = 'code,product_name,product_name_en,brands,image_front_url,image_url,ingredients_text,ingredients_text_en,nutriments,nova_group,categories_tags,nutriscore_grade,countries_tags,stores_tags,stores,purchase_places_tags';
-      const offUrl = `https://world.openfoodfacts.net/api/v0/product/${barcode}.json?fields=${OFF_FIELDS}`;
+    const userId = (req.user as any)?.id ?? null;
+
+    async function logBarcodeEvent(opts: {
+      barcode: string;
+      status: string;
+      httpStatus: number;
+      offProductCode?: string | null;
+      offProductName?: string | null;
+      failureReason?: string | null;
+      requestUrl?: string | null;
+    }) {
+      try {
+        await pool.query(
+          `INSERT INTO barcode_lookup_events
+             (user_id, barcode, lookup_source, status, http_status, off_product_code, off_product_name, failure_reason, request_url)
+           VALUES ($1, $2, 'off', $3, $4, $5, $6, $7, $8)`,
+          [
+            userId,
+            opts.barcode,
+            opts.status,
+            opts.httpStatus,
+            opts.offProductCode ?? null,
+            opts.offProductName ?? null,
+            opts.failureReason ?? null,
+            opts.requestUrl ?? null,
+          ]
+        );
+      } catch (logErr) {
+        console.error("[BARCODE-LOG] Failed to write barcode_lookup_events:", logErr);
+      }
+    }
+
+    const rawBarcode = req.params.barcode.trim();
+    const includeRegulatoryInScoring = req.query.includeRegulatoryInScoring !== 'false';
+
+    console.log(`[BARCODE-SCAN] attempt barcode=${rawBarcode} user=${userId}`);
+
+    if (!rawBarcode || !/^\d{8,14}$/.test(rawBarcode)) {
+      console.warn(`[BARCODE-SCAN] invalid format barcode=${rawBarcode}`);
+      await logBarcodeEvent({ barcode: rawBarcode || 'EMPTY', status: 'invalid_format', httpStatus: 400, failureReason: 'Barcode did not match \\d{8,14}' });
+      return res.status(400).json({ message: "Invalid barcode format" });
+    }
+
+    // If a 12-digit barcode arrives (UPC-A), also try the 13-digit EAN-13
+    // equivalent (leading zero prepended). OFF stores all products under their
+    // canonical EAN-13 code, so a raw UPC-A lookup will always miss.
+    const barcode = rawBarcode.length === 12 ? '0' + rawBarcode : rawBarcode;
+    if (barcode !== rawBarcode) {
+      console.log(`[BARCODE-SCAN] UPC-A→EAN-13 expansion: "${rawBarcode}" → "${barcode}"`);
+    }
+
+    console.log(`[SCAN-BACKEND] received="${rawBarcode}" normalised="${barcode}" sent_to_off="${barcode}"`);
+
+    const OFF_FIELDS = 'code,product_name,product_name_en,brands,image_front_url,image_url,ingredients_text,ingredients_text_en,nutriments,nova_group,categories_tags,nutriscore_grade,countries_tags,stores_tags,stores,purchase_places_tags';
+    const offUrl = `https://world.openfoodfacts.net/api/v0/product/${barcode}.json?fields=${OFF_FIELDS}`;
+
+    try {
       const response = await axios.get(offUrl, {
         timeout: 15000,
         headers: { 'User-Agent': 'SmartMealPlanner/1.0 (contact: smartmealplanner@replit.app)' },
       });
 
+      const offHttpStatus = response.status;
+      const offStatus = response.data?.status ?? 'no_data';
+      const offCode = response.data?.product?.code ?? 'none';
+      const offNameFinal = response.data?.product?.product_name ?? response.data?.product?.product_name_en ?? 'none';
+      console.log(`[SCAN-OFF] http_status=${offHttpStatus} off_status=${offStatus} code="${offCode}" name="${offNameFinal}"`);
+
       if (!response.data || response.data.status !== 1 || !response.data.product) {
-        return res.status(404).json({ message: "Product not found" });
+        console.warn(`[BARCODE-SCAN] OFF miss barcode=${barcode} off_status=${response.data?.status ?? 'no_data'}`);
+        await logBarcodeEvent({ barcode, status: 'not_found_off', httpStatus: 404, failureReason: 'OFF returned status!=1 or no product', requestUrl: offUrl });
+        return res.status(404).json({ message: "Product not found", scanStatus: 'not_found_off' });
       }
 
       const p = response.data.product;
+      // offCode and offNameFinal already declared above from response.data — reuse below
 
-      // Reject products whose ingredient text is not available in English.
-      // Consistent with all other product pipelines — we only surface products
-      // we can reliably explain to the user.
-      if (!hasEnglishIngredients(p)) {
-        console.log(`[LANG-FILTER] Barcode ${barcode} excluded: no English ingredient text`);
-        return res.status(404).json({ message: "Product found but ingredient information is not available in English" });
+      // Determine ingredient confidence for this barcode scan.
+      //
+      // Hard-block ONLY when the product is positively identified as non-English
+      // (non-ASCII character density ≥ 2, or known German/French/Dutch lexical
+      // markers). This is the only case we should return a 404.
+      //
+      // When the language check is inconclusive (e.g. "Free range eggs" — too
+      // short to score confidently, but no negative signals), we return the
+      // product with scanConfidence:"low" rather than silently 404-ing. This
+      // prevents false negatives on simple whole foods.
+      const ingredTextForLangCheck = p.ingredients_text_en || p.ingredients_text || '';
+      const nonAsciiDensity = (ingredTextForLangCheck.match(/[àáâäæãåçćèéêëîïíìłńñôöòóœøśšûüùúÿžżÄÖÜß]/g) || []).length;
+      const isConfirmedNonEnglish = nonAsciiDensity >= 2 || isLikelyNonEnglishIngredients(ingredTextForLangCheck);
+
+      if (isConfirmedNonEnglish) {
+        console.warn(`[BARCODE-SCAN] lang-filter BLOCKED barcode=${barcode} off_name="${offNameFinal}" non_ascii=${nonAsciiDensity} text="${ingredTextForLangCheck.slice(0,80)}"`);
+        await logBarcodeEvent({ barcode, status: 'lang_filtered', httpStatus: 404, offProductCode: offCode, offProductName: offNameFinal, failureReason: 'Confirmed non-English: non-ASCII density or foreign lexical markers', requestUrl: offUrl });
+        return res.status(404).json({ message: "Product not found", scanStatus: 'lang_blocked' });
+      }
+
+      const passesFullEnglishCheck = hasEnglishIngredients(p);
+      const scanConfidence: 'high' | 'low' = passesFullEnglishCheck ? 'high' : 'low';
+
+      if (scanConfidence === 'low') {
+        console.log(`[BARCODE-SCAN] lang-filter LOW-CONFIDENCE barcode=${barcode} off_name="${offNameFinal}" text_len=${ingredTextForLangCheck.length} — returning product with warning`);
       }
 
       const ingredientsText = p.ingredients_text_en || p.ingredients_text || '';
@@ -4815,13 +4893,35 @@ export async function registerRoutes(
         inferredStores: barcodeRetail.inferredStores,
       };
 
-      res.json({ product });
+      console.log(`[BARCODE-SCAN] success barcode=${barcode} off_name="${offNameFinal}" confidence=${scanConfidence} tha_rating=${upfAnalysis?.thaRating ?? 'n/a'} has_ingredients=${!!ingredientsText}`);
+      await logBarcodeEvent({ barcode, status: 'found', httpStatus: 200, offProductCode: offCode, offProductName: offNameFinal, requestUrl: offUrl });
+
+      res.json({
+        product: {
+          ...product,
+          scanConfidence,
+          ...(scanConfidence === 'low' ? { scanWarning: "Ingredient data is limited for this product; THA analysis may be incomplete." } : {}),
+        },
+      });
     } catch (err: any) {
-      if (err?.response?.status === 404) {
-        return res.status(404).json({ message: "Product not found" });
+      const isAxiosTimeout = err?.code === 'ECONNABORTED' || err?.message?.includes('timeout');
+      const isOffNotFound = err?.response?.status === 404;
+
+      if (isOffNotFound) {
+        console.warn(`[BARCODE-SCAN] OFF 404 barcode=${barcode}`);
+        await logBarcodeEvent({ barcode, status: 'not_found_off', httpStatus: 404, failureReason: 'OFF API returned 404', requestUrl: offUrl });
+        return res.status(404).json({ message: "Product not found", scanStatus: 'not_found_off' });
       }
-      console.error("Error looking up barcode:", err);
-      res.status(500).json({ message: "Failed to look up barcode" });
+
+      if (isAxiosTimeout) {
+        console.error(`[BARCODE-SCAN] timeout barcode=${barcode} url=${offUrl}`);
+        await logBarcodeEvent({ barcode, status: 'timeout', httpStatus: 504, failureReason: `Axios timeout: ${err?.message}`, requestUrl: offUrl });
+        return res.status(504).json({ message: "Barcode lookup timed out", scanStatus: 'timeout' });
+      }
+
+      console.error(`[BARCODE-SCAN] error barcode=${barcode}`, err?.message ?? err);
+      await logBarcodeEvent({ barcode, status: 'error', httpStatus: 500, failureReason: err?.message ?? String(err), requestUrl: offUrl });
+      res.status(500).json({ message: "Failed to look up barcode", scanStatus: 'error' });
     }
   });
 

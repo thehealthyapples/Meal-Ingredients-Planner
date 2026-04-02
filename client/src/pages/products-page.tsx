@@ -587,8 +587,22 @@ export default function ProductsPage() {
     setBarcodeLoading(true);
     try {
       const includeRegulatory = intelligenceSettings?.includeRegulatoryAdditivesInScoring ?? true;
+      console.log(`[SCAN-REQUEST] GET /api/products/barcode/${barcode}?includeRegulatoryInScoring=${includeRegulatory}`);
       const res = await fetch(`/api/products/barcode/${barcode}?includeRegulatoryInScoring=${includeRegulatory}`, { credentials: "include" });
-      if (!res.ok) throw new Error("Product not found");
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const scanStatus = body.scanStatus as string | undefined;
+        if (scanStatus === 'not_found_off' || res.status === 404) {
+          toast({ title: "Not Found", description: "This barcode wasn't found in Open Food Facts.", variant: "destructive" });
+        } else if (scanStatus === 'timeout' || res.status === 504) {
+          toast({ title: "Timeout", description: "The lookup timed out. Please try again.", variant: "destructive" });
+        } else {
+          toast({ title: "Scan Error", description: "Something went wrong during barcode lookup.", variant: "destructive" });
+        }
+        return;
+      }
+
       const data = await res.json();
       if (data.product) {
         setLastBarcode(barcode);
@@ -612,12 +626,16 @@ export default function ProductsPage() {
           }
         }
 
-        toast({ title: "Product Found", description: data.product.product_name });
+        if (data.product.scanConfidence === 'low') {
+          toast({ title: "Product Found", description: `${data.product.product_name} — ingredient data is limited` });
+        } else {
+          toast({ title: "Product Found", description: data.product.product_name });
+        }
       } else {
         toast({ title: "Not Found", description: `No product found for barcode ${barcode}`, variant: "destructive" });
       }
     } catch {
-      toast({ title: "Scan Error", description: "Could not look up this barcode.", variant: "destructive" });
+      toast({ title: "Scan Error", description: "Something went wrong during barcode lookup.", variant: "destructive" });
     } finally {
       setBarcodeLoading(false);
     }
