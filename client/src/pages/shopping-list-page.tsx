@@ -267,6 +267,15 @@ const PANTRY_FAMILY_MAP: Record<string, string> = {
   'tinned chopped tomatoes': 'chopped_tomatoes',
   'can chopped tomatoes': 'chopped_tomatoes',
   'tomato puree': 'tomato_puree',
+  'garlic': 'garlic',
+  'garlic clove': 'garlic',
+  'garlic cloves': 'garlic',
+  'lemon': 'lemon',
+  'lemons': 'lemon',
+  'tomato': 'tomato',
+  'tomatoes': 'tomato',
+  'plum tomato': 'tomato',
+  'plum tomatoes': 'tomato',
   'cumin': 'cumin',
   'paprika': 'paprika',
   'soy sauce': 'soy_sauce',
@@ -285,10 +294,12 @@ type PantryMergeProfile = { family: string; blockingModifiers: string[] };
 function getPantryMergeProfile(name: string): PantryMergeProfile {
   const lower = name.toLowerCase().trim();
   let stripped = lower;
+  // Strip accidental leading quantity (e.g. "1 lemon" → "lemon", "2 garlic cloves" → "garlic cloves")
+  stripped = stripped.replace(/^\d+(?:\.\d+)?\s+/, '');
   for (const word of IGNORABLE_MODIFIERS) {
     stripped = stripped.replace(new RegExp(`\\b${word}\\b`, 'g'), '').replace(/\s+/g, ' ').trim();
   }
-  const family = PANTRY_FAMILY_MAP[stripped] ?? PANTRY_FAMILY_MAP[lower] ?? normalizeIngredientKey(lower);
+  const family = PANTRY_FAMILY_MAP[stripped] ?? PANTRY_FAMILY_MAP[lower] ?? normalizeIngredientKey(stripped);
   const blockingModifiers = BLOCKING_MODIFIERS.filter(m => lower.includes(m)).sort();
   return { family, blockingModifiers };
 }
@@ -2496,9 +2507,7 @@ export default function ShoppingListPage() {
                   const catExtras = shoppingExtras.filter(e => (e.inBasket || e.alwaysAdd) && e.category !== 'household' && EXTRAS_TO_BASKET_CATEGORY[e.category] === cat);
                   const hasContent = catItems.length > 0 || catExtras.length > 0;
                   const isPantry = cat === 'pantry';
-                  const displayRows = isPantry
-                    ? computePantryMergedRows(catItems, sourcesByItem)
-                    : catItems.map(i => ({ primary: i, combinedSources: sourcesByItem.get(i.id) ?? [], combinedQtyValue: i.quantityValue ?? null, mergedCount: 1 }));
+                  const displayRows = computePantryMergedRows(catItems, sourcesByItem);
                   const catDefault = getCategoryDefault(cat);
                   const isMixed = catItems.some(i => i.selectedTier !== null && i.selectedTier !== catDefault.tier);
                   const CatIcon = CATEGORY_ICONS[cat] || CircleDot;
@@ -3356,6 +3365,7 @@ export default function ShoppingListPage() {
           <ShopModeView
             items={savedItems}
             allPriceMatches={allPriceMatches}
+            thaPicks={thaPicks}
             pantryKeySet={pantryKeySet}
             onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
           />
