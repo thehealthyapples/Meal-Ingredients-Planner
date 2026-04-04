@@ -12,7 +12,7 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Trash2, Plus, Loader2, Home, Refrigerator, Archive, Layers, ShoppingCart, ChevronDown, ChevronRight, PawPrint, Settings2 } from "lucide-react";
+import { Trash2, Plus, Loader2, Home, Refrigerator, Archive, Layers, ShoppingCart, ChevronDown, ChevronRight, PawPrint, Settings2, Apple } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -45,17 +45,18 @@ const ALL_FOOD_CATEGORIES = [
   { value: "larder", label: "Larder", icon: Archive },
   { value: "fridge", label: "Fridge", icon: Refrigerator },
   { value: "freezer", label: "Freezer", icon: Layers },
+  { value: "fruit", label: "Fruit", icon: Apple },
   { value: "pet", label: "Pet Food & Care", icon: PawPrint },
 ] as const;
 
-type FoodCategory = "larder" | "fridge" | "freezer" | "pet";
+type FoodCategory = "larder" | "fridge" | "freezer" | "fruit" | "pet";
 
 function loadVisibleCats(): Set<FoodCategory> {
   try {
     const saved = localStorage.getItem("pantry-visible-cats");
     if (saved) return new Set(JSON.parse(saved) as FoodCategory[]);
   } catch {}
-  return new Set<FoodCategory>(["larder", "fridge", "freezer", "pet"]);
+  return new Set<FoodCategory>(["larder", "fridge", "freezer", "fruit", "pet"]);
 }
 
 function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoading: boolean }) {
@@ -67,6 +68,7 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
     larder: true,
     fridge: false,
     freezer: false,
+    fruit: false,
     pet: false,
   });
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -173,6 +175,7 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
     larder: "No larder staples yet - try adding olive oil or pasta.",
     fridge: "No fridge staples yet - try adding milk or eggs.",
     freezer: "No freezer items yet.",
+    fruit: "No fruit yet - try adding apples or berries.",
     pet: "No pet food or care items yet.",
   };
 

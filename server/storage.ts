@@ -1,4 +1,4 @@
-import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings } from "@shared/schema";
+import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
 import { eq, and, ilike, or, sql, inArray, isNull, isNotNull } from "drizzle-orm";
@@ -54,7 +54,7 @@ export interface IStorage {
   addShoppingListItem(userId: number, item: InsertShoppingListItem): Promise<ShoppingListItem>;
   addOrConsolidateShoppingListItem(userId: number, item: InsertShoppingListItem): Promise<ShoppingListItem>;
   updateShoppingListItemQuantity(id: number, quantity: number): Promise<ShoppingListItem | undefined>;
-  updateShoppingListItem(id: number, fields: Partial<Pick<ShoppingListItem, 'productName' | 'normalizedName' | 'quantityValue' | 'unit' | 'category' | 'quantity' | 'selectedTier' | 'checked' | 'quantityInGrams' | 'ingredientId' | 'matchedProductId' | 'matchedStore' | 'matchedPrice' | 'availableStores' | 'thaRating' | 'itemType' | 'variantSelections' | 'attributePreferences' | 'confidenceLevel' | 'confidenceReason' | 'basketLabel'>>): Promise<ShoppingListItem | undefined>;
+  updateShoppingListItem(id: number, fields: Partial<Pick<ShoppingListItem, 'productName' | 'normalizedName' | 'quantityValue' | 'unit' | 'category' | 'quantity' | 'selectedTier' | 'checked' | 'quantityInGrams' | 'ingredientId' | 'matchedProductId' | 'matchedStore' | 'matchedPrice' | 'availableStores' | 'thaRating' | 'itemType' | 'variantSelections' | 'attributePreferences' | 'confidenceLevel' | 'confidenceReason' | 'basketLabel' | 'shopStatus'>>): Promise<ShoppingListItem | undefined>;
   removeShoppingListItem(id: number): Promise<void>;
   clearShoppingList(userId: number): Promise<void>;
   getMealPlans(userId: number): Promise<MealPlan[]>;
@@ -97,7 +97,7 @@ export interface IStorage {
   batchUpdateShoppingListStore(userId: number, store: string | null): Promise<void>;
   getUserPreferences(userId: number): Promise<UserPreferences | undefined>;
   upsertUserPreferences(userId: number, prefs: InsertUserPreferences): Promise<UserPreferences>;
-  updateUserProfile(id: number, fields: Partial<Pick<User, 'firstName' | 'displayName' | 'profilePhotoUrl' | 'dietPattern' | 'dietRestrictions' | 'eatingSchedule'>>): Promise<User | undefined>;
+  updateUserProfile(id: number, fields: Partial<Pick<User, 'firstName' | 'displayName' | 'profilePhotoUrl' | 'dietPattern' | 'dietRestrictions' | 'eatingSchedule' | 'customMetricDefs' | 'diaryExtraMetrics'>>): Promise<User | undefined>;
   completeOnboarding(userId: number): Promise<User | undefined>;
   resetOnboarding(userId: number): Promise<void>;
   getAllAdditives(): Promise<Additive[]>;
@@ -247,6 +247,7 @@ export interface IStorage {
   getOrCreateFoodDiaryDay(userId: number, date: string): Promise<FoodDiaryDay>;
   getFoodDiaryEntries(userId: number, date: string): Promise<FoodDiaryEntry[]>;
   createFoodDiaryEntry(userId: number, date: string, data: InsertFoodDiaryEntry): Promise<FoodDiaryEntry>;
+  logMealToDiary(userId: number, date: string, mealId: number, mealSlot: string): Promise<{ logged: string[] }>;
   updateFoodDiaryEntry(entryId: number, userId: number, data: Partial<Pick<FoodDiaryEntry, 'name' | 'notes' | 'mealSlot'>>): Promise<FoodDiaryEntry | undefined>;
   deleteFoodDiaryEntry(entryId: number, userId: number): Promise<void>;
   copyPlannerToFoodDiary(userId: number, date: string, slots?: string[]): Promise<{ copied: number; skipped: number }>;
@@ -744,7 +745,7 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async updateUserProfile(id: number, fields: Partial<Pick<User, 'firstName' | 'displayName' | 'profilePhotoUrl' | 'dietPattern' | 'dietRestrictions' | 'eatingSchedule'>>): Promise<User | undefined> {
+  async updateUserProfile(id: number, fields: Partial<Pick<User, 'firstName' | 'displayName' | 'profilePhotoUrl' | 'dietPattern' | 'dietRestrictions' | 'eatingSchedule' | 'customMetricDefs' | 'diaryExtraMetrics'>>): Promise<User | undefined> {
     const [result] = await db.update(users).set(fields).where(eq(users.id, id)).returning();
     return result;
   }
@@ -1825,7 +1826,7 @@ export class DatabaseStorage implements IStorage {
       console.warn(`[Pantry Seed] No household for user ${userId}, skipping food pantry seed`);
       return;
     }
-    const defaults: { name: string; category: "larder" | "fridge" | "freezer"; sortOrder: number }[] = [
+    const defaults: { name: string; category: "larder" | "fridge" | "freezer" | "fruit"; sortOrder: number }[] = [
       // FRIDGE
       { name: "Milk", category: "fridge", sortOrder: 0 },
       { name: "Butter", category: "fridge", sortOrder: 1 },
@@ -1904,6 +1905,48 @@ export class DatabaseStorage implements IStorage {
       { name: "Garlic granules", category: "larder", sortOrder: 117 },
       { name: "Onion granules", category: "larder", sortOrder: 118 },
       { name: "Ground ginger", category: "larder", sortOrder: 119 },
+      // FRUIT
+      // Apples
+      { name: "Gala apple", category: "fruit", sortOrder: 0 },
+      { name: "Braeburn apple", category: "fruit", sortOrder: 1 },
+      { name: "Granny Smith apple", category: "fruit", sortOrder: 2 },
+      { name: "Pink Lady apple", category: "fruit", sortOrder: 3 },
+      { name: "Fuji apple", category: "fruit", sortOrder: 4 },
+      { name: "Cox apple", category: "fruit", sortOrder: 5 },
+      // Berries
+      { name: "Strawberries", category: "fruit", sortOrder: 10 },
+      { name: "Blueberries", category: "fruit", sortOrder: 11 },
+      { name: "Raspberries", category: "fruit", sortOrder: 12 },
+      { name: "Blackberries", category: "fruit", sortOrder: 13 },
+      { name: "Cherries", category: "fruit", sortOrder: 14 },
+      { name: "Cranberries", category: "fruit", sortOrder: 15 },
+      { name: "Redcurrants", category: "fruit", sortOrder: 16 },
+      { name: "Blackcurrants", category: "fruit", sortOrder: 17 },
+      { name: "Gooseberries", category: "fruit", sortOrder: 18 },
+      // Citrus
+      { name: "Orange", category: "fruit", sortOrder: 20 },
+      { name: "Clementine", category: "fruit", sortOrder: 21 },
+      { name: "Lemon", category: "fruit", sortOrder: 22 },
+      { name: "Lime", category: "fruit", sortOrder: 23 },
+      { name: "Grapefruit", category: "fruit", sortOrder: 24 },
+      { name: "Satsuma", category: "fruit", sortOrder: 25 },
+      // Tropical
+      { name: "Banana", category: "fruit", sortOrder: 30 },
+      { name: "Mango", category: "fruit", sortOrder: 31 },
+      { name: "Pineapple", category: "fruit", sortOrder: 32 },
+      { name: "Kiwi", category: "fruit", sortOrder: 33 },
+      { name: "Papaya", category: "fruit", sortOrder: 34 },
+      { name: "Passion fruit", category: "fruit", sortOrder: 35 },
+      // Stone fruit
+      { name: "Peach", category: "fruit", sortOrder: 40 },
+      { name: "Nectarine", category: "fruit", sortOrder: 41 },
+      { name: "Plum", category: "fruit", sortOrder: 42 },
+      { name: "Apricot", category: "fruit", sortOrder: 43 },
+      // Other
+      { name: "Red grapes", category: "fruit", sortOrder: 50 },
+      { name: "White grapes", category: "fruit", sortOrder: 51 },
+      { name: "Pear", category: "fruit", sortOrder: 52 },
+      { name: "Cantaloupe melon", category: "fruit", sortOrder: 53 },
     ];
     for (const { name, category, sortOrder } of defaults) {
       const ingredientKey = normalizeIngredientKey(name);
@@ -2873,6 +2916,89 @@ export class DatabaseStorage implements IStorage {
     await db.insert(siteSettings)
       .values({ key, value, updatedAt: new Date() })
       .onConflictDoUpdate({ target: siteSettings.key, set: { value, updatedAt: new Date() } });
+  }
+
+  // ── Meal Items (Epic 1) ──────────────────────────────────────────────────
+  async getMealItems(mealId: number): Promise<MealItem[]> {
+    return db.select().from(mealItems)
+      .where(eq(mealItems.mealId, mealId))
+      .orderBy(mealItems.id);
+  }
+
+  async logMealToDiary(userId: number, date: string, mealId: number, mealSlot: string): Promise<{ logged: string[] }> {
+    const meal = await this.getMeal(mealId);
+    if (!meal) throw new Error('Meal not found');
+
+    const items = await this.getMealItems(mealId); // ordered by id (insertion order)
+
+    // Build entry names, preserving quantity as a suffix when present.
+    // Duplicate item names are kept as separate entries (intentional: two of
+    // the same item in a meal means two portions logged).
+    const names: string[] = items.length > 0
+      ? items.map(i => i.quantity ? `${i.name} (${i.quantity})` : i.name)
+      : [meal.name]; // legacy meal with no structured items — log meal name
+
+    // Ensure diary day exists (idempotent; harmless if the transaction below fails)
+    const day = await this.getOrCreateFoodDiaryDay(userId, date);
+
+    // Insert all entries atomically — either all succeed or none are committed
+    await db.transaction(async (tx) => {
+      for (const name of names) {
+        await tx.insert(foodDiaryEntries).values({
+          dayId: day.id,
+          userId,
+          name,
+          mealSlot,
+          notes: null,
+          sourceType: 'manual' as const,
+          sourcePlannerEntryId: null,
+        });
+      }
+    });
+
+    // Record usage for each item (fire-and-forget; failure doesn't affect the log)
+    for (const name of names) {
+      this.recordItemUsage(userId, 'manual', name).catch(() => {});
+    }
+
+    return { logged: names };
+  }
+
+  async addMealItem(data: InsertMealItem): Promise<MealItem> {
+    const [row] = await db.insert(mealItems).values(data).returning();
+    return row;
+  }
+
+  async deleteMealItem(id: number, mealId: number): Promise<void> {
+    await db.delete(mealItems).where(and(eq(mealItems.id, id), eq(mealItems.mealId, mealId)));
+  }
+
+  // ── User Item Usage (Epic 3) ─────────────────────────────────────────────
+  async recordItemUsage(userId: number, itemType: string, itemName: string, itemId?: number | null): Promise<void> {
+    await db.insert(userItemUsage)
+      .values({ userId, itemType, itemName, itemId: itemId ?? null, lastUsedAt: new Date(), useCount: 1 })
+      .onConflictDoUpdate({
+        target: [userItemUsage.userId, userItemUsage.itemName, userItemUsage.itemType],
+        set: {
+          lastUsedAt: new Date(),
+          useCount: sql`${userItemUsage.useCount} + 1`,
+          itemId: itemId ?? null,
+        },
+      });
+  }
+
+  async getRecentItems(userId: number, limit = 20): Promise<typeof userItemUsage.$inferSelect[]> {
+    return db.select().from(userItemUsage)
+      .where(eq(userItemUsage.userId, userId))
+      .orderBy(sql`${userItemUsage.lastUsedAt} DESC`)
+      .limit(limit);
+  }
+
+  async getFrequentItems(userId: number, limit = 20): Promise<typeof userItemUsage.$inferSelect[]> {
+    return db.select().from(userItemUsage)
+      .where(eq(userItemUsage.userId, userId))
+      .orderBy(sql`${userItemUsage.useCount} DESC`)
+      .limit(limit);
   }
 }
 

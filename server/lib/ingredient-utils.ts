@@ -271,7 +271,8 @@ const INGREDIENT_CATEGORIES: Record<string, string[]> = {
   fish: ['salmon', 'tuna', 'cod', 'haddock', 'mackerel', 'trout', 'bass', 'halibut', 'sardine', 'anchovy', 'fish', 'prawn', 'shrimp', 'crab', 'lobster', 'mussel', 'squid', 'calamari', 'scallop', 'clam', 'oyster'],
   dairy: ['milk', 'cheese', 'cream', 'butter', 'yogurt', 'yoghurt', 'cheddar', 'mozzarella', 'parmesan', 'ricotta', 'mascarpone', 'brie', 'camembert', 'feta', 'gouda', 'gruyere', 'ghee', 'curd', 'whey'],
   eggs: ['egg'],
-  produce: ['onion', 'garlic', 'tomato', 'potato', 'carrot', 'pepper', 'lettuce', 'spinach', 'broccoli', 'cauliflower', 'cabbage', 'celery', 'cucumber', 'courgette', 'zucchini', 'aubergine', 'eggplant', 'mushroom', 'leek', 'beetroot', 'turnip', 'parsnip', 'radish', 'sweetcorn', 'corn', 'pea', 'bean', 'asparagus', 'artichoke', 'kale', 'chard', 'rocket', 'watercress'],
+  produce: ['onion', 'garlic', 'tomato', 'carrot', 'pepper', 'lettuce', 'spinach', 'broccoli', 'cauliflower', 'cabbage', 'celery', 'cucumber', 'courgette', 'zucchini', 'aubergine', 'eggplant', 'mushroom', 'leek', 'beetroot', 'turnip', 'parsnip', 'radish', 'sweetcorn', 'corn', 'pea', 'bean', 'asparagus', 'artichoke', 'kale', 'chard', 'rocket', 'watercress'],
+  pantry: ['potato', 'sweet potato'],
   fruit: ['apple', 'banana', 'orange', 'lemon', 'lime', 'grape', 'strawberry', 'blueberry', 'raspberry', 'blackberry', 'mango', 'pineapple', 'melon', 'watermelon', 'peach', 'pear', 'plum', 'cherry', 'fig', 'date', 'avocado', 'coconut', 'kiwi', 'pomegranate', 'passion fruit', 'cranberry'],
   grains: ['cornstarch', 'corn starch', 'cornflour', 'rice', 'pasta', 'noodle', 'bread', 'flour', 'oat', 'quinoa', 'couscous', 'barley', 'bulgur', 'polenta', 'cornmeal', 'semolina', 'tortilla', 'wrap', 'pitta', 'pita', 'naan', 'focaccia', 'ciabatta', 'sourdough', 'bagel', 'croissant', 'cracker', 'breadcrumb'],
   herbs: ['basil', 'oregano', 'thyme', 'rosemary', 'parsley', 'coriander', 'cilantro', 'mint', 'dill', 'sage', 'chive', 'tarragon', 'bay leaf', 'bay leaves', 'marjoram', 'cumin', 'paprika', 'turmeric', 'cinnamon', 'nutmeg', 'clove', 'cardamom', 'ginger', 'saffron', 'chilli', 'cayenne'],
@@ -285,6 +286,10 @@ const INGREDIENT_CATEGORIES: Record<string, string[]> = {
 
 export function detectIngredientCategory(name: string): string {
   const lower = name.toLowerCase();
+  // Tinned pre-check: must run before the keyword loop because produce keywords
+  // like 'tomato' (6 chars) are longer than 'can ' (4 chars) and would win the
+  // sort, mis-categorising "can tomato" as produce instead of tinned.
+  if (/^(tinned|canned|tin of|can of|tin |can )/.test(lower)) return 'tinned';
   // Collect all [keyword, category] pairs and sort longest-first so multi-word
   // phrases (e.g. "tomato sauce") beat single-word overlaps (e.g. "tomato").
   const allKeywords: Array<[string, string]> = [];

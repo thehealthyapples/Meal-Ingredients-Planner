@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils } from "lucide-react";
+import { CreateMealModal } from "@/components/create-meal-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -407,6 +408,7 @@ export default function WeeklyPlannerPage() {
   const [renameWeekId, setRenameWeekId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [clearWeekId, setClearWeekId] = useState<number | null>(null);
+  const [createMealOpen, setCreateMealOpen] = useState(false);
   const [mealPickerOpen, setMealPickerOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<EntryTarget | null>(null);
   const [mealSearch, setMealSearch] = useState("");
@@ -1161,6 +1163,10 @@ export default function WeeklyPlannerPage() {
             {smartLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
             {smartLoading ? "Planning…" : "Plan"}
           </Button>
+          <Button size="sm" variant="outline" className="px-2.5 text-xs" onClick={() => setCreateMealOpen(true)} data-testid="button-create-meal">
+            <Utensils className="h-3 w-3 mr-1" />
+            Create Meal
+          </Button>
           <Button size="sm" className="px-2.5 text-xs" onClick={() => setTemplatesOpen(true)} data-testid="button-open-templates">
             <LayoutGrid className="h-3 w-3 mr-1" />
             Templates
@@ -1624,6 +1630,13 @@ export default function WeeklyPlannerPage() {
         getMeal={getMeal}
         allMeals={meals}
         onPlannerInvalidate={() => qc.invalidateQueries({ queryKey: ["/api/planner/full"] })}
+      />
+
+      {/* ── Create Meal Modal (Epic 1) ── */}
+      <CreateMealModal
+        open={createMealOpen}
+        onOpenChange={setCreateMealOpen}
+        onCreated={() => qc.invalidateQueries({ queryKey: ["/api/meals"] })}
       />
 
       {/* ── Meal Detail Modal ── */}

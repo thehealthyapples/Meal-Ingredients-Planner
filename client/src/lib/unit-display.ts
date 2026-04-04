@@ -1,3 +1,19 @@
+/**
+ * Strips an accidental leading quantity from a productName that was stored without
+ * being parsed (e.g. "1 lemon" stored as the name instead of "lemon").
+ * Only strips if the leading number matches the item's quantityValue (or quantityValue
+ * is null/1), to avoid clobbering legitimate names like "2-in-1 shampoo".
+ */
+export function cleanProductName(name: string, quantityValue?: number | null): string {
+  const match = name.match(/^(\d+(?:\.\d+)?)\s+(.+)$/);
+  if (!match) return name;
+  const leading = parseFloat(match[1]);
+  // Only strip if the leading number matches what's already recorded as the qty
+  // or if quantityValue wasn't set (i.e. it defaults to 1).
+  if (quantityValue == null || quantityValue === leading) return match[2];
+  return name;
+}
+
 export function formatQuantityMetric(quantity: number, unit: string): string {
   if (unit === 'g') {
     if (quantity >= 1000) return `${(quantity / 1000).toFixed(2).replace(/\.?0+$/, '')} kg`;

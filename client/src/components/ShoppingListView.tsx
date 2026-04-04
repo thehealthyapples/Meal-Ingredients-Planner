@@ -1,9 +1,17 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { normalizeIngredientKey } from "@shared/normalize";
-import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check } from "lucide-react";
+import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowRight, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { ShoppingListItem, IngredientSource } from "@shared/schema";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { ShoppingListItem, IngredientSource, ProductMatch } from "@shared/schema";
+import { cleanProductName } from "@/lib/unit-display";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -20,12 +28,25 @@ type SLItem = ShoppingListItem & {
   }>;
 };
 
+const SUPERMARKETS = [
+  "Tesco",
+  "Sainsbury's",
+  "Morrisons",
+  "Ocado",
+  "Waitrose",
+  "Asda",
+  "Aldi",
+  "Lidl",
+  "Independent shop",
+];
+
 interface ShoppingListViewProps {
   items: SLItem[];
   extras: { id: number; name: string; category: string; alwaysAdd: boolean; inBasket: boolean }[];
   sourcesByItem: Map<number, IngredientSource[]>;
   pantryKeySet: Set<string>;
   measurementPref: "metric" | "imperial";
+  allPriceMatches: ProductMatch[];
   onToggleBought: (id: number, checked: boolean) => void;
   onClose: () => void;
 }
@@ -173,12 +194,19 @@ const SHOPPING_CATS = [
 const FRESH_HERBS = new Set(["coriander", "basil", "parsley", "mint", "dill"]);
 
 function getItemCatKey(category: string | null | undefined, name: string): string {
+  const lowerName = name.toLowerCase();
+  // Name-based overrides: fix items whose category may be stale in the DB.
+  // Tinned/canned items stored as "produce" because "can X" wasn't caught server-side.
+  if (/^(can |tin |tinned |canned )/.test(lowerName)) return "pantry";
+  // Potatoes are ambient starch (pantry), not chilled produce.
+  if (lowerName.includes("potato")) return "pantry";
+
   const raw = (category || "other").toLowerCase();
   if (raw === "household") return "household";
   if (raw === "meat" || raw === "fish") return "meat";
   if (raw === "dairy" || raw === "eggs") return "dairy";
   if (raw === "produce" || raw === "fruit") return "produce";
-  if (raw === "herbs") return FRESH_HERBS.has(name.toLowerCase()) ? "produce" : "pantry";
+  if (raw === "herbs") return FRESH_HERBS.has(lowerName) ? "produce" : "pantry";
   if (raw === "bakery") return "bakery";
   if (raw === "frozen") return "frozen";
   if (["grains", "oils", "condiments", "nuts", "legumes", "tinned", "pantry", "spices"].includes(raw))
@@ -289,14 +317,18 @@ export default function ShoppingListView({
   sourcesByItem,
   pantryKeySet,
   measurementPref,
+  allPriceMatches,
   onToggleBought,
   onClose,
 }: ShoppingListViewProps) {
   const [notInShop, setNotInShop] = useState<Set<number>>(() => loadNotInShop());
+  const [selectedSupermarket, setSelectedSupermarket] = useState<string>("Tesco");
   const [extraStates, setExtraStates] = useState<Map<number, "in_basket" | "not_in_shop">>(new Map());
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [shopSession, setShopSession] = useState<ShopSession | null>(null);
   const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
+  const [phase, setPhase] = useState<"cupboard_check" | "shopping">("cupboard_check");
+  const [atHomeIds, setAtHomeIds] = useState<Set<number>>(new Set());
   const itemsScrollRef = useRef<HTMLDivElement>(null);
   const tabStripRef = useRef<HTMLDivElement>(null);
   const activeTabElRef = useRef<HTMLButtonElement>(null);
@@ -343,17 +375,24 @@ export default function ShoppingListView({
     });
   }, []);
 
+  // ── Filtered item list (excludes at-home items once in shopping phase) ────
+
+  const shoppingItems = useMemo(
+    () => (phase === "shopping" ? items.filter((i) => !atHomeIds.has(i.id)) : items),
+    [items, atHomeIds, phase],
+  );
+
   // ── Progress ─────────────────────────────────────────────────────────────
 
   const activeExtras = useMemo(() => extras.filter((e) => e.inBasket || e.alwaysAdd), [extras]);
-  const totalItems = items.length + activeExtras.length;
+  const totalItems = shoppingItems.length + activeExtras.length;
 
   const inBasketCount =
-    items.filter((i) => getItemState(i) === "in_basket").length +
+    shoppingItems.filter((i) => getItemState(i) === "in_basket").length +
     activeExtras.filter((e) => getExtraState(e.id) === "in_basket").length;
 
   const notFoundCount =
-    items.filter((i) => getItemState(i) === "not_in_shop").length +
+    shoppingItems.filter((i) => getItemState(i) === "not_in_shop").length +
     activeExtras.filter((e) => getExtraState(e.id) === "not_in_shop").length;
 
   const needCount = totalItems - inBasketCount - notFoundCount;
@@ -362,7 +401,7 @@ export default function ShoppingListView({
   // ── Shopping trip completion ──────────────────────────────────────────────
 
   function handleFinishShop() {
-    const remainingListItems = items.filter((i) => getItemState(i) !== "in_basket");
+    const remainingListItems = shoppingItems.filter((i) => getItemState(i) !== "in_basket");
     const remainingExtras = activeExtras.filter((e) => getExtraState(e.id) !== "in_basket");
 
     const remainingItems: ShopSession["remainingItems"] = [
@@ -409,7 +448,7 @@ export default function ShoppingListView({
   const groupedCategories = useMemo(() => {
     const map = new Map<string, { savedItems: SLItem[]; extraItems: typeof extras }>();
     for (const cat of SHOPPING_CATS) map.set(cat.key, { savedItems: [], extraItems: [] });
-    for (const item of items) {
+    for (const item of shoppingItems) {
       const key = getItemCatKey(item.category, item.normalizedName ?? item.productName);
       (map.get(key) ?? map.get("other")!).savedItems.push(item);
     }
@@ -473,6 +512,9 @@ export default function ShoppingListView({
     const isPantryStaple = pantryKeySet.has(
       normalizeIngredientKey(item.normalizedName ?? item.productName ?? ""),
     );
+    const matchedProduct = allPriceMatches
+      .filter(m => m.shoppingListItemId === item.id && m.supermarket.toLowerCase() === selectedSupermarket.toLowerCase())
+      .sort((a, b) => (b.thaRating ?? 0) - (a.thaRating ?? 0))[0] ?? null;
 
     const rowBg =
       state === "in_basket"   ? "bg-primary/[0.04] dark:bg-primary/[0.07]"
@@ -493,7 +535,7 @@ export default function ShoppingListView({
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
             <span className={`font-medium text-[13.5px] leading-snug ${nameCls}`}>
-              {capWords(item.productName)}
+              {capWords(cleanProductName(item.productName, item.quantityValue))}
             </span>
             {qty && (
               <span className={`text-[11.5px] tabular-nums ${state !== "need" ? "text-muted-foreground/45" : "text-muted-foreground/70"}`}>
@@ -501,7 +543,15 @@ export default function ShoppingListView({
               </span>
             )}
           </div>
-          {state === "need" && firstMeal && (
+          {state === "need" && matchedProduct && (
+            <p className="tha-print-hide text-[11px] text-muted-foreground/70 leading-tight mt-0.5">
+              {matchedProduct.productName}
+              {matchedProduct.price != null && (
+                <span className="ml-1.5 tabular-nums">£{matchedProduct.price.toFixed(2)}</span>
+              )}
+            </p>
+          )}
+          {state === "need" && !matchedProduct && firstMeal && (
             <p className="tha-print-hide text-[11px] text-muted-foreground/55 leading-tight mt-0.5">
               {firstMeal}{isPantryStaple ? " · staple" : ""}
             </p>
@@ -637,7 +687,7 @@ export default function ShoppingListView({
                 className="font-semibold text-[18px] sm:text-[20px] leading-tight text-foreground"
                 style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.015em" }}
               >
-                Shop View
+                {phase === "cupboard_check" ? "Check your cupboards" : "Shop View"}
               </h1>
               {totalItems > 0 && (
                 <span
@@ -661,8 +711,21 @@ export default function ShoppingListView({
             </p>
           </div>
 
-          {/* Right: Print + Close */}
+          {/* Right: Supermarket picker + Print + Close */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            {phase === "shopping" && (
+              <Select value={selectedSupermarket} onValueChange={setSelectedSupermarket}>
+                <SelectTrigger className="h-8 text-xs bg-background/70 gap-1 pr-2" style={{ minWidth: 0, width: "auto" }}>
+                  <Store className="h-3.5 w-3.5 shrink-0" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPERMARKETS.map(s => (
+                    <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {inBasketCount > 0 && !shopSession && (
               <Button
                 size="sm"
@@ -709,7 +772,7 @@ export default function ShoppingListView({
           Tabs: rounded top corners, flat bottom, 2px accent top bar.
           Active tab connects seamlessly to the panel below.
       ─────────────────────────────────────────────────────────────────── */}
-      {groupedCategories.length > 0 && (
+      {phase === "shopping" && groupedCategories.length > 0 && (
         <div
           className="tha-print-hide relative z-10 flex-shrink-0"
           style={{
@@ -792,7 +855,117 @@ export default function ShoppingListView({
         </div>
       )}
 
-      {/* ── 4a. Shopping trip summary (shown after "Done here") ──────────── */}
+      {/* ── 4a. Cupboard check ───────────────────────────────────────────────── */}
+      {phase === "cupboard_check" && !shopSession && (
+        <div className="tha-print-hide relative z-10 flex-1 overflow-hidden flex flex-col px-3 sm:px-5 pt-3 pb-3 w-full max-w-3xl mx-auto">
+          <div
+            className="flex flex-col flex-1 min-h-0 rounded-xl overflow-hidden"
+            style={{
+              background: "hsl(var(--card) / 0.62)",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              border: "1px solid hsl(var(--border) / 0.45)",
+              borderTop: "3px solid hsl(var(--primary))",
+              boxShadow: "0 6px 36px rgba(0,0,0,0.09), 0 1px 6px rgba(0,0,0,0.05)",
+            }}
+          >
+            {/* Panel header */}
+            <div
+              className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b"
+              style={{ background: "hsl(var(--primary) / 0.06)", borderColor: "hsl(var(--primary) / 0.15)" }}
+            >
+              <div>
+                <p className="font-semibold text-[14px] text-foreground">Check your cupboards</p>
+                <p className="text-[11px] text-muted-foreground/70 mt-0.5">Mark anything you already have at home.</p>
+              </div>
+              <button
+                onClick={() => setPhase("shopping")}
+                className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground underline underline-offset-2 flex-shrink-0"
+              >
+                Skip
+              </button>
+            </div>
+
+            {/* Item list */}
+            <div className="flex-1 overflow-y-auto" style={{ background: "hsl(var(--card) / 0.88)" }}>
+              <div className="divide-y divide-border/25">
+                {items.map((item) => {
+                  const isAtHome = atHomeIds.has(item.id);
+                  const isLikelyInStock = pantryKeySet.has(
+                    normalizeIngredientKey(item.normalizedName ?? item.productName ?? ""),
+                  );
+                  const qty = fmtQty(item.quantityValue, item.unit, item.quantityInGrams, measurementPref);
+                  return (
+                    <div
+                      key={item.id}
+                      className={`flex items-center gap-3 px-4 py-3 transition-colors duration-100 ${isAtHome ? "bg-primary/[0.04] dark:bg-primary/[0.07]" : ""}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span
+                            className={`font-medium text-[13.5px] leading-snug ${
+                              isAtHome ? "line-through text-muted-foreground/70" : "text-foreground"
+                            }`}
+                          >
+                            {capWords(cleanProductName(item.productName, item.quantityValue))}
+                          </span>
+                          {qty && (
+                            <span className="text-[11.5px] tabular-nums text-muted-foreground/70">{qty}</span>
+                          )}
+                          {isLikelyInStock && !isAtHome && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border border-amber-200/70 dark:border-amber-700/40">
+                              likely in stock
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {isAtHome ? (
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-[11px] text-primary/80 font-medium">✓ At home</span>
+                          <button
+                            onClick={() =>
+                              setAtHomeIds((prev) => {
+                                const s = new Set(prev);
+                                s.delete(item.id);
+                                return s;
+                              })
+                            }
+                            className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2"
+                          >
+                            undo
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setAtHomeIds((prev) => { const s = new Set(prev); s.add(item.id); return s; })}
+                          className="inline-flex items-center text-[11px] px-3 py-1.5 rounded-lg border border-border/60 bg-background/70 text-foreground/80 hover:bg-muted/50 hover:border-border transition-colors flex-shrink-0 whitespace-nowrap"
+                        >
+                          In my cupboard
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* CTA */}
+              <div className="px-4 py-4">
+                <button
+                  onClick={() => setPhase("shopping")}
+                  className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 hover:bg-primary/90 active:bg-primary/80 transition-colors"
+                >
+                  {atHomeIds.size > 0
+                    ? `Done — ${atHomeIds.size} item${atHomeIds.size > 1 ? "s" : ""} at home`
+                    : "Head to the shop"}
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 4b. Shopping trip summary (shown after "Done here") ──────────── */}
       {shopSession && (
         <div className="tha-print-hide relative z-10 flex-1 overflow-y-auto px-3 sm:px-5 pt-4 pb-6 w-full max-w-3xl mx-auto">
           {/* Header card */}
@@ -929,7 +1102,7 @@ export default function ShoppingListView({
           ONLY the item list scrolls, via overflow-y-auto on the inner div.
           No full-page scroll - the orchard background stays fixed behind.
       ─────────────────────────────────────────────────────────────────── */}
-      {!shopSession && <div className="tha-print-hide relative z-10 flex-1 overflow-hidden flex flex-col px-3 sm:px-5 pt-3 pb-3 w-full max-w-3xl mx-auto">
+      {phase === "shopping" && !shopSession && <div className="tha-print-hide relative z-10 flex-1 overflow-hidden flex flex-col px-3 sm:px-5 pt-3 pb-3 w-full max-w-3xl mx-auto">
         {activeCat ? (() => {
           const { total, got, allDone } = getCatProgress(activeCat);
           return (
@@ -1083,7 +1256,7 @@ export default function ShoppingListView({
                   <div key={item.id} data-print-item className="flex items-center gap-1.5">
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <span style={{ fontWeight: state === "in_basket" ? 400 : 500, textDecoration: state === "in_basket" ? "line-through" : "none", color: state === "in_basket" ? "#6b7280" : "inherit" }}>
-                        {capWords(item.productName)}
+                        {capWords(cleanProductName(item.productName, item.quantityValue))}
                       </span>
                       {qty && <span style={{ marginLeft: 4, color: "#9ca3af" }}>{qty}</span>}
                     </div>

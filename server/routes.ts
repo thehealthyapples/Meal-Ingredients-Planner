@@ -660,6 +660,8 @@ export async function registerRoutes(
       dietPattern: user.dietPattern ?? null,
       dietRestrictions: user.dietRestrictions ?? [],
       eatingSchedule: user.eatingSchedule ?? null,
+      customMetricDefs: (user.customMetricDefs as Array<{ id: string; name: string; unit: string }> | null) ?? [],
+      diaryExtraMetrics: (user.diaryExtraMetrics as string[] | null) ?? [],
       preferences: prefs || {},
       health: {
         bmi,
@@ -702,6 +704,8 @@ export async function registerRoutes(
     dietPattern: z.enum(ALLOWED_DIET_PATTERNS).nullable().optional(),
     dietRestrictions: z.array(z.enum(ALLOWED_DIET_RESTRICTIONS)).optional(),
     eatingSchedule: z.enum(ALLOWED_EATING_SCHEDULES).nullable().optional(),
+    customMetricDefs: z.array(z.object({ id: z.string(), name: z.string(), unit: z.string() })).optional(),
+    diaryExtraMetrics: z.array(z.string()).optional(),
     preferences: z.object({
       calorieMode: z.enum(["auto", "manual"]).optional(),
       calorieTarget: z.number().optional(),
@@ -741,6 +745,8 @@ export async function registerRoutes(
       if (parsed.dietPattern !== undefined) profileFields.dietPattern = parsed.dietPattern;
       if (parsed.dietRestrictions !== undefined) profileFields.dietRestrictions = parsed.dietRestrictions;
       if (parsed.eatingSchedule !== undefined) profileFields.eatingSchedule = parsed.eatingSchedule;
+      if (parsed.customMetricDefs !== undefined) profileFields.customMetricDefs = parsed.customMetricDefs;
+      if (parsed.diaryExtraMetrics !== undefined) profileFields.diaryExtraMetrics = parsed.diaryExtraMetrics;
       if (Object.keys(profileFields).length > 0) {
         await storage.updateUserProfile(req.user!.id, profileFields);
       }
@@ -2792,6 +2798,14 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const input = api.shoppingList.add.input.parse(req.body);
+      // Strip accidental leading quantity from productName (e.g. "1 lemon" → "lemon").
+      const leadingQtyMatch = input.productName.match(/^(\d+(?:\.\d+)?)\s+(.+)$/);
+      if (leadingQtyMatch) {
+        const extractedQty = parseFloat(leadingQtyMatch[1]);
+        input.productName = leadingQtyMatch[2];
+        if (!input.quantityValue) (input as any).quantityValue = extractedQty;
+        if (!input.normalizedName) (input as any).normalizedName = leadingQtyMatch[2].toLowerCase().trim();
+      }
       if (input.quantityValue && input.unit) {
         const grams = convertToGrams(input.quantityValue, input.unit);
         if (grams !== null) (input as any).quantityInGrams = grams;
@@ -2895,6 +2909,14 @@ export async function registerRoutes(
     }
     if (req.body.confidenceReason !== undefined) {
       updates.confidenceReason = req.body.confidenceReason === null ? null : String(req.body.confidenceReason).trim();
+    }
+    if (req.body.shopStatus !== undefined) {
+      const validStatuses = ['pending', 'already_got', 'need_to_buy', 'in_basket', 'alternate_selected', 'deferred'];
+      const val = req.body.shopStatus === null ? null : String(req.body.shopStatus);
+      if (val !== null && !validStatuses.includes(val)) {
+        return res.status(400).json({ message: 'Invalid shop status' });
+      }
+      updates.shopStatus = val;
     }
     if (updates.quantityValue !== undefined && updates.unit !== undefined) {
       const grams = convertToGrams(updates.quantityValue, updates.unit);
@@ -4218,6 +4240,10 @@ export async function registerRoutes(
     upfSensitivity: z.string().optional().default("moderate"),
     qualityPreference: z.string().optional().default("standard"),
     calorieTarget: z.number().nullable().optional(),
+    // Tracking toggles — set during onboarding (all default OFF for new users)
+    calorieMode: z.enum(["auto", "manual"]).optional(),
+    eliteTrackingEnabled: z.boolean().optional(),
+    healthTrendEnabled: z.boolean().optional(),
   });
 
   app.put("/api/user/preferences", async (req, res) => {
@@ -6490,6 +6516,22 @@ export async function registerRoutes(
     }
   });
 
+  app.post("/api/food-diary/:date/log-meal", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { date } = req.params;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ message: "Invalid date format" });
+    const { mealId, mealSlot } = z.object({
+      mealId: z.number().int(),
+      mealSlot: z.enum(['breakfast', 'lunch', 'dinner', 'snack', 'drink']),
+    }).parse(req.body);
+    const meal = await storage.getMeal(mealId);
+    if (!meal || (meal.userId !== req.user!.id && !meal.isSystemMeal)) {
+      return res.status(404).json({ message: "Meal not found" });
+    }
+    const result = await storage.logMealToDiary(req.user!.id, date, mealId, mealSlot);
+    res.status(201).json(result);
+  });
+
   app.post("/api/food-diary/:date/entries", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const { date } = req.params;
@@ -6508,6 +6550,8 @@ export async function registerRoutes(
       sourceType: 'manual',
       sourcePlannerEntryId: null,
     });
+    // Track usage for recent/frequent (Epic 3)
+    storage.recordItemUsage(req.user!.id, 'manual', name).catch(() => {});
     res.status(201).json(entry);
   });
 
@@ -6544,6 +6588,7 @@ export async function registerRoutes(
       energyApples: z.number().int().min(1).max(5).nullable().optional(),
       notes: z.string().nullable().optional(),
       stuckToPlan: z.boolean().nullable().optional(),
+      customValues: z.record(z.string()).nullable().optional(),
     }).parse(req.body);
     const userId = req.user!.id;
     const prefs = await storage.getUserPreferences(userId);
@@ -6707,6 +6752,64 @@ export async function registerRoutes(
       console.error("[FoodKnowledge] slug error:", err);
       res.status(500).json({ message: "Failed to fetch entry" });
     }
+  });
+
+  // ── Meal Items (Epic 1) ───────────────────────────────────────────────────
+
+  app.get("/api/meals/:id/items", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const mealId = Number(req.params.id);
+    if (isNaN(mealId)) return res.status(400).json({ message: "Invalid meal ID" });
+    const meal = await storage.getMeal(mealId);
+    if (!meal || (meal.userId !== req.user!.id && !meal.isSystemMeal)) {
+      return res.status(404).json({ message: "Meal not found" });
+    }
+    res.json(await storage.getMealItems(mealId));
+  });
+
+  app.post("/api/meals/:id/items", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const mealId = Number(req.params.id);
+    if (isNaN(mealId)) return res.status(400).json({ message: "Invalid meal ID" });
+    const meal = await storage.getMeal(mealId);
+    if (!meal || meal.userId !== req.user!.id) {
+      return res.status(404).json({ message: "Meal not found" });
+    }
+    const { type, referenceId, name, quantity } = z.object({
+      type: z.enum(['recipe', 'product', 'manual']),
+      referenceId: z.number().int().nullable().optional(),
+      name: z.string().min(1),
+      quantity: z.string().optional(),
+    }).parse(req.body);
+    const item = await storage.addMealItem({ mealId, type, referenceId: referenceId ?? null, name, quantity: quantity ?? null });
+    // Track usage (Epic 3)
+    storage.recordItemUsage(req.user!.id, type, name, referenceId ?? null).catch(() => {});
+    res.status(201).json(item);
+  });
+
+  app.delete("/api/meal-items/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const itemId = Number(req.params.id);
+    const { mealId } = z.object({ mealId: z.number().int() }).parse(req.body);
+    if (isNaN(itemId)) return res.status(400).json({ message: "Invalid item ID" });
+    const meal = await storage.getMeal(mealId);
+    if (!meal || meal.userId !== req.user!.id) {
+      return res.status(404).json({ message: "Meal not found" });
+    }
+    await storage.deleteMealItem(itemId, mealId);
+    res.sendStatus(204);
+  });
+
+  // ── Recent + Frequent Items (Epic 3) ─────────────────────────────────────
+
+  app.get("/api/user-items/recent", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    res.json(await storage.getRecentItems(req.user!.id));
+  });
+
+  app.get("/api/user-items/frequent", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    res.json(await storage.getFrequentItems(req.user!.id));
   });
 
   return httpServer;

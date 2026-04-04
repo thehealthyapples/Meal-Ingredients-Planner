@@ -56,7 +56,7 @@ import { useToast } from "@/hooks/use-toast";
 import { api, buildUrl } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { normalizeIngredientKey } from "@shared/normalize";
-import { formatItemDisplay } from "@/lib/unit-display";
+import { formatItemDisplay, cleanProductName } from "@/lib/unit-display";
 import ScoreBadge from "@/components/ui/score-badge";
 import AppleRating from "@/components/AppleRating";
 import BadAppleWarningModal from "@/components/BadAppleWarningModal";
@@ -71,6 +71,7 @@ import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import FoodKnowledgeModal from "@/components/food-knowledge-modal";
 import WholeFoodSelector from "@/components/whole-food-selector";
 import ShoppingListView from "@/components/ShoppingListView";
+import ShopModeView from "@/components/ShopModeView";
 
 type ShoppingListItemExtended = ShoppingListItem & {
   addedByDisplayName?: string | null;
@@ -1507,6 +1508,7 @@ export default function ShoppingListPage() {
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const collapsedInitRef = useRef(false);
   const [shoppingViewOpen, setShoppingViewOpen] = useState(false);
+  const [shopModeOpen, setShopModeOpen] = useState(false);
   const prevExtrasLenRef = useRef(0);
 
   const toggleNeededThisWeek = (id: number) => {
@@ -2406,6 +2408,18 @@ export default function ShoppingListPage() {
                     <span>Shop View</span>
                   </Button>
                 )}
+                {savedItems.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShopModeOpen(v => !v)}
+                    className="gap-1.5"
+                    data-testid="button-shop-mode"
+                  >
+                    <ShoppingCart className="h-3.5 w-3.5" />
+                    <span>{shopModeOpen ? "Close shop" : "Head to the shop"}</span>
+                  </Button>
+                )}
                 {/* Apple overflow menu - far right */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -2635,7 +2649,7 @@ export default function ShoppingListPage() {
                                       ) : (
                                         <div className="flex items-center justify-between gap-3">
                                           <div className="flex items-center gap-1 flex-wrap min-w-0 flex-1">
-                                          <span className="font-medium text-foreground cursor-pointer" onClick={() => startEdit(item.id, 'productName', item.productName)} data-testid={`text-item-name-${item.id}`}>{capitalizeWords(item.productName)}</span>
+                                          <span className="font-medium text-foreground cursor-pointer" onClick={() => startEdit(item.id, 'productName', item.productName)} data-testid={`text-item-name-${item.id}`}>{capitalizeWords(cleanProductName(item.productName, item.quantityValue))}</span>
                                           {item.quantity > 1 && <Badge variant="secondary" className="text-[10px]" data-testid={`badge-quantity-${item.id}`}>x{item.quantity}</Badge>}
                                           {mergedCount > 1 && <Badge variant="outline" className="text-[10px] text-blue-500 dark:text-blue-400 border-blue-300 dark:border-blue-600" data-testid={`badge-merged-${item.id}`}>×{mergedCount}</Badge>}
                                           {sources.some(s => frozenMealIds.has(s.mealId)) && (
@@ -3336,6 +3350,16 @@ export default function ShoppingListPage() {
             </div>
           )}
         </Card>
+
+        {/* Shop Mode — inline below basket */}
+        {shopModeOpen && (
+          <ShopModeView
+            items={savedItems}
+            allPriceMatches={allPriceMatches}
+            pantryKeySet={pantryKeySet}
+            onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
+          />
+        )}
       </div>
 
 
@@ -3655,6 +3679,7 @@ export default function ShoppingListPage() {
           sourcesByItem={sourcesByItem}
           pantryKeySet={pantryKeySet}
           measurementPref={measurementPref}
+          allPriceMatches={allPriceMatches}
           onToggleBought={(id, checked) => toggleChecked.mutate({ id, checked })}
           onClose={() => setShoppingViewOpen(false)}
         />

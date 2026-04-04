@@ -30,7 +30,7 @@ import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES } from "@/lib/diets";
 import { GOAL_OPTIONS, STORE_OPTIONS, UPF_OPTIONS, BUDGET_OPTIONS, deriveGoalType } from "@/lib/shared-options";
 
-interface ProfileData {
+export interface ProfileData {
   id: number;
   username: string;
   firstName: string | null;
@@ -41,6 +41,8 @@ interface ProfileData {
   dietPattern: string | null;
   dietRestrictions: string[];
   eatingSchedule: string | null;
+  customMetricDefs: Array<{ id: string; name: string; unit: string }>;
+  diaryExtraMetrics: string[];
   preferences: any;
   health: {
     bmi: number | null;
@@ -153,24 +155,12 @@ export default function ProfilePage() {
         onSave={(field, value) => saveField(field, value, false)}
       />
 
-      <HealthSnapshot profile={profile} />
-
       <HouseholdSettings
         household={profile.household}
         onSave={(prefs) => savePreferences(prefs)}
       />
 
       <HouseholdManagementSection currentUserId={profile.id} />
-
-      <CalorieSettings
-        profile={profile}
-        onSave={(prefs) => savePreferences(prefs)}
-      />
-
-      <GoalsPreferences
-        profile={profile}
-        onSave={(data) => updateMutation.mutate(data)}
-      />
 
       <ShoppingPreferences
         prefs={prefs}
@@ -278,7 +268,7 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
   );
 }
 
-function HealthSnapshot({ profile }: { profile: ProfileData }) {
+export function HealthSnapshot({ profile }: { profile: ProfileData }) {
   const { bmi, bmiCategory, dailyCalories, activityLevel } = profile.health;
 
   const bmiColor = !bmi ? "text-muted-foreground" :
@@ -692,7 +682,7 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
   );
 }
 
-function CalorieSettings({ profile, onSave }: { profile: ProfileData; onSave: (prefs: any) => void }) {
+export function CalorieSettings({ profile, onSave }: { profile: ProfileData; onSave: (prefs: any) => void }) {
   const prefs = profile.preferences || {};
   const [mode, setMode] = useState<"auto" | "manual">(prefs.calorieMode || "auto");
   const [manualCal, setManualCal] = useState(prefs.calorieTarget || 2000);
@@ -812,7 +802,7 @@ function CalorieSettings({ profile, onSave }: { profile: ProfileData; onSave: (p
   );
 }
 
-function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (data: any) => void }) {
+export function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (data: any) => void }) {
   const prefs = profile.preferences || {};
   const [activity, setActivity] = useState<string>(prefs.activityLevel || profile.health.activityLevel || "moderate");
   const [dietPattern, setDietPattern] = useState<string | null>(profile.dietPattern ?? null);

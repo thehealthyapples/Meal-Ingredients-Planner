@@ -34,6 +34,8 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
   lastSeenAt: timestamp("last_seen_at", { withTimezone: true }),
+  customMetricDefs: jsonb("custom_metric_defs").$type<Array<{ id: string; name: string; unit: string }>>(),
+  diaryExtraMetrics: jsonb("diary_extra_metrics").$type<string[]>(),
 });
 
 export const mealCategories = pgTable("meal_categories", {
@@ -173,6 +175,8 @@ export const shoppingList = pgTable("shopping_list", {
   confidenceLevel: text("confidence_level"),
   confidenceReason: text("confidence_reason"),
   basketLabel: text("basket_label"),
+  // Guided shop mode state — values: pending | already_got | need_to_buy | in_basket | alternate_selected | deferred
+  shopStatus: text("shop_status"),
 });
 
 export const productMatches = pgTable("product_matches", {
@@ -297,6 +301,7 @@ export const insertShoppingListItemSchema = createInsertSchema(shoppingList).pic
   validationNote: true,
   selectedStore: true,
   basketLabel: true,
+  shopStatus: true,
 });
 
 export const insertProductMatchSchema = createInsertSchema(productMatches).pick({
@@ -538,6 +543,7 @@ export const additives = pgTable("additives", {
   riskLevel: text("risk_level").notNull().default("low"),
   description: text("description"),
   isRegulatory: boolean("is_regulatory").default(false),
+  aliases: text("aliases").array(),
 });
 
 export const productAdditives = pgTable("product_additives", {
@@ -1047,6 +1053,7 @@ export const foodDiaryMetrics = pgTable("food_diary_metrics", {
   energyApples: integer("energy_apples"),
   notes: text("notes"),
   stuckToPlan: boolean("stuck_to_plan"),
+  customValues: jsonb("custom_values").$type<Record<string, string>>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   unique("food_diary_metrics_user_date_unique").on(table.userId, table.date),
@@ -1086,4 +1093,30 @@ export const siteSettings = pgTable("site_settings", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Epic 1: Meal Builder — typed items within a meal
+export const mealItems = pgTable("meal_items", {
+  id: serial("id").primaryKey(),
+  mealId: integer("meal_id").notNull().references(() => meals.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // 'recipe' | 'product' | 'manual'
+  referenceId: integer("reference_id"), // meals.id for recipe, productHistory.id for product, null for manual
+  name: text("name").notNull(),
+  quantity: text("quantity"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertMealItemSchema = createInsertSchema(mealItems).omit({ id: true, createdAt: true });
+export type MealItem = typeof mealItems.$inferSelect;
+export type InsertMealItem = z.infer<typeof insertMealItemSchema>;
+
+// Epic 3: Usage tracking — recent and frequent items per user
+export const userItemUsage = pgTable("user_item_usage", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  itemType: text("item_type").notNull(), // 'recipe' | 'product' | 'manual'
+  itemId: integer("item_id"),
+  itemName: text("item_name").notNull(),
+  lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull().defaultNow(),
+  useCount: integer("use_count").notNull().default(1),
 });

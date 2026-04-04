@@ -640,6 +640,66 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-04-02_add_additives_aliases",
+    statements: [
+      "ALTER TABLE additives ADD COLUMN IF NOT EXISTS aliases TEXT[]",
+    ],
+  },
+
+  {
+    id: "2026-04-02_add_fruit_pantry_category",
+    statements: [
+      "ALTER TABLE user_pantry_items DROP CONSTRAINT IF EXISTS user_pantry_items_category_check",
+      "ALTER TABLE user_pantry_items ADD CONSTRAINT user_pantry_items_category_check CHECK (category IN ('larder','fridge','freezer','household','fruit'))",
+    ],
+  },
+
+  {
+    id: "2026-04-02_meal_items_and_usage",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS meal_items (
+        id           SERIAL PRIMARY KEY,
+        meal_id      INTEGER NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
+        type         TEXT NOT NULL CHECK (type IN ('recipe','product','manual')),
+        reference_id INTEGER,
+        name         TEXT NOT NULL,
+        quantity     TEXT,
+        created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_meal_items_meal_id ON meal_items (meal_id)`,
+      `CREATE TABLE IF NOT EXISTS user_item_usage (
+        id           SERIAL PRIMARY KEY,
+        user_id      INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        item_type    TEXT NOT NULL,
+        item_id      INTEGER,
+        item_name    TEXT NOT NULL,
+        last_used_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        use_count    INTEGER NOT NULL DEFAULT 1,
+        CONSTRAINT user_item_usage_unique UNIQUE (user_id, item_name, item_type)
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_user_item_usage_user_id ON user_item_usage (user_id)`,
+    ],
+  },
+
+  {
+    id: "2026-04-02_add_shop_status_to_shopping_list",
+    statements: [
+      // Tracks guided shop mode state per item.
+      // Values: pending | already_got | need_to_buy | in_basket | alternate_selected | deferred
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS shop_status TEXT",
+    ],
+  },
+
+  {
+    id: "2026-04-04_custom_diary_metrics",
+    statements: [
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS custom_metric_defs JSONB NOT NULL DEFAULT '[]'",
+      "ALTER TABLE users ADD COLUMN IF NOT EXISTS diary_extra_metrics JSONB NOT NULL DEFAULT '[]'",
+      "ALTER TABLE food_diary_metrics ADD COLUMN IF NOT EXISTS custom_values JSONB NOT NULL DEFAULT '{}'",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
