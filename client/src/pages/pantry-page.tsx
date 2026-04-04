@@ -525,7 +525,7 @@ export default function PantryPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-pantry-title">My Pantry</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Manage your food staples and household essentials.
+          Your everyday choices live here.
         </p>
       </div>
 

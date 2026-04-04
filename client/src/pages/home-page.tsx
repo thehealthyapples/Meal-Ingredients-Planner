@@ -1,25 +1,25 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, CalendarDays, Search, ShoppingBasket, Loader2, ChevronDown } from "lucide-react";
+import { ArrowRight, ScanLine, Lightbulb, TrendingUp, Loader2, ChevronDown } from "lucide-react";
 import OrchardBackdrop from "@/components/layout/orchard-backdrop";
 import ProductFlowVisual from "@/components/KitchenToBasketVisual";
 
 const VALUE_BLOCKS = [
   {
-    icon: <CalendarDays className="h-5 w-5 text-primary" />,
-    title: "Plan meals",
-    body: "Organise your week clearly with a structured meal plan built around your household, diet, and preferences.",
+    icon: <ScanLine className="h-5 w-5 text-primary" />,
+    title: "Scan & Understand",
+    body: "Instantly see what's in your food — no confusion.",
   },
   {
-    icon: <Search className="h-5 w-5 text-primary" />,
-    title: "Analyse ingredients",
-    body: "Understand what's in your food - NOVA scores, additives, and clear health guidance shown at a glance.",
+    icon: <Lightbulb className="h-5 w-5 text-primary" />,
+    title: "Make Better Choices",
+    body: "Clear guidance, so you can decide with confidence.",
   },
   {
-    icon: <ShoppingBasket className="h-5 w-5 text-primary" />,
-    title: "Build smarter baskets",
-    body: "Shop with confidence. Build your weekly basket from your plan and make better choices without the effort.",
+    icon: <TrendingUp className="h-5 w-5 text-primary" />,
+    title: "Build Better Habits",
+    body: "Small changes that add up over time.",
   },
 ];
 
@@ -86,14 +86,14 @@ export default function HomePage() {
                   className="text-[2.4rem] sm:text-5xl font-semibold tracking-tight text-foreground leading-[1.12] mb-6"
                   data-testid="text-hero-headline"
                 >
-                  Plan meals. Analyse ingredients. Build smarter baskets.
+                  Eat better. Without overthinking it.
                 </h1>
 
                 <p
                   className="text-base text-muted-foreground leading-relaxed mb-8 max-w-[480px]"
                   data-testid="text-hero-body"
                 >
-                  The Healthy Apples helps you make better food choices with less effort by combining meal planning, ingredient analysis, and practical alternatives for everyday life.
+                  Scan food, understand what's inside, and make confidently better choices — simply.
                 </p>
 
                 <div className="flex flex-col items-stretch sm:items-start gap-3 mb-6 w-full sm:w-auto">
@@ -181,6 +181,16 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* ── Ethos strip ── */}
+        <section className="px-6 sm:px-10 py-10 border-t border-border/20 text-center">
+          <p
+            className="text-sm text-muted-foreground/80 italic max-w-xl mx-auto leading-relaxed"
+            data-testid="text-ethos-strip"
+          >
+            We don't believe in perfect diets or constant tracking. Just better choices, made consistently.
+          </p>
+        </section>
+
         {/* ── Story section ── */}
         <section className="px-6 sm:px-10 py-16 border-t border-border/20">
           <div className="max-w-2xl mx-auto text-center">
@@ -189,7 +199,7 @@ export default function HomePage() {
                 className="text-base text-foreground/80 leading-relaxed"
                 data-testid="text-story-section"
               >
-                The Healthy Apples was built out of a genuine need - helping a family navigate confusing food choices during a period of serious health challenges. We believe that better food knowledge should be simple, practical, and within reach for everyone.
+                The Healthy Apples was built out of a genuine need — helping a family navigate confusing food choices during a period of serious health challenges. We believe that better food knowledge should be simple, practical, and within reach for everyone.
               </p>
             </div>
           </div>

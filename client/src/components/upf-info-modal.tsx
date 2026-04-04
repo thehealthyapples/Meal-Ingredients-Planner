@@ -21,7 +21,7 @@ export function UPFInfoModal({ trigger }: Props) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Ultra-Processed Food (UPF)</DialogTitle>
+            <DialogTitle>What is ultra-processed food?</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-5 text-sm leading-relaxed">
