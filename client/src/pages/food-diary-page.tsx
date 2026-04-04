@@ -29,7 +29,7 @@ import {
   Gift, ClipboardCheck,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
-import { HealthSnapshot, GoalsPreferences, ProfileData } from "./profile-page";
+import { HealthSnapshot, GoalsPreferences, CalorieSettings, ProfileData } from "./profile-page";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
@@ -1040,6 +1040,7 @@ export default function FoodDiaryPage() {
   const [diarySettingsOpen, setDiarySettingsOpen] = useState(false);
 
   // Diary settings (localStorage-backed)
+  const [optionalRecordsOpen, setOptionalRecordsOpen] = useState(false);
   const [showHealthSnapshot, setShowHealthSnapshot] = useState<boolean>(() => {
     try { return localStorage.getItem("tha_diary_show_health_snapshot") !== "false"; }
     catch { return true; }
@@ -1392,13 +1393,6 @@ export default function FoodDiaryPage() {
           </div>
         ) : (
           <>
-            {/* Health Snapshot — top of diary, conditional */}
-            {showHealthSnapshot && profile && (
-              <div className="mb-4">
-                <HealthSnapshot profile={profile} />
-              </div>
-            )}
-
             <div className="lg:grid lg:grid-cols-[1fr_300px] lg:gap-5">
               {/* ── Left: meal slots ──────────────────────────────── */}
               <div className="space-y-3">
@@ -1521,6 +1515,42 @@ export default function FoodDiaryPage() {
                 </div>
               )}
             </div>
+
+            {/* ── Optional Records ─────────────────────────────── */}
+            {!(showDetailedTracking || showWeightTracking) ? (
+              <p className="text-xs text-muted-foreground/60 text-center py-4">
+                You can track more if it helps — optional.
+              </p>
+            ) : (
+              <div className="mt-4 border border-border rounded-lg overflow-hidden" data-testid="section-optional-records">
+                <button
+                  type="button"
+                  className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-muted/20 transition-colors"
+                  onClick={() => setOptionalRecordsOpen(v => !v)}
+                  data-testid="button-toggle-optional-records"
+                >
+                  <span className="text-sm font-medium">Optional Records</span>
+                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-150 ${optionalRecordsOpen ? "rotate-180" : ""}`} />
+                </button>
+                {optionalRecordsOpen && profile && (
+                  <div className="border-t border-border divide-y divide-border">
+                    <div className="p-4"><HealthSnapshot profile={profile} /></div>
+                    <div className="p-4">
+                      <CalorieSettings
+                        profile={profile}
+                        onSave={(prefs) => updateProfileMutation.mutate({ preferences: prefs })}
+                      />
+                    </div>
+                    <div className="p-4">
+                      <GoalsPreferences
+                        profile={profile}
+                        onSave={(data) => updateProfileMutation.mutate(data)}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )
       )}

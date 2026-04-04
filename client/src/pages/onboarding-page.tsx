@@ -12,6 +12,7 @@ import {
   ArrowRight, ArrowLeft, Check, Info,
   BookOpen, ScanLine, CalendarDays, ClipboardList, ShoppingBasket,
   Scale, Activity, Target, Microscope, Compass,
+  Leaf, Sparkles, Snowflake,
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import FiveApplesLogo from "@/components/FiveApplesLogo";
@@ -465,7 +466,7 @@ export default function OnboardingPage() {
                     {/* ── Screen 1 — Reframing health ────────────────── */}
                     {step === 1 && (
                       <div className="space-y-5 text-center py-4">
-                        <div className="text-4xl">🥗</div>
+                        <div className="flex justify-center"><Leaf className="h-12 w-12 text-primary/70" /></div>
                         <div className="space-y-3">
                           <h2 className="text-2xl font-semibold tracking-tight">Healthy eating isn't about perfection.</h2>
                           <p className="text-base text-muted-foreground leading-relaxed max-w-sm mx-auto">
@@ -478,7 +479,7 @@ export default function OnboardingPage() {
                     {/* ── Screen 2 — Remove pressure ─────────────────── */}
                     {step === 2 && (
                       <div className="space-y-5 text-center py-4">
-                        <div className="text-4xl">✨</div>
+                        <div className="flex justify-center"><Sparkles className="h-12 w-12 text-primary/70" /></div>
                         <div className="space-y-3">
                           <h2 className="text-2xl font-semibold tracking-tight">No calorie counting required.</h2>
                           <p className="text-base text-muted-foreground leading-relaxed max-w-sm mx-auto">
@@ -522,7 +523,7 @@ export default function OnboardingPage() {
                     {/* ── Screen 4 — Preferences intro ──────────────── */}
                     {step === 4 && (
                       <div className="space-y-4 text-center py-4">
-                        <div className="text-4xl">🌿</div>
+                        <div className="flex justify-center"><Leaf className="h-12 w-12 text-primary/70" /></div>
                         <div className="space-y-3">
                           <h2 className="text-2xl font-semibold tracking-tight">Anything we should know?</h2>
                           <p className="text-base text-muted-foreground leading-relaxed max-w-sm mx-auto">
@@ -661,14 +662,14 @@ export default function OnboardingPage() {
                         </div>
                         <div className="text-left max-w-sm mx-auto space-y-2 pt-1">
                           {[
-                            { icon: "📖", text: "Save recipes from anywhere" },
-                            { icon: "📅", text: "Plan meals for the week" },
-                            { icon: "🧊", text: "Store meals for later" },
-                            { icon: "🏪", text: "Know what's in your pantry" },
-                            { icon: "📋", text: "Record what you eat — simply" },
-                          ].map(({ icon, text }) => (
+                            { icon: BookOpen, text: "Save recipes from anywhere" },
+                            { icon: CalendarDays, text: "Plan meals for the week" },
+                            { icon: Snowflake, text: "Store meals for later" },
+                            { icon: ShoppingBasket, text: "Know what's in your pantry" },
+                            { icon: ClipboardList, text: "Record what you eat — simply" },
+                          ].map(({ icon: Icon, text }) => (
                             <div key={text} className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/20 px-3 py-2.5">
-                              <span className="text-base shrink-0">{icon}</span>
+                              <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
                               <span className="text-sm text-foreground/75 leading-snug">{text}</span>
                             </div>
                           ))}
