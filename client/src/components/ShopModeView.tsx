@@ -121,19 +121,6 @@ function resolveDisplayMatches(
     return true;
   });
 
-  // Diagnostic log — remove once verified
-  console.log("[ShopMode] resolveDisplayMatches", {
-    item: item.productName,
-    itemKey,
-    store,
-    thaMatchCount: thaMatches.length,
-    priceMatchCount: priceMatches.length,
-    totalMatches: deduped.length,
-    headlineField: deduped[0]
-      ? `${deduped[0].source}: "${deduped[0].productName}"`
-      : "no matches → generic fallback",
-  });
-
   return deduped;
 }
 
@@ -438,20 +425,14 @@ function ShoppingPhase({
   onUpdateStatus: (id: number, status: ShopStatus | null) => void;
 }) {
   const [selectedStore, setSelectedStore] = useState<string>("Tesco");
-  // Tracks which product index is currently shown per item
+  // Tracks which product index is currently shown per item — reset when store changes
   const [productIndexMap, setProductIndexMap] = useState<Record<number, number>>({});
   const [homeOpen, setHomeOpen] = useState(false);
 
-  // Diagnostic logs — remove once verified
-  console.log("[ShopMode] ShoppingPhase", {
-    selectedStore,
-    itemCount: items.length,
-    allPriceMatchCount: allPriceMatches.length,
-    thaPicksKeys: Object.keys(thaPicks),
-    samplePriceMatches: allPriceMatches.slice(0, 3).map(m => ({
-      itemId: m.shoppingListItemId, supermarket: m.supermarket, productName: m.productName, thaRating: m.thaRating,
-    })),
-  });
+  function handleStoreChange(store: string) {
+    setSelectedStore(store);
+    setProductIndexMap({});
+  }
 
   const toShop = items.filter(i => i.shopStatus !== "already_got");
   const atHome = items.filter(i => i.shopStatus === "already_got");
@@ -475,7 +456,7 @@ function ShoppingPhase({
           <h2 className="text-base font-semibold">At the shop</h2>
           <p className="text-xs text-muted-foreground">{inBasketCount} of {total} in basket</p>
         </div>
-        <Select value={selectedStore} onValueChange={setSelectedStore}>
+        <Select value={selectedStore} onValueChange={handleStoreChange}>
           <SelectTrigger className="w-40 h-8 text-xs">
             <Store className="h-3.5 w-3.5 mr-1.5 shrink-0" />
             <SelectValue />
