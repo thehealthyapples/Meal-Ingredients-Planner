@@ -5,10 +5,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   Utensils, ShoppingBasket, Plus, ArrowRight,
   CalendarDays, Leaf, CheckCircle2, Circle, Apple, Scale,
+  Sparkles, Moon, Zap, Activity, Droplet, Heart, ClipboardCheck,
 } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
@@ -17,6 +21,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import OrchardHero from "@/components/illustrations/orchard-hero";
 import AppleRating from "@/components/ui/apple-rating";
+import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   PieChart, Pie,
@@ -96,6 +101,57 @@ export default function Dashboard() {
     },
     onError: () => toast({ title: "Failed to save weight", variant: "destructive" }),
   });
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [signalsOpen, setSignalsOpen] = useState(false);
+  const [signalsForm, setSignalsForm] = useState({
+    weightKg: "",
+    moodApples: null as number | null,
+    energyApples: null as number | null,
+    sleepHours: "",
+    notes: "",
+    stuckToPlan: false,
+    bloodPressure: "",
+    bloodSugar: "",
+    bpm: "",
+  });
+
+  const setSignal = <K extends keyof typeof signalsForm>(k: K, v: (typeof signalsForm)[K]) =>
+    setSignalsForm((f) => ({ ...f, [k]: v }));
+
+  const resetSignalsForm = () =>
+    setSignalsForm({ weightKg: "", moodApples: null, energyApples: null, sleepHours: "", notes: "", stuckToPlan: false, bloodPressure: "", bloodSugar: "", bpm: "" });
+
+  const saveSignalsMutation = useMutation({
+    mutationFn: async (data: object) => {
+      const res = await apiRequest("PATCH", `/api/food-diary/${today}/metrics`, data);
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/food-diary", today] });
+      toast({ title: "Daily signals saved" });
+      setSignalsOpen(false);
+      resetSignalsForm();
+    },
+    onError: () => toast({ title: "Failed to save", variant: "destructive" }),
+  });
+
+  const submitSignals = () => {
+    const payload: Record<string, unknown> = {};
+    if (signalsForm.weightKg.trim()) payload.weightKg = parseFloat(signalsForm.weightKg);
+    if (signalsForm.moodApples !== null) payload.moodApples = signalsForm.moodApples;
+    if (signalsForm.energyApples !== null) payload.energyApples = signalsForm.energyApples;
+    if (signalsForm.sleepHours.trim()) payload.sleepHours = parseFloat(signalsForm.sleepHours);
+    if (signalsForm.notes.trim()) payload.notes = signalsForm.notes;
+    payload.stuckToPlan = signalsForm.stuckToPlan;
+    const customVals: Record<string, string> = {};
+    if (signalsForm.bloodPressure.trim()) customVals.bloodPressure = signalsForm.bloodPressure;
+    if (signalsForm.bloodSugar.trim()) customVals.bloodSugar = signalsForm.bloodSugar;
+    if (signalsForm.bpm.trim()) customVals.bpm = signalsForm.bpm;
+    if (Object.keys(customVals).length > 0) payload.customValues = customVals;
+    saveSignalsMutation.mutate(payload);
+  };
 
   const userMeals = meals?.filter(m => !m.isSystemMeal) || [];
 
@@ -470,6 +526,18 @@ export default function Dashboard() {
                       <ArrowRight className="h-4 w-4 text-muted-foreground/40 ml-auto shrink-0" />
                     </CardContent>
                   </Card>
+                  <Card className="group cursor-pointer hover-elevate transition-all duration-200" data-testid="action-log-signals" onClick={() => setSignalsOpen(true)}>
+                    <CardContent className="p-4 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
+                        <Sparkles className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="title-card">Log Daily Signals</p>
+                        <p className="text-xs text-muted-foreground">Mood, energy, sleep &amp; more</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground/40 ml-auto shrink-0" />
+                    </CardContent>
+                  </Card>
                 </div>
               </div>
 
@@ -544,6 +612,163 @@ export default function Dashboard() {
 
         </motion.div>
       </div>
+
+      <Dialog open={signalsOpen} onOpenChange={(v) => { if (!v) { setSignalsOpen(false); resetSignalsForm(); } }}>
+        <DialogContent className="max-w-sm max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Log Daily Signals
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-1">
+            {/* Weight */}
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 block">Weight (kg)</Label>
+              <Input
+                type="number" step="0.1"
+                placeholder="e.g. 72.5"
+                value={signalsForm.weightKg}
+                onChange={(e) => setSignal("weightKg", e.target.value)}
+                className="h-8 text-sm"
+                data-testid="input-signals-weight"
+              />
+            </div>
+
+            {/* Mood + Energy */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Mood</Label>
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setSignal("moodApples", n)}
+                      className={`transition-all ${signalsForm.moodApples !== null && n <= signalsForm.moodApples ? "opacity-100 scale-100" : "opacity-20 hover:opacity-50 hover:scale-105"}`}
+                    >
+                      <ThaAppleIcon size={20} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Energy</Label>
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setSignal("energyApples", n)}
+                      className={`transition-all ${signalsForm.energyApples !== null && n <= signalsForm.energyApples ? "opacity-100 scale-100" : "opacity-20 hover:opacity-50 hover:scale-105"}`}
+                    >
+                      <ThaAppleIcon size={20} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Sleep */}
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
+                <Moon className="h-3.5 w-3.5" /> Sleep (hours)
+              </Label>
+              <Input
+                type="number" step="0.5"
+                placeholder="e.g. 7.5"
+                value={signalsForm.sleepHours}
+                onChange={(e) => setSignal("sleepHours", e.target.value)}
+                className="h-8 text-sm"
+                data-testid="input-signals-sleep"
+              />
+            </div>
+
+            {/* Stuck to plan */}
+            <div className="flex items-center gap-2.5">
+              <Switch
+                id="signals-stuck"
+                checked={signalsForm.stuckToPlan}
+                onCheckedChange={(v) => setSignal("stuckToPlan", v)}
+                data-testid="switch-signals-stuck"
+              />
+              <Label htmlFor="signals-stuck" className="text-xs cursor-pointer flex items-center gap-1.5">
+                <ClipboardCheck className="h-3.5 w-3.5 text-muted-foreground" /> Stuck to meal plan
+              </Label>
+            </div>
+
+            {/* Blood pressure */}
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
+                <Activity className="h-3.5 w-3.5" /> Blood pressure (mmHg)
+              </Label>
+              <Input
+                type="text"
+                placeholder="e.g. 120/80"
+                value={signalsForm.bloodPressure}
+                onChange={(e) => setSignal("bloodPressure", e.target.value)}
+                className="h-8 text-sm"
+                data-testid="input-signals-bp"
+              />
+            </div>
+
+            {/* Blood sugar */}
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
+                <Droplet className="h-3.5 w-3.5" /> Blood sugar (mmol/L)
+              </Label>
+              <Input
+                type="number" step="0.1"
+                placeholder="e.g. 5.4"
+                value={signalsForm.bloodSugar}
+                onChange={(e) => setSignal("bloodSugar", e.target.value)}
+                className="h-8 text-sm"
+                data-testid="input-signals-sugar"
+              />
+            </div>
+
+            {/* Heart rate */}
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
+                <Heart className="h-3.5 w-3.5" /> Heart rate (BPM)
+              </Label>
+              <Input
+                type="number" step="1"
+                placeholder="e.g. 68"
+                value={signalsForm.bpm}
+                onChange={(e) => setSignal("bpm", e.target.value)}
+                className="h-8 text-sm"
+                data-testid="input-signals-bpm"
+              />
+            </div>
+
+            {/* Notes */}
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1 flex items-center gap-1.5 block">
+                <Zap className="h-3.5 w-3.5" /> Notes
+              </Label>
+              <Textarea
+                placeholder="How did today go?"
+                value={signalsForm.notes}
+                onChange={(e) => setSignal("notes", e.target.value)}
+                className="text-sm min-h-[56px] resize-none"
+                data-testid="textarea-signals-notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => { setSignalsOpen(false); resetSignalsForm(); }}>Cancel</Button>
+            <Button
+              size="sm"
+              onClick={submitSignals}
+              disabled={saveSignalsMutation.isPending}
+              data-testid="button-save-signals"
+            >
+              {saveSignalsMutation.isPending ? "Saving…" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={weightOpen} onOpenChange={(v) => { if (!v) { setWeightOpen(false); setWeightInput(""); } }}>
         <DialogContent className="max-w-xs">
