@@ -84,10 +84,14 @@ function resolveDisplayMatches(
   const itemKey = getItemKey(item);
   const storeNorm = store.toLowerCase();
 
-  // 1. Curated THA picks for this retailer
+  // 1. Curated THA picks for this retailer — sort by thaRating desc, fall back to priority
   const thaMatches: ShopDisplayMatch[] = (thaPicks[itemKey] ?? [])
     .filter(p => p.retailer.toLowerCase() === storeNorm)
-    .sort((a, b) => b.priority - a.priority)
+    .sort((a, b) => {
+      const rA = (a.tags as any)?.thaRating ?? a.priority ?? 0;
+      const rB = (b.tags as any)?.thaRating ?? b.priority ?? 0;
+      return rB - rA;
+    })
     .map(p => ({
       productName: p.productName,
       thaRating: (p.tags as any)?.thaRating ?? null,
@@ -394,10 +398,10 @@ function ShoppingItemCard({
             variant="outline"
             className="h-7 text-xs px-2.5"
             onClick={onNextProduct}
-            disabled={!hasNextProduct && matches.length <= 1}
+            disabled={!hasNextProduct}
             title={hasNextProduct ? "Show next healthiest option" : "No more options"}
           >
-            <SkipForward className="h-3 w-3 mr-1 shrink-0" />Next
+            <SkipForward className="h-3 w-3 mr-1 shrink-0" />Next product
           </Button>
           <Button
             size="sm"

@@ -700,6 +700,26 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-04-05_savings_events",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS savings_events (
+        id          SERIAL PRIMARY KEY,
+        user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        date        TEXT NOT NULL,
+        type        TEXT NOT NULL CHECK (type IN ('takeaway_avoided','pantry_used','smart_swap')),
+        amount      REAL NOT NULL,
+        source_id   INTEGER,
+        source_type TEXT,
+        note        TEXT,
+        created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_savings_events_user_id ON savings_events (user_id)`,
+      `CREATE INDEX IF NOT EXISTS idx_savings_events_user_date ON savings_events (user_id, date)`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_savings_events_source ON savings_events (user_id, source_type, source_id) WHERE source_id IS NOT NULL AND source_type IS NOT NULL`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

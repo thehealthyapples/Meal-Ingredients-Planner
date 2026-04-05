@@ -1110,6 +1110,23 @@ export const insertMealItemSchema = createInsertSchema(mealItems).omit({ id: tru
 export type MealItem = typeof mealItems.$inferSelect;
 export type InsertMealItem = z.infer<typeof insertMealItemSchema>;
 
+// ─── Savings Events ────────────────────────────────────────────────────────────
+export const savingsEvents = pgTable("savings_events", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  date: text("date").notNull(),
+  type: text("type").notNull(), // 'takeaway_avoided' | 'pantry_used' | 'smart_swap'
+  amount: real("amount").notNull(),
+  sourceId: integer("source_id"),
+  sourceType: text("source_type"),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertSavingsEventSchema = createInsertSchema(savingsEvents).omit({ id: true, createdAt: true });
+export type SavingsEvent = typeof savingsEvents.$inferSelect;
+export type InsertSavingsEvent = z.infer<typeof insertSavingsEventSchema>;
+
 // Epic 3: Usage tracking — recent and frequent items per user
 export const userItemUsage = pgTable("user_item_usage", {
   id: serial("id").primaryKey(),

@@ -28,6 +28,7 @@ import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/r
 import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
 import { getHouseholdForUser } from "./lib/household";
 import { pool } from "./db";
+import { SAVINGS_RATES } from "./lib/savings-config";
 import multer from "multer";
 import { extractTextFromImage, OcrError } from "./services/ocr";
 import { parseScannedText } from "./services/recipeParser";
@@ -6529,6 +6530,16 @@ export async function registerRoutes(
       return res.status(404).json({ message: "Meal not found" });
     }
     const result = await storage.logMealToDiary(req.user!.id, date, mealId, mealSlot);
+    // Savings: one takeaway_avoided per meal log action (deduped by mealId+date via unique index)
+    storage.createSavingsEvent(req.user!.id, {
+      userId: req.user!.id,
+      date,
+      type: 'takeaway_avoided',
+      amount: SAVINGS_RATES.takeaway_avoided,
+      sourceId: mealId,
+      sourceType: 'meal_log',
+      note: null,
+    }).catch(() => {});
     res.status(201).json(result);
   });
 
@@ -6552,6 +6563,16 @@ export async function registerRoutes(
     });
     // Track usage for recent/frequent (Epic 3)
     storage.recordItemUsage(req.user!.id, 'manual', name).catch(() => {});
+    // Savings: one takeaway_avoided event per logged entry (fire-and-forget)
+    storage.createSavingsEvent(req.user!.id, {
+      userId: req.user!.id,
+      date,
+      type: 'takeaway_avoided',
+      amount: SAVINGS_RATES.takeaway_avoided,
+      sourceId: entry.id,
+      sourceType: 'diary_entry',
+      note: null,
+    }).catch(() => {});
     res.status(201).json(entry);
   });
 
@@ -6606,6 +6627,17 @@ export async function registerRoutes(
     const days = req.query.days ? Number(req.query.days) : 90;
     const trends = await storage.getFoodDiaryMetricsTrends(req.user!.id, days);
     res.json(trends);
+  });
+
+  app.get("/api/savings/aggregates", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const aggregates = await storage.getSavingsAggregates(req.user!.id);
+      res.json(aggregates);
+    } catch (err) {
+      console.error("[Savings] Failed to fetch aggregates:", err);
+      res.status(500).json({ message: "Failed to fetch savings aggregates" });
+    }
   });
 
   app.post("/api/food-diary/import/preview", async (req, res) => {

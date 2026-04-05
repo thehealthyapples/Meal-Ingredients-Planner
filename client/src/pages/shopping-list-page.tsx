@@ -2049,7 +2049,7 @@ export default function ShoppingListPage() {
   }, [hasPrices, savedItems, pricesByItem, getCheapestForItem]);
 
   useEffect(() => {
-    if (!hasPrices || savedItems.length === 0 || Object.keys(thaPicks).length > 0) return;
+    if (savedItems.length === 0 || Object.keys(thaPicks).length > 0) return;
     const rawKeys = savedItems
       .map(i => normalizeIngredientKey((i as any).ingredientName ?? (i as any).name ?? i.normalizedName ?? i.productName ?? ''))
       .filter(Boolean);
@@ -2064,7 +2064,7 @@ export default function ShoppingListPage() {
       .then(res => (res.ok ? res.json() : null))
       .then(data => { if (data) setThaPicks(data.recommendations ?? {}); })
       .catch(e => console.warn('[THA Picks] Lookup on load failed (non-fatal):', e));
-  }, [hasPrices, savedItems.length]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [savedItems.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {

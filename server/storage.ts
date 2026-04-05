@@ -1,4 +1,4 @@
-import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage } from "@shared/schema";
+import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
 import { eq, and, ilike, or, sql, inArray, isNull, isNotNull } from "drizzle-orm";
@@ -255,6 +255,11 @@ export interface IStorage {
   upsertFoodDiaryMetrics(userId: number, date: string, data: Partial<InsertFoodDiaryMetrics>): Promise<FoodDiaryMetrics>;
   getFoodDiaryMetricsTrends(userId: number, days?: number): Promise<FoodDiaryMetrics[]>;
 
+  // ── Savings Events ────────────────────────────────────────────────────────────
+  createSavingsEvent(userId: number, data: InsertSavingsEvent): Promise<SavingsEvent>;
+  hasSavingsEventForSource(userId: number, sourceType: string, sourceId: number): Promise<boolean>;
+  getSavingsAggregates(userId: number): Promise<SavingsAggregates>;
+
   // ── Demo User Lifecycle ───────────────────────────────────────────────────────
   createDemoUser(): Promise<User>;
   seedDemoData(userId: number): Promise<void>;
@@ -272,6 +277,13 @@ export interface IStorage {
 export type ShoppingListItemWithAttribution = ShoppingListItem & {
   addedByDisplayName: string | null;
   sources: Array<{ mealId: number; mealName: string; weekNumber: number | null; dayOfWeek: number | null; mealSlot: string | null }>;
+};
+
+export type SavingsAggregates = {
+  thisWeekTotal: number;
+  prevWeekTotal: number | null;
+  thisMonthTotal: number;
+  thisWeekCountsByType: { takeaway_avoided: number; pantry_used: number; smart_swap: number };
 };
 
 export type HouseholdDietaryContext = {
@@ -2516,21 +2528,23 @@ export class DatabaseStorage implements IStorage {
 
   async copyPlannerToFoodDiary(userId: number, date: string, slots?: string[]): Promise<{ copied: number; skipped: number }> {
     const targetDate = new Date(date);
-    const jsDay = targetDate.getDay();
-    const plannerDay = jsDay === 0 ? 7 : jsDay;
+    const plannerDay = targetDate.getDay(); // 0=Sun...6=Sat, matches planner dayOfWeek
 
+    const householdId = await getHouseholdForUser(userId);
     const weeks = await db.select().from(plannerWeeks)
-      .where(eq(plannerWeeks.userId, userId))
-      .orderBy(plannerWeeks.weekNumber)
-      .limit(1);
+      .where(eq(plannerWeeks.householdId, householdId))
+      .orderBy(plannerWeeks.weekNumber);
     if (weeks.length === 0) return { copied: 0, skipped: 0 };
 
-    const week = weeks[0];
-    const days = await db.select().from(plannerDays)
-      .where(and(eq(plannerDays.weekId, week.id), eq(plannerDays.dayOfWeek, plannerDay)));
-    if (days.length === 0) return { copied: 0, skipped: 0 };
+    // Find first week that has entries for this day
+    let day: typeof plannerDays.$inferSelect | undefined;
+    for (const week of weeks) {
+      const [found] = await db.select().from(plannerDays)
+        .where(and(eq(plannerDays.weekId, week.id), eq(plannerDays.dayOfWeek, plannerDay)));
+      if (found) { day = found; break; }
+    }
+    if (!day) return { copied: 0, skipped: 0 };
 
-    const day = days[0];
     const entries = await db.select().from(plannerEntries).where(eq(plannerEntries.dayId, day.id));
 
     const existingEntries = await this.getFoodDiaryEntries(userId, date);
@@ -2999,6 +3013,91 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userItemUsage.userId, userId))
       .orderBy(sql`${userItemUsage.useCount} DESC`)
       .limit(limit);
+  }
+
+  // ── Savings Events ─────────────────────────────────────────────────────────
+
+  async createSavingsEvent(userId: number, data: InsertSavingsEvent): Promise<SavingsEvent> {
+    const [row] = await db.insert(savingsEvents).values({ ...data, userId }).returning();
+    return row;
+  }
+
+  async hasSavingsEventForSource(userId: number, sourceType: string, sourceId: number): Promise<boolean> {
+    const [row] = await db
+      .select({ id: savingsEvents.id })
+      .from(savingsEvents)
+      .where(
+        and(
+          eq(savingsEvents.userId, userId),
+          eq(savingsEvents.sourceType, sourceType),
+          eq(savingsEvents.sourceId, sourceId),
+        )
+      )
+      .limit(1);
+    return !!row;
+  }
+
+  async getSavingsAggregates(userId: number): Promise<SavingsAggregates> {
+    const today = new Date();
+
+    // Monday of current week
+    const dow = today.getDay(); // 0=Sun
+    const daysToMonday = dow === 0 ? 6 : dow - 1;
+    const thisWeekStart = new Date(today);
+    thisWeekStart.setDate(today.getDate() - daysToMonday);
+    const thisWeekStartStr = thisWeekStart.toISOString().slice(0, 10);
+
+    // Monday of previous week
+    const prevWeekStart = new Date(thisWeekStart);
+    prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+    const prevWeekStartStr = prevWeekStart.toISOString().slice(0, 10);
+
+    // First day of current month
+    const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const thisMonthStartStr = thisMonthStart.toISOString().slice(0, 10);
+
+    // Fetch events from prev week start onwards (covers all needed windows)
+    const events = await db
+      .select()
+      .from(savingsEvents)
+      .where(
+        and(
+          eq(savingsEvents.userId, userId),
+          sql`${savingsEvents.date} >= ${prevWeekStartStr}`,
+        )
+      );
+
+    let thisWeekTotal = 0;
+    let prevWeekTotal = 0;
+    let hasPrevWeekData = false;
+    let thisMonthTotal = 0;
+    const thisWeekCountsByType = { takeaway_avoided: 0, pantry_used: 0, smart_swap: 0 };
+
+    for (const event of events) {
+      const isThisWeek = event.date >= thisWeekStartStr;
+      const isPrevWeek = event.date >= prevWeekStartStr && event.date < thisWeekStartStr;
+      const isThisMonth = event.date >= thisMonthStartStr;
+
+      if (isThisWeek) {
+        thisWeekTotal += event.amount;
+        const t = event.type as keyof typeof thisWeekCountsByType;
+        if (t in thisWeekCountsByType) thisWeekCountsByType[t]++;
+      }
+      if (isPrevWeek) {
+        prevWeekTotal += event.amount;
+        hasPrevWeekData = true;
+      }
+      if (isThisMonth) {
+        thisMonthTotal += event.amount;
+      }
+    }
+
+    return {
+      thisWeekTotal,
+      prevWeekTotal: hasPrevWeekData ? prevWeekTotal : null,
+      thisMonthTotal,
+      thisWeekCountsByType,
+    };
   }
 }
 

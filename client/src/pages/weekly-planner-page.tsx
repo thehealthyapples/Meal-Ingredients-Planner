@@ -412,14 +412,14 @@ export default function WeeklyPlannerPage() {
   const [mealPickerOpen, setMealPickerOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<EntryTarget | null>(null);
   const [mealSearch, setMealSearch] = useState("");
-  const [mealFilter, setMealFilter] = useState<"all" | "recipes" | "ready">("all");
+  const [mealFilter, setMealFilter] = useState<"all" | "cookbook" | "planner" | "ready">("all");
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [bulkMeal, setBulkMeal] = useState<Meal | null>(null);
   const [bulkWeeks, setBulkWeeks] = useState<Set<number>>(new Set());
   const [bulkDays, setBulkDays] = useState<Set<number>>(new Set());
   const [bulkSlots, setBulkSlots] = useState<Set<string>>(new Set());
   const [bulkMealSearch, setBulkMealSearch] = useState("");
-  const [bulkMealFilter, setBulkMealFilter] = useState<"all" | "recipes" | "ready">("all");
+  const [bulkMealFilter, setBulkMealFilter] = useState<"all" | "cookbook" | "planner" | "ready">("all");
   const [bulkStep, setBulkStep] = useState<1 | 2>(1);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -639,6 +639,14 @@ export default function WeeklyPlannerPage() {
     return meals.find((m) => m.id === id);
   };
 
+  // Meal IDs already placed in the active week (for "From Planner" filter)
+  const plannerMealIdSet = useMemo(() => {
+    const ids = new Set<number>();
+    const activeWk = fullPlanner.find((w) => w.weekNumber === Number(activeWeek));
+    activeWk?.days?.forEach(d => d.entries.forEach(e => ids.add(e.mealId)));
+    return ids;
+  }, [fullPlanner, activeWeek]);
+
   const categoryIdForSlot = useMemo(() => {
     const map: Record<string, number | undefined> = {};
     for (const cat of categories) {
@@ -667,8 +675,10 @@ export default function WeeklyPlannerPage() {
         }
       }
     }
-    if (mealFilter === "recipes") {
-      result = result.filter((m) => !m.isReadyMeal);
+    if (mealFilter === "cookbook") {
+      result = result.filter((m) => !m.isReadyMeal && !m.isSystemMeal);
+    } else if (mealFilter === "planner") {
+      result = result.filter((m) => plannerMealIdSet.has(m.id));
     } else if (mealFilter === "ready") {
       result = result.filter((m) => m.isReadyMeal);
     }
@@ -684,19 +694,20 @@ export default function WeeklyPlannerPage() {
         result = [...matching, ...rest];
       }
     }
-    return result.slice(0, 50);
-  }, [meals, mealFilter, mealSearch, pickerTarget, categoryIdForSlot]);
+    return result.slice(0, 100);
+  }, [meals, mealFilter, mealSearch, pickerTarget, categoryIdForSlot, plannerMealIdSet]);
 
   const bulkFilteredMeals = useMemo(() => {
     let result = meals;
-    if (bulkMealFilter === "recipes") result = result.filter((m) => !m.isReadyMeal);
+    if (bulkMealFilter === "cookbook") result = result.filter((m) => !m.isReadyMeal && !m.isSystemMeal);
+    else if (bulkMealFilter === "planner") result = result.filter((m) => plannerMealIdSet.has(m.id));
     else if (bulkMealFilter === "ready") result = result.filter((m) => m.isReadyMeal);
     if (bulkMealSearch.trim()) {
       const q = bulkMealSearch.toLowerCase();
       result = result.filter((m) => m.name.toLowerCase().includes(q));
     }
-    return result.slice(0, 50);
-  }, [meals, bulkMealFilter, bulkMealSearch]);
+    return result.slice(0, 100);
+  }, [meals, bulkMealFilter, bulkMealSearch, plannerMealIdSet]);
 
   const bulkAssignments = useMemo(() => {
     if (!bulkMeal || bulkWeeks.size === 0 || bulkDays.size === 0 || bulkSlots.size === 0) return [];
@@ -1037,6 +1048,7 @@ export default function WeeklyPlannerPage() {
   };
 
   const activeWeekData = fullPlanner.find((w) => w.weekNumber === Number(activeWeek));
+
   const sortedDays = activeWeekData?.days?.slice().sort((a, b) => {
     const aIdx = MONDAY_FIRST_ORDER.indexOf(a.dayOfWeek);
     const bIdx = MONDAY_FIRST_ORDER.indexOf(b.dayOfWeek);
@@ -1826,7 +1838,7 @@ export default function WeeklyPlannerPage() {
 
       {/* ── Meal Picker Dialog ── */}
       <Dialog open={mealPickerOpen} onOpenChange={setMealPickerOpen}>
-        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col gap-0 overflow-hidden">
           <DialogHeader>
             <DialogTitle>
               {pickerTarget?.isDrink ? "Choose a Drink" :
@@ -1835,7 +1847,7 @@ export default function WeeklyPlannerPage() {
                `Choose a ${MEAL_TYPES.find(s => s.key === pickerTarget?.mealType)?.label || "Meal"}`}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-3 flex-shrink-0 pt-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -1846,8 +1858,8 @@ export default function WeeklyPlannerPage() {
                 data-testid="input-meal-search"
               />
             </div>
-            <div className="flex gap-1">
-              {(["all", "recipes", "ready"] as const).map((f) => (
+            <div className="flex gap-1 flex-wrap">
+              {(["all", "cookbook", "planner", "ready"] as const).map((f) => (
                 <Button
                   key={f}
                   variant={mealFilter === f ? "default" : "outline"}
@@ -1855,7 +1867,7 @@ export default function WeeklyPlannerPage() {
                   onClick={() => setMealFilter(f)}
                   data-testid={`button-filter-${f}`}
                 >
-                  {f === "all" ? "All" : f === "recipes" ? "Recipes" : "Packaged & Processed"}
+                  {f === "all" ? "All" : f === "cookbook" ? "Cookbook" : f === "planner" ? "From Planner" : "Ready Meals"}
                 </Button>
               ))}
             </div>
@@ -1912,7 +1924,7 @@ export default function WeeklyPlannerPage() {
 
       {/* ── Bulk Assign Dialog ── */}
       <Dialog open={bulkAssignOpen} onOpenChange={(v) => { if (!v) resetBulkAssign(); }}>
-        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-primary" />
@@ -1923,15 +1935,15 @@ export default function WeeklyPlannerPage() {
 
           {bulkStep === 1 ? (
             <>
-              <div className="space-y-3">
+              <div className="space-y-3 flex-shrink-0 pt-2">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input placeholder="Search meals..." value={bulkMealSearch} onChange={(e) => setBulkMealSearch(e.target.value)} className="pl-9" data-testid="input-bulk-meal-search" />
                 </div>
-                <div className="flex gap-1">
-                  {(["all", "recipes", "ready"] as const).map((f) => (
+                <div className="flex gap-1 flex-wrap">
+                  {(["all", "cookbook", "planner", "ready"] as const).map((f) => (
                     <Button key={f} variant={bulkMealFilter === f ? "default" : "outline"} size="sm" onClick={() => setBulkMealFilter(f)} data-testid={`button-bulk-filter-${f}`}>
-                      {f === "all" ? "All" : f === "recipes" ? "Recipes" : "Packaged & Processed"}
+                      {f === "all" ? "All" : f === "cookbook" ? "Cookbook" : f === "planner" ? "From Planner" : "Ready Meals"}
                     </Button>
                   ))}
                 </div>

@@ -25,7 +25,7 @@ import {
   Copy, Loader2, TrendingUp, Weight, Moon, Zap, BookOpen,
   Sun, Coffee, UtensilsCrossed, Droplets, Sparkles, ChefHat,
   ChevronDown, Heart, Flame, Target, Activity, Droplet,
-  Gift, ClipboardCheck,
+  Gift, ClipboardCheck, PiggyBank, Search,
 } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { HealthSnapshot, GoalsPreferences, CalorieSettings, ProfileData } from "./profile-page";
@@ -85,6 +85,8 @@ interface SavedMeal {
   name: string;
   ingredients: string[];
   kind: string | null;
+  isReadyMeal: boolean | null;
+  isSystemMeal: boolean | null;
 }
 
 interface UsageItem { id: number; itemName: string; itemType: string; useCount: number; }
@@ -274,6 +276,7 @@ function AddEntryModal({
   onAdd,
   onLogMeal,
   savedMeals,
+  plannerMealIdSet,
   recentItems,
   frequentItems,
   isPending,
@@ -284,14 +287,28 @@ function AddEntryModal({
   onAdd: (name: string) => void;
   onLogMeal: (meal: SavedMeal) => void;
   savedMeals: SavedMeal[];
+  plannerMealIdSet: Set<number>;
   recentItems: UsageItem[];
   frequentItems: UsageItem[];
   isPending: boolean;
 }) {
   const [name, setName] = useState("");
   const [showFrequent, setShowFrequent] = useState(false);
+  const [mealSearch, setMealSearch] = useState("");
+  const [mealFilter, setMealFilter] = useState<"all" | "cookbook" | "planner" | "ready">("all");
   const suggestions = showFrequent ? frequentItems : recentItems;
-  const visibleMeals = savedMeals.filter((m) => m.kind !== "component").slice(0, 10);
+
+  const visibleMeals = useMemo(() => {
+    let result = savedMeals.filter((m) => m.kind !== "component");
+    if (mealFilter === "cookbook") result = result.filter((m) => !m.isReadyMeal && !m.isSystemMeal);
+    else if (mealFilter === "planner") result = result.filter((m) => plannerMealIdSet.has(m.id));
+    else if (mealFilter === "ready") result = result.filter((m) => !!m.isReadyMeal);
+    if (mealSearch.trim()) {
+      const q = mealSearch.toLowerCase();
+      result = result.filter((m) => m.name.toLowerCase().includes(q));
+    }
+    return result.slice(0, 100);
+  }, [savedMeals, mealFilter, mealSearch, plannerMealIdSet]);
 
   const handleAdd = () => {
     if (!name.trim()) return;
@@ -301,12 +318,12 @@ function AddEntryModal({
 
   return (
     <Dialog open={slot !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-sm">
+      <DialogContent className="max-w-sm max-h-[80vh] flex flex-col gap-0 overflow-hidden">
         <DialogHeader>
           <DialogTitle>Add to {slotLabel}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3 flex-shrink-0 pt-2">
           {/* Manual entry */}
           <div className="flex items-center gap-2">
             <Input
@@ -359,32 +376,64 @@ function AddEntryModal({
             </div>
           )}
 
-          {/* Saved meals */}
-          {visibleMeals.length > 0 && (
-            <div className="space-y-1.5">
+          {/* Saved meals — search + filter */}
+          {savedMeals.filter((m) => m.kind !== "component").length > 0 && (
+            <div className="space-y-2">
               <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Saved meals</p>
-              <div className="space-y-1 max-h-[200px] overflow-y-auto">
-                {visibleMeals.map((meal) => (
-                  <button
-                    key={meal.id}
-                    className="w-full flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-left hover:bg-muted/40 transition-colors disabled:opacity-50"
-                    onClick={() => { onLogMeal(meal); onClose(); }}
-                    disabled={isPending}
-                    data-testid={`button-log-meal-modal-${meal.id}`}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search meals…"
+                  value={mealSearch}
+                  onChange={(e) => setMealSearch(e.target.value)}
+                  className="pl-9 h-8 text-sm"
+                />
+              </div>
+              <div className="flex gap-1 flex-wrap">
+                {(["all", "cookbook", "planner", "ready"] as const).map((f) => (
+                  <Button
+                    key={f}
+                    variant={mealFilter === f ? "default" : "outline"}
+                    size="sm"
+                    className="text-xs h-7 px-2"
+                    onClick={() => setMealFilter(f)}
                   >
-                    <ChefHat className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{meal.name}</p>
-                      {meal.ingredients.length > 0 && (
-                        <p className="text-xs text-muted-foreground truncate">
-                          {meal.ingredients.slice(0, 3).join(", ")}
-                        </p>
-                      )}
-                    </div>
-                  </button>
+                    {f === "all" ? "All" : f === "cookbook" ? "Cookbook" : f === "planner" ? "From Planner" : "Ready Meals"}
+                  </Button>
                 ))}
               </div>
             </div>
+          )}
+        </div>
+
+        {/* Scrollable meal list */}
+        <div className="flex-1 overflow-y-auto mt-2 space-y-1 min-h-0">
+          {visibleMeals.length === 0 ? (
+            <p className="text-center text-xs text-muted-foreground py-4">No meals found</p>
+          ) : (
+            visibleMeals.map((meal) => (
+              <button
+                key={meal.id}
+                className="w-full flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-left hover:bg-muted/40 transition-colors disabled:opacity-50"
+                onClick={() => { onLogMeal(meal); onClose(); }}
+                disabled={isPending}
+                data-testid={`button-log-meal-modal-${meal.id}`}
+              >
+                {meal.isReadyMeal ? (
+                  <UtensilsCrossed className="h-3.5 w-3.5 shrink-0 text-green-500/60" />
+                ) : (
+                  <ChefHat className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{meal.name}</p>
+                  {meal.ingredients.length > 0 && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {meal.ingredients.slice(0, 3).join(", ")}
+                    </p>
+                  )}
+                </div>
+              </button>
+            ))
           )}
         </div>
       </DialogContent>
@@ -1028,6 +1077,88 @@ function DiarySettingsPanel({
   );
 }
 
+// ── Savings Card ────────────────────────────────────────────────────────────
+
+interface SavingsAggregates {
+  thisWeekTotal: number;
+  prevWeekTotal: number | null;
+  thisMonthTotal: number;
+  thisWeekCountsByType: { takeaway_avoided: number; pantry_used: number; smart_swap: number };
+}
+
+function SavingsCard({ aggregates }: { aggregates: SavingsAggregates }) {
+  const weekDiff =
+    aggregates.prevWeekTotal != null
+      ? aggregates.thisWeekTotal - aggregates.prevWeekTotal
+      : null;
+
+  const hasBreakdown =
+    aggregates.thisWeekCountsByType.takeaway_avoided > 0 ||
+    aggregates.thisWeekCountsByType.pantry_used > 0 ||
+    aggregates.thisWeekCountsByType.smart_swap > 0;
+
+  return (
+    <Card className="shadow-none border-border" data-testid="card-savings">
+      <CardContent className="px-4 py-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70 font-medium mb-0.5 flex items-center gap-1">
+              <PiggyBank className="h-3 w-3" />
+              This week with THA
+            </p>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-xl font-semibold text-foreground" data-testid="savings-week-total">
+                £{aggregates.thisWeekTotal.toFixed(0)}
+              </span>
+              <span className="text-sm text-muted-foreground">likely saved</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5" data-testid="savings-week-context">
+              {weekDiff != null
+                ? weekDiff >= 0
+                  ? `Up £${weekDiff.toFixed(0)} from last week`
+                  : `Down £${Math.abs(weekDiff).toFixed(0)} from last week`
+                : "Estimated savings based on your food habits"}
+            </p>
+          </div>
+
+          {aggregates.thisMonthTotal > 0 && (
+            <div className="text-right shrink-0">
+              <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/70">This month</p>
+              <p className="text-base font-semibold" data-testid="savings-month-total">
+                £{aggregates.thisMonthTotal.toFixed(0)}
+              </p>
+              <p className="text-[10px] text-muted-foreground">estimated saved</p>
+            </div>
+          )}
+        </div>
+
+        {hasBreakdown && (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2.5 pt-2.5 border-t border-border/50">
+            {aggregates.thisWeekCountsByType.takeaway_avoided > 0 && (
+              <span className="text-xs text-muted-foreground" data-testid="savings-count-takeaway">
+                <span className="font-medium text-foreground">{aggregates.thisWeekCountsByType.takeaway_avoided}</span>
+                {" "}takeaway{aggregates.thisWeekCountsByType.takeaway_avoided !== 1 ? "s" : ""} avoided
+              </span>
+            )}
+            {aggregates.thisWeekCountsByType.pantry_used > 0 && (
+              <span className="text-xs text-muted-foreground" data-testid="savings-count-pantry">
+                <span className="font-medium text-foreground">{aggregates.thisWeekCountsByType.pantry_used}</span>
+                {" "}pantry item{aggregates.thisWeekCountsByType.pantry_used !== 1 ? "s" : ""} used
+              </span>
+            )}
+            {aggregates.thisWeekCountsByType.smart_swap > 0 && (
+              <span className="text-xs text-muted-foreground" data-testid="savings-count-swap">
+                <span className="font-medium text-foreground">{aggregates.thisWeekCountsByType.smart_swap}</span>
+                {" "}smarter choice{aggregates.thisWeekCountsByType.smart_swap !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main page ───────────────────────────────────────────────────────────────
 
 export default function FoodDiaryPage() {
@@ -1167,6 +1298,26 @@ export default function FoodDiaryPage() {
   const { data: frequentItems = [] } = useQuery<UsageItem[]>({ queryKey: ["/api/user-items/frequent"] });
   const { data: savedMeals = [] } = useQuery<SavedMeal[]>({ queryKey: ["/api/meals"] });
 
+  const { data: fullPlanner = [] } = useQuery<{ days: { entries: { mealId: number }[] }[] }[]>({
+    queryKey: ["/api/planner/full"],
+    staleTime: 60_000,
+  });
+  const plannerMealIdSet = useMemo(() => {
+    const ids = new Set<number>();
+    fullPlanner.forEach(w => w.days.forEach(d => d.entries.forEach(e => ids.add(e.mealId))));
+    return ids;
+  }, [fullPlanner]);
+
+  const { data: savingsAggregates } = useQuery<SavingsAggregates>({
+    queryKey: ["/api/savings/aggregates"],
+    queryFn: async () => {
+      const res = await fetch("/api/savings/aggregates", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch savings");
+      return res.json();
+    },
+    enabled: activeTab === "diary",
+  });
+
   const copyFromPlannerMut = useMutation({
     mutationFn: (slots: string[]) =>
       apiRequest("POST", `/api/food-diary/${date}/copy-from-planner`, slots.length > 0 ? { slots } : {}),
@@ -1189,6 +1340,8 @@ export default function FoodDiaryPage() {
       qc.invalidateQueries({ queryKey: diaryKey });
       qc.invalidateQueries({ queryKey: ["/api/user-items/recent"] });
       qc.invalidateQueries({ queryKey: ["/api/user-items/frequent"] });
+      qc.invalidateQueries({ queryKey: ["/api/savings/aggregates"] });
+      toast({ title: "Logged", description: "Nice — that likely saved about £10 vs takeaway.", duration: 3000 });
     },
     onError: () => toast({ title: "Failed to log item", variant: "destructive" }),
   });
@@ -1205,10 +1358,11 @@ export default function FoodDiaryPage() {
       qc.invalidateQueries({ queryKey: diaryKey });
       qc.invalidateQueries({ queryKey: ["/api/user-items/recent"] });
       qc.invalidateQueries({ queryKey: ["/api/user-items/frequent"] });
+      qc.invalidateQueries({ queryKey: ["/api/savings/aggregates"] });
       toast({
         title: "Meal logged",
-        description: `${data.logged.length} item${data.logged.length !== 1 ? "s" : ""} added.`,
-        duration: 2000,
+        description: `${data.logged.length} item${data.logged.length !== 1 ? "s" : ""} added — likely saved about £10 vs takeaway.`,
+        duration: 3000,
       });
     },
     onError: () => toast({ title: "Failed to log meal", variant: "destructive" }),
@@ -1408,6 +1562,13 @@ export default function FoodDiaryPage() {
             {showHealthSnapshot && profile && (
               <div className="mb-4">
                 <HealthSnapshot profile={profile} />
+              </div>
+            )}
+
+            {/* ── Savings Card ─────────────────────────────────── */}
+            {savingsAggregates && savingsAggregates.thisMonthTotal > 0 && (
+              <div className="mb-4">
+                <SavingsCard aggregates={savingsAggregates} />
               </div>
             )}
 
@@ -1672,6 +1833,7 @@ export default function FoodDiaryPage() {
           logMealMut.mutate({ meal, slot: addModalSlot });
         }}
         savedMeals={savedMeals}
+        plannerMealIdSet={plannerMealIdSet}
         recentItems={recentItems}
         frequentItems={frequentItems}
         isPending={logEntryMut.isPending || logMealMut.isPending}
