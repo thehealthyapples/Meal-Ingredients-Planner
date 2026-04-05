@@ -162,6 +162,12 @@ export default function ProfilePage() {
 
       <HouseholdManagementSection currentUserId={profile.id} />
 
+      <GoalsPreferences
+        profile={profile}
+        onSave={(data) => updateMutation.mutate(data)}
+        showDiet={true}
+      />
+
       <ShoppingPreferences
         prefs={prefs}
         onSave={(prefs) => savePreferences(prefs)}
@@ -802,7 +808,7 @@ export function CalorieSettings({ profile, onSave }: { profile: ProfileData; onS
   );
 }
 
-export function GoalsPreferences({ profile, onSave }: { profile: ProfileData; onSave: (data: any) => void }) {
+export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile: ProfileData; onSave: (data: any) => void; showDiet?: boolean }) {
   const prefs = profile.preferences || {};
   const [activity, setActivity] = useState<string>(prefs.activityLevel || profile.health.activityLevel || "moderate");
   const [dietPattern, setDietPattern] = useState<string | null>(profile.dietPattern ?? null);
@@ -849,7 +855,7 @@ export function GoalsPreferences({ profile, onSave }: { profile: ProfileData; on
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
           <Target className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">Goals & Diet</h3>
+          <h3 className="text-sm font-medium">{showDiet ? "Goals & Diet" : "Goals"}</h3>
         </div>
         {dirty && (
           <Button size="sm" onClick={save} data-testid="button-save-goals">
@@ -882,72 +888,76 @@ export function GoalsPreferences({ profile, onSave }: { profile: ProfileData; on
           </div>
         </div>
 
-        <Separator />
+        {showDiet && (
+          <>
+            <Separator />
 
-        <div>
-          <Label className="text-xs text-muted-foreground mb-2 block">Diet pattern</Label>
-          <div className="flex flex-wrap gap-2">
-            <Badge
-              variant={!dietPattern ? "default" : "outline"}
-              className="cursor-pointer"
-              onClick={() => { setDietPattern(null); setDirty(true); }}
-              data-testid="badge-diet-pattern-none"
-            >
-              {!dietPattern && <Check className="h-3 w-3 mr-1" />}
-              None
-            </Badge>
-            {DIET_PATTERNS.map((d) => (
-              <Badge
-                key={d.value}
-                variant={dietPattern === d.value ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => { setDietPattern(dietPattern === d.value ? null : d.value); setDirty(true); }}
-                data-testid={`badge-diet-pattern-${d.value}`}
-              >
-                {dietPattern === d.value && <Check className="h-3 w-3 mr-1" />}
-                {d.label}
-              </Badge>
-            ))}
-          </div>
-        </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-2 block">Diet pattern</Label>
+              <div className="flex flex-wrap gap-2">
+                <Badge
+                  variant={!dietPattern ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => { setDietPattern(null); setDirty(true); }}
+                  data-testid="badge-diet-pattern-none"
+                >
+                  {!dietPattern && <Check className="h-3 w-3 mr-1" />}
+                  None
+                </Badge>
+                {DIET_PATTERNS.map((d) => (
+                  <Badge
+                    key={d.value}
+                    variant={dietPattern === d.value ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => { setDietPattern(dietPattern === d.value ? null : d.value); setDirty(true); }}
+                    data-testid={`badge-diet-pattern-${d.value}`}
+                  >
+                    {dietPattern === d.value && <Check className="h-3 w-3 mr-1" />}
+                    {d.label}
+                  </Badge>
+                ))}
+              </div>
+            </div>
 
-        <div>
-          <Label className="text-xs text-muted-foreground mb-2 block">Dietary restrictions</Label>
-          <div className="flex flex-wrap gap-2">
-            {DIET_RESTRICTIONS.map((r) => (
-              <Badge
-                key={r.value}
-                variant={dietRestrictions.includes(r.value) ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => toggleRestriction(r.value)}
-                data-testid={`badge-restriction-${r.value}`}
-              >
-                {dietRestrictions.includes(r.value) && <Check className="h-3 w-3 mr-1" />}
-                {r.label}
-              </Badge>
-            ))}
-          </div>
-        </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-2 block">Dietary restrictions</Label>
+              <div className="flex flex-wrap gap-2">
+                {DIET_RESTRICTIONS.map((r) => (
+                  <Badge
+                    key={r.value}
+                    variant={dietRestrictions.includes(r.value) ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => toggleRestriction(r.value)}
+                    data-testid={`badge-restriction-${r.value}`}
+                  >
+                    {dietRestrictions.includes(r.value) && <Check className="h-3 w-3 mr-1" />}
+                    {r.label}
+                  </Badge>
+                ))}
+              </div>
+            </div>
 
-        <div>
-          <Label className="text-xs text-muted-foreground mb-2 block">Eating schedule</Label>
-          <div className="flex flex-wrap gap-2">
-            {EATING_SCHEDULES.map((s) => (
-              <Badge
-                key={s.value}
-                variant={(eatingSchedule ?? "None") === s.value ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => { setEatingSchedule(s.value === "None" ? null : s.value); setDirty(true); }}
-                data-testid={`badge-schedule-${s.value}`}
-              >
-                {(eatingSchedule ?? "None") === s.value && <Check className="h-3 w-3 mr-1" />}
-                {s.label}
-              </Badge>
-            ))}
-          </div>
-        </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-2 block">Eating schedule</Label>
+              <div className="flex flex-wrap gap-2">
+                {EATING_SCHEDULES.map((s) => (
+                  <Badge
+                    key={s.value}
+                    variant={(eatingSchedule ?? "None") === s.value ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => { setEatingSchedule(s.value === "None" ? null : s.value); setDirty(true); }}
+                    data-testid={`badge-schedule-${s.value}`}
+                  >
+                    {(eatingSchedule ?? "None") === s.value && <Check className="h-3 w-3 mr-1" />}
+                    {s.label}
+                  </Badge>
+                ))}
+              </div>
+            </div>
 
-        <Separator />
+            <Separator />
+          </>
+        )}
 
         <div>
           <Label className="text-xs text-muted-foreground mb-2 block">Activity level</Label>

@@ -622,13 +622,27 @@ function DailySignalsPanel({
   return (
     <>
       <Card className="shadow-none border-border" data-testid="card-daily-signals">
-        <CardHeader className="py-3 px-4 flex flex-row items-center justify-between">
+        <CardHeader className="py-2.5 px-4 flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
             <Sparkles className="h-4 w-4 text-muted-foreground" />
             Daily Signals
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {dirty && <span className="text-[10px] text-muted-foreground">Unsaved</span>}
+            <Button
+              size="sm"
+              className="h-6 text-[10px] px-2.5"
+              onClick={submit}
+              disabled={saveMut.isPending}
+              data-testid="button-save-metrics"
+            >
+              {saveMut.isPending ? (
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+              ) : (
+                <Check className="h-3 w-3 mr-1" />
+              )}
+              Save
+            </Button>
             {onCsvClick && (
               <Button
                 variant="outline"
@@ -643,7 +657,12 @@ function DailySignalsPanel({
           </div>
         </CardHeader>
 
-        <CardContent className="px-4 pb-4 pt-0 space-y-3" data-testid="metrics-form">
+        <CardContent className="px-4 pb-3 pt-0 space-y-2" data-testid="metrics-form">
+          {/* Microcopy — supportive context at the top */}
+          <p className="text-[11px] text-muted-foreground/55 leading-relaxed">
+            Your numbers don't define you — they simply help you understand your habits.
+          </p>
+
           {/* Weight */}
           <div>
             <Label className="text-xs text-muted-foreground mb-1 block">
@@ -661,26 +680,26 @@ function DailySignalsPanel({
             />
           </div>
 
-          {/* Mood */}
-          <div>
-            <Label className="text-xs text-muted-foreground mb-1.5 block">Mood</Label>
-            <ThaAppleScorePicker
-              value={form.moodApples}
-              onChange={(v) => set("moodApples", v)}
-              testId="picker-mood"
-              size={22}
-            />
-          </div>
-
-          {/* Energy */}
-          <div>
-            <Label className="text-xs text-muted-foreground mb-1.5 block">Energy</Label>
-            <ThaAppleScorePicker
-              value={form.energyApples}
-              onChange={(v) => set("energyApples", v)}
-              testId="picker-energy"
-              size={22}
-            />
+          {/* Mood + Energy on same row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">Mood</Label>
+              <ThaAppleScorePicker
+                value={form.moodApples}
+                onChange={(v) => set("moodApples", v)}
+                testId="picker-mood"
+                size={20}
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground mb-1.5 block">Energy</Label>
+              <ThaAppleScorePicker
+                value={form.energyApples}
+                onChange={(v) => set("energyApples", v)}
+                testId="picker-energy"
+                size={20}
+              />
+            </div>
           </div>
 
           {/* Optional built-in extras */}
@@ -792,24 +811,6 @@ function DailySignalsPanel({
             Add metric
           </button>
 
-          <p className="text-xs text-muted-foreground/60 leading-relaxed">
-            Your numbers don't define you — they simply help you understand your habits.
-          </p>
-
-          <Button
-            size="sm"
-            className="w-full"
-            onClick={submit}
-            disabled={saveMut.isPending}
-            data-testid="button-save-metrics"
-          >
-            {saveMut.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-            ) : (
-              <Check className="h-3.5 w-3.5 mr-1" />
-            )}
-            Save
-          </Button>
         </CardContent>
       </Card>
 
@@ -999,6 +1000,17 @@ function DiarySettingsPanel({
             </div>
           </div>
 
+          {/* Nutrition Targets */}
+          {profile && (
+            <div className="space-y-3">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nutrition Targets</p>
+              <CalorieSettings
+                profile={profile}
+                onSave={(prefs) => onSaveProfile({ preferences: prefs })}
+              />
+            </div>
+          )}
+
           {/* Goals */}
           {profile && (
             <div className="space-y-3">
@@ -1006,6 +1018,7 @@ function DiarySettingsPanel({
               <GoalsPreferences
                 profile={profile}
                 onSave={onSaveProfile}
+                showDiet={false}
               />
             </div>
           )}
@@ -1039,7 +1052,6 @@ export default function FoodDiaryPage() {
   const [diarySettingsOpen, setDiarySettingsOpen] = useState(false);
 
   // Diary settings (localStorage-backed)
-  const [optionalRecordsOpen, setOptionalRecordsOpen] = useState(false);
   const [showHealthSnapshot, setShowHealthSnapshot] = useState<boolean>(() => {
     try { return localStorage.getItem("tha_diary_show_health_snapshot") !== "false"; }
     catch { return true; }
@@ -1392,7 +1404,14 @@ export default function FoodDiaryPage() {
           </div>
         ) : (
           <>
-            <div className="lg:grid lg:grid-cols-[1fr_300px] lg:gap-5">
+            {/* ── Health Snapshot ──────────────────────────────── */}
+            {showHealthSnapshot && profile && (
+              <div className="mb-4">
+                <HealthSnapshot profile={profile} />
+              </div>
+            )}
+
+            <div className={`lg:gap-4 ${(showDetailedTracking || showWeightTracking) ? "lg:grid lg:grid-cols-[minmax(0,1fr)_280px_220px]" : ""}`}>
               {/* ── Left: meal slots ──────────────────────────────── */}
               <div className="space-y-3">
                 <FirstVisitHint
@@ -1496,9 +1515,9 @@ export default function FoodDiaryPage() {
                 </div>
               </div>
 
-              {/* ── Right: Daily Signals + Looking Forward ─────────── */}
+              {/* ── Middle: Daily Signals ─────────────────────────── */}
               {(showDetailedTracking || showWeightTracking) && (
-                <div className="mt-4 lg:mt-0 space-y-3">
+                <div className="mt-4 lg:mt-0">
                   <DailySignalsPanel
                     metrics={diary?.metrics ?? null}
                     date={date}
@@ -1510,46 +1529,17 @@ export default function FoodDiaryPage() {
                     onCustomDefsChange={updateCustomDefs}
                     onWeightSaved={(kg) => updateProfileMutation.mutate({ weightKg: kg })}
                   />
+                </div>
+              )}
+
+              {/* ── Right: Looking Forward ────────────────────────── */}
+              {(showDetailedTracking || showWeightTracking) && (
+                <div className="mt-3 lg:mt-0">
                   <LookingForwardWidget />
                 </div>
               )}
             </div>
 
-            {/* ── Optional Records ─────────────────────────────── */}
-            {!(showDetailedTracking || showWeightTracking) ? (
-              <p className="text-xs text-muted-foreground/60 text-center py-4">
-                You can track more if it helps — optional.
-              </p>
-            ) : (
-              <div className="mt-4 border border-border rounded-lg overflow-hidden" data-testid="section-optional-records">
-                <button
-                  type="button"
-                  className="flex items-center justify-between w-full px-4 py-3 text-left hover:bg-muted/20 transition-colors"
-                  onClick={() => setOptionalRecordsOpen(v => !v)}
-                  data-testid="button-toggle-optional-records"
-                >
-                  <span className="text-sm font-medium">Optional Records</span>
-                  <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-150 ${optionalRecordsOpen ? "rotate-180" : ""}`} />
-                </button>
-                {optionalRecordsOpen && profile && (
-                  <div className="border-t border-border divide-y divide-border">
-                    <div className="p-4"><HealthSnapshot profile={profile} /></div>
-                    <div className="p-4">
-                      <CalorieSettings
-                        profile={profile}
-                        onSave={(prefs) => updateProfileMutation.mutate({ preferences: prefs })}
-                      />
-                    </div>
-                    <div className="p-4">
-                      <GoalsPreferences
-                        profile={profile}
-                        onSave={(data) => updateProfileMutation.mutate(data)}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </>
         )
       )}
