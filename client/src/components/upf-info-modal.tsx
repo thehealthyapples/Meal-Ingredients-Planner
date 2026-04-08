@@ -2,6 +2,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { useState } from "react";
+import thaAppleSrc from "@/assets/icons/tha-apple.png";
 
 interface Props {
   trigger?: React.ReactNode;
@@ -50,7 +51,7 @@ export function UPFInfoModal({ trigger }: Props) {
               <p className="font-semibold text-foreground">The Healthy Apples approach</p>
               <div className="space-y-2.5">
                 <div className="flex gap-2.5">
-                  <span className="shrink-0 mt-0.5">🍎</span>
+                  <img src={thaAppleSrc} alt="" className="h-4 w-4 object-contain shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-foreground text-xs">Awareness, not restriction</p>
                     <p className="text-xs text-muted-foreground">Knowing what's in your food is the starting point. We're here to inform, not to judge.</p>

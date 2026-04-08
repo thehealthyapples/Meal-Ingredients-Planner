@@ -3,7 +3,6 @@ import { Link, useLocation, useSearch } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/hooks/use-user";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -13,7 +12,7 @@ import {
   LayoutDashboard, CalendarDays, ShoppingBasket,
   LogOut, ShieldCheck, Star,
   Mail, Sliders, Search, ChevronLeft, ChevronRight,
-  MoreHorizontal, Microscope, BookOpen, Heart, ScrollText,
+  Microscope, BookOpen, Heart, ScrollText,
   User,
 } from "lucide-react";
 import { api } from "@shared/routes";
@@ -42,12 +41,13 @@ const NAV_ITEMS_MAIN = [
   { href: "/diary", label: "My Diary", icon: ScrollText },
 ];
 
-// Mobile bottom nav - 4 core tools
+// Mobile bottom nav - 5 core tools (no More layer)
 const MOBILE_BOTTOM_ITEMS = [
   { href: "/meals", label: "Cookbook", icon: BookOpen },
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/products", label: "Analyser", icon: Microscope },
+  { href: "/diary", label: "Diary", icon: ScrollText },
 ];
 
 export type SidebarContextValue = { isCollapsed: boolean };
@@ -547,66 +547,35 @@ export function DesktopSidebar() {
 export function MobileNav() {
   const [location] = useLocation();
   const { user } = useUser();
-  const [moreOpen, setMoreOpen] = useState(false);
 
   if (!user) return null;
 
   return (
-    <>
-      <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-        data-testid="mobile-bottom-nav"
-      >
-        <div className="flex items-center justify-around px-2 py-1 max-w-lg mx-auto">
-          {MOBILE_BOTTOM_ITEMS.map((item) => {
-            const isActive = location === item.href;
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors min-w-[60px] min-h-[44px] justify-center ${
-                  isActive ? "text-primary" : "text-muted-foreground"
-                }`}
-                data-testid={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-              >
-                <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
-                <span className="text-[10px] font-medium leading-tight">{item.label}</span>
-              </Link>
-            );
-          })}
-          <button
-            className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors min-w-[60px] min-h-[44px] justify-center text-muted-foreground"
-            onClick={() => setMoreOpen(true)}
-            data-testid="mobile-nav-more"
-          >
-            <MoreHorizontal className="h-5 w-5" />
-            <span className="text-[10px] font-medium leading-tight">More</span>
-          </button>
-        </div>
-      </nav>
-
-      <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl" data-testid="sheet-more-menu">
-          <SheetHeader className="mb-4">
-            <SheetTitle className="text-left">More</SheetTitle>
-          </SheetHeader>
-          <div className="flex flex-col gap-1">
+    <nav
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border"
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+      data-testid="mobile-bottom-nav"
+    >
+      <div className="flex items-center justify-around px-1 py-1 max-w-lg mx-auto">
+        {MOBILE_BOTTOM_ITEMS.map((item) => {
+          const isActive = location === item.href;
+          const Icon = item.icon;
+          return (
             <Link
-              href="/diary"
-              onClick={() => setMoreOpen(false)}
-              className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-left hover:bg-muted transition-colors ${location === "/diary" ? "text-primary font-medium" : ""}`}
-              data-testid="more-link-diary"
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors min-w-[52px] min-h-[44px] justify-center ${
+                isActive ? "text-primary" : "text-muted-foreground"
+              }`}
+              data-testid={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
             >
-              <ScrollText className="h-5 w-5 text-muted-foreground" />
-              <span className="font-medium">My Diary</span>
+              <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
+              <span className="text-[9px] font-medium leading-tight">{item.label}</span>
             </Link>
-
-          </div>
-        </SheetContent>
-      </Sheet>
-    </>
+          );
+        })}
+      </div>
+    </nav>
   );
 }
 

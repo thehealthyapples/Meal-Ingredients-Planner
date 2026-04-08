@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, X, ShoppingBasket, Loader2, ChefHat, Leaf, Save, Globe, UtensilsCrossed, Snowflake, Check, ChevronDown, ChevronUp, Utensils, ImageOff, Camera } from "lucide-react";
+import { Plus, X, ShoppingBasket, Loader2, ChefHat, Leaf, Save, Globe, UtensilsCrossed, Snowflake, Check, ChevronDown, ChevronUp, Utensils, ImageOff, Camera, Store } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { getWholeFoodAlternative } from "@/lib/whole-food-alternatives";
 import { api } from "@shared/routes";
 import type { Meal } from "@shared/schema";
 import { MealCompletionDialog, type CompletionMeal } from "@/components/meal-completion-dialog";
+import { ProductPickerSheet, type PickerProduct } from "@/components/product-picker-sheet";
 
 interface WebSearchRecipe {
   id: string;
@@ -24,11 +25,14 @@ interface WebSearchRecipe {
 }
 
 export interface PartSource {
-  type: "basic" | "web" | "my-meal" | "fresh" | "frozen";
+  type: "basic" | "web" | "my-meal" | "fresh" | "frozen" | "product";
   url?: string;
   displayName?: string;
   sourceName?: string;
   mealId?: number;
+  /** populated when type === "product" */
+  barcode?: string;
+  brand?: string;
 }
 
 interface MealPart {
@@ -60,6 +64,7 @@ function sourceLabel(source: PartSource): string {
     case "my-meal": return "Cookbook";
     case "fresh": return "Fresh";
     case "frozen": return "Frozen";
+    case "product": return source.brand || "Shop";
     default: return "Basic";
   }
 }
@@ -70,6 +75,7 @@ function sourceBadgeClass(type: PartSource["type"]): string {
     case "my-meal": return "border-purple-300 text-purple-700 dark:border-purple-700 dark:text-purple-400";
     case "fresh": return "border-green-300 text-green-700 dark:border-green-700 dark:text-green-400";
     case "frozen": return "border-cyan-300 text-cyan-700 dark:border-cyan-700 dark:text-cyan-400";
+    case "product": return "border-orange-300 text-orange-700 dark:border-orange-700 dark:text-orange-400";
     default: return "border-border text-muted-foreground";
   }
 }
@@ -96,6 +102,11 @@ export default function QuickMealPage() {
 
   const [expandedPartId, setExpandedPartId] = useState<string | null>(null);
   const [completionMeal, setCompletionMeal] = useState<CompletionMeal | null>(null);
+
+  // Product picker sheet state
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerTargetPartId, setPickerTargetPartId] = useState<string | null>(null);
   const [webResults, setWebResults] = useState<Record<string, WebSearchRecipe[]>>({});
   const [webLoading, setWebLoading] = useState<Record<string, boolean>>({});
   const [webDisplayCount, setWebDisplayCount] = useState<Record<string, number>>({});
@@ -216,6 +227,31 @@ export default function QuickMealPage() {
     setParts((prev) => prev.map((p) => p.id === id ? { ...p, source } : p));
     setExpandedPartId(null);
   };
+
+  const openProductPicker = (query: string, targetPartId: string | null) => {
+    setPickerQuery(query);
+    setPickerTargetPartId(targetPartId);
+    setPickerOpen(true);
+  };
+
+  const handleProductSelect = useCallback((product: PickerProduct) => {
+    const source: PartSource = {
+      type: "product",
+      barcode: product.barcode ?? undefined,
+      brand: product.brand ?? undefined,
+      displayName: product.product_name,
+    };
+    if (pickerTargetPartId) {
+      // Updating the source of an existing part
+      updatePartSource(pickerTargetPartId, source);
+    } else {
+      // Adding a new part from the inline input
+      setParts(prev => [...prev, { id: makeId(), label: product.product_name, source }]);
+      setInputValue("");
+    }
+    setPickerTargetPartId(null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickerTargetPartId]);
 
   const toggleExpanded = (id: string) => {
     setExpandedPartId((prev) => prev === id ? null : id);
@@ -371,6 +407,21 @@ export default function QuickMealPage() {
                 </Button>
               </div>
 
+              {inputValue.trim().length >= 2 && (
+                <button
+                  type="button"
+                  onClick={() => openProductPicker(inputValue.trim(), null)}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-md border border-primary/30 bg-primary/5 text-sm text-foreground hover:border-primary/60 hover:bg-primary/10 transition-colors"
+                  data-testid="button-find-shop-product-inline"
+                >
+                  <Store className="h-4 w-4 shrink-0 text-primary" />
+                  <span className="flex-1 text-left">
+                    Search shop products for <strong>"{inputValue.trim()}"</strong>
+                  </span>
+                  <span className="text-xs text-muted-foreground shrink-0">Analyser</span>
+                </button>
+              )}
+
               <input
                 ref={photoInputRef}
                 type="file"
@@ -418,6 +469,7 @@ export default function QuickMealPage() {
                               {part.source.type === "my-meal" && <Utensils className="h-2.5 w-2.5" />}
                               {part.source.type === "fresh" && <Leaf className="h-2.5 w-2.5" />}
                               {part.source.type === "frozen" && <Snowflake className="h-2.5 w-2.5" />}
+                              {part.source.type === "product" && <Store className="h-2.5 w-2.5" />}
                               {sourceLabel(part.source)}
                             </Badge>
                           )}
@@ -485,6 +537,18 @@ export default function QuickMealPage() {
                                 Frozen
                               </Button>
                             </div>
+
+                            {/* Shop product search shortcut */}
+                            <button
+                              type="button"
+                              onClick={() => openProductPicker(part.label, part.id)}
+                              className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md border border-primary/30 bg-primary/5 text-sm hover:border-primary/60 hover:bg-primary/10 transition-colors"
+                              data-testid={`button-source-shop-product-${idx}`}
+                            >
+                              <Store className="h-3.5 w-3.5 shrink-0 text-primary" />
+                              <span className="flex-1 text-left text-xs font-medium text-foreground">Find shop-bought product</span>
+                              <span className="text-[10px] text-muted-foreground shrink-0">Analyser</span>
+                            </button>
 
                             {/* My Meals matches (compact list) */}
                             {myMeals.length > 0 && (
@@ -635,6 +699,13 @@ export default function QuickMealPage() {
           </div>
         </>
       )}
+
+      <ProductPickerSheet
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        initialQuery={pickerQuery}
+        onSelect={handleProductSelect}
+      />
 
       {completionMeal && (
         <MealCompletionDialog

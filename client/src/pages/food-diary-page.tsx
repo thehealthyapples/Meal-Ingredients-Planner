@@ -1460,7 +1460,7 @@ export default function FoodDiaryPage() {
         {/* UPF awareness banner */}
         {!upfDismissed && (
           <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 mb-3">
-            <span className="text-base shrink-0">🍎</span>
+            <img src={thaAppleSrc} alt="" className="h-5 w-5 object-contain shrink-0" />
             <div className="flex-1 min-w-0">
               <span className="text-xs text-foreground/80">
                 <strong className="font-medium">Want to eat less processed food?</strong>{" "}
@@ -1577,7 +1577,7 @@ export default function FoodDiaryPage() {
               <div className="space-y-3">
                 <FirstVisitHint
                   areaKey="diary"
-                  message="Keep it simple — add anything you've eaten today."
+                  message="Log what you eat each day. Tap Add on any meal slot to record food — your entries build a clearer picture of your habits over time."
                 />
 
                 {(diary?.entries?.length ?? 0) > 0 && (

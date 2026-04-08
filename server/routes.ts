@@ -20,6 +20,7 @@ import { generateSmartSuggestion, type SmartSuggestSettings, type LockedEntry } 
 import { searchAllRecipes, searchJamieOliver, searchSeriousEats, searchEdamam, searchApiNinjas, searchBigOven, searchFatSecret, type ExternalMealCandidate } from "./lib/external-meal-service";
 import { seedSourceSettings, isSourceCallable, getSourceKeyForUrl, logAuditEvent, getAllSourceSettings, updateSourceSettings, getAuditLogs } from "./lib/recipe-source-gate";
 import { shouldExcludeRecipe, scoreRecipeForDiet } from "./lib/dietRules";
+import { expandSearchQuery } from "@shared/food-synonyms";
 import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreezerMealSchema, updateMealSchema } from "@shared/schema";
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
 import { sanitizeUser } from "./lib/sanitizeUser";
@@ -1931,10 +1932,17 @@ export async function registerRoutes(
         return res.json({ recipes: [], hasMore: false });
       }
 
-      const keywords = q.split(/[,\s]+/).map(s => s.trim()).filter(Boolean);
-      const lowerKeywords = keywords.map(k => k.toLowerCase());
+      // Expand query: correct obvious misspellings + add UK/US synonyms.
+      // expandedQueries[0] is always the corrected/canonical form of the user input.
+      // Additional entries are synonym variants (e.g. "aubergine" → also "eggplant").
+      const expandedQueries = expandSearchQuery(q);
+      const primaryQuery = expandedQueries[0]; // corrected canonical form
+      const allQueryTerms = expandedQueries.join(' ');
 
-      const filters = { query: q };
+      const keywords = allQueryTerms.split(/[,\s]+/).map(s => s.trim()).filter(Boolean);
+      const lowerKeywords = Array.from(new Set(keywords.map(k => k.toLowerCase())));
+
+      const filters = { query: primaryQuery };
       const [
         mealDbResults, bbcResults,
         arResults, joResults, seResults,
@@ -1971,16 +1979,28 @@ export async function registerRoutes(
               }
               return Array.from(mealMap.values()).sort((a, b) => b.score - a.score).map(e => e.meal);
             } else {
-              const response = await axios.get(
-                `https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(q)}`,
-                { timeout: 10000 }
+              // Single-term: use corrected/canonical query; also try synonym if different
+              const responses = await Promise.all(
+                Array.from(new Set([primaryQuery, q])).map(term =>
+                  axios.get(
+                    `https://www.themealdb.com/api/json/v1/1/search.php?s=${encodeURIComponent(term)}`,
+                    { timeout: 10000 }
+                  ).then(r => r.data.meals || []).catch(() => [] as any[])
+                )
               );
-              return response.data.meals || [];
+              const seen = new Set<string>();
+              const merged: any[] = [];
+              for (const batch of responses) {
+                for (const m of batch) {
+                  if (!seen.has(m.idMeal)) { seen.add(m.idMeal); merged.push(m); }
+                }
+              }
+              return merged;
             }
           } catch { return []; }
         })(),
         // BBC Good Food — scraped
-        (async () => (await isSourceCallable('bbcgoodfood')) ? searchBBCGoodFood(q) : [])(),
+        (async () => (await isSourceCallable('bbcgoodfood')) ? searchBBCGoodFood(primaryQuery) : [])(),
         // AllRecipes — scraped
         (async () => (await isSourceCallable('allrecipes')) ? (await searchAllRecipes(filters)).map(candidateToRecipe) : [])(),
         // Jamie Oliver — scraped
@@ -1988,13 +2008,13 @@ export async function registerRoutes(
         // Serious Eats — scraped
         (async () => (await isSourceCallable('seriouseats')) ? (await searchSeriousEats(filters)).map(candidateToRecipe) : [])(),
         // Edamam — official API
-        (async () => (await isSourceCallable('edamam')) ? (await searchEdamam(q)).map(candidateToRecipe) : [])(),
+        (async () => (await isSourceCallable('edamam')) ? (await searchEdamam(primaryQuery)).map(candidateToRecipe) : [])(),
         // API-Ninjas — official API
-        (async () => (await isSourceCallable('apininjas')) ? (await searchApiNinjas(q)).map(candidateToRecipe) : [])(),
+        (async () => (await isSourceCallable('apininjas')) ? (await searchApiNinjas(primaryQuery)).map(candidateToRecipe) : [])(),
         // BigOven — official API
-        (async () => (await isSourceCallable('bigoven')) ? (await searchBigOven(q)).map(candidateToRecipe) : [])(),
+        (async () => (await isSourceCallable('bigoven')) ? (await searchBigOven(primaryQuery)).map(candidateToRecipe) : [])(),
         // FatSecret — official API
-        (async () => (await isSourceCallable('fatsecret')) ? (await searchFatSecret(q)).map(candidateToRecipe) : [])(),
+        (async () => (await isSourceCallable('fatsecret')) ? (await searchFatSecret(primaryQuery)).map(candidateToRecipe) : [])(),
       ]);
 
       const mealDbMapped: NormalizedRecipe[] = mealDbResults.map((m: any) => ({

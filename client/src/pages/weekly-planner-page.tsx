@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store } from "lucide-react";
 import { CreateMealModal } from "@/components/create-meal-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -22,6 +22,7 @@ import { SharePlanDialog } from "@/components/share-plan-dialog";
 import { DayViewDrawer } from "@/components/day-view-drawer";
 import { useUser } from "@/hooks/use-user";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { FirstVisitHint } from "@/components/first-visit-hint";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@shared/routes";
 import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutrition, MealCategory } from "@shared/schema";
@@ -40,6 +41,17 @@ interface EntryTarget {
   audience: string;
   isDrink: boolean;
   drinkType?: string | null;
+}
+
+interface PlannerProductResult {
+  barcode: string | null;
+  product_name: string;
+  brand: string | null;
+  image_url: string | null;
+  confirmedStores?: string[];
+  inferredStores?: string[];
+  availableStores?: string[];
+  nutriments: { calories: string | null } | null;
 }
 
 interface MatrixRow {
@@ -412,7 +424,7 @@ export default function WeeklyPlannerPage() {
   const [mealPickerOpen, setMealPickerOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<EntryTarget | null>(null);
   const [mealSearch, setMealSearch] = useState("");
-  const [mealFilter, setMealFilter] = useState<"all" | "cookbook" | "planner" | "ready">("all");
+  const [mealFilter, setMealFilter] = useState<"all" | "cookbook" | "planner" | "ready" | "product">("all");
   const [bulkAssignOpen, setBulkAssignOpen] = useState(false);
   const [bulkMeal, setBulkMeal] = useState<Meal | null>(null);
   const [bulkWeeks, setBulkWeeks] = useState<Set<number>>(new Set());
@@ -450,6 +462,12 @@ export default function WeeklyPlannerPage() {
   const [lockedEntries, setLockedEntries] = useState<Set<string>>(new Set());
   const [expandedExplanation, setExpandedExplanation] = useState<string | null>(null);
   const [applyingSmartPlan, setApplyingSmartPlan] = useState(false);
+
+  // Product search within meal picker
+  const [productQuery, setProductQuery] = useState("");
+  const [productResults, setProductResults] = useState<PlannerProductResult[]>([]);
+  const [productSearching, setProductSearching] = useState(false);
+  const [productRetailer, setProductRetailer] = useState("");
 
   const { data: plannerSettings } = useQuery<{
     showCalories: boolean;
@@ -613,6 +631,19 @@ export default function WeeklyPlannerPage() {
     },
     onError: () => {
       toast({ title: "Failed to add meal", variant: "destructive" });
+    },
+  });
+
+  const deleteEntryMutation = useMutation({
+    mutationFn: async (entryId: number) => {
+      const res = await apiRequest("DELETE", `/api/planner/entries/${entryId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove meal", variant: "destructive" });
     },
   });
 
@@ -788,6 +819,54 @@ export default function WeeklyPlannerPage() {
     });
     setMealPickerOpen(false);
     setPickerTarget(null);
+  };
+
+  const searchProducts = async () => {
+    if (!productQuery.trim()) return;
+    setProductSearching(true);
+    try {
+      const q = productRetailer
+        ? `${productRetailer} ${productQuery.trim()}`
+        : productQuery.trim();
+      const res = await fetch(`/api/search-products?q=${encodeURIComponent(q)}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Search failed");
+      const data = await res.json();
+      let products: PlannerProductResult[] = data.products || [];
+      if (productRetailer) {
+        const r = productRetailer.toLowerCase();
+        const withStore = products.filter(p =>
+          [...(p.confirmedStores ?? []), ...(p.inferredStores ?? []), ...(p.availableStores ?? [])]
+            .some(s => s.toLowerCase().includes(r))
+        );
+        products = withStore.length > 0 ? withStore : products;
+      }
+      setProductResults(products.slice(0, 30));
+    } catch {
+      toast({ title: "Product search failed", variant: "destructive" });
+    } finally {
+      setProductSearching(false);
+    }
+  };
+
+  const addProductToPlanner = async (product: PlannerProductResult) => {
+    if (!pickerTarget) return;
+    try {
+      const mealRes = await apiRequest("POST", "/api/meals", {
+        name: product.brand ? `${product.brand} – ${product.product_name}` : product.product_name,
+        ingredients: [],
+        instructions: [],
+        servings: 1,
+        kind: "meal",
+        isReadyMeal: true,
+        brand: product.brand ?? undefined,
+        barcode: product.barcode ?? undefined,
+      });
+      const meal = await mealRes.json();
+      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      selectMeal(meal.id);
+    } catch {
+      toast({ title: "Could not add product to planner", variant: "destructive" });
+    }
   };
 
   const clearEntry = (target: EntryTarget) => {
@@ -1105,6 +1184,10 @@ export default function WeeklyPlannerPage() {
   return (
     <div className="w-full px-3 py-6">
       {/* ── Page Header ── */}
+      <FirstVisitHint
+        areaKey="planner"
+        message="Plan your meals for the week ahead. Add meals to each day, use templates to get started fast, or tap Plan to get suggestions — then send the whole week to your basket."
+      />
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
         <div className="flex-1 min-w-[160px]">
           <h1 className="text-[28px] font-semibold tracking-tight" data-testid="text-weekly-planner-title">
@@ -1114,7 +1197,7 @@ export default function WeeklyPlannerPage() {
             {weekStats.filled} meals planned out of {weekStats.total} this week
           </p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {/* Week chooser - left of Plan My Week */}
           {renameWeekId === activeWeekData?.id ? (
             <input
@@ -1761,8 +1844,8 @@ export default function WeeklyPlannerPage() {
                       </div>
                     )}
 
-                    {/* Source URL */}
-                    {meal.sourceUrl && (
+                    {/* Source URL — only for recipe-sourced meals, not shop-bought */}
+                    {meal.sourceUrl && !meal.isReadyMeal && (
                       <div className="sm:col-span-2">
                         <a
                           href={meal.sourceUrl}
@@ -1787,10 +1870,10 @@ export default function WeeklyPlannerPage() {
                       size="sm"
                       className="text-destructive border-destructive/30 hover:bg-destructive/10"
                       onClick={() => {
-                        clearEntry({ dayId, mealType, audience, isDrink });
+                        deleteEntryMutation.mutate(entry.id);
                         setMealDetail(null);
                       }}
-                      disabled={upsertEntryMutation.isPending}
+                      disabled={deleteEntryMutation.isPending}
                       data-testid="button-meal-detail-remove"
                     >
                       <X className="h-3.5 w-3.5 mr-1.5" />
@@ -1809,18 +1892,36 @@ export default function WeeklyPlannerPage() {
                     </Button>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setMealDetail(null);
-                        navigate(`/meals/${meal.id}`);
-                      }}
-                      data-testid="button-meal-detail-edit"
-                    >
-                      <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                      Edit Recipe
-                    </Button>
+                    {meal.isReadyMeal ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setMealDetail(null);
+                          const query = meal.brand
+                            ? `${meal.brand} ${meal.name.replace(`${meal.brand} – `, "")}`
+                            : meal.name;
+                          navigate(`/products?q=${encodeURIComponent(query)}`);
+                        }}
+                        data-testid="button-meal-detail-analyse"
+                      >
+                        <Search className="h-3.5 w-3.5 mr-1.5" />
+                        Analyse Product
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setMealDetail(null);
+                          navigate(`/meals/${meal.id}`);
+                        }}
+                        data-testid="button-meal-detail-edit"
+                      >
+                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                        Edit Recipe
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       onClick={() => setMealDetail(null)}
@@ -1837,7 +1938,17 @@ export default function WeeklyPlannerPage() {
       </Dialog>
 
       {/* ── Meal Picker Dialog ── */}
-      <Dialog open={mealPickerOpen} onOpenChange={setMealPickerOpen}>
+      <Dialog
+        open={mealPickerOpen}
+        onOpenChange={(open) => {
+          setMealPickerOpen(open);
+          if (!open) {
+            setProductQuery("");
+            setProductResults([]);
+            setProductRetailer("");
+          }
+        }}
+      >
         <DialogContent className="max-w-lg max-h-[80vh] flex flex-col gap-0 overflow-hidden">
           <DialogHeader>
             <DialogTitle>
@@ -1847,78 +1958,209 @@ export default function WeeklyPlannerPage() {
                `Choose a ${MEAL_TYPES.find(s => s.key === pickerTarget?.mealType)?.label || "Meal"}`}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-3 flex-shrink-0 pt-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search meals..."
-                value={mealSearch}
-                onChange={(e) => setMealSearch(e.target.value)}
-                className="pl-9"
-                data-testid="input-meal-search"
-              />
+
+          {/* ── Filter tabs ── */}
+          <div className="flex gap-1 flex-wrap pt-2 flex-shrink-0">
+            {(["all", "cookbook", "planner", "ready", "product"] as const).map((f) => (
+              <Button
+                key={f}
+                variant={mealFilter === f ? "default" : "outline"}
+                size="sm"
+                className={f === "product" ? "gap-1" : ""}
+                onClick={() => setMealFilter(f)}
+                data-testid={`button-filter-${f}`}
+              >
+                {f === "product" && <Package className="h-3 w-3" />}
+                {f === "all" ? "All" : f === "cookbook" ? "Cookbook" : f === "planner" ? "From Planner" : f === "ready" ? "Ready Meals" : "Shop-bought"}
+              </Button>
+            ))}
+          </div>
+
+          {/* ── Recipe search (non-product tabs) ── */}
+          {mealFilter !== "product" && (
+            <div className="pt-2 flex-shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search meals..."
+                  value={mealSearch}
+                  onChange={(e) => setMealSearch(e.target.value)}
+                  className="pl-9"
+                  data-testid="input-meal-search"
+                />
+              </div>
             </div>
-            <div className="flex gap-1 flex-wrap">
-              {(["all", "cookbook", "planner", "ready"] as const).map((f) => (
+          )}
+
+          {/* ── Product search (Shop-bought tab) ── */}
+          {mealFilter === "product" && (
+            <div className="pt-2 space-y-2 flex-shrink-0">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="e.g. oven chips, tomato soup, granola…"
+                    value={productQuery}
+                    onChange={(e) => setProductQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && searchProducts()}
+                    className="pl-9"
+                    data-testid="input-product-query"
+                  />
+                </div>
                 <Button
-                  key={f}
-                  variant={mealFilter === f ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setMealFilter(f)}
-                  data-testid={`button-filter-${f}`}
+                  size="icon"
+                  onClick={searchProducts}
+                  disabled={productSearching || !productQuery.trim()}
+                  data-testid="button-product-search"
                 >
-                  {f === "all" ? "All" : f === "cookbook" ? "Cookbook" : f === "planner" ? "From Planner" : "Ready Meals"}
+                  {productSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                 </Button>
-              ))}
+              </div>
+              {/* Retailer chips */}
+              <div className="flex gap-1 flex-wrap items-center">
+                <span className="text-[10px] text-muted-foreground/60 shrink-0">Shop:</span>
+                {["Tesco", "Sainsbury's", "Asda", "Morrisons", "Aldi", "Lidl", "Waitrose", "M&S"].map((shop) => (
+                  <button
+                    key={shop}
+                    onClick={() => setProductRetailer(productRetailer === shop ? "" : shop)}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors ${
+                      productRetailer === shop
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background border-border text-muted-foreground hover:border-primary/40"
+                    }`}
+                    data-testid={`button-picker-retailer-${shop.toLowerCase().replace(/['\s]+/g, "-")}`}
+                  >
+                    {shop}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="flex-1 overflow-y-auto mt-2 space-y-1 min-h-0">
-            {filteredMeals.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">No meals found</p>
-            ) : (
-              filteredMeals.map((meal) => (
-                <button
-                  key={meal.id}
-                  className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
-                  onClick={() => selectMeal(meal.id)}
-                  data-testid={`button-select-meal-${meal.id}`}
-                >
-                  {meal.isReadyMeal ? (
-                    <div className="h-10 w-10 rounded-md bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                      <UtensilsCrossed className="h-5 w-5 text-green-500/40" />
+          )}
+
+          {/* ── Meals list (non-product tabs) ── */}
+          {mealFilter !== "product" && (
+            <div className="flex-1 overflow-y-auto mt-2 space-y-1 min-h-0">
+              {filteredMeals.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">No meals found</p>
+              ) : (
+                filteredMeals.map((meal) => (
+                  <button
+                    key={meal.id}
+                    className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
+                    onClick={() => selectMeal(meal.id)}
+                    data-testid={`button-select-meal-${meal.id}`}
+                  >
+                    {meal.isReadyMeal ? (
+                      <div className="h-10 w-10 rounded-md bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                        <UtensilsCrossed className="h-5 w-5 text-green-500/40" />
+                      </div>
+                    ) : meal.imageUrl ? (
+                      <img src={meal.imageUrl} alt={meal.name} className="h-10 w-10 rounded-md object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                        <ChefHat className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{meal.name}</p>
+                      <div className="flex items-center gap-1.5">
+                        {meal.isReadyMeal && <Badge variant="outline" className="text-xs">Ready Meal</Badge>}
+                        {meal.audience === "baby" && (
+                          <Badge variant="outline" className="text-xs border-pink-400/60 text-pink-500">
+                            <Baby className="h-3 w-3 mr-0.5" /> Baby
+                          </Badge>
+                        )}
+                        {meal.audience === "child" && (
+                          <Badge variant="outline" className="text-xs border-sky-400/60 text-sky-500">
+                            <PersonStanding className="h-3 w-3 mr-0.5" /> Child
+                          </Badge>
+                        )}
+                        {meal.isDrink && (
+                          <Badge variant="outline" className="text-xs border-purple-400/60 text-purple-500">
+                            <Wine className="h-3 w-3 mr-0.5" /> Drink
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                  ) : meal.imageUrl ? (
-                    <img src={meal.imageUrl} alt={meal.name} className="h-10 w-10 rounded-md object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-                      <ChefHat className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{meal.name}</p>
-                    <div className="flex items-center gap-1.5">
-                      {meal.isReadyMeal && <Badge variant="outline" className="text-xs">Ready Meal</Badge>}
-                      {meal.audience === "baby" && (
-                        <Badge variant="outline" className="text-xs border-pink-400/60 text-pink-500">
-                          <Baby className="h-3 w-3 mr-0.5" /> Baby
-                        </Badge>
+                  </button>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* ── Product results (Shop-bought tab) ── */}
+          {mealFilter === "product" && (
+            <div className="flex-1 overflow-y-auto mt-2 space-y-1 min-h-0">
+              {!productSearching && productResults.length === 0 && !productQuery.trim() && (
+                <div className="text-center py-10 text-muted-foreground">
+                  <Store className="h-10 w-10 mx-auto mb-3 opacity-20" />
+                  <p className="text-sm font-medium">Search for a shop-bought product</p>
+                  <p className="text-xs mt-1 text-muted-foreground/70">Try: oven chips, baked beans, Greek yoghurt</p>
+                </div>
+              )}
+              {productSearching && (
+                <div className="flex items-center justify-center py-10">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              )}
+              {!productSearching && productResults.length === 0 && productQuery.trim() && (
+                <p className="text-center text-muted-foreground py-8 text-sm">No products found — try a different term</p>
+              )}
+              {!productSearching && productResults.map((product, i) => {
+                const stores = [
+                  ...(product.confirmedStores ?? []),
+                  ...(product.inferredStores ?? []),
+                ];
+                const displayName = product.brand
+                  ? `${product.brand} – ${product.product_name}`
+                  : product.product_name;
+                const analyserQuery = product.brand
+                  ? `${product.brand} ${product.product_name}`
+                  : product.product_name;
+                const analyserUrl = `/products?q=${encodeURIComponent(analyserQuery)}${productRetailer ? `&shop=${encodeURIComponent(productRetailer)}` : ""}`;
+                return (
+                  <div
+                    key={`${product.barcode ?? product.product_name}-${i}`}
+                    className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/40 group"
+                  >
+                    <button
+                      className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                      onClick={() => addProductToPlanner(product)}
+                      data-testid={`button-select-product-${i}`}
+                    >
+                      {product.image_url ? (
+                        <img src={product.image_url} alt={displayName} className="h-10 w-10 rounded-md object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                          <Package className="h-5 w-5 text-muted-foreground/40" />
+                        </div>
                       )}
-                      {meal.audience === "child" && (
-                        <Badge variant="outline" className="text-xs border-sky-400/60 text-sky-500">
-                          <PersonStanding className="h-3 w-3 mr-0.5" /> Child
-                        </Badge>
-                      )}
-                      {meal.isDrink && (
-                        <Badge variant="outline" className="text-xs border-purple-400/60 text-purple-500">
-                          <Wine className="h-3 w-3 mr-0.5" /> Drink
-                        </Badge>
-                      )}
-                    </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{displayName}</p>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {stores.slice(0, 3).map(s => (
+                            <span key={s} className="text-[10px] text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </button>
+                    {/* Analyse link — opens Analyser with this product pre-searched */}
+                    <a
+                      href={analyserUrl}
+                      onClick={(e) => { e.stopPropagation(); setMealPickerOpen(false); }}
+                      className="shrink-0 p-1.5 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors opacity-0 group-hover:opacity-100"
+                      title="Analyse in Analyser"
+                      data-testid={`link-analyse-product-${i}`}
+                    >
+                      <Microscope className="h-3.5 w-3.5" />
+                    </a>
                   </div>
-                </button>
-              ))
-            )}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

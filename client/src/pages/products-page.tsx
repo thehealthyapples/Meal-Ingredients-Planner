@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +33,7 @@ import BarcodeScanner from "@/components/BarcodeScanner";
 import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
 import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import { useSoundEffects } from "@/hooks/use-sound-effects";
+import { FirstVisitHint } from "@/components/first-visit-hint";
 import AnalyserDetailV2 from "@/components/analyser/AnalyserDetailV2";
 
 interface ParsedIngredient {
@@ -386,7 +388,15 @@ function RiskBreakdownPanel({ breakdown }: { breakdown: UPFAnalysisInfo['riskBre
 export default function ProductsPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [location] = useLocation();
+
+  // Read URL params once on mount (e.g. navigated from Planner with ?q=oven+chips&shop=Tesco)
+  const urlParams = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return { q: params.get("q") ?? "", shop: params.get("shop") ?? "" };
+  }, [location]);
+
+  const [searchQuery, setSearchQuery] = useState(urlParams.q);
   const [searchResults, setSearchResults] = useState<ProductResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -407,6 +417,7 @@ export default function ProductsPage() {
   const [minRating, setMinRating] = useState(0);
   const [excludedAdditives, setExcludedAdditives] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<'default' | 'score-desc' | 'score-asc' | 'shop'>('default');
+  const [retailerFilter, setRetailerFilter] = useState<string>(urlParams.shop);
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
   const [barcodeLoading, setBarcodeLoading] = useState(false);
   // Tracks the barcode used by the last scan so we can re-fetch it if settings change.
@@ -546,6 +557,45 @@ export default function ProductsPage() {
     },
   });
 
+  // Auto-trigger search when navigated from Planner with ?q= (and optional ?shop=) URL params.
+  //
+  // Guard: track the exact param combination last searched so we can:
+  //   - fire again when params change (new Planner → Analyser navigation)
+  //   - skip when only intelligenceSettings loads/re-renders with the same params
+  //   - never loop
+  const lastAutoSearchKey = useRef<string>("");
+
+  useEffect(() => {
+    if (!urlParams.q.trim()) return;
+    // Wait until intelligenceSettings are loaded.
+    if (intelligenceSettings === undefined) return;
+
+    const key = `${urlParams.q}||${urlParams.shop}`;
+    // Same params as the last auto-search — nothing to do.
+    if (key === lastAutoSearchKey.current) return;
+    lastAutoSearchKey.current = key;
+
+    // Sync visible state so the input/chip reflect the incoming params.
+    setSearchQuery(urlParams.q);
+    setRetailerFilter(urlParams.shop);
+    setSelectedProduct(null);
+
+    // Bake retailer into the query for better server-side relevance; client-side filter also runs.
+    const baseQ = urlParams.q.trim();
+    const q = urlParams.shop ? `${urlParams.shop} ${baseQ}` : baseQ;
+    const includeRegulatory = intelligenceSettings?.includeRegulatoryAdditivesInScoring ?? true;
+    setIsSearching(true);
+    setHasSearched(false);
+    fetch(`/api/search-products?q=${encodeURIComponent(q)}&includeRegulatoryInScoring=${includeRegulatory}`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : { products: [] })
+      .then(data => {
+        setSearchResults(data.products || []);
+        setHasSearched(true);
+      })
+      .catch(() => {})
+      .finally(() => setIsSearching(false));
+  }, [intelligenceSettings, urlParams.q, urlParams.shop]);
+
   // Auto-refresh visible results when the regulatory scoring preference is toggled.
   // Uses a ref to distinguish a genuine toggle change from the setting loading on first render.
   useEffect(() => {
@@ -666,6 +716,15 @@ export default function ProductsPage() {
   });
 
   const filteredResults = deduplicatedResults.filter(p => {
+    if (retailerFilter) {
+      const r = retailerFilter.toLowerCase();
+      const stores = [
+        ...(p.confirmedStores ?? []),
+        ...(p.inferredStores ?? []),
+        ...(p.availableStores ?? []),
+      ];
+      if (!stores.some(s => s.toLowerCase().includes(r))) return false;
+    }
     if (hideUltraProcessed && p.analysis?.isUltraProcessed) return false;
     if (hideHighRiskAdditives && p.upfAnalysis?.additiveMatches.some(a => a.riskLevel === 'high')) return false;
     if (hideEmulsifiers && p.upfAnalysis?.additiveMatches.some(a => a.type === 'emulsifier')) return false;
@@ -995,6 +1054,11 @@ export default function ProductsPage() {
           </div>
         </div>
 
+        <FirstVisitHint
+          areaKey="analyser"
+          message="Search any packaged food to see its ingredients, additives, and health rating. Spot ultra-processed products and find cleaner alternatives before you buy."
+        />
+
         <Card data-testid="card-product-search">
           <CardContent className="pt-6">
             <div className="flex gap-3">
@@ -1030,6 +1094,42 @@ export default function ProductsPage() {
           </CardContent>
         </Card>
 
+        {/* ── Retailer filter ── */}
+        <div className="flex flex-wrap gap-1.5 items-center">
+          <span className="text-[11px] text-muted-foreground/70 shrink-0">Shop:</span>
+          {["Tesco", "Sainsbury's", "Asda", "Morrisons", "Aldi", "Lidl", "Waitrose", "M&S", "Co-op"].map((shop) => (
+            <button
+              key={shop}
+              onClick={() => setRetailerFilter(retailerFilter === shop ? "" : shop)}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+                retailerFilter === shop
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+              }`}
+              data-testid={`button-retailer-${shop.toLowerCase().replace(/['\s]+/g, "-")}`}
+            >
+              {shop}
+            </button>
+          ))}
+          {retailerFilter && (
+            <button
+              onClick={() => setRetailerFilter("")}
+              className="px-2 py-1 rounded-full text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+              data-testid="button-retailer-clear"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {hasSearched && retailerFilter && filteredResults.length === 0 && searchResults.length > 0 && !isSearching && (
+          <div className="text-center py-8 text-muted-foreground">
+            <Store className="h-10 w-10 mx-auto mb-3 opacity-30" />
+            <p className="text-sm">No products confirmed at {retailerFilter} in these results.</p>
+            <p className="text-xs mt-1">Try a different retailer or clear the filter to see all results.</p>
+          </div>
+        )}
+
         {hasSearched && searchResults.length === 0 && !isSearching && (
           <div className="text-center py-12 text-muted-foreground">
             <Package className="h-16 w-16 mx-auto mb-4 opacity-30" />
@@ -1038,7 +1138,7 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {hasSearched && filteredResults.length === 0 && searchResults.length > 0 && !isSearching && (
+        {hasSearched && filteredResults.length === 0 && searchResults.length > 0 && !isSearching && !retailerFilter && (
           <div className="text-center py-12 text-muted-foreground">
             <Filter className="h-16 w-16 mx-auto mb-4 opacity-30" />
             <p className="text-lg">All products filtered out</p>

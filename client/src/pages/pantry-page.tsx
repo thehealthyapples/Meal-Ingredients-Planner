@@ -15,6 +15,7 @@ import {
 import { Trash2, Plus, Loader2, Home, Refrigerator, Archive, Layers, ShoppingCart, ChevronDown, ChevronRight, PawPrint, Settings2, Apple } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { FirstVisitHint } from "@/components/first-visit-hint";
 
 interface PantryItem {
   id: number;
@@ -528,6 +529,11 @@ export default function PantryPage() {
           Your everyday choices live here.
         </p>
       </div>
+
+      <FirstVisitHint
+        areaKey="pantry"
+        message="Add the ingredients you have at home — fridge, freezer, and larder. Your pantry helps tailor meal suggestions and avoids duplicates when you shop."
+      />
 
       <FoodPantrySection items={items} isLoading={isLoading} />
       <HouseholdSection items={items} isLoading={isLoading} />

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import thaAppleSrc from "@/assets/icons/tha-apple.png";
 
 interface FirstVisitHintProps {
   /** Unique key for this area — used to persist dismissed state in localStorage */
@@ -42,7 +43,7 @@ export function FirstVisitHint({ areaKey, message, className }: FirstVisitHintPr
       role="status"
       aria-live="polite"
     >
-      <span className="text-base shrink-0" aria-hidden="true">🍎</span>
+      <img src={thaAppleSrc} alt="" className="h-5 w-5 object-contain shrink-0" aria-hidden="true" />
       <p className="flex-1 text-sm text-foreground/75">{message}</p>
       <button
         className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
