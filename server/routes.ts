@@ -2848,7 +2848,8 @@ export async function registerRoutes(
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
       }
-      throw err;
+      console.error("[ShoppingList] POST /api/shopping-list error:", err);
+      return res.status(500).json({ message: err instanceof Error ? err.message : "Failed to add item" });
     }
   });
 
@@ -3410,19 +3411,30 @@ export async function registerRoutes(
   app.post(api.shoppingList.lookupPrices.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
+      // Optional store filter: when provided, only match/clear that one store.
+      // This is used by ShoppingListView for fast single-store matching.
+      const { store } = req.body as { store?: string };
+
       const items = await storage.getShoppingListItems(req.user!.id);
       if (items.length === 0) {
         return res.json({ matches: [] });
       }
 
-      await storage.clearAllProductMatchesForUser(req.user!.id);
+      // Scope the clear to just the requested store so existing data for other
+      // stores is preserved when the user is only shopping one store.
+      if (store) {
+        await storage.clearProductMatchesForStore(req.user!.id, store);
+      } else {
+        await storage.clearAllProductMatchesForUser(req.user!.id);
+      }
 
+      const allStores = ['Tesco', "Sainsbury's", 'Asda', 'Morrisons', 'Aldi', 'Lidl', 'Waitrose', 'Ocado', 'Marks & Spencer'];
       const allMatches = [];
       for (const item of items) {
         if (isGarbageIngredient(item.productName)) continue;
 
         if (item.matchedProductId && item.matchedPrice) {
-          const getSearchUrl = (store: string) => {
+          const getSearchUrl = (storeName: string) => {
             const q = encodeURIComponent(item.productName);
             const urls: Record<string, string> = {
               'Tesco': `https://www.tesco.com/groceries/en-GB/search?query=${q}`,
@@ -3435,23 +3447,24 @@ export async function registerRoutes(
               'Ocado': `https://www.ocado.com/search?entry=${q}`,
               'Marks & Spencer': `https://www.ocado.com/search?entry=${q}&dnr=y&bof=marksandspencer`,
             };
-            return urls[store] || null;
+            return urls[storeName] || null;
           };
           let knownStores: string[] = [];
           try {
             knownStores = item.availableStores ? JSON.parse(item.availableStores) : [];
           } catch { knownStores = []; }
-          const allStores = ['Tesco', "Sainsbury's", 'Asda', 'Morrisons', 'Aldi', 'Lidl', 'Waitrose', 'Ocado', 'Marks & Spencer'];
           const storesToShow = knownStores.length > 0 ? knownStores.filter(s => allStores.includes(s)) : allStores;
-          const finalStores = storesToShow.length > 0 ? storesToShow : allStores;
-          for (const store of finalStores) {
+          let finalStores = storesToShow.length > 0 ? storesToShow : allStores;
+          // Scope to the requested store if one was specified
+          if (store) finalStores = finalStores.filter(s => s === store);
+          for (const storeName of finalStores) {
             const match = await storage.addProductMatch({
               shoppingListItemId: item.id,
-              supermarket: store,
+              supermarket: storeName,
               productName: item.productName,
               price: item.matchedPrice,
               pricePerUnit: null,
-              productUrl: getSearchUrl(store),
+              productUrl: getSearchUrl(storeName),
               imageUrl: item.imageUrl || null,
               currency: 'GBP',
               tier: 'standard',
@@ -3468,7 +3481,8 @@ export async function registerRoutes(
           item.productName,
           category,
           item.quantityValue || 1,
-          item.unit || 'unit'
+          item.unit || 'unit',
+          store ? [store] : undefined
         );
 
         for (const p of prices) {

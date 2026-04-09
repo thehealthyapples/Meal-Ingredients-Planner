@@ -1,16 +1,21 @@
-import { useState, useEffect, useRef } from "react";
-import { useLocation, useSearch } from "wouter";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
 import { normalizeIngredientKey } from "@shared/normalize";
 import {
-  NotepadText, Store, Sparkles, ChevronRight, Loader2,
-  Clock, X, RotateCcw,
+  Store, Sparkles, ChevronRight, Loader2,
+  Clock, X, RotateCcw, Mic, Camera, ImageUp, ArrowLeft,
 } from "lucide-react";
+import { CameraModal } from "@/components/camera-modal";
+import thaAppleUrl from "@/assets/icons/tha-apple.png";
+import RetailerLogo from "@/components/RetailerLogo";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -67,6 +72,9 @@ function formatRelativeTime(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+// Inline SVG logos — no external dependency, works offline.
+
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ListPage() {
@@ -74,11 +82,16 @@ export default function ListPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   const [rawText, setRawText] = useState("");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [shopPickerOpen, setShopPickerOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const [history, setHistory] = useState<QuickListBasket[]>(() => loadHistory());
 
   useEffect(() => {
@@ -86,26 +99,126 @@ export default function ListPage() {
     return () => { document.title = "The Healthy Apples"; };
   }, []);
 
-  // Auto-focus textarea on mount
+  // Auto-focus on mount
   useEffect(() => {
     setTimeout(() => textareaRef.current?.focus(), 100);
   }, []);
 
+  // Stop recognition on unmount
+  useEffect(() => {
+    return () => { recognitionRef.current?.stop(); };
+  }, []);
+
   const parsedItems = parseList(rawText);
+
+  // ── Auto-resize textarea ──────────────────────────────────────────────────
+
+  const resizeTextarea = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+
+  // ── Speech input ──────────────────────────────────────────────────────────
+
+  const toggleSpeech = useCallback(() => {
+    const SR =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+
+    if (!SR) {
+      toast({ title: "Voice input not supported", description: "Try Chrome or Safari on iOS." });
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.lang = "en-GB";
+
+    rec.onstart = () => setIsListening(true);
+    rec.onend = () => setIsListening(false);
+    rec.onerror = () => setIsListening(false);
+
+    rec.onresult = (e: any) => {
+      const spoken = Array.from(e.results as SpeechRecognitionResultList)
+        .slice(e.resultIndex)
+        .filter((r) => r.isFinal)
+        .map((r) => r[0].transcript.trim())
+        .join("\n");
+      if (spoken) {
+        setRawText((prev) => (prev ? `${prev}\n${spoken}` : spoken));
+        setTimeout(resizeTextarea, 0);
+      }
+    };
+
+    recognitionRef.current = rec;
+    rec.start();
+  }, [isListening, toast, resizeTextarea]);
+
+  // ── Camera / file OCR ────────────────────────────────────────────────────
+
+  const handleImageCapture = useCallback(async (file: File) => {
+    setIsScanning(true);
+    try {
+      const form = new FormData();
+      form.append("image", file);
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        credentials: "include",
+        body: form,
+      });
+      const data = await res.json();
+      // Use rawText regardless of whether the OCR parser detected a recipe or
+      // meal plan — for a shopping list the result is usually "unknown" and
+      // rawText contains the extracted lines.
+      const extracted: string =
+        data.rawText ?? (data.parsed as any)?.rawText ?? "";
+      if (extracted.trim()) {
+        setRawText((prev) =>
+          prev ? `${prev}\n${extracted.trim()}` : extracted.trim()
+        );
+        setTimeout(resizeTextarea, 0);
+        toast({ title: "List scanned", description: "Text added — edit freely." });
+      } else {
+        toast({
+          title: "Nothing readable",
+          description: "Try a clearer or closer photo.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({ title: "Scan failed", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setIsScanning(false);
+    }
+  }, [toast, resizeTextarea]);
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) handleImageCapture(file);
+      e.target.value = "";
+    },
+    [handleImageCapture]
+  );
+
+  // ── Navigate to shop view ─────────────────────────────────────────────────
 
   const processAndNavigate = async (shop: string | null) => {
     if (parsedItems.length === 0) return;
     setIsProcessing(true);
 
-    // Each quick-list basket gets a unique label so items are never mixed
-    // between sessions and can be cleanly filtered in the dedicated view.
     const basketId = Date.now().toString();
     const basketLabel = `quick_list_${basketId}`;
 
     try {
-      // Add each item through the existing shopping-list endpoint.
-      // Providing normalizedName lets the server's detectIngredientCategory run
-      // automatically — no need for a parallel category system.
       for (const item of parsedItems) {
         await apiRequest("POST", api.shoppingList.add.path, {
           productName: item,
@@ -114,15 +227,12 @@ export default function ListPage() {
         });
       }
 
-      // Kick off auto-scoring so THA ratings are applied before the user sees items.
       try {
         await fetch(api.shoppingList.autoSmp.path, { method: "POST", credentials: "include" });
       } catch { /* non-fatal */ }
 
-      // Invalidate cache so the quick-shop page sees the new items
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
 
-      // Persist to quick-list history (up to MAX_HISTORY)
       const basket: QuickListBasket = {
         id: basketId,
         rawText,
@@ -133,13 +243,7 @@ export default function ListPage() {
       saveToHistory(basket);
       setHistory(loadHistory());
 
-      // Navigate to the existing basket view, scoped to this basket label.
-      // The basket page filters to these items and starts ShopModeView at the
-      // cupboard-check phase directly (skipping the "Before you head out" intro).
-      const navParams = new URLSearchParams({
-        quickList: basketLabel,
-        shopMode: "1",
-      });
+      const navParams = new URLSearchParams({ quickList: basketLabel, shopMode: "1" });
       if (shop) navParams.set("store", shop);
       navigate(`/analyse-basket?${navParams.toString()}`);
 
@@ -147,119 +251,265 @@ export default function ListPage() {
         title: `${parsedItems.length} item${parsedItems.length !== 1 ? "s" : ""} added`,
         description: shop ? `Opening ${shop}…` : "Opening shop view…",
       });
-    } catch {
-      toast({ title: "Failed to process list", variant: "destructive" });
+    } catch (err: any) {
+      console.error("[ListPage] processAndNavigate error:", err);
+      toast({
+        title: "Failed to process list",
+        description: err?.message ?? "Please try again.",
+        variant: "destructive",
+      });
       setIsProcessing(false);
     }
   };
 
   const restoreFromHistory = (basket: QuickListBasket) => {
     setRawText(basket.rawText);
-    setTimeout(() => textareaRef.current?.focus(), 50);
+    setTimeout(() => {
+      resizeTextarea();
+      textareaRef.current?.focus();
+    }, 50);
   };
 
+  // ── Render ────────────────────────────────────────────────────────────────
+
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto px-4 pt-5 pb-4 max-w-2xl mx-auto w-full">
+    <div className="flex flex-col min-h-full">
+      <div className="flex-1 px-4 pt-6 pb-10 flex flex-col items-center">
 
-        {/* Header */}
-        <div className="mb-4">
-          <div className="flex items-center gap-2 mb-1">
-            <NotepadText className="h-5 w-5 text-primary" />
-            <h1 className="text-xl font-semibold tracking-tight">Quick Shop List</h1>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Type your shopping list — commas or new lines, your choice.
-          </p>
-        </div>
-
-        {/* Text area */}
-        <div className="relative">
-          <textarea
-            ref={textareaRef}
-            value={rawText}
-            onChange={(e) => setRawText(e.target.value)}
-            placeholder={"milk, eggs\noven chips\nbananas, yoghurt\npasta sauce"}
-            rows={10}
-            className="w-full resize-none rounded-xl border border-border bg-background px-4 py-3 text-base leading-relaxed placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 transition-shadow"
-            data-testid="textarea-quick-list"
+        {/* ── Writing surface ────────────────────────────────────────────── */}
+        <div
+          className="w-full max-w-lg flex flex-col relative overflow-hidden"
+          style={{
+            backgroundImage: "url('/orchard-bg.png')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            borderRadius: 20,
+            boxShadow:
+              "0 4px 32px rgba(0,0,0,0.09), 0 1px 6px rgba(0,0,0,0.05)",
+          }}
+        >
+          {/* Faint orchard wash — white overlay to push bg into the background */}
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(255,255,255,0.82)",
+              borderRadius: 20,
+              pointerEvents: "none",
+            }}
           />
-          {rawText.length > 0 && (
-            <button
-              onClick={() => setRawText("")}
-              className="absolute top-2.5 right-2.5 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/60 transition-colors"
-              aria-label="Clear"
-              data-testid="button-clear-list"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
 
-        {/* Item preview */}
-        {parsedItems.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5" data-testid="parsed-items-preview">
-            {parsedItems.map((item, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center px-2.5 py-1 rounded-full bg-accent text-xs font-medium text-foreground"
-              >
-                {item}
+          {/* All content sits above the overlay */}
+          <div className="relative z-10 flex flex-col">
+
+          {/* Brand header */}
+          <div className="px-6 pt-6 pb-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <img
+                src={thaAppleUrl}
+                width={40}
+                height={40}
+                alt="THA"
+                style={{ opacity: 0.85 }}
+                draggable={false}
+              />
+              <span className="text-[10px] tracking-widest uppercase font-medium text-foreground/60 select-none">
+                The Healthy Apples
               </span>
-            ))}
-          </div>
-        )}
-
-        {/* CTA */}
-        <div className="mt-5">
-          <Button
-            size="lg"
-            className="w-full gap-2 text-base font-semibold h-12"
-            disabled={parsedItems.length === 0 || isProcessing}
-            onClick={() => setSheetOpen(true)}
-            data-testid="button-create-shop-list"
-          >
-            {isProcessing ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <Store className="h-5 w-5" />
-            )}
-            {isProcessing ? "Building your list…" : "Create Shop List"}
-          </Button>
-          {parsedItems.length > 0 && (
-            <p className="text-center text-xs text-muted-foreground mt-2">
-              {parsedItems.length} item{parsedItems.length !== 1 ? "s" : ""} ready
+            </div>
+            <p className="text-[13px] text-foreground/55 leading-snug italic">
+              Write what you need — THA will help you shop smarter.
             </p>
+          </div>
+
+          {/* Divider */}
+          <div
+            style={{
+              height: 1,
+              background: "rgba(0,0,0,0.06)",
+              marginInline: 24,
+            }}
+          />
+
+          {/* Seamless textarea — text appears directly on the paper */}
+          <div className="relative px-6 pt-4 pb-2">
+            <textarea
+              ref={textareaRef}
+              value={rawText}
+              onChange={(e) => {
+                setRawText(e.target.value);
+                resizeTextarea();
+              }}
+              placeholder={"milk, eggs\noven chips\nbananas, yoghurt\npasta sauce"}
+              rows={8}
+              className="w-full resize-none bg-transparent text-[15px] leading-loose placeholder:text-foreground/25 placeholder:italic focus:outline-none text-foreground font-medium"
+              style={{ minHeight: 180 }}
+              data-testid="textarea-quick-list"
+            />
+            {rawText.length > 0 && (
+              <button
+                onClick={() => {
+                  setRawText("");
+                  if (textareaRef.current) {
+                    textareaRef.current.style.height = "auto";
+                  }
+                  setTimeout(() => textareaRef.current?.focus(), 50);
+                }}
+                className="absolute top-4 right-6 p-1 rounded-md text-muted-foreground/35 hover:text-muted-foreground transition-colors"
+                aria-label="Clear list"
+                data-testid="button-clear-list"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Parsed item chips — inside the card, below the writing area */}
+          {parsedItems.length > 0 && (
+            <div
+              className="px-6 pb-3 flex flex-wrap gap-1.5"
+              data-testid="parsed-items-preview"
+            >
+              {parsedItems.map((item, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium"
+                  style={{
+                    background: "rgba(0,0,0,0.055)",
+                    color: "hsl(var(--foreground))",
+                  }}
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
           )}
+
+          {/* Divider above tools */}
+          <div
+            style={{
+              height: 1,
+              background: "rgba(0,0,0,0.055)",
+              marginInline: 24,
+            }}
+          />
+
+          {/* Tools row + CTA */}
+          <div className="px-5 py-3.5 flex items-center gap-1">
+
+            {/* Speech */}
+            <button
+              onClick={toggleSpeech}
+              className={`p-2 rounded-full transition-colors ${
+                isListening
+                  ? "bg-red-50 text-red-500"
+                  : "text-muted-foreground/45 hover:text-foreground hover:bg-black/[0.05]"
+              }`}
+              title={isListening ? "Stop listening" : "Speak your list"}
+              aria-label={isListening ? "Stop listening" : "Speak your list"}
+              data-testid="button-speech-input"
+            >
+              <Mic className={`h-4 w-4 ${isListening ? "animate-pulse" : ""}`} />
+            </button>
+
+            {/* Camera scan */}
+            <button
+              onClick={() => setCameraOpen(true)}
+              disabled={isScanning}
+              className="p-2 rounded-full text-muted-foreground/45 hover:text-foreground hover:bg-black/[0.05] transition-colors disabled:opacity-30"
+              title="Scan a handwritten list"
+              aria-label="Scan a handwritten list"
+              data-testid="button-camera-scan"
+            >
+              {isScanning ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Camera className="h-4 w-4" />
+              )}
+            </button>
+
+            {/* Photo upload */}
+            <label
+              className="p-2 rounded-full text-muted-foreground/45 hover:text-foreground hover:bg-black/[0.05] transition-colors cursor-pointer"
+              title="Upload a photo of your list"
+              aria-label="Upload a photo of your list"
+              data-testid="label-image-upload"
+            >
+              <ImageUp className="h-4 w-4" />
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={handleFileChange}
+                data-testid="input-image-upload"
+              />
+            </label>
+
+            <div className="flex-1" />
+
+            {/* Primary CTA — lives inside the writing surface */}
+            <Button
+              size="sm"
+              className="gap-1.5 font-semibold px-4 h-9"
+              disabled={parsedItems.length === 0 || isProcessing}
+              onClick={() => setSheetOpen(true)}
+              data-testid="button-create-shop-list"
+            >
+              {isProcessing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Store className="h-3.5 w-3.5" />
+              )}
+              {isProcessing
+                ? "Building…"
+                : parsedItems.length > 0
+                ? `Shop · ${parsedItems.length}`
+                : "Shop list"}
+            </Button>
+          </div>
+          </div>{/* end z-10 content wrapper */}
         </div>
 
-        {/* History */}
+        {/* ── Recent lists ──────────────────────────────────────────────── */}
         {history.length > 0 && (
-          <div className="mt-8">
-            <div className="flex items-center gap-1.5 mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              <Clock className="h-3.5 w-3.5" />
-              Recent lists
+          <div className="mt-6 w-full max-w-lg">
+            <div className="flex items-center gap-1.5 mb-2.5 px-1">
+              <Clock className="h-3 w-3 text-muted-foreground/40" />
+              <span className="text-[10px] tracking-widest uppercase font-medium text-muted-foreground/40 select-none">
+                Recent
+              </span>
             </div>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               {history.map((basket) => (
                 <button
                   key={basket.id}
                   onClick={() => restoreFromHistory(basket)}
-                  className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card/60 px-3.5 py-3 text-left hover:bg-accent/40 transition-colors"
+                  className="flex items-start justify-between gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:brightness-95"
+                  style={{
+                    background: "rgba(253,251,246,0.82)",
+                    backdropFilter: "blur(6px)",
+                  }}
                   data-testid={`history-item-${basket.id}`}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate text-foreground">
+                    <p className="text-[13px] font-medium truncate text-foreground/75">
                       {basket.parsedItems.slice(0, 4).join(", ")}
-                      {basket.parsedItems.length > 4 && ` +${basket.parsedItems.length - 4} more`}
+                      {basket.parsedItems.length > 4 &&
+                        ` +${basket.parsedItems.length - 4} more`}
                     </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {basket.parsedItems.length} item{basket.parsedItems.length !== 1 ? "s" : ""}
-                      {basket.selectedShop ? ` · ${basket.selectedShop}` : " · Best shop"}
-                      {" · "}{formatRelativeTime(basket.createdAt)}
+                    <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+                      {basket.parsedItems.length} item
+                      {basket.parsedItems.length !== 1 ? "s" : ""}
+                      {basket.selectedShop
+                        ? ` · ${basket.selectedShop}`
+                        : " · Best shop"}
+                      {" · "}
+                      {formatRelativeTime(basket.createdAt)}
                     </p>
                   </div>
-                  <RotateCcw className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
+                  <RotateCcw className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30 mt-0.5" />
                 </button>
               ))}
             </div>
@@ -267,78 +517,115 @@ export default function ListPage() {
         )}
       </div>
 
-      {/* ── Bottom sheet: Where are you shopping? ── */}
-      <Sheet open={sheetOpen} onOpenChange={(v) => { if (!isProcessing) setSheetOpen(v); }}>
-        <SheetContent
-          side="bottom"
-          className="rounded-t-2xl max-w-2xl mx-auto"
-          data-testid="sheet-shop-choice"
-        >
-          <SheetHeader className="mb-5">
-            <SheetTitle className="text-lg">Where are you shopping?</SheetTitle>
-          </SheetHeader>
-          <div className="flex flex-col gap-3 pb-4">
+      {/* ── Camera modal ─────────────────────────────────────────────────── */}
+      <CameraModal
+        open={cameraOpen}
+        onOpenChange={setCameraOpen}
+        onCapture={(file) => {
+          setCameraOpen(false);
+          handleImageCapture(file);
+        }}
+        onUploadInstead={() => fileInputRef.current?.click()}
+      />
+
+      {/* ── Dialog: Where are you shopping? ── */}
+      <Dialog
+        open={sheetOpen}
+        onOpenChange={(v) => { if (!isProcessing) setSheetOpen(v); }}
+      >
+        <DialogContent className="max-w-sm" data-testid="sheet-shop-choice">
+          <DialogHeader>
+            <div className="flex items-center gap-2 mb-1">
+              <img src={thaAppleUrl} width={20} height={20} alt="" draggable={false} style={{ opacity: 0.8 }} />
+              <DialogTitle className="text-base font-semibold">Where are you shopping?</DialogTitle>
+            </div>
+            <DialogDescription className="text-[13px]">
+              Pick your store and THA will guide you through the healthiest choices.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-2.5 mt-1">
+            {/* Choose a store */}
             <button
               onClick={() => { setSheetOpen(false); setShopPickerOpen(true); }}
-              className="flex items-center justify-between w-full rounded-xl border border-border bg-card px-4 py-3.5 hover:bg-accent/40 transition-colors"
+              className="group flex items-center gap-3.5 w-full rounded-xl border border-border bg-card px-4 py-3.5 text-left hover:border-primary/40 hover:bg-accent/30 transition-colors"
               data-testid="button-choose-shop"
             >
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-9 w-9 rounded-full bg-primary/10 text-primary">
-                  <Store className="h-4.5 w-4.5" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-semibold">Choose shop</p>
-                  <p className="text-xs text-muted-foreground">Pick where you're heading</p>
-                </div>
+              <div className="flex items-center justify-center h-10 w-10 rounded-full bg-muted text-foreground shrink-0">
+                <Store className="h-4.5 w-4.5" />
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold leading-tight">Choose a store</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Pick exactly where you're heading</p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0 group-hover:text-foreground transition-colors" />
             </button>
 
+            {/* Auto-match */}
             <button
               onClick={() => { setSheetOpen(false); processAndNavigate(null); }}
-              className="flex items-center justify-between w-full rounded-xl border border-primary/30 bg-primary/5 px-4 py-3.5 hover:bg-primary/10 transition-colors"
+              disabled={isProcessing}
+              className="group flex items-center gap-3.5 w-full rounded-xl border border-primary/40 bg-primary/[0.06] px-4 py-3.5 text-left hover:bg-primary/[0.12] transition-colors disabled:opacity-60"
               data-testid="button-best-shop"
             >
-              <div className="flex items-center gap-3">
-                <div className="flex items-center justify-center h-9 w-9 rounded-full bg-primary/15 text-primary">
-                  <Sparkles className="h-4.5 w-4.5" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-primary">Auto-match shops</p>
-                  <p className="text-xs text-muted-foreground">Open in auto mode — switch shops freely in view</p>
-                </div>
+              <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/15 text-primary shrink-0">
+                {isProcessing
+                  ? <Loader2 className="h-4.5 w-4.5 animate-spin" />
+                  : <Sparkles className="h-4.5 w-4.5" />
+                }
               </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-primary leading-tight">Auto-match shops</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Switch freely between stores in view
+                </p>
+              </div>
+              <ChevronRight className="h-4 w-4 text-primary/40 shrink-0 group-hover:text-primary transition-colors" />
             </button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
-      {/* ── Bottom sheet: Shop picker ── */}
-      <Sheet open={shopPickerOpen} onOpenChange={(v) => { if (!isProcessing) setShopPickerOpen(v); }}>
-        <SheetContent
-          side="bottom"
-          className="rounded-t-2xl max-w-2xl mx-auto"
-          data-testid="sheet-shop-picker"
-        >
-          <SheetHeader className="mb-4">
-            <SheetTitle className="text-lg">Choose your shop</SheetTitle>
-          </SheetHeader>
-          <div className="grid grid-cols-2 gap-2 pb-4">
+      {/* ── Dialog: Choose your shop ── */}
+      <Dialog
+        open={shopPickerOpen}
+        onOpenChange={(v) => { if (!isProcessing) setShopPickerOpen(v); }}
+      >
+        <DialogContent className="max-w-sm" data-testid="sheet-shop-picker">
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setShopPickerOpen(false); setSheetOpen(true); }}
+                className="p-1 -ml-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                aria-label="Back"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+              <DialogTitle className="text-base font-semibold">Choose your store</DialogTitle>
+            </div>
+            <DialogDescription className="text-[13px]">
+              THA will show you the healthiest picks for that store.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-4 gap-3 mt-1 pb-1">
             {SHOPS.map((shop) => (
               <button
                 key={shop}
                 onClick={() => { setShopPickerOpen(false); processAndNavigate(shop); }}
-                className="flex items-center justify-center h-12 rounded-xl border border-border bg-card text-sm font-medium hover:bg-accent/40 hover:border-primary/30 transition-colors"
+                disabled={isProcessing}
+                className="flex flex-col items-center justify-center gap-2 rounded-xl p-3 hover:bg-accent/50 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                 data-testid={`button-shop-${shop.toLowerCase().replace(/[^a-z]+/g, "-")}`}
               >
-                {shop}
+                <RetailerLogo name={shop} size="h-7" />
+                <span className="text-[11px] font-medium text-foreground/70 text-center leading-tight">
+                  {shop}
+                </span>
               </button>
             ))}
           </div>
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

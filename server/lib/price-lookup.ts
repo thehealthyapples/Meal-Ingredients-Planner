@@ -258,7 +258,8 @@ export async function lookupPricesForIngredient(
   ingredientName: string,
   category: string,
   quantity: number,
-  unit: string
+  unit: string,
+  stores?: string[]
 ): Promise<PriceResult[]> {
   const results: PriceResult[] = [];
 
@@ -326,7 +327,11 @@ export async function lookupPricesForIngredient(
     ? basePrice
     : basePrice / (TIER_MULTIPLIERS[detectedTier] || 1.0);
 
-  for (const [storeName, variance] of Object.entries(SUPERMARKET_VARIANCE)) {
+  const storeEntries = stores && stores.length > 0
+    ? Object.entries(SUPERMARKET_VARIANCE).filter(([s]) => stores.includes(s))
+    : Object.entries(SUPERMARKET_VARIANCE);
+
+  for (const [storeName, variance] of storeEntries) {
     const searchUrl = getStoreSearchUrl(storeName, ingredientName);
 
     for (const tier of TIERS) {

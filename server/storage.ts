@@ -79,6 +79,7 @@ export interface IStorage {
   addProductMatch(match: InsertProductMatch): Promise<ProductMatch>;
   clearProductMatches(shoppingListItemId: number): Promise<void>;
   clearAllProductMatchesForUser(userId: number): Promise<void>;
+  clearProductMatchesForStore(userId: number, store: string): Promise<void>;
   updateUserPriceTier(id: number, tier: string): Promise<User | undefined>;
   getIngredientSources(shoppingListItemId: number): Promise<IngredientSource[]>;
   getIngredientSourcesForUser(userId: number): Promise<IngredientSource[]>;
@@ -637,10 +638,20 @@ export class DatabaseStorage implements IStorage {
 
   async clearAllProductMatchesForUser(userId: number): Promise<void> {
     const householdId = await getHouseholdForUser(userId);
-    const items = await db.select().from(shoppingList).where(eq(shoppingList.householdId, householdId));
-    for (const item of items) {
-      await db.delete(productMatches).where(eq(productMatches.shoppingListItemId, item.id));
-    }
+    const items = await db.select({ id: shoppingList.id }).from(shoppingList).where(eq(shoppingList.householdId, householdId));
+    if (items.length === 0) return;
+    const itemIds = items.map(i => i.id);
+    await db.delete(productMatches).where(inArray(productMatches.shoppingListItemId, itemIds));
+  }
+
+  async clearProductMatchesForStore(userId: number, store: string): Promise<void> {
+    const householdId = await getHouseholdForUser(userId);
+    const items = await db.select({ id: shoppingList.id }).from(shoppingList).where(eq(shoppingList.householdId, householdId));
+    if (items.length === 0) return;
+    const itemIds = items.map(i => i.id);
+    await db.delete(productMatches).where(
+      and(inArray(productMatches.shoppingListItemId, itemIds), eq(productMatches.supermarket, store))
+    );
   }
 
   async updateUserPriceTier(id: number, tier: string): Promise<User | undefined> {

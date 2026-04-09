@@ -247,18 +247,12 @@
     background: white !important;
   }
 
-  /* When the shopping view is open, hide every other direct child of body,
-     then make the print area static so it flows naturally on paper */
-  body.tha-shopping-open > * {
-    display: none !important;
-  }
-  body.tha-shopping-open > #tha-shopping-print-area {
-    display: block !important;
+  /* Print: make the shopping print area flow naturally on paper */
+  #tha-shopping-print-area {
     position: static !important;
     overflow: visible !important;
     height: auto !important;
     max-height: none !important;
-    z-index: auto !important;
   }
 
   /* Hide interactive chrome inside the print area */

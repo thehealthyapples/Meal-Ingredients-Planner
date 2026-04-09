@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { createPortal } from "react-dom";
 import { normalizeIngredientKey } from "@shared/normalize";
-import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowRight, Store, SkipForward, Pencil } from "lucide-react";
+import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowLeft, ArrowRight, Store, SkipForward, Pencil, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -12,6 +11,7 @@ import {
 } from "@/components/ui/select";
 import type { ShoppingListItem, IngredientSource, ProductMatch, IngredientProduct } from "@shared/schema";
 import { cleanProductName } from "@/lib/unit-display";
+import { isWholeFood } from "@/lib/basket-item-classifier";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -71,6 +71,10 @@ interface ShoppingListViewProps {
   thaPicks?: Record<string, IngredientProduct[]>;
   /** Allow renaming/refining an item and re-triggering product lookup. */
   onRenameItem?: (id: number, newName: string) => void;
+  /** Trigger store-scoped product matching for the currently selected store. */
+  onMatchStore?: (store: string) => void;
+  /** True while a store-scoped match is in progress. */
+  isMatchingPrices?: boolean;
 }
 
 // ── State persistence ──────────────────────────────────────────────────────
@@ -175,21 +179,36 @@ function resolveDisplayMatches(
 
   const combined = [...thaMatches, ...priceMatches];
   const seen = new Set<string>();
-  return combined.filter(m => {
+  const deduped = combined.filter(m => {
     const key = m.productName.toLowerCase();
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
+
+  // Globally sort by thaRating DESC so the highest-rated product is always shown first.
+  // This is a stable sort: ties preserve the THA-picks-first insertion order from the spread above,
+  // so curated picks beat price-match entries of identical rating.
+  deduped.sort((a, b) => (b.thaRating ?? 0) - (a.thaRating ?? 0));
+
+  // If this item is a whole food, any match with a null rating should show 5 apples
+  // (whole foods are always 5 — no processing, no additives).
+  const wholeFoodItem = isWholeFood(item);
+  if (wholeFoodItem) {
+    return deduped.map(m => ({ ...m, thaRating: m.thaRating ?? 5 }));
+  }
+  return deduped;
 }
 
-// Compact apple rating: single apple icon + count
+// Compact apple rating: N THA apple logos inline — no text, no emoji
 function CompactRating({ rating }: { rating: number }) {
   const clamped = Math.max(1, Math.min(5, Math.round(rating || 1)));
   return (
-    <span className="inline-flex items-center gap-0.5 shrink-0">
-      <img src={thaAppleUrl} width={11} height={11} alt="" draggable={false} />
-      <span className="text-[10px] font-semibold leading-none">{clamped}x</span>
+    <span className="inline-flex items-center shrink-0" aria-label={`${clamped} apple${clamped !== 1 ? "s" : ""}`}>
+      {Array.from({ length: clamped }).map((_, i) => (
+        <img key={i} src={thaAppleUrl} width={36} height={36} alt="" draggable={false}
+          style={{ marginLeft: i === 0 ? 0 : -10 }} />
+      ))}
     </span>
   );
 }
@@ -307,26 +326,92 @@ const SHOPPING_CATS = [
 
 // ── Category helpers ───────────────────────────────────────────────────────
 
-const FRESH_HERBS = new Set(["coriander", "basil", "parsley", "mint", "dill"]);
+// These keyword sets mirror server/lib/ingredient-utils.ts INGREDIENT_CATEGORIES.
+// They serve as a name-based fallback for items whose DB category is null or "other"
+// (e.g. items added before category detection existed, or via a path that skipped it).
+
+const MEAT_WORDS = [
+  "chicken", "beef", "pork", "lamb", "bacon", "steak", "ham", "turkey", "duck",
+  "sausage", "mince", "veal", "venison", "chorizo", "salami", "prosciutto", "pancetta",
+];
+const FISH_WORDS = [
+  "salmon", "tuna", "cod", "haddock", "mackerel", "trout", "halibut", "sardine",
+  "anchovy", "prawn", "shrimp", "crab", "lobster", "mussel", "squid", "calamari", "scallop",
+];
+const DAIRY_WORDS = [
+  "milk", "cheese", "cream", "butter", "yogurt", "yoghurt", "cheddar", "mozzarella",
+  "parmesan", "ricotta", "mascarpone", "brie", "feta", "gouda", "ghee", "curd", "whey",
+];
+const EGG_WORDS = ["egg"];
+const PRODUCE_WORDS = [
+  "onion", "garlic", "tomato", "carrot", "pepper", "lettuce", "spinach", "broccoli",
+  "cauliflower", "cabbage", "celery", "cucumber", "courgette", "aubergine", "mushroom",
+  "leek", "beetroot", "parsnip", "sweetcorn", "asparagus", "kale", "rocket", "watercress",
+];
+const FRUIT_WORDS = [
+  "apple", "banana", "orange", "lemon", "lime", "grape", "strawberry", "blueberry",
+  "raspberry", "blackberry", "mango", "pineapple", "melon", "peach", "pear", "plum",
+  "cherry", "fig", "avocado", "kiwi", "pomegranate", "cranberry",
+];
+const FROZEN_KEYWORDS = [
+  "oven chip", "fish finger", "fish stick", "chicken nugget", "nugget",
+  "ice cream", "ice lolly", "sorbet", "hash brown",
+  "frozen pea", "frozen corn", "frozen spinach", "frozen bean", "frozen meal",
+];
+const BAKERY_WORDS = [
+  "bread", "loaf", "wrap", "tortilla", "pitta", "pita", "naan",
+  "bagel", "roll", "bun", "sourdough", "ciabatta", "focaccia", "croissant",
+];
+const FRESH_HERBS = new Set([
+  "coriander", "basil", "parsley", "mint", "dill", "thyme", "rosemary", "sage", "chive",
+]);
 
 function getItemCatKey(category: string | null | undefined, name: string): string {
   const lowerName = name.toLowerCase();
-  // Name-based overrides: fix items whose category may be stale in the DB.
-  // Tinned/canned items stored as "produce" because "can X" wasn't caught server-side.
+
+  // ── Name-based overrides (run before DB category — correct regardless of stored value) ──
+
+  // Tinned/canned → pantry (must be first: "canned tomato" shouldn't be produce)
   if (/^(can |tin |tinned |canned )/.test(lowerName)) return "pantry";
-  // Potatoes are ambient starch (pantry), not chilled produce.
+
+  // Frozen items (server had no frozen category until recently; name is authoritative)
+  if (lowerName.startsWith("frozen ") || FROZEN_KEYWORDS.some(kw => lowerName.includes(kw)))
+    return "frozen";
+  if (lowerName === "chips" || lowerName === "oven chips") return "frozen";
+
+  // Potatoes → pantry (ambient starch, not chilled produce)
   if (lowerName.includes("potato")) return "pantry";
 
-  const raw = (category || "other").toLowerCase();
-  if (raw === "household") return "household";
+  // ── DB category (fast path for correctly-categorised items) ──
+
+  const raw = (category ?? "").toLowerCase();
   if (raw === "meat" || raw === "fish") return "meat";
   if (raw === "dairy" || raw === "eggs") return "dairy";
   if (raw === "produce" || raw === "fruit") return "produce";
-  if (raw === "herbs") return FRESH_HERBS.has(lowerName) ? "produce" : "pantry";
   if (raw === "bakery") return "bakery";
   if (raw === "frozen") return "frozen";
-  if (["grains", "oils", "condiments", "nuts", "legumes", "tinned", "pantry", "spices"].includes(raw))
+  if (raw === "household") return "household";
+  if (raw === "herbs") return FRESH_HERBS.has(lowerName) ? "produce" : "pantry";
+  if (raw === "grains") {
+    if (BAKERY_WORDS.some(w => lowerName.includes(w))) return "bakery";
     return "pantry";
+  }
+  if (["oils", "condiments", "nuts", "legumes", "tinned", "pantry", "spices"].includes(raw))
+    return "pantry";
+
+  // ── Name-based fallback (handles null/other/unknown DB category) ──
+  // Items inserted before category detection existed, or via a path that skipped it,
+  // will have category=null or category="other". Use the name to bin them correctly.
+
+  if (MEAT_WORDS.some(w => lowerName.includes(w))) return "meat";
+  if (FISH_WORDS.some(w => lowerName.includes(w))) return "meat"; // meat & fish tab
+  if (EGG_WORDS.some(w => lowerName === w || lowerName.startsWith(w + "s") || lowerName.startsWith(w + " "))) return "dairy";
+  if (DAIRY_WORDS.some(w => lowerName.includes(w))) return "dairy";
+  if (PRODUCE_WORDS.some(w => lowerName.includes(w))) return "produce";
+  if (FRUIT_WORDS.some(w => lowerName.includes(w))) return "produce";
+  if (BAKERY_WORDS.some(w => lowerName.includes(w))) return "bakery";
+  if (FRESH_HERBS.has(lowerName)) return "produce";
+
   return "other";
 }
 
@@ -441,6 +526,8 @@ export default function ShoppingListView({
   initialPhase,
   thaPicks = {},
   onRenameItem,
+  onMatchStore,
+  isMatchingPrices = false,
 }: ShoppingListViewProps) {
   const [notInShop, setNotInShop] = useState<Set<number>>(() => loadNotInShop());
   const [selectedSupermarket, setSelectedSupermarket] = useState<string>(initialStore ?? "Tesco");
@@ -459,10 +546,6 @@ export default function ShoppingListView({
   const tabStripRef = useRef<HTMLDivElement>(null);
   const activeTabElRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    document.body.classList.add("tha-shopping-open");
-    return () => document.body.classList.remove("tha-shopping-open");
-  }, []);
 
   useEffect(() => {
     saveNotInShop(notInShop, items);
@@ -676,6 +759,12 @@ export default function ShoppingListView({
     const resolvedMatch = resolvedMatches[currentMatchIndex] ?? null;
     const isEditing = editingItemId === item.id;
 
+    // Effective apple rating: match rating > item DB rating > whole-food inference (5).
+    // This ensures whole foods always show 5 apples even when no product match exists.
+    const itemIsWholeFood = isWholeFood(item);
+    const effectiveRating: number | null =
+      resolvedMatch?.thaRating ?? item.thaRating ?? (itemIsWholeFood ? 5 : null);
+
     const rowBg =
       state === "in_basket"   ? "bg-primary/[0.04] dark:bg-primary/[0.07]"
       : state === "not_in_shop" ? "bg-amber-50/60 dark:bg-amber-950/20"
@@ -741,10 +830,9 @@ export default function ShoppingListView({
             </div>
           ) : (
             <>
-              {/* Product match hint with THA rating + cycling */}
+              {/* Product match hint with cycling — rating moved to centre column */}
               {state === "need" && resolvedMatch && (
                 <div className="tha-print-hide flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  {resolvedMatch.thaRating != null && <CompactRating rating={resolvedMatch.thaRating} />}
                   <span className="text-[11px] text-muted-foreground/70 truncate max-w-[160px]">
                     {resolvedMatch.productName}
                   </span>
@@ -774,11 +862,13 @@ export default function ShoppingListView({
                   )}
                 </div>
               )}
-              {state === "need" && !resolvedMatch && firstMeal && (
+              {state === "need" && !resolvedMatch && (firstMeal || effectiveRating != null) && (
                 <div className="tha-print-hide flex items-center gap-1.5 mt-0.5">
-                  <p className="text-[11px] text-muted-foreground/55 leading-tight">
-                    {firstMeal}{isPantryStaple ? " · staple" : ""}
-                  </p>
+                  {firstMeal && (
+                    <p className="text-[11px] text-muted-foreground/55 leading-tight">
+                      {firstMeal}{isPantryStaple ? " · staple" : ""}
+                    </p>
+                  )}
                   {onRenameItem && (
                     <button
                       onClick={(e) => { e.stopPropagation(); setEditValue(item.productName ?? ""); setEditingItemId(item.id); }}
@@ -833,6 +923,12 @@ export default function ShoppingListView({
             </>
           )}
         </div>
+        {/* Centre column: apple rating — prominent, vertically centred, separate from product text */}
+        {state === "need" && effectiveRating != null && (
+          <div className="tha-print-hide flex-shrink-0 flex items-center justify-center">
+            <CompactRating rating={effectiveRating} />
+          </div>
+        )}
         <div className="tha-print-hide flex-shrink-0">
           <StateChips
             state={state}
@@ -893,62 +989,21 @@ export default function ShoppingListView({
   const content = (
     <div
       id="tha-shopping-print-area"
-      className="fixed inset-0 z-50 overflow-hidden flex flex-col"
-      style={{ backgroundColor: "hsl(var(--background))" }}
+      className="relative flex flex-col overflow-hidden rounded-xl border border-border bg-card/82 backdrop-blur-md"
+      style={{ minHeight: "calc(100vh - 9rem)" }}
     >
 
-      {/* ── Orchard background - screen only, full bleed, never scrolls ── */}
-      <div
-        aria-hidden
-        className="tha-print-hide fixed inset-0 pointer-events-none"
-        style={{ zIndex: 0 }}
-      >
-        <img
-          src="/orchard-bg.png"
-          alt=""
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition: "center top",
-            opacity: 0.48,
-          }}
-        />
-      </div>
 
       {/* ══════════════════════════════════════════════════════════════════
           SCREEN CONTENT  (flex column - nothing outside item list scrolls)
       ══════════════════════════════════════════════════════════════════ */}
 
-      {/* ── 1. THA Branded Header ─────────────────────────────────────────
-          Identical to the site TopBar: /logo-long.png, bg-card/60,
-          backdrop-blur-md, border-b border-border.
-      ─────────────────────────────────────────────────────────────────── */}
-      <header className="tha-print-hide w-full bg-card/60 backdrop-blur-md border-b border-border py-0.5 shrink-0 relative z-30">
-        <div className="flex items-center justify-center px-4">
-          <img
-            src="/logo-long.png"
-            alt="The Healthy Apples"
-            className="h-auto max-h-[72px] md:max-h-[108px] w-auto max-w-[520px] md:max-w-[900px]"
-          />
-        </div>
-      </header>
-
-      {/* ── 2. Shop View Toolbar ──────────────────────────────────────────
+      {/* ── Shop View Toolbar ─────────────────────────────────────────────
           Title + progress summary. Print + Close actions.
           No logo here - branding is handled by the header above.
       ─────────────────────────────────────────────────────────────────── */}
       <header
-        className="tha-print-hide relative z-20 flex-shrink-0"
-        style={{
-          background: "linear-gradient(135deg, hsl(var(--primary) / 0.10) 0%, hsl(var(--background) / 0.97) 50%, hsl(var(--primary) / 0.07) 100%)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          borderBottom: "1px solid hsl(var(--border) / 0.6)",
-          boxShadow: "0 1px 12px hsl(var(--primary) / 0.07)",
-        }}
+        className="tha-print-hide relative z-20 flex-shrink-0 border-b border-border"
       >
         <div className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-5 sm:py-3 max-w-3xl mx-auto">
           {/* Left: title + progress */}
@@ -985,17 +1040,38 @@ export default function ShoppingListView({
           {/* Right: Supermarket picker + Print + Close */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {phase === "shopping" && (
-              <Select value={selectedSupermarket} onValueChange={handleStoreChange}>
-                <SelectTrigger className="h-8 text-xs bg-background/70 gap-1 pr-2" style={{ minWidth: 0, width: "auto" }}>
-                  <Store className="h-3.5 w-3.5 shrink-0" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUPERMARKETS.map(s => (
-                    <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <>
+                <Select value={selectedSupermarket} onValueChange={handleStoreChange}>
+                  <SelectTrigger className="h-8 text-xs bg-background/70 gap-1 pr-2" style={{ minWidth: 0, width: "auto" }}>
+                    <Store className="h-3.5 w-3.5 shrink-0" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SUPERMARKETS.map(s => (
+                      <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {onMatchStore && (() => {
+                  const storeNorm = selectedSupermarket.toLowerCase();
+                  const hasMatchesForStore = allPriceMatches.some(
+                    m => m.supermarket.toLowerCase() === storeNorm
+                  );
+                  if (hasMatchesForStore || isMatchingPrices) return null;
+                  return (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onMatchStore(selectedSupermarket)}
+                      className="h-8 px-2.5 text-xs bg-background/70 gap-1"
+                      title={`Find products at ${selectedSupermarket}`}
+                    >
+                      <Search className="h-3 w-3" />
+                      <span className="hidden sm:inline">Find</span>
+                    </Button>
+                  );
+                })()}
+              </>
             )}
             {inBasketCount > 0 && !shopSession && (
               <Button
@@ -1021,10 +1097,10 @@ export default function ShoppingListView({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="h-8 px-2.5 text-xs"
+              className="h-8 px-2.5 text-xs gap-1.5"
             >
-              <X className="h-4 w-4" />
-              <span className="hidden sm:inline ml-1">Close</span>
+              <ArrowLeft className="h-4 w-4" />
+              <span className="hidden sm:inline">Back to basket</span>
             </Button>
           </div>
         </div>
@@ -1130,15 +1206,7 @@ export default function ShoppingListView({
       {phase === "cupboard_check" && !shopSession && (
         <div className="tha-print-hide relative z-10 flex-1 overflow-hidden flex flex-col px-3 sm:px-5 pt-3 pb-3 w-full max-w-3xl mx-auto">
           <div
-            className="flex flex-col flex-1 min-h-0 rounded-xl overflow-hidden"
-            style={{
-              background: "hsl(var(--card) / 0.62)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-              border: "1px solid hsl(var(--border) / 0.45)",
-              borderTop: "3px solid hsl(var(--primary))",
-              boxShadow: "0 6px 36px rgba(0,0,0,0.09), 0 1px 6px rgba(0,0,0,0.05)",
-            }}
+            className="flex flex-col flex-1 min-h-0 rounded-xl overflow-hidden border border-border bg-card/82 backdrop-blur-md"
           >
             {/* Panel header */}
             <div
@@ -1158,7 +1226,7 @@ export default function ShoppingListView({
             </div>
 
             {/* Item list */}
-            <div className="flex-1 overflow-y-auto" style={{ background: "hsl(var(--card) / 0.88)" }}>
+            <div className="flex-1 overflow-y-auto" style={{ background: "hsl(var(--card) / 0.30)" }}>
               <div className="divide-y divide-border/25">
                 {items.map((item) => {
                   const isAtHome = onUpdateStatus
@@ -1390,12 +1458,9 @@ export default function ShoppingListView({
               key={activeCat.key}
               className="flex flex-col flex-1 min-h-0 rounded-xl overflow-hidden"
               style={{
-                background: "hsl(var(--card) / 0.62)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
+                background: "hsl(var(--card) / 0.30)",
                 border: "1px solid hsl(var(--border) / 0.45)",
                 borderTop: `3px solid ${activeCat.tabAccent}`,
-                boxShadow: "0 6px 36px rgba(0,0,0,0.09), 0 1px 6px rgba(0,0,0,0.05)",
               }}
             >
               {/* Category header - pinned, never scrolls */}
@@ -1432,7 +1497,7 @@ export default function ShoppingListView({
               <div
                 ref={itemsScrollRef}
                 className="flex-1 overflow-y-auto"
-                style={{ background: "hsl(var(--card) / 0.88)" }}
+                style={{ background: "hsl(var(--card) / 0.30)" }}
               >
                 <div className="divide-y divide-border/25">
                   {activeCat.savedItems.map((item) => renderSavedItem(item))}
@@ -1571,5 +1636,5 @@ export default function ShoppingListView({
     </div>
   );
 
-  return createPortal(content, document.body);
+  return content;
 }

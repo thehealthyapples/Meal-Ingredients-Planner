@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
+import RetailerLogo from "@/components/RetailerLogo";
 import {
   ShoppingCart, Copy, Trash2, RefreshCw, Scale,
   Search, ExternalLink, PoundSterling, TrendingDown, Loader2,
@@ -1536,8 +1537,8 @@ export default function ShoppingListPage() {
   const [alwaysAddModal, setAlwaysAddModal] = useState<{ extraId: number; extraName: string } | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const collapsedInitRef = useRef(false);
-  const [shoppingViewOpen, setShoppingViewOpen] = useState(() => {
-    try { return new URLSearchParams(window.location.search).get("shopMode") === "1"; } catch { return false; }
+  const [viewMode, setViewMode] = useState<"basket" | "shop">(() => {
+    try { return new URLSearchParams(window.location.search).get("shopMode") === "1" ? "shop" : "basket"; } catch { return "basket"; }
   });
   // shopModeOpen kept so the inline ShopModeView section compiles until it is removed in a later step.
   const [shopModeOpen, setShopModeOpen] = useState(false);
@@ -1733,11 +1734,11 @@ export default function ShoppingListPage() {
 
 
   const lookupPrices = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (store?: string) => {
       const res = await fetch(api.shoppingList.lookupPrices.path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify(store ? { store } : {}),
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to lookup prices');
@@ -2095,7 +2096,10 @@ export default function ShoppingListPage() {
     if (quickListPricesTriggeredRef.current) return;
     if (loadingSaved || savedItems.length === 0) return;
     quickListPricesTriggeredRef.current = true;
-    lookupPrices.mutate();
+    // Scope to the user's selected store so only the relevant store is matched,
+    // making the operation 9× faster than matching all stores at once.
+    const targetStore = globalStore !== 'auto' ? globalStore : undefined;
+    lookupPrices.mutate(targetStore);
   }, [quickListLabel, loadingSaved, savedItems.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Rename an item and re-fetch THA picks for its new key.
@@ -2385,8 +2389,8 @@ export default function ShoppingListPage() {
   // active, ShoppingListView opens as a portal overlay covering the full page.
   // The view starts at cupboard_check (the default), which skips only the old
   // ShopModeView intro card while preserving the cupboard check step.
-  // NOTE: shoppingViewOpen is seeded from ?shopMode=1 in useState, so the
-  // portal opens immediately on navigation — no early return needed here.
+  // NOTE: viewMode is seeded from ?shopMode=1 in useState, so shop view
+  // opens immediately on navigation — no early return needed here.
 
   return (
     <div
@@ -2403,6 +2407,8 @@ export default function ShoppingListPage() {
       )}
 
       <div className={`flex flex-col ${isFullscreen ? 'flex-1 overflow-auto p-4 sm:p-6' : ''}`}>
+        {/* ── Basket view ──────────────────────────────────────────────────── */}
+        <div className={viewMode === "shop" ? "hidden" : ""}>
         <Card className="flex-1 flex flex-col">
           <CardHeader className="pb-6 border-b border-border">
             <div className="flex justify-between items-center gap-1 flex-wrap">
@@ -2482,24 +2488,12 @@ export default function ShoppingListPage() {
                   <Button
                     variant="default"
                     size="sm"
-                    onClick={() => setShoppingViewOpen(true)}
+                    onClick={() => setViewMode("shop")}
                     className="gap-1.5"
                     data-testid="button-shopping-view"
                   >
                     <ListChecks className="h-3.5 w-3.5" />
                     <span>Shop View</span>
-                  </Button>
-                )}
-                {savedItems.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShoppingViewOpen(v => !v)}
-                    className="gap-1.5"
-                    data-testid="button-shop-mode"
-                  >
-                    <ShoppingCart className="h-3.5 w-3.5" />
-                    <span>{shoppingViewOpen ? "Close shop" : "Head to the shop"}</span>
                   </Button>
                 )}
                 {/* Apple overflow menu - far right */}
@@ -3444,6 +3438,27 @@ export default function ShoppingListPage() {
             onRenameItem={handleRenameItem}
           />
         )}
+        </div>{/* end basket view wrapper */}
+
+        {/* ── Shop view — inline, app shell stays intact ───────────────────── */}
+        {viewMode === "shop" && (
+          <ShoppingListView
+            items={savedItems}
+            extras={shoppingExtras}
+            sourcesByItem={sourcesByItem}
+            pantryKeySet={pantryKeySet}
+            measurementPref={measurementPref}
+            allPriceMatches={allPriceMatches}
+            thaPicks={thaPicks}
+            initialStore={globalStore !== 'auto' ? globalStore : undefined}
+            initialPhase="cupboard_check"
+            onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
+            onRenameItem={handleRenameItem}
+            onMatchStore={(store) => lookupPrices.mutate(store)}
+            isMatchingPrices={lookupPrices.isPending}
+            onClose={() => setViewMode("basket")}
+          />
+        )}
       </div>
 
 
@@ -3587,26 +3602,20 @@ export default function ShoppingListPage() {
                 <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/70">Direct Basket</p>
                 <div className="grid grid-cols-3 gap-3">
                   {primarySupermarkets.map(store => (
-                    <Button
+                    <button
                       key={store.key}
-                      variant="outline"
-                      className="flex flex-col items-center gap-1.5 py-3"
+                      className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 py-3.5 hover:bg-accent/40 transition-colors disabled:opacity-50"
                       disabled={basketSending !== null}
                       onClick={() => handleSendBasket(store.name)}
                       data-testid={`button-basket-${store.key}`}
                     >
                       {basketSending === store.name ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                       ) : (
-                        <span
-                          className="flex items-center justify-center h-8 w-8 rounded-md text-white text-sm font-semibold shrink-0"
-                          style={{ backgroundColor: store.color }}
-                        >
-                          {store.name.charAt(0)}
-                        </span>
+                        <RetailerLogo name={store.name} size="h-7" />
                       )}
-                      <span className="text-xs font-medium">{store.name}</span>
-                    </Button>
+                      <span className="text-xs font-medium text-foreground/70">{store.name}</span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -3617,27 +3626,20 @@ export default function ShoppingListPage() {
                 <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/70">Search Pages</p>
                 <div className="grid grid-cols-3 gap-2">
                   {otherSupermarkets.map(store => (
-                    <Button
+                    <button
                       key={store.key}
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 justify-start"
+                      className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-2 py-2.5 hover:bg-accent/40 transition-colors disabled:opacity-50"
                       disabled={basketSending !== null}
                       onClick={() => handleSendBasket(store.name)}
                       data-testid={`button-basket-${store.key}`}
                     >
                       {basketSending === store.name ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
                       ) : (
-                        <span
-                          className="flex items-center justify-center h-4 w-4 rounded-sm text-white text-[8px] font-bold shrink-0"
-                          style={{ backgroundColor: store.color }}
-                        >
-                          {store.name.charAt(0)}
-                        </span>
+                        <RetailerLogo name={store.name} size="h-5" />
                       )}
-                      <span className="text-xs truncate">{store.name}</span>
-                    </Button>
+                      <span className="text-[11px] font-medium text-foreground/70 truncate w-full text-center">{store.name}</span>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -3756,22 +3758,6 @@ export default function ShoppingListPage() {
         />
       )}
 
-      {shoppingViewOpen && (
-        <ShoppingListView
-          items={savedItems}
-          extras={shoppingExtras}
-          sourcesByItem={sourcesByItem}
-          pantryKeySet={pantryKeySet}
-          measurementPref={measurementPref}
-          allPriceMatches={allPriceMatches}
-          thaPicks={thaPicks}
-          initialStore={globalStore !== 'auto' ? globalStore : undefined}
-          initialPhase="cupboard_check"
-          onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
-          onRenameItem={handleRenameItem}
-          onClose={() => setShoppingViewOpen(false)}
-        />
-      )}
     </div>
   );
 }
