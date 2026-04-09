@@ -444,7 +444,7 @@ export class DatabaseStorage implements IStorage {
 
   async getShoppingListItems(userId: number): Promise<ShoppingListItem[]> {
     const householdId = await getHouseholdForUser(userId);
-    return await db.select().from(shoppingList).where(eq(shoppingList.householdId, householdId));
+    return await db.select().from(shoppingList).where(eq(shoppingList.householdId, householdId)).orderBy(shoppingList.id);
   }
 
   async addShoppingListItem(userId: number, item: InsertShoppingListItem, addedByUserId?: number): Promise<ShoppingListItem> {
@@ -2411,7 +2411,9 @@ export class DatabaseStorage implements IStorage {
 
   async getShoppingListItemsWithAttribution(userId: number): Promise<ShoppingListItemWithAttribution[]> {
     const householdId = await getHouseholdForUser(userId);
-    const items = await db.select().from(shoppingList).where(eq(shoppingList.householdId, householdId));
+    // Always order by id (insertion order) so that marking an item "already_got" / "in_basket"
+    // never changes its position in the list after the query refetches.
+    const items = await db.select().from(shoppingList).where(eq(shoppingList.householdId, householdId)).orderBy(shoppingList.id);
     if (items.length === 0) return [];
 
     const allSources = await db.select().from(ingredientSources).where(

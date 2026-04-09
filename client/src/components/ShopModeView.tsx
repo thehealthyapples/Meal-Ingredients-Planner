@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,7 @@ import {
 import {
   ChevronDown, ChevronUp, Check, Home, ShoppingCart,
   RefreshCw, ExternalLink, ArrowRight, Store, SkipForward,
+  Pencil, X as XIcon,
 } from "lucide-react";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 import type { ShoppingListItem, ProductMatch, IngredientProduct } from "@shared/schema";
@@ -41,6 +42,12 @@ interface ShopModeViewProps {
   thaPicks?: Record<string, IngredientProduct[]>;
   pantryKeySet: Set<string>;
   onUpdateStatus: (id: number, status: ShopStatus | null) => void;
+  /** Pre-select a store on first render of the shopping phase. */
+  initialStore?: string;
+  /** Skip the "start" intro and land directly on a given phase. */
+  initialPhase?: Phase;
+  /** Callback to rename/refine an item and trigger product re-lookup. */
+  onRenameItem?: (id: number, newName: string) => void;
 }
 
 const SUPERMARKETS = [
@@ -274,6 +281,8 @@ interface ShoppingItemCardProps {
   onUndo: () => void;
   onNextProduct: () => void;
   onNotInShop: () => void;
+  /** Allow user to refine the item name — triggers re-lookup of products. */
+  onRename?: (newName: string) => void;
 }
 
 function ShoppingItemCard({
@@ -284,6 +293,7 @@ function ShoppingItemCard({
   onUndo,
   onNextProduct,
   onNotInShop,
+  onRename,
 }: ShoppingItemCardProps) {
   const genericName = getDisplayName(item);
   const qty = item.quantityValue != null ? `${item.quantityValue}${item.unit ? ` ${item.unit}` : ""}` : null;
@@ -291,6 +301,23 @@ function ShoppingItemCard({
   const hasNextProduct = matches.length > currentMatchIndex + 1;
   const isInBasket = item.shopStatus === "in_basket" || item.shopStatus === "alternate_selected";
   const isNotInShop = item.shopStatus === "deferred";
+  const [editing, setEditing] = useState(false);
+  const [editValue, setEditValue] = useState(genericName);
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  const startEdit = () => {
+    setEditValue(genericName);
+    setEditing(true);
+    setTimeout(() => editInputRef.current?.focus(), 50);
+  };
+
+  const confirmEdit = () => {
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== genericName && onRename) {
+      onRename(trimmed);
+    }
+    setEditing(false);
+  };
 
   return (
     <div
@@ -365,8 +392,38 @@ function ShoppingItemCard({
           <div>
             <span className="font-semibold text-sm">{genericName}</span>
             {qty && <span className="text-xs text-muted-foreground ml-2">{qty}</span>}
-            <p className="text-xs text-muted-foreground mt-0.5 italic">No product data — look for {genericName}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 italic">No product found — look for {genericName}</p>
           </div>
+        )}
+
+        {/* Inline refine / edit */}
+        {!isInBasket && !isNotInShop && onRename && (
+          editing ? (
+            <div className="flex items-center gap-1.5 mt-2">
+              <input
+                ref={editInputRef}
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") confirmEdit(); if (e.key === "Escape") setEditing(false); }}
+                className="flex-1 h-7 text-xs rounded-md border border-primary/40 bg-background px-2 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                placeholder="Refine item…"
+              />
+              <button onClick={confirmEdit} className="h-7 w-7 flex items-center justify-center rounded-md bg-primary text-primary-foreground text-xs hover:bg-primary/90">
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={() => setEditing(false)} className="h-7 w-7 flex items-center justify-center rounded-md border border-border text-muted-foreground hover:text-foreground">
+                <XIcon className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={startEdit}
+              className="flex items-center gap-1 mt-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Pencil className="h-2.5 w-2.5" />
+              Refine
+            </button>
+          )
         )}
       </div>
 
@@ -422,13 +479,17 @@ function ShoppingPhase({
   allPriceMatches,
   thaPicks,
   onUpdateStatus,
+  initialStore,
+  onRenameItem,
 }: {
   items: ShopModeItem[];
   allPriceMatches: ProductMatch[];
   thaPicks: Record<string, IngredientProduct[]>;
   onUpdateStatus: (id: number, status: ShopStatus | null) => void;
+  initialStore?: string;
+  onRenameItem?: (id: number, newName: string) => void;
 }) {
-  const [selectedStore, setSelectedStore] = useState<string>("Tesco");
+  const [selectedStore, setSelectedStore] = useState<string>(initialStore ?? "Tesco");
   // Tracks which product index is currently shown per item — reset when store changes
   const [productIndexMap, setProductIndexMap] = useState<Record<number, number>>({});
   const [homeOpen, setHomeOpen] = useState(false);
@@ -504,6 +565,7 @@ function ShoppingPhase({
             onUndo={() => onUpdateStatus(item.id, "pending")}
             onNextProduct={() => handleNextProduct(item, matches)}
             onNotInShop={() => onUpdateStatus(item.id, "deferred")}
+            onRename={onRenameItem ? (newName) => onRenameItem(item.id, newName) : undefined}
           />
         );
       })}
@@ -551,8 +613,8 @@ function ShoppingPhase({
 
 // ─── Root component ───────────────────────────────────────────────────────────
 
-export default function ShopModeView({ items, allPriceMatches, thaPicks = {}, pantryKeySet, onUpdateStatus }: ShopModeViewProps) {
-  const [phase, setPhase] = useState<Phase>("start");
+export default function ShopModeView({ items, allPriceMatches, thaPicks = {}, pantryKeySet, onUpdateStatus, initialStore, initialPhase, onRenameItem }: ShopModeViewProps) {
+  const [phase, setPhase] = useState<Phase>(initialPhase ?? "start");
 
   return (
     <AnimatePresence mode="wait">
@@ -583,6 +645,8 @@ export default function ShopModeView({ items, allPriceMatches, thaPicks = {}, pa
             allPriceMatches={allPriceMatches}
             thaPicks={thaPicks}
             onUpdateStatus={onUpdateStatus}
+            initialStore={initialStore}
+            onRenameItem={onRenameItem}
           />
         )}
       </motion.div>

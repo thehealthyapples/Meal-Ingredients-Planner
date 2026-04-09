@@ -13,7 +13,7 @@ import {
   LogOut, ShieldCheck, Star,
   Mail, Sliders, Search, ChevronLeft, ChevronRight,
   Microscope, BookOpen, Heart, ScrollText,
-  User,
+  User, NotepadText,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -325,7 +325,7 @@ export function TopBar() {
 
         {/* Desktop: [Dashboard, Search, Diary] | logo (center) | [Basket, Partners, Profile] */}
         <div className="hidden md:grid items-center px-4" style={{ gridTemplateColumns: "1fr auto 1fr" }}>
-          {/* Left: Dashboard + Search + Diary */}
+          {/* Left: Dashboard + Search + List */}
           <div className="flex items-center gap-1">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -352,6 +352,19 @@ export function TopBar() {
                 </button>
               </TooltipTrigger>
               <TooltipContent>Search</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/list"
+                  className={`flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/list" ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+                  aria-label="List"
+                  data-testid="button-topbar-list"
+                >
+                  <NotepadText className="h-5 w-5" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>List</TooltipContent>
             </Tooltip>
           </div>
 
@@ -391,7 +404,7 @@ export function TopBar() {
         {/* Mobile: [Dashboard, Search] | logo | [Basket, Profile] */}
         <div className="md:hidden flex items-center justify-between px-1 h-14">
 
-          {/* Left: Dashboard + Search + Diary */}
+          {/* Left: Dashboard + Search + List */}
           <div className="flex items-center">
             <Link
               href="/"
@@ -409,6 +422,14 @@ export function TopBar() {
             >
               <Search className="h-5 w-5" />
             </button>
+            <Link
+              href="/list"
+              className={`flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/list" ? "text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+              aria-label="List"
+              data-testid="button-topbar-list-mobile"
+            >
+              <NotepadText className="h-5 w-5" />
+            </Link>
           </div>
 
           {/* Center: logo */}

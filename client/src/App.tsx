@@ -38,6 +38,7 @@ import DemoBasketPage from "@/pages/demo-basket-page";
 import DemoMealsPage from "@/pages/demo-meals-page";
 import PartnersPage from "@/pages/partners-page";
 import QuickMealPage from "@/pages/quick-meal-page";
+import ListPage from "@/pages/list-page";
 import HomePage from "@/pages/home-page";
 
 let _contentRenderMeasured = false;
@@ -143,6 +144,7 @@ function Router() {
       <Route path="/shared/:token" component={SharedPlanPage} />
       <Route path="/partners" component={() => <ProtectedRoute component={PartnersPage} />} />
       <Route path="/quick-meal" component={() => <ProtectedRoute component={QuickMealPage} />} />
+      <Route path="/list" component={() => <ProtectedRoute component={ListPage} />} />
 
       <Route path="/demo" component={() => <DemoRoute component={DemoOverviewPage} />} />
       <Route path="/demo/planner" component={() => <DemoRoute component={DemoPlannerPage} />} />

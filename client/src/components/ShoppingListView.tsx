@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { normalizeIngredientKey } from "@shared/normalize";
-import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowRight, Store } from "lucide-react";
+import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowRight, Store, SkipForward, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -10,8 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { ShoppingListItem, IngredientSource, ProductMatch } from "@shared/schema";
+import type { ShoppingListItem, IngredientSource, ProductMatch, IngredientProduct } from "@shared/schema";
 import { cleanProductName } from "@/lib/unit-display";
+import thaAppleUrl from "@/assets/icons/tha-apple.png";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -40,6 +41,16 @@ const SUPERMARKETS = [
   "Independent shop",
 ];
 
+// Unified display record used inside the shopping item row.
+// Sources: curated IngredientProduct (thaPicks) or a price match.
+interface ShopDisplayMatch {
+  productName: string;
+  thaRating: number | null;
+  price: number | null;
+  pricePerUnit: string | null;
+  productUrl: string | null;
+}
+
 interface ShoppingListViewProps {
   items: SLItem[];
   extras: { id: number; name: string; category: string; alwaysAdd: boolean; inBasket: boolean }[];
@@ -47,8 +58,19 @@ interface ShoppingListViewProps {
   pantryKeySet: Set<string>;
   measurementPref: "metric" | "imperial";
   allPriceMatches: ProductMatch[];
-  onToggleBought: (id: number, checked: boolean) => void;
+  /** DB-backed status update — preferred over onToggleBought. */
+  onUpdateStatus?: (id: number, status: string) => void;
+  /** Legacy: writes the boolean `checked` field. Used as fallback when onUpdateStatus is absent. */
+  onToggleBought?: (id: number, checked: boolean) => void;
   onClose: () => void;
+  /** Pre-select a supermarket when the view opens. */
+  initialStore?: string;
+  /** Skip to shopping phase directly. */
+  initialPhase?: "cupboard_check" | "shopping";
+  /** Curated THA product recommendations keyed by normalised ingredient key. */
+  thaPicks?: Record<string, IngredientProduct[]>;
+  /** Allow renaming/refining an item and re-triggering product lookup. */
+  onRenameItem?: (id: number, newName: string) => void;
 }
 
 // ── State persistence ──────────────────────────────────────────────────────
@@ -108,6 +130,100 @@ export function getLastShopSession(): ShopSession | null {
     const raw = localStorage.getItem(SHOP_SESSION_KEY);
     return raw ? (JSON.parse(raw) as ShopSession) : null;
   } catch { return null; }
+}
+
+// ── Product match resolution ───────────────────────────────────────────────
+// Priority: 1. THA curated picks for this store, 2. Price matches for this item+store.
+
+function resolveDisplayMatches(
+  item: SLItem,
+  allPriceMatches: ProductMatch[],
+  thaPicks: Record<string, IngredientProduct[]>,
+  store: string,
+): ShopDisplayMatch[] {
+  const itemKey = normalizeIngredientKey(item.normalizedName ?? item.productName ?? "");
+  const storeNorm = store.toLowerCase();
+
+  const thaMatches: ShopDisplayMatch[] = (thaPicks[itemKey] ?? [])
+    .filter(p => p.retailer.toLowerCase() === storeNorm)
+    .sort((a, b) => {
+      const rA = (a.tags as any)?.thaRating ?? a.priority ?? 0;
+      const rB = (b.tags as any)?.thaRating ?? b.priority ?? 0;
+      return rB - rA;
+    })
+    .map(p => ({
+      productName: p.productName,
+      // Use tags.thaRating first; fall back to the priority column which IS the 1-5 apple
+      // rating stored on ingredient_products rows. Without this fallback, curated THA picks
+      // showed no apple rating in shop view even when priority was set.
+      thaRating: (p.tags as any)?.thaRating ?? (p.priority > 0 ? p.priority : null),
+      price: null,
+      pricePerUnit: p.size ?? null,
+      productUrl: null,
+    }));
+
+  const priceMatches: ShopDisplayMatch[] = allPriceMatches
+    .filter(m => m.shoppingListItemId === item.id && m.supermarket.toLowerCase() === storeNorm)
+    .sort((a, b) => (b.thaRating ?? 0) - (a.thaRating ?? 0))
+    .map(m => ({
+      productName: m.productName,
+      thaRating: m.thaRating ?? null,
+      price: m.price ?? null,
+      pricePerUnit: m.pricePerUnit ?? null,
+      productUrl: m.productUrl ?? null,
+    }));
+
+  const combined = [...thaMatches, ...priceMatches];
+  const seen = new Set<string>();
+  return combined.filter(m => {
+    const key = m.productName.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// Compact apple rating: single apple icon + count
+function CompactRating({ rating }: { rating: number }) {
+  const clamped = Math.max(1, Math.min(5, Math.round(rating || 1)));
+  return (
+    <span className="inline-flex items-center gap-0.5 shrink-0">
+      <img src={thaAppleUrl} width={11} height={11} alt="" draggable={false} />
+      <span className="text-[10px] font-semibold leading-none">{clamped}x</span>
+    </span>
+  );
+}
+
+// ── Vague-item clarification ───────────────────────────────────────────────
+// Maps a generic item name to refinement chips shown inline in shop view.
+// Only items whose normalised name EXACTLY matches a key here get a prompt.
+// Clear, specific items (e.g. "oven chips", "greek yoghurt") will not match.
+
+const CLARIFICATION_OPTIONS: Record<string, { label: string; refinements: string[] }> = {
+  yoghurt:  { label: "What kind?", refinements: ["Greek natural yoghurt", "Yoghurt with berries", "Kids yoghurt", "High-protein yoghurt"] },
+  yogurt:   { label: "What kind?", refinements: ["Greek natural yoghurt", "Yoghurt with berries", "Kids yoghurt", "High-protein yoghurt"] },
+  bread:    { label: "What kind?", refinements: ["Sourdough bread", "Wholemeal bread", "White bread", "Seeded bread"] },
+  milk:     { label: "What kind?", refinements: ["Whole milk", "Semi-skimmed milk", "Skimmed milk", "Oat milk"] },
+  cheese:   { label: "What kind?", refinements: ["Cheddar cheese", "Mozzarella", "Cream cheese", "Brie"] },
+  juice:    { label: "What kind?", refinements: ["Orange juice", "Apple juice", "Cranberry juice", "Pineapple juice"] },
+  cereal:   { label: "What kind?", refinements: ["Porridge oats", "Cornflakes", "Granola", "Muesli"] },
+  butter:   { label: "What kind?", refinements: ["Salted butter", "Unsalted butter", "Plant-based butter"] },
+  cream:    { label: "What kind?", refinements: ["Single cream", "Double cream", "Soured cream", "Crème fraîche"] },
+  pasta:    { label: "What kind?", refinements: ["Spaghetti", "Penne pasta", "Fusilli pasta", "Tagliatelle"] },
+  rice:     { label: "What kind?", refinements: ["Basmati rice", "White rice", "Brown rice", "Arborio rice"] },
+  sauce:    { label: "What kind?", refinements: ["Tomato pasta sauce", "Pesto", "Curry sauce", "Stir-fry sauce"] },
+  meat:     { label: "What kind?", refinements: ["Chicken breast", "Beef mince", "Pork sausages", "Lamb chops"] },
+  fish:     { label: "What kind?", refinements: ["Salmon fillets", "Cod fillets", "Tuna", "Prawns"] },
+  oil:      { label: "What kind?", refinements: ["Olive oil", "Vegetable oil", "Coconut oil", "Rapeseed oil"] },
+  stock:    { label: "What kind?", refinements: ["Chicken stock", "Beef stock", "Vegetable stock", "Fish stock"] },
+  crackers: { label: "What kind?", refinements: ["Oatcakes", "Cream crackers", "Rice cakes", "Rye crispbread"] },
+};
+
+function getVagueItemKey(item: SLItem): string | null {
+  const name = (item.normalizedName ?? item.productName ?? "").toLowerCase().trim();
+  // Strip any leading digit/quantity (e.g. "2 milk" → "milk")
+  const stripped = name.replace(/^\d+(?:\.\d+)?\s+/, "").trim();
+  return CLARIFICATION_OPTIONS[stripped] ? stripped : null;
 }
 
 // ── Category definitions ───────────────────────────────────────────────────
@@ -318,17 +434,27 @@ export default function ShoppingListView({
   pantryKeySet,
   measurementPref,
   allPriceMatches,
+  onUpdateStatus,
   onToggleBought,
   onClose,
+  initialStore,
+  initialPhase,
+  thaPicks = {},
+  onRenameItem,
 }: ShoppingListViewProps) {
   const [notInShop, setNotInShop] = useState<Set<number>>(() => loadNotInShop());
-  const [selectedSupermarket, setSelectedSupermarket] = useState<string>("Tesco");
+  const [selectedSupermarket, setSelectedSupermarket] = useState<string>(initialStore ?? "Tesco");
   const [extraStates, setExtraStates] = useState<Map<number, "in_basket" | "not_in_shop">>(new Map());
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [shopSession, setShopSession] = useState<ShopSession | null>(null);
   const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
-  const [phase, setPhase] = useState<"cupboard_check" | "shopping">("cupboard_check");
+  const [phase, setPhase] = useState<"cupboard_check" | "shopping">(initialPhase ?? "cupboard_check");
   const [atHomeIds, setAtHomeIds] = useState<Set<number>>(new Set());
+  const [productIndexMap, setProductIndexMap] = useState<Record<number, number>>({});
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
+  // Track items whose vague name the user has already responded to (clarified or dismissed).
+  const [clarifiedItemIds, setClarifiedItemIds] = useState<Set<number>>(new Set());
   const itemsScrollRef = useRef<HTMLDivElement>(null);
   const tabStripRef = useRef<HTMLDivElement>(null);
   const activeTabElRef = useRef<HTMLButtonElement>(null);
@@ -342,9 +468,29 @@ export default function ShoppingListView({
     saveNotInShop(notInShop, items);
   }, [notInShop, items]);
 
+  function handleStoreChange(store: string) {
+    setSelectedSupermarket(store);
+    setProductIndexMap({});
+  }
+
+  function handleNextProduct(itemId: number, total: number) {
+    setProductIndexMap(prev => {
+      const next = (prev[itemId] ?? 0) + 1;
+      return next < total ? { ...prev, [itemId]: next } : prev;
+    });
+  }
+
   // ── State derivation ─────────────────────────────────────────────────────
 
   function getItemState(item: SLItem): ShopState {
+    if (onUpdateStatus) {
+      // DB-backed path: derive state from shopStatus field
+      const s = item.shopStatus;
+      if (s === "deferred") return "not_in_shop";
+      if (s === "in_basket" || s === "alternate_selected") return "in_basket";
+      return "need";
+    }
+    // Legacy local-state path
     if (notInShop.has(item.id)) return "not_in_shop";
     if (item.checked) return "in_basket";
     return "need";
@@ -352,8 +498,17 @@ export default function ShoppingListView({
 
   function setItemState(item: SLItem, next: ShopState) {
     if (getItemState(item) === next) return;
-    if (next === "in_basket" && !item.checked) onToggleBought(item.id, true);
-    else if (next !== "in_basket" && item.checked) onToggleBought(item.id, false);
+    if (onUpdateStatus) {
+      const dbStatus =
+        next === "in_basket" ? "in_basket" :
+        next === "not_in_shop" ? "deferred" :
+        "pending";
+      onUpdateStatus(item.id, dbStatus);
+      return;
+    }
+    // Legacy local-state path
+    if (next === "in_basket" && !item.checked) onToggleBought?.(item.id, true);
+    else if (next !== "in_basket" && item.checked) onToggleBought?.(item.id, false);
     setNotInShop((prev) => {
       const s = new Set(prev);
       if (next === "not_in_shop") s.add(item.id);
@@ -378,8 +533,10 @@ export default function ShoppingListView({
   // ── Filtered item list (excludes at-home items once in shopping phase) ────
 
   const shoppingItems = useMemo(
-    () => (phase === "shopping" ? items.filter((i) => !atHomeIds.has(i.id)) : items),
-    [items, atHomeIds, phase],
+    () => (phase === "shopping"
+      ? items.filter((i) => onUpdateStatus ? i.shopStatus !== "already_got" : !atHomeIds.has(i.id))
+      : items),
+    [items, atHomeIds, phase, onUpdateStatus],
   );
 
   // ── Progress ─────────────────────────────────────────────────────────────
@@ -512,9 +669,12 @@ export default function ShoppingListView({
     const isPantryStaple = pantryKeySet.has(
       normalizeIngredientKey(item.normalizedName ?? item.productName ?? ""),
     );
-    const matchedProduct = allPriceMatches
-      .filter(m => m.shoppingListItemId === item.id && m.supermarket.toLowerCase() === selectedSupermarket.toLowerCase())
-      .sort((a, b) => (b.thaRating ?? 0) - (a.thaRating ?? 0))[0] ?? null;
+
+    // Resolve display matches: THA picks first, then price matches
+    const resolvedMatches = resolveDisplayMatches(item, allPriceMatches, thaPicks, selectedSupermarket);
+    const currentMatchIndex = productIndexMap[item.id] ?? 0;
+    const resolvedMatch = resolvedMatches[currentMatchIndex] ?? null;
+    const isEditing = editingItemId === item.id;
 
     const rowBg =
       state === "in_basket"   ? "bg-primary/[0.04] dark:bg-primary/[0.07]"
@@ -543,23 +703,134 @@ export default function ShoppingListView({
               </span>
             )}
           </div>
-          {state === "need" && matchedProduct && (
-            <p className="tha-print-hide text-[11px] text-muted-foreground/70 leading-tight mt-0.5">
-              {matchedProduct.productName}
-              {matchedProduct.price != null && (
-                <span className="ml-1.5 tabular-nums">£{matchedProduct.price.toFixed(2)}</span>
+
+          {/* Inline rename input */}
+          {isEditing ? (
+            <div className="tha-print-hide flex items-center gap-1.5 mt-1.5">
+              <input
+                autoFocus
+                value={editValue}
+                onChange={e => setEditValue(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") {
+                    const trimmed = editValue.trim();
+                    if (trimmed && onRenameItem) onRenameItem(item.id, trimmed);
+                    setEditingItemId(null);
+                  }
+                  if (e.key === "Escape") setEditingItemId(null);
+                }}
+                className="flex-1 h-6 text-[11px] rounded-md border border-primary/40 bg-background px-2 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                placeholder="Refine item name…"
+              />
+              <button
+                onClick={() => {
+                  const trimmed = editValue.trim();
+                  if (trimmed && onRenameItem) onRenameItem(item.id, trimmed);
+                  setEditingItemId(null);
+                }}
+                className="h-6 w-6 flex items-center justify-center rounded bg-primary text-primary-foreground"
+              >
+                <Check className="h-3 w-3" />
+              </button>
+              <button
+                onClick={() => setEditingItemId(null)}
+                className="h-6 w-6 flex items-center justify-center rounded border border-border text-muted-foreground"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Product match hint with THA rating + cycling */}
+              {state === "need" && resolvedMatch && (
+                <div className="tha-print-hide flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  {resolvedMatch.thaRating != null && <CompactRating rating={resolvedMatch.thaRating} />}
+                  <span className="text-[11px] text-muted-foreground/70 truncate max-w-[160px]">
+                    {resolvedMatch.productName}
+                  </span>
+                  {resolvedMatch.price != null && (
+                    <span className="text-[11px] text-muted-foreground/70 tabular-nums">
+                      £{resolvedMatch.price.toFixed(2)}
+                    </span>
+                  )}
+                  {resolvedMatches.length > 1 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleNextProduct(item.id, resolvedMatches.length); }}
+                      className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/40 hover:text-foreground transition-colors"
+                      title="Next product option"
+                    >
+                      <SkipForward className="h-2.5 w-2.5" />
+                      <span>{currentMatchIndex + 1}/{resolvedMatches.length}</span>
+                    </button>
+                  )}
+                  {onRenameItem && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditValue(item.productName ?? ""); setEditingItemId(item.id); }}
+                      className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/40 hover:text-foreground transition-colors"
+                      title="Refine item name"
+                    >
+                      <Pencil className="h-2.5 w-2.5" />
+                    </button>
+                  )}
+                </div>
               )}
-            </p>
-          )}
-          {state === "need" && !matchedProduct && firstMeal && (
-            <p className="tha-print-hide text-[11px] text-muted-foreground/55 leading-tight mt-0.5">
-              {firstMeal}{isPantryStaple ? " · staple" : ""}
-            </p>
-          )}
-          {state === "not_in_shop" && (
-            <p className="tha-print-hide text-[11px] text-amber-600/70 dark:text-amber-500/70 leading-tight mt-0.5">
-              Try next shop
-            </p>
+              {state === "need" && !resolvedMatch && firstMeal && (
+                <div className="tha-print-hide flex items-center gap-1.5 mt-0.5">
+                  <p className="text-[11px] text-muted-foreground/55 leading-tight">
+                    {firstMeal}{isPantryStaple ? " · staple" : ""}
+                  </p>
+                  {onRenameItem && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditValue(item.productName ?? ""); setEditingItemId(item.id); }}
+                      className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/40 hover:text-foreground transition-colors"
+                      title="Refine item name"
+                    >
+                      <Pencil className="h-2.5 w-2.5" />
+                    </button>
+                  )}
+                </div>
+              )}
+              {state === "not_in_shop" && (
+                <p className="tha-print-hide text-[11px] text-amber-600/70 dark:text-amber-500/70 leading-tight mt-0.5">
+                  Try next shop
+                </p>
+              )}
+              {/* Vague-item clarification chips — only when needed, not already clarified */}
+              {state === "need" && !clarifiedItemIds.has(item.id) && (() => {
+                const vagueKey = getVagueItemKey(item);
+                if (!vagueKey) return null;
+                const { label, refinements } = CLARIFICATION_OPTIONS[vagueKey];
+                return (
+                  <div className="tha-print-hide mt-1.5">
+                    <p className="text-[10px] text-muted-foreground/55 mb-1">{label}</p>
+                    <div className="flex flex-wrap gap-1">
+                      {refinements.map((r) => (
+                        <button
+                          key={r}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRenameItem?.(item.id, r);
+                            setClarifiedItemIds((prev) => { const s = new Set(prev); s.add(item.id); return s; });
+                          }}
+                          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border border-border/60 bg-muted/50 hover:bg-primary/10 hover:border-primary/40 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {r}
+                        </button>
+                      ))}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setClarifiedItemIds((prev) => { const s = new Set(prev); s.add(item.id); return s; });
+                        }}
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border border-border/30 bg-transparent text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                      >
+                        Keep as is
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </>
           )}
         </div>
         <div className="tha-print-hide flex-shrink-0">
@@ -714,7 +985,7 @@ export default function ShoppingListView({
           {/* Right: Supermarket picker + Print + Close */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
             {phase === "shopping" && (
-              <Select value={selectedSupermarket} onValueChange={setSelectedSupermarket}>
+              <Select value={selectedSupermarket} onValueChange={handleStoreChange}>
                 <SelectTrigger className="h-8 text-xs bg-background/70 gap-1 pr-2" style={{ minWidth: 0, width: "auto" }}>
                   <Store className="h-3.5 w-3.5 shrink-0" />
                   <SelectValue />
@@ -890,7 +1161,9 @@ export default function ShoppingListView({
             <div className="flex-1 overflow-y-auto" style={{ background: "hsl(var(--card) / 0.88)" }}>
               <div className="divide-y divide-border/25">
                 {items.map((item) => {
-                  const isAtHome = atHomeIds.has(item.id);
+                  const isAtHome = onUpdateStatus
+                    ? item.shopStatus === "already_got"
+                    : atHomeIds.has(item.id);
                   const isLikelyInStock = pantryKeySet.has(
                     normalizeIngredientKey(item.normalizedName ?? item.productName ?? ""),
                   );
@@ -923,12 +1196,9 @@ export default function ShoppingListView({
                         <div className="flex items-center gap-2 flex-shrink-0">
                           <span className="text-[11px] text-primary/80 font-medium">✓ At home</span>
                           <button
-                            onClick={() =>
-                              setAtHomeIds((prev) => {
-                                const s = new Set(prev);
-                                s.delete(item.id);
-                                return s;
-                              })
+                            onClick={() => onUpdateStatus
+                              ? onUpdateStatus(item.id, "pending")
+                              : setAtHomeIds((prev) => { const s = new Set(prev); s.delete(item.id); return s; })
                             }
                             className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2"
                           >
@@ -937,7 +1207,10 @@ export default function ShoppingListView({
                         </div>
                       ) : (
                         <button
-                          onClick={() => setAtHomeIds((prev) => { const s = new Set(prev); s.add(item.id); return s; })}
+                          onClick={() => onUpdateStatus
+                            ? onUpdateStatus(item.id, "already_got")
+                            : setAtHomeIds((prev) => { const s = new Set(prev); s.add(item.id); return s; })
+                          }
                           className="inline-flex items-center text-[11px] px-3 py-1.5 rounded-lg border border-border/60 bg-background/70 text-foreground/80 hover:bg-muted/50 hover:border-border transition-colors flex-shrink-0 whitespace-nowrap"
                         >
                           In my cupboard
@@ -949,17 +1222,24 @@ export default function ShoppingListView({
               </div>
 
               {/* CTA */}
-              <div className="px-4 py-4">
-                <button
-                  onClick={() => setPhase("shopping")}
-                  className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 hover:bg-primary/90 active:bg-primary/80 transition-colors"
-                >
-                  {atHomeIds.size > 0
-                    ? `Done — ${atHomeIds.size} item${atHomeIds.size > 1 ? "s" : ""} at home`
-                    : "Head to the shop"}
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
+              {(() => {
+                const atHomeCount = onUpdateStatus
+                  ? items.filter(i => i.shopStatus === "already_got").length
+                  : atHomeIds.size;
+                return (
+                  <div className="px-4 py-4">
+                    <button
+                      onClick={() => setPhase("shopping")}
+                      className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 hover:bg-primary/90 active:bg-primary/80 transition-colors"
+                    >
+                      {atHomeCount > 0
+                        ? `Done — ${atHomeCount} item${atHomeCount > 1 ? "s" : ""} at home`
+                        : "Head to the shop"}
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

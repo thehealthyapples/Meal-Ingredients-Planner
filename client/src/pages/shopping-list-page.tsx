@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearch, Link } from "wouter";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -41,13 +42,13 @@ import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import {
   ShoppingCart, Copy, Trash2, RefreshCw, Scale,
   Search, ExternalLink, PoundSterling, TrendingDown, Loader2,
-  ArrowUpDown, ArrowUp, ArrowDown, Pencil, Check, X,
+  ArrowUpDown, ArrowUp, ArrowDown, ArrowLeft, Pencil, Check, X,
   Beef, Fish, Milk, Egg, Leaf, Apple, Wheat, Flower2,
   Droplets, FlaskConical, Nut, Bean, Croissant, Package,
   CircleDot, Plus, Minus, Info, Layers, Crown, Sprout, Tag,
   Download, UtensilsCrossed, Store, Maximize2, Minimize2,
   ChevronDown, ChevronUp, AlertTriangle, Microscope, Filter, SlidersHorizontal,
-  Snowflake, Home, Columns2, Clock, ChefHat, Sparkles, ListChecks,
+  Snowflake, Home, Columns2, Clock, ChefHat, Sparkles, ListChecks, NotepadText,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -1373,6 +1374,7 @@ export default function ShoppingListPage() {
   const { user } = useUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const search = useSearch();
 
   useEffect(() => {
     document.title = "Basket \u2013 The Healthy Apples";
@@ -1388,7 +1390,9 @@ export default function ShoppingListPage() {
   const [basketDialogOpen, setBasketDialogOpen] = useState(false);
   const [basketSending, setBasketSending] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [globalStore, setGlobalStore] = useState<string>('auto');
+  const [globalStore, setGlobalStore] = useState<string>(() => {
+    try { return new URLSearchParams(window.location.search).get("store") || 'auto'; } catch { return 'auto'; }
+  });
   const [analyseItem, setAnalyseItem] = useState<ShoppingListItem | null>(null);
   const [correctItem, setCorrectItem] = useState<ShoppingListItem | null>(null);
   const [optimizerSelections, setOptimizerSelections] = useState<Record<number, string[]>>({});
@@ -1461,9 +1465,23 @@ export default function ShoppingListPage() {
   const measurementPref = (user?.measurementPreference as 'metric' | 'imperial') || 'metric';
   const currentTier = (user?.preferredPriceTier as PriceTier) || 'standard';
 
-  const { data: savedItems = [], isLoading: loadingSaved } = useQuery<ShoppingListItemExtended[]>({
+  // Determine if we're viewing a specific quick-list basket (from ?quickList= URL param).
+  // This is computed once at mount from the URL so it is stable for the component lifetime.
+  const quickListLabel = useMemo(() => {
+    try { return new URLSearchParams(search).get("quickList") || null; } catch { return null; }
+  }, [search]);
+
+  const { data: savedItems_raw = [], isLoading: loadingSaved } = useQuery<ShoppingListItemExtended[]>({
     queryKey: [api.shoppingList.list.path],
   });
+  // In quick-list mode show only the items for that basket.
+  // In normal mode exclude all quick-list items so they never contaminate the main basket.
+  const savedItems = useMemo(
+    () => quickListLabel
+      ? savedItems_raw.filter(i => i.basketLabel === quickListLabel)
+      : savedItems_raw.filter(i => !i.basketLabel?.startsWith("quick_list")),
+    [savedItems_raw, quickListLabel],
+  );
 
   const { data: householdData } = useQuery<{ id: number; name: string; members?: unknown[] }>({
     queryKey: ['/api/household'],
@@ -1518,7 +1536,10 @@ export default function ShoppingListPage() {
   const [alwaysAddModal, setAlwaysAddModal] = useState<{ extraId: number; extraName: string } | null>(null);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const collapsedInitRef = useRef(false);
-  const [shoppingViewOpen, setShoppingViewOpen] = useState(false);
+  const [shoppingViewOpen, setShoppingViewOpen] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get("shopMode") === "1"; } catch { return false; }
+  });
+  // shopModeOpen kept so the inline ShopModeView section compiles until it is removed in a later step.
   const [shopModeOpen, setShopModeOpen] = useState(false);
   const prevExtrasLenRef = useRef(0);
 
@@ -2066,6 +2087,38 @@ export default function ShoppingListPage() {
       .catch(e => console.warn('[THA Picks] Lookup on load failed (non-fatal):', e));
   }, [savedItems.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // When entering from List (quick-list mode), auto-trigger price matching so
+  // product options are ready by the time the user reaches the shopping phase.
+  const quickListPricesTriggeredRef = useRef(false);
+  useEffect(() => {
+    if (!quickListLabel) return;
+    if (quickListPricesTriggeredRef.current) return;
+    if (loadingSaved || savedItems.length === 0) return;
+    quickListPricesTriggeredRef.current = true;
+    lookupPrices.mutate();
+  }, [quickListLabel, loadingSaved, savedItems.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Rename an item and re-fetch THA picks for its new key.
+  const handleRenameItem = useCallback(async (id: number, newName: string) => {
+    const normalizedName = normalizeIngredientKey(newName);
+    await updateItem.mutateAsync({ id, fields: { productName: newName, normalizedName } });
+    // Fetch THA picks for the new key and merge into existing map so other items are unaffected.
+    try {
+      const res = await fetch('/api/ingredient-products/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredientKeys: [normalizedName] }),
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.recommendations) {
+          setThaPicks(prev => ({ ...prev, ...data.recommendations }));
+        }
+      }
+    } catch {}
+  }, [updateItem]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -2327,6 +2380,14 @@ export default function ShoppingListPage() {
     </th>
   );
 
+  // ── Quick-list clean mode ──────────────────────────────────────────────────
+  // When entering from the List page (quickListLabel is set) with shop mode
+  // active, ShoppingListView opens as a portal overlay covering the full page.
+  // The view starts at cupboard_check (the default), which skips only the old
+  // ShopModeView intro card while preserving the cupboard check step.
+  // NOTE: shoppingViewOpen is seeded from ?shopMode=1 in useState, so the
+  // portal opens immediately on navigation — no early return needed here.
+
   return (
     <div
       className={`${isFullscreen ? 'fixed inset-0 z-50 overflow-auto flex flex-col' : 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`}
@@ -2374,6 +2435,16 @@ export default function ShoppingListPage() {
                       </div>
                     );
                   })()}
+                  {quickListLabel && (
+                    <div className="flex items-center gap-2 mt-2 px-2.5 py-1.5 rounded-lg bg-primary/8 border border-primary/20 text-xs" data-testid="banner-quick-list">
+                      <NotepadText className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="text-primary font-medium">Quick List</span>
+                      <span className="text-muted-foreground">· {savedItems.length} item{savedItems.length !== 1 ? "s" : ""}</span>
+                      <Link href="/analyse-basket" className="ml-auto text-muted-foreground hover:text-foreground underline underline-offset-2 shrink-0">
+                        Full basket
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-wrap justify-end">
@@ -2423,12 +2494,12 @@ export default function ShoppingListPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setShopModeOpen(v => !v)}
+                    onClick={() => setShoppingViewOpen(v => !v)}
                     className="gap-1.5"
                     data-testid="button-shop-mode"
                   >
                     <ShoppingCart className="h-3.5 w-3.5" />
-                    <span>{shopModeOpen ? "Close shop" : "Head to the shop"}</span>
+                    <span>{shoppingViewOpen ? "Close shop" : "Head to the shop"}</span>
                   </Button>
                 )}
                 {/* Apple overflow menu - far right */}
@@ -3367,7 +3438,10 @@ export default function ShoppingListPage() {
             allPriceMatches={allPriceMatches}
             thaPicks={thaPicks}
             pantryKeySet={pantryKeySet}
+            initialStore={globalStore !== 'auto' ? globalStore : undefined}
+            initialPhase={quickListLabel ? "cupboard" : undefined}
             onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
+            onRenameItem={handleRenameItem}
           />
         )}
       </div>
@@ -3690,7 +3764,11 @@ export default function ShoppingListPage() {
           pantryKeySet={pantryKeySet}
           measurementPref={measurementPref}
           allPriceMatches={allPriceMatches}
-          onToggleBought={(id, checked) => toggleChecked.mutate({ id, checked })}
+          thaPicks={thaPicks}
+          initialStore={globalStore !== 'auto' ? globalStore : undefined}
+          initialPhase="cupboard_check"
+          onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
+          onRenameItem={handleRenameItem}
           onClose={() => setShoppingViewOpen(false)}
         />
       )}

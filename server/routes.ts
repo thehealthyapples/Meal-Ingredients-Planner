@@ -2834,6 +2834,9 @@ export async function registerRoutes(
       if (input.normalizedName) {
         const { normalizeName, detectIngredientCategory: detect } = await import('./lib/ingredient-utils');
         const cat = input.category || detect(input.normalizedName);
+        // Write the detected category back to input so the DB row carries the right category,
+        // not null. Without this, quick-list items always land in "Other" in shop view.
+        (input as any).category = cat;
         const ingredient = await storage.getOrCreateNormalizedIngredient(
           input.productName, input.normalizedName, cat
         );
