@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus } from "lucide-react";
 import { ScanConfirmDialog } from "@/components/scan-confirm-dialog";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { MealCompletionDialog, type CompletionMeal } from "@/components/meal-completion-dialog";
@@ -378,7 +378,7 @@ function GroupedMealDetail({ meal, allMeals, tab, mealId }: {
   );
 }
 
-function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, audience, isFreezerEligible, onFreezeClick, servings, sourceUrl, mealFormat, instructions, hideEdit, hideBasket }: {
+function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, audience, isFreezerEligible, onFreezeClick, servings, sourceUrl, mealFormat, instructions, hideEdit, hideBasket, onAddToList }: {
   mealId: number;
   mealName: string;
   ingredients: string[];
@@ -393,6 +393,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
   instructions?: string[] | null;
   hideEdit?: boolean;
   hideBasket?: boolean;
+  onAddToList?: (ingredients: string[]) => void;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -687,6 +688,23 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
               </Button>
             </TooltipTrigger>
             <TooltipContent><p className="text-xs">Add to freezer</p></TooltipContent>
+          </Tooltip>
+        )}
+
+        {onAddToList && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-primary"
+                onClick={(e) => { e.stopPropagation(); onAddToList(ingredients); }}
+                data-testid={`button-add-to-list-${mealId}`}
+              >
+                <ListPlus className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p className="text-xs">Add to list</p></TooltipContent>
           </Tooltip>
         )}
         </div>
@@ -1108,13 +1126,14 @@ function WebSourceBadge({ recipe }: { recipe: WebSearchRecipe }) {
   );
 }
 
-function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, nutritionMap, onFreezeClick }: {
+function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, nutritionMap, onFreezeClick, onAddToList }: {
   recipe: WebSearchRecipe;
   importedMealId: number | null;
   importedMeal: any;
   onImport: (recipe: WebSearchRecipe) => Promise<number | null>;
   nutritionMap: Map<number, any>;
   onFreezeClick?: () => void;
+  onAddToList?: (ingredients: string[]) => void;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1204,6 +1223,17 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
     setPendingAction(null);
   };
 
+  const handleAddToList = async () => {
+    if (!onAddToList) return;
+    setPendingAction("list");
+    // Import the meal to cookbook first (no-op if already imported)
+    const mealId = await ensureImported();
+    if (!mealId) { setPendingAction(null); return; }
+    const ingredients = importedMeal?.ingredients || recipe.ingredients || [];
+    onAddToList(ingredients);
+    setPendingAction(null);
+  };
+
   if (localMealId && importedMeal && !plannerOpen && !analysisOpen) {
     return (
       <div onClick={(e) => e.stopPropagation()}>
@@ -1219,6 +1249,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
           onFreezeClick={onFreezeClick ?? (() => {})}
           servings={importedMeal.servings || 1}
           sourceUrl={recipe.url || null}
+          onAddToList={onAddToList}
         />
       </div>
     );
@@ -1285,6 +1316,23 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
           </TooltipTrigger>
           <TooltipContent><p className="text-xs">Add to planner</p></TooltipContent>
         </Tooltip>
+        {onAddToList && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-primary"
+                onClick={handleAddToList}
+                disabled={isDisabled}
+                data-testid={`button-web-add-to-list-${recipe.id}`}
+              >
+                {pendingAction === "list" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListPlus className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p className="text-xs">Add to list</p></TooltipContent>
+          </Tooltip>
+        )}
       </div>
 
       {localMealId && (
@@ -1399,6 +1447,32 @@ export default function MealsPage() {
   const [freezerPortions, setFreezerPortions] = useState(4);
   const [freezerLabel, setFreezerLabel] = useState("");
   const [freezerNotes, setFreezerNotes] = useState("");
+
+  const isFromList = useMemo(() => new URLSearchParams(searchStr).get("from") === "list", [searchStr]);
+
+  const handleAddToListFromCookbook = useCallback(async (ingredients: string[]) => {
+    try {
+      let payload: unknown;
+      try {
+        const parseRes = await apiRequest("POST", api.import.parse.path, {
+          source: "ingredients",
+          rawText: ingredients.join("\n"),
+          hint: "recipe",
+        });
+        const { items } = (await parseRes.json()) as { items: unknown[] };
+        payload = { version: 2, items };
+      } catch {
+        // Parse endpoint failed — fall back to raw strings (version 1)
+        payload = ingredients;
+      }
+      localStorage.setItem("tha-pending-list-ingredients", JSON.stringify(payload));
+    } catch {}
+    if (isFromList) {
+      navigate("/list");
+    } else {
+      toast({ title: "Added to your list", description: "Open List to see and edit your quick list." });
+    }
+  }, [navigate, isFromList, toast]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchStr);
@@ -1878,7 +1952,15 @@ export default function MealsPage() {
         const ingB = b.ingredients?.length ?? 999;
         return ingA - ingB || a.name.localeCompare(b.name);
       }
-      return orderA - orderB || a.name.localeCompare(b.name);
+      const catOrder = orderA - orderB;
+      if (catOrder !== 0) return catOrder;
+      // No active search: within the same category, meals with images come first
+      if (!activeSearch) {
+        const imgA = a.imageUrl ? 0 : 1;
+        const imgB = b.imageUrl ? 0 : 1;
+        if (imgA !== imgB) return imgA - imgB;
+      }
+      return a.name.localeCompare(b.name);
     });
   }, [meals, searchTerm, categoryFilter, allCategories, activeGroups, activeAudiences, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter, searchSource, user]);
 
@@ -1928,9 +2010,30 @@ export default function MealsPage() {
 
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
+      {/* "from list" mode banner */}
+      {isFromList && (
+        <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 mb-4" data-testid="banner-add-to-list-mode">
+          <ListPlus className="h-4 w-4 text-primary shrink-0" />
+          <p className="flex-1 text-sm text-foreground/80">
+            Tap <ListPlus className="inline h-3.5 w-3.5 text-primary mx-0.5" /> on any meal to add its ingredients to your quick list.
+          </p>
+          <button
+            className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            onClick={() => navigate("/list")}
+            aria-label="Back to list"
+            data-testid="button-back-to-list"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Row A: compact title + action buttons */}
       <div className="flex justify-between items-center gap-4 mb-3">
-        <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-meals-title">Cookbook</h1>
+        <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2" data-testid="text-meals-title">
+          <ChefHat className="h-5 w-5 text-primary" />
+          Cookbook
+        </h1>
         <div className="flex items-center gap-2 shrink-0">
           <input
             ref={scanFileRef}
@@ -2466,6 +2569,7 @@ export default function MealsPage() {
                                         onImport={handleWebImport}
                                         nutritionMap={nutritionMap}
                                         onFreezeClick={importedMealId ? () => setAddToFreezerMealId(importedMealId) : undefined}
+                                        onAddToList={handleAddToListFromCookbook}
                                       />
                                     </div>
                                   )}
@@ -2828,6 +2932,7 @@ export default function MealsPage() {
                         sourceUrl={meal.sourceUrl}
                         mealFormat={meal.mealFormat}
                         instructions={meal.instructions}
+                        onAddToList={handleAddToListFromCookbook}
                       />
                     </CardFooter>
                   </Card>
@@ -2951,6 +3056,7 @@ export default function MealsPage() {
                             sourceUrl={meal.sourceUrl}
                             mealFormat={meal.mealFormat}
                             instructions={meal.instructions}
+                            onAddToList={handleAddToListFromCookbook}
                           />
                           {!meal.isSystemMeal && (
                             <Button
@@ -3173,6 +3279,7 @@ export default function MealsPage() {
                                 instructions={meal.instructions}
                                 hideEdit
                                 hideBasket
+                                onAddToList={handleAddToListFromCookbook}
                               />
                             </div>
                             <Button
@@ -3619,6 +3726,7 @@ export default function MealsPage() {
                                         onImport={handleWebImport}
                                         nutritionMap={nutritionMap}
                                         onFreezeClick={importedMealId ? () => setAddToFreezerMealId(importedMealId) : undefined}
+                                        onAddToList={handleAddToListFromCookbook}
                                       />
                                     </div>
                                   )}

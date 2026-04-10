@@ -524,7 +524,10 @@ export default function PantryPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-pantry-title">My Pantry</h1>
+        <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2" data-testid="text-pantry-title">
+          <PantryIcon className="h-5 w-5 text-primary" />
+          My Pantry
+        </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Your everyday choices live here.
         </p>

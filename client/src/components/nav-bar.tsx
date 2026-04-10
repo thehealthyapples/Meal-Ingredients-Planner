@@ -12,7 +12,7 @@ import {
   LayoutDashboard, CalendarDays, ShoppingBasket,
   LogOut, ShieldCheck, Star,
   Mail, Sliders, Search, ChevronLeft, ChevronRight,
-  Microscope, BookOpen, Heart, ScrollText,
+  Microscope, BookOpen, Heart, ScrollText, ChefHat,
   User, NotepadText,
 } from "lucide-react";
 import { api } from "@shared/routes";
@@ -34,20 +34,20 @@ function PantryIcon({ className }: { className?: string }) {
 
 // Sidebar nav - high-frequency items (Dashboard, Search, Basket, Profile) live in the top bar
 const NAV_ITEMS_MAIN = [
-  { href: "/meals", label: "Cookbook", icon: BookOpen },
+  { href: "/meals", label: "Cookbook", icon: ChefHat },
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/products", label: "Analyser", icon: Microscope },
-  { href: "/diary", label: "My Diary", icon: ScrollText },
+  { href: "/diary", label: "My Diary", icon: BookOpen },
 ];
 
 // Mobile bottom nav - 5 core tools (no More layer)
 const MOBILE_BOTTOM_ITEMS = [
-  { href: "/meals", label: "Cookbook", icon: BookOpen },
+  { href: "/meals", label: "Cookbook", icon: ChefHat },
   { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/products", label: "Analyser", icon: Microscope },
-  { href: "/diary", label: "Diary", icon: ScrollText },
+  { href: "/diary", label: "Diary", icon: BookOpen },
 ];
 
 export type SidebarContextValue = { isCollapsed: boolean };

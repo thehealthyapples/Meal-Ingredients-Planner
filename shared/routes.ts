@@ -100,6 +100,15 @@ export const api = {
       path: '/api/import-recipe' as const,
       input: z.object({ url: z.string().url() }),
     },
+    parse: {
+      method: 'POST' as const,
+      path: '/api/import/parse' as const,
+      input: z.object({
+        rawText: z.string().min(1),
+        source: z.enum(['speech', 'ocr', 'ingredients']),
+        hint: z.enum(['shopping_list', 'recipe']).optional(),
+      }),
+    },
   },
   search: {
     recipes: {

@@ -8,12 +8,13 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
-import { normalizeIngredientKey } from "@shared/normalize";
+import { parseIngredient } from "@shared/parse-ingredient";
 import {
   Store, Sparkles, ChevronRight, Loader2,
-  Clock, X, RotateCcw, Mic, Camera, ImageUp, ArrowLeft,
+  Clock, X, RotateCcw, Mic, Camera, ImageUp, ArrowLeft, ChefHat, NotepadText,
 } from "lucide-react";
 import { CameraModal } from "@/components/camera-modal";
+import { FirstVisitHint } from "@/components/first-visit-hint";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 import RetailerLogo from "@/components/RetailerLogo";
 
@@ -25,6 +26,7 @@ const SHOPS = [
 ];
 
 const QUICK_LIST_KEY = "tha-quick-list-history";
+const PENDING_LIST_KEY = "tha-pending-list-ingredients";
 const MAX_HISTORY = 4;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -45,6 +47,7 @@ function parseList(raw: string): string[] {
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 }
+
 
 function loadHistory(): QuickListBasket[] {
   try {
@@ -72,9 +75,6 @@ function formatRelativeTime(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-// Inline SVG logos — no external dependency, works offline.
-
-
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function ListPage() {
@@ -93,18 +93,17 @@ export default function ListPage() {
   const [isScanning, setIsScanning] = useState(false);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [history, setHistory] = useState<QuickListBasket[]>(() => loadHistory());
+  const [aiCleaned, setAiCleaned] = useState(false);
 
   useEffect(() => {
     document.title = "List – The Healthy Apples";
     return () => { document.title = "The Healthy Apples"; };
   }, []);
 
-  // Auto-focus on mount
   useEffect(() => {
     setTimeout(() => textareaRef.current?.focus(), 100);
   }, []);
 
-  // Stop recognition on unmount
   useEffect(() => {
     return () => { recognitionRef.current?.stop(); };
   }, []);
@@ -119,6 +118,42 @@ export default function ListPage() {
     el.style.height = "auto";
     el.style.height = `${el.scrollHeight}px`;
   }, []);
+
+  // ── Pick up ingredients passed back from Cookbook ─────────────────────────
+
+  const pickUpPendingIngredients = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(PENDING_LIST_KEY);
+      if (!raw) return;
+      localStorage.removeItem(PENDING_LIST_KEY);
+      const parsed = JSON.parse(raw);
+
+      let names: string[];
+      if (Array.isArray(parsed)) {
+        // Version 1: plain string array (fallback payload or old format)
+        names = (parsed as string[]).filter(Boolean);
+      } else if (parsed && parsed.version === 2 && Array.isArray(parsed.items)) {
+        // Version 2: structured items from the parse endpoint
+        names = parsed.items.map((item: { productName: string }) => item.productName).filter(Boolean);
+      } else {
+        return;
+      }
+
+      if (!names.length) return;
+      const text = names.join("\n");
+      setRawText((prev) => (prev ? `${prev}\n${text}` : text));
+      setTimeout(resizeTextarea, 50);
+      toast({
+        title: `${names.length} ingredient${names.length !== 1 ? "s" : ""} added`,
+        description: "From your Cookbook selection",
+      });
+    } catch {}
+  }, [toast, resizeTextarea]);
+
+  // Run on mount (handles navigating back from Cookbook in the same tab)
+  useEffect(() => {
+    pickUpPendingIngredients();
+  }, [pickUpPendingIngredients]);
 
   // ── Speech input ──────────────────────────────────────────────────────────
 
@@ -175,9 +210,6 @@ export default function ListPage() {
         body: form,
       });
       const data = await res.json();
-      // Use rawText regardless of whether the OCR parser detected a recipe or
-      // meal plan — for a shopping list the result is usually "unknown" and
-      // rawText contains the extracted lines.
       const extracted: string =
         data.rawText ?? (data.parsed as any)?.rawText ?? "";
       if (extracted.trim()) {
@@ -219,10 +251,70 @@ export default function ListPage() {
     const basketLabel = `quick_list_${basketId}`;
 
     try {
-      for (const item of parsedItems) {
+      // Attempt canonical server-side parse; fall back to inline parsing if it fails.
+      let structuredItems: Array<{ productName: string; normalizedName: string; quantity: string | null; unit: string | null; category?: string }> | null = null;
+      try {
+        const parseRes = await apiRequest("POST", api.import.parse.path, {
+          source: "speech",
+          rawText,
+          hint: "shopping_list",
+        });
+        if (!parseRes.ok) {
+          console.warn("[ListPage] parse endpoint non-OK:", parseRes.status);
+        } else {
+          const json = await parseRes.json();
+          structuredItems = Array.isArray(json?.items) ? json.items : null;
+          if (json?.meta?.aiUsed === true) setAiCleaned(true);
+          console.debug("[ListPage] parse endpoint returned", structuredItems?.length, "items");
+        }
+      } catch (parseErr) {
+        console.warn("[ListPage] parse endpoint failed, using fallback:", parseErr);
+      }
+
+      // Build full structured item list from parse result or inline fallback.
+      type StructuredItem = { productName: string; normalizedName: string; quantity: string | null; unit: string | null; category?: string };
+      const allItems: StructuredItem[] = parsedItems.map((item, i) => {
+        const s = structuredItems?.[i] ?? parseIngredient(item);
+        return {
+          productName: s.productName,
+          normalizedName: s.normalizedName,
+          quantity: s.quantity,
+          unit: s.unit,
+          category: 'category' in s ? (s as any).category as string | undefined : undefined,
+        };
+      });
+
+      // Deduplicate by normalizedName: sum quantities when numeric + same unit, keep first otherwise.
+      const merged = new Map<string, StructuredItem>();
+      for (const item of allItems) {
+        const existing = merged.get(item.normalizedName);
+        if (!existing) {
+          merged.set(item.normalizedName, { ...item });
+          continue;
+        }
+        if (existing.quantity !== null && item.quantity !== null && existing.unit === item.unit) {
+          const a = parseFloat(existing.quantity);
+          const b = parseFloat(item.quantity);
+          if (!isNaN(a) && !isNaN(b)) {
+            merged.set(item.normalizedName, { ...existing, quantity: String(a + b) });
+            continue;
+          }
+        }
+        // Units differ, non-numeric, or one is null — keep first, discard duplicate.
+      }
+
+      // Insert deduplicated items.
+      for (const item of Array.from(merged.values())) {
+        // quantity from parseIngredient is a measurement string (e.g. "500", "2").
+        // The DB `quantity` column is an integer count-of-packs (defaults to 1) — do not send.
+        // Send measurement as quantityValue (real) + unit (text) instead.
+        const quantityValue = item.quantity ? parseFloat(item.quantity) : undefined;
         await apiRequest("POST", api.shoppingList.add.path, {
-          productName: item,
-          normalizedName: normalizeIngredientKey(item),
+          productName: item.productName,
+          normalizedName: item.normalizedName,
+          ...(quantityValue && !isNaN(quantityValue) ? { quantityValue } : {}),
+          ...(item.unit ? { unit: item.unit } : {}),
+          ...(item.category && item.category !== 'uncategorised' ? { category: item.category } : {}),
           basketLabel,
         });
       }
@@ -247,8 +339,9 @@ export default function ListPage() {
       if (shop) navParams.set("store", shop);
       navigate(`/analyse-basket?${navParams.toString()}`);
 
+      const addedCount = merged.size;
       toast({
-        title: `${parsedItems.length} item${parsedItems.length !== 1 ? "s" : ""} added`,
+        title: `${addedCount} item${addedCount !== 1 ? "s" : ""} added`,
         description: shop ? `Opening ${shop}…` : "Opening shop view…",
       });
     } catch (err: any) {
@@ -273,75 +366,62 @@ export default function ListPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex flex-col min-h-full">
-      <div className="flex-1 px-4 pt-6 pb-10 flex flex-col items-center">
+    <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
 
-        {/* ── Writing surface ────────────────────────────────────────────── */}
+      {/* ── Page header ──────────────────────────────────────────────────── */}
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2" data-testid="text-list-title">
+          <NotepadText className="h-5 w-5 text-primary" />
+          Quick List
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Popping to the shop? create a quick list here. The Healthy Apples will quickly help you choose better, effortlessly.
+        </p>
+      </div>
+
+      {/* ── First-visit hint ─────────────────────────────────────────────── */}
+      <FirstVisitHint
+        areaKey="quick-list"
+        message="Write your list naturally — THA will organise it, find better products, and guide you in-store."
+      />
+
+      {/* ── Writing surface ──────────────────────────────────────────────── */}
+      <div
+        className="w-full flex flex-col relative overflow-hidden"
+        style={{
+          backgroundImage: "url('/orchard-bg.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          borderRadius: 20,
+          boxShadow: "0 4px 32px rgba(0,0,0,0.09), 0 1px 6px rgba(0,0,0,0.05)",
+        }}
+      >
+        {/* Soft orchard tint overlay */}
         <div
-          className="w-full max-w-lg flex flex-col relative overflow-hidden"
+          aria-hidden
           style={{
-            backgroundImage: "url('/orchard-bg.png')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
+            position: "absolute",
+            inset: 0,
+            background: "rgba(255,255,255,0.80)",
             borderRadius: 20,
-            boxShadow:
-              "0 4px 32px rgba(0,0,0,0.09), 0 1px 6px rgba(0,0,0,0.05)",
+            pointerEvents: "none",
           }}
-        >
-          {/* Faint orchard wash — white overlay to push bg into the background */}
-          <div
-            aria-hidden
-            style={{
-              position: "absolute",
-              inset: 0,
-              background: "rgba(255,255,255,0.82)",
-              borderRadius: 20,
-              pointerEvents: "none",
-            }}
-          />
+        />
 
-          {/* All content sits above the overlay */}
-          <div className="relative z-10 flex flex-col">
+        {/* Content sits above the overlay */}
+        <div className="relative z-10 flex flex-col">
 
-          {/* Brand header */}
-          <div className="px-6 pt-6 pb-3">
-            <div className="flex items-center gap-1.5 mb-2">
-              <img
-                src={thaAppleUrl}
-                width={40}
-                height={40}
-                alt="THA"
-                style={{ opacity: 0.85 }}
-                draggable={false}
-              />
-              <span className="text-[10px] tracking-widest uppercase font-medium text-foreground/60 select-none">
-                The Healthy Apples
-              </span>
-            </div>
-            <p className="text-[13px] text-foreground/55 leading-snug italic">
-              Write what you need — THA will help you shop smarter.
-            </p>
-          </div>
-
-          {/* Divider */}
-          <div
-            style={{
-              height: 1,
-              background: "rgba(0,0,0,0.06)",
-              marginInline: 24,
-            }}
-          />
-
-          {/* Seamless textarea — text appears directly on the paper */}
-          <div className="relative px-6 pt-4 pb-2">
+          {/* Seamless textarea */}
+          <div className="relative px-6 pt-6 pb-3">
             <textarea
               ref={textareaRef}
               value={rawText}
               onChange={(e) => {
                 setRawText(e.target.value);
                 resizeTextarea();
+                if (aiCleaned) setAiCleaned(false);
               }}
-              placeholder={"milk, eggs\noven chips\nbananas, yoghurt\npasta sauce"}
+              placeholder={"milk, eggs\noven chips\nbananas, yoghurt"}
               rows={8}
               className="w-full resize-none bg-transparent text-[15px] leading-loose placeholder:text-foreground/25 placeholder:italic focus:outline-none text-foreground font-medium"
               style={{ minHeight: 180 }}
@@ -356,7 +436,7 @@ export default function ListPage() {
                   }
                   setTimeout(() => textareaRef.current?.focus(), 50);
                 }}
-                className="absolute top-4 right-6 p-1 rounded-md text-muted-foreground/35 hover:text-muted-foreground transition-colors"
+                className="absolute top-6 right-6 p-1 rounded-md text-muted-foreground/35 hover:text-muted-foreground transition-colors"
                 aria-label="Clear list"
                 data-testid="button-clear-list"
               >
@@ -365,7 +445,7 @@ export default function ListPage() {
             )}
           </div>
 
-          {/* Parsed item chips — inside the card, below the writing area */}
+          {/* Parsed item chips */}
           {parsedItems.length > 0 && (
             <div
               className="px-6 pb-3 flex flex-wrap gap-1.5"
@@ -380,13 +460,21 @@ export default function ListPage() {
                     color: "hsl(var(--foreground))",
                   }}
                 >
-                  {item}
+                  {parseIngredient(item).productName}
                 </span>
               ))}
+              {aiCleaned && (
+                <span
+                  className="w-full mt-1 text-[11px]"
+                  style={{ color: "hsl(var(--muted-foreground))", opacity: 0.7 }}
+                >
+                  We cleaned up a few items for you
+                </span>
+              )}
             </div>
           )}
 
-          {/* Divider above tools */}
+          {/* Divider above toolbar */}
           <div
             style={{
               height: 1,
@@ -395,7 +483,7 @@ export default function ListPage() {
             }}
           />
 
-          {/* Tools row + CTA */}
+          {/* Toolbar row */}
           <div className="px-5 py-3.5 flex items-center gap-1">
 
             {/* Speech */}
@@ -447,9 +535,20 @@ export default function ListPage() {
               />
             </label>
 
+            {/* Cookbook */}
+            <button
+              onClick={() => navigate("/meals?from=list")}
+              className="p-2 rounded-full text-muted-foreground/45 hover:text-foreground hover:bg-black/[0.05] transition-colors"
+              title="Add ingredients from Cookbook"
+              aria-label="Add ingredients from Cookbook"
+              data-testid="button-open-cookbook"
+            >
+              <ChefHat className="h-4 w-4" />
+            </button>
+
             <div className="flex-1" />
 
-            {/* Primary CTA — lives inside the writing surface */}
+            {/* Primary CTA */}
             <Button
               size="sm"
               className="gap-1.5 font-semibold px-4 h-9"
@@ -465,57 +564,61 @@ export default function ListPage() {
               {isProcessing
                 ? "Building…"
                 : parsedItems.length > 0
-                ? `Shop · ${parsedItems.length}`
-                : "Shop list"}
+                ? `Create my shop list · ${parsedItems.length}`
+                : "Create my shop list"}
             </Button>
           </div>
-          </div>{/* end z-10 content wrapper */}
         </div>
-
-        {/* ── Recent lists ──────────────────────────────────────────────── */}
-        {history.length > 0 && (
-          <div className="mt-6 w-full max-w-lg">
-            <div className="flex items-center gap-1.5 mb-2.5 px-1">
-              <Clock className="h-3 w-3 text-muted-foreground/40" />
-              <span className="text-[10px] tracking-widest uppercase font-medium text-muted-foreground/40 select-none">
-                Recent
-              </span>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              {history.map((basket) => (
-                <button
-                  key={basket.id}
-                  onClick={() => restoreFromHistory(basket)}
-                  className="flex items-start justify-between gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:brightness-95"
-                  style={{
-                    background: "rgba(253,251,246,0.82)",
-                    backdropFilter: "blur(6px)",
-                  }}
-                  data-testid={`history-item-${basket.id}`}
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium truncate text-foreground/75">
-                      {basket.parsedItems.slice(0, 4).join(", ")}
-                      {basket.parsedItems.length > 4 &&
-                        ` +${basket.parsedItems.length - 4} more`}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground/50 mt-0.5">
-                      {basket.parsedItems.length} item
-                      {basket.parsedItems.length !== 1 ? "s" : ""}
-                      {basket.selectedShop
-                        ? ` · ${basket.selectedShop}`
-                        : " · Best shop"}
-                      {" · "}
-                      {formatRelativeTime(basket.createdAt)}
-                    </p>
-                  </div>
-                  <RotateCcw className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30 mt-0.5" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* ── Recent lists ─────────────────────────────────────────────────── */}
+      {history.length > 0 && (
+        <div>
+          <div className="flex items-center gap-1.5 mb-3 px-1">
+            <Clock className="h-3 w-3 text-muted-foreground/40" />
+            <span className="text-[10px] tracking-widest uppercase font-medium text-muted-foreground/40 select-none">
+              Recent lists
+            </span>
+          </div>
+          <div
+            className="rounded-2xl overflow-hidden"
+            style={{
+              background: "rgba(253,251,246,0.88)",
+              backdropFilter: "blur(6px)",
+              boxShadow: "0 2px 16px rgba(0,0,0,0.06)",
+            }}
+          >
+            {history.map((basket, idx) => (
+              <button
+                key={basket.id}
+                onClick={() => restoreFromHistory(basket)}
+                className={`flex items-start justify-between gap-3 w-full px-4 py-3.5 text-left transition-colors hover:bg-black/[0.035] ${
+                  idx > 0 ? "border-t border-black/[0.04]" : ""
+                }`}
+                data-testid={`history-item-${basket.id}`}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-[13px] font-medium truncate text-foreground/80">
+                    {basket.parsedItems.slice(0, 4).join(", ")}
+                    {basket.parsedItems.length > 4 &&
+                      ` +${basket.parsedItems.length - 4} more`}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+                    {basket.parsedItems.length} item
+                    {basket.parsedItems.length !== 1 ? "s" : ""}
+                    {basket.selectedShop
+                      ? ` · ${basket.selectedShop}`
+                      : " · Best shop"}
+                    {" · "}
+                    {formatRelativeTime(basket.createdAt)}
+                  </p>
+                </div>
+                <RotateCcw className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30 mt-0.5" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Camera modal ─────────────────────────────────────────────────── */}
       <CameraModal
@@ -545,7 +648,6 @@ export default function ListPage() {
           </DialogHeader>
 
           <div className="flex flex-col gap-2.5 mt-1">
-            {/* Choose a store */}
             <button
               onClick={() => { setSheetOpen(false); setShopPickerOpen(true); }}
               className="group flex items-center gap-3.5 w-full rounded-xl border border-border bg-card px-4 py-3.5 text-left hover:border-primary/40 hover:bg-accent/30 transition-colors"
@@ -561,7 +663,6 @@ export default function ListPage() {
               <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0 group-hover:text-foreground transition-colors" />
             </button>
 
-            {/* Auto-match */}
             <button
               onClick={() => { setSheetOpen(false); processAndNavigate(null); }}
               disabled={isProcessing}

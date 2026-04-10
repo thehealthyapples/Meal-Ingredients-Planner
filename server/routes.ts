@@ -21,6 +21,9 @@ import { searchAllRecipes, searchJamieOliver, searchSeriousEats, searchEdamam, s
 import { seedSourceSettings, isSourceCallable, getSourceKeyForUrl, logAuditEvent, getAllSourceSettings, updateSourceSettings, getAuditLogs } from "./lib/recipe-source-gate";
 import { shouldExcludeRecipe, scoreRecipeForDiet } from "./lib/dietRules";
 import { expandSearchQuery } from "@shared/food-synonyms";
+import { parseIngredient as parseIngredientShared } from "@shared/parse-ingredient";
+import { INGREDIENT_TAXONOMY } from "@shared/ingredient-taxonomy";
+import { normalizeIngredientKey } from "@shared/normalize";
 import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreezerMealSchema, updateMealSchema } from "@shared/schema";
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
 import { sanitizeUser } from "./lib/sanitizeUser";
@@ -2354,6 +2357,133 @@ export async function registerRoutes(
       }
       res.status(500).json({ message: 'Failed to fetch or parse recipe from URL' });
     }
+  });
+
+  app.post(api.import.parse.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const parseResult = api.import.parse.input.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ message: 'Invalid request body', errors: parseResult.error.flatten() });
+    }
+
+    const { rawText, source } = parseResult.data;
+    const startMs = Date.now();
+
+    // Split on newlines, commas, and conjunctions ("and", "plus")
+    const lines = rawText
+      .split(/[\n,]|\s+and\s+|\s+plus\s+/i)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+
+    // ── Deterministic parse ──────────────────────────────────────────────────
+    const items = lines.map((line) => {
+      const parsed = parseIngredientShared(line);
+      const hasQuantityOrUnit = parsed.quantity !== null || parsed.unit !== null;
+      const category = INGREDIENT_TAXONOMY[parsed.normalizedName] ?? 'uncategorised';
+      return {
+        productName: parsed.productName,
+        normalizedName: parsed.normalizedName,
+        quantity: parsed.quantity,
+        unit: parsed.unit,
+        confidence: (hasQuantityOrUnit ? 'high' : 'low') as 'high' | 'low',
+        ambiguous: false,
+        category,
+      };
+    });
+
+    // ── AI enhancement for genuinely ambiguous items only ───────────────────
+    // Simple 1-3 word inputs that are already clean ingredient names skip AI.
+    // Only send inputs that contain filler/informal language suggesting the
+    // deterministic result may not reflect what the user actually meant.
+    const FILLER_WORDS = new Set([
+      'some', 'bit', 'cheeky', 'nice', 'fresh', 'few', 'handful',
+      'dash', 'drizzle', 'optional', 'little', 'large', 'big', 'good',
+    ]);
+
+    function isClearlySimpleIngredient(raw: string, normalizedName: string): boolean {
+      const words = raw.trim().toLowerCase().split(/\s+/);
+      if (words.length > 3) return false;
+      if (!/^[a-z\s]+$/.test(raw.trim().toLowerCase())) return false;
+      if (words.some(w => FILLER_WORDS.has(w))) return false;
+      // If the normalized name isn't in the taxonomy and any word is longer than
+      // 3 characters, treat as a likely misspelling and send to AI.
+      if (!(normalizedName in INGREDIENT_TAXONOMY) && words.some(w => w.length > 3)) return false;
+      return true;
+    }
+
+    let aiUsed = false;
+    const lowIndices = items
+      .map((item, i) =>
+        item.confidence === 'low' && !isClearlySimpleIngredient(lines[i], item.normalizedName) ? i : -1
+      )
+      .filter(i => i >= 0);
+
+    if (lowIndices.length > 0 && process.env.OPENAI_API_KEY) {
+      try {
+        const ambiguousLines = lowIndices.map(i => lines[i]);
+        const { default: OpenAI } = await import("openai");
+        const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+        const systemPrompt = `You are an ingredient extractor for a UK grocery app. Given a JSON array of informal or messy ingredient descriptions, return a JSON array of the same length with structured items in the same order.
+
+For each item extract:
+- productName: clean ingredient name, title case, no quantities or prep notes (e.g. "Chicken breast")
+- quantity: numeric string only (e.g. "2", "500"), or null
+- unit: unit string only (e.g. "cloves", "g", "ml"), or null
+
+Return ONLY a valid JSON array, no markdown, no explanation, no extra fields.
+
+Example input: ["cheeky chicken breast","some greek yoghurt","a bit of olive oil"]
+Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"productName":"Greek yoghurt","quantity":null,"unit":null},{"productName":"Olive oil","quantity":null,"unit":null}]`;
+
+        const response = await client.chat.completions.create({
+          model: 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: JSON.stringify(ambiguousLines) },
+          ],
+          temperature: 0,
+          max_tokens: 800,
+        });
+
+        const raw = response.choices[0]?.message?.content?.trim() ?? '';
+        const aiResults: Array<{ productName: string; quantity: string | null; unit: string | null } | null> = JSON.parse(raw);
+
+        if (Array.isArray(aiResults) && aiResults.length === lowIndices.length) {
+          for (let j = 0; j < lowIndices.length; j++) {
+            const aiItem = aiResults[j];
+            if (aiItem && typeof aiItem.productName === 'string' && aiItem.productName.trim()) {
+              const idx = lowIndices[j];
+              const resolvedName = aiItem.productName.trim();
+              const resolvedNormalized = normalizeIngredientKey(resolvedName);
+              const resolvedCategory = INGREDIENT_TAXONOMY[resolvedNormalized] ?? 'uncategorised';
+              items[idx] = {
+                ...items[idx],
+                productName: resolvedName,
+                normalizedName: resolvedNormalized,
+                quantity: aiItem.quantity ?? items[idx].quantity,
+                unit: aiItem.unit ?? items[idx].unit,
+                ambiguous: false,
+                category: resolvedCategory,
+              };
+            }
+          }
+          aiUsed = true;
+        }
+      } catch {
+        // AI failed — deterministic results returned unchanged
+      }
+    }
+
+    return res.json({
+      items,
+      meta: {
+        source,
+        aiUsed,
+        processingMs: Date.now() - startMs,
+      },
+    });
   });
 
   app.post('/api/preview-recipe', async (req, res) => {

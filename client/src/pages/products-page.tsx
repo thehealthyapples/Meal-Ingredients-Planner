@@ -20,7 +20,7 @@ import {
   Scale, Beaker, Star, Filter, Info, Layers,
   ScanLine,
   Award, Zap, History, Trash2,
-  ChefHat, Check, Sparkles, Store, Clock,
+  ChefHat, Check, Sparkles, Store, Clock, Microscope,
 } from "lucide-react";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -942,7 +942,10 @@ export default function ProductsPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-start gap-4">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight" data-testid="text-products-title">Analyser</h1>
+            <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2" data-testid="text-products-title">
+              <Microscope className="h-5 w-5 text-primary" />
+              Analyser
+            </h1>
             <p className="text-sm text-muted-foreground mt-1">Search packaged foods, detect ultra-processed ingredients, and find healthier alternatives</p>
           </div>
           <div className="flex items-center gap-2 mt-1 shrink-0">
