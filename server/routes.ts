@@ -2496,7 +2496,12 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
     console.log('[parse] returning aiUsed:', aiUsed, '| items:', items.map(it => it.productName));
     return res.json({
-      items,
+      // Attach needsReview to each item so the client can surface unrecognised
+      // items visibly instead of silently adding them with invented prices.
+      items: items.map(item => ({
+        ...item,
+        needsReview: item.category === 'uncategorised',
+      })),
       meta: {
         source,
         aiUsed,
@@ -2976,22 +2981,43 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         if (!input.quantityValue) (input as any).quantityValue = extractedQty;
         if (!input.normalizedName) (input as any).normalizedName = leadingQtyMatch[2].toLowerCase().trim();
       }
+      // Build the final insert payload explicitly rather than mutating the Zod
+      // result, which is unreliable with Drizzle's default-column handling.
+      const insertPayload: Record<string, unknown> = { ...input };
+
       if (input.quantityValue && input.unit) {
         const grams = convertToGrams(input.quantityValue, input.unit);
-        if (grams !== null) (input as any).quantityInGrams = grams;
+        if (grams !== null) insertPayload.quantityInGrams = grams;
       }
+
       if (input.normalizedName) {
         const { normalizeName, detectIngredientCategory: detect } = await import('./lib/ingredient-utils');
-        const cat = input.category || detect(input.normalizedName);
-        // Write the detected category back to input so the DB row carries the right category,
-        // not null. Without this, quick-list items always land in "Other" in shop view.
-        (input as any).category = cat;
+        // SAFETY: only run keyword detection when the client sent no category at
+        // all (null / undefined).  An explicit 'uncategorised' from the parse
+        // route means the item was not recognised — we must NOT replace it with
+        // a keyword guess based on the (possibly AI-generated) product name,
+        // which would promote nonsense inputs to a real category and trigger
+        // fake prices (e.g. "Boorboans"→"Bourbon Biscuits"→"biscuit"→bakery).
+        const cat = (input.category != null) ? input.category : detect(input.normalizedName);
+        insertPayload.category = cat;
+
+        if (cat === 'uncategorised') {
+          insertPayload.needsReview = true;
+          insertPayload.validationNote =
+            (input.validationNote as string | undefined) ||
+            'Item not confidently recognised — please verify';
+        }
+
         const ingredient = await storage.getOrCreateNormalizedIngredient(
           input.productName, input.normalizedName, cat
         );
-        (input as any).ingredientId = ingredient.id;
+        insertPayload.ingredientId = ingredient.id;
       }
-      const item = await storage.addShoppingListItem(req.user!.id, input);
+
+      const item = await storage.addShoppingListItem(
+        req.user!.id,
+        insertPayload as typeof input,
+      );
       res.status(201).json(item);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -3582,14 +3608,17 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       for (const item of items) {
         if (isGarbageIngredient(item.productName)) continue;
 
-        // Confidence gate: resolve the effective category the same way the
-        // price path does, then skip if it's unrecognised.
-        // NOTE: list-page.tsx strips 'uncategorised' before the add call, so
-        // items from the parse route that weren't identified land in DB as
-        // 'other' (via detectIngredientCategory fallback). The gate must
-        // therefore catch 'other' as well as 'uncategorised'.
-        const effectiveCategory = item.category || detectIngredientCategory(item.productName);
-        if (effectiveCategory === 'other' || effectiveCategory === 'uncategorised') continue;
+        // HARD FAIL-SAFE: never look up prices for unrecognised items.
+        // Use only the stored category — do NOT run keyword detection on the
+        // product name here.  The product name may have been assigned by AI
+        // from a nonsense input (e.g. "Boorboans"→"Bourbon Biscuits"), and
+        // keyword-matching it would silently grant it a real category and
+        // trigger fake prices.  Items that reached the DB as 'uncategorised'
+        // or 'other' (or with no category) stay unmatched.
+        // Also skip any item explicitly marked for review.
+        const effectiveCategory = item.category;
+        if (!effectiveCategory || effectiveCategory === 'other' || effectiveCategory === 'uncategorised') continue;
+        if (item.needsReview === true) continue;
 
         if (item.matchedProductId && item.matchedPrice) {
           const getSearchUrl = (storeName: string) => {

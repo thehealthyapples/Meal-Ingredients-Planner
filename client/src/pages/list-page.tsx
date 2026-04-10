@@ -252,7 +252,7 @@ export default function ListPage() {
 
     try {
       // Attempt canonical server-side parse; fall back to inline parsing if it fails.
-      let structuredItems: Array<{ productName: string; normalizedName: string; quantity: string | null; unit: string | null; category?: string }> | null = null;
+      let structuredItems: Array<{ productName: string; normalizedName: string; quantity: string | null; unit: string | null; category?: string; needsReview?: boolean }> | null = null;
       try {
         const parseRes = await apiRequest("POST", api.import.parse.path, {
           source: "speech",
@@ -272,7 +272,7 @@ export default function ListPage() {
       }
 
       // Build full structured item list from parse result or inline fallback.
-      type StructuredItem = { productName: string; normalizedName: string; quantity: string | null; unit: string | null; category?: string };
+      type StructuredItem = { productName: string; normalizedName: string; quantity: string | null; unit: string | null; category?: string; needsReview?: boolean };
       const allItems: StructuredItem[] = parsedItems.map((item, i) => {
         const s = structuredItems?.[i] ?? parseIngredient(item);
         return {
@@ -281,6 +281,7 @@ export default function ListPage() {
           quantity: s.quantity,
           unit: s.unit,
           category: 'category' in s ? (s as any).category as string | undefined : undefined,
+          needsReview: 'needsReview' in s ? (s as any).needsReview as boolean | undefined : undefined,
         };
       });
 
@@ -314,7 +315,11 @@ export default function ListPage() {
           normalizedName: item.normalizedName,
           ...(quantityValue && !isNaN(quantityValue) ? { quantityValue } : {}),
           ...(item.unit ? { unit: item.unit } : {}),
-          ...(item.category && item.category !== 'uncategorised' ? { category: item.category } : {}),
+          // Always send the category — including 'uncategorised' — so the add
+          // route never runs keyword detection on an AI-generated name and
+          // silently promotes a nonsense input to a real category.
+          category: item.category || 'uncategorised',
+          ...(item.needsReview ? { needsReview: true, validationNote: 'Item not confidently recognised — please verify' } : {}),
           basketLabel,
         });
       }

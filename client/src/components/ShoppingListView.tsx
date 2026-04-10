@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { normalizeIngredientKey } from "@shared/normalize";
-import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowLeft, ArrowRight, Store, SkipForward, Pencil, Search } from "lucide-react";
+import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowLeft, ArrowRight, Store, SkipForward, Pencil, Search, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -71,6 +71,8 @@ interface ShoppingListViewProps {
   thaPicks?: Record<string, IngredientProduct[]>;
   /** Allow renaming/refining an item and re-triggering product lookup. */
   onRenameItem?: (id: number, newName: string) => void;
+  /** Remove an item from the shopping list entirely. */
+  onRemoveItem?: (id: number) => void;
   /** Trigger store-scoped product matching for the currently selected store. */
   onMatchStore?: (store: string) => void;
   /** True while a store-scoped match is in progress. */
@@ -526,6 +528,7 @@ export default function ShoppingListView({
   initialPhase,
   thaPicks = {},
   onRenameItem,
+  onRemoveItem,
   onMatchStore,
   isMatchingPrices = false,
 }: ShoppingListViewProps) {
@@ -542,6 +545,11 @@ export default function ShoppingListView({
   const [editValue, setEditValue] = useState<string>("");
   // Track items whose vague name the user has already responded to (clarified or dismissed).
   const [clarifiedItemIds, setClarifiedItemIds] = useState<Set<number>>(new Set());
+  // Cupboard-check review state: tracks which needsReview items the user has
+  // explicitly kept/edited so we stop showing the review card for them.
+  const [reviewDismissed, setReviewDismissed] = useState<Set<number>>(new Set());
+  const [reviewEditId, setReviewEditId] = useState<number | null>(null);
+  const [reviewEditVal, setReviewEditVal] = useState<string>("");
   const itemsScrollRef = useRef<HTMLDivElement>(null);
   const tabStripRef = useRef<HTMLDivElement>(null);
   const activeTabElRef = useRef<HTMLButtonElement>(null);
@@ -1236,6 +1244,103 @@ export default function ShoppingListView({
                     normalizeIngredientKey(item.normalizedName ?? item.productName ?? ""),
                   );
                   const qty = fmtQty(item.quantityValue, item.unit, item.quantityInGrams, measurementPref);
+                  const displayName = capWords(cleanProductName(item.productName, item.quantityValue));
+
+                  // ── Unrecognised-item review card ──────────────────────────
+                  if (item.needsReview && !reviewDismissed.has(item.id)) {
+                    return (
+                      <div
+                        key={item.id}
+                        className="px-4 py-3 border-l-2 border-amber-400/50 bg-amber-50/25 dark:bg-amber-950/10"
+                      >
+                        {reviewEditId === item.id ? (
+                          // Inline edit mode
+                          <div className="flex flex-col gap-2">
+                            <span className="text-[11px] text-muted-foreground/70">What is this item?</span>
+                            <div className="flex items-center gap-2">
+                              <input
+                                autoFocus
+                                value={reviewEditVal}
+                                onChange={e => setReviewEditVal(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === "Enter") {
+                                    const trimmed = reviewEditVal.trim();
+                                    if (trimmed) {
+                                      if (onRenameItem) onRenameItem(item.id, trimmed);
+                                      setReviewDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; });
+                                    }
+                                    setReviewEditId(null);
+                                  }
+                                  if (e.key === "Escape") setReviewEditId(null);
+                                }}
+                                className="flex-1 h-7 text-[13px] px-2 rounded-md border border-border bg-background/80 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                                placeholder="e.g. Broccoli"
+                              />
+                              <button
+                                onClick={() => {
+                                  const trimmed = reviewEditVal.trim();
+                                  if (trimmed) {
+                                    if (onRenameItem) onRenameItem(item.id, trimmed);
+                                    setReviewDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; });
+                                  }
+                                  setReviewEditId(null);
+                                }}
+                                className="h-7 px-3 text-[11px] rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={() => setReviewEditId(null)}
+                                className="h-7 px-2 text-[11px] rounded-md border border-border/60 text-muted-foreground hover:bg-muted/50 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          // Review prompt
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-baseline gap-2 flex-wrap">
+                                <span className="font-medium text-[13.5px] text-foreground/80">{displayName}</span>
+                                {qty && <span className="text-[11.5px] tabular-nums text-muted-foreground/60">{qty}</span>}
+                              </div>
+                              <div className="flex items-center gap-1 mt-0.5">
+                                <AlertTriangle className="h-3 w-3 text-amber-500/70 flex-shrink-0" />
+                                <span className="text-[11px] text-amber-600/75 dark:text-amber-400/75">
+                                  Couldn't be confidently recognised
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+                              <button
+                                onClick={() => { setReviewEditVal(item.productName ?? ""); setReviewEditId(item.id); }}
+                                className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/70 hover:bg-muted/50 hover:border-border transition-colors"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => setReviewDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; })}
+                                className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/70 hover:bg-muted/50 hover:border-border transition-colors"
+                              >
+                                Keep
+                              </button>
+                              {onRemoveItem && (
+                                <button
+                                  onClick={() => onRemoveItem(item.id)}
+                                  className="text-[11px] px-2.5 py-1 rounded-lg border border-rose-200/60 dark:border-rose-800/40 bg-background/70 text-rose-500/80 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 transition-colors"
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  // ── Normal recognised item ─────────────────────────────────
                   return (
                     <div
                       key={item.id}
@@ -1248,7 +1353,7 @@ export default function ShoppingListView({
                               isAtHome ? "line-through text-muted-foreground/70" : "text-foreground"
                             }`}
                           >
-                            {capWords(cleanProductName(item.productName, item.quantityValue))}
+                            {displayName}
                           </span>
                           {qty && (
                             <span className="text-[11.5px] tabular-nums text-muted-foreground/70">{qty}</span>

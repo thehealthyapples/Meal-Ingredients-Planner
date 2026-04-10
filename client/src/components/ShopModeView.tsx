@@ -12,7 +12,7 @@ import {
 import {
   ChevronDown, ChevronUp, Check, Home, ShoppingCart,
   RefreshCw, ExternalLink, ArrowRight, Store, SkipForward,
-  Pencil, X as XIcon,
+  Pencil, X as XIcon, AlertTriangle,
 } from "lucide-react";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 import type { ShoppingListItem, ProductMatch, IngredientProduct } from "@shared/schema";
@@ -48,6 +48,8 @@ interface ShopModeViewProps {
   initialPhase?: Phase;
   /** Callback to rename/refine an item and trigger product re-lookup. */
   onRenameItem?: (id: number, newName: string) => void;
+  /** Remove an item from the shopping list entirely. */
+  onRemoveItem?: (id: number) => void;
 }
 
 const SUPERMARKETS = [
@@ -182,12 +184,106 @@ interface CupboardItemRowProps {
   isMarked: boolean;
   onMark: () => void;
   onUnmark: () => void;
+  onRenameItem?: (id: number, newName: string) => void;
+  onRemoveItem?: (id: number) => void;
 }
 
-function CupboardItemRow({ item, inPantry, isMarked, onMark, onUnmark }: CupboardItemRowProps) {
+function CupboardItemRow({ item, inPantry, isMarked, onMark, onUnmark, onRenameItem, onRemoveItem }: CupboardItemRowProps) {
   const displayName = getDisplayName(item);
   const qty = item.quantityValue != null ? `${item.quantityValue}${item.unit ? ` ${item.unit}` : ""}` : null;
 
+  // Local review state — tracks whether the user has acted on this item's
+  // "unrecognised" state (keeping or editing it).
+  const [reviewDismissed, setReviewDismissed] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editVal, setEditVal] = useState(item.productName ?? "");
+
+  // ── Unrecognised-item review card ──────────────────────────────────────
+  if (item.needsReview && !reviewDismissed) {
+    return (
+      <div className="px-3 py-2.5 rounded-lg border border-amber-200/60 dark:border-amber-700/30 bg-amber-50/30 dark:bg-amber-950/10">
+        {editing ? (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[11px] text-muted-foreground/70">What is this item?</span>
+            <div className="flex items-center gap-2">
+              <input
+                autoFocus
+                value={editVal}
+                onChange={e => setEditVal(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") {
+                    const trimmed = editVal.trim();
+                    if (trimmed && onRenameItem) onRenameItem(item.id, trimmed);
+                    setReviewDismissed(true);
+                    setEditing(false);
+                  }
+                  if (e.key === "Escape") setEditing(false);
+                }}
+                className="flex-1 h-7 text-[13px] px-2 rounded-md border border-border bg-background/80 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                placeholder="e.g. Broccoli"
+              />
+              <button
+                onClick={() => {
+                  const trimmed = editVal.trim();
+                  if (trimmed && onRenameItem) onRenameItem(item.id, trimmed);
+                  setReviewDismissed(true);
+                  setEditing(false);
+                }}
+                className="h-7 px-3 text-[11px] rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => setEditing(false)}
+                className="h-7 px-2 text-[11px] rounded-md border border-border/60 text-muted-foreground hover:bg-muted/50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium text-foreground/80">{displayName}</span>
+                {qty && <span className="text-xs text-muted-foreground">{qty}</span>}
+              </div>
+              <div className="flex items-center gap-1 mt-0.5">
+                <AlertTriangle className="h-3 w-3 text-amber-500/70 shrink-0" />
+                <span className="text-[11px] text-amber-600/75 dark:text-amber-400/75">
+                  Couldn't be confidently recognised
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                onClick={() => { setEditVal(item.productName ?? ""); setEditing(true); }}
+                className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/70 hover:bg-muted/50 transition-colors"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => setReviewDismissed(true)}
+                className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/70 hover:bg-muted/50 transition-colors"
+              >
+                Keep
+              </button>
+              {onRemoveItem && (
+                <button
+                  onClick={() => onRemoveItem(item.id)}
+                  className="text-[11px] px-2.5 py-1 rounded-lg border border-rose-200/60 dark:border-rose-800/40 bg-background/70 text-rose-500/80 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 transition-colors"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Normal recognised item ─────────────────────────────────────────────
   return (
     <div
       className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border transition-colors ${
@@ -230,11 +326,15 @@ function CupboardPhase({
   pantryKeySet,
   onUpdateStatus,
   onDone,
+  onRenameItem,
+  onRemoveItem,
 }: {
   items: ShopModeItem[];
   pantryKeySet: Set<string>;
   onUpdateStatus: (id: number, status: ShopStatus | null) => void;
   onDone: () => void;
+  onRenameItem?: (id: number, newName: string) => void;
+  onRemoveItem?: (id: number) => void;
 }) {
   const markedCount = items.filter(i => i.shopStatus === "already_got").length;
 
@@ -254,6 +354,8 @@ function CupboardPhase({
             isMarked={item.shopStatus === "already_got"}
             onMark={() => onUpdateStatus(item.id, "already_got")}
             onUnmark={() => onUpdateStatus(item.id, "pending")}
+            onRenameItem={onRenameItem}
+            onRemoveItem={onRemoveItem}
           />
         ))}
       </div>
@@ -613,7 +715,7 @@ function ShoppingPhase({
 
 // ─── Root component ───────────────────────────────────────────────────────────
 
-export default function ShopModeView({ items, allPriceMatches, thaPicks = {}, pantryKeySet, onUpdateStatus, initialStore, initialPhase, onRenameItem }: ShopModeViewProps) {
+export default function ShopModeView({ items, allPriceMatches, thaPicks = {}, pantryKeySet, onUpdateStatus, initialStore, initialPhase, onRenameItem, onRemoveItem }: ShopModeViewProps) {
   const [phase, setPhase] = useState<Phase>(initialPhase ?? "start");
 
   return (
@@ -637,6 +739,8 @@ export default function ShopModeView({ items, allPriceMatches, thaPicks = {}, pa
             pantryKeySet={pantryKeySet}
             onUpdateStatus={onUpdateStatus}
             onDone={() => setPhase("shopping")}
+            onRenameItem={onRenameItem}
+            onRemoveItem={onRemoveItem}
           />
         )}
         {phase === "shopping" && (

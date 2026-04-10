@@ -3436,6 +3436,7 @@ export default function ShoppingListPage() {
             initialPhase={quickListLabel ? "cupboard" : undefined}
             onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
             onRenameItem={handleRenameItem}
+            onRemoveItem={id => removeItem.mutate(id)}
           />
         )}
         </div>{/* end basket view wrapper */}
@@ -3454,6 +3455,7 @@ export default function ShoppingListPage() {
             initialPhase="cupboard_check"
             onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
             onRenameItem={handleRenameItem}
+            onRemoveItem={id => removeItem.mutate(id)}
             onMatchStore={(store) => lookupPrices.mutate(store)}
             isMatchingPrices={lookupPrices.isPending}
             onClose={() => setViewMode("basket")}
