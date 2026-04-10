@@ -259,7 +259,8 @@ function parseSocialCaption(rawText: string): {
     .replace(/^[\-\*•·]\s*/, '')
     .replace(/^[""\\]/, '').replace(/[""\\]$/, '')
     .trim();
-  const noEmoji = stripped.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}]/gu, '').trim();
+  // Strip emoji via surrogate pairs (ES5-compatible, no u flag needed)
+  const noEmoji = stripped.replace(/[\uD800-\uDFFF]|[\u2600-\u27FF]/g, '').trim();
   const title = (noEmoji.length > 2 ? noEmoji : stripped) || 'Imported Recipe';
 
   // Ingredients: from header+1 to instructions header (or end)

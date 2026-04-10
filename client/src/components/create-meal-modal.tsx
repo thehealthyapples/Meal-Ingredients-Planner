@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { X, Plus, Loader2, Search } from "lucide-react";
+import { X, Plus, Loader2, Search, ExternalLink } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Meal } from "@shared/schema";
@@ -27,14 +27,26 @@ interface PendingItem {
   quantity?: string;
 }
 
+export interface ImportedRecipeDraft {
+  title: string;
+  ingredients: string[];
+  instructions: string[];
+  servings: number;
+  imageUrl: string | null;
+  sourceUrl: string;
+  sourcePlatform: 'instagram' | 'tiktok' | 'website';
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   /** Called with the new meal id after creation */
   onCreated?: (mealId: number) => void;
+  /** Prefill from recipe import — optional, best-effort */
+  prefill?: ImportedRecipeDraft;
 }
 
-export function CreateMealModal({ open, onOpenChange, onCreated }: Props) {
+export function CreateMealModal({ open, onOpenChange, onCreated, prefill }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -44,6 +56,14 @@ export function CreateMealModal({ open, onOpenChange, onCreated }: Props) {
   const [manualQty, setManualQty] = useState("");
   const [recipeSearch, setRecipeSearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
+
+  // Seed state from prefill when modal opens
+  useEffect(() => {
+    if (open && prefill) {
+      setMealName(prefill.title || "");
+      setItems(prefill.ingredients.map(ing => ({ type: "manual" as const, name: ing })));
+    }
+  }, [open, prefill]);
 
   const { data: meals = [] } = useQuery<Meal[]>({
     queryKey: ["/api/meals"],
@@ -60,9 +80,15 @@ export function CreateMealModal({ open, onOpenChange, onCreated }: Props) {
       const res = await apiRequest("POST", "/api/meals", {
         name: mealName.trim(),
         ingredients: [],
-        instructions: [],
-        servings: 1,
+        instructions: prefill?.instructions ?? [],
+        servings: prefill?.servings ?? 1,
         kind: "meal",
+        // Import attribution — imageUrl is best-effort; sourceUrl is the permanent record
+        ...(prefill?.imageUrl ? { imageUrl: prefill.imageUrl } : {}),
+        ...(prefill ? {
+          sourceUrl: prefill.sourceUrl,
+          mealSourceType: `imported_${prefill.sourcePlatform}`,
+        } : {}),
       });
       return res.json() as Promise<Meal>;
     },
@@ -103,6 +129,7 @@ export function CreateMealModal({ open, onOpenChange, onCreated }: Props) {
     setRecipeSearch("");
     setProductSearch("");
     onOpenChange(false);
+    // Note: prefill state is owned by the parent — no reset needed here
   };
 
   const addManual = () => {
@@ -142,6 +169,26 @@ export function CreateMealModal({ open, onOpenChange, onCreated }: Props) {
         </DialogHeader>
 
         <div className="flex flex-col gap-4 overflow-y-auto flex-1 py-1">
+          {/* Import attribution banner — shown only for prefilled imports */}
+          {prefill && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5">
+              <ExternalLink className="h-3.5 w-3.5 text-amber-600/80 dark:text-amber-400/70 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] text-amber-700/90 dark:text-amber-300/80 leading-snug">
+                  THA AI has imported this recipe. Please validate before saving.
+                </p>
+                <a
+                  href={prefill.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-amber-600/70 dark:text-amber-400/60 underline underline-offset-2 truncate block mt-0.5"
+                >
+                  {prefill.sourceUrl}
+                </a>
+              </div>
+            </div>
+          )}
+
           <Input
             placeholder="Meal name"
             value={mealName}
