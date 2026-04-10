@@ -35,6 +35,9 @@ interface SpoonacularProduct {
 
 const SPOONACULAR_BASE = "https://api.spoonacular.com";
 
+// Set to true when a 402 is received; prevents hammering a depleted quota
+let spoonacularQuotaExceeded = false;
+
 const TIER_MULTIPLIERS: Record<string, number> = {
   budget: 0.75,
   standard: 1.0,
@@ -184,7 +187,7 @@ const TIERS = ['budget', 'standard', 'premium', 'organic'] as const;
 
 async function searchSpoonacular(query: string): Promise<SpoonacularProduct | null> {
   const apiKey = process.env.SPOONACULAR_API_KEY;
-  if (!apiKey) return null;
+  if (!apiKey || spoonacularQuotaExceeded) return null;
 
   try {
     const response = await axios.get(`${SPOONACULAR_BASE}/food/products/search`, {
@@ -213,7 +216,8 @@ async function searchSpoonacular(query: string): Promise<SpoonacularProduct | nu
     return withPrice || candidates[0];
   } catch (err: any) {
     if (err.response?.status === 402) {
-      console.warn('Spoonacular API quota exceeded');
+      spoonacularQuotaExceeded = true;
+      console.warn('Spoonacular API quota exceeded — disabling until server restart');
     } else {
       console.warn('Spoonacular API error:', err.message);
     }
@@ -307,6 +311,12 @@ export async function lookupPricesForIngredient(
       }
     }
   } else {
+    // No Spoonacular product found. For unrecognised categories ('other' /
+    // 'uncategorised') we have no basis for a price estimate — return nothing
+    // rather than fabricating a Tesco Value fallback.
+    if (category === 'other' || category === 'uncategorised') {
+      return [];
+    }
     basePrice = estimateFallbackPrice(category, quantity, unit);
     productLabel = ingredientName;
     productImage = null;

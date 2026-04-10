@@ -20,7 +20,7 @@ import { generateSmartSuggestion, type SmartSuggestSettings, type LockedEntry } 
 import { searchAllRecipes, searchJamieOliver, searchSeriousEats, searchEdamam, searchApiNinjas, searchBigOven, searchFatSecret, type ExternalMealCandidate } from "./lib/external-meal-service";
 import { seedSourceSettings, isSourceCallable, getSourceKeyForUrl, logAuditEvent, getAllSourceSettings, updateSourceSettings, getAuditLogs } from "./lib/recipe-source-gate";
 import { shouldExcludeRecipe, scoreRecipeForDiet } from "./lib/dietRules";
-import { expandSearchQuery } from "@shared/food-synonyms";
+import { expandSearchQuery, correctFoodSpelling } from "@shared/food-synonyms";
 import { parseIngredient as parseIngredientShared } from "@shared/parse-ingredient";
 import { INGREDIENT_TAXONOMY } from "@shared/ingredient-taxonomy";
 import { normalizeIngredientKey } from "@shared/normalize";
@@ -2380,10 +2380,21 @@ export async function registerRoutes(
     const items = lines.map((line) => {
       const parsed = parseIngredientShared(line);
       const hasQuantityOrUnit = parsed.quantity !== null || parsed.unit !== null;
-      const category = INGREDIENT_TAXONOMY[parsed.normalizedName] ?? 'uncategorised';
+
+      // Apply word-level food spelling correction (deterministic, no AI required).
+      // e.g. "brocoli" → "broccoli", "aurbegine" → "aubergine"
+      const correctedName = parsed.productName
+        .split(/\s+/)
+        .map(w => correctFoodSpelling(w))
+        .join(' ');
+      const correctedNormalized = correctedName !== parsed.productName
+        ? normalizeIngredientKey(correctedName)
+        : parsed.normalizedName;
+
+      const category = INGREDIENT_TAXONOMY[correctedNormalized] ?? INGREDIENT_TAXONOMY[parsed.normalizedName] ?? 'uncategorised';
       return {
-        productName: parsed.productName,
-        normalizedName: parsed.normalizedName,
+        productName: correctedName,
+        normalizedName: correctedNormalized,
         quantity: parsed.quantity,
         unit: parsed.unit,
         confidence: (hasQuantityOrUnit ? 'high' : 'low') as 'high' | 'low',
@@ -2419,7 +2430,10 @@ export async function registerRoutes(
       )
       .filter(i => i >= 0);
 
+    console.log('[parse] key present:', !!process.env.OPENAI_API_KEY, '| lowIndices:', lowIndices);
+
     if (lowIndices.length > 0 && process.env.OPENAI_API_KEY) {
+      console.log('[parse] AI branch entered');
       try {
         const ambiguousLines = lowIndices.map(i => lines[i]);
         const { default: OpenAI } = await import("openai");
@@ -2448,7 +2462,11 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         });
 
         const raw = response.choices[0]?.message?.content?.trim() ?? '';
-        const aiResults: Array<{ productName: string; quantity: string | null; unit: string | null } | null> = JSON.parse(raw);
+        console.log('[parse] AI raw response:', raw);
+        // Strip markdown code fences that some models add despite instructions
+        const cleanedRaw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+        const aiResults: Array<{ productName: string; quantity: string | null; unit: string | null } | null> = JSON.parse(cleanedRaw);
+        console.log('[parse] aiResults length:', aiResults?.length, 'expected:', lowIndices.length);
 
         if (Array.isArray(aiResults) && aiResults.length === lowIndices.length) {
           for (let j = 0; j < lowIndices.length; j++) {
@@ -2471,11 +2489,12 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           }
           aiUsed = true;
         }
-      } catch {
-        // AI failed — deterministic results returned unchanged
+      } catch (aiErr: any) {
+        console.error('[parse] AI call failed:', aiErr?.message ?? aiErr);
       }
     }
 
+    console.log('[parse] returning aiUsed:', aiUsed, '| items:', items.map(it => it.productName));
     return res.json({
       items,
       meta: {
@@ -3563,6 +3582,15 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       for (const item of items) {
         if (isGarbageIngredient(item.productName)) continue;
 
+        // Confidence gate: resolve the effective category the same way the
+        // price path does, then skip if it's unrecognised.
+        // NOTE: list-page.tsx strips 'uncategorised' before the add call, so
+        // items from the parse route that weren't identified land in DB as
+        // 'other' (via detectIngredientCategory fallback). The gate must
+        // therefore catch 'other' as well as 'uncategorised'.
+        const effectiveCategory = item.category || detectIngredientCategory(item.productName);
+        if (effectiveCategory === 'other' || effectiveCategory === 'uncategorised') continue;
+
         if (item.matchedProductId && item.matchedPrice) {
           const getSearchUrl = (storeName: string) => {
             const q = encodeURIComponent(item.productName);
@@ -3606,10 +3634,9 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           continue;
         }
 
-        const category = item.category || detectIngredientCategory(item.productName);
         const prices = await lookupPricesForIngredient(
           item.productName,
-          category,
+          effectiveCategory,
           item.quantityValue || 1,
           item.unit || 'unit',
           store ? [store] : undefined
