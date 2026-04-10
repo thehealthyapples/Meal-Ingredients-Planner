@@ -216,10 +216,16 @@ function parseSocialCaption(rawText: string): {
   instructions: string[];
   servings: number;
 } {
-  // Strip "AccountName on Instagram: \"" and similar prefixes
+  // Strip Instagram/TikTok metadata prefixes before parsing:
+  //   "6,068 likes, 166 comments - quotidianrecipes on March 7, 2026: \"..."
+  //   "accountname on Instagram: \"..."
   let text = rawText
-    .replace(/^[^:\n]+\bon\s+(?:instagram|tiktok)\s*:\s*["""\u201c]?\s*/i, '')
-    .replace(/^["""\u201c]/, '')
+    // Remove engagement counts: "6,068 likes, 166 comments - "
+    .replace(/^[\d,]+\s+likes?,\s+[\d,]+\s+comments?\s*[-–]\s*/i, '')
+    // Remove "username on Instagram:", "username on TikTok:", "username on Month D, YYYY:"
+    .replace(/^[^\n:]+\bon\s+(?:instagram|tiktok|[A-Za-z]+\s+\d{1,2},\s+\d{4})\s*:\s*["""\u201c\\]?\s*/i, '')
+    // Remove any remaining leading quote or escaped quote
+    .replace(/^["""\u201c\\]/, '')
     .replace(/["""\u201d]\s*$/, '')
     .trim();
 
@@ -248,10 +254,13 @@ function parseSocialCaption(rawText: string): {
   const rawTitle = workLines
     .slice(0, firstHeaderIdx)
     .find(l => l.length > 2 && !metaLineRe.test(l)) ?? '';
-  const title = rawTitle
+  // Strip leading bullets/quotes, then strip emojis — keep emoji-free version if still meaningful
+  const stripped = rawTitle
     .replace(/^[\-\*•·]\s*/, '')
-    .replace(/^[""]/, '').replace(/[""]$/, '')
-    .trim() || 'Imported Recipe';
+    .replace(/^[""\\]/, '').replace(/[""\\]$/, '')
+    .trim();
+  const noEmoji = stripped.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27FF}]/gu, '').trim();
+  const title = (noEmoji.length > 2 ? noEmoji : stripped) || 'Imported Recipe';
 
   // Ingredients: from header+1 to instructions header (or end)
   const ingredientsEnd = instructionsIdx > ingredientsIdx && instructionsIdx > -1
@@ -2302,7 +2311,9 @@ export async function registerRoutes(
         const ogTitle = $('meta[property="og:title"]').attr('content')?.trim() || '';
         // og:description tends to be the fuller caption; prefer it as parsing source
         const ogDescription = $('meta[property="og:description"]').attr('content')?.trim() || '';
-        const ogImage = $('meta[property="og:image"]').attr('content') || null;
+        const rawOgImage = $('meta[property="og:image"]').attr('content') || null;
+        // Only use image URL if it's a valid absolute URL — never block import if absent
+        const ogImage: string | null = rawOgImage && rawOgImage.startsWith('http') ? rawOgImage : null;
         // Use og:description as primary caption source; fall back to og:title stripped of prefix
         const captionSource = ogDescription || ogTitle;
         const extractedText = [ogTitle, ogDescription].filter(Boolean).join('\n').trim();
