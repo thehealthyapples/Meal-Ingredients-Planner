@@ -210,6 +210,81 @@ interface JsonLdRecipe {
   nutrition?: Record<string, any>;
 }
 
+function parseSocialCaption(rawText: string): {
+  title: string;
+  ingredients: string[];
+  instructions: string[];
+  servings: number;
+} {
+  // Strip "AccountName on Instagram: \"" and similar prefixes
+  let text = rawText
+    .replace(/^[^:\n]+\bon\s+(?:instagram|tiktok)\s*:\s*["""\u201c]?\s*/i, '')
+    .replace(/^["""\u201c]/, '')
+    .replace(/["""\u201d]\s*$/, '')
+    .trim();
+
+  const lines = text.split(/\r?\n/).map(l => l.trim());
+
+  // Stop before hashtag footer or promotional lines
+  const stopRe = [/^#\w/, /^follow\b/i, /^save\b.*(?:recipe|this)/i, /^tag\b.*friend/i, /^link in bio/i];
+  const stopIdx = lines.findIndex(l => stopRe.some(p => p.test(l)));
+  const workLines = stopIdx > -1 ? lines.slice(0, stopIdx) : lines;
+
+  const ingredientsHeaderRe = /^(ingredients?|what\s+you(?:'ll)?\s+need|you(?:'ll)?\s+need)\s*:?\s*$/i;
+  const instructionsHeaderRe = /^(instructions?|method|directions?|steps?|how\s+to(?:\s+make)?|to\s+make|preparation)\s*:?\s*$/i;
+  const metaLineRe = /^(?:prep|cook|total)\s*time\s*:|^servings?\s*:|^serves?\s*:|^makes?\s*:/i;
+
+  let ingredientsIdx = -1;
+  let instructionsIdx = -1;
+  workLines.forEach((line, i) => {
+    if (ingredientsIdx === -1 && ingredientsHeaderRe.test(line)) ingredientsIdx = i;
+    if (instructionsIdx === -1 && instructionsHeaderRe.test(line)) instructionsIdx = i;
+  });
+
+  // Title: first substantive non-meta line before any section header
+  const firstHeaderIdx = [ingredientsIdx, instructionsIdx]
+    .filter(i => i > 0)
+    .sort((a, b) => a - b)[0] ?? workLines.length;
+  const rawTitle = workLines
+    .slice(0, firstHeaderIdx)
+    .find(l => l.length > 2 && !metaLineRe.test(l)) ?? '';
+  const title = rawTitle
+    .replace(/^[\-\*•·]\s*/, '')
+    .replace(/^[""]/, '').replace(/[""]$/, '')
+    .trim() || 'Imported Recipe';
+
+  // Ingredients: from header+1 to instructions header (or end)
+  const ingredientsEnd = instructionsIdx > ingredientsIdx && instructionsIdx > -1
+    ? instructionsIdx
+    : workLines.length;
+  const ingredients: string[] = ingredientsIdx > -1
+    ? workLines
+        .slice(ingredientsIdx + 1, ingredientsEnd)
+        .filter(l => l.length > 1 && !metaLineRe.test(l))
+        .map(l => l.replace(/^[\-\*•·]\s*/, '').replace(/^\d+[.\)]\s*/, '').trim())
+        .filter(l => l.length > 1)
+    : [];
+
+  // Instructions: from header+1 to end
+  const instructions: string[] = instructionsIdx > -1
+    ? workLines
+        .slice(instructionsIdx + 1)
+        .filter(l => l.length > 3 && !metaLineRe.test(l))
+        .map(l => l.replace(/^\d+[.\)]\s*/, '').trim())
+        .filter(l => l.length > 3)
+    : [];
+
+  // Servings
+  let servings = 1;
+  const servingsLine = workLines.find(l => /^(?:servings?|serves?|makes?)\s*:?\s*\d+/i.test(l));
+  if (servingsLine) {
+    const m = servingsLine.match(/\d+/);
+    if (m) servings = parseInt(m[0], 10) || 1;
+  }
+
+  return { title, ingredients, instructions, servings };
+}
+
 function extractJsonLdRecipe($: cheerio.CheerioAPI): JsonLdRecipe | null {
   let recipeSchema: JsonLdRecipe | null = null;
 
@@ -2225,11 +2300,14 @@ export async function registerRoutes(
       if (sourcePlatform === 'instagram' || sourcePlatform === 'tiktok') {
         const platformName = sourcePlatform === 'instagram' ? 'Instagram' : 'TikTok';
         const ogTitle = $('meta[property="og:title"]').attr('content')?.trim() || '';
+        // og:description tends to be the fuller caption; prefer it as parsing source
         const ogDescription = $('meta[property="og:description"]').attr('content')?.trim() || '';
         const ogImage = $('meta[property="og:image"]').attr('content') || null;
+        // Use og:description as primary caption source; fall back to og:title stripped of prefix
+        const captionSource = ogDescription || ogTitle;
         const extractedText = [ogTitle, ogDescription].filter(Boolean).join('\n').trim();
 
-        if (!extractedText) {
+        if (!captionSource) {
           return res.json({
             confidence: 'failed' as const,
             sourcePlatform,
@@ -2238,17 +2316,35 @@ export async function registerRoutes(
           });
         }
 
+        const parsed = parseSocialCaption(captionSource);
+
+        const hasTitle = parsed.title && parsed.title !== 'Imported Recipe';
+        const hasIngredients = parsed.ingredients.length > 0;
+        const hasInstructions = parsed.instructions.length > 0;
+
+        const confidence =
+          hasTitle && hasIngredients && hasInstructions ? 'high' as const
+          : hasIngredients || hasInstructions ? 'partial' as const
+          : 'partial' as const; // text present but unstructured — let AI handle in Step 5
+
+        const missingParts: string[] = [];
+        if (!hasIngredients) missingParts.push('ingredients');
+        if (!hasInstructions) missingParts.push('method');
+        const failureReason = missingParts.length > 0
+          ? `Recipe text was found but ${missingParts.join(' and ')} could not be fully extracted. Please review before saving.`
+          : null;
+
         return res.json({
-          confidence: 'partial' as const,
+          confidence,
           sourcePlatform,
-          failureReason: null,
+          failureReason,
           extractedText,
-          title: ogTitle || 'Imported Recipe',
-          ingredients: [],
-          instructions: [],
+          title: parsed.title,
+          ingredients: parsed.ingredients,
+          instructions: parsed.instructions,
           imageUrl: ogImage,
           nutrition: {},
-          servings: 1,
+          servings: parsed.servings,
         });
       }
 
