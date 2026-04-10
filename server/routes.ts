@@ -2115,6 +2115,13 @@ export async function registerRoutes(
     try {
       const { url } = api.import.recipe.input.parse(req.body);
 
+      // Detect source platform from hostname
+      const urlHostname = (() => { try { return new URL(url).hostname.toLowerCase(); } catch { return ''; } })();
+      const sourcePlatform: 'instagram' | 'tiktok' | 'website' =
+        urlHostname.includes('instagram.com') ? 'instagram' :
+        urlHostname.includes('tiktok.com') ? 'tiktok' :
+        'website';
+
       // Source gate — check if this domain's source is enabled
       const importSourceKey = getSourceKeyForUrl(url);
       if (importSourceKey && !(await isSourceCallable(importSourceKey))) {
@@ -2197,12 +2204,53 @@ export async function registerRoutes(
       }
 
       if (!html) {
+        // Social platforms failing to load is expected — return structured failure
+        if (sourcePlatform === 'instagram' || sourcePlatform === 'tiktok') {
+          const platformName = sourcePlatform === 'instagram' ? 'Instagram' : 'TikTok';
+          return res.json({
+            confidence: 'failed' as const,
+            sourcePlatform,
+            failureReason: `This ${platformName} post is not publicly accessible. Copy the recipe text and paste it manually.`,
+            title: '', ingredients: [], instructions: [], imageUrl: null, nutrition: {}, servings: 1, extractedText: null,
+          });
+        }
         return res.status(403).json({
           message: 'This website is blocking automated access. Try pasting the recipe URL from a different site like BBC Good Food or AllRecipes.',
         });
       }
 
       const $ = cheerio.load(html);
+
+      // ── Social platform extraction (og:meta only — no JSON-LD on these platforms) ──
+      if (sourcePlatform === 'instagram' || sourcePlatform === 'tiktok') {
+        const platformName = sourcePlatform === 'instagram' ? 'Instagram' : 'TikTok';
+        const ogTitle = $('meta[property="og:title"]').attr('content')?.trim() || '';
+        const ogDescription = $('meta[property="og:description"]').attr('content')?.trim() || '';
+        const ogImage = $('meta[property="og:image"]').attr('content') || null;
+        const extractedText = [ogTitle, ogDescription].filter(Boolean).join('\n').trim();
+
+        if (!extractedText) {
+          return res.json({
+            confidence: 'failed' as const,
+            sourcePlatform,
+            failureReason: `This ${platformName} post is not publicly accessible. Copy the recipe text and paste it manually.`,
+            title: '', ingredients: [], instructions: [], imageUrl: null, nutrition: {}, servings: 1, extractedText: null,
+          });
+        }
+
+        return res.json({
+          confidence: 'partial' as const,
+          sourcePlatform,
+          failureReason: null,
+          extractedText,
+          title: ogTitle || 'Imported Recipe',
+          ingredients: [],
+          instructions: [],
+          imageUrl: ogImage,
+          nutrition: {},
+          servings: 1,
+        });
+      }
 
       const jsonLdRecipe = extractJsonLdRecipe($);
 
@@ -2229,7 +2277,13 @@ export async function registerRoutes(
           if (numMatch) servings = parseInt(numMatch[1], 10) || 1;
         }
 
-        return res.json({ title, ingredients, instructions: finalInstructions, imageUrl, nutrition, servings });
+        return res.json({
+          title, ingredients, instructions: finalInstructions, imageUrl, nutrition, servings,
+          confidence: 'high' as const,
+          sourcePlatform,
+          failureReason: null,
+          extractedText: null,
+        });
       }
 
       let title = $('h1').first().text().trim();
@@ -2349,7 +2403,20 @@ export async function registerRoutes(
         return res.status(403).json({ message: "This recipe is behind a paywall and cannot be imported." });
       }
 
-      res.json({ title, ingredients, instructions: finalInstructions, imageUrl, nutrition: nutritionData, servings });
+      const fallbackConfidence =
+        title && title !== 'Imported Recipe' && ingredients.length >= 2 && finalInstructions[0] !== 'No instructions available'
+          ? 'high' as const
+          : (title !== 'Imported Recipe' || ingredients.length > 0)
+          ? 'partial' as const
+          : 'failed' as const;
+
+      res.json({
+        title, ingredients, instructions: finalInstructions, imageUrl, nutrition: nutritionData, servings,
+        confidence: fallbackConfidence,
+        sourcePlatform,
+        failureReason: fallbackConfidence === 'failed' ? 'No recipe content found on this page.' : null,
+        extractedText: null,
+      });
     } catch (err) {
       console.error('Import error:', err);
       if (err instanceof z.ZodError) {
