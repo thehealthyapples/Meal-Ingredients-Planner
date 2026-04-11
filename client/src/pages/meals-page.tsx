@@ -8,12 +8,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { CreateMealModal, type ImportedRecipeDraft } from "@/components/create-meal-modal";
 import { ScanConfirmDialog } from "@/components/scan-confirm-dialog";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { MealCompletionDialog, type CompletionMeal } from "@/components/meal-completion-dialog";
-import { IngredientRow, buildIngredientString } from "@/components/ingredient-input";
+import { IngredientRow, buildIngredientString, parseIngredientString } from "@/components/ingredient-input";
 import { CameraModal } from "@/components/camera-modal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -2072,7 +2074,7 @@ export default function MealsPage() {
             )}
             <span className="hidden sm:inline">Scan Product</span>
           </Button>
-          <AddMealGatewayDialog onScan={() => setCameraModalOpen(true)} />
+          <CreateMealDialog onScan={() => setCameraModalOpen(true)} />
           {(!importStatus || importStatus.totalImported === 0) && (
             <Button
               variant="outline"
@@ -3996,7 +3998,7 @@ interface ImportPreview {
   nutrition: Record<string, string>;
   servings?: number;
   confidence?: 'high' | 'partial' | 'failed';
-  sourcePlatform?: 'instagram' | 'tiktok' | 'website';
+  sourcePlatform?: 'instagram' | 'tiktok' | 'website' | 'manual';
   failureReason?: string | null;
 }
 
@@ -4225,20 +4227,39 @@ function AddMealGatewayDialog({ onScan }: { onScan: () => void }) {
   );
 }
 
-function ImportRecipeDialog({ externalOpen, onExternalOpenChange, socialMode }: { externalOpen?: boolean; onExternalOpenChange?: (v: boolean) => void; socialMode?: boolean } = {}) {
+function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOpen?: boolean; onExternalOpenChange?: (v: boolean) => void; socialMode?: boolean } = {}) {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
   const setOpen = (v: boolean) => {
     setInternalOpen(v);
     onExternalOpenChange?.(v);
   };
+  const [tab, setTab] = useState<'url' | 'text'>('url');
   const [url, setUrl] = useState("");
+  const [pastedText, setPastedText] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [failureMsg, setFailureMsg] = useState<string | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createModalPrefill, setCreateModalPrefill] = useState<ImportedRecipeDraft | undefined>(undefined);
 
-  const handleImport = async () => {
+  const openModal = (data: ImportPreview, sourceUrl: string) => {
+    setCreateModalPrefill({
+      title: data.title || 'Imported Recipe',
+      ingredients: data.ingredients ?? [],
+      instructions: data.instructions ?? [],
+      servings: data.servings ?? 1,
+      imageUrl: data.imageUrl ?? null,
+      sourceUrl,
+      sourcePlatform: data.sourcePlatform ?? 'website',
+    });
+    setOpen(false);
+    setUrl("");
+    setPastedText("");
+    setFailureMsg(null);
+    setCreateModalOpen(true);
+  };
+
+  const handleImportUrl = async () => {
     if (!url.trim()) return;
     setIsImporting(true);
     setFailureMsg(null);
@@ -4254,28 +4275,47 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange, socialMode }: 
         return;
       }
       const data: ImportPreview = await res.json();
-
       if (data.confidence === 'failed') {
         setFailureMsg(data.failureReason || "No recipe content found at this URL.");
         return;
       }
-
-      // high or partial — hand off to CreateMealModal for review before save
-      setCreateModalPrefill({
-        title: data.title || 'Imported Recipe',
-        ingredients: data.ingredients ?? [],
-        instructions: data.instructions ?? [],
-        servings: data.servings ?? 1,
-        imageUrl: data.imageUrl ?? null,
-        sourceUrl: url.trim(),
-        sourcePlatform: data.sourcePlatform ?? 'website',
-      });
-      setOpen(false);
-      setUrl("");
-      setFailureMsg(null);
-      setCreateModalOpen(true);
+      openModal(data, url.trim());
     } catch (err: any) {
-      setFailureMsg(err.message || "Could not fetch or parse the recipe. Try a different URL.");
+      setFailureMsg("Could not fetch or parse the recipe. Try a different URL or paste the recipe text instead.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleImportText = async () => {
+    if (!pastedText.trim()) return;
+    setIsImporting(true);
+    setFailureMsg(null);
+    try {
+      const res = await fetch(api.import.recipeFromText.path, {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: pastedText.trim() }),
+      });
+      // Guard against non-JSON responses (e.g. server not yet reloaded, HTML fallback)
+      const contentType = res.headers.get("content-type") ?? "";
+      if (!contentType.includes("application/json")) {
+        setFailureMsg("The server is not responding correctly. Try restarting the dev server, then try again.");
+        return;
+      }
+      const json = await res.json();
+      if (!res.ok) {
+        setFailureMsg(json.message || "Could not extract a recipe from this text.");
+        return;
+      }
+      const data: ImportPreview = json;
+      if (data.confidence === 'failed') {
+        setFailureMsg(data.failureReason || "We couldn't extract a recipe from this text. Please edit and try again.");
+        return;
+      }
+      openModal(data, '');
+    } catch (err: any) {
+      setFailureMsg("Could not reach the server. Check your connection and try again.");
     } finally {
       setIsImporting(false);
     }
@@ -4285,6 +4325,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange, socialMode }: 
     setOpen(newOpen);
     if (!newOpen) {
       setUrl("");
+      setPastedText("");
       setFailureMsg(null);
       setIsImporting(false);
     }
@@ -4304,52 +4345,87 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange, socialMode }: 
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {socialMode ? <Share2 className="h-5 w-5 text-primary" /> : <Globe className="h-5 w-5 text-primary" />}
-              {socialMode ? "Import from Social Media" : "Import Recipe"}
+              <Globe className="h-5 w-5 text-primary" />
+              Import Recipe
             </DialogTitle>
             <DialogDescription>
-              {socialMode
-                ? "Paste a link from Instagram, TikTok, or any recipe site."
-                : "Paste a recipe URL to import automatically."}
+              Paste a link from any recipe site, or paste the recipe text directly.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <Input
-                data-testid="input-import-recipe-url"
-                type="url"
-                placeholder="https://..."
-                value={url}
-                onChange={(e) => { setUrl(e.target.value); setFailureMsg(null); }}
-                onKeyDown={(e) => e.key === "Enter" && handleImport()}
+          <Tabs value={tab} onValueChange={(v) => { setTab(v as 'url' | 'text'); setFailureMsg(null); }}>
+            <TabsList className="w-full">
+              <TabsTrigger value="url" className="flex-1 gap-1.5">
+                <Globe className="h-3.5 w-3.5" />
+                Paste a link
+              </TabsTrigger>
+              <TabsTrigger value="text" className="flex-1 gap-1.5">
+                <ClipboardList className="h-3.5 w-3.5" />
+                Paste text
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="url" className="space-y-3 mt-3">
+              <div className="flex gap-2">
+                <Input
+                  data-testid="input-import-recipe-url"
+                  type="url"
+                  placeholder="https://..."
+                  value={url}
+                  onChange={(e) => { setUrl(e.target.value); setFailureMsg(null); }}
+                  onKeyDown={(e) => e.key === "Enter" && handleImportUrl()}
+                  disabled={isImporting}
+                  className="flex-1"
+                />
+                <Button
+                  data-testid="button-import-fetch"
+                  onClick={handleImportUrl}
+                  disabled={isImporting || !url.trim()}
+                >
+                  {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  <span className="ml-1.5">Import</span>
+                </Button>
+              </div>
+              {!failureMsg && (
+                <p className="text-xs text-muted-foreground">
+                  Works with BBC Good Food, AllRecipes, Instagram, TikTok, and most recipe sites.
+                </p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="text" className="space-y-3 mt-3">
+              <Textarea
+                data-testid="input-import-recipe-text"
+                placeholder={"Paste recipe text here — from a TikTok caption, blog, or anywhere else.\n\nE.g.:\nEasy Pasta\nIngredients: 200g pasta, 2 cloves garlic...\nMethod: Boil pasta, fry garlic..."}
+                value={pastedText}
+                onChange={(e) => { setPastedText(e.target.value); setFailureMsg(null); }}
                 disabled={isImporting}
-                className="flex-1"
+                className="min-h-[140px] text-sm resize-none"
               />
               <Button
-                data-testid="button-import-fetch"
-                onClick={handleImport}
-                disabled={isImporting || !url.trim()}
+                data-testid="button-import-text"
+                onClick={handleImportText}
+                disabled={isImporting || !pastedText.trim()}
+                className="w-full"
               >
                 {isImporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                <span className="ml-1.5">Import</span>
+                <span className="ml-1.5">Extract Recipe</span>
               </Button>
+              {!failureMsg && (
+                <p className="text-xs text-muted-foreground">
+                  AI will extract the title, ingredients, and steps. You review before saving.
+                </p>
+              )}
+            </TabsContent>
+          </Tabs>
+
+          {/* Inline failure message — shown below either tab */}
+          {failureMsg && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5 mt-1">
+              <Info className="h-4 w-4 text-amber-600/80 dark:text-amber-400/70 shrink-0 mt-0.5" />
+              <p className="text-[12.5px] text-amber-700/90 dark:text-amber-300/80 leading-snug">{failureMsg}</p>
             </div>
-
-            {/* Inline failure message — shown instead of opening the modal */}
-            {failureMsg && (
-              <div className="flex items-start gap-2.5 rounded-lg border border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5">
-                <Info className="h-4 w-4 text-amber-600/80 dark:text-amber-400/70 shrink-0 mt-0.5" />
-                <p className="text-[12.5px] text-amber-700/90 dark:text-amber-300/80 leading-snug">{failureMsg}</p>
-              </div>
-            )}
-
-            {!failureMsg && (
-              <p className="text-xs text-muted-foreground">
-                Works best with recipe websites. Instagram/TikTok posts may have limited availability.
-              </p>
-            )}
-          </div>
+          )}
         </DialogContent>
       </Dialog>
 
@@ -4363,19 +4439,24 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange, socialMode }: 
   );
 }
 
-function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: { externalOpen?: boolean; onExternalOpenChange?: (v: boolean) => void; initialName?: string } = {}) {
+function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onScan }: { externalOpen?: boolean; onExternalOpenChange?: (v: boolean) => void; initialName?: string; onScan?: () => void } = {}) {
   const { createMeal } = useMeals();
   const queryClient = useQueryClient();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = externalOpen !== undefined ? externalOpen : internalOpen;
-  const setOpen = (v: boolean) => {
-    setInternalOpen(v);
-    onExternalOpenChange?.(v);
-  };
   const [selectedDiets, setSelectedDiets] = useState<number[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<number | undefined>(undefined);
   const [completionMeal, setCompletionMeal] = useState<CompletionMeal | null>(null);
   const { user } = useUser();
+
+  // Unified import bar state
+  const [unifiedInput, setUnifiedInput] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [importBanner, setImportBanner] = useState<{ partial: boolean; sourceUrl: string } | null>(null);
+  const [importFailureMsg, setImportFailureMsg] = useState<string | null>(null);
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const [instructionsText, setInstructionsText] = useState("");
   
   const { data: allDiets = [] } = useQuery<Diet[]>({
     queryKey: ['/api/diets'],
@@ -4406,7 +4487,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: {
     }
   }, [open, initialName]);
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove, replace } = useFieldArray({
     control: form.control,
     name: "ingredients",
   });
@@ -4417,6 +4498,117 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: {
     );
   };
 
+  const resetImportState = () => {
+    setUnifiedInput("");
+    setIsImporting(false);
+    setImportBanner(null);
+    setImportFailureMsg(null);
+    setListening(false);
+    setInstructionsText("");
+    if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} }
+  };
+
+  const handleDialogOpenChange = (v: boolean) => {
+    if (!v) {
+      resetImportState();
+      setSelectedDiets([]);
+      setSelectedCategory(undefined);
+      form.reset();
+    }
+    setInternalOpen(v);
+    onExternalOpenChange?.(v);
+  };
+
+  const prefillFromImport = (data: ImportPreview, sourceUrl: string) => {
+    form.setValue("name", data.title || "");
+    form.setValue("servings", data.servings ?? 1);
+    const parsed = (data.ingredients || []).map(parseIngredientString);
+    replace(parsed.length > 0 ? parsed : [{ amount: "", unit: "", name: "" }]);
+    setInstructionsText((data.instructions || []).join("\n"));
+    const partial = data.confidence === 'partial' || !data.ingredients?.length;
+    setImportBanner({ partial, sourceUrl });
+    setImportFailureMsg(null);
+    setUnifiedInput("");
+  };
+
+  const handleUnifiedSubmit = async () => {
+    const val = unifiedInput.trim();
+    if (!val || isImporting) return;
+    const isUrl = /^https?:\/\//i.test(val);
+    setIsImporting(true);
+    setImportFailureMsg(null);
+    try {
+      if (isUrl) {
+        const res = await fetch('/api/import-recipe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: val }),
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          setImportFailureMsg((err as any).message || "Could not import this URL.");
+          return;
+        }
+        const data: ImportPreview = await res.json();
+        if (data.confidence === 'failed') {
+          setImportFailureMsg(data.failureReason || "No recipe content found at this URL.");
+          return;
+        }
+        prefillFromImport(data, val);
+      } else {
+        const res = await fetch('/api/import-recipe-from-text', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: val }),
+          credentials: 'include',
+        });
+        const ct = res.headers.get('content-type') ?? '';
+        if (!ct.includes('application/json')) {
+          setImportFailureMsg("Server error. Please try restarting the dev server.");
+          return;
+        }
+        const data: ImportPreview = await res.json();
+        if (!res.ok || data.confidence === 'failed') {
+          setImportFailureMsg(data.failureReason || "Couldn't extract a recipe from this text. Please edit and try again.");
+          return;
+        }
+        prefillFromImport(data, '');
+      }
+    } catch {
+      setImportFailureMsg("Could not reach the server. Check your connection and try again.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const SpeechRecognition = typeof window !== "undefined"
+    ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    : null;
+
+  const startListening = () => {
+    if (!SpeechRecognition) return;
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-GB";
+    recognition.onresult = (event: any) => {
+      const t = Array.from(event.results).map((r: any) => r[0].transcript).join("");
+      setUnifiedInput(t);
+    };
+    recognition.onerror = () => setListening(false);
+    recognition.onend = () => setListening(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setListening(true);
+    setImportFailureMsg(null);
+  };
+
+  const stopListening = () => {
+    try { recognitionRef.current?.stop(); } catch {}
+    setListening(false);
+  };
+
   const onSubmit = async (data: CreateMealFormValues) => {
     const catName = categories.find(c => c.id === selectedCategory)?.name?.toLowerCase() || "";
     const isDrink = catName === "drink" || catName === "smoothie";
@@ -4424,11 +4616,13 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: {
     const cleanData = {
       ...data,
       ingredients: data.ingredients.map(i => buildIngredientString(i.amount, i.unit, i.name)).filter(v => v.trim() !== ""),
+      instructions: instructionsText.split('\n').map(s => s.trim()).filter(Boolean),
       categoryId: selectedCategory || null,
       audience,
       isDrink,
+      ...(importBanner?.sourceUrl ? { sourceUrl: importBanner.sourceUrl, mealSourceType: 'imported_website' } : {}),
     };
-    
+
     createMeal.mutate(cleanData, {
       onSuccess: async (meal: any) => {
         try {
@@ -4440,10 +4634,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: {
         } catch (err) {
           console.error("Failed to set diets:", err);
         }
-        setOpen(false);
-        setSelectedDiets([]);
-        setSelectedCategory(undefined);
-        form.reset();
+        handleDialogOpenChange(false);
         setCompletionMeal({ id: meal.id, name: meal.name, isDrink: isDrink, audience });
       }
     });
@@ -4451,12 +4642,12 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: {
 
   return (
     <>
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       {externalOpen === undefined && (
         <DialogTrigger asChild>
-          <Button data-testid="button-add-meal-direct">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Recipe
+          <Button title="Add Recipe" className="px-2 sm:px-4" data-testid="button-add-meal">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Add Recipe</span>
           </Button>
         </DialogTrigger>
       )}
@@ -4464,13 +4655,119 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: {
         <DialogHeader>
           <DialogTitle>Add New Recipe</DialogTitle>
           <DialogDescription>
-            Create a recipe with its required ingredients.
+            Paste a URL or recipe text to auto-fill, or fill in the form manually.
           </DialogDescription>
         </DialogHeader>
-        
+
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col min-h-0 flex-1">
           <div className="flex-1 overflow-y-auto space-y-5 pr-1 -mr-1 py-1">
+
+            {/* ── UNIFIED INPUT BAR ───────────────────────────────────────── */}
+            <div className="space-y-2 pb-3 border-b border-border">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    placeholder={listening ? "Listening… speak your recipe" : "Paste a URL or recipe text to import…"}
+                    value={unifiedInput}
+                    onChange={e => { setUnifiedInput(e.target.value); setImportFailureMsg(null); }}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleUnifiedSubmit(); } }}
+                    disabled={isImporting || listening}
+                    className="pr-[88px] text-sm"
+                    data-testid="input-unified-import"
+                  />
+                  <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-0.5">
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className={`h-7 w-7 ${listening ? 'text-destructive animate-pulse' : 'text-muted-foreground hover:text-foreground'}`}
+                      onClick={listening ? stopListening : startListening}
+                      title={listening ? "Stop recording" : "Speak recipe"}
+                      data-testid="button-mic-input"
+                    >
+                      <Mic className="h-3.5 w-3.5" />
+                    </Button>
+                    {onScan && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                        onClick={() => { handleDialogOpenChange(false); onScan(); }}
+                        title="Scan image"
+                        data-testid="button-camera-input"
+                      >
+                        <Camera className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                      onClick={handleUnifiedSubmit}
+                      disabled={isImporting || !unifiedInput.trim()}
+                      title="Import recipe"
+                      data-testid="button-unified-import"
+                    >
+                      {isImporting
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Sparkles className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              {!importFailureMsg && !isImporting && (
+                <p className="text-xs text-muted-foreground">
+                  Works with BBC Good Food, AllRecipes, Instagram, TikTok, and most recipe sites.
+                </p>
+              )}
+              {isImporting && (
+                <p className="text-xs text-muted-foreground animate-pulse">Importing recipe…</p>
+              )}
+              {importFailureMsg && (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2">
+                  <Info className="h-3.5 w-3.5 text-amber-600/80 dark:text-amber-400/70 shrink-0 mt-0.5" />
+                  <p className="text-xs text-amber-700/90 dark:text-amber-300/80">{importFailureMsg}</p>
+                </div>
+              )}
+            </div>
+
+            {/* ── IMPORT BANNER (shown after successful AI import) ─────────── */}
+            {importBanner && (
+              importBanner.partial ? (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-300/80 dark:border-amber-600/50 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2.5">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] font-medium text-amber-800 dark:text-amber-300 leading-snug">
+                      THA AI has partially imported this recipe. Some fields may be incomplete — please review before saving.
+                    </p>
+                    {importBanner.sourceUrl && (
+                      <a href={importBanner.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-amber-600/70 dark:text-amber-400/60 underline underline-offset-2 truncate block mt-0.5">
+                        {importBanner.sourceUrl}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5">
+                  <ExternalLink className="h-3.5 w-3.5 text-amber-600/80 dark:text-amber-400/70 shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[12px] text-amber-700/90 dark:text-amber-300/80 leading-snug">
+                      THA AI has imported this recipe. Please validate before saving.
+                    </p>
+                    {importBanner.sourceUrl && (
+                      <a href={importBanner.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-amber-600/70 dark:text-amber-400/60 underline underline-offset-2 truncate block mt-0.5">
+                        {importBanner.sourceUrl}
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )
+            )}
+
+            {/* ── MANUAL FORM ─────────────────────────────────────────────── */}
             <FormField
               control={form.control}
               name="name"
@@ -4622,9 +4919,21 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName }: {
               </Button>
             </div>
 
+            <div className="space-y-2">
+              <FormLabel>Method / Instructions</FormLabel>
+              <Textarea
+                placeholder={"Enter the steps, one per line.\n\nE.g.:\nHeat oil in a pan over medium heat.\nAdd onion and cook for 5 minutes.\nStir in remaining ingredients and simmer."}
+                value={instructionsText}
+                onChange={e => setInstructionsText(e.target.value)}
+                className="min-h-[120px] text-sm resize-none"
+                data-testid="textarea-instructions"
+              />
+              <p className="text-[11px] text-muted-foreground">One step per line. Optional but recommended.</p>
+            </div>
+
             </div>
             <DialogFooter className="pt-4 shrink-0">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={() => handleDialogOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={createMeal.isPending} data-testid="button-submit-meal">
                 {createMeal.isPending ? "Creating..." : "Create Recipe"}
               </Button>
