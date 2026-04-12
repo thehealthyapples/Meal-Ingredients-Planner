@@ -24,6 +24,7 @@ import { expandSearchQuery, correctFoodSpelling } from "@shared/food-synonyms";
 import { parseIngredient as parseIngredientShared } from "@shared/parse-ingredient";
 import { INGREDIENT_TAXONOMY } from "@shared/ingredient-taxonomy";
 import { normalizeIngredientKey } from "@shared/normalize";
+import { lookupFoodConstruct, isLikelyFoodConstruct, logUnrecognisedConstruct, logConstructMappingFailure } from "@shared/food-constructs";
 import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreezerMealSchema, updateMealSchema } from "@shared/schema";
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
 import { sanitizeUser } from "./lib/sanitizeUser";
@@ -1202,6 +1203,74 @@ export async function registerRoutes(
     return res.json({ exists: false });
   });
 
+  // ── Generate AI meal image ──────────────────────────────────────────────────
+  app.post(api.meals.generateImage.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const meal = await storage.getMeal(Number(req.params.id));
+    if (!meal || meal.userId !== req.user!.id) {
+      return res.status(404).json({ message: "Meal not found" });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(503).json({ message: "Image generation is not configured on this server." });
+    }
+
+    try {
+      const { default: OpenAI } = await import("openai");
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      // Build a short ingredient list for the prompt (top 8, skip amounts/units)
+      const ingredientNames = meal.ingredients
+        .slice(0, 8)
+        .map(ing => {
+          // Strip leading amounts/units — keep only the ingredient name portion
+          const parts = ing.trim().split(/\s+/);
+          // Skip the first token if it looks like a number or fraction
+          const nameStart = /^[\d¼½¾⅓⅔]+/.test(parts[0]) ? 1 : 0;
+          // Also skip a common unit token immediately after the number
+          const units = new Set(["g", "kg", "ml", "l", "tsp", "tbsp", "cup", "cups", "oz", "lb", "lbs", "pinch", "handful", "piece", "pieces", "slice", "slices", "clove", "cloves"]);
+          const nameFrom = nameStart < parts.length && units.has(parts[nameStart]?.toLowerCase()) ? nameStart + 1 : nameStart;
+          return parts.slice(nameFrom).join(" ").replace(/[,;.]+$/, "").trim();
+        })
+        .filter(Boolean);
+
+      const ingredientList = ingredientNames.length > 0
+        ? ingredientNames.join(", ")
+        : "assorted fresh ingredients";
+
+      const prompt = `Professional food photography of ${meal.name}. ` +
+        `Key ingredients: ${ingredientList}. ` +
+        `Shot from above or slight angle, natural daylight, shallow depth of field, ` +
+        `rustic wooden or marble surface, garnished and ready to eat. ` +
+        `No text, no watermarks, no people. Appetising, magazine-quality.`;
+
+      const response = await client.images.generate({
+        model: "dall-e-3",
+        prompt,
+        n: 1,
+        size: "1024x1024",
+        quality: "standard",
+        style: "natural",
+        response_format: "url",
+      });
+
+      const imageUrl = response.data?.[0]?.url;
+      if (!imageUrl) {
+        return res.status(500).json({ message: "No image was returned. Please try again." });
+      }
+
+      const updated = await storage.updateMealImageUrl(meal.id, imageUrl);
+      res.json(updated);
+    } catch (err: any) {
+      console.error("[generate-meal-image] error:", err?.message ?? err);
+      const msg = err?.status === 400
+        ? "The AI couldn't generate an image for this meal. Please try again."
+        : "We couldn't generate an image right now. Try again.";
+      res.status(500).json({ message: msg });
+    }
+  });
+
   app.patch(api.meals.reimportInstructions.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
@@ -2261,8 +2330,13 @@ export async function registerRoutes(
             timeout: 15000,
             maxContentLength: 5 * 1024 * 1024,
             maxRedirects: 5,
+            responseType: 'text',
           });
-          html = axiosRes.data;
+          // Only accept text/html responses — reject JSON, binary, or bot-challenge pages
+          const ct = String(axiosRes.headers['content-type'] || '');
+          if (typeof axiosRes.data === 'string' && (ct.includes('text/html') || ct.includes('text/plain') || ct === '')) {
+            html = axiosRes.data;
+          }
         } catch {}
       }
 
@@ -2295,12 +2369,16 @@ export async function registerRoutes(
           return res.json({
             confidence: 'failed' as const,
             sourcePlatform,
-            failureReason: `This ${platformName} post is not publicly accessible. Copy the recipe text and paste it manually.`,
+            failureReason: `This ${platformName} post is not publicly accessible. Try pasting the recipe text instead.`,
             title: '', ingredients: [], instructions: [], imageUrl: null, nutrition: {}, servings: 1, extractedText: null,
           });
         }
-        return res.status(403).json({
-          message: 'This website is blocking automated access. Try pasting the recipe URL from a different site like BBC Good Food or AllRecipes.',
+        // Return as structured failure rather than HTTP 403 so the UI shows the inline error message
+        return res.json({
+          confidence: 'failed' as const,
+          sourcePlatform,
+          failureReason: "We couldn't load this page. The site may be blocking automated access. Try copying and pasting the recipe text instead.",
+          title: '', ingredients: [], instructions: [], imageUrl: null, nutrition: {}, servings: 1, extractedText: null,
         });
       }
 
@@ -2530,7 +2608,170 @@ export async function registerRoutes(
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: 'Invalid URL' });
       }
-      res.status(500).json({ message: 'Failed to fetch or parse recipe from URL' });
+      // Surface as a structured failure so the UI shows the inline error, not a raw error state
+      res.json({
+        confidence: 'failed' as const,
+        sourcePlatform: 'website' as const,
+        failureReason: "Something went wrong while importing this recipe. Please try a different URL or paste the recipe text instead.",
+        title: '', ingredients: [], instructions: [], imageUrl: null, nutrition: {}, servings: 1, extractedText: null,
+      });
+    }
+  });
+
+  // ── Import recipe from pasted text ──────────────────────────────────────────
+  app.post(api.import.recipeFromText.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const parseResult = api.import.recipeFromText.input.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ message: 'Invalid request body' });
+    }
+
+    const { text } = parseResult.data;
+
+    // Fast path: if no OpenAI key, fall back to deterministic heuristic parser
+    if (!process.env.OPENAI_API_KEY) {
+      const parsed = parseSocialCaption(text);
+      const hasTitle = parsed.title && parsed.title !== 'Imported Recipe';
+      const hasIngredients = parsed.ingredients.length > 0;
+      const hasInstructions = parsed.instructions.length > 0;
+      const confidence =
+        hasTitle && hasIngredients && hasInstructions ? 'high' as const
+        : hasIngredients || hasInstructions ? 'partial' as const
+        : 'failed' as const;
+      return res.json({
+        title: parsed.title,
+        ingredients: parsed.ingredients,
+        instructions: parsed.instructions,
+        servings: parsed.servings,
+        imageUrl: null,
+        sourcePlatform: 'manual' as const,
+        confidence,
+        failureReason: confidence === 'failed'
+          ? "We couldn't extract a recipe from this text. Please edit and try again."
+          : null,
+        extractedText: text,
+        nutrition: {},
+      });
+    }
+
+    try {
+      const { default: OpenAI } = await import("openai");
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const systemPrompt = `You are a recipe extraction assistant. Given raw text (e.g. a TikTok caption, blog post, or pasted recipe), extract the recipe structure.
+
+Return ONLY valid JSON in this exact shape:
+{
+  "title": string or null,
+  "ingredients": string[],
+  "instructions": string[],
+  "servings": number or null
+}
+
+Rules:
+- Extract only what is clearly present in the text. Do NOT invent, guess, or hallucinate.
+- ingredients: each item as a single line (e.g. "2 cups flour"). Empty array if not found.
+- instructions: each step as a single sentence or short paragraph. Empty array if not found.
+- servings: a number if mentioned, otherwise null.
+- title: the recipe name if present, otherwise null.
+- No markdown, no explanation, no extra keys. Just the JSON object.`;
+
+      const completion = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: text },
+        ],
+        temperature: 0,
+        max_tokens: 1500,
+        response_format: { type: 'json_object' },
+      });
+
+      let extracted: { title: string | null; ingredients: string[]; instructions: string[]; servings: number | null } = {
+        title: null, ingredients: [], instructions: [], servings: null,
+      };
+
+      try {
+        const raw = completion.choices[0]?.message?.content?.trim() ?? '{}';
+        const parsed = JSON.parse(raw);
+
+        // Post-process ingredients: must be short single-line strings, trimmed, non-empty
+        const rawIngredients: string[] = Array.isArray(parsed.ingredients)
+          ? parsed.ingredients.filter((s: any) => typeof s === 'string')
+          : [];
+        const ingredients = rawIngredients
+          .flatMap(s => s.split('\n'))           // split any newline-concatenated items
+          .map(s => s.replace(/\s+/g, ' ').trim()) // collapse internal whitespace
+          .filter(s => s.length > 0 && s.length <= 200); // remove empty and absurdly long lines
+
+        // Post-process instructions: split long paragraphs into individual steps,
+        // strip leading step numbers/bullets, trim, remove empty strings
+        const rawInstructions: string[] = Array.isArray(parsed.instructions)
+          ? parsed.instructions.filter((s: any) => typeof s === 'string')
+          : [];
+        const instructions = rawInstructions
+          .flatMap(s => s.split(/\n+/))                          // split on newlines
+          .flatMap(s => s.split(/(?<=\.)\s+(?=[A-Z])/))          // split "Sentence. Next sentence."
+          .map(s => s.replace(/^\s*(?:\d+[\.\)]|[-•*])\s*/, '')) // strip "1." "1)" "-" "•" prefixes
+          .map(s => s.replace(/\s+/g, ' ').trim())               // collapse whitespace
+          .filter(s => s.length > 0);                            // remove empty strings
+
+        extracted = {
+          title: typeof parsed.title === 'string' ? parsed.title.trim() || null : null,
+          ingredients,
+          instructions,
+          servings: typeof parsed.servings === 'number' ? parsed.servings : null,
+        };
+      } catch {}
+
+      const hasTitle = !!extracted.title;
+      const hasIngredients = extracted.ingredients.length > 0;
+      const hasInstructions = extracted.instructions.length > 0;
+
+      const confidence =
+        hasTitle && hasIngredients && hasInstructions ? 'high' as const
+        : hasIngredients || hasInstructions ? 'partial' as const
+        : 'failed' as const;
+
+      return res.json({
+        title: extracted.title || 'Imported Recipe',
+        ingredients: extracted.ingredients,
+        instructions: extracted.instructions,
+        servings: extracted.servings ?? 1,
+        imageUrl: null,
+        sourcePlatform: 'manual' as const,
+        confidence,
+        failureReason: confidence === 'failed'
+          ? "We couldn't extract a recipe from this text. Please edit and try again."
+          : null,
+        extractedText: text,
+        nutrition: {},
+      });
+    } catch (err) {
+      console.error('[import-recipe-from-text] AI error:', err);
+      // Fallback to heuristic parser on AI failure
+      const parsed = parseSocialCaption(text);
+      const hasIngredients = parsed.ingredients.length > 0;
+      const hasInstructions = parsed.instructions.length > 0;
+      const confidence =
+        hasIngredients && hasInstructions ? 'partial' as const
+        : hasIngredients || hasInstructions ? 'partial' as const
+        : 'failed' as const;
+      return res.json({
+        title: parsed.title || 'Imported Recipe',
+        ingredients: parsed.ingredients,
+        instructions: parsed.instructions,
+        servings: parsed.servings ?? 1,
+        imageUrl: null,
+        sourcePlatform: 'manual' as const,
+        confidence,
+        failureReason: confidence === 'failed'
+          ? "We couldn't extract a recipe from this text. Please edit and try again."
+          : null,
+        extractedText: text,
+        nutrition: {},
+      });
     }
   });
 
@@ -2565,6 +2806,44 @@ export async function registerRoutes(
       const correctedNormalized = correctedName !== parsed.productName
         ? normalizeIngredientKey(correctedName)
         : parsed.normalizedName;
+
+      // ── Food constructs layer ─────────────────────────────────────────────
+      // Runs after spelling correction + normalisation, before taxonomy lookup.
+      // Resolves colloquial / composite inputs ("chip butty", "round of
+      // sandwiches", "slice of pizza") to canonical ingredient representations.
+      const construct = lookupFoodConstruct(correctedNormalized);
+      if (construct) {
+        if (!construct.resolvedName) {
+          logConstructMappingFailure(construct, "resolvedName is empty");
+        } else {
+          const resolvedNormalized = normalizeIngredientKey(construct.resolvedName);
+          const resolvedCategory =
+            construct.category ??
+            INGREDIENT_TAXONOMY[resolvedNormalized] ??
+            'uncategorised';
+          console.log(
+            `[food-constructs] resolved: "${line}" → "${construct.resolvedName}"` +
+              (construct.unit !== undefined ? ` unit="${construct.unit}"` : "") +
+              (construct.quantityMultiplier !== undefined ? ` qty×${construct.quantityMultiplier}` : "")
+          );
+          return {
+            productName: construct.resolvedName,
+            normalizedName: resolvedNormalized,
+            quantity: construct.quantityMultiplier != null
+              ? String(construct.quantityMultiplier)
+              : parsed.quantity,
+            unit: construct.unit !== undefined ? construct.unit : parsed.unit,
+            confidence: 'high' as const,   // constructs are deterministic
+            ambiguous: false,
+            category: resolvedCategory,
+            ...(construct.components ? { components: construct.components } : {}),
+          };
+        }
+      } else if (isLikelyFoodConstruct(correctedNormalized)) {
+        // Input looks construct-like but we don't have a mapping for it yet —
+        // log so it can be added to EXACT_CONSTRUCTS in the next pass.
+        logUnrecognisedConstruct(line, correctedNormalized);
+      }
 
       const category = INGREDIENT_TAXONOMY[correctedNormalized] ?? INGREDIENT_TAXONOMY[parsed.normalizedName] ?? 'uncategorised';
       return {

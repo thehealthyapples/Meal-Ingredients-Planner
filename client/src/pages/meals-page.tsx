@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateMealModal, type ImportedRecipeDraft } from "@/components/create-meal-modal";
@@ -1444,6 +1444,7 @@ export default function MealsPage() {
   });
   const [addToFreezerMealId, setAddToFreezerMealId] = useState<number | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | string | null>(null);
+  const [generatingImageFor, setGeneratingImageFor] = useState<number | null>(null);
   const [webPreviewCache, setWebPreviewCache] = useState<Record<string, { ingredients: string[]; instructions: string[]; loading?: boolean; error?: string }>>({});
 
   const [expandedTab, setExpandedTab] = useState<"ingredients" | "method">("ingredients");
@@ -1452,6 +1453,28 @@ export default function MealsPage() {
   const [freezerNotes, setFreezerNotes] = useState("");
 
   const isFromList = useMemo(() => new URLSearchParams(searchStr).get("from") === "list", [searchStr]);
+
+  const handleGenerateMealImage = useCallback(async (meal: Meal) => {
+    setGeneratingImageFor(meal.id);
+    try {
+      const res = await apiRequest("POST", buildUrl(api.meals.generateImage.path, { id: meal.id }));
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast({ title: "Image generation failed", description: (err as any).message || "We couldn't generate an image right now. Try again.", variant: "destructive" });
+        return;
+      }
+      const updated: Meal = await res.json();
+      // Update the meal in the query cache immediately
+      queryClient.setQueryData<Meal[]>([api.meals.list.path], (prev) =>
+        prev ? prev.map(m => m.id === updated.id ? updated : m) : prev
+      );
+      toast({ title: "Image generated", description: `Photo added to "${updated.name}".` });
+    } catch {
+      toast({ title: "Image generation failed", description: "We couldn't generate an image right now. Try again.", variant: "destructive" });
+    } finally {
+      setGeneratingImageFor(null);
+    }
+  }, [queryClient, toast]);
 
   const handleAddToListFromCookbook = useCallback(async (ingredients: string[]) => {
     try {
@@ -1904,7 +1927,9 @@ export default function MealsPage() {
       const cat = getMealDisplayCategory(meal);
       let matchesGroup = true;
       if (cat === "user_meals") matchesGroup = activeGroups.has("cookbook");
-      else if (cat === "from_web" || cat === "tha_meals") matchesGroup = activeGroups.has("recipes");
+      // user-imported web recipes are part of the user's cookbook AND show under "Recipes"
+      else if (cat === "from_web") matchesGroup = activeGroups.has("cookbook") || activeGroups.has("recipes");
+      else if (cat === "tha_meals") matchesGroup = activeGroups.has("recipes");
       else if (cat === "ready_meals") matchesGroup = activeGroups.has("packaged");
       else if (cat === "drinks") matchesGroup = activeGroups.has("cookbook") || activeGroups.has("recipes");
       const eff = activeAudiences.size === 0 ? new Set(["adult"]) : activeAudiences;
@@ -2074,7 +2099,7 @@ export default function MealsPage() {
             )}
             <span className="hidden sm:inline">Scan Product</span>
           </Button>
-          <CreateMealDialog onScan={() => setCameraModalOpen(true)} />
+          <CreateMealDialog onScan={() => setCameraModalOpen(true)} onMealCreated={(_, hasSourceUrl) => { setActiveGroups(prev => { const n = new Set(prev); n.add(hasSourceUrl ? "recipes" : "cookbook"); return n; }); }} />
           {(!importStatus || importStatus.totalImported === 0) && (
             <Button
               variant="outline"
@@ -2746,14 +2771,14 @@ export default function MealsPage() {
                           )}
                         </>
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center relative bg-accent/30" data-testid={`placeholder-meal-${meal.id}`}>
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 px-3 relative bg-accent/30" data-testid={`placeholder-meal-${meal.id}`}>
                           {meal.audience === 'baby' ? (
                             <MealWatermark type="baby" size="lg" className="relative" />
                           ) : meal.audience === 'child' ? (
                             <MealWatermark type="child" size="lg" className="relative" />
                           ) : (
                             <>
-                              <ChefHat className="h-12 w-12 text-muted-foreground/40" />
+                              <ChefHat className="h-10 w-10 text-muted-foreground/40 relative z-10" />
                               {!meal.isSystemMeal && (
                                 <MealWatermark type="adult" size="lg" className="inset-0 m-auto flex items-center justify-center" />
                               )}
@@ -2765,6 +2790,7 @@ export default function MealsPage() {
                               )}
                             </>
                           )}
+                          <span className="text-sm font-semibold text-center leading-tight relative z-10 text-foreground line-clamp-2 px-1">{meal.name}</span>
                         </div>
                       )}
                       {!meal.isReadyMeal && meal.imageUrl && (
@@ -2937,6 +2963,20 @@ export default function MealsPage() {
                         instructions={meal.instructions}
                         onAddToList={handleAddToListFromCookbook}
                       />
+                      {!meal.imageUrl && !meal.isReadyMeal && !meal.isSystemMeal && meal.mealFormat !== "grouped" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="w-full h-7 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+                          disabled={generatingImageFor === meal.id}
+                          onClick={() => handleGenerateMealImage(meal)}
+                          data-testid={`button-generate-image-${meal.id}`}
+                        >
+                          {generatingImageFor === meal.id
+                            ? <><Loader2 className="h-3 w-3 animate-spin" />Generating image…</>
+                            : <><Wand2 className="h-3 w-3" />Generate image with THA AI</>}
+                        </Button>
+                      )}
                     </CardFooter>
                   </Card>
                 </motion.div>
@@ -3061,6 +3101,20 @@ export default function MealsPage() {
                             instructions={meal.instructions}
                             onAddToList={handleAddToListFromCookbook}
                           />
+                          {!meal.imageUrl && !meal.isReadyMeal && !meal.isSystemMeal && meal.mealFormat !== "grouped" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-xs gap-1.5 text-muted-foreground"
+                              disabled={generatingImageFor === meal.id}
+                              onClick={(e) => { e.stopPropagation(); handleGenerateMealImage(meal); }}
+                              data-testid={`button-generate-image-${meal.id}`}
+                            >
+                              {generatingImageFor === meal.id
+                                ? <><Loader2 className="h-3 w-3 animate-spin" />Generating…</>
+                                : <><Wand2 className="h-3 w-3" />Generate image</>}
+                            </Button>
+                          )}
                           {!meal.isSystemMeal && (
                             <Button
                               variant="ghost"
@@ -4439,7 +4493,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
   );
 }
 
-function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onScan }: { externalOpen?: boolean; onExternalOpenChange?: (v: boolean) => void; initialName?: string; onScan?: () => void } = {}) {
+function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onScan, onMealCreated }: { externalOpen?: boolean; onExternalOpenChange?: (v: boolean) => void; initialName?: string; onScan?: () => void; onMealCreated?: (meal: Meal, hasSourceUrl: boolean) => void } = {}) {
   const { createMeal } = useMeals();
   const queryClient = useQueryClient();
   const [internalOpen, setInternalOpen] = useState(false);
@@ -4452,11 +4506,19 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
   // Unified import bar state
   const [unifiedInput, setUnifiedInput] = useState("");
   const [isImporting, setIsImporting] = useState(false);
-  const [importBanner, setImportBanner] = useState<{ partial: boolean; sourceUrl: string } | null>(null);
+  const [importBanner, setImportBanner] = useState<{ partial: boolean; sourceUrl: string; isVoice?: boolean } | null>(null);
   const [importFailureMsg, setImportFailureMsg] = useState<string | null>(null);
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  // Ref to capture speech transcript outside React state batching
+  const speechTranscriptRef = useRef("");
+  // Signals that a voice capture has finished and needs AI structuring
+  const [pendingVoiceImport, setPendingVoiceImport] = useState<string | null>(null);
   const [instructionsText, setInstructionsText] = useState("");
+  // Paste-text helper state (shown for partial imports with missing fields)
+  const [pasteHelperText, setPasteHelperText] = useState("");
+  const [isPasteImporting, setIsPasteImporting] = useState(false);
+  const [pasteHelperMsg, setPasteHelperMsg] = useState<string | null>(null);
   
   const { data: allDiets = [] } = useQuery<Diet[]>({
     queryKey: ['/api/diets'],
@@ -4505,6 +4567,12 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     setImportFailureMsg(null);
     setListening(false);
     setInstructionsText("");
+    setPasteHelperText("");
+    setPasteHelperMsg(null);
+    setPendingVoiceImport(null);
+    speechTranscriptRef.current = "";
+    // Reset before stopping so onend doesn't falsely trigger "no speech captured"
+    wasListeningRef.current = false;
     if (recognitionRef.current) { try { recognitionRef.current.stop(); } catch {} }
   };
 
@@ -4522,6 +4590,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
   const prefillFromImport = (data: ImportPreview, sourceUrl: string) => {
     form.setValue("name", data.title || "");
     form.setValue("servings", data.servings ?? 1);
+    if (data.imageUrl) form.setValue("imageUrl", data.imageUrl);
     const parsed = (data.ingredients || []).map(parseIngredientString);
     replace(parsed.length > 0 ? parsed : [{ amount: "", unit: "", name: "" }]);
     setInstructionsText((data.instructions || []).join("\n"));
@@ -4529,6 +4598,66 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     setImportBanner({ partial, sourceUrl });
     setImportFailureMsg(null);
     setUnifiedInput("");
+  };
+
+  const handlePasteImprove = async () => {
+    const text = pasteHelperText.trim();
+    if (!text || isPasteImporting) return;
+    setIsPasteImporting(true);
+    setPasteHelperMsg(null);
+    try {
+      const res = await fetch('/api/import-recipe-from-text', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+        credentials: 'include',
+      });
+      const ct = res.headers.get('content-type') ?? '';
+      if (!ct.includes('application/json')) {
+        setPasteHelperMsg("Server error. Please try again.");
+        return;
+      }
+      const data: ImportPreview = await res.json();
+      if (!res.ok || data.confidence === 'failed') {
+        setPasteHelperMsg(data.failureReason || "Couldn't extract a recipe from this text. Try pasting more of the recipe content.");
+        return;
+      }
+
+      // Merge: only fill in fields that are currently empty / default
+      const currentName = form.getValues("name").trim();
+      const newTitle = data.title?.trim();
+      if (newTitle && (!currentName || currentName === 'Imported Recipe')) {
+        form.setValue("name", newTitle);
+      }
+
+      const currentServings = form.getValues("servings");
+      if (data.servings && data.servings > 1 && (!currentServings || currentServings === 1)) {
+        form.setValue("servings", data.servings);
+      }
+
+      const currentIngredientsEmpty = fields.every(f => !f.name.trim());
+      if (currentIngredientsEmpty && data.ingredients?.length) {
+        replace(data.ingredients.map(parseIngredientString));
+      }
+
+      const currentInstructionsEmpty = !instructionsText.trim();
+      if (currentInstructionsEmpty && data.instructions?.length) {
+        setInstructionsText(data.instructions.join("\n"));
+      }
+
+      // Re-evaluate partial state after merge
+      const stillMissingIngredients = currentIngredientsEmpty && !data.ingredients?.length;
+      const stillMissingInstructions = currentInstructionsEmpty && !data.instructions?.length;
+      setImportBanner(prev => prev
+        ? { ...prev, partial: stillMissingIngredients || stillMissingInstructions }
+        : null
+      );
+      setPasteHelperText("");
+    } catch {
+      setPasteHelperMsg("Could not reach the server. Check your connection and try again.");
+    } finally {
+      setIsPasteImporting(false);
+    }
   };
 
   const handleUnifiedSubmit = async () => {
@@ -4586,17 +4715,38 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     : null;
 
+  // Track the previous listening state so we can detect the true→false transition
+  const wasListeningRef = useRef(false);
+
   const startListening = () => {
     if (!SpeechRecognition) return;
+    speechTranscriptRef.current = "";
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = "en-GB";
+    // Use browser default language — specifying en-GB can silently fail for non-UK users
     recognition.onresult = (event: any) => {
-      const t = Array.from(event.results).map((r: any) => r[0].transcript).join("");
-      setUnifiedInput(t);
+      // Accumulate all results (both interim and final) into a single transcript
+      let transcript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      speechTranscriptRef.current = transcript;
+      setUnifiedInput(transcript);
     };
-    recognition.onerror = () => setListening(false);
+    recognition.onerror = (event: any) => {
+      speechTranscriptRef.current = "";
+      setListening(false);
+      // Show an error so the user knows something went wrong, not just silence
+      const code = event?.error ?? "unknown";
+      if (code !== "aborted" && code !== "no-speech") {
+        setImportFailureMsg(
+          code === "not-allowed"
+            ? "Microphone access was denied. Please allow microphone permissions and try again."
+            : "Voice recognition error. Please try again."
+        );
+      }
+    };
     recognition.onend = () => setListening(false);
     recognitionRef.current = recognition;
     recognition.start();
@@ -4608,6 +4758,67 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     try { recognitionRef.current?.stop(); } catch {}
     setListening(false);
   };
+
+  // Detect the moment listening stops — snapshot the ref and queue voice import
+  useEffect(() => {
+    if (wasListeningRef.current && !listening) {
+      const captured = speechTranscriptRef.current.trim();
+      speechTranscriptRef.current = "";
+      if (captured) {
+        setPendingVoiceImport(captured);
+      } else {
+        // Recording stopped with no captured text — let the user know
+        setImportFailureMsg("No speech was captured. Please try again and speak clearly.");
+      }
+    }
+    wasListeningRef.current = listening;
+  }, [listening]);
+
+  // When speech recognition ends with a transcript, route it through AI structuring
+  useEffect(() => {
+    if (!pendingVoiceImport) return;
+    const text = pendingVoiceImport;
+    setPendingVoiceImport(null);
+    setIsImporting(true);
+    setImportFailureMsg(null);
+    fetch('/api/import-recipe-from-text', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      credentials: 'include',
+    })
+      .then(async res => {
+        const ct = res.headers.get('content-type') ?? '';
+        if (!ct.includes('application/json')) {
+          setImportFailureMsg("Server error. Please try again.");
+          return;
+        }
+        const data: ImportPreview = await res.json();
+        if (!res.ok || data.confidence === 'failed') {
+          setImportFailureMsg(
+            data.failureReason ||
+            "We couldn't confidently structure this voice input. Please edit the text and try again."
+          );
+          return;
+        }
+        // Prefill the form with structured data
+        form.setValue("name", data.title || "");
+        form.setValue("servings", data.servings ?? 1);
+        if (data.imageUrl) form.setValue("imageUrl", data.imageUrl);
+        const parsed = (data.ingredients || []).map(parseIngredientString);
+        replace(parsed.length > 0 ? parsed : [{ amount: "", unit: "", name: "" }]);
+        setInstructionsText((data.instructions || []).join("\n"));
+        const partial = data.confidence === 'partial' || !data.ingredients?.length;
+        setImportBanner({ partial, sourceUrl: '', isVoice: true });
+        setUnifiedInput("");
+      })
+      .catch(() => {
+        setImportFailureMsg("Could not reach the server. Check your connection and try again.");
+      })
+      .finally(() => {
+        setIsImporting(false);
+      });
+  }, [pendingVoiceImport]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSubmit = async (data: CreateMealFormValues) => {
     const catName = categories.find(c => c.id === selectedCategory)?.name?.toLowerCase() || "";
@@ -4634,11 +4845,19 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
         } catch (err) {
           console.error("Failed to set diets:", err);
         }
+        const hadSourceUrl = !!(cleanData as any).sourceUrl;
         handleDialogOpenChange(false);
         setCompletionMeal({ id: meal.id, name: meal.name, isDrink: isDrink, audience });
+        onMealCreated?.(meal, hadSourceUrl);
       }
     });
   };
+
+  // Show paste-text helper when we have a partial import AND at least one key field is still empty
+  const ingredientsAreEmpty = fields.every(f => !f.name.trim());
+  const instructionsAreEmpty = !instructionsText.trim();
+  const titleIsEmpty = !form.watch("name").trim();
+  const showPasteHelper = !!(importBanner?.partial && (ingredientsAreEmpty || instructionsAreEmpty || titleIsEmpty));
 
   return (
     <>
@@ -4741,7 +4960,9 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                   <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-medium text-amber-800 dark:text-amber-300 leading-snug">
-                      THA AI has partially imported this recipe. Some fields may be incomplete — please review before saving.
+                      {importBanner.isVoice
+                        ? "THA AI has partially structured your voice recipe. Some fields may be missing — please review and complete before saving."
+                        : "THA AI has partially imported this recipe. Some fields may be incomplete — please review before saving."}
                     </p>
                     {importBanner.sourceUrl && (
                       <a href={importBanner.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-amber-600/70 dark:text-amber-400/60 underline underline-offset-2 truncate block mt-0.5">
@@ -4749,6 +4970,13 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                       </a>
                     )}
                   </div>
+                </div>
+              ) : importBanner.isVoice ? (
+                <div className="flex items-start gap-2 rounded-lg border border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5">
+                  <Mic className="h-3.5 w-3.5 text-amber-600/80 dark:text-amber-400/70 shrink-0 mt-0.5" />
+                  <p className="text-[12px] text-amber-700/90 dark:text-amber-300/80 leading-snug">
+                    THA AI has structured your voice recipe. Please review the details before saving.
+                  </p>
                 </div>
               ) : (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5">
@@ -4766,6 +4994,79 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                 </div>
               )
             )}
+
+            {/* ── PASTE-TEXT HELPER (partial import with missing fields) ────── */}
+            {showPasteHelper && (
+              <div className="rounded-lg border border-border bg-muted/40 px-3 py-3 space-y-2">
+                <p className="text-xs text-muted-foreground leading-snug">
+                  We couldn't extract all of this recipe from the source. Paste the recipe text here to improve the import.
+                </p>
+                <Textarea
+                  placeholder={"Paste the full recipe text here — e.g. from the post caption, comments, or the recipe website."}
+                  value={pasteHelperText}
+                  onChange={e => { setPasteHelperText(e.target.value); setPasteHelperMsg(null); }}
+                  className="min-h-[100px] text-sm resize-none"
+                  disabled={isPasteImporting}
+                  data-testid="textarea-paste-helper"
+                />
+                {pasteHelperMsg && (
+                  <p className="text-xs text-amber-700 dark:text-amber-300">{pasteHelperMsg}</p>
+                )}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handlePasteImprove}
+                  disabled={isPasteImporting || !pasteHelperText.trim()}
+                  className="w-full"
+                  data-testid="button-paste-improve"
+                >
+                  {isPasteImporting ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+                  {isPasteImporting ? "Importing…" : "Improve import"}
+                </Button>
+              </div>
+            )}
+
+            {/* ── IMAGE SECTION ───────────────────────────────────────────── */}
+            {importBanner && (() => {
+              const currentImageUrl = form.watch("imageUrl");
+              return currentImageUrl ? (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={currentImageUrl}
+                    alt="Recipe photo"
+                    className="w-16 h-16 object-cover rounded-md border border-border shrink-0"
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground mb-1">Photo imported</p>
+                    <button type="button" className="text-xs text-destructive hover:underline" onClick={() => form.setValue("imageUrl", null as any)}>Remove</button>
+                  </div>
+                </div>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-1.5 text-muted-foreground font-normal">
+                        <ImageIcon className="h-3.5 w-3.5" />
+                        Photo URL <span className="text-[11px] text-muted-foreground/60">(optional — no photo was found)</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://example.com/photo.jpg"
+                          {...field}
+                          value={field.value ?? ""}
+                          onChange={e => field.onChange(e.target.value || null)}
+                          data-testid="input-image-url"
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              );
+            })()}
 
             {/* ── MANUAL FORM ─────────────────────────────────────────────── */}
             <FormField

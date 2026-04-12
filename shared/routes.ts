@@ -61,6 +61,10 @@ export const api = {
       method: 'GET' as const,
       path: '/api/meals/:id/edited-copy' as const,
     },
+    generateImage: {
+      method: 'POST' as const,
+      path: '/api/meals/:id/generate-image' as const,
+    },
     saveProduct: {
       method: 'POST' as const,
       path: '/api/meals/save-product' as const,
@@ -99,6 +103,11 @@ export const api = {
       method: 'POST' as const,
       path: '/api/import-recipe' as const,
       input: z.object({ url: z.string().url() }),
+    },
+    recipeFromText: {
+      method: 'POST' as const,
+      path: '/api/import-recipe-from-text' as const,
+      input: z.object({ text: z.string().min(1) }),
     },
     parse: {
       method: 'POST' as const,
