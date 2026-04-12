@@ -720,6 +720,27 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-04-12_item_resolution_layer",
+    statements: [
+      // original_text: raw user input before any normalisation
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS original_text TEXT",
+      // canonical_name: authoritative resolved name (e.g. "toilet roll" not "bog roll")
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS canonical_name TEXT",
+      // subcategory: finer classification within a category (e.g. category=produce, subcategory=root_vegetable)
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS subcategory TEXT",
+      // resolution_state: lifecycle of the item from raw input to resolved
+      // Values: raw | needs_review | resolved | matched_to_product
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS resolution_state TEXT NOT NULL DEFAULT 'raw'",
+      // review_reason: machine-readable reason why the item needs review
+      // Values: unrecognised_item | ambiguous_term | low_confidence | category_conflict
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS review_reason TEXT",
+      // review_suggestions: JSON array of suggested specific variants for ambiguous umbrella terms
+      // e.g. ["strawberries","blueberries","raspberries","mixed berries"] for "berries"
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS review_suggestions TEXT",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

@@ -3427,46 +3427,53 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
       const input = api.shoppingList.add.input.parse(req.body);
-      // Strip accidental leading quantity from productName (e.g. "1 lemon" → "lemon").
-      const leadingQtyMatch = input.productName.match(/^(\d+(?:\.\d+)?)\s+(.+)$/);
-      if (leadingQtyMatch) {
-        const extractedQty = parseFloat(leadingQtyMatch[1]);
-        input.productName = leadingQtyMatch[2];
-        if (!input.quantityValue) (input as any).quantityValue = extractedQty;
-        if (!input.normalizedName) (input as any).normalizedName = leadingQtyMatch[2].toLowerCase().trim();
-      }
+      // ── Shared Item Resolution Layer ───────────────────────────────────────
+      // Every item entering the shopping list goes through resolveItem() so that
+      // resolution_state, canonical_name, category enforcement, and ambiguity
+      // detection are applied consistently regardless of source.
+      const { resolveItem } = await import('./lib/item-resolver');
+      const resolved = resolveItem(input.productName, {
+        callerCategory: input.category ?? null,
+      });
+
+      // Override productName / normalizedName with resolved values so leading
+      // quantities are stripped and the name is clean.
+      input.productName = resolved.productName;
+
       // Build the final insert payload explicitly rather than mutating the Zod
       // result, which is unreliable with Drizzle's default-column handling.
       const insertPayload: Record<string, unknown> = { ...input };
+
+      // Apply resolution fields — these always come from the resolver, not the client
+      insertPayload.originalText     = resolved.originalText;
+      insertPayload.normalizedName   = resolved.normalizedName;
+      insertPayload.canonicalName    = resolved.canonicalName;
+      insertPayload.category         = resolved.category;
+      insertPayload.subcategory      = resolved.subcategory;
+      insertPayload.resolutionState  = resolved.resolutionState;
+      insertPayload.reviewReason     = resolved.reviewReason;
+      insertPayload.reviewSuggestions= resolved.reviewSuggestions;
+      insertPayload.needsReview      = resolved.needsReview;
+      insertPayload.validationNote   = resolved.validationNote ?? (input.validationNote as string | undefined) ?? null;
+
+      // Extract quantity from original text if the caller didn't send one
+      if (!input.quantityValue) {
+        const leadingQtyMatch = resolved.originalText.match(/^(\d+(?:\.\d+)?)\s+/);
+        if (leadingQtyMatch) {
+          insertPayload.quantityValue = parseFloat(leadingQtyMatch[1]);
+        }
+      }
 
       if (input.quantityValue && input.unit) {
         const grams = convertToGrams(input.quantityValue, input.unit);
         if (grams !== null) insertPayload.quantityInGrams = grams;
       }
 
-      if (input.normalizedName) {
-        const { normalizeName, detectIngredientCategory: detect } = await import('./lib/ingredient-utils');
-        // SAFETY: only run keyword detection when the client sent no category at
-        // all (null / undefined).  An explicit 'uncategorised' from the parse
-        // route means the item was not recognised — we must NOT replace it with
-        // a keyword guess based on the (possibly AI-generated) product name,
-        // which would promote nonsense inputs to a real category and trigger
-        // fake prices (e.g. "Boorboans"→"Bourbon Biscuits"→"biscuit"→bakery).
-        const cat = (input.category != null) ? input.category : detect(input.normalizedName);
-        insertPayload.category = cat;
-
-        if (cat === 'uncategorised') {
-          insertPayload.needsReview = true;
-          insertPayload.validationNote =
-            (input.validationNote as string | undefined) ||
-            'Item not confidently recognised — please verify';
-        }
-
-        const ingredient = await storage.getOrCreateNormalizedIngredient(
-          input.productName, input.normalizedName, cat
-        );
-        insertPayload.ingredientId = ingredient.id;
-      }
+      // Create / fetch the normalised ingredient record for deduplication
+      const ingredient = await storage.getOrCreateNormalizedIngredient(
+        resolved.productName, resolved.normalizedName, resolved.category
+      );
+      insertPayload.ingredientId = ingredient.id;
 
       const item = await storage.addShoppingListItem(
         req.user!.id,
@@ -3499,9 +3506,22 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       updates.quantity = quantity;
     }
     if (req.body.productName !== undefined) {
-      updates.productName = String(req.body.productName).trim();
-      const { normalizeName } = await import('./lib/ingredient-utils');
-      updates.normalizedName = normalizeName(updates.productName);
+      // Re-resolve whenever the name changes so resolution state stays accurate
+      const { resolveItem } = await import('./lib/item-resolver');
+      const resolved = resolveItem(String(req.body.productName).trim(), {
+        callerCategory: req.body.category ?? null,
+      });
+      updates.productName      = resolved.productName;
+      updates.originalText     = resolved.originalText;
+      updates.normalizedName   = resolved.normalizedName;
+      updates.canonicalName    = resolved.canonicalName;
+      updates.category         = resolved.category;
+      updates.subcategory      = resolved.subcategory;
+      updates.resolutionState  = resolved.resolutionState;
+      updates.reviewReason     = resolved.reviewReason;
+      updates.reviewSuggestions= resolved.reviewSuggestions;
+      updates.needsReview      = resolved.needsReview;
+      updates.validationNote   = resolved.validationNote;
       if (req.body.matchedProductId === undefined) {
         updates.matchedProductId = null;
         updates.matchedStore = null;
@@ -3847,24 +3867,35 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       }
 
       const WHOLE_FOOD_CATS_SERVER = new Set(['produce', 'fruit', 'eggs']);
+      const { resolveItem } = await import('./lib/item-resolver');
       const consolidated = consolidateAndNormalize(allIngredients);
       for (const c of consolidated) {
+        // Run every consolidated ingredient through the shared resolver so that
+        // category enforcement, ambiguity detection, and resolution_state are
+        // applied consistently for recipe-imported items.
+        const resolved = resolveItem(c.displayName, { callerCategory: c.category || null });
         const ingredient = await storage.getOrCreateNormalizedIngredient(
-          c.displayName, c.normalizedName, c.category
+          resolved.productName, resolved.normalizedName, resolved.category
         );
         const item = await storage.addOrConsolidateShoppingListItem(req.user!.id, {
-          productName: c.displayName,
-          normalizedName: c.normalizedName,
+          productName: resolved.productName,
+          normalizedName: resolved.normalizedName,
           quantityValue: c.quantity,
           unit: c.unit,
           quantityInGrams: c.quantityInGrams,
           quantity: 1,
-          category: c.category,
+          category: resolved.category,
           ingredientId: ingredient.id,
-          needsReview: c.needsReview || false,
-          validationNote: c.validationNote || null,
-        });
-        const inferredItemType = WHOLE_FOOD_CATS_SERVER.has((c.category || '').toLowerCase()) ? 'whole_food' : 'packaged';
+          needsReview: resolved.needsReview,
+          validationNote: resolved.validationNote,
+          originalText: resolved.originalText,
+          canonicalName: resolved.canonicalName,
+          subcategory: resolved.subcategory,
+          resolutionState: resolved.resolutionState,
+          reviewReason: resolved.reviewReason,
+          reviewSuggestions: resolved.reviewSuggestions,
+        } as any);
+        const inferredItemType = WHOLE_FOOD_CATS_SERVER.has((resolved.category || '').toLowerCase()) ? 'whole_food' : 'packaged';
         if (!item.itemType) {
           await storage.updateShoppingListItem(item.id, { itemType: inferredItemType });
           item.itemType = inferredItemType;
@@ -3991,24 +4022,32 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       }
 
       const WHOLE_FOOD_CATS_SERVER2 = new Set(['produce', 'fruit', 'eggs']);
+      const { resolveItem: resolveItem2 } = await import('./lib/item-resolver');
       const consolidated = consolidateAndNormalize(allIngredients);
       for (const c of consolidated) {
+        const resolved = resolveItem2(c.displayName, { callerCategory: c.category || null });
         const ingredient = await storage.getOrCreateNormalizedIngredient(
-          c.displayName, c.normalizedName, c.category
+          resolved.productName, resolved.normalizedName, resolved.category
         );
         const item = await storage.addOrConsolidateShoppingListItem(req.user!.id, {
-          productName: c.displayName,
-          normalizedName: c.normalizedName,
+          productName: resolved.productName,
+          normalizedName: resolved.normalizedName,
           quantityValue: c.quantity,
           unit: c.unit,
           quantityInGrams: c.quantityInGrams,
           quantity: 1,
-          category: c.category,
+          category: resolved.category,
           ingredientId: ingredient.id,
-          needsReview: c.needsReview || false,
-          validationNote: c.validationNote || null,
-        });
-        const inferredItemType2 = WHOLE_FOOD_CATS_SERVER2.has((c.category || '').toLowerCase()) ? 'whole_food' : 'packaged';
+          needsReview: resolved.needsReview,
+          validationNote: resolved.validationNote,
+          originalText: resolved.originalText,
+          canonicalName: resolved.canonicalName,
+          subcategory: resolved.subcategory,
+          resolutionState: resolved.resolutionState,
+          reviewReason: resolved.reviewReason,
+          reviewSuggestions: resolved.reviewSuggestions,
+        } as any);
+        const inferredItemType2 = WHOLE_FOOD_CATS_SERVER2.has((resolved.category || '').toLowerCase()) ? 'whole_food' : 'packaged';
         if (!item.itemType) {
           await storage.updateShoppingListItem(item.id, { itemType: inferredItemType2 });
           item.itemType = inferredItemType2;
@@ -4139,6 +4178,20 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
             productWeight: p.productWeight || null,
           });
           allMatches.push(match);
+        }
+
+        // ── Promote to matched_to_product ──────────────────────────────────
+        // Only promote when ALL four conditions are true:
+        // 1. Item is already confidently resolved (not raw / needs_review)
+        // 2. Category is valid and not unresolved (already checked above)
+        // 3. At least one match from a genuine lookup has a real price
+        // 4. Price came from lookupPricesForIngredient, not legacy fallback data
+        const genuinePriceMatches = prices.filter(p => p.price !== null && p.price !== undefined);
+        if (
+          genuinePriceMatches.length > 0 &&
+          (item as any).resolutionState === 'resolved'
+        ) {
+          await storage.updateShoppingListItem(item.id, { resolutionState: 'matched_to_product' });
         }
       }
 

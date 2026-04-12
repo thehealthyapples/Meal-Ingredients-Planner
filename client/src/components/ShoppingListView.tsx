@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { normalizeIngredientKey } from "@shared/normalize";
-import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowLeft, ArrowRight, Store, SkipForward, Pencil, Search, AlertTriangle } from "lucide-react";
+import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowLeft, ArrowRight, Store, SkipForward, Pencil, Search, AlertTriangle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -73,6 +73,8 @@ interface ShoppingListViewProps {
   onRenameItem?: (id: number, newName: string) => void;
   /** Remove an item from the shopping list entirely. */
   onRemoveItem?: (id: number) => void;
+  /** Add a new item directly from within the view (e.g. from Check Cupboard). Persists to DB via resolver. */
+  onAddItem?: (rawText: string) => void;
   /** Trigger store-scoped product matching for the currently selected store. */
   onMatchStore?: (store: string) => void;
   /** True while a store-scoped match is in progress. */
@@ -214,6 +216,25 @@ function CompactRating({ rating }: { rating: number }) {
     </span>
   );
 }
+
+// ── Multi-select ambiguity terms ──────────────────────────────────────────────
+// When a needsReview item's productName (lowercased) is in this set, the
+// ambiguity suggestions are shown as checkboxes so the user can pick multiple.
+// Selecting multiple creates one basket item per selection and removes the original.
+// Selecting exactly one behaves identically to single-select (rename).
+//
+// These are "group" umbrella terms where buying several specific variants is the
+// natural intent.  Single-variant terms (milk, bread, pasta…) stay as single-select.
+const MULTI_SELECT_AMBIGUOUS = new Set([
+  'berries', 'berry', 'mixed berries',
+  'greens', 'leafy greens',
+  'root veg', 'root vegetables',
+  'nuts', 'nut',
+  'seeds',
+  'herbs',
+  'spices',
+  'squash',
+]);
 
 // ── Vague-item clarification ───────────────────────────────────────────────
 // Maps a generic item name to refinement chips shown inline in shop view.
@@ -529,6 +550,7 @@ export default function ShoppingListView({
   thaPicks = {},
   onRenameItem,
   onRemoveItem,
+  onAddItem,
   onMatchStore,
   isMatchingPrices = false,
 }: ShoppingListViewProps) {
@@ -550,6 +572,12 @@ export default function ShoppingListView({
   const [reviewDismissed, setReviewDismissed] = useState<Set<number>>(new Set());
   const [reviewEditId, setReviewEditId] = useState<number | null>(null);
   const [reviewEditVal, setReviewEditVal] = useState<string>("");
+  // Multi-select state for group umbrella terms (e.g. "berries").
+  // Keyed by item.id → set of selected suggestion strings.
+  const [multiSelections, setMultiSelections] = useState<Map<number, Set<string>>>(new Map());
+  // Cupboard check: inline add-item input
+  const [addingItem, setAddingItem] = useState(false);
+  const [addItemVal, setAddItemVal] = useState("");
   const itemsScrollRef = useRef<HTMLDivElement>(null);
   const tabStripRef = useRef<HTMLDivElement>(null);
   const activeTabElRef = useRef<HTMLButtonElement>(null);
@@ -1251,7 +1279,7 @@ export default function ShoppingListView({
                     return (
                       <div
                         key={item.id}
-                        className="px-4 py-3 border-l-2 border-amber-400/50 bg-amber-50/25 dark:bg-amber-950/10"
+                        className="px-4 py-3 border-l-4 border-amber-500 bg-amber-50/70 dark:bg-amber-950/25"
                       >
                         {reviewEditId === item.id ? (
                           // Inline edit mode
@@ -1299,42 +1327,175 @@ export default function ShoppingListView({
                           </div>
                         ) : (
                           // Review prompt
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-baseline gap-2 flex-wrap">
-                                <span className="font-medium text-[13.5px] text-foreground/80">{displayName}</span>
-                                {qty && <span className="text-[11.5px] tabular-nums text-muted-foreground/60">{qty}</span>}
+                          (() => {
+                            const isAmbiguous = (item as any).reviewReason === 'ambiguous_term';
+                            const suggestions: string[] = (() => {
+                              try { return isAmbiguous ? JSON.parse((item as any).reviewSuggestions ?? '[]') : []; }
+                              catch { return []; }
+                            })();
+                            return (
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-baseline gap-2 flex-wrap">
+                                      <span className="font-medium text-[13.5px] text-foreground/80">{displayName}</span>
+                                      {qty && <span className="text-[11.5px] tabular-nums text-muted-foreground/60">{qty}</span>}
+                                    </div>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                      <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0" />
+                                      <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                                        Check item —{" "}
+                                        {isAmbiguous ? "which type did you mean?" : "couldn't be confidently recognised"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
+                                    {!isAmbiguous && (
+                                      <button
+                                        onClick={() => { setReviewEditVal(item.productName ?? ""); setReviewEditId(item.id); }}
+                                        className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/70 hover:bg-muted/50 hover:border-border transition-colors"
+                                      >
+                                        Edit
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => setReviewDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; })}
+                                      className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/70 hover:bg-muted/50 hover:border-border transition-colors"
+                                    >
+                                      Keep
+                                    </button>
+                                    {onRemoveItem && (
+                                      <button
+                                        onClick={() => onRemoveItem(item.id)}
+                                        className="text-[11px] px-2.5 py-1 rounded-lg border border-rose-200/60 dark:border-rose-800/40 bg-background/70 text-rose-500/80 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 transition-colors"
+                                      >
+                                        Remove
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                                {/* Ambiguity suggestion chips / checkboxes */}
+                                {isAmbiguous && suggestions.length > 0 && (() => {
+                                  const isMultiSelect = MULTI_SELECT_AMBIGUOUS.has(
+                                    (item.productName ?? '').toLowerCase().trim()
+                                  );
+
+                                  if (isMultiSelect) {
+                                    // Multi-select: checkboxes + confirm button
+                                    const selected = multiSelections.get(item.id) ?? new Set<string>();
+
+                                    const toggleSelection = (s: string) => {
+                                      setMultiSelections(prev => {
+                                        const next = new Map(prev);
+                                        const cur = new Set(next.get(item.id) ?? []);
+                                        if (cur.has(s)) cur.delete(s); else cur.add(s);
+                                        next.set(item.id, cur);
+                                        return next;
+                                      });
+                                    };
+
+                                    const confirmSelection = () => {
+                                      const picks = Array.from(selected);
+                                      if (picks.length === 0) return;
+                                      if (picks.length === 1) {
+                                        // Single pick → rename in place
+                                        if (onRenameItem) onRenameItem(item.id, picks[0]);
+                                      } else {
+                                        // Multiple picks → add each, remove original umbrella item.
+                                        // Only proceed if onAddItem is available — do not remove
+                                        // the original without being able to replace it.
+                                        if (onAddItem) {
+                                          picks.forEach(p => onAddItem(p));
+                                          if (onRemoveItem) onRemoveItem(item.id);
+                                        } else if (onRenameItem) {
+                                          // Fallback: rename to first pick if no add capability
+                                          onRenameItem(item.id, picks[0]);
+                                        }
+                                      }
+                                      setReviewDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; });
+                                      setMultiSelections(prev => { const m = new Map(prev); m.delete(item.id); return m; });
+                                    };
+
+                                    return (
+                                      <div className="flex flex-col gap-2 mt-0.5">
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {suggestions.map(s => {
+                                            const checked = selected.has(s);
+                                            return (
+                                              <button
+                                                key={s}
+                                                onClick={() => toggleSelection(s)}
+                                                className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors flex items-center gap-1.5 ${
+                                                  checked
+                                                    ? 'border-primary bg-primary/10 text-primary font-medium'
+                                                    : 'border-primary/30 bg-primary/5 text-primary/80 hover:bg-primary/10 hover:border-primary/50'
+                                                }`}
+                                              >
+                                                <span className={`inline-block w-3 h-3 rounded-sm border flex-shrink-0 ${checked ? 'bg-primary border-primary' : 'border-primary/40'}`}>
+                                                  {checked && (
+                                                    <svg viewBox="0 0 10 10" className="w-full h-full text-primary-foreground" fill="currentColor">
+                                                      <path d="M1.5 5L4 7.5 8.5 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                                                    </svg>
+                                                  )}
+                                                </span>
+                                                {s}
+                                              </button>
+                                            );
+                                          })}
+                                          <button
+                                            onClick={() => { setReviewEditVal(item.productName ?? ""); setReviewEditId(item.id); }}
+                                            className="text-[11px] px-2.5 py-1 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:bg-muted/50 transition-colors"
+                                          >
+                                            Other…
+                                          </button>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            onClick={confirmSelection}
+                                            disabled={selected.size === 0}
+                                            className="text-[11px] px-3 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                          >
+                                            {selected.size === 0
+                                              ? 'Select items'
+                                              : selected.size === 1
+                                                ? 'Confirm'
+                                                : `Add ${selected.size} items`}
+                                          </button>
+                                          <span className="text-[10px] text-muted-foreground/60">
+                                            {selected.size === 0 ? 'tap to select' : `${selected.size} selected`}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+
+                                  // Single-select: original chip tap behaviour
+                                  return (
+                                    <div className="flex flex-wrap gap-1.5 mt-0.5">
+                                      {suggestions.map(s => (
+                                        <button
+                                          key={s}
+                                          onClick={() => {
+                                            if (onRenameItem) onRenameItem(item.id, s);
+                                            setReviewDismissed(prev => { const ns = new Set(prev); ns.add(item.id); return ns; });
+                                          }}
+                                          className="text-[11px] px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary/80 hover:bg-primary/10 hover:border-primary/50 transition-colors"
+                                        >
+                                          {s}
+                                        </button>
+                                      ))}
+                                      <button
+                                        onClick={() => { setReviewEditVal(item.productName ?? ""); setReviewEditId(item.id); }}
+                                        className="text-[11px] px-2.5 py-1 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:bg-muted/50 transition-colors"
+                                      >
+                                        Other…
+                                      </button>
+                                    </div>
+                                  );
+                                })()}
                               </div>
-                              <div className="flex items-center gap-1 mt-0.5">
-                                <AlertTriangle className="h-3 w-3 text-amber-500/70 flex-shrink-0" />
-                                <span className="text-[11px] text-amber-600/75 dark:text-amber-400/75">
-                                  Couldn't be confidently recognised
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0 mt-0.5">
-                              <button
-                                onClick={() => { setReviewEditVal(item.productName ?? ""); setReviewEditId(item.id); }}
-                                className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/70 hover:bg-muted/50 hover:border-border transition-colors"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => setReviewDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; })}
-                                className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/70 hover:bg-muted/50 hover:border-border transition-colors"
-                              >
-                                Keep
-                              </button>
-                              {onRemoveItem && (
-                                <button
-                                  onClick={() => onRemoveItem(item.id)}
-                                  className="text-[11px] px-2.5 py-1 rounded-lg border border-rose-200/60 dark:border-rose-800/40 bg-background/70 text-rose-500/80 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 transition-colors"
-                                >
-                                  Remove
-                                </button>
-                              )}
-                            </div>
-                          </div>
+                            );
+                          })()
                         )}
                       </div>
                     );
@@ -1393,6 +1554,53 @@ export default function ShoppingListView({
                   );
                 })}
               </div>
+
+              {/* Add item row — persists to DB via onAddItem → resolver */}
+              {onAddItem && (
+                <div className="border-t border-border/25 px-4 py-3">
+                  {addingItem ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        autoFocus
+                        value={addItemVal}
+                        onChange={e => setAddItemVal(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === "Enter") {
+                            const trimmed = addItemVal.trim();
+                            if (trimmed) { onAddItem(trimmed); setAddItemVal(""); setAddingItem(false); }
+                          }
+                          if (e.key === "Escape") { setAddItemVal(""); setAddingItem(false); }
+                        }}
+                        className="flex-1 h-8 text-[13px] px-2.5 rounded-lg border border-border bg-background/80 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                        placeholder="Add an item…"
+                      />
+                      <button
+                        onClick={() => {
+                          const trimmed = addItemVal.trim();
+                          if (trimmed) { onAddItem(trimmed); setAddItemVal(""); setAddingItem(false); }
+                        }}
+                        className="h-8 px-3 text-[11px] rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                      >
+                        Add
+                      </button>
+                      <button
+                        onClick={() => { setAddItemVal(""); setAddingItem(false); }}
+                        className="h-8 px-2 text-[11px] rounded-lg border border-border/60 text-muted-foreground hover:bg-muted/50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setAddingItem(true)}
+                      className="flex items-center gap-1.5 text-[12px] text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add an item
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* CTA */}
               {(() => {

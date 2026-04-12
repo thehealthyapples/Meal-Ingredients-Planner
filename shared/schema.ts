@@ -177,6 +177,19 @@ export const shoppingList = pgTable("shopping_list", {
   basketLabel: text("basket_label"),
   // Guided shop mode state — values: pending | already_got | need_to_buy | in_basket | alternate_selected | deferred
   shopStatus: text("shop_status"),
+  // ── Item Resolution Layer ──────────────────────────────────────────────────
+  // originalText: raw user input before any normalisation (e.g. "some berries")
+  originalText: text("original_text"),
+  // canonicalName: authoritative resolved name (e.g. "toilet roll" not "bog roll")
+  canonicalName: text("canonical_name"),
+  // subcategory: finer classification within a category
+  subcategory: text("subcategory"),
+  // resolutionState: lifecycle — raw | needs_review | resolved | matched_to_product
+  resolutionState: text("resolution_state").default("raw"),
+  // reviewReason: machine-readable — unrecognised_item | ambiguous_term | low_confidence | category_conflict
+  reviewReason: text("review_reason"),
+  // reviewSuggestions: JSON-encoded string[] of specific variants for ambiguous terms
+  reviewSuggestions: text("review_suggestions"),
 });
 
 export const productMatches = pgTable("product_matches", {
@@ -302,6 +315,12 @@ export const insertShoppingListItemSchema = createInsertSchema(shoppingList).pic
   selectedStore: true,
   basketLabel: true,
   shopStatus: true,
+  originalText: true,
+  canonicalName: true,
+  subcategory: true,
+  resolutionState: true,
+  reviewReason: true,
+  reviewSuggestions: true,
 });
 
 export const insertProductMatchSchema = createInsertSchema(productMatches).pick({

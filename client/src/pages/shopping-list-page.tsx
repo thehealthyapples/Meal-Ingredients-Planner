@@ -1906,6 +1906,25 @@ export default function ShoppingListPage() {
   });
 
 
+  const addItem = useMutation({
+    mutationFn: async (rawText: string) => {
+      const res = await fetch(api.shoppingList.add.path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productName: rawText }),
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('Failed to add item');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Could not add item.", variant: "destructive" });
+    },
+  });
+
   const copyToClipboard = () => {
     const items = savedItems.length > 0
       ? savedItems.map(i => {
@@ -2710,7 +2729,7 @@ export default function ShoppingListPage() {
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0, height: 0 }}
-                                    className={`group border-b border-border/40 ${item.checked ? 'opacity-50' : ''}`}
+                                    className={`group border-b border-border/40 ${item.checked ? 'opacity-50' : ''} ${item.needsReview && !item.checked ? 'bg-amber-50/40 dark:bg-amber-950/15' : ''}`}
                                     data-testid={`shopping-item-${item.id}`}
                                   >
                                     <td className="px-1.5 py-1 sticky left-0 z-10">
@@ -2737,7 +2756,7 @@ export default function ShoppingListPage() {
                                           {item.needsReview && (
                                             <Tooltip>
                                               <TooltipTrigger asChild>
-                                                <Badge variant="outline" className="text-[10px] text-amber-600 dark:text-amber-400 border-amber-300 dark:border-amber-700 gap-0.5" data-testid={`badge-review-${item.id}`}><AlertTriangle className="h-2.5 w-2.5" />Review</Badge>
+                                                <Badge className="text-[10px] bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border border-amber-400 dark:border-amber-600 gap-0.5 shrink-0" data-testid={`badge-review-${item.id}`}><AlertTriangle className="h-2.5 w-2.5 shrink-0" />Check item</Badge>
                                               </TooltipTrigger>
                                               <TooltipContent><p className="text-xs">{item.validationNote || 'This item may need manual review'}</p></TooltipContent>
                                             </Tooltip>
@@ -3456,6 +3475,7 @@ export default function ShoppingListPage() {
             onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
             onRenameItem={handleRenameItem}
             onRemoveItem={id => removeItem.mutate(id)}
+            onAddItem={(rawText) => addItem.mutate(rawText)}
             onMatchStore={(store) => lookupPrices.mutate(store)}
             isMatchingPrices={lookupPrices.isPending}
             onClose={() => setViewMode("basket")}
