@@ -1600,9 +1600,10 @@ export default function MealsPage() {
     }
   };
 
-  const { data: importStatus } = useQuery<{ totalImported: number; byCategory: Record<string, number> }>({
+  const { data: importStatus, isLoading: importStatusLoading } = useQuery<{ totalImported: number; byCategory: Record<string, number> }>({
     queryKey: ['/api/admin/import-status'],
     retry: false,
+    staleTime: Infinity,
   });
 
   const { data: userProfile } = useQuery<any>({
@@ -2100,7 +2101,7 @@ export default function MealsPage() {
             <span className="hidden sm:inline">Scan Product</span>
           </Button>
           <CreateMealDialog onScan={() => setCameraModalOpen(true)} onMealCreated={(_, hasSourceUrl) => { setActiveGroups(prev => { const n = new Set(prev); n.add(hasSourceUrl ? "recipes" : "cookbook"); return n; }); }} />
-          {(!importStatus || importStatus.totalImported === 0) && (
+          {!importStatusLoading && (!importStatus || importStatus.totalImported === 0) && (
             <Button
               variant="outline"
               size="sm"
@@ -4054,6 +4055,10 @@ interface ImportPreview {
   confidence?: 'high' | 'partial' | 'failed';
   sourcePlatform?: 'instagram' | 'tiktok' | 'website' | 'manual';
   failureReason?: string | null;
+  /** Raw text scraped from the page — present when scraping succeeded but
+   *  recipe extraction failed.  Surfaced so the user can paste it into the
+   *  text tab to retry without re-typing everything. */
+  extractedText?: string | null;
 }
 
 function VoiceMealDialog({ open, onOpenChange, onTranscript }: {
@@ -4330,7 +4335,21 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
       }
       const data: ImportPreview = await res.json();
       if (data.confidence === 'failed') {
-        setFailureMsg(data.failureReason || "No recipe content found at this URL.");
+        // Switch to the text tab so the user can paste the recipe manually.
+        // Pre-populate the textarea with any text the server was able to scrape.
+        setTab('text');
+        if (data.extractedText) {
+          setPastedText(data.extractedText);
+        }
+        const platform = data.sourcePlatform === 'instagram' ? 'Instagram'
+          : data.sourcePlatform === 'tiktok' ? 'TikTok'
+          : null;
+        setFailureMsg(
+          data.failureReason ||
+          (platform
+            ? `We couldn't extract a recipe from this ${platform} link. Paste the caption or recipe text below and we'll try again.`
+            : "We couldn't extract a recipe from this link. Paste the recipe text below and we'll try again.")
+        );
         return;
       }
       openModal(data, url.trim());
@@ -4364,7 +4383,11 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
       }
       const data: ImportPreview = json;
       if (data.confidence === 'failed') {
-        setFailureMsg(data.failureReason || "We couldn't extract a recipe from this text. Please edit and try again.");
+        setFailureMsg(
+          data.failureReason ||
+          "We couldn't find a recipe in this text. Make sure it includes ingredients and steps, then try again."
+        );
+        // Don't clear the textarea — leave it so the user can edit and retry
         return;
       }
       openModal(data, '');
@@ -4477,7 +4500,14 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
           {failureMsg && (
             <div className="flex items-start gap-2.5 rounded-lg border border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5 mt-1">
               <Info className="h-4 w-4 text-amber-600/80 dark:text-amber-400/70 shrink-0 mt-0.5" />
-              <p className="text-[12.5px] text-amber-700/90 dark:text-amber-300/80 leading-snug">{failureMsg}</p>
+              <div className="min-w-0">
+                <p className="text-[12.5px] text-amber-700/90 dark:text-amber-300/80 leading-snug">{failureMsg}</p>
+                {tab === 'text' && pastedText.trim() && (
+                  <p className="text-[11.5px] text-amber-600/70 dark:text-amber-400/60 mt-1">
+                    Edit the text above and try extracting again.
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </DialogContent>
