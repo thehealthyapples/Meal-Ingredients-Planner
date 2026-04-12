@@ -222,19 +222,6 @@ function CompactRating({ rating }: { rating: number }) {
 // ambiguity suggestions are shown as checkboxes so the user can pick multiple.
 // Selecting multiple creates one basket item per selection and removes the original.
 // Selecting exactly one behaves identically to single-select (rename).
-//
-// These are "group" umbrella terms where buying several specific variants is the
-// natural intent.  Single-variant terms (milk, bread, pasta…) stay as single-select.
-const MULTI_SELECT_AMBIGUOUS = new Set([
-  'berries', 'berry', 'mixed berries',
-  'greens', 'leafy greens',
-  'root veg', 'root vegetables',
-  'nuts', 'nut',
-  'seeds',
-  'herbs',
-  'spices',
-  'squash',
-]);
 
 // ── Vague-item clarification ───────────────────────────────────────────────
 // Maps a generic item name to refinement chips shown inline in shop view.
@@ -1329,9 +1316,24 @@ export default function ShoppingListView({
                           // Review prompt
                           (() => {
                             const isAmbiguous = (item as any).reviewReason === 'ambiguous_term';
-                            const suggestions: string[] = (() => {
-                              try { return isAmbiguous ? JSON.parse((item as any).reviewSuggestions ?? '[]') : []; }
-                              catch { return []; }
+                            // Parse reviewSuggestions — supports both formats:
+                            //   old: string[]  (written before the mode field was added)
+                            //   new: { items: string[], mode: "single" | "multi" }
+                            const { suggestions, isMultiSelectGroup } = (() => {
+                              if (!isAmbiguous) return { suggestions: [] as string[], isMultiSelectGroup: false };
+                              try {
+                                const raw = JSON.parse((item as any).reviewSuggestions ?? '[]');
+                                if (Array.isArray(raw)) {
+                                  // Legacy format — default to single-select
+                                  return { suggestions: raw as string[], isMultiSelectGroup: false };
+                                }
+                                return {
+                                  suggestions: (raw?.items ?? []) as string[],
+                                  isMultiSelectGroup: raw?.mode === 'multi',
+                                };
+                              } catch {
+                                return { suggestions: [] as string[], isMultiSelectGroup: false };
+                              }
                             })();
                             return (
                               <div className="flex flex-col gap-2">
@@ -1376,11 +1378,7 @@ export default function ShoppingListView({
                                 </div>
                                 {/* Ambiguity suggestion chips / checkboxes */}
                                 {isAmbiguous && suggestions.length > 0 && (() => {
-                                  const isMultiSelect = MULTI_SELECT_AMBIGUOUS.has(
-                                    (item.productName ?? '').toLowerCase().trim()
-                                  );
-
-                                  if (isMultiSelect) {
+                                  if (isMultiSelectGroup) {
                                     // Multi-select: checkboxes + confirm button
                                     const selected = multiSelections.get(item.id) ?? new Set<string>();
 

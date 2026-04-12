@@ -83,13 +83,21 @@ const CANONICAL_MAP: Record<string, CanonicalEntry> = (() => {
 
 // ── Ambiguity dictionary ──────────────────────────────────────────────────────
 // Keys are normalised lowercase umbrella terms.
-// Values are ordered lists of common specific variants the user probably meant.
+// Values are objects with:
+//   mode        — "single" (pick one) or "multi" (pick several)
+//   suggestions — ordered list of specific variants the user probably meant
+//
 // When a key matches, the item is marked needs_review + ambiguous_term so the UI
-// can present suggestion chips.
+// can present suggestion chips or checkboxes depending on mode.
 //
 // Data lives in server/data/ambiguity-map.json — edit that file to add entries.
 
-const AMBIGUITY_MAP: Record<string, string[]> = (() => {
+interface AmbiguityEntry {
+  mode: 'single' | 'multi';
+  suggestions: string[];
+}
+
+const AMBIGUITY_MAP: Record<string, AmbiguityEntry> = (() => {
   try {
     return JSON.parse(readFileSync(join(__dir, '../data/ambiguity-map.json'), 'utf-8'));
   } catch (err) {
@@ -151,8 +159,8 @@ export function resolveItem(rawText: string, options: ResolveOptions = {}): Reso
   const canonical = lookupCanonical(lowerKey, productName);
 
   // 3. Check ambiguity dictionary — before we try to categorise
-  const suggestions = lookupAmbiguity(lowerKey, productName);
-  if (suggestions) {
+  const ambiguity = lookupAmbiguity(lowerKey, productName);
+  if (ambiguity) {
     // Use canonical category if found, otherwise try modifier (e.g. "frozen berries"
     // should be category=frozen even though "berries" is ambiguous), then callerCategory,
     // then 'other' as last resort.
@@ -166,7 +174,10 @@ export function resolveItem(rawText: string, options: ResolveOptions = {}): Reso
       subcategory: canonical?.subcategory ?? null,
       resolutionState: 'needs_review',
       reviewReason: 'ambiguous_term',
-      reviewSuggestions: JSON.stringify(suggestions),
+      // Encode both the suggestions list and the selection mode so the UI
+      // can decide between single-select chips and multi-select checkboxes
+      // without any client-side string matching.
+      reviewSuggestions: JSON.stringify({ items: ambiguity.suggestions, mode: ambiguity.mode }),
       validationNote: `"${productName}" could refer to several specific items — please pick one`,
       needsReview: true,
     };
@@ -299,16 +310,27 @@ function lookupCanonical(lowerKey: string, rawProductName: string): CanonicalEnt
 }
 
 /**
- * Look up ambiguity suggestions.  Returns an array when the input is an
- * umbrella term, or null when it is specific enough to resolve directly.
+ * Look up an ambiguity entry.  Returns the entry (mode + suggestions) when the
+ * input is an umbrella term, or null when it is specific enough to resolve
+ * directly.
  */
-function lookupAmbiguity(lowerKey: string, rawProductName: string): string[] | null {
+function lookupAmbiguity(lowerKey: string, rawProductName: string): AmbiguityEntry | null {
   // Exact match on normalised key
   if (AMBIGUITY_MAP[lowerKey]) return AMBIGUITY_MAP[lowerKey];
 
-  // Exact match on raw name lowercased
+  // Exact match on raw name lowercased (handles "frozen berries" → strip modifier
+  // → "berries", but also plain raw matches before normalisation)
   const lowerRaw = rawProductName.toLowerCase().trim();
   if (AMBIGUITY_MAP[lowerRaw]) return AMBIGUITY_MAP[lowerRaw];
+
+  // Modifier-stripped lookup: strip a leading modifier word so "frozen berries"
+  // → normalised key "berries" and "dried lentils" → "lentils" both hit their
+  // ambiguity entries even when normalizeName() already stripped the modifier.
+  const strippedKey = lowerKey.replace(/^(frozen|tinned|canned|dried)\s+/, '').trim();
+  if (strippedKey !== lowerKey && AMBIGUITY_MAP[strippedKey]) return AMBIGUITY_MAP[strippedKey];
+
+  const strippedRaw = lowerRaw.replace(/^(frozen|tinned|canned|dried)\s+/, '').trim();
+  if (strippedRaw !== lowerRaw && AMBIGUITY_MAP[strippedRaw]) return AMBIGUITY_MAP[strippedRaw];
 
   // Only trigger for very short / generic inputs — avoid false positives on
   // specific items like "strawberry yogurt" matching "yogurt"
