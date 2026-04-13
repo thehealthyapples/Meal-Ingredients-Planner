@@ -3475,7 +3475,7 @@ export default function ShoppingListPage() {
             onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
             onRenameItem={handleRenameItem}
             onRemoveItem={id => removeItem.mutate(id)}
-            onAddItem={async (rawText) => { try { await addItem.mutateAsync(rawText); } catch { /* onError handles toast */ } }}
+            onAddItem={async (rawText) => { console.log('[addItem] firing for:', rawText); try { const result = await addItem.mutateAsync(rawText); console.log('[addItem] success:', rawText, 'id:', (result as any)?.id); } catch (e) { console.error('[addItem] failed:', rawText, e); /* onError handles toast */ } }}
             onMatchStore={(store) => lookupPrices.mutate(store)}
             isMatchingPrices={lookupPrices.isPending}
             onClose={() => setViewMode("basket")}

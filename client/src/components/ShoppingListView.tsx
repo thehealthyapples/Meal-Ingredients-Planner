@@ -598,6 +598,7 @@ export default function ShoppingListView({
   // The function awaits all add-mutations before transitioning so that the shop
   // view renders with the correct items the first time it mounts.
   const handleHeadToShop = useCallback(async () => {
+    console.log('[HTS] called — isCommitting:', isCommitting, 'multiSelections.size:', multiSelections.size);
     if (isCommitting) return;
 
     if (multiSelections.size > 0) {
@@ -612,6 +613,7 @@ export default function ShoppingListView({
         for (const [itemId, selected] of Array.from(multiSelections.entries())) {
           if (selected.size === 0) continue;
           const picks = Array.from(selected);
+          console.log('[HTS] item', itemId, 'picks:', picks, 'onAddItem?', !!onAddItem, 'onRenameItem?', !!onRenameItem);
 
           if (picks.length === 1) {
             // Single pick — rename the umbrella item in place
@@ -623,9 +625,12 @@ export default function ShoppingListView({
             // Multiple picks — add each child that isn't already in the list
             for (const p of picks) {
               if (!existingNames.has(p.toLowerCase().trim())) {
+                console.log('[HTS] adding:', p);
                 const r = onAddItem(p);
                 if (r instanceof Promise) addPromises.push(r);
                 existingNames.add(p.toLowerCase().trim()); // prevent double-add within same batch
+              } else {
+                console.log('[HTS] skipping (already exists):', p);
               }
             }
             toRemove.push(itemId);
@@ -636,7 +641,9 @@ export default function ShoppingListView({
           }
         }
 
+        console.log('[HTS] awaiting', addPromises.length, 'add promises, toRemove:', toRemove);
         await Promise.all(addPromises);
+        console.log('[HTS] adds complete — removing', toRemove.length, 'items');
         toRemove.forEach(id => onRemoveItem?.(id));
         setMultiSelections(new Map());
       } finally {
@@ -644,6 +651,7 @@ export default function ShoppingListView({
       }
     }
 
+    console.log('[HTS] setPhase("shopping")');
     setPhase("shopping");
   }, [isCommitting, multiSelections, items, onAddItem, onRenameItem, onRemoveItem]);
 
@@ -770,6 +778,7 @@ export default function ShoppingListView({
   // ── Category grouping ─────────────────────────────────────────────────────
 
   const groupedCategories = useMemo(() => {
+    console.log('[groupedCats] recomputing — shoppingItems.length:', shoppingItems.length, 'phase:', phase, 'items.length:', items.length);
     const map = new Map<string, { savedItems: SLItem[]; extraItems: typeof extras }>();
     for (const cat of SHOPPING_CATS) map.set(cat.key, { savedItems: [], extraItems: [] });
     for (const item of shoppingItems) {
@@ -783,7 +792,7 @@ export default function ShoppingListView({
     return SHOPPING_CATS.map((cat) => ({ ...cat, ...map.get(cat.key)! })).filter(
       (cat) => cat.savedItems.length > 0 || cat.extraItems.length > 0,
     );
-  }, [items, activeExtras]);
+  }, [shoppingItems, activeExtras]);
 
   // ── Active category ───────────────────────────────────────────────────────
 
