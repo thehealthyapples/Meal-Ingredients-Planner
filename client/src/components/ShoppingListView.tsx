@@ -609,7 +609,7 @@ export default function ShoppingListView({
         const toRemove: number[] = [];
         const addPromises: Array<Promise<void>> = [];
 
-        for (const [itemId, selected] of multiSelections.entries()) {
+        for (const [itemId, selected] of Array.from(multiSelections.entries())) {
           if (selected.size === 0) continue;
           const picks = Array.from(selected);
 
