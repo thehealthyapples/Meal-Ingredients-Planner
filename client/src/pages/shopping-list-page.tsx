@@ -3475,7 +3475,7 @@ export default function ShoppingListPage() {
             onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
             onRenameItem={handleRenameItem}
             onRemoveItem={id => removeItem.mutate(id)}
-            onAddItem={(rawText) => addItem.mutate(rawText)}
+            onAddItem={async (rawText) => { try { await addItem.mutateAsync(rawText); } catch { /* onError handles toast */ } }}
             onMatchStore={(store) => lookupPrices.mutate(store)}
             isMatchingPrices={lookupPrices.isPending}
             onClose={() => setViewMode("basket")}

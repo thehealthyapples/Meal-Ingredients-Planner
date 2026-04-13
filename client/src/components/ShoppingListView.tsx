@@ -70,11 +70,11 @@ interface ShoppingListViewProps {
   /** Curated THA product recommendations keyed by normalised ingredient key. */
   thaPicks?: Record<string, IngredientProduct[]>;
   /** Allow renaming/refining an item and re-triggering product lookup. */
-  onRenameItem?: (id: number, newName: string) => void;
+  onRenameItem?: (id: number, newName: string) => Promise<void> | void;
   /** Remove an item from the shopping list entirely. */
   onRemoveItem?: (id: number) => void;
   /** Add a new item directly from within the view (e.g. from Check Cupboard). Persists to DB via resolver. */
-  onAddItem?: (rawText: string) => void;
+  onAddItem?: (rawText: string) => Promise<void> | void;
   /** Trigger store-scoped product matching for the currently selected store. */
   onMatchStore?: (store: string) => void;
   /** True while a store-scoped match is in progress. */
@@ -562,6 +562,8 @@ export default function ShoppingListView({
   // Multi-select state for group umbrella terms (e.g. "berries").
   // Keyed by item.id → set of selected suggestion strings.
   const [multiSelections, setMultiSelections] = useState<Map<number, Set<string>>>(new Map());
+  // True while handleHeadToShop is committing pending selections — prevents double-tap.
+  const [isCommitting, setIsCommitting] = useState(false);
   // Cupboard check: inline add-item input
   const [addingItem, setAddingItem] = useState(false);
   const [addItemVal, setAddItemVal] = useState("");
@@ -585,6 +587,65 @@ export default function ShoppingListView({
       return next < total ? { ...prev, [itemId]: next } : prev;
     });
   }
+
+  // Commit any pending multi-select ambiguity expansions, then transition to
+  // shopping phase.  Called by both "Head to the shop" and "Skip".
+  //
+  // For each umbrella item that has ≥1 checkbox selection:
+  //   • 1 pick  → rename the original item in place (preserves ID, re-resolves)
+  //   • 2+ picks → add each child item (skip if already in list), then remove umbrella
+  //
+  // The function awaits all add-mutations before transitioning so that the shop
+  // view renders with the correct items the first time it mounts.
+  const handleHeadToShop = useCallback(async () => {
+    if (isCommitting) return;
+
+    if (multiSelections.size > 0) {
+      setIsCommitting(true);
+      try {
+        const existingNames = new Set(
+          items.map(i => (i.productName ?? '').toLowerCase().trim())
+        );
+        const toRemove: number[] = [];
+        const addPromises: Array<Promise<void>> = [];
+
+        for (const [itemId, selected] of multiSelections.entries()) {
+          if (selected.size === 0) continue;
+          const picks = Array.from(selected);
+
+          if (picks.length === 1) {
+            // Single pick — rename the umbrella item in place
+            if (onRenameItem) {
+              const r = onRenameItem(itemId, picks[0]);
+              if (r instanceof Promise) addPromises.push(r);
+            }
+          } else if (onAddItem) {
+            // Multiple picks — add each child that isn't already in the list
+            for (const p of picks) {
+              if (!existingNames.has(p.toLowerCase().trim())) {
+                const r = onAddItem(p);
+                if (r instanceof Promise) addPromises.push(r);
+                existingNames.add(p.toLowerCase().trim()); // prevent double-add within same batch
+              }
+            }
+            toRemove.push(itemId);
+          } else if (onRenameItem) {
+            // No add capability — rename to first pick as fallback
+            const r = onRenameItem(itemId, picks[0]);
+            if (r instanceof Promise) addPromises.push(r);
+          }
+        }
+
+        await Promise.all(addPromises);
+        toRemove.forEach(id => onRemoveItem?.(id));
+        setMultiSelections(new Map());
+      } finally {
+        setIsCommitting(false);
+      }
+    }
+
+    setPhase("shopping");
+  }, [isCommitting, multiSelections, items, onAddItem, onRenameItem, onRemoveItem]);
 
   // ── State derivation ─────────────────────────────────────────────────────
 
@@ -1241,7 +1302,7 @@ export default function ShoppingListView({
                 <p className="text-[11px] text-muted-foreground/70 mt-0.5">Mark anything you already have at home.</p>
               </div>
               <button
-                onClick={() => setPhase("shopping")}
+                onClick={handleHeadToShop}
                 className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground underline underline-offset-2 flex-shrink-0"
               >
                 Skip
@@ -1608,13 +1669,16 @@ export default function ShoppingListView({
                 return (
                   <div className="px-4 py-4">
                     <button
-                      onClick={() => setPhase("shopping")}
-                      className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 hover:bg-primary/90 active:bg-primary/80 transition-colors"
+                      onClick={handleHeadToShop}
+                      disabled={isCommitting}
+                      className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 hover:bg-primary/90 active:bg-primary/80 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                      {atHomeCount > 0
-                        ? `Done — ${atHomeCount} item${atHomeCount > 1 ? "s" : ""} at home`
-                        : "Head to the shop"}
-                      <ArrowRight className="h-4 w-4" />
+                      {isCommitting
+                        ? "Saving…"
+                        : atHomeCount > 0
+                          ? `Done — ${atHomeCount} item${atHomeCount > 1 ? "s" : ""} at home`
+                          : "Head to the shop"}
+                      {!isCommitting && <ArrowRight className="h-4 w-4" />}
                     </button>
                   </div>
                 );
