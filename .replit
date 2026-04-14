@@ -45,3 +45,7 @@ outputType = "webview"
 task = "shell.exec"
 args = "lsof -ti :5000 | xargs kill -9 2>/dev/null; sleep 1; npm run dev"
 waitForPort = 5000
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 20000
