@@ -1,0 +1,99 @@
+hello replit. i need help troubleshooting production and database parity issues in my app.
+
+context:
+i have been developing the app through terminal using claude code. we have pushed changes to production, but production is not behaving as expected.
+
+there are two main tasks:
+
+---
+
+1. production AI integration troubleshooting
+
+---
+
+the AI-assisted features are not working correctly in production, specifically:
+
+* creating recipes via voice
+* importing recipes/content from social media
+
+PRIORITY: start here first before anything else
+
+step 1 — verify production environment + connections:
+
+* confirm production environment variables are present and correct (especially AI/API keys)
+* confirm the production server is using the correct Neon database connection string
+* confirm there is no mismatch between dev and prod env configuration
+
+only after this, proceed to deeper debugging.
+
+then investigate why these flows work differently in dev vs production.
+
+check, in order:
+
+* whether the relevant API routes are actually deployed and reachable in production
+* whether the server is calling the AI path at runtime or silently falling back
+* whether there are runtime errors in production logs
+* whether request/response payloads differ between dev and prod
+* whether any prod-only auth, CORS, routing, or build issues are blocking these features
+* whether the issue is frontend, backend, deployment, or environment related
+
+for each broken flow, trace end-to-end:
+
+* frontend action
+* network request
+* server handler
+* AI call / gating logic
+* response returned
+* what the UI does with that response
+
+---
+
+2. dev DB vs production DB check (Neon)
+
+---
+
+compare the dev and production databases in Neon and confirm whether production is fully up to date.
+
+check:
+
+* whether both environments point to the intended Neon databases
+* whether production has the same schema as dev
+* whether all recent migrations have been run in production
+* whether any columns, tables, indexes, enums, defaults, or constraints exist in dev but not prod
+* whether any required seed/config data exists in dev but is missing in prod
+* whether production code is expecting fields that do not exist in production DB
+
+provide a clear comparison:
+
+* schema differences
+* migration differences
+* configuration differences
+* likely impact of each difference
+
+---
+
+## IMPORTANT CONSTRAINTS
+
+* do not guess
+* inspect actual production config, logs, routes, env vars, and Neon DB state
+* prioritise environment + connection issues first (these are most likely)
+* keep scope focused on production troubleshooting and dev/prod parity
+* if something cannot be verified directly, state exactly what is missing
+
+---
+
+## OUTPUT FORMAT
+
+at the top of your response write:
+
+ROOT CAUSE: _______
+
+(if multiple causes, list them clearly)
+
+then provide:
+
+* whether the AI issue is caused by env/config, deployment, code path, database mismatch, or multiple factors
+* exact dev vs prod DB differences
+* exact files/config/routes involved
+* exact fix steps in priority order
+* any urgent production risks

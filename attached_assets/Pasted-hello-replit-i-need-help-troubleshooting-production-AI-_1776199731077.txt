@@ -1,0 +1,200 @@
+hello replit. i need help troubleshooting production AI failures and dev vs production database parity in my app.
+
+context:
+i have been developing the app through terminal using claude code. we have pushed changes to production, but production is not behaving as expected.
+
+AI-powered features are not working correctly in production, specifically:
+
+* creating recipes via voice/text
+* importing recipes/content from social media
+
+these flows work in dev but not in production.
+
+---
+
+## 🚨 STEP 0 — FAST FAILURE CHECK (RUN FIRST)
+
+before doing anything else, trigger real production requests to:
+
+* POST /api/preview-recipe
+* POST /api/scan
+
+capture and inspect:
+
+* status code
+* response body
+* server logs for those requests
+
+classify the failure immediately:
+
+* no request fired → frontend issue
+* 404 → route not deployed
+* 500 → backend/env/db issue
+* HTML response instead of JSON → wrong route/build
+* empty or fallback response → AI/env gating issue
+
+this step is mandatory and should guide the rest of the investigation.
+
+---
+
+1. PRODUCTION ENVIRONMENT + CONNECTION CHECK
+
+---
+
+verify this BEFORE deeper debugging:
+
+* confirm all required production environment variables are present and correctly named:
+
+  * DATABASE_URL (must point to correct Neon production DB)
+  * OPENAI_API_KEY
+  * WHISK_API_KEY
+  * USDA_API_KEY
+  * SPOONACULAR_API_KEY
+  * EDAMAM_APP_ID / EDAMAM_API_KEY
+  * SESSION_SECRET
+  * any feature flags
+
+* confirm production server is actually using these values at runtime
+
+* confirm production is not accidentally using dev environment variables
+
+* confirm no missing or mis-scoped secrets
+
+---
+
+2. DEV VS PRODUCTION NEON DB PARITY CHECK
+
+---
+
+compare dev and production Neon databases.
+
+check:
+
+* tables
+* columns (types, nullability, defaults)
+* indexes
+* enums
+* constraints
+* any missing migrations in production
+* seed/config data present in dev but missing in prod
+
+also verify:
+
+* dev app points to dev DB
+* prod app points to prod DB
+* no cross-environment leakage
+
+output:
+
+* exact schema differences
+* migration differences
+* config/data differences
+* likely impact of each difference
+
+---
+
+3. TRACE BROKEN AI FLOWS END-TO-END (PRODUCTION)
+
+---
+
+for each broken flow:
+
+* social import (POST /api/preview-recipe)
+* voice/text recipe creation (POST /api/scan)
+
+trace:
+
+frontend action
+→ network request
+→ server route handler
+→ AI call / gating logic
+→ response returned
+→ UI rendering
+
+verify:
+
+* route exists and is deployed
+* route is actually being hit in production
+* AI call is attempted (not skipped)
+* errors are not swallowed silently
+* response shape matches what frontend expects
+
+---
+
+4. CHECK FOR SILENT FALLBACKS (CRITICAL)
+
+---
+
+inspect backend logic for patterns like:
+
+try {
+callAI()
+} catch {
+return fallback
+}
+
+ensure:
+
+* production does NOT silently fallback without logging
+* failures are visible in logs and/or responses
+* add logging where necessary to surface real errors
+
+---
+
+5. IDENTIFY ROOT CAUSE(S)
+
+---
+
+based on evidence, determine whether the issue is:
+
+* environment/config (missing API keys, wrong DB URL)
+* deployment (routes not deployed, stale build)
+* database mismatch (schema missing in prod)
+* runtime/backend issue (errors, AI call failing)
+* frontend issue (requests not firing or mis-handled)
+* OR a combination
+
+---
+
+6. APPLY TARGETED FIXES
+
+---
+
+for each confirmed root cause:
+
+* set missing env vars
+* correct connection strings
+* run missing migrations in production
+* fix incorrect routing or deployment issues
+* remove or fix silent fallback logic
+* ensure AI calls execute correctly
+
+---
+
+## IMPORTANT CONSTRAINTS
+
+* do not guess
+* inspect real production environment, not assumptions
+* prioritise env + connection issues first
+* do not widen scope into new features
+* keep fixes minimal and targeted
+* if something cannot be verified, explicitly state what is missing
+
+---
+
+## OUTPUT FORMAT
+
+at the top of your response write:
+
+ROOT CAUSE: _______
+
+(if multiple causes, list clearly)
+
+then provide:
+
+* classification of the failure (from Step 0)
+* exact root cause(s)
+* exact files/config/routes involved
+* dev vs prod DB differences
+* exact fixes required (in priority order)
+* any urgent production risks

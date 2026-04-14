@@ -1,0 +1,138 @@
+[1mdiff --git a/client/src/components/ShoppingListView.tsx b/client/src/components/ShoppingListView.tsx[m
+[1mindex 9ff4ccf..b9e51d8 100644[m
+[1m--- a/client/src/components/ShoppingListView.tsx[m
+[1m+++ b/client/src/components/ShoppingListView.tsx[m
+[36m@@ -70,11 +70,11 @@[m [minterface ShoppingListViewProps {[m
+   /** Curated THA product recommendations keyed by normalised ingredient key. */[m
+   thaPicks?: Record<string, IngredientProduct[]>;[m
+   /** Allow renaming/refining an item and re-triggering product lookup. */[m
+[31m-  onRenameItem?: (id: number, newName: string) => void;[m
+[32m+[m[32m  onRenameItem?: (id: number, newName: string) => Promise<void> | void;[m
+   /** Remove an item from the shopping list entirely. */[m
+   onRemoveItem?: (id: number) => void;[m
+   /** Add a new item directly from within the view (e.g. from Check Cupboard). Persists to DB via resolver. */[m
+[31m-  onAddItem?: (rawText: string) => void;[m
+[32m+[m[32m  onAddItem?: (rawText: string) => Promise<void> | void;[m
+   /** Trigger store-scoped product matching for the currently selected store. */[m
+   onMatchStore?: (store: string) => void;[m
+   /** True while a store-scoped match is in progress. */[m
+[36m@@ -562,6 +562,8 @@[m [mexport default function ShoppingListView({[m
+   // Multi-select state for group umbrella terms (e.g. "berries").[m
+   // Keyed by item.id → set of selected suggestion strings.[m
+   const [multiSelections, setMultiSelections] = useState<Map<number, Set<string>>>(new Map());[m
+[32m+[m[32m  // True while handleHeadToShop is committing pending selections — prevents double-tap.[m
+[32m+[m[32m  const [isCommitting, setIsCommitting] = useState(false);[m
+   // Cupboard check: inline add-item input[m
+   const [addingItem, setAddingItem] = useState(false);[m
+   const [addItemVal, setAddItemVal] = useState("");[m
+[36m@@ -586,6 +588,65 @@[m [mexport default function ShoppingListView({[m
+     });[m
+   }[m
+ [m
+[32m+[m[32m  // Commit any pending multi-select ambiguity expansions, then transition to[m
+[32m+[m[32m  // shopping phase.  Called by both "Head to the shop" and "Skip".[m
+[32m+[m[32m  //[m
+[32m+[m[32m  // For each umbrella item that has ≥1 checkbox selection:[m
+[32m+[m[32m  //   • 1 pick  → rename the original item in place (preserves ID, re-resolves)[m
+[32m+[m[32m  //   • 2+ picks → add each child item (skip if already in list), then remove umbrella[m
+[32m+[m[32m  //[m
+[32m+[m[32m  // The function awaits all add-mutations before transitioning so that the shop[m
+[32m+[m[32m  // view renders with the correct items the first time it mounts.[m
+[32m+[m[32m  const handleHeadToShop = useCallback(async () => {[m
+[32m+[m[32m    if (isCommitting) return;[m
+[32m+[m
+[32m+[m[32m    if (multiSelections.size > 0) {[m
+[32m+[m[32m      setIsCommitting(true);[m
+[32m+[m[32m      try {[m
+[32m+[m[32m        const existingNames = new Set([m
+[32m+[m[32m          items.map(i => (i.productName ?? '').toLowerCase().trim())[m
+[32m+[m[32m        );[m
+[32m+[m[32m        const toRemove: number[] = [];[m
+[32m+[m[32m        const addPromises: Array<Promise<void>> = [];[m
+[32m+[m
+[32m+[m[32m        for (const [itemId, selected] of multiSelections.entries()) {[m
+[32m+[m[32m          if (selected.size === 0) continue;[m
+[32m+[m[32m          const picks = Array.from(selected);[m
+[32m+[m
+[32m+[m[32m          if (picks.length === 1) {[m
+[32m+[m[32m            // Single pick — rename the umbrella item in place[m
+[32m+[m[32m            if (onRenameItem) {[m
+[32m+[m[32m              const r = onRenameItem(itemId, picks[0]);[m
+[32m+[m[32m              if (r instanceof Promise) addPromises.push(r);[m
+[32m+[m[32m            }[m
+[32m+[m[32m          } else if (onAddItem) {[m
+[32m+[m[32m            // Multiple picks — add each child that isn't already in the list[m
+[32m+[m[32m            for (const p of picks) {[m
+[32m+[m[32m              if (!existingNames.has(p.toLowerCase().trim())) {[m
+[32m+[m[32m                const r = onAddItem(p);[m
+[32m+[m[32m                if (r instanceof Promise) addPromises.push(r);[m
+[32m+[m[32m                existingNames.add(p.toLowerCase().trim()); // prevent double-add within same batch[m
+[32m+[m[32m              }[m
+[32m+[m[32m            }[m
+[32m+[m[32m            toRemove.push(itemId);[m
+[32m+[m[32m          } else if (onRenameItem) {[m
+[32m+[m[32m            // No add capability — rename to first pick as fallback[m
+[32m+[m[32m            const r = onRenameItem(itemId, picks[0]);[m
+[32m+[m[32m            if (r instanceof Promise) addPromises.push(r);[m
+[32m+[m[32m          }[m
+[32m+[m[32m        }[m
+[32m+[m
+[32m+[m[32m        await Promise.all(addPromises);[m
+[32m+[m[32m        toRemove.forEach(id => onRemoveItem?.(id));[m
+[32m+[m[32m        setMultiSelections(new Map());[m
+[32m+[m[32m      } finally {[m
+[32m+[m[32m        setIsCommitting(false);[m
+[32m+[m[32m      }[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    setPhase("shopping");[m
+[32m+[m[32m  }, [isCommitting, multiSelections, items, onAddItem, onRenameItem, onRemoveItem]);[m
+[32m+[m
+   // ── State derivation ─────────────────────────────────────────────────────[m
+ [m
+   function getItemState(item: SLItem): ShopState {[m
+[36m@@ -1241,7 +1302,7 @@[m [mexport default function ShoppingListView({[m
+                 <p className="text-[11px] text-muted-foreground/70 mt-0.5">Mark anything you already have at home.</p>[m
+               </div>[m
+               <button[m
+[31m-                onClick={() => setPhase("shopping")}[m
+[32m+[m[32m                onClick={handleHeadToShop}[m
+                 className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground underline underline-offset-2 flex-shrink-0"[m
+               >[m
+                 Skip[m
+[36m@@ -1608,13 +1669,16 @@[m [mexport default function ShoppingListView({[m
+                 return ([m
+                   <div className="px-4 py-4">[m
+                     <button[m
+[31m-                      onClick={() => setPhase("shopping")}[m
+[31m-                      className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 hover:bg-primary/90 active:bg-primary/80 transition-colors"[m
+[32m+[m[32m                      onClick={handleHeadToShop}[m
+[32m+[m[32m                      disabled={isCommitting}[m
+[32m+[m[32m                      className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 hover:bg-primary/90 active:bg-primary/80 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"[m
+                     >[m
+[31m-                      {atHomeCount > 0[m
+[31m-                        ? `Done — ${atHomeCount} item${atHomeCount > 1 ? "s" : ""} at home`[m
+[31m-                        : "Head to the shop"}[m
+[31m-                      <ArrowRight className="h-4 w-4" />[m
+[32m+[m[32m                      {isCommitting[m
+[32m+[m[32m                        ? "Saving…"[m
+[32m+[m[32m                        : atHomeCount > 0[m
+[32m+[m[32m                          ? `Done — ${atHomeCount} item${atHomeCount > 1 ? "s" : ""} at home`[m
+[32m+[m[32m                          : "Head to the shop"}[m
+[32m+[m[32m                      {!isCommitting && <ArrowRight className="h-4 w-4" />}[m
+                     </button>[m
+                   </div>[m
+                 );[m
+[1mdiff --git a/client/src/pages/shopping-list-page.tsx b/client/src/pages/shopping-list-page.tsx[m
+[1mindex 2c680d5..7cd69a6 100644[m
+[1m--- a/client/src/pages/shopping-list-page.tsx[m
+[1m+++ b/client/src/pages/shopping-list-page.tsx[m
+[36m@@ -3475,7 +3475,7 @@[m [mexport default function ShoppingListPage() {[m
+             onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}[m
+             onRenameItem={handleRenameItem}[m
+             onRemoveItem={id => removeItem.mutate(id)}[m
+[31m-            onAddItem={(rawText) => addItem.mutate(rawText)}[m
+[32m+[m[32m            onAddItem={async (rawText) => { try { await addItem.mutateAsync(rawText); } catch { /* onError handles toast */ } }}[m
+             onMatchStore={(store) => lookupPrices.mutate(store)}[m
+             isMatchingPrices={lookupPrices.isPending}[m
+             onClose={() => setViewMode("basket")}[m
