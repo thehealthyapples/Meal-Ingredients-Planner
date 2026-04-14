@@ -2631,6 +2631,7 @@ export async function registerRoutes(
 
     // Fast path: if no OpenAI key, fall back to deterministic heuristic parser
     if (!process.env.OPENAI_API_KEY) {
+      console.warn("[import-recipe-from-text] OPENAI_API_KEY not set — using heuristic parser");
       const parsed = parseSocialCaption(text);
       const hasTitle = parsed.title && parsed.title !== 'Imported Recipe';
       const hasIngredients = parsed.ingredients.length > 0;
@@ -2647,6 +2648,7 @@ export async function registerRoutes(
         imageUrl: null,
         sourcePlatform: 'manual' as const,
         confidence,
+        parsedBy: 'heuristic' as const,
         failureReason: confidence === 'failed'
           ? "We couldn't extract a recipe from this text. Please edit and try again."
           : null,
@@ -2723,7 +2725,9 @@ Rules:
           instructions,
           servings: typeof parsed.servings === 'number' ? parsed.servings : null,
         };
-      } catch {}
+      } catch (parseErr) {
+        console.error('[import-recipe-from-text] Failed to parse AI JSON response:', parseErr instanceof Error ? parseErr.message : parseErr);
+      }
 
       const hasTitle = !!extracted.title;
       const hasIngredients = extracted.ingredients.length > 0;
@@ -2742,6 +2746,7 @@ Rules:
         imageUrl: null,
         sourcePlatform: 'manual' as const,
         confidence,
+        parsedBy: 'openai' as const,
         failureReason: confidence === 'failed'
           ? "We couldn't extract a recipe from this text. Please edit and try again."
           : null,
@@ -2749,8 +2754,7 @@ Rules:
         nutrition: {},
       });
     } catch (err) {
-      console.error('[import-recipe-from-text] AI error:', err);
-      // Fallback to heuristic parser on AI failure
+      console.error('[import-recipe-from-text] AI error — falling back to heuristic parser:', err);
       const parsed = parseSocialCaption(text);
       const hasIngredients = parsed.ingredients.length > 0;
       const hasInstructions = parsed.instructions.length > 0;
@@ -2766,6 +2770,7 @@ Rules:
         imageUrl: null,
         sourcePlatform: 'manual' as const,
         confidence,
+        parsedBy: 'heuristic' as const,
         failureReason: confidence === 'failed'
           ? "We couldn't extract a recipe from this text. Please edit and try again."
           : null,
@@ -2943,8 +2948,8 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           }
           aiUsed = true;
         }
-      } catch (aiErr: any) {
-        console.error('[parse] AI call failed:', aiErr?.message ?? aiErr);
+      } catch (aiErr) {
+        console.error('[parse] AI call failed:', aiErr instanceof Error ? aiErr.message : aiErr);
       }
     }
 
@@ -2992,17 +2997,27 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       try {
         const nativeRes = await fetch(url, { headers: browserHeaders, signal: controller.signal, redirect: 'follow' });
         clearTimeout(timeout);
-        if (nativeRes.ok) html = await nativeRes.text();
-      } catch { clearTimeout(timeout); }
+        if (nativeRes.ok) {
+          html = await nativeRes.text();
+        } else {
+          console.warn(`[preview-recipe] fetch returned non-OK status ${nativeRes.status} for ${url}`);
+        }
+      } catch (fetchErr) {
+        clearTimeout(timeout);
+        console.warn(`[preview-recipe] native fetch failed for ${url}:`, fetchErr instanceof Error ? fetchErr.message : fetchErr);
+      }
 
       if (!html) {
         try {
           const axiosRes = await axios.get(url, { headers: browserHeaders, timeout: 15000, maxContentLength: 5 * 1024 * 1024, maxRedirects: 5 });
           html = axiosRes.data;
-        } catch {}
+        } catch (axiosErr) {
+          console.warn(`[preview-recipe] axios fallback also failed for ${url}:`, axiosErr instanceof Error ? axiosErr.message : axiosErr);
+        }
       }
 
       if (!html) {
+        console.error(`[preview-recipe] all fetch methods failed for ${url} — returning empty result`);
         return res.json({ ingredients: [], instructions: [], error: 'Could not access this recipe page' });
       }
 
@@ -7078,8 +7093,11 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         throw err;
       }
 
-      const parsed = await parseScannedText(rawText);
-      res.json({ rawText, parsed });
+      const { result: parsed, parsedBy } = await parseScannedText(rawText);
+      if (parsedBy === "heuristic") {
+        console.warn("[Scan] AI unavailable or failed — result parsed by heuristic fallback");
+      }
+      res.json({ rawText, parsed, parsedBy });
     } catch (err) {
       console.error("[Scan] Error:", err);
       res.status(500).json({ message: "Scan failed unexpectedly. Please try again." });

@@ -140,25 +140,32 @@ Return only the JSON, no markdown, no explanation.`;
       return parsed as ScanResult;
     }
     return null;
-  } catch {
+  } catch (err) {
+    console.error("[recipeParser] OpenAI parse failed:", err instanceof Error ? err.message : err);
     return null;
   }
 }
 
-export async function parseScannedText(text: string): Promise<ScanResult> {
+export type ParsedBy = "openai" | "heuristic";
+
+export async function parseScannedText(text: string): Promise<{ result: ScanResult; parsedBy: ParsedBy }> {
   if (!text || text.trim().length < 5) {
-    return { type: "unknown", rawText: text };
+    return { result: { type: "unknown", rawText: text }, parsedBy: "heuristic" };
   }
 
   const aiResult = await parseWithOpenAI(text);
-  if (aiResult) return aiResult;
+  if (aiResult) return { result: aiResult, parsedBy: "openai" };
+
+  if (!process.env.OPENAI_API_KEY) {
+    console.warn("[recipeParser] OPENAI_API_KEY not set — using heuristic parser for scan");
+  }
 
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
   const mealPlanDays = detectMealPlan(lines);
   if (mealPlanDays) {
     const confidence: "high" | "low" = mealPlanDays.length >= 3 ? "high" : "low";
-    return { type: "meal_plan", days: mealPlanDays, confidence };
+    return { result: { type: "meal_plan", days: mealPlanDays, confidence }, parsedBy: "heuristic" };
   }
 
   const hasRecipeContent =
@@ -168,8 +175,8 @@ export async function parseScannedText(text: string): Promise<ScanResult> {
     lines.length >= 3;
 
   if (hasRecipeContent) {
-    return parseRecipeHeuristic(text);
+    return { result: parseRecipeHeuristic(text), parsedBy: "heuristic" };
   }
 
-  return { type: "unknown", rawText: text };
+  return { result: { type: "unknown", rawText: text }, parsedBy: "heuristic" };
 }

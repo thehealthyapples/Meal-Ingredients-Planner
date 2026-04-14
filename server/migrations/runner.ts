@@ -819,8 +819,18 @@ export async function runMigrations(): Promise<MigrationResult> {
       "SELECT id FROM schema_migrations ORDER BY applied_at DESC, id DESC LIMIT 1"
     );
 
+    const lastAppliedId = latest[0]?.id ?? null;
+
+    // Log parity summary: confirms the migration state matches the code expectations
+    const expectedHead = MIGRATIONS[MIGRATIONS.length - 1]?.id ?? null;
+    if (lastAppliedId && lastAppliedId === expectedHead) {
+      console.log(`[Migrations] Schema at head: ${lastAppliedId}`);
+    } else if (lastAppliedId) {
+      console.warn(`[Migrations] Schema head mismatch — DB at "${lastAppliedId}", expected "${expectedHead}"`);
+    }
+
     return {
-      lastAppliedId: latest[0]?.id ?? null,
+      lastAppliedId,
       newlyApplied: pending.length,
     };
   } finally {
