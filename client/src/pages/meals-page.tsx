@@ -4552,6 +4552,17 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
   const [openSection, setOpenSection] = useState<'basics' | 'ingredients' | 'method' | 'optional' | ''>('basics');
   const toggleSection = (s: typeof openSection) => setOpenSection(prev => prev === s ? '' : s);
 
+  interface IngredientSuggestion { title: string; description: string; extraIngredients: string[]; effort: 'easy' | 'medium' | 'involved'; }
+  const [suggestions, setSuggestions] = useState<IngredientSuggestion[] | null>(null);
+  const [ingredientSource, setIngredientSource] = useState("");
+
+  const isIngredientList = (text: string): boolean => {
+    if (/^https?:\/\//i.test(text)) return false;
+    const items = text.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+    if (items.length < 2) return false;
+    return items.every(s => s.length <= 80 && !s.includes('. ') && !/^\d+[\.\)]\s/.test(s));
+  };
+
   const { data: allDiets = [] } = useQuery<Diet[]>({
     queryKey: ['/api/diets'],
   });
@@ -4602,6 +4613,8 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     setPasteHelperText("");
     setPasteHelperMsg(null);
     setPendingVoiceImport(null);
+    setSuggestions(null);
+    setIngredientSource("");
     speechTranscriptRef.current = "";
     // Reset before stopping so onend doesn't falsely trigger "no speech captured"
     wasListeningRef.current = false;
@@ -4694,14 +4707,60 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     }
   };
 
+  const handleSelectSuggestion = async (s: IngredientSuggestion) => {
+    setIsImporting(true);
+    setSuggestions(null);
+    setImportFailureMsg(null);
+    try {
+      const res = await fetch('/api/generate-recipe-from-suggestion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients: ingredientSource, title: s.title, description: s.description }),
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setImportFailureMsg((err as any).message || "Could not generate this recipe.");
+        return;
+      }
+      const data: ImportPreview = await res.json();
+      prefillFromImport(data, '');
+    } catch {
+      setImportFailureMsg("Could not reach the server. Check your connection and try again.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const handleUnifiedSubmit = async () => {
     const val = unifiedInput.trim();
     if (!val || isImporting) return;
     const isUrl = /^https?:\/\//i.test(val);
     setIsImporting(true);
     setImportFailureMsg(null);
+    setSuggestions(null);
     try {
-      if (isUrl) {
+      if (!isUrl && isIngredientList(val)) {
+        // Ingredient list detected — fetch 3 meal suggestions
+        const res = await fetch('/api/suggest-from-ingredients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ingredients: val }),
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          setImportFailureMsg((err as any).message || "Could not generate suggestions.");
+          return;
+        }
+        const data = await res.json();
+        if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+          setIngredientSource(val);
+          setSuggestions(data.suggestions.slice(0, 3));
+        } else {
+          setImportFailureMsg("Couldn't generate suggestions. Try pasting fuller recipe text instead.");
+        }
+      } else if (isUrl) {
         const res = await fetch('/api/import-recipe', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -5042,8 +5101,48 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
               </div>
             )}
 
+            {/* ── INGREDIENT SUGGESTIONS ──────────────────────────────────── */}
+            {suggestions && (
+              <div className="space-y-2.5">
+                <p className="text-xs text-muted-foreground">
+                  THA can turn these ingredients into a meal. Pick a recipe idea to continue.
+                </p>
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="w-full text-left rounded-lg border border-border bg-card hover:bg-muted/50 hover:border-primary/40 transition-colors px-3 py-2.5 space-y-1 disabled:opacity-50 disabled:pointer-events-none"
+                    onClick={() => handleSelectSuggestion(s)}
+                    disabled={isImporting}
+                    data-testid={`suggestion-card-${i}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-sm font-medium leading-snug">{s.title}</span>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 mt-0.5 ${
+                        s.effort === 'easy'
+                          ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
+                          : s.effort === 'medium'
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+                          : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                      }`}>
+                        {s.effort === 'easy' ? 'Easy' : s.effort === 'medium' ? 'Medium' : 'Involved'}
+                      </span>
+                    </div>
+                    {s.description && (
+                      <p className="text-xs text-muted-foreground leading-snug">{s.description}</p>
+                    )}
+                    {s.extraIngredients?.length > 0 && (
+                      <p className="text-[11px] text-muted-foreground/70">
+                        Also needs: {s.extraIngredients.join(', ')}
+                      </p>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {/* ── ACCORDION SECTIONS ──────────────────────────────────────── */}
-            {(() => {
+            {!suggestions && (() => {
               const recipeName = form.watch("name");
               const ingredientCount = fields.filter(f => f.name?.trim()).length;
               const instructionStepCount = instructionsText.split('\n').filter(s => s.trim()).length;

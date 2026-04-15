@@ -7621,5 +7621,107 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     res.json(await storage.getFrequentItems(req.user!.id));
   });
 
+  // ── Ingredient-based recipe suggestions ───────────────────────────────────
+
+  app.post("/api/suggest-from-ingredients", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { ingredients } = z.object({ ingredients: z.string().min(1).max(2000) }).parse(req.body);
+    if (!process.env.OPENAI_API_KEY) return res.status(503).json({ message: "AI not configured" });
+    try {
+      const { default: OpenAI } = await import("openai");
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const systemPrompt = `You are a recipe suggestion assistant. Given a list of ingredients the user has, return exactly 3 meal ideas they could make. Prioritise using all provided ingredients, minimise extra ingredients needed beyond what was listed.
+
+Return ONLY a valid JSON object with this exact shape:
+{
+  "suggestions": [
+    {
+      "title": "Recipe Name",
+      "description": "One sentence describing the dish",
+      "extraIngredients": ["extra1", "extra2"],
+      "effort": "easy"
+    }
+  ]
+}
+
+Rules:
+- "effort" must be exactly one of: "easy", "medium", "involved"
+- "extraIngredients" is an array of key additional ingredients not in the user's list (empty array if none needed)
+- Return exactly 3 suggestions, no duplicates
+- No markdown, no explanation, no extra keys`;
+      const completion = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Ingredients I have: ${ingredients}` },
+        ],
+        temperature: 0.7,
+        max_tokens: 600,
+        response_format: { type: 'json_object' },
+      });
+      const raw = completion.choices[0]?.message?.content?.trim() ?? '{}';
+      const parsed = JSON.parse(raw);
+      const suggestions = Array.isArray(parsed.suggestions) ? parsed.suggestions.slice(0, 3) : [];
+      res.json({ suggestions });
+    } catch (err) {
+      console.error("[suggest-from-ingredients]", err);
+      res.status(500).json({ message: "Failed to generate suggestions" });
+    }
+  });
+
+  app.post("/api/generate-recipe-from-suggestion", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const { ingredients, title, description } = z.object({
+      ingredients: z.string().min(1).max(2000),
+      title: z.string().min(1).max(200),
+      description: z.string().max(500).optional(),
+    }).parse(req.body);
+    if (!process.env.OPENAI_API_KEY) return res.status(503).json({ message: "AI not configured" });
+    try {
+      const { default: OpenAI } = await import("openai");
+      const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const systemPrompt = `You are a recipe generation assistant. Generate a complete, practical recipe card. Return ONLY a valid JSON object with this exact shape:
+{
+  "title": "Recipe Name",
+  "ingredients": ["200g pasta", "2 cloves garlic, minced"],
+  "instructions": ["First step.", "Second step."],
+  "servings": 2
+}
+
+Rules:
+- "ingredients": array of strings, each with quantity and ingredient name
+- "instructions": array of strings, each a complete step (do not number them, no leading numbers or bullets)
+- "servings": positive integer
+- Use the provided base ingredients as the foundation, add only necessary extras
+- Keep it practical and home-cook friendly
+- No markdown, no extra keys`;
+      const userMsg = `Recipe: "${title}"${description ? ` — ${description}` : ''}
+Base ingredients the user has: ${ingredients}
+Generate a complete recipe using these as the foundation.`;
+      const completion = await client.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMsg },
+        ],
+        temperature: 0.3,
+        max_tokens: 1200,
+        response_format: { type: 'json_object' },
+      });
+      const raw = completion.choices[0]?.message?.content?.trim() ?? '{}';
+      const parsed = JSON.parse(raw);
+      res.json({
+        title: typeof parsed.title === 'string' ? parsed.title : title,
+        ingredients: Array.isArray(parsed.ingredients) ? parsed.ingredients : [],
+        instructions: Array.isArray(parsed.instructions) ? parsed.instructions : [],
+        servings: typeof parsed.servings === 'number' && parsed.servings > 0 ? parsed.servings : 2,
+        confidence: 'full',
+      });
+    } catch (err) {
+      console.error("[generate-recipe-from-suggestion]", err);
+      res.status(500).json({ message: "Failed to generate recipe" });
+    }
+  });
+
   return httpServer;
 }
