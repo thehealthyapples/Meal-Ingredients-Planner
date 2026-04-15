@@ -2622,16 +2622,29 @@ export async function registerRoutes(
   app.post(api.import.recipeFromText.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
+    // ── TEMP DIAG: IRT_DEBUG_2026_04_15 ──────────────────────────────────────
+    const irtLog = (msg: string) => console.log(`[IRT_DIAG] ${msg}`);
+    const sawOpenAIKey = !!process.env.OPENAI_API_KEY;
+    let branch: 'openai_success' | 'openai_error' | 'heuristic_fallback' | 'failed_before_openai' | 'failed_after_openai' = 'failed_before_openai';
+    const BUILD_MARKER = 'IRT_DEBUG_2026_04_15';
+    irtLog('route hit');
+    // ── END TEMP DIAG HEADER ─────────────────────────────────────────────────
+
     const parseResult = api.import.recipeFromText.input.safeParse(req.body);
     if (!parseResult.success) {
+      irtLog(`validation failed — returning failed_before_openai`);
       return res.status(400).json({ message: 'Invalid request body' });
     }
 
     const { text } = parseResult.data;
+    irtLog(`text length: ${text.length}`);
+    irtLog(`openai key present: ${sawOpenAIKey}`);
 
     // Fast path: if no OpenAI key, fall back to deterministic heuristic parser
     if (!process.env.OPENAI_API_KEY) {
       console.warn("[import-recipe-from-text] OPENAI_API_KEY not set — using heuristic parser");
+      branch = 'heuristic_fallback';
+      irtLog(`returning heuristic_fallback (no key)`);
       const parsed = parseSocialCaption(text);
       const hasTitle = parsed.title && parsed.title !== 'Imported Recipe';
       const hasIngredients = parsed.ingredients.length > 0;
@@ -2654,8 +2667,12 @@ export async function registerRoutes(
           : null,
         extractedText: text,
         nutrition: {},
+        buildMarker: BUILD_MARKER,
+        debug: { sawOpenAIKey, branch },
       });
     }
+
+    irtLog('entering openai branch');
 
     try {
       const { default: OpenAI } = await import("openai");
@@ -2679,6 +2696,7 @@ Rules:
 - title: the recipe name if present, otherwise null.
 - No markdown, no explanation, no extra keys. Just the JSON object.`;
 
+      irtLog('sending openai request');
       const completion = await client.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
@@ -2689,6 +2707,7 @@ Rules:
         max_tokens: 1500,
         response_format: { type: 'json_object' },
       });
+      irtLog('openai request succeeded');
 
       let extracted: { title: string | null; ingredients: string[]; instructions: string[]; servings: number | null } = {
         title: null, ingredients: [], instructions: [], servings: null,
@@ -2738,6 +2757,9 @@ Rules:
         : hasIngredients || hasInstructions ? 'partial' as const
         : 'failed' as const;
 
+      branch = confidence === 'failed' ? 'failed_after_openai' : 'openai_success';
+      irtLog(`returning ${branch}`);
+
       return res.json({
         title: extracted.title || 'Imported Recipe',
         ingredients: extracted.ingredients,
@@ -2752,8 +2774,12 @@ Rules:
           : null,
         extractedText: text,
         nutrition: {},
+        buildMarker: BUILD_MARKER,
+        debug: { sawOpenAIKey, branch },
       });
     } catch (err) {
+      branch = 'openai_error';
+      irtLog(`openai error: ${err instanceof Error ? err.message : String(err)}`);
       console.error('[import-recipe-from-text] AI error — falling back to heuristic parser:', err);
       const parsed = parseSocialCaption(text);
       const hasIngredients = parsed.ingredients.length > 0;
@@ -2762,6 +2788,7 @@ Rules:
         hasIngredients && hasInstructions ? 'partial' as const
         : hasIngredients || hasInstructions ? 'partial' as const
         : 'failed' as const;
+      irtLog(`returning heuristic_fallback (after openai_error)`);
       return res.json({
         title: parsed.title || 'Imported Recipe',
         ingredients: parsed.ingredients,
@@ -2776,6 +2803,8 @@ Rules:
           : null,
         extractedText: text,
         nutrition: {},
+        buildMarker: BUILD_MARKER,
+        debug: { sawOpenAIKey, branch },
       });
     }
   });
