@@ -1,0 +1,183 @@
+hello replit. i want a planning/design prompt for the next THA feature. do not build the feature yet. this task is to produce a lean implementation plan only.
+
+---
+
+## CONTEXT
+
+THA already has:
+
+* household-linked user accounts and profiles
+* planner as the main planning surface
+* cookbook accessible from planner
+* recipes/meals chosen in the normal way
+
+i do NOT want a separate meal generator flow.
+
+i want THA to stay planner-first:
+
+* meals are chosen as normal in planner / cookbook
+* then AI adapts that chosen meal for the people who are actually eating it
+
+the key idea is:
+
+* one shared household meal
+* slight plate-level adaptations per eater
+* not separate totally different dinners
+
+examples:
+
+* tuna spaghetti -> vegetarian eater gets a vegetarian swap, keto eater gets keto noodles
+* egg salad -> high-protein eater gets extra eggs / beans / tofu
+* pescatarian + vegetarian household -> same bowl, different protein on top
+* coeliac requirement -> base meal and all adaptations must remain gluten safe
+
+---
+
+## NEW REQUIREMENT
+
+planner needs a temporary per-person override layer.
+
+example:
+
+* Colin default profile = high protein
+* Lindsay default profile = vegetarian
+* but for this week both want vegan
+
+so THA must support:
+
+1. profile defaults
+2. planner-level temporary overrides
+
+priority should be:
+
+1. hard restrictions always win
+
+   * coeliac
+   * allergies
+   * intolerances
+   * medical exclusions
+
+2. planner override wins over default soft preference
+
+   * vegan this week
+   * pescatarian this week
+   * high protein this week
+   * keto this week
+
+3. profile default applies if there is no override
+
+   * vegetarian
+   * high protein
+   * pescatarian
+   * keto
+   * etc.
+
+---
+
+## GOAL
+
+design a lean implementation plan for:
+
+A. planner stays the primary meal-selection flow
+B. each planner meal knows who is eating it
+C. THA can adapt that one chosen meal for those eaters
+D. per-person planner overrides can temporarily replace default profile preferences
+E. shopping can later account for extra swap ingredients if needed
+
+---
+
+## WHAT I WANT PLANNED
+
+please work out and recommend:
+
+1. product flow
+
+* where in planner this logic should live
+* when eaters are chosen
+* when overrides are applied
+* when AI runs
+* when adaptations are shown to the user
+
+2. effective diet logic
+
+* how THA should calculate each eater's active dietary profile for a planner meal
+* how hard restrictions, overrides, and default profiles interact
+* what should and should not be overridable
+
+3. data structure
+   propose the leanest useful data model for:
+
+* household members
+* default diet/profile per person
+* planner week or planner entry overrides
+* eaters attached to a planner meal
+* stored meal adaptations
+
+4. AI adaptation layer
+   propose the right prompt/output shape for AI so it returns:
+
+* one shared base meal
+* why it works for the household
+* eater-specific adaptations
+* extra ingredients needed
+* serving notes
+
+important:
+this is not separate full meals per eater.
+it is one meal with small plate-level changes.
+
+5. minimal UI approach
+   recommend the lightest useful UI pattern inside planner for:
+
+* selecting who is eating
+* applying weekly per-person overrides
+* showing adaptation notes on a planned meal
+* keeping the experience simple on mobile
+
+6. shopping implications
+   recommend how this should later influence shopping:
+
+* shared ingredients merged normally
+* extra swap ingredients added only if required by an eater adaptation
+* avoid duplicating whole meals
+
+---
+
+## IMPORTANT PRODUCT PRINCIPLES
+
+optimise for:
+
+* one shared meal
+* minimal extra prep
+* minimal extra shopping
+* realistic family cooking
+* plate-level changes instead of separate dinners
+
+profiles describe how people usually eat.
+planner overrides describe how they want to eat right now.
+
+---
+
+## CONSTRAINTS
+
+* do not build the feature yet
+* do not redesign planner or cookbook broadly
+* do not create separate meal plans per person
+* do not widen scope into full shopping automation yet
+* keep the first implementation lean and extensible
+* this task is plan/design only
+
+---
+
+## DELIVERABLE
+
+return:
+
+* recommended product flow
+* effective diet priority rules
+* recommended data structure
+* recommended AI prompt/output shape
+* recommended minimal UI pattern
+* phased implementation plan
+* biggest risks and edge cases
+* recommendation on what should be phase 1 vs later
