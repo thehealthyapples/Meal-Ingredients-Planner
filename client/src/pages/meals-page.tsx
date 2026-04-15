@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2 } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateMealModal, type ImportedRecipeDraft } from "@/components/create-meal-modal";
@@ -4549,7 +4549,9 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
   const [pasteHelperText, setPasteHelperText] = useState("");
   const [isPasteImporting, setIsPasteImporting] = useState(false);
   const [pasteHelperMsg, setPasteHelperMsg] = useState<string | null>(null);
-  
+  const [openSection, setOpenSection] = useState<'basics' | 'ingredients' | 'method' | 'optional' | ''>('basics');
+  const toggleSection = (s: typeof openSection) => setOpenSection(prev => prev === s ? '' : s);
+
   const { data: allDiets = [] } = useQuery<Diet[]>({
     queryKey: ['/api/diets'],
   });
@@ -4611,6 +4613,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
       resetImportState();
       setSelectedDiets([]);
       setSelectedCategory(undefined);
+      setOpenSection('basics');
       form.reset();
     }
     setInternalOpen(v);
@@ -4628,6 +4631,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     setImportBanner({ partial, sourceUrl });
     setImportFailureMsg(null);
     setUnifiedInput("");
+    setOpenSection('basics');
   };
 
   const handlePasteImprove = async () => {
@@ -4904,7 +4908,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
         <DialogHeader>
           <DialogTitle>Add New Recipe</DialogTitle>
           <DialogDescription>
-            Paste a URL or recipe text to auto-fill, or fill in the form manually.
+            Paste a link, recipe text, or the ingredients you have, and THA will create a recipe card for you - or fill it in manually.
           </DialogDescription>
         </DialogHeader>
 
@@ -4983,46 +4987,27 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
               )}
             </div>
 
-            {/* ── IMPORT BANNER (shown after successful AI import) ─────────── */}
+            {/* ── IMPORT BANNER (compact single-line after AI import) ───────── */}
             {importBanner && (
-              importBanner.partial ? (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-300/80 dark:border-amber-600/50 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2.5">
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-medium text-amber-800 dark:text-amber-300 leading-snug">
-                      {importBanner.isVoice
-                        ? "THA AI has partially structured your voice recipe. Some fields may be missing — please review and complete before saving."
-                        : "THA AI has partially imported this recipe. Some fields may be incomplete — please review before saving."}
-                    </p>
-                    {importBanner.sourceUrl && (
-                      <a href={importBanner.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-amber-600/70 dark:text-amber-400/60 underline underline-offset-2 truncate block mt-0.5">
-                        {importBanner.sourceUrl}
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ) : importBanner.isVoice ? (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5">
-                  <Mic className="h-3.5 w-3.5 text-amber-600/80 dark:text-amber-400/70 shrink-0 mt-0.5" />
-                  <p className="text-[12px] text-amber-700/90 dark:text-amber-300/80 leading-snug">
-                    THA AI has structured your voice recipe. Please review the details before saving.
-                  </p>
-                </div>
-              ) : (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5">
-                  <ExternalLink className="h-3.5 w-3.5 text-amber-600/80 dark:text-amber-400/70 shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[12px] text-amber-700/90 dark:text-amber-300/80 leading-snug">
-                      THA AI has imported this recipe. Please validate before saving.
-                    </p>
-                    {importBanner.sourceUrl && (
-                      <a href={importBanner.sourceUrl} target="_blank" rel="noopener noreferrer" className="text-[11px] text-amber-600/70 dark:text-amber-400/60 underline underline-offset-2 truncate block mt-0.5">
-                        {importBanner.sourceUrl}
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )
+              <div className={`flex items-center gap-2 rounded-md border px-3 py-2 ${importBanner.partial ? "border-amber-300/80 dark:border-amber-600/50 bg-amber-50/80 dark:bg-amber-950/30" : "border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20"}`}>
+                {importBanner.partial
+                  ? <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  : importBanner.isVoice
+                  ? <Mic className="h-3.5 w-3.5 text-amber-600/80 dark:text-amber-400/70 shrink-0" />
+                  : <ExternalLink className="h-3.5 w-3.5 text-amber-600/80 dark:text-amber-400/70 shrink-0" />}
+                <p className="text-[12px] text-amber-700/90 dark:text-amber-300/80 flex-1 min-w-0 leading-none truncate">
+                  {importBanner.partial
+                    ? (importBanner.isVoice ? "Partial voice import — please review and complete." : "Partial import — some fields may be incomplete.")
+                    : importBanner.isVoice
+                    ? "Voice recipe structured — please review before saving."
+                    : "Imported — please validate before saving."}
+                  {importBanner.sourceUrl && !importBanner.isVoice && (
+                    <a href={importBanner.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-1.5 underline underline-offset-2 text-amber-600/70 dark:text-amber-400/60">
+                      {importBanner.sourceUrl.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
+                    </a>
+                  )}
+                </p>
+              </div>
             )}
 
             {/* ── PASTE-TEXT HELPER (partial import with missing fields) ────── */}
@@ -5057,213 +5042,264 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
               </div>
             )}
 
-            {/* ── IMAGE SECTION ───────────────────────────────────────────── */}
-            {importBanner && (() => {
+            {/* ── ACCORDION SECTIONS ──────────────────────────────────────── */}
+            {(() => {
+              const recipeName = form.watch("name");
+              const ingredientCount = fields.filter(f => f.name?.trim()).length;
+              const instructionStepCount = instructionsText.split('\n').filter(s => s.trim()).length;
+              const dietCount = selectedDiets.length;
               const currentImageUrl = form.watch("imageUrl");
-              return currentImageUrl ? (
-                <div className="flex items-center gap-3">
-                  <img
-                    src={currentImageUrl}
-                    alt="Recipe photo"
-                    className="w-16 h-16 object-cover rounded-md border border-border shrink-0"
-                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted-foreground mb-1">Photo imported</p>
-                    <button type="button" className="text-xs text-destructive hover:underline" onClick={() => form.setValue("imageUrl", null as any)}>Remove</button>
+
+              const sectionHeader = (id: typeof openSection, label: string, summary: string) => (
+                <button
+                  type="button"
+                  className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-medium bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+                  onClick={() => toggleSection(id)}
+                  data-testid={`section-toggle-${id}`}
+                >
+                  <span>{label}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {openSection !== id && summary && (
+                      <span className="text-xs text-muted-foreground font-normal max-w-[160px] truncate">{summary}</span>
+                    )}
+                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openSection === id ? 'rotate-180' : ''}`} />
                   </div>
-                </div>
-              ) : (
-                <FormField
-                  control={form.control}
-                  name="imageUrl"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-1.5 text-muted-foreground font-normal">
-                        <ImageIcon className="h-3.5 w-3.5" />
-                        Photo URL <span className="text-[11px] text-muted-foreground/60">(optional — no photo was found)</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="https://example.com/photo.jpg"
-                          {...field}
-                          value={field.value ?? ""}
-                          onChange={e => field.onChange(e.target.value || null)}
-                          data-testid="input-image-url"
+                </button>
+              );
+
+              return (
+                <div className="space-y-2">
+
+                  {/* BASICS */}
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    {sectionHeader('basics', 'Basics', recipeName || 'Name, category, servings')}
+                    {openSection === 'basics' && (
+                      <div className="p-3 space-y-3 border-t border-border">
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Recipe Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g. Spicy Chicken Pasta" {...field} data-testid="input-meal-name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
                         />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                        <div className="space-y-2">
+                          <FormLabel>Category</FormLabel>
+                          <Select
+                            value={selectedCategory ? String(selectedCategory) : ""}
+                            onValueChange={(val) => setSelectedCategory(val ? Number(val) : undefined)}
+                          >
+                            <SelectTrigger data-testid="select-meal-category">
+                              <SelectValue placeholder="Select category..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.map(cat => {
+                                const Icon = getCategoryIcon(cat.name);
+                                return (
+                                  <SelectItem key={cat.id} value={String(cat.id)} data-testid={`option-category-${cat.id}`}>
+                                    <span className="flex items-center gap-2">
+                                      <Icon className={`h-4 w-4 ${getCategoryColor(cat.name)}`} />
+                                      {cat.name}
+                                    </span>
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {user?.role === 'admin' && (
+                          <FormField
+                            control={form.control}
+                            name="kind"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Type</FormLabel>
+                                <Select value={field.value ?? "meal"} onValueChange={field.onChange}>
+                                  <SelectTrigger data-testid="select-meal-kind">
+                                    <SelectValue placeholder="Select type..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="meal">Meal</SelectItem>
+                                    <SelectItem value="component">Component</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground">Components are reusable building blocks (e.g. Bone Broth, Pepper Sauce).</p>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+                        <FormField
+                          control={form.control}
+                          name="servings"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Servings</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={20}
+                                  placeholder="How many servings?"
+                                  {...field}
+                                  onChange={e => field.onChange(parseInt(e.target.value) || 1)}
+                                  data-testid="input-meal-servings"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* INGREDIENTS */}
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    {sectionHeader('ingredients', 'Ingredients', ingredientCount > 0 ? `${ingredientCount} item${ingredientCount === 1 ? '' : 's'}` : 'Empty')}
+                    {openSection === 'ingredients' && (
+                      <div className="p-3 space-y-2 border-t border-border">
+                        <div className="text-xs text-muted-foreground flex gap-2">
+                          <span className="w-14 shrink-0 text-center">Qty</span>
+                          <span className="w-[72px] shrink-0">Unit</span>
+                          <span className="flex-1">Ingredient</span>
+                        </div>
+                        <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                          {fields.map((field, index) => (
+                            <FormField
+                              key={field.id}
+                              control={form.control}
+                              name={`ingredients.${index}.name`}
+                              render={() => (
+                                <FormItem>
+                                  <FormControl>
+                                    <IngredientRow
+                                      index={index}
+                                      amount={form.watch(`ingredients.${index}.amount`)}
+                                      unit={form.watch(`ingredients.${index}.unit`)}
+                                      name={form.watch(`ingredients.${index}.name`)}
+                                      onAmountChange={v => form.setValue(`ingredients.${index}.amount`, v)}
+                                      onUnitChange={v => form.setValue(`ingredients.${index}.unit`, v)}
+                                      onNameChange={v => form.setValue(`ingredients.${index}.name`, v)}
+                                      onRemove={() => remove(index)}
+                                      showRemove={!(fields.length === 1 && index === 0)}
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          ))}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-dashed"
+                          onClick={() => append({ amount: "", unit: "", name: "" })}
+                          data-testid="button-add-ingredient"
+                        >
+                          <Plus className="mr-2 h-3 w-3" />
+                          Add Ingredient
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* METHOD / INSTRUCTIONS */}
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    {sectionHeader('method', 'Method / Instructions', instructionStepCount > 0 ? `${instructionStepCount} step${instructionStepCount === 1 ? '' : 's'}` : 'Empty')}
+                    {openSection === 'method' && (
+                      <div className="p-3 border-t border-border space-y-1.5">
+                        <Textarea
+                          placeholder={"Enter the steps, one per line.\n\nE.g.:\nHeat oil in a pan over medium heat.\nAdd onion and cook for 5 minutes.\nStir in remaining ingredients and simmer."}
+                          value={instructionsText}
+                          onChange={e => setInstructionsText(e.target.value)}
+                          className="min-h-[120px] text-sm resize-none"
+                          data-testid="textarea-instructions"
+                        />
+                        <p className="text-[11px] text-muted-foreground">One step per line. Optional but recommended.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* OPTIONAL DETAILS */}
+                  <div className="border border-border rounded-lg overflow-hidden">
+                    {sectionHeader('optional', 'Optional details', dietCount > 0 ? `${dietCount} diet${dietCount === 1 ? '' : 's'}` : 'Diets, photo')}
+                    {openSection === 'optional' && (
+                      <div className="p-3 space-y-3 border-t border-border">
+                        {allDiets.length > 0 && (
+                          <div className="space-y-2">
+                            <FormLabel>Diet Compatibility</FormLabel>
+                            <div className="flex flex-wrap gap-3">
+                              {allDiets.map(diet => (
+                                <label
+                                  key={diet.id}
+                                  className="flex items-center gap-2 cursor-pointer"
+                                  data-testid={`checkbox-diet-${diet.id}`}
+                                >
+                                  <Checkbox
+                                    checked={selectedDiets.includes(diet.id)}
+                                    onCheckedChange={() => toggleDiet(diet.id)}
+                                  />
+                                  <span className="text-sm">{diet.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {importBanner && (
+                          currentImageUrl ? (
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={currentImageUrl}
+                                alt="Recipe photo"
+                                className="w-14 h-14 object-cover rounded-md border border-border shrink-0"
+                                onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                              />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-muted-foreground mb-1">Photo imported</p>
+                                <button type="button" className="text-xs text-destructive hover:underline" onClick={() => form.setValue("imageUrl", null as any)}>Remove</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <FormField
+                              control={form.control}
+                              name="imageUrl"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="flex items-center gap-1.5 text-muted-foreground font-normal">
+                                    <ImageIcon className="h-3.5 w-3.5" />
+                                    Photo URL <span className="text-[11px] text-muted-foreground/60">(optional)</span>
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      placeholder="https://example.com/photo.jpg"
+                                      {...field}
+                                      value={field.value ?? ""}
+                                      onChange={e => field.onChange(e.target.value || null)}
+                                      data-testid="input-image-url"
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          )
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                </div>
               );
             })()}
 
-            {/* ── MANUAL FORM ─────────────────────────────────────────────── */}
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Recipe Name</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Spicy Chicken Pasta" {...field} data-testid="input-meal-name" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="space-y-2">
-              <FormLabel>Category</FormLabel>
-              <Select
-                value={selectedCategory ? String(selectedCategory) : ""}
-                onValueChange={(val) => setSelectedCategory(val ? Number(val) : undefined)}
-              >
-                <SelectTrigger data-testid="select-meal-category">
-                  <SelectValue placeholder="Select category..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(cat => {
-                    const Icon = getCategoryIcon(cat.name);
-                    return (
-                      <SelectItem key={cat.id} value={String(cat.id)} data-testid={`option-category-${cat.id}`}>
-                        <span className="flex items-center gap-2">
-                          <Icon className={`h-4 w-4 ${getCategoryColor(cat.name)}`} />
-                          {cat.name}
-                        </span>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
             </div>
-
-            {user?.role === 'admin' && (
-              <FormField
-                control={form.control}
-                name="kind"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Type</FormLabel>
-                    <Select value={field.value ?? "meal"} onValueChange={field.onChange}>
-                      <SelectTrigger data-testid="select-meal-kind">
-                        <SelectValue placeholder="Select type..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="meal">Meal</SelectItem>
-                        <SelectItem value="component">Component</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">Components are reusable building blocks (e.g. Bone Broth, Pepper Sauce) that can be paired with meals.</p>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-
-            <FormField
-              control={form.control}
-              name="servings"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Servings</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={20}
-                      placeholder="How many servings?"
-                      {...field}
-                      onChange={e => field.onChange(parseInt(e.target.value) || 1)}
-                      data-testid="input-meal-servings"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {allDiets.length > 0 && (
-              <div className="space-y-3">
-                <FormLabel>Diet Compatibility</FormLabel>
-                <div className="flex flex-wrap gap-3">
-                  {allDiets.map(diet => (
-                    <label
-                      key={diet.id}
-                      className="flex items-center gap-2 cursor-pointer"
-                      data-testid={`checkbox-diet-${diet.id}`}
-                    >
-                      <Checkbox
-                        checked={selectedDiets.includes(diet.id)}
-                        onCheckedChange={() => toggleDiet(diet.id)}
-                      />
-                      <span className="text-sm">{diet.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <FormLabel>Ingredients</FormLabel>
-              <div className="text-xs text-muted-foreground -mt-1 mb-1 flex gap-2">
-                <span className="w-14 shrink-0 text-center">Qty</span>
-                <span className="w-[72px] shrink-0">Unit</span>
-                <span className="flex-1">Ingredient</span>
-              </div>
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-                {fields.map((field, index) => (
-                  <FormField
-                    key={field.id}
-                    control={form.control}
-                    name={`ingredients.${index}.name`}
-                    render={() => (
-                      <FormItem>
-                        <FormControl>
-                          <IngredientRow
-                            index={index}
-                            amount={form.watch(`ingredients.${index}.amount`)}
-                            unit={form.watch(`ingredients.${index}.unit`)}
-                            name={form.watch(`ingredients.${index}.name`)}
-                            onAmountChange={v => form.setValue(`ingredients.${index}.amount`, v)}
-                            onUnitChange={v => form.setValue(`ingredients.${index}.unit`, v)}
-                            onNameChange={v => form.setValue(`ingredients.${index}.name`, v)}
-                            onRemove={() => remove(index)}
-                            showRemove={!(fields.length === 1 && index === 0)}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                ))}
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="w-full border-dashed"
-                onClick={() => append({ amount: "", unit: "", name: "" })}
-                data-testid="button-add-ingredient"
-              >
-                <Plus className="mr-2 h-3 w-3" />
-                Add Ingredient
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <FormLabel>Method / Instructions</FormLabel>
-              <Textarea
-                placeholder={"Enter the steps, one per line.\n\nE.g.:\nHeat oil in a pan over medium heat.\nAdd onion and cook for 5 minutes.\nStir in remaining ingredients and simmer."}
-                value={instructionsText}
-                onChange={e => setInstructionsText(e.target.value)}
-                className="min-h-[120px] text-sm resize-none"
-                data-testid="textarea-instructions"
-              />
-              <p className="text-[11px] text-muted-foreground">One step per line. Optional but recommended.</p>
-            </div>
-
-            </div>
-            <DialogFooter className="pt-4 shrink-0">
+            <DialogFooter className="pt-3 shrink-0 border-t border-border">
               <Button type="button" variant="outline" onClick={() => handleDialogOpenChange(false)}>Cancel</Button>
               <Button type="submit" disabled={createMeal.isPending} data-testid="button-submit-meal">
                 {createMeal.isPending ? "Creating..." : "Create Recipe"}

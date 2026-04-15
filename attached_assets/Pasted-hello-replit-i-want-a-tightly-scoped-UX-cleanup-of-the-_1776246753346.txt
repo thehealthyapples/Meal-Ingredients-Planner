@@ -1,0 +1,124 @@
+hello replit. i want a tightly scoped UX cleanup of the Add New Recipe modal.
+
+do not redesign the whole app.
+do not implement ingredients-to-recipe generation yet.
+this task is only about making the existing modal cleaner, shorter, and better for mobile.
+
+---
+
+## GOAL
+
+improve the Add New Recipe modal so:
+
+* it feels less long and overwhelming
+* it requires less scrolling, especially on mobile
+* imported recipes are easier to review and edit
+* the primary actions stay visible and accessible
+
+this task should also update the top helper copy so the entry point is future-ready for ingredient-based recipe creation, but do not implement that feature yet.
+
+---
+
+## CURRENT PROBLEMS TO SOLVE
+
+* the modal becomes very long once recipe fields are shown
+* too much scrolling is required inside the modal
+* the top helper text feels disconnected from the actual input
+* after import, the source/import panel takes too much space
+* the Create Recipe action sits too far away from the user on smaller screens
+
+---
+
+## REQUIRED CHANGES
+
+1. update the top helper copy
+   replace the current top helper copy with:
+
+Paste a link, recipe text, or the ingredients you have, and THA will create a recipe card for you - or fill it in manually.
+
+important:
+
+* use "-" hyphen, not an em dash
+* this is copy only, not a feature change
+
+2. split the editor into compact sections
+   after the import area, reorganise the recipe form into clear sections:
+
+* Basics
+* Ingredients
+* Method / Instructions
+* Optional details
+
+3. use progressive disclosure / accordion behaviour
+
+* on mobile: only one section should be expanded at a time
+* on desktop: keep it simple and compact - one open at a time is also acceptable if easier
+* show a compact summary in collapsed section headers where possible, for example:
+
+  * Basics - title, type, servings
+  * Ingredients - number of items
+  * Method / Instructions - number of steps or “empty”
+  * Optional details - collapsed by default
+
+4. make the post-import state more compact
+   after a successful or partial import:
+
+* keep the import source/status visible
+* but reduce its vertical footprint
+* avoid a large stacked warning block if a more compact summary card or inline status treatment can achieve the same thing
+* the import UI should no longer dominate the modal once the editable recipe fields are visible
+
+5. add a sticky footer
+   keep the footer actions visible while scrolling:
+
+* Cancel
+* Create Recipe
+
+the footer should work well on mobile and not cover important content.
+
+---
+
+## IMPORTANT UX CONSTRAINTS
+
+* do not remove any existing recipe fields
+* do not hide important validation or warning states
+* do not change backend logic
+* do not implement ingredients-to-recipe generation in this task
+* do not make the modal feel more complex than it is now
+* optimise for clarity, compactness, and mobile usability
+
+---
+
+## TECHNICAL GUIDANCE
+
+* keep the implementation lightweight
+* reuse existing components where possible
+* avoid introducing large new dependencies
+* keep styling consistent with the current THA look and feel
+* do not do a broad visual redesign
+
+---
+
+## SUCCESS CRITERIA
+
+the modal should:
+
+* feel shorter and less overwhelming
+* require noticeably less scrolling
+* work better on mobile
+* keep the main actions visible
+* preserve current functionality
+* have the new helper copy in place
+
+---
+
+## DELIVERABLE
+
+return:
+
+* files changed
+* exact structural changes made to the modal
+* how accordion/progressive disclosure works
+* how the sticky footer behaves
+* confirmation that existing import/manual flows still work
+* confirmation that the helper copy was updated exactly as written
