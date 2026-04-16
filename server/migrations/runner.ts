@@ -414,9 +414,14 @@ const MIGRATIONS: Migration[] = [
       "ALTER TABLE user_pantry_items ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0",
       // Backfill display_name from ingredient_key for any pre-existing rows
       "UPDATE user_pantry_items SET display_name = ingredient_key WHERE display_name IS NULL",
-      // Widen the category CHECK to include 'household' (seed inserts this value)
+      // Widen the category CHECK to include 'household' and 'fruit'.
+      // 'fruit' rows were seeded before this migration ran (the original inline
+      // constraint was dropped by a drizzle-kit push), so we must include it here
+      // or the ADD CONSTRAINT fails on existing rows.  A later migration
+      // (2026-04-02_add_fruit_pantry_category) already adds 'fruit' to the same
+      // list, so including it now is safe and makes that migration a clean no-op.
       "ALTER TABLE user_pantry_items DROP CONSTRAINT IF EXISTS user_pantry_items_category_check",
-      "ALTER TABLE user_pantry_items ADD CONSTRAINT user_pantry_items_category_check CHECK (category IN ('larder','fridge','freezer','household'))",
+      "ALTER TABLE user_pantry_items ADD CONSTRAINT user_pantry_items_category_check CHECK (category IN ('larder','fridge','freezer','household','fruit'))",
     ],
   },
 
@@ -738,6 +743,48 @@ const MIGRATIONS: Migration[] = [
       // review_suggestions: JSON array of suggested specific variants for ambiguous umbrella terms
       // e.g. ["strawberries","blueberries","raspberries","mixed berries"] for "berries"
       "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS review_suggestions TEXT",
+    ],
+  },
+
+  {
+    id: "2026-04-16_add_guest_eaters_to_planner_entries",
+    statements: [
+      "ALTER TABLE planner_entries ADD COLUMN IF NOT EXISTS guest_eaters JSONB",
+    ],
+  },
+
+  {
+    id: "2026-04-16_ingredient_sources_meal_context",
+    statements: [
+      "ALTER TABLE ingredient_sources ADD COLUMN IF NOT EXISTS eater_ids INTEGER[]",
+      "ALTER TABLE ingredient_sources ADD COLUMN IF NOT EXISTS guest_eaters JSONB",
+    ],
+  },
+
+  {
+    id: "2026-04-16_add_household_eaters_tables",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS household_eaters (
+        id SERIAL PRIMARY KEY,
+        household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+        display_name TEXT NOT NULL,
+        user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        default_diet_types TEXT[],
+        hard_restrictions TEXT[]
+      )`,
+      `CREATE TABLE IF NOT EXISTS planner_entry_eaters (
+        id SERIAL PRIMARY KEY,
+        entry_id INTEGER NOT NULL REFERENCES planner_entries(id) ON DELETE CASCADE,
+        household_eater_id INTEGER NOT NULL REFERENCES household_eaters(id) ON DELETE CASCADE,
+        CONSTRAINT planner_entry_eaters_entry_member_unique UNIQUE (entry_id, household_eater_id)
+      )`,
+      `CREATE TABLE IF NOT EXISTS planner_week_eater_overrides (
+        id SERIAL PRIMARY KEY,
+        week_id INTEGER NOT NULL REFERENCES planner_weeks(id) ON DELETE CASCADE,
+        eater_id INTEGER NOT NULL REFERENCES household_eaters(id) ON DELETE CASCADE,
+        diet_types TEXT[] NOT NULL DEFAULT '{}',
+        CONSTRAINT pweo_week_eater_unique UNIQUE (week_id, eater_id)
+      )`,
     ],
   },
 

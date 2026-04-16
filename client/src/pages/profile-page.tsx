@@ -27,8 +27,9 @@ import {
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
-import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES } from "@/lib/diets";
+import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES, ONBOARDING_DIET_OPTIONS, ALLERGY_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
 import { GOAL_OPTIONS, STORE_OPTIONS, UPF_OPTIONS, BUDGET_OPTIONS, deriveGoalType } from "@/lib/shared-options";
+import type { HouseholdEater } from "@shared/household-eater";
 
 export interface ProfileData {
   id: number;
@@ -161,6 +162,8 @@ export default function ProfilePage() {
       />
 
       <HouseholdManagementSection currentUserId={profile.id} />
+
+      <HouseholdEatersSection />
 
       <GoalsPreferences
         profile={profile}
@@ -688,6 +691,238 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
   );
 }
 
+// ─── Household Eaters Section ────────────────────────────────────────────────
+
+const DIET_OPTIONS_FOR_EATER = DIET_PATTERN_OPTIONS;
+
+function EaterForm({
+  displayName, setDisplayName,
+  selectedDiets, toggleDiet,
+  selectedRestrictions, toggleRestriction,
+}: {
+  displayName: string; setDisplayName: (v: string) => void;
+  selectedDiets: string[]; toggleDiet: (v: string) => void;
+  selectedRestrictions: string[]; toggleRestriction: (v: string) => void;
+}) {
+  return (
+    <div className="space-y-4 py-1">
+      <div className="space-y-1.5">
+        <Label htmlFor="eater-name" className="text-sm">Name</Label>
+        <Input
+          id="eater-name"
+          value={displayName}
+          onChange={e => setDisplayName(e.target.value)}
+          placeholder="e.g. Lily"
+          className="h-8 text-sm"
+          data-testid="input-eater-name"
+        />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-sm">Diet (optional)</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {DIET_OPTIONS_FOR_EATER.map(opt => (
+            <button key={opt.value} type="button" onClick={() => toggleDiet(opt.value)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${selectedDiets.includes(opt.value) ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-foreground"}`}
+              data-testid={`toggle-diet-${opt.value}`}>{opt.label}</button>
+          ))}
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-sm">Allergies &amp; intolerances (optional)</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {ALLERGY_INTOLERANCE_OPTIONS.map(opt => (
+            <button key={opt.value} type="button" onClick={() => toggleRestriction(opt.value)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${selectedRestrictions.includes(opt.value) ? "bg-destructive text-destructive-foreground border-destructive" : "border-border text-muted-foreground hover:border-foreground"}`}
+              data-testid={`toggle-restriction-${opt.value}`}>{opt.label}</button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HouseholdEatersSection() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // add dialog state
+  const [open, setOpen] = useState(false);
+  const [displayName, setDisplayName] = useState("");
+  const [selectedDiets, setSelectedDiets] = useState<string[]>([]);
+  const [selectedRestrictions, setSelectedRestrictions] = useState<string[]>([]);
+
+  // edit dialog state
+  const [editingEater, setEditingEater] = useState<HouseholdEater | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDiets, setEditDiets] = useState<string[]>([]);
+  const [editRestrictions, setEditRestrictions] = useState<string[]>([]);
+
+  const { data: eaters = [], isLoading } = useQuery<HouseholdEater[]>({
+    queryKey: ["/api/household/eaters"],
+  });
+
+  const addMutation = useMutation({
+    mutationFn: (body: { displayName: string; defaultDietTypes: string[]; hardRestrictions: string[] }) =>
+      apiRequest("POST", "/api/household/eaters", body),
+    onSuccess: () => {
+      toast({ title: "Child eater added" });
+      queryClient.invalidateQueries({ queryKey: ["/api/household/eaters"] });
+      setOpen(false);
+      setDisplayName("");
+      setSelectedDiets([]);
+      setSelectedRestrictions([]);
+    },
+    onError: (err: any) => toast({ variant: "destructive", title: "Could not add eater", description: err?.message || "Please try again." }),
+  });
+
+  const editMutation = useMutation({
+    mutationFn: ({ id, body }: { id: string; body: { displayName: string; defaultDietTypes: string[]; hardRestrictions: string[] } }) =>
+      apiRequest("PATCH", `/api/household/eaters/${id}`, body),
+    onSuccess: () => {
+      toast({ title: "Eater updated" });
+      queryClient.invalidateQueries({ queryKey: ["/api/household/eaters"] });
+      setEditingEater(null);
+    },
+    onError: (err: any) => toast({ variant: "destructive", title: "Could not update eater", description: err?.message || "Please try again." }),
+  });
+
+  const openEdit = (eater: HouseholdEater) => {
+    setEditingEater(eater);
+    setEditName(eater.displayName);
+    setEditDiets([...eater.defaultDietTypes]);
+    setEditRestrictions([...eater.hardRestrictions]);
+  };
+
+  const toggleDiet = (v: string) =>
+    setSelectedDiets(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
+
+  const toggleRestriction = (v: string) =>
+    setSelectedRestrictions(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
+
+  const toggleEditDiet = (v: string) =>
+    setEditDiets(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
+
+  const toggleEditRestriction = (v: string) =>
+    setEditRestrictions(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v]);
+
+  if (isLoading) return null;
+
+  return (
+    <>
+      <Card className="p-5 space-y-4" data-testid="card-household-eaters">
+        <div className="flex items-center gap-2">
+          <Baby className="h-4 w-4 text-muted-foreground" />
+          <h3 className="text-sm font-medium">Household Eaters</h3>
+          <span className="text-xs text-muted-foreground ml-1">— who gets meals planned for them</span>
+        </div>
+
+        {eaters.length === 0 ? (
+          <p className="text-xs text-muted-foreground">No eaters yet. Adult members are synced automatically.</p>
+        ) : (
+          <div className="space-y-2">
+            {eaters.map(eater => (
+              <div key={eater.id} className="flex items-center gap-3" data-testid={`row-eater-${eater.id}`}>
+                <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+                  {eater.kind === "child"
+                    ? <Baby className="h-3.5 w-3.5 text-muted-foreground" />
+                    : <PersonStanding className="h-3.5 w-3.5 text-muted-foreground" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate" data-testid={`text-eater-name-${eater.id}`}>{eater.displayName}</p>
+                  {(eater.defaultDietTypes.length > 0 || eater.hardRestrictions.length > 0) && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {[...eater.defaultDietTypes, ...eater.hardRestrictions].join(", ")}
+                    </p>
+                  )}
+                </div>
+                <Badge variant={eater.kind === "child" ? "secondary" : "outline"} className="text-xs shrink-0 capitalize">
+                  {eater.kind}
+                </Badge>
+                {eater.kind === "child" && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => openEdit(eater)}
+                    data-testid={`button-edit-eater-${eater.id}`}
+                    aria-label={`Edit ${eater.displayName}`}
+                  >
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full"
+          onClick={() => setOpen(true)}
+          data-testid="button-add-child-eater"
+        >
+          <Plus className="h-3.5 w-3.5 mr-1.5" /> Add child eater
+        </Button>
+      </Card>
+
+      {/* Add dialog */}
+      <Dialog open={open} onOpenChange={v => { if (!v) { setOpen(false); setDisplayName(""); setSelectedDiets([]); setSelectedRestrictions([]); } }}>
+        <DialogContent className="max-w-sm" data-testid="dialog-add-child-eater">
+          <DialogHeader>
+            <DialogTitle>Add child eater</DialogTitle>
+            <DialogDescription>Add a child or household member without an account.</DialogDescription>
+          </DialogHeader>
+          <EaterForm
+            displayName={displayName} setDisplayName={setDisplayName}
+            selectedDiets={selectedDiets} toggleDiet={toggleDiet}
+            selectedRestrictions={selectedRestrictions} toggleRestriction={toggleRestriction}
+          />
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button
+              size="sm"
+              disabled={!displayName.trim() || addMutation.isPending}
+              onClick={() => addMutation.mutate({ displayName: displayName.trim(), defaultDietTypes: selectedDiets, hardRestrictions: selectedRestrictions })}
+              data-testid="button-confirm-add-eater"
+            >
+              {addMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+              Add
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editingEater} onOpenChange={v => { if (!v) setEditingEater(null); }}>
+        <DialogContent className="max-w-sm" data-testid="dialog-edit-child-eater">
+          <DialogHeader>
+            <DialogTitle>Edit child eater</DialogTitle>
+            <DialogDescription>Update name and dietary preferences.</DialogDescription>
+          </DialogHeader>
+          <EaterForm
+            displayName={editName} setDisplayName={setEditName}
+            selectedDiets={editDiets} toggleDiet={toggleEditDiet}
+            selectedRestrictions={editRestrictions} toggleRestriction={toggleEditRestriction}
+          />
+          <DialogFooter>
+            <Button variant="ghost" size="sm" onClick={() => setEditingEater(null)}>Cancel</Button>
+            <Button
+              size="sm"
+              disabled={!editName.trim() || editMutation.isPending}
+              onClick={() => editingEater && editMutation.mutate({ id: editingEater.id, body: { displayName: editName.trim(), defaultDietTypes: editDiets, hardRestrictions: editRestrictions } })}
+              data-testid="button-confirm-edit-eater"
+            >
+              {editMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export function CalorieSettings({ profile, onSave }: { profile: ProfileData; onSave: (prefs: any) => void }) {
   const prefs = profile.preferences || {};
   const [mode, setMode] = useState<"auto" | "manual">(prefs.calorieMode || "auto");
@@ -920,9 +1155,9 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
             </div>
 
             <div>
-              <Label className="text-xs text-muted-foreground mb-2 block">Dietary restrictions</Label>
+              <Label className="text-xs text-muted-foreground mb-2 block">Allergies &amp; intolerances</Label>
               <div className="flex flex-wrap gap-2">
-                {DIET_RESTRICTIONS.map((r) => (
+                {ALLERGY_INTOLERANCE_OPTIONS.map((r) => (
                   <Badge
                     key={r.value}
                     variant={dietRestrictions.includes(r.value) ? "default" : "outline"}

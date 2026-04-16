@@ -1,4 +1,4 @@
-import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent } from "@shared/schema";
+import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
 import { eq, and, ilike, or, sql, inArray, isNull, isNotNull } from "drizzle-orm";
@@ -237,6 +237,22 @@ export interface IStorage {
   leaveHousehold(userId: number): Promise<Household>;
   renameHousehold(userId: number, householdId: number, name: string): Promise<Household>;
   removeHouseholdMember(actorUserId: number, targetUserId: number): Promise<{ member: HouseholdMember; user: { id: number; displayName: string | null; username: string } }[]>;
+  // Household eaters (Phase 2 + bridge)
+  syncMembersAsEaters(householdId: number): Promise<void>;
+  getHouseholdEaters(householdId: number): Promise<HouseholdEaterRow[]>;
+  createHouseholdEater(householdId: number, data: { displayName: string; userId?: number; defaultDietTypes?: string[]; hardRestrictions?: string[] }): Promise<HouseholdEaterRow>;
+  updateHouseholdEater(eaterId: number, data: { displayName?: string; defaultDietTypes?: string[]; hardRestrictions?: string[] }): Promise<HouseholdEaterRow | undefined>;
+  getPlannerEntryEaters(entryId: number): Promise<HouseholdEaterRow[]>;
+  setPlannerEntryEaters(entryId: number, eaterIds: number[]): Promise<void>;
+  // Week eater overrides (Phase 4)
+  getWeekEaterOverrides(weekId: number): Promise<WeekEaterOverride[]>;
+  setWeekEaterOverride(weekId: number, eaterId: number, dietTypes: string[]): Promise<void>;
+  deleteWeekEaterOverride(weekId: number, eaterId: number): Promise<void>;
+  // Meal adaptation (Phase 3)
+  savePlannerEntryAdaptation(entryId: number, result: import("@shared/meal-adaptation").AdaptationResult): Promise<void>;
+  // Entry guests (Phase 5)
+  getEntryGuests(entryId: number): Promise<import("@shared/household-eater").GuestEater[]>;
+  setEntryGuests(entryId: number, guests: import("@shared/household-eater").GuestEater[]): Promise<void>;
 
   // ── Basket Attribution ───────────────────────────────────────────────────────
   getShoppingListItemsWithAttribution(userId: number): Promise<ShoppingListItemWithAttribution[]>;
@@ -693,7 +709,7 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return updated;
     }
-    const [result] = await db.insert(ingredientSources).values(source).returning();
+    const [result] = await db.insert(ingredientSources).values({ ...source, guestEaters: (source.guestEaters ?? null) as any }).returning();
     return result;
   }
 
@@ -2499,6 +2515,129 @@ export class DatabaseStorage implements IStorage {
         unionExclusions: Array.from(new Set(memberProfiles.flatMap(m => m.excludedIngredients))),
       },
     };
+  }
+
+  // ── Household eaters (Phase 2 + bridge) ─────────────────────────────────────
+
+  /** Ensure every active household_member has a corresponding householdEaters row. */
+  async syncMembersAsEaters(householdId: number): Promise<void> {
+    const members = await db
+      .select({ userId: householdMembers.userId, displayName: users.displayName, username: users.username })
+      .from(householdMembers)
+      .innerJoin(users, eq(householdMembers.userId, users.id))
+      .where(and(eq(householdMembers.householdId, householdId), eq(householdMembers.status, "active")));
+
+    const existing = await db
+      .select({ userId: householdEaters.userId })
+      .from(householdEaters)
+      .where(eq(householdEaters.householdId, householdId));
+
+    const existingUserIds = new Set(existing.map(e => e.userId).filter(Boolean) as number[]);
+
+    for (const m of members) {
+      if (!existingUserIds.has(m.userId)) {
+        await db.insert(householdEaters).values({
+          householdId,
+          displayName: m.displayName || m.username,
+          userId: m.userId,
+          defaultDietTypes: [],
+          hardRestrictions: [],
+        });
+      }
+    }
+  }
+
+  async getHouseholdEaters(householdId: number): Promise<HouseholdEaterRow[]> {
+    return db.select().from(householdEaters)
+      .where(eq(householdEaters.householdId, householdId))
+      .orderBy(householdEaters.id);
+  }
+
+  async createHouseholdEater(
+    householdId: number,
+    data: { displayName: string; userId?: number; defaultDietTypes?: string[]; hardRestrictions?: string[] },
+  ): Promise<HouseholdEaterRow> {
+    const [row] = await db.insert(householdEaters).values({
+      householdId,
+      displayName: data.displayName,
+      userId: data.userId ?? null,
+      defaultDietTypes: data.defaultDietTypes ?? [],
+      hardRestrictions: data.hardRestrictions ?? [],
+    }).returning();
+    return row;
+  }
+
+  async updateHouseholdEater(eaterId: number, data: { displayName?: string; defaultDietTypes?: string[]; hardRestrictions?: string[] }): Promise<HouseholdEaterRow | undefined> {
+    const [row] = await db.update(householdEaters)
+      .set({
+        ...(data.displayName !== undefined ? { displayName: data.displayName } : {}),
+        ...(data.defaultDietTypes !== undefined ? { defaultDietTypes: data.defaultDietTypes } : {}),
+        ...(data.hardRestrictions !== undefined ? { hardRestrictions: data.hardRestrictions } : {}),
+      })
+      .where(eq(householdEaters.id, eaterId))
+      .returning();
+    return row;
+  }
+
+  async getPlannerEntryEaters(entryId: number): Promise<HouseholdEaterRow[]> {
+    return db.select({ householdEaters })
+      .from(plannerEntryEaters)
+      .innerJoin(householdEaters, eq(plannerEntryEaters.householdEaterId, householdEaters.id))
+      .where(eq(plannerEntryEaters.entryId, entryId))
+      .then(rows => rows.map(r => r.householdEaters));
+  }
+
+  async setPlannerEntryEaters(entryId: number, eaterIds: number[]): Promise<void> {
+    await db.delete(plannerEntryEaters).where(eq(plannerEntryEaters.entryId, entryId));
+    if (eaterIds.length === 0) return;
+    await db.insert(plannerEntryEaters).values(
+      eaterIds.map(id => ({ entryId, householdEaterId: id }))
+    );
+  }
+
+  async savePlannerEntryAdaptation(entryId: number, result: import("@shared/meal-adaptation").AdaptationResult): Promise<void> {
+    await db.update(plannerEntries)
+      .set({ adaptationResult: result })
+      .where(eq(plannerEntries.id, entryId));
+  }
+
+  // ── Entry guests (Phase 5) ────────────────────────────────────────────────────
+
+  async getEntryGuests(entryId: number): Promise<import("@shared/household-eater").GuestEater[]> {
+    const [row] = await db.select({ guestEaters: plannerEntries.guestEaters })
+      .from(plannerEntries)
+      .where(eq(plannerEntries.id, entryId));
+    return row?.guestEaters ?? [];
+  }
+
+  async setEntryGuests(entryId: number, guests: import("@shared/household-eater").GuestEater[]): Promise<void> {
+    await db.update(plannerEntries)
+      .set({ guestEaters: guests })
+      .where(eq(plannerEntries.id, entryId));
+  }
+
+  // ── Week eater overrides (Phase 4) ───────────────────────────────────────────
+
+  async getWeekEaterOverrides(weekId: number): Promise<WeekEaterOverride[]> {
+    return db.select().from(plannerWeekEaterOverrides)
+      .where(eq(plannerWeekEaterOverrides.weekId, weekId));
+  }
+
+  async setWeekEaterOverride(weekId: number, eaterId: number, dietTypes: string[]): Promise<void> {
+    await db.insert(plannerWeekEaterOverrides)
+      .values({ weekId, eaterId, dietTypes })
+      .onConflictDoUpdate({
+        target: [plannerWeekEaterOverrides.weekId, plannerWeekEaterOverrides.eaterId],
+        set: { dietTypes },
+      });
+  }
+
+  async deleteWeekEaterOverride(weekId: number, eaterId: number): Promise<void> {
+    await db.delete(plannerWeekEaterOverrides)
+      .where(and(
+        eq(plannerWeekEaterOverrides.weekId, weekId),
+        eq(plannerWeekEaterOverrides.eaterId, eaterId),
+      ));
   }
 
   // ── My Diary ─────────────────────────────────────────────────────────────────

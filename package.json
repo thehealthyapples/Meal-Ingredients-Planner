@@ -6,26 +6,23 @@
   "scripts": {
     "dev": "NODE_ENV=development tsx server/index.ts",
     "dev:reset": "kill -9 $(lsof -t -i:5000) 2>/dev/null || true; NODE_ENV=development tsx server/index.ts",
-
     "build": "tsx script/build.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
-
     "typecheck": "tsc --noEmit",
     "test": "npm run test:additives && npm run test:extracts && npm run test:scoring && npm run test:ingredient-language && npm run test:product-dedup",
-
     "release:check": "npm run typecheck && npm run test && npm run build",
-
     "db:push": "drizzle-kit push",
-
     "seed:additives": "tsx server/seeds/run-additives-seed.ts",
-
     "test:additives": "tsx server/tests/test-additive-detection.ts",
     "test:extracts": "tsx server/tests/test-extract-detection.ts",
     "test:scoring": "tsx server/tests/test-tha-scoring.ts",
     "test:ingredient-language": "tsx server/tests/test-ingredient-language.ts",
-    "test:product-dedup": "tsx server/tests/test-product-dedup.ts"
+    "test:product-dedup": "tsx server/tests/test-product-dedup.ts",
+    "test:household-eater": "tsx server/tests/test-household-eater.ts",
+    "test:guest-eater": "tsx server/tests/test-guest-eater.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.89.0",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@radix-ui/react-accordion": "^1.2.4",

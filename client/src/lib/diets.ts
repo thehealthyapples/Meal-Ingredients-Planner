@@ -20,6 +20,32 @@ export const DIET_RESTRICTIONS = [
 
 export type DietRestrictionValue = (typeof DIET_RESTRICTIONS)[number]["value"];
 
+// ─── Canonical shared options (used across all dietary input surfaces) ────────
+
+/** Diet pattern chips — used on profile, eater form, guest form, planner. */
+export const DIET_PATTERN_OPTIONS = [
+  { value: "Mediterranean", label: "Mediterranean" },
+  { value: "DASH",          label: "DASH" },
+  { value: "MIND",          label: "MIND" },
+  { value: "Flexitarian",   label: "Flexitarian" },
+  { value: "Vegetarian",    label: "Vegetarian" },
+  { value: "Vegan",         label: "Vegan" },
+  { value: "Keto",          label: "Keto" },
+  { value: "Low-Carb",      label: "Low-Carb / Atkins" },
+  { value: "Paleo",         label: "Paleo" },
+  { value: "Carnivore",     label: "Carnivore" },
+] as const;
+
+/** Allergy & intolerance chips — hard constraints, used everywhere. */
+export const ALLERGY_INTOLERANCE_OPTIONS = [
+  { value: "Gluten-Free", label: "Gluten-Free" },
+  { value: "Dairy-Free",  label: "Dairy-Free" },
+  { value: "Nuts",        label: "Nuts" },
+  { value: "Eggs",        label: "Eggs" },
+  { value: "Shellfish",   label: "Shellfish" },
+  { value: "Soy",         label: "Soy" },
+] as const;
+
 export const EATING_SCHEDULES = [
   { value: "None",                 label: "No preference",        desc: "Eat at any time" },
   { value: "Intermittent Fasting", label: "Intermittent Fasting", desc: "Time-restricted eating" },

@@ -1,4 +1,6 @@
 import { pgTable, text, serial, integer, real, boolean, unique, timestamp, varchar, index, jsonb } from "drizzle-orm/pg-core";
+import type { AdaptationResult } from "./meal-adaptation";
+import type { GuestEater } from "./household-eater";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -397,6 +399,10 @@ export const plannerEntries = pgTable("planner_entries", {
   isDrink: boolean("is_drink").notNull().default(false),
   drinkType: text("drink_type"),
   position: integer("position").notNull().default(0),
+  /** AI-generated household adaptation result. Null until user triggers "Tailor for household". */
+  adaptationResult: jsonb("adaptation_result").$type<AdaptationResult>(),
+  /** One-off guest eaters for this entry only. Phase 5. */
+  guestEaters: jsonb("guest_eaters").$type<GuestEater[]>(),
 });
 
 export const diets = pgTable("diets", {
@@ -503,6 +509,7 @@ export type PlannerWeek = typeof plannerWeeks.$inferSelect;
 export type InsertPlannerWeek = z.infer<typeof insertPlannerWeekSchema>;
 export type PlannerDay = typeof plannerDays.$inferSelect;
 export type InsertPlannerDay = z.infer<typeof insertPlannerDaySchema>;
+export type { GuestEater } from "./household-eater";
 export type PlannerEntry = typeof plannerEntries.$inferSelect;
 export type InsertPlannerEntry = z.infer<typeof insertPlannerEntrySchema>;
 
@@ -535,6 +542,9 @@ export const ingredientSources = pgTable("ingredient_sources", {
   weekNumber: integer("week_number"),
   dayOfWeek: integer("day_of_week"),
   mealSlot: text("meal_slot"),
+  /** Meal context captured at add-to-list time (Phase 6 equivalent). */
+  eaterIds: integer("eater_ids").array(),
+  guestEaters: jsonb("guest_eaters").$type<GuestEater[]>(),
 });
 
 export const insertIngredientSourceSchema = createInsertSchema(ingredientSources).pick({
@@ -545,6 +555,8 @@ export const insertIngredientSourceSchema = createInsertSchema(ingredientSources
   weekNumber: true,
   dayOfWeek: true,
   mealSlot: true,
+  eaterIds: true,
+  guestEaters: true,
 });
 
 export type IngredientSource = typeof ingredientSources.$inferSelect;
@@ -1021,6 +1033,33 @@ export const householdMembers = pgTable("household_members", {
   unique("household_members_household_user_unique").on(table.householdId, table.userId),
 ]);
 
+/**
+ * Eaters within a household who meals can be planned for.
+ * Supports both linked users (adults with accounts) and children (userId = null).
+ */
+export const householdEaters = pgTable("household_eaters", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id, { onDelete: "cascade" }),
+  displayName: text("display_name").notNull(),
+  /** Null for children who don't have an account. */
+  userId: integer("user_id").references(() => users.id, { onDelete: "set null" }),
+  /** Soft diet preferences — can be overridden per meal plan. */
+  defaultDietTypes: text("default_diet_types").array(),
+  /** Hard restrictions — always enforced, never overridable. */
+  hardRestrictions: text("hard_restrictions").array(),
+});
+
+/**
+ * Which household eaters are associated with a specific planner entry.
+ */
+export const plannerEntryEaters = pgTable("planner_entry_eaters", {
+  id: serial("id").primaryKey(),
+  entryId: integer("entry_id").notNull().references(() => plannerEntries.id, { onDelete: "cascade" }),
+  householdEaterId: integer("household_eater_id").notNull().references(() => householdEaters.id, { onDelete: "cascade" }),
+}, (table) => [
+  unique("planner_entry_eaters_entry_member_unique").on(table.entryId, table.householdEaterId),
+]);
+
 export const insertHouseholdSchema = createInsertSchema(households).omit({
   id: true,
   createdAt: true,
@@ -1031,10 +1070,30 @@ export const insertHouseholdMemberSchema = createInsertSchema(householdMembers).
   id: true,
 });
 
+export const insertHouseholdEaterSchema = createInsertSchema(householdEaters).omit({ id: true });
+
+/**
+ * Per-week diet override for a household eater.
+ * Replaces defaultDietTypes for the duration of this week only.
+ * hardRestrictions are never touched.
+ */
+export const plannerWeekEaterOverrides = pgTable("planner_week_eater_overrides", {
+  id: serial("id").primaryKey(),
+  weekId: integer("week_id").notNull().references(() => plannerWeeks.id, { onDelete: "cascade" }),
+  eaterId: integer("eater_id").notNull().references(() => householdEaters.id, { onDelete: "cascade" }),
+  dietTypes: text("diet_types").array().notNull().default([]),
+}, (table) => [
+  unique("pweo_week_eater_unique").on(table.weekId, table.eaterId),
+]);
+
 export type Household = typeof households.$inferSelect;
 export type InsertHousehold = z.infer<typeof insertHouseholdSchema>;
 export type HouseholdMember = typeof householdMembers.$inferSelect;
 export type InsertHouseholdMember = z.infer<typeof insertHouseholdMemberSchema>;
+export type HouseholdEaterRow = typeof householdEaters.$inferSelect;
+export type InsertHouseholdEater = z.infer<typeof insertHouseholdEaterSchema>;
+export type PlannerEntryEater = typeof plannerEntryEaters.$inferSelect;
+export type WeekEaterOverride = typeof plannerWeekEaterOverrides.$inferSelect;
 
 // ─── My Diary ─────────────────────────────────────────────────────────────────
 

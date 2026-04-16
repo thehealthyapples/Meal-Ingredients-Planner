@@ -3970,7 +3970,8 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
   app.post(api.shoppingList.generateFromMeals.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      let mealSelections: { mealId: number; count: number }[];
+      type MealSelection = { mealId: number; count: number; eaterIds?: number[]; guestEaters?: { id: string; displayName: string; dietTypes: string[]; hardRestrictions: string[] }[] };
+      let mealSelections: MealSelection[];
 
       if (req.body.mealIds) {
         mealSelections = (req.body.mealIds as number[]).map(id => ({ mealId: id, count: 1 }));
@@ -3984,6 +3985,14 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       for (const fm of freezerMeals) {
         const existing = frozenPortionsByMeal.get(fm.mealId) || 0;
         frozenPortionsByMeal.set(fm.mealId, existing + fm.remainingPortions);
+      }
+
+      // Build a per-mealId context map for later use when creating ingredient sources
+      const mealContextMap = new Map<number, { eaterIds?: number[]; guestEaters?: MealSelection["guestEaters"] }>();
+      for (const sel of mealSelections) {
+        if (sel.eaterIds || sel.guestEaters) {
+          mealContextMap.set(sel.mealId, { eaterIds: sel.eaterIds, guestEaters: sel.guestEaters });
+        }
       }
 
       const allIngredients: string[] = [];
@@ -4057,11 +4066,14 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           validationNote: null,
         });
         items.push(item);
+        const rmCtx = mealContextMap.get(rm.mealId);
         await storage.addIngredientSource({
           shoppingListItemId: item.id,
           mealId: rm.mealId,
           mealName: rm.name,
           quantityMultiplier: rm.count,
+          eaterIds: rmCtx?.eaterIds ?? null,
+          guestEaters: (rmCtx?.guestEaters ?? null) as any,
         });
       }
 
@@ -4100,11 +4112,14 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
         for (const mealInfo of mealMap) {
           if (ingredientMatchesMeal(c.normalizedName, mealInfo.ingredients)) {
+            const mealCtx = mealContextMap.get(mealInfo.meal.id);
             await storage.addIngredientSource({
               shoppingListItemId: item.id,
               mealId: mealInfo.meal.id,
               mealName: mealInfo.meal.name,
               quantityMultiplier: mealInfo.count,
+              eaterIds: mealCtx?.eaterIds ?? null,
+              guestEaters: (mealCtx?.guestEaters ?? null) as any,
             });
           }
         }
@@ -5400,6 +5415,12 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const householdId = await getHouseholdForUser(req.user!.id);
       if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Day not found" });
 
+      const guestEaterSchema = z.object({
+        id: z.string().min(1),
+        displayName: z.string().min(1),
+        dietTypes: z.array(z.string()).default([]),
+        hardRestrictions: z.array(z.string()).default([]),
+      });
       const bodySchema = z.object({
         mealSlot: z.enum(["breakfast", "lunch", "dinner", "snacks"]),
         mealId: z.number().int(),
@@ -5408,6 +5429,9 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         calories: z.number().int().optional(),
         isDrink: z.boolean().optional().default(false),
         drinkType: z.string().nullable().optional(),
+        // Phase 6: optional context captured at add-to-planner time
+        eaterIds: z.array(z.number().int()).optional(),
+        guestEaters: z.array(guestEaterSchema).optional(),
       });
       const parsed = bodySchema.parse(req.body);
 
@@ -5426,6 +5450,15 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         parsed.isDrink,
         parsed.drinkType ?? null,
       );
+
+      // Phase 6: persist eater/guest context if provided
+      if (parsed.eaterIds && parsed.eaterIds.length > 0) {
+        await storage.setPlannerEntryEaters(entry.id, parsed.eaterIds);
+      }
+      if (parsed.guestEaters && parsed.guestEaters.length > 0) {
+        await storage.setEntryGuests(entry.id, parsed.guestEaters);
+      }
+
       res.status(201).json(entry);
     } catch (err: any) {
       if (err?.name === "ZodError") return res.status(400).json({ message: "Invalid input", errors: err.errors });
@@ -7263,6 +7296,468 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     } catch (err) {
       console.error("[HouseholdDietary] error:", err);
       res.status(500).json({ message: "Failed to fetch household dietary context" });
+    }
+  });
+
+  // ── Household Eaters (Phase 2) ────────────────────────────────────────────────
+
+  // List all eaters in the current user's household.
+  // Lazily syncs adult household members into household_eaters on every read.
+  app.get("/api/household/eaters", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      await storage.syncMembersAsEaters(householdId);
+      const rows = await storage.getHouseholdEaters(householdId);
+      const { dbEaterToHouseholdEater } = await import("@shared/household-eater.js");
+      res.json(rows.map(dbEaterToHouseholdEater));
+    } catch (err) {
+      console.error("[HouseholdEaters] GET error:", err);
+      res.status(500).json({ message: "Failed to fetch household eaters" });
+    }
+  });
+
+  // Create a new eater (typically a child without an account).
+  app.post("/api/household/eaters", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const parsed = z.object({
+        displayName: z.string().min(1).max(100),
+        defaultDietTypes: z.array(z.string()).optional(),
+        hardRestrictions: z.array(z.string()).optional(),
+      }).parse(req.body);
+      const row = await storage.createHouseholdEater(householdId, parsed);
+      const { dbEaterToHouseholdEater } = await import("@shared/household-eater.js");
+      res.status(201).json(dbEaterToHouseholdEater(row));
+    } catch (err: any) {
+      if (err?.name === "ZodError") return res.status(400).json({ message: "Invalid input", errors: err.errors });
+      console.error("[HouseholdEaters] POST error:", err);
+      res.status(500).json({ message: "Failed to create household eater" });
+    }
+  });
+
+  // Edit an existing child eater (kind === "child") — adults are synced from accounts.
+  app.patch("/api/household/eaters/:eaterId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const eaterId = Number(req.params.eaterId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const allEaters = await storage.getHouseholdEaters(householdId);
+      const target = allEaters.find(e => e.id === eaterId);
+      if (!target) return res.status(404).json({ message: "Eater not found" });
+      if (target.userId !== null) return res.status(403).json({ message: "Adult eaters cannot be edited here" });
+
+      const parsed = z.object({
+        displayName: z.string().min(1).max(100).optional(),
+        defaultDietTypes: z.array(z.string()).optional(),
+        hardRestrictions: z.array(z.string()).optional(),
+      }).parse(req.body);
+
+      const row = await storage.updateHouseholdEater(eaterId, parsed);
+      if (!row) return res.status(404).json({ message: "Eater not found" });
+      const { dbEaterToHouseholdEater } = await import("@shared/household-eater.js");
+      res.json(dbEaterToHouseholdEater(row));
+    } catch (err: any) {
+      if (err?.name === "ZodError") return res.status(400).json({ message: "Invalid input", errors: err.errors });
+      console.error("[HouseholdEaters] PATCH error:", err);
+      res.status(500).json({ message: "Failed to update eater" });
+    }
+  });
+
+  // Get eaters for a planner entry.
+  // Default: if none are explicitly set, return all adult (userId != null) household eaters.
+  app.get("/api/planner/entries/:entryId/eaters", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const entryId = Number(req.params.entryId);
+      const entry = await storage.getPlannerEntryById(entryId);
+      if (!entry) return res.status(404).json({ message: "Entry not found" });
+      const day = await storage.getPlannerDay(entry.dayId);
+      if (!day) return res.status(404).json({ message: "Entry not found" });
+      const week = await storage.getPlannerWeek(day.weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Entry not found" });
+
+      const { dbEaterToHouseholdEater } = await import("@shared/household-eater.js");
+      let rows = await storage.getPlannerEntryEaters(entryId);
+
+      // Default: no explicit selection yet → return all household eaters (adults + children)
+      if (rows.length === 0) {
+        rows = await storage.getHouseholdEaters(householdId);
+      }
+
+      res.json(rows.map(dbEaterToHouseholdEater));
+    } catch (err) {
+      console.error("[PlannerEntryEaters] GET error:", err);
+      res.status(500).json({ message: "Failed to fetch entry eaters" });
+    }
+  });
+
+  // Set eaters for a planner entry (replaces previous selection).
+  app.put("/api/planner/entries/:entryId/eaters", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const entryId = Number(req.params.entryId);
+      const entry = await storage.getPlannerEntryById(entryId);
+      if (!entry) return res.status(404).json({ message: "Entry not found" });
+      const day = await storage.getPlannerDay(entry.dayId);
+      if (!day) return res.status(404).json({ message: "Entry not found" });
+      const week = await storage.getPlannerWeek(day.weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Entry not found" });
+
+      const { eaterIds } = z.object({
+        eaterIds: z.array(z.number().int().positive()).min(1, "At least one eater must be selected"),
+      }).parse(req.body);
+
+      // Verify all eaterIds belong to this household
+      const allEaters = await storage.getHouseholdEaters(householdId);
+      const validIds = new Set(allEaters.map(e => e.id));
+      if (eaterIds.some(id => !validIds.has(id))) {
+        return res.status(400).json({ message: "One or more eater IDs do not belong to this household" });
+      }
+
+      await storage.setPlannerEntryEaters(entryId, eaterIds);
+      res.json({ success: true });
+    } catch (err: any) {
+      if (err?.name === "ZodError") return res.status(400).json({ message: "Invalid input", errors: err.errors });
+      console.error("[PlannerEntryEaters] PUT error:", err);
+      res.status(500).json({ message: "Failed to set entry eaters" });
+    }
+  });
+
+  // ── Entry guests (Phase 5) ────────────────────────────────────────────────────
+
+  // Get all guest eaters for a planner entry.
+  app.get("/api/planner/entries/:entryId/guests", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const entryId = Number(req.params.entryId);
+      const entry = await storage.getPlannerEntryById(entryId);
+      if (!entry) return res.status(404).json({ message: "Entry not found" });
+      const day = await storage.getPlannerDay(entry.dayId);
+      if (!day) return res.status(404).json({ message: "Entry not found" });
+      const week = await storage.getPlannerWeek(day.weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Entry not found" });
+
+      const guests = await storage.getEntryGuests(entryId);
+      res.json(guests);
+    } catch (err) {
+      console.error("[EntryGuests] GET error:", err);
+      res.status(500).json({ message: "Failed to fetch entry guests" });
+    }
+  });
+
+  // Add a guest eater to a planner entry.
+  app.post("/api/planner/entries/:entryId/guests", async (req, res) => {
+    console.log("[GUEST_DIAG] 1. route hit: POST /api/planner/entries/:entryId/guests");
+    if (!req.isAuthenticated()) {
+      console.log("[GUEST_DIAG] auth failed — 401");
+      return res.sendStatus(401);
+    }
+    try {
+      const entryId = Number(req.params.entryId);
+      console.log("[GUEST_DIAG] 2. entryId =", entryId);
+      console.log("[GUEST_DIAG] 3. authenticated user id =", req.user!.id);
+
+      const entry = await storage.getPlannerEntryById(entryId);
+      if (!entry) { console.log("[GUEST_DIAG] ownership: entry not found"); return res.status(404).json({ message: "Entry not found" }); }
+      const day = await storage.getPlannerDay(entry.dayId);
+      if (!day) { console.log("[GUEST_DIAG] ownership: day not found"); return res.status(404).json({ message: "Entry not found" }); }
+      const week = await storage.getPlannerWeek(day.weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) {
+        console.log("[GUEST_DIAG] ownership check FAILED — week.householdId =", week?.householdId, "user householdId =", householdId);
+        return res.status(404).json({ message: "Entry not found" });
+      }
+      console.log("[GUEST_DIAG] 4. ownership check passed — householdId =", householdId);
+
+      console.log("[GUEST_DIAG] 5. request payload =", JSON.stringify(req.body));
+      const parsed = z.object({
+        id: z.string().min(1).max(100),
+        displayName: z.string().min(1).max(100),
+        dietTypes: z.array(z.string()).default([]),
+        hardRestrictions: z.array(z.string()).default([]),
+      }).parse(req.body);
+      console.log("[GUEST_DIAG] 6. payload validation passed — parsed =", JSON.stringify(parsed));
+
+      const existing = await storage.getEntryGuests(entryId);
+      console.log("[GUEST_DIAG] 7. existing guest array loaded — count =", existing.length);
+
+      // Deduplicate by id
+      const updated = [...existing.filter(g => g.id !== parsed.id), parsed];
+      console.log("[GUEST_DIAG] 8. merged guest array to save — count =", updated.length);
+
+      await storage.setEntryGuests(entryId, updated);
+      console.log("[GUEST_DIAG] 9. DB save passed");
+      console.log("[GUEST_DIAG] 10. returning status 201");
+      res.status(201).json(parsed);
+    } catch (err: any) {
+      if (err?.name === "ZodError") {
+        console.log("[GUEST_DIAG] 6. payload validation FAILED —", JSON.stringify(err.errors));
+        return res.status(400).json({ message: "Invalid input", errors: err.errors });
+      }
+      console.error("[GUEST_DIAG] 9. DB save FAILED — message:", err?.message);
+      console.error("[GUEST_DIAG] stack:", err?.stack);
+      console.error("[GUEST_DIAG] 10. returning status 500");
+      console.error("[EntryGuests] POST error:", err);
+      res.status(500).json({ message: "Failed to add guest" });
+    }
+  });
+
+  // Remove a guest eater from a planner entry.
+  app.delete("/api/planner/entries/:entryId/guests/:guestId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const entryId = Number(req.params.entryId);
+      const guestId = req.params.guestId;
+      const entry = await storage.getPlannerEntryById(entryId);
+      if (!entry) return res.status(404).json({ message: "Entry not found" });
+      const day = await storage.getPlannerDay(entry.dayId);
+      if (!day) return res.status(404).json({ message: "Entry not found" });
+      const week = await storage.getPlannerWeek(day.weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Entry not found" });
+
+      const existing = await storage.getEntryGuests(entryId);
+      const updated = existing.filter(g => g.id !== guestId);
+      await storage.setEntryGuests(entryId, updated);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("[EntryGuests] DELETE error:", err);
+      res.status(500).json({ message: "Failed to remove guest" });
+    }
+  });
+
+  // ── Week eater overrides (Phase 4) ───────────────────────────────────────────
+
+  // Get all overrides for a planner week.
+  app.get("/api/planner/weeks/:weekId/eater-overrides", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const weekId = Number(req.params.weekId);
+      const week = await storage.getPlannerWeek(weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Week not found" });
+      const overrides = await storage.getWeekEaterOverrides(weekId);
+      res.json(overrides);
+    } catch (err) {
+      console.error("[WeekEaterOverrides] GET error:", err);
+      res.status(500).json({ message: "Failed to fetch week overrides" });
+    }
+  });
+
+  // Set (upsert) a single eater's diet override for a week.
+  app.put("/api/planner/weeks/:weekId/eater-overrides/:eaterId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const weekId = Number(req.params.weekId);
+      const eaterId = Number(req.params.eaterId);
+      const week = await storage.getPlannerWeek(weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Week not found" });
+
+      const { dietTypes } = z.object({
+        dietTypes: z.array(z.string()),
+      }).parse(req.body);
+
+      // Verify eater belongs to this household
+      const allEaters = await storage.getHouseholdEaters(householdId);
+      if (!allEaters.some(e => e.id === eaterId)) {
+        return res.status(400).json({ message: "Eater does not belong to this household" });
+      }
+
+      await storage.setWeekEaterOverride(weekId, eaterId, dietTypes);
+      res.json({ success: true });
+    } catch (err: any) {
+      if (err?.name === "ZodError") return res.status(400).json({ message: "Invalid input", errors: err.errors });
+      console.error("[WeekEaterOverrides] PUT error:", err);
+      res.status(500).json({ message: "Failed to set override" });
+    }
+  });
+
+  // Remove an eater's diet override for a week (reverts to defaultDietTypes).
+  app.delete("/api/planner/weeks/:weekId/eater-overrides/:eaterId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const weekId = Number(req.params.weekId);
+      const eaterId = Number(req.params.eaterId);
+      const week = await storage.getPlannerWeek(weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Week not found" });
+      await storage.deleteWeekEaterOverride(weekId, eaterId);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("[WeekEaterOverrides] DELETE error:", err);
+      res.status(500).json({ message: "Failed to remove override" });
+    }
+  });
+
+  // ── Meal Adaptation (Phase 3) ─────────────────────────────────────────────────
+
+  // Trigger AI adaptation for a planner entry.
+  // Gathers meal + selected eaters + diet profiles, calls Claude, stores and returns the result.
+  app.post("/api/planner/entries/:entryId/adapt", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    console.log("[ADAPT_DIAG] 1. route hit");
+    try {
+      const entryId = Number(req.params.entryId);
+      if (isNaN(entryId)) return res.status(400).json({ message: "Invalid entry ID" });
+      console.log("[ADAPT_DIAG] 2. entryId =", entryId);
+      console.log("[ADAPT_DIAG] 3. authenticated user id =", req.user!.id);
+
+      // Ownership check
+      const entry = await storage.getPlannerEntryById(entryId);
+      if (!entry) return res.status(404).json({ message: "Entry not found" });
+      const day = await storage.getPlannerDay(entry.dayId);
+      if (!day) return res.status(404).json({ message: "Entry not found" });
+      const week = await storage.getPlannerWeek(day.weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Entry not found" });
+      console.log("[ADAPT_DIAG] 4. ownership check passed — householdId =", householdId);
+
+      // Gather meal
+      const meal = await storage.getMeal(entry.mealId);
+      if (!meal) return res.status(404).json({ message: "Meal not found" });
+      console.log("[ADAPT_DIAG] 5. resolved planner entry — mealId =", entry.mealId, "meal =", meal.name);
+
+      // Gather eaters (Phase 2 logic — fall back to adults if none explicitly set)
+      const { dbEaterToHouseholdEater, getEffectiveDietProfile, guestEaterToProfile } = await import("@shared/household-eater.js");
+      let eaterRows = await storage.getPlannerEntryEaters(entryId);
+      if (eaterRows.length === 0) {
+        const allEaters = await storage.getHouseholdEaters(householdId);
+        eaterRows = allEaters.filter(e => e.userId != null);
+      }
+
+      // Phase 5: also gather guest eaters for this entry
+      const guestEaters = await storage.getEntryGuests(entryId);
+
+      if (eaterRows.length === 0 && guestEaters.length === 0) {
+        console.log("[ADAPT_DIAG] 6. no eaters found — returning 400");
+        return res.status(400).json({ message: "No eaters found for this entry" });
+      }
+      console.log("[ADAPT_DIAG] 6. resolved eater ids =", eaterRows.map(e => e.id), "names =", eaterRows.map(e => e.displayName), "guests =", guestEaters.map(g => g.displayName));
+
+      const eaters = eaterRows.map(dbEaterToHouseholdEater);
+
+      // Phase 4: apply any weekly overrides before building profiles
+      const weekOverrides = await storage.getWeekEaterOverrides(week.id);
+      const overrideMap = new Map(weekOverrides.map(o => [o.eaterId, { dietTypes: o.dietTypes }]));
+
+      const householdProfiles = eaters.map(e => ({
+        displayName: e.displayName,
+        ...getEffectiveDietProfile(e, overrideMap.get(Number(e.id))),
+      }));
+
+      // Phase 5: map guest eaters into the same profile shape — no overrides apply to guests
+      const guestProfiles = guestEaters.map(g => ({
+        displayName: g.displayName,
+        ...guestEaterToProfile(g),
+      }));
+
+      const profiles = [...householdProfiles, ...guestProfiles];
+      console.log("[ADAPT_DIAG] 7. built effective diet profiles =", JSON.stringify(profiles));
+
+      // Build prompt
+      const ingredientList = (meal.ingredients ?? []).length > 0
+        ? (meal.ingredients ?? []).map(i => `  - ${i}`).join("\n")
+        : "  (no ingredients listed)";
+
+      const eatersSection = profiles.map(p => {
+        const diets = p.dietTypes.length > 0 ? p.dietTypes.join(", ") : "none";
+        const restrictions = p.hardRestrictions.length > 0 ? p.hardRestrictions.join(", ") : "none";
+        return `  - ${p.displayName}: diet pattern=${diets}, allergies & intolerances=${restrictions}`;
+      }).join("\n");
+
+      const userMessage =
+        `Meal: ${meal.name}\n\nIngredients:\n${ingredientList}\n\nEaters:\n${eatersSection}`;
+
+      // Call OpenAI (reuses the same integration as recipe import)
+      console.log("[ADAPT_DIAG] 8. about to call AI — OPENAI_API_KEY present =", !!process.env.OPENAI_API_KEY);
+      const { default: OpenAI } = await import("openai");
+      const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+      const SYSTEM_PROMPT = `You are a household meal adaptation assistant. Suggest small, practical plate-level adjustments to a shared meal so it works for every eater listed.
+
+CORE RULES:
+- One shared meal — never generate separate meals or rewrite the recipe
+- Adaptations must happen at plating, serving, or the final cooking stage only
+- Minimise extra prep and cooking effort
+- Hard restrictions (allergies, intolerances, religious/medical) must NEVER be violated
+- If the base meal is unsafe for an eater, state this clearly in their note — never ignore it
+
+ADAPTATION TYPES:
+- none: eater needs no changes
+- swap: replace one ingredient with another at serving (e.g. swap tuna for butter beans)
+- add_on: add something extra on this eater's plate only (e.g. extra grilled chicken on the side)
+- omission: leave out an ingredient for this eater's plate
+
+Return a JSON object with exactly these keys:
+- baseMealNote: string
+- adaptations: array of { eaterName, changeType ("none"|"swap"|"add_on"|"omission"), note, extraIngredients (string array) }
+- householdExtraIngredients: string array (deduplicated extras shared across eaters)
+- cookingNote: string
+
+Keep notes short and concrete. Never duplicate ingredients across eaters and householdExtraIngredients.`;
+
+      let rawText: string;
+      try {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content: userMessage },
+          ],
+          temperature: 0,
+          max_tokens: 1024,
+          response_format: { type: "json_object" },
+        });
+        rawText = completion.choices[0]?.message?.content?.trim() ?? "";
+        console.log("[ADAPT_DIAG] 9. AI call succeeded — finish_reason =", completion.choices[0]?.finish_reason);
+      } catch (aiErr: any) {
+        console.error("[ADAPT_DIAG] 9. AI call FAILED — status =", aiErr?.status, "error =", aiErr?.message, "full =", aiErr);
+        throw aiErr;
+      }
+
+      console.log("[ADAPT_DIAG] 10. AI raw response (first 500 chars) =", rawText.slice(0, 500));
+
+      let adaptationResult: import("@shared/meal-adaptation").AdaptationResult;
+      try {
+        adaptationResult = JSON.parse(rawText);
+        console.log("[ADAPT_DIAG] 11. JSON parse passed");
+      } catch (parseErr: any) {
+        console.error("[ADAPT_DIAG] 11. JSON parse FAILED —", parseErr?.message, "| raw =", rawText.slice(0, 200));
+        return res.status(502).json({ message: "AI returned invalid JSON — please try again" });
+      }
+
+      // Basic shape validation
+      if (
+        typeof adaptationResult.baseMealNote !== "string" ||
+        !Array.isArray(adaptationResult.adaptations) ||
+        !Array.isArray(adaptationResult.householdExtraIngredients) ||
+        typeof adaptationResult.cookingNote !== "string"
+      ) {
+        console.error("[ADAPT_DIAG] 11. shape validation FAILED — keys =", Object.keys(adaptationResult));
+        return res.status(502).json({ message: "AI returned unexpected shape — please try again" });
+      }
+
+      // Persist and return
+      try {
+        await storage.savePlannerEntryAdaptation(entryId, adaptationResult);
+        console.log("[ADAPT_DIAG] 12. DB save passed");
+      } catch (dbErr: any) {
+        console.error("[ADAPT_DIAG] 12. DB save FAILED —", dbErr?.message, dbErr);
+        throw dbErr;
+      }
+
+      console.log("[ADAPT_DIAG] 13. returning 200");
+      res.json(adaptationResult);
+
+    } catch (err: any) {
+      console.error("[ADAPT_DIAG] caught error — message =", err?.message, "| status =", err?.status, "| stack =", err?.stack);
+      res.status(500).json({ message: "Failed to generate adaptation — please try again" });
     }
   });
 

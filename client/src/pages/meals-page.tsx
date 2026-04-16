@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown, Users, UserPlus } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateMealModal, type ImportedRecipeDraft } from "@/components/create-meal-modal";
@@ -24,6 +24,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { insertMealSchema, type InsertMeal, type Nutrition, type Diet, type MealDiet, type MealCategory, type FreezerMeal, type Meal } from "@shared/schema";
+import type { GuestEater, HouseholdEater } from "@shared/household-eater";
+import { DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -420,9 +422,14 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
   });
 
   const addToListMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (ctx?: { eaterIds?: number[]; guestEaters?: GuestEater[] }) => {
       const res = await apiRequest('POST', api.shoppingList.generateFromMeals.path, {
-        mealSelections: [{ mealId, count: qty }],
+        mealSelections: [{
+          mealId,
+          count: qty,
+          ...(ctx?.eaterIds?.length ? { eaterIds: ctx.eaterIds } : {}),
+          ...(ctx?.guestEaters?.length ? { guestEaters: ctx.guestEaters } : {}),
+        }],
       });
       return res.json();
     },
@@ -458,6 +465,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
   });
 
   const [plannerOpen, setPlannerOpen] = useState(false);
+  const [listContextOpen, setListContextOpen] = useState(false);
 
   return (
     <div className="w-full flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
@@ -625,8 +633,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                   variant="ghost"
                   onClick={(e) => {
                     e.stopPropagation();
-                    addToBasket({ mealId, quantity: qty });
-                    addToListMutation.mutate();
+                    setListContextOpen(true);
                   }}
                   disabled={addToListMutation.isPending}
                   data-testid={`button-add-basket-${mealId}`}
@@ -715,6 +722,17 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
 
       <AddToPlannerDialog mealId={mealId} mealName={mealName} isDrink={isDrink} audience={audience} open={plannerOpen} onOpenChange={setPlannerOpen} />
 
+      <AddToShoppingListDialog
+        mealName={mealName}
+        open={listContextOpen}
+        onOpenChange={setListContextOpen}
+        onAdd={(ctx) => {
+          addToBasket({ mealId, quantity: qty });
+          addToListMutation.mutate(ctx);
+          setListContextOpen(false);
+        }}
+      />
+
       <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -762,6 +780,7 @@ interface PlannerAssignment {
   isDrink: boolean;
 }
 
+
 function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience, open, onOpenChange }: {
   mealId: number;
   mealName: string;
@@ -770,9 +789,20 @@ function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience,
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  // Step 1: where to add | Step 2: who's eating
+  const [step, setStep] = useState<1 | 2>(1);
   const [selectedWeeks, setSelectedWeeks] = useState<Set<number>>(new Set());
   const [selectedDays, setSelectedDays] = useState<Set<number>>(new Set());
   const [selectedSlots, setSelectedSlots] = useState<Set<string>>(new Set());
+
+  // Phase 6 context state
+  const [selectedEaterIds, setSelectedEaterIds] = useState<Set<number>>(new Set());
+  const [pendingGuests, setPendingGuests] = useState<GuestEater[]>([]);
+  const [guestFormOpen, setGuestFormOpen] = useState(false);
+  const [newGuestName, setNewGuestName] = useState("");
+  const [newGuestDietTypes, setNewGuestDietTypes] = useState<Set<string>>(new Set());
+  const [newGuestAllergyTypes, setNewGuestAllergyTypes] = useState<Set<string>>(new Set());
+
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -789,6 +819,18 @@ function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience,
     queryKey: ["/api/user/planner-settings"],
     enabled: open,
   });
+
+  const { data: householdEaters = [] } = useQuery<HouseholdEater[]>({
+    queryKey: ["/api/household/eaters"],
+    enabled: open,
+  });
+
+  // If the query resolves after the user has already reached step 2, seed the default selection.
+  useEffect(() => {
+    if (step === 2 && selectedEaterIds.size === 0 && householdEaters.length > 0) {
+      setSelectedEaterIds(new Set(householdEaters.map(e => Number(e.id))));
+    }
+  }, [step, householdEaters]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const enableBabyMeals = plannerSettings?.enableBabyMeals ?? false;
   const enableChildMeals = plannerSettings?.enableChildMeals ?? false;
@@ -839,18 +881,24 @@ function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience,
     return result;
   }, [selectedWeeks, selectedDays, selectedSlots, plannerWeeks, availableSlots, isDrink, resolvedAudience]);
 
+  const doAdd = async (withContext: boolean) => {
+    const eaterIds = withContext && selectedEaterIds.size > 0 ? Array.from(selectedEaterIds) : undefined;
+    const guests = withContext && pendingGuests.length > 0 ? pendingGuests : undefined;
+    for (const a of assignments) {
+      await apiRequest("POST", `/api/planner/days/${a.dayId}/items`, {
+        mealSlot: a.mealType,
+        audience: a.audience,
+        mealId,
+        isDrink: a.isDrink,
+        position: 0,
+        ...(eaterIds ? { eaterIds } : {}),
+        ...(guests ? { guestEaters: guests } : {}),
+      });
+    }
+  };
+
   const addMutation = useMutation({
-    mutationFn: async () => {
-      for (const a of assignments) {
-        await apiRequest("POST", `/api/planner/days/${a.dayId}/items`, {
-          mealSlot: a.mealType,
-          audience: a.audience,
-          mealId,
-          isDrink: a.isDrink,
-          position: 0,
-        });
-      }
-    },
+    mutationFn: (withContext: boolean) => doAdd(withContext),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/planner/full"] });
       resetState();
@@ -863,9 +911,32 @@ function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience,
 
   const resetState = () => {
     onOpenChange(false);
+    setStep(1);
     setSelectedWeeks(new Set());
     setSelectedDays(new Set());
     setSelectedSlots(new Set());
+    setSelectedEaterIds(new Set());
+    setPendingGuests([]);
+    setGuestFormOpen(false);
+    setNewGuestName("");
+    setNewGuestDietTypes(new Set());
+    setNewGuestAllergyTypes(new Set());
+  };
+
+  const addPendingGuest = () => {
+    const name = newGuestName.trim();
+    if (!name) return;
+    const guest: GuestEater = {
+      id: crypto.randomUUID(),
+      displayName: name,
+      dietTypes: Array.from(newGuestDietTypes),
+      hardRestrictions: Array.from(newGuestAllergyTypes),
+    };
+    setPendingGuests(prev => [...prev, guest]);
+    setNewGuestName("");
+    setNewGuestDietTypes(new Set());
+    setNewGuestAllergyTypes(new Set());
+    setGuestFormOpen(false);
   };
 
   const audienceLabel = resolvedAudience === "baby" ? "Baby" : resolvedAudience === "child" ? "Child" : "";
@@ -875,150 +946,538 @@ function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience,
       <Dialog open={open} onOpenChange={(v) => { if (!v) resetState(); else onOpenChange(v); }}>
         <DialogContent className="max-w-md max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
           <DialogHeader>
-            <DialogTitle>Add to Planner</DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Assign <span className="font-medium text-foreground">{mealName}</span>
-              {isDrink && <Badge variant="secondary" className="ml-1.5 text-[10px]"><Wine className="h-3 w-3 mr-0.5" />Drink</Badge>}
-              {audienceLabel && <Badge variant="secondary" className="ml-1.5 text-[10px]">{audienceLabel}</Badge>}
-              {" "}to one or more weeks, days{!isDrink && ", and meal slots"}.
-            </p>
+            <DialogTitle>{step === 1 ? "Add to Planner" : "Who's eating this meal?"}</DialogTitle>
+            {step === 1 && (
+              <p className="text-sm text-muted-foreground">
+                Assign <span className="font-medium text-foreground">{mealName}</span>
+                {isDrink && <Badge variant="secondary" className="ml-1.5 text-[10px]"><Wine className="h-3 w-3 mr-0.5" />Drink</Badge>}
+                {audienceLabel && <Badge variant="secondary" className="ml-1.5 text-[10px]">{audienceLabel}</Badge>}
+                {" "}to one or more weeks, days{!isDrink && ", and meal slots"}.
+              </p>
+            )}
+            {step === 2 && (
+              <p className="text-sm text-muted-foreground">Optional — skip to add without context.</p>
+            )}
           </DialogHeader>
-          <div className="flex-1 overflow-y-auto space-y-4">
-            {isDrink && !enableDrinks && (
-              <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 border border-border">
-                <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                <p className="text-xs text-muted-foreground">
-                  Drinks are currently disabled in your planner settings. Enable them in the planner to see drink slots.
-                </p>
-              </div>
-            )}
 
-            {resolvedAudience === "baby" && !enableBabyMeals && (
-              <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 border border-border">
-                <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                <p className="text-xs text-muted-foreground">
-                  Baby meal rows are currently disabled in your planner settings. Enable them in the planner to see baby slots.
-                </p>
-              </div>
-            )}
-
-            {resolvedAudience === "child" && !enableChildMeals && (
-              <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 border border-border">
-                <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                <p className="text-xs text-muted-foreground">
-                  Child meal rows are currently disabled in your planner settings. Enable them in the planner to see child slots.
-                </p>
-              </div>
-            )}
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium">Weeks</label>
-                <Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => {
-                  if (selectedWeeks.size === plannerWeeks.length) setSelectedWeeks(new Set());
-                  else setSelectedWeeks(new Set(plannerWeeks.map(w => w.id)));
-                }} data-testid="button-toggle-all-weeks">
-                  {selectedWeeks.size === plannerWeeks.length ? "Deselect All" : "Select All"}
-                </Button>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {plannerWeeks.slice().sort((a, b) => a.weekNumber - b.weekNumber).map((week) => (
-                  <label key={week.id} className="flex items-center gap-2 p-2 rounded-md border border-border cursor-pointer hover-elevate" data-testid={`label-week-${week.weekNumber}`}>
-                    <Checkbox checked={selectedWeeks.has(week.id)} onCheckedChange={(checked) => {
-                      setSelectedWeeks(prev => { const next = new Set(prev); checked ? next.add(week.id) : next.delete(week.id); return next; });
-                    }} />
-                    <span className="text-xs">{week.weekName}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium">Days</label>
-                <Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => {
-                  if (selectedDays.size === 7) setSelectedDays(new Set());
-                  else setSelectedDays(new Set(PLANNER_DAY_ORDER));
-                }} data-testid="button-toggle-all-days">
-                  {selectedDays.size === 7 ? "Deselect All" : "Select All"}
-                </Button>
-              </div>
-              <div className="grid grid-cols-4 gap-2">
-                {PLANNER_DAY_ORDER.map((dayIdx) => (
-                  <label key={dayIdx} className="flex items-center gap-2 p-2 rounded-md border border-border cursor-pointer hover-elevate" data-testid={`label-day-${dayIdx}`}>
-                    <Checkbox checked={selectedDays.has(dayIdx)} onCheckedChange={(checked) => {
-                      setSelectedDays(prev => { const next = new Set(prev); checked ? next.add(dayIdx) : next.delete(dayIdx); return next; });
-                    }} />
-                    <span className="text-xs">{PLANNER_DAY_NAMES[dayIdx].slice(0, 3)}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {!isDrink && (
-              <div>
-                <label className="text-sm font-medium mb-2 block">Meal Slots</label>
-                <div className="grid grid-cols-2 gap-2">
-                  {availableSlots.map((slot) => {
-                    const SlotIcon = slot.icon;
-                    return (
-                      <label key={slot.key} className="flex items-center gap-2 p-2 rounded-md border border-border cursor-pointer hover-elevate" data-testid={`label-slot-${slot.key}`}>
-                        <Checkbox checked={selectedSlots.has(slot.key)} onCheckedChange={(checked) => {
-                          setSelectedSlots(prev => { const next = new Set(prev); checked ? next.add(slot.key) : next.delete(slot.key); return next; });
-                        }} />
-                        <SlotIcon className="h-3.5 w-3.5" />
-                        <span className="text-xs">{slot.label}</span>
-                      </label>
-                    );
-                  })}
+          {/* ── Step 1: where ── */}
+          {step === 1 && (
+            <div className="flex-1 overflow-y-auto space-y-4">
+              {isDrink && !enableDrinks && (
+                <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 border border-border">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    Drinks are currently disabled in your planner settings. Enable them in the planner to see drink slots.
+                  </p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {isDrink && (
-              <div>
-                <label className="text-sm font-medium mb-2 block">Slot</label>
-                <div className="flex gap-2">
-                  <label className="flex items-center gap-2 p-2 rounded-md border border-border cursor-pointer hover-elevate flex-1" data-testid="label-slot-drinks">
-                    <Checkbox checked={selectedSlots.has("drinks")} onCheckedChange={(checked) => {
-                      setSelectedSlots(checked ? new Set(["drinks"]) : new Set());
-                    }} />
-                    <Wine className="h-3.5 w-3.5 text-purple-400" />
-                    <span className="text-xs">Drinks</span>
-                  </label>
+              {resolvedAudience === "baby" && !enableBabyMeals && (
+                <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 border border-border">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    Baby meal rows are currently disabled in your planner settings. Enable them in the planner to see baby slots.
+                  </p>
                 </div>
-              </div>
-            )}
+              )}
 
-            {assignments.length > 0 && (
+              {resolvedAudience === "child" && !enableChildMeals && (
+                <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50 border border-border">
+                  <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    Child meal rows are currently disabled in your planner settings. Enable them in the planner to see child slots.
+                  </p>
+                </div>
+              )}
+
               <div>
-                <label className="text-sm font-medium mb-1.5 block">
-                  {assignments.length} slot{assignments.length !== 1 ? 's' : ''} will be assigned
-                </label>
-                <div className="rounded-md border border-border max-h-32 overflow-y-auto divide-y divide-border">
-                  {assignments.map((a, i) => (
-                    <div key={i} className="flex items-center justify-between px-3 py-1.5 text-xs">
-                      <span className="text-muted-foreground">{a.weekName}</span>
-                      <span>{a.dayName} - {a.slotLabel}{a.audience !== "adult" ? ` (${a.audience})` : ""}</span>
-                    </div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium">Weeks</label>
+                  <Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => {
+                    if (selectedWeeks.size === plannerWeeks.length) setSelectedWeeks(new Set());
+                    else setSelectedWeeks(new Set(plannerWeeks.map(w => w.id)));
+                  }} data-testid="button-toggle-all-weeks">
+                    {selectedWeeks.size === plannerWeeks.length ? "Deselect All" : "Select All"}
+                  </Button>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {plannerWeeks.slice().sort((a, b) => a.weekNumber - b.weekNumber).map((week) => (
+                    <label key={week.id} className="flex items-center gap-2 p-2 rounded-md border border-border cursor-pointer hover-elevate" data-testid={`label-week-${week.weekNumber}`}>
+                      <Checkbox checked={selectedWeeks.has(week.id)} onCheckedChange={(checked) => {
+                        setSelectedWeeks(prev => { const next = new Set(prev); checked ? next.add(week.id) : next.delete(week.id); return next; });
+                      }} />
+                      <span className="text-xs">{week.weekName}</span>
+                    </label>
                   ))}
                 </div>
               </div>
-            )}
-          </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium">Days</label>
+                  <Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => {
+                    if (selectedDays.size === 7) setSelectedDays(new Set());
+                    else setSelectedDays(new Set(PLANNER_DAY_ORDER));
+                  }} data-testid="button-toggle-all-days">
+                    {selectedDays.size === 7 ? "Deselect All" : "Select All"}
+                  </Button>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {PLANNER_DAY_ORDER.map((dayIdx) => (
+                    <label key={dayIdx} className="flex items-center gap-2 p-2 rounded-md border border-border cursor-pointer hover-elevate" data-testid={`label-day-${dayIdx}`}>
+                      <Checkbox checked={selectedDays.has(dayIdx)} onCheckedChange={(checked) => {
+                        setSelectedDays(prev => { const next = new Set(prev); checked ? next.add(dayIdx) : next.delete(dayIdx); return next; });
+                      }} />
+                      <span className="text-xs">{PLANNER_DAY_NAMES[dayIdx].slice(0, 3)}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {!isDrink && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Meal Slots</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {availableSlots.map((slot) => {
+                      const SlotIcon = slot.icon;
+                      return (
+                        <label key={slot.key} className="flex items-center gap-2 p-2 rounded-md border border-border cursor-pointer hover-elevate" data-testid={`label-slot-${slot.key}`}>
+                          <Checkbox checked={selectedSlots.has(slot.key)} onCheckedChange={(checked) => {
+                            setSelectedSlots(prev => { const next = new Set(prev); checked ? next.add(slot.key) : next.delete(slot.key); return next; });
+                          }} />
+                          <SlotIcon className="h-3.5 w-3.5" />
+                          <span className="text-xs">{slot.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {isDrink && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Slot</label>
+                  <div className="flex gap-2">
+                    <label className="flex items-center gap-2 p-2 rounded-md border border-border cursor-pointer hover-elevate flex-1" data-testid="label-slot-drinks">
+                      <Checkbox checked={selectedSlots.has("drinks")} onCheckedChange={(checked) => {
+                        setSelectedSlots(checked ? new Set(["drinks"]) : new Set());
+                      }} />
+                      <Wine className="h-3.5 w-3.5 text-purple-400" />
+                      <span className="text-xs">Drinks</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {assignments.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium mb-1.5 block">
+                    {assignments.length} slot{assignments.length !== 1 ? 's' : ''} will be assigned
+                  </label>
+                  <div className="rounded-md border border-border max-h-32 overflow-y-auto divide-y divide-border">
+                    {assignments.map((a, i) => (
+                      <div key={i} className="flex items-center justify-between px-3 py-1.5 text-xs">
+                        <span className="text-muted-foreground">{a.weekName}</span>
+                        <span>{a.dayName} - {a.slotLabel}{a.audience !== "adult" ? ` (${a.audience})` : ""}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Step 2: who's eating ── */}
+          {step === 2 && (
+            <div className="flex-1 overflow-y-auto space-y-5">
+              {/* Household eaters */}
+              {householdEaters.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Household</label>
+                  <div className="space-y-1.5">
+                    {householdEaters.map(eater => {
+                      const eaterId = Number(eater.id);
+                      const checked = selectedEaterIds.has(eaterId);
+                      return (
+                        <label
+                          key={eater.id}
+                          className="flex items-center gap-2.5 p-2 rounded-md border border-border cursor-pointer hover-elevate"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(v) => {
+                              setSelectedEaterIds(prev => {
+                                const next = new Set(prev);
+                                v ? next.add(eaterId) : next.delete(eaterId);
+                                return next;
+                              });
+                            }}
+                          />
+                          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-sm">{eater.displayName}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Guests */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium">Guests</label>
+                  {!guestFormOpen && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => setGuestFormOpen(true)}
+                    >
+                      <UserPlus className="h-3 w-3 mr-1" />Add guest
+                    </Button>
+                  )}
+                </div>
+
+                {guestFormOpen && (
+                  <div className="space-y-2 p-3 rounded-md border border-border">
+                    <input
+                      className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+                      placeholder="Guest name"
+                      value={newGuestName}
+                      onChange={e => setNewGuestName(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addPendingGuest(); } }}
+                      autoFocus
+                    />
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Diet pattern (optional)</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {DIET_PATTERN_OPTIONS.map(opt => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setNewGuestDietTypes(prev => {
+                              const next = new Set(prev);
+                              next.has(opt.value) ? next.delete(opt.value) : next.add(opt.value);
+                              return next;
+                            })}
+                            className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${newGuestDietTypes.has(opt.value) ? "bg-primary text-primary-foreground border-primary" : "border-border bg-background"}`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Allergies &amp; intolerances (optional)</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {ALLERGY_INTOLERANCE_OPTIONS.map(opt => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setNewGuestAllergyTypes(prev => {
+                              const next = new Set(prev);
+                              next.has(opt.value) ? next.delete(opt.value) : next.add(opt.value);
+                              return next;
+                            })}
+                            className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${newGuestAllergyTypes.has(opt.value) ? "bg-destructive text-destructive-foreground border-destructive" : "border-border bg-background"}`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" className="h-7 text-xs" onClick={addPendingGuest} disabled={!newGuestName.trim()}>Add</Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setGuestFormOpen(false); setNewGuestName(""); setNewGuestDietTypes(new Set()); setNewGuestAllergyTypes(new Set()); }}>Cancel</Button>
+                    </div>
+                  </div>
+                )}
+
+                {pendingGuests.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {pendingGuests.map(g => (
+                      <div key={g.id} className="flex items-center justify-between px-2 py-1.5 rounded-md border border-border text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span>{g.displayName}</span>
+                          {g.dietTypes.length > 0 && (
+                            <span className="text-xs text-muted-foreground truncate">{g.dietTypes.join(", ")}</span>
+                          )}
+                          {g.hardRestrictions.length > 0 && (
+                            <span className="text-xs text-destructive/70 truncate">⚠ {g.hardRestrictions.join(", ")}</span>
+                          )}
+                        </div>
+                        <button onClick={() => setPendingGuests(prev => prev.filter(x => x.id !== g.id))} className="text-muted-foreground hover:text-foreground shrink-0">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {pendingGuests.length === 0 && !guestFormOpen && (
+                  <p className="text-xs text-muted-foreground">No guests added.</p>
+                )}
+              </div>
+            </div>
+          )}
+
           <DialogFooter>
-            <Button variant="outline" onClick={resetState}>Cancel</Button>
-            <Button
-              disabled={assignments.length === 0 || addMutation.isPending}
-              onClick={() => addMutation.mutate()}
-              data-testid="button-confirm-add-planner"
-            >
-              {addMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Assigning...</> : `Assign to ${assignments.length} slot${assignments.length !== 1 ? 's' : ''}`}
-            </Button>
+            {step === 1 && (
+              <>
+                <Button variant="outline" onClick={resetState}>Cancel</Button>
+                <Button
+                  disabled={assignments.length === 0 || addMutation.isPending}
+                  onClick={() => {
+                    setSelectedEaterIds(new Set(householdEaters.map(e => Number(e.id))));
+                    setStep(2);
+                  }}
+                  data-testid="button-confirm-add-planner"
+                >
+                  Next <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                </Button>
+              </>
+            )}
+            {step === 2 && (
+              <>
+                <Button variant="outline" onClick={() => setStep(1)}>Back</Button>
+                <Button
+                  variant="ghost"
+                  disabled={addMutation.isPending}
+                  onClick={() => addMutation.mutate(false)}
+                  data-testid="button-skip-context"
+                >
+                  Skip
+                </Button>
+                <Button
+                  disabled={addMutation.isPending}
+                  onClick={() => addMutation.mutate(true)}
+                  data-testid="button-assign-with-context"
+                >
+                  {addMutation.isPending ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Assigning...</> : `Assign`}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function AddToShoppingListDialog({ mealName, open, onOpenChange, onAdd }: {
+  mealName: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onAdd: (ctx?: { eaterIds?: number[]; guestEaters?: GuestEater[] }) => void;
+}) {
+  const [selectedEaterIds, setSelectedEaterIds] = useState<Set<number>>(new Set());
+  const [pendingGuests, setPendingGuests] = useState<GuestEater[]>([]);
+  const [guestFormOpen, setGuestFormOpen] = useState(false);
+  const [newGuestName, setNewGuestName] = useState("");
+  const [newGuestDietTypes, setNewGuestDietTypes] = useState<Set<string>>(new Set());
+  const [newGuestAllergyTypes, setNewGuestAllergyTypes] = useState<Set<string>>(new Set());
+
+  const { data: householdEaters = [] } = useQuery<HouseholdEater[]>({
+    queryKey: ["/api/household/eaters"],
+    enabled: open,
+  });
+
+  // Pre-select all household eaters when dialog opens (or query resolves)
+  useEffect(() => {
+    if (open && householdEaters.length > 0 && selectedEaterIds.size === 0) {
+      setSelectedEaterIds(new Set(householdEaters.map(e => Number(e.id))));
+    }
+  }, [open, householdEaters]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const reset = () => {
+    setSelectedEaterIds(new Set());
+    setPendingGuests([]);
+    setGuestFormOpen(false);
+    setNewGuestName("");
+    setNewGuestDietTypes(new Set());
+    setNewGuestAllergyTypes(new Set());
+  };
+
+  const addPendingGuest = () => {
+    const name = newGuestName.trim();
+    if (!name) return;
+    const guest: GuestEater = {
+      id: crypto.randomUUID(),
+      displayName: name,
+      dietTypes: Array.from(newGuestDietTypes),
+      hardRestrictions: Array.from(newGuestAllergyTypes),
+    };
+    setPendingGuests(prev => [...prev, guest]);
+    setNewGuestName("");
+    setNewGuestDietTypes(new Set());
+    setNewGuestAllergyTypes(new Set());
+    setGuestFormOpen(false);
+  };
+
+  const handleClose = (v: boolean) => {
+    if (!v) reset();
+    onOpenChange(v);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <DialogHeader>
+          <DialogTitle>Who's eating this meal?</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Optional — skip to add <span className="font-medium text-foreground">{mealName}</span> without context.
+          </p>
+        </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto space-y-5">
+          {/* Household eaters */}
+          {householdEaters.length > 0 && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">Household</label>
+              <div className="space-y-1.5">
+                {householdEaters.map(eater => {
+                  const eaterId = Number(eater.id);
+                  const checked = selectedEaterIds.has(eaterId);
+                  return (
+                    <label
+                      key={eater.id}
+                      className="flex items-center gap-2.5 p-2 rounded-md border border-border cursor-pointer hover-elevate"
+                    >
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(v) => {
+                          setSelectedEaterIds(prev => {
+                            const next = new Set(prev);
+                            v ? next.add(eaterId) : next.delete(eaterId);
+                            return next;
+                          });
+                        }}
+                      />
+                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm">{eater.displayName}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Guests */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-sm font-medium">Guests</label>
+              {!guestFormOpen && (
+                <Button variant="ghost" size="sm" className="h-6 text-xs" onClick={() => setGuestFormOpen(true)}>
+                  <UserPlus className="h-3 w-3 mr-1" />Add guest
+                </Button>
+              )}
+            </div>
+
+            {guestFormOpen && (
+              <div className="space-y-2 p-3 rounded-md border border-border">
+                <input
+                  className="w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+                  placeholder="Guest name"
+                  value={newGuestName}
+                  onChange={e => setNewGuestName(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addPendingGuest(); } }}
+                  autoFocus
+                />
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Diet pattern (optional)</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {DIET_PATTERN_OPTIONS.map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setNewGuestDietTypes(prev => {
+                          const next = new Set(prev);
+                          next.has(opt.value) ? next.delete(opt.value) : next.add(opt.value);
+                          return next;
+                        })}
+                        className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${newGuestDietTypes.has(opt.value) ? "bg-primary text-primary-foreground border-primary" : "border-border bg-background"}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Allergies &amp; intolerances (optional)</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ALLERGY_INTOLERANCE_OPTIONS.map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setNewGuestAllergyTypes(prev => {
+                          const next = new Set(prev);
+                          next.has(opt.value) ? next.delete(opt.value) : next.add(opt.value);
+                          return next;
+                        })}
+                        className={`px-2 py-0.5 rounded-full text-xs border transition-colors ${newGuestAllergyTypes.has(opt.value) ? "bg-destructive text-destructive-foreground border-destructive" : "border-border bg-background"}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" className="h-7 text-xs" onClick={addPendingGuest} disabled={!newGuestName.trim()}>Add</Button>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setGuestFormOpen(false); setNewGuestName(""); setNewGuestDietTypes(new Set()); setNewGuestAllergyTypes(new Set()); }}>Cancel</Button>
+                </div>
+              </div>
+            )}
+
+            {pendingGuests.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {pendingGuests.map(g => (
+                  <div key={g.id} className="flex items-center justify-between px-2 py-1.5 rounded-md border border-border text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span>{g.displayName}</span>
+                      {g.dietTypes.length > 0 && (
+                        <span className="text-xs text-muted-foreground truncate">{g.dietTypes.join(", ")}</span>
+                      )}
+                      {g.hardRestrictions.length > 0 && (
+                        <span className="text-xs text-destructive/70 truncate">⚠ {g.hardRestrictions.join(", ")}</span>
+                      )}
+                    </div>
+                    <button onClick={() => setPendingGuests(prev => prev.filter(x => x.id !== g.id))} className="text-muted-foreground hover:text-foreground shrink-0">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {pendingGuests.length === 0 && !guestFormOpen && (
+              <p className="text-xs text-muted-foreground">No guests added.</p>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => handleClose(false)}>Cancel</Button>
+          <Button
+            variant="ghost"
+            onClick={() => { reset(); onAdd(undefined); }}
+          >
+            Skip
+          </Button>
+          <Button
+            onClick={() => {
+              const ctx = {
+                eaterIds: selectedEaterIds.size > 0 ? Array.from(selectedEaterIds) : undefined,
+                guestEaters: pendingGuests.length > 0 ? pendingGuests : undefined,
+              };
+              reset();
+              onAdd(ctx);
+            }}
+          >
+            Add
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1145,6 +1604,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
   const [pendingAction, setPendingAction] = useState<string | null>(null);
   const [localMealId, setLocalMealId] = useState<number | null>(importedMealId);
   const [plannerOpen, setPlannerOpen] = useState(false);
+  const [listContextOpen, setListContextOpen] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const { isMealInBasket, addToBasket } = useBasket();
@@ -1205,14 +1665,23 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
     setPendingAction(null);
   };
 
-  const handleBasket = async () => {
+  const handleBasket = () => {
+    setListContextOpen(true);
+  };
+
+  const doAddToList = async (ctx?: { eaterIds?: number[]; guestEaters?: GuestEater[] }) => {
     setPendingAction("basket");
     const mealId = await ensureImported();
     if (!mealId) { setPendingAction(null); return; }
     try {
       addToBasket({ mealId, quantity: 1 });
       const res = await apiRequest('POST', api.shoppingList.generateFromMeals.path, {
-        mealSelections: [{ mealId, count: 1 }],
+        mealSelections: [{
+          mealId,
+          count: 1,
+          ...(ctx?.eaterIds?.length ? { eaterIds: ctx.eaterIds } : {}),
+          ...(ctx?.guestEaters?.length ? { guestEaters: ctx.guestEaters } : {}),
+        }],
       });
       await res.json();
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
@@ -1341,6 +1810,16 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
       {localMealId && (
         <AddToPlannerDialog mealId={localMealId} mealName={recipe.name} isDrink={false} audience="adult" open={plannerOpen} onOpenChange={setPlannerOpen} />
       )}
+
+      <AddToShoppingListDialog
+        mealName={recipe.name}
+        open={listContextOpen}
+        onOpenChange={setListContextOpen}
+        onAdd={(ctx) => {
+          setListContextOpen(false);
+          doAddToList(ctx);
+        }}
+      />
 
       <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
         <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">

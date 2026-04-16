@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store, Users, Wand2 } from "lucide-react";
 import { CreateMealModal } from "@/components/create-meal-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -25,7 +25,10 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@shared/routes";
-import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutrition, MealCategory } from "@shared/schema";
+import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutrition, MealCategory, WeekEaterOverride } from "@shared/schema";
+import type { HouseholdEater, GuestEater } from "@shared/household-eater";
+import type { AdaptationResult } from "@shared/meal-adaptation";
+import { ONBOARDING_DIET_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
 
 interface FullDay extends PlannerDay {
   entries: PlannerEntry[];
@@ -564,6 +567,129 @@ export default function WeeklyPlannerPage() {
     });
     return map;
   }, [nutritionData]);
+
+  // ── Household eaters (Phase 2) ────────────────────────────────────────────────
+  const { data: householdEaters = [] } = useQuery<HouseholdEater[]>({
+    queryKey: ["/api/household/eaters"],
+  });
+
+  const { data: entryEaters = [] } = useQuery<HouseholdEater[]>({
+    queryKey: ["/api/planner/entries", mealDetail?.entry.id, "eaters"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/planner/entries/${mealDetail!.entry.id}/eaters`);
+      return res.json();
+    },
+    enabled: !!mealDetail,
+  });
+
+  const setEntryEatersMutation = useMutation({
+    mutationFn: async ({ entryId, eaterIds }: { entryId: number; eaterIds: number[] }) => {
+      const res = await apiRequest("PUT", `/api/planner/entries/${entryId}/eaters`, { eaterIds });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/entries", mealDetail?.entry.id, "eaters"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update eaters", variant: "destructive" });
+    },
+  });
+
+  // ── Week eater overrides (Phase 4) ───────────────────────────────────────────
+  const [weekDietsOpen, setWeekDietsOpen] = useState(false);
+
+  const activeWeekId = fullPlanner.find((w) => w.weekNumber === Number(activeWeek))?.id;
+
+  const { data: weekOverrides = [] } = useQuery<WeekEaterOverride[]>({
+    queryKey: ["/api/planner/weeks", activeWeekId, "eater-overrides"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/planner/weeks/${activeWeekId}/eater-overrides`);
+      return res.json();
+    },
+    enabled: !!activeWeekId && householdEaters.length > 0,
+  });
+
+  const setOverrideMutation = useMutation({
+    mutationFn: async ({ eaterId, dietTypes }: { eaterId: number; dietTypes: string[] }) => {
+      const res = await apiRequest("PUT", `/api/planner/weeks/${activeWeekId}/eater-overrides/${eaterId}`, { dietTypes });
+      if (!res.ok) throw new Error("Failed to save override");
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/planner/weeks", activeWeekId, "eater-overrides"] }),
+    onError: () => toast({ title: "Failed to save diet override", variant: "destructive" }),
+  });
+
+  const deleteOverrideMutation = useMutation({
+    mutationFn: async (eaterId: number) => {
+      const res = await apiRequest("DELETE", `/api/planner/weeks/${activeWeekId}/eater-overrides/${eaterId}`);
+      if (!res.ok) throw new Error("Failed to remove override");
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["/api/planner/weeks", activeWeekId, "eater-overrides"] }),
+    onError: () => toast({ title: "Failed to remove diet override", variant: "destructive" }),
+  });
+
+  // ── Meal adaptation (Phase 3) ────────────────────────────────────────────────
+  const [adaptationOpen, setAdaptationOpen] = useState(false);
+
+  const adaptMutation = useMutation({
+    mutationFn: async (entryId: number): Promise<AdaptationResult> => {
+      const res = await apiRequest("POST", `/api/planner/entries/${entryId}/adapt`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message ?? "Failed to generate adaptation");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      // Refresh the planner so the stored result is reflected
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      setAdaptationOpen(true);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Adaptation failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  // ── Entry guests (Phase 5) ────────────────────────────────────────────────────
+  const [addGuestOpen, setAddGuestOpen] = useState(false);
+  const [guestName, setGuestName] = useState("");
+  const [guestDietTypes, setGuestDietTypes] = useState<string[]>([]);
+  const [guestRestrictions, setGuestRestrictions] = useState<string[]>([]);
+
+  const { data: entryGuests = [] } = useQuery<GuestEater[]>({
+    queryKey: ["/api/planner/entries", mealDetail?.entry.id, "guests"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/planner/entries/${mealDetail!.entry.id}/guests`);
+      return res.json();
+    },
+    enabled: !!mealDetail,
+  });
+
+  const addGuestMutation = useMutation({
+    mutationFn: async (guest: GuestEater) => {
+      const res = await apiRequest("POST", `/api/planner/entries/${mealDetail!.entry.id}/guests`, guest);
+      if (!res.ok) throw new Error("Failed to add guest");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/entries", mealDetail?.entry.id, "guests"] });
+      setGuestName("");
+      setGuestDietTypes([]);
+      setGuestRestrictions([]);
+      setAddGuestOpen(false);
+    },
+    onError: () => toast({ title: "Failed to add guest", variant: "destructive" }),
+  });
+
+  const removeGuestMutation = useMutation({
+    mutationFn: async (guestId: string) => {
+      const res = await apiRequest("DELETE", `/api/planner/entries/${mealDetail!.entry.id}/guests/${guestId}`);
+      if (!res.ok) throw new Error("Failed to remove guest");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/entries", mealDetail?.entry.id, "guests"] });
+    },
+    onError: () => toast({ title: "Failed to remove guest", variant: "destructive" }),
+  });
 
   const renameMutation = useMutation({
     mutationFn: async ({ weekId, weekName }: { weekId: number; weekName: string }) => {
@@ -1408,6 +1534,85 @@ export default function WeeklyPlannerPage() {
           )}
         </AnimatePresence>
 
+        {/* ── Phase 4: This week's household diet overrides ── */}
+        {householdEaters.length > 0 && activeWeekId && (
+          <div className="mb-4" data-testid="section-week-diets">
+            <button
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
+              onClick={() => setWeekDietsOpen(o => !o)}
+              data-testid="button-toggle-week-diets"
+            >
+              <Users className="h-3.5 w-3.5" />
+              <span>This week's household diets</span>
+              {weekOverrides.length > 0 && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">{weekOverrides.length} override{weekOverrides.length !== 1 ? "s" : ""}</Badge>
+              )}
+              {weekDietsOpen ? <ChevronUp className="h-3 w-3 ml-auto" /> : <ChevronDown className="h-3 w-3 ml-auto" />}
+            </button>
+
+            {weekDietsOpen && (
+              <Card className="p-4 space-y-3" data-testid="card-week-diets">
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Override a member's default diet for this week only. Hard restrictions are always kept.
+                </p>
+                {householdEaters.map(eater => {
+                  const eaterId = Number(eater.id);
+                  const override = weekOverrides.find(o => o.eaterId === eaterId);
+                  const activeDiets: string[] = override ? override.dietTypes : eater.defaultDietTypes;
+                  const isOverridden = !!override;
+
+                  const toggle = (diet: string) => {
+                    const next = activeDiets.includes(diet)
+                      ? activeDiets.filter(d => d !== diet)
+                      : [...activeDiets, diet];
+                    setOverrideMutation.mutate({ eaterId, dietTypes: next });
+                  };
+
+                  return (
+                    <div key={eater.id} className="space-y-1.5" data-testid={`row-week-diet-${eater.id}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium">{eater.displayName}</span>
+                        {isOverridden && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-600 border-amber-400">this week</Badge>
+                        )}
+                        {isOverridden && (
+                          <button
+                            className="text-[10px] text-muted-foreground hover:text-destructive ml-auto transition-colors"
+                            onClick={() => deleteOverrideMutation.mutate(eaterId)}
+                            disabled={deleteOverrideMutation.isPending}
+                            data-testid={`button-reset-override-${eater.id}`}
+                          >
+                            Reset to default
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {ONBOARDING_DIET_OPTIONS.slice(0, 8).map(opt => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => toggle(opt.value)}
+                            className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+                              activeDiets.includes(opt.value)
+                                ? isOverridden
+                                  ? "bg-amber-100 text-amber-800 border-amber-400 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-600"
+                                  : "bg-primary/10 text-primary border-primary/40"
+                                : "border-border text-muted-foreground hover:border-foreground/40"
+                            }`}
+                            data-testid={`chip-diet-${eater.id}-${opt.value}`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </Card>
+            )}
+          </div>
+        )}
+
         {fullPlanner.map((week) => (
           <TabsContent key={week.id} value={String(week.weekNumber)} className="mt-0">
 
@@ -1736,7 +1941,7 @@ export default function WeeklyPlannerPage() {
       />
 
       {/* ── Meal Detail Modal ── */}
-      <Dialog open={!!mealDetail} onOpenChange={(v) => !v && setMealDetail(null)}>
+      <Dialog open={!!mealDetail} onOpenChange={(v) => { if (!v) { setMealDetail(null); setAdaptationOpen(false); adaptMutation.reset(); setAddGuestOpen(false); setGuestName(""); setGuestDietTypes([]); setGuestRestrictions([]); } }}>
         <DialogContent
           className="max-w-[640px] max-h-[82vh] overflow-y-auto bg-[hsl(var(--background))] border-border p-0"
           style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
@@ -1810,6 +2015,263 @@ export default function WeeklyPlannerPage() {
                       </Badge>
                     )}
                   </div>
+
+                  {/* Eater selector */}
+                  {householdEaters.length > 0 && (
+                    <div>
+                      <h3 className="text-sm font-semibold mb-2 text-foreground">Who's eating this?</h3>
+                      <div className="flex flex-col gap-1.5">
+                        {householdEaters.map((eater) => {
+                          const checked = entryEaters.some(e => e.id === eater.id);
+                          return (
+                            <label
+                              key={eater.id}
+                              className="flex items-center gap-2 text-sm cursor-pointer select-none"
+                            >
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={(next) => {
+                                  const currentIds = entryEaters.map(e => Number(e.id));
+                                  const eaterId = Number(eater.id);
+                                  const newIds = next
+                                    ? [...currentIds, eaterId]
+                                    : currentIds.filter(id => id !== eaterId);
+                                  setEntryEatersMutation.mutate({ entryId: entry.id, eaterIds: newIds });
+                                }}
+                              />
+                              <span className="text-foreground/90">{eater.displayName}</span>
+                              {eater.kind === "child" && (
+                                <span className="text-[10px] text-muted-foreground">(child)</span>
+                              )}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Guest eaters (Phase 5) ── */}
+                  {householdEaters.length > 0 && (
+                    <div data-testid="section-guests">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Guests</span>
+                        <button
+                          className="text-xs text-primary hover:underline flex items-center gap-1"
+                          onClick={() => setAddGuestOpen(o => !o)}
+                          data-testid="button-add-guest"
+                        >
+                          <Plus className="h-3 w-3" />
+                          Add guest
+                        </button>
+                      </div>
+
+                      {/* Inline add-guest form */}
+                      {addGuestOpen && (
+                        <div className="border border-border rounded-md p-2.5 space-y-2 mb-2 bg-muted/20" data-testid="form-add-guest">
+                          <Input
+                            placeholder="Guest name"
+                            value={guestName}
+                            onChange={e => setGuestName(e.target.value)}
+                            className="h-7 text-xs"
+                            data-testid="input-guest-name"
+                          />
+                          {/* Diet pattern chips */}
+                          <div>
+                            <p className="text-[10px] text-muted-foreground mb-1">Diet pattern (optional)</p>
+                            <div className="flex flex-wrap gap-1">
+                              {DIET_PATTERN_OPTIONS.map(opt => (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => setGuestDietTypes(prev => prev.includes(opt.value) ? prev.filter(d => d !== opt.value) : [...prev, opt.value])}
+                                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                                    guestDietTypes.includes(opt.value)
+                                      ? "bg-primary text-primary-foreground border-primary"
+                                      : "border-border text-muted-foreground hover:border-foreground/40"
+                                  }`}
+                                  data-testid={`chip-guest-diet-${opt.value}`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {/* Allergy & intolerance chips */}
+                          <div>
+                            <p className="text-[10px] text-muted-foreground mb-1">Allergies &amp; intolerances (optional)</p>
+                            <div className="flex flex-wrap gap-1">
+                              {ALLERGY_INTOLERANCE_OPTIONS.map(opt => (
+                                <button
+                                  key={opt.value}
+                                  type="button"
+                                  onClick={() => setGuestRestrictions(prev => prev.includes(opt.value) ? prev.filter(r => r !== opt.value) : [...prev, opt.value])}
+                                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                                    guestRestrictions.includes(opt.value)
+                                      ? "bg-destructive text-destructive-foreground border-destructive"
+                                      : "border-border text-muted-foreground hover:border-foreground/40"
+                                  }`}
+                                  data-testid={`chip-guest-restriction-${opt.value}`}
+                                >
+                                  {opt.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setAddGuestOpen(false); setGuestName(""); setGuestDietTypes([]); setGuestRestrictions([]); }}>
+                              Cancel
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="h-7 text-xs"
+                              disabled={!guestName.trim() || addGuestMutation.isPending}
+                              onClick={() => {
+                                if (!guestName.trim()) return;
+                                addGuestMutation.mutate({
+                                  id: crypto.randomUUID(),
+                                  displayName: guestName.trim(),
+                                  dietTypes: guestDietTypes,
+                                  hardRestrictions: guestRestrictions,
+                                });
+                              }}
+                              data-testid="button-save-guest"
+                            >
+                              {addGuestMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Add"}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Guest list */}
+                      {entryGuests.length > 0 && (
+                        <div className="space-y-1" data-testid="guest-list">
+                          {entryGuests.map(guest => (
+                            <div key={guest.id} className="flex items-center justify-between text-sm" data-testid={`guest-row-${guest.id}`}>
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="text-foreground/90 truncate">{guest.displayName}</span>
+                                <span className="text-[10px] text-muted-foreground shrink-0">(guest)</span>
+                                {guest.hardRestrictions.length > 0 && (
+                                  <span className="text-[10px] text-destructive/70 truncate">
+                                    ⚠ {guest.hardRestrictions.join(", ")}
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                className="text-muted-foreground hover:text-destructive ml-2 shrink-0 transition-colors"
+                                onClick={() => removeGuestMutation.mutate(guest.id)}
+                                disabled={removeGuestMutation.isPending}
+                                data-testid={`button-remove-guest-${guest.id}`}
+                                aria-label={`Remove ${guest.displayName}`}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {entryGuests.length === 0 && !addGuestOpen && (
+                        <p className="text-xs text-muted-foreground">No guests for this meal.</p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Tailor for household (Phase 3) */}
+                  {(householdEaters.length > 1 || entryGuests.length > 0) && (
+                    <div className="border border-border rounded-lg overflow-hidden">
+                      {/* Header row — always visible */}
+                      <div className="flex items-center justify-between px-3 py-2 bg-muted/30">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-sm font-medium text-foreground">Tailor for household</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {/* Re-run / run button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs"
+                            disabled={adaptMutation.isPending}
+                            onClick={() => adaptMutation.mutate(entry.id)}
+                            data-testid="button-adapt"
+                          >
+                            {adaptMutation.isPending ? (
+                              <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Tailoring…</>
+                            ) : (entry.adaptationResult || adaptMutation.data) ? (
+                              <><RefreshCw className="h-3 w-3 mr-1" />Re-tailor</>
+                            ) : (
+                              <><Wand2 className="h-3 w-3 mr-1" />Tailor</>
+                            )}
+                          </Button>
+                          {/* Collapse toggle — shown only when result exists */}
+                          {(entry.adaptationResult || adaptMutation.data) && !adaptMutation.isPending && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2"
+                              onClick={() => setAdaptationOpen(o => !o)}
+                            >
+                              {adaptationOpen
+                                ? <ChevronUp className="h-3.5 w-3.5" />
+                                : <ChevronDown className="h-3.5 w-3.5" />}
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Result body — collapsed by default */}
+                      {(() => {
+                        const result: AdaptationResult | null | undefined =
+                          adaptMutation.data ?? (entry.adaptationResult as AdaptationResult | null);
+                        if (!result || !adaptationOpen || adaptMutation.isPending) return null;
+                        return (
+                          <div className="px-3 py-3 space-y-3 border-t border-border bg-background">
+                            {/* Base meal note */}
+                            {result.baseMealNote && (
+                              <p className="text-xs text-muted-foreground italic">{result.baseMealNote}</p>
+                            )}
+                            {/* Per-eater adaptations */}
+                            <ul className="space-y-1.5">
+                              {result.adaptations.map((a, i) => (
+                                <li key={i} className="text-sm flex items-start gap-2">
+                                  <span className="shrink-0 font-medium text-foreground min-w-[80px]">
+                                    {a.eaterName}
+                                  </span>
+                                  <span className="text-foreground/80">
+                                    {a.changeType === "none" ? (
+                                      <span className="text-muted-foreground">as normal</span>
+                                    ) : (
+                                      <>
+                                        {a.note}
+                                        {a.extraIngredients.length > 0 && (
+                                          <span className="text-muted-foreground">
+                                            {" "}(needs: {a.extraIngredients.join(", ")})
+                                          </span>
+                                        )}
+                                      </>
+                                    )}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                            {/* Extra ingredients summary */}
+                            {result.householdExtraIngredients.length > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                <span className="font-medium">Extra to buy:</span>{" "}
+                                {result.householdExtraIngredients.join(", ")}
+                              </p>
+                            )}
+                            {/* Cooking note */}
+                            {result.cookingNote && (
+                              <p className="text-xs text-foreground/70 bg-muted/30 rounded px-2 py-1.5">
+                                {result.cookingNote}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
 
                   {/* Two-column layout: Ingredients + Instructions */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -190,6 +190,14 @@ export const api = {
         mealSelections: z.array(z.object({
           mealId: z.number(),
           count: z.number().min(1).default(1),
+          /** Optional meal context captured at add-to-list time. */
+          eaterIds: z.array(z.number().int()).optional(),
+          guestEaters: z.array(z.object({
+            id: z.string(),
+            displayName: z.string(),
+            dietTypes: z.array(z.string()).default([]),
+            hardRestrictions: z.array(z.string()).default([]),
+          })).optional(),
         })),
       }),
     },
