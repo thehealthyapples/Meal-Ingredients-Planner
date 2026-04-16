@@ -3077,7 +3077,6 @@ export default function MealsPage() {
                                         onImport={handleWebImport}
                                         nutritionMap={nutritionMap}
                                         onFreezeClick={importedMealId ? () => setAddToFreezerMealId(importedMealId) : undefined}
-                                        onAddToList={handleAddToListFromCookbook}
                                       />
                                     </div>
                                   )}
@@ -3441,7 +3440,6 @@ export default function MealsPage() {
                         sourceUrl={meal.sourceUrl}
                         mealFormat={meal.mealFormat}
                         instructions={meal.instructions}
-                        onAddToList={handleAddToListFromCookbook}
                       />
                       {!meal.imageUrl && !meal.isReadyMeal && !meal.isSystemMeal && meal.mealFormat !== "grouped" && (
                         <Button
@@ -3579,7 +3577,6 @@ export default function MealsPage() {
                             sourceUrl={meal.sourceUrl}
                             mealFormat={meal.mealFormat}
                             instructions={meal.instructions}
-                            onAddToList={handleAddToListFromCookbook}
                           />
                           {!meal.imageUrl && !meal.isReadyMeal && !meal.isSystemMeal && meal.mealFormat !== "grouped" && (
                             <Button
@@ -4263,7 +4260,6 @@ export default function MealsPage() {
                                         onImport={handleWebImport}
                                         nutritionMap={nutritionMap}
                                         onFreezeClick={importedMealId ? () => setAddToFreezerMealId(importedMealId) : undefined}
-                                        onAddToList={handleAddToListFromCookbook}
                                       />
                                     </div>
                                   )}
