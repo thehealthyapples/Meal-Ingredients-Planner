@@ -19,6 +19,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { TemplatesPanel } from "@/components/templates-panel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
+import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@/lib/nutrition-variety";
+import { getMealNutrients } from "@/lib/nutrition-insights";
+import { NutritionVarietyDots } from "@/components/nutrition-variety-chips";
+import { MealNutrientTags } from "@/components/nutrition-insights-panel";
 import { DayViewDrawer } from "@/components/day-view-drawer";
 import { useUser } from "@/hooks/use-user";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -234,6 +238,8 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
   const sourceUrl = entry.candidate.sourceUrl || meal?.sourceUrl || null;
   const ingredientList = (entry.candidate.ingredients?.length ? entry.candidate.ingredients : null) || meal?.ingredients || [];
   const ingredientCount = ingredientList.length || null;
+  const varietyScore = useMemo(() => computeMealVariety(ingredientList), [ingredientList]);
+  const nutrientTags = useMemo(() => getMealNutrients(ingredientList), [ingredientList]);
   const servings = entry.candidate.servings || meal?.servings || null;
   const primaryProtein = entry.candidate.primaryProtein || null;
   const upfScore = entry.candidate.estimatedUPFScore ?? null;
@@ -267,6 +273,8 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
             {dietTypes.includes('gluten-free') && <Badge variant="outline" className="text-[10px] h-4 px-1 border-amber-500/50 text-amber-600 dark:text-amber-400">GF</Badge>}
           </div>
           <p className="text-sm font-semibold leading-snug mb-1">{entry.candidate.name}</p>
+          <NutritionVarietyDots score={varietyScore} />
+          <MealNutrientTags nutrients={nutrientTags} />
           <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
             {cuisine && <span className="capitalize">{cuisine}</span>}
             {primaryProtein && <span className="capitalize">{primaryProtein}</span>}

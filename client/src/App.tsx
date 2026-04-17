@@ -20,7 +20,6 @@ import MealsPage from "@/pages/meals-page";
 import ShoppingListPage from "@/pages/shopping-list-page";
 import ImportRecipePage from "@/pages/import-recipe-page";
 import ProductsPage from "@/pages/products-page";
-import MealPlannerPage from "@/pages/meal-planner-page";
 import SupermarketsPage from "@/pages/supermarkets-page";
 import MealDetailPage from "@/pages/meal-detail-page";
 import WeeklyPlannerPage from "@/pages/weekly-planner-page";
@@ -132,8 +131,7 @@ function Router() {
       <Route path="/import-recipe" component={() => <ProtectedRoute component={ImportRecipePage} />} />
       <Route path="/analyse-basket" component={() => <ProtectedRoute component={ShoppingListPage} />} />
       <Route path="/products" component={() => <ProtectedRoute component={ProductsPage} />} />
-      <Route path="/planner" component={() => <ProtectedRoute component={MealPlannerPage} />} />
-      <Route path="/weekly-planner" component={() => <ProtectedRoute component={WeeklyPlannerPage} />} />
+<Route path="/weekly-planner" component={() => <ProtectedRoute component={WeeklyPlannerPage} />} />
       <Route path="/supermarkets" component={() => <ProtectedRoute component={SupermarketsPage} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersPage} />} />

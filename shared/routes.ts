@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertMealSchema, insertShoppingListItemSchema, insertMealPlanSchema, insertMealPlanEntrySchema } from './schema';
+import { insertMealSchema, insertShoppingListItemSchema } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -176,13 +176,6 @@ export const api = {
       method: 'DELETE' as const,
       path: '/api/shopping-list' as const,
     },
-    generateFromPlan: {
-      method: 'POST' as const,
-      path: '/api/shopping-list/from-plan' as const,
-      input: z.object({
-        planId: z.number(),
-      }),
-    },
     generateFromMeals: {
       method: 'POST' as const,
       path: '/api/shopping-list/from-meals' as const,
@@ -322,61 +315,6 @@ export const api = {
     byCountry: {
       method: 'GET' as const,
       path: '/api/supermarkets/:country' as const,
-    },
-  },
-  mealPlans: {
-    list: {
-      method: 'GET' as const,
-      path: '/api/meal-plans' as const,
-    },
-    get: {
-      method: 'GET' as const,
-      path: '/api/meal-plans/:id' as const,
-    },
-    create: {
-      method: 'POST' as const,
-      path: '/api/meal-plans' as const,
-      input: insertMealPlanSchema,
-    },
-    delete: {
-      method: 'DELETE' as const,
-      path: '/api/meal-plans/:id' as const,
-    },
-    addEntry: {
-      method: 'POST' as const,
-      path: '/api/meal-plans/:id/entries' as const,
-      input: z.object({
-        dayOfWeek: z.number().min(0).max(6),
-        slot: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
-        mealId: z.number(),
-        mealTemplateId: z.number().optional(),
-        resolvedSourceType: z.string().optional(),
-      }),
-    },
-    removeEntry: {
-      method: 'DELETE' as const,
-      path: '/api/meal-plan-entries/:id' as const,
-    },
-    getEntries: {
-      method: 'GET' as const,
-      path: '/api/meal-plans/:id/entries' as const,
-    },
-    suggest: {
-      method: 'POST' as const,
-      path: '/api/meal-plans/suggest' as const,
-      input: z.object({
-        dietId: z.number().optional(),
-        calorieTarget: z.number().optional(),
-        peopleCount: z.number().optional(),
-      }).optional(),
-    },
-    duplicate: {
-      method: 'POST' as const,
-      path: '/api/meal-plans/:id/duplicate' as const,
-      input: z.object({
-        weekStart: z.string(),
-        name: z.string(),
-      }),
     },
   },
 };

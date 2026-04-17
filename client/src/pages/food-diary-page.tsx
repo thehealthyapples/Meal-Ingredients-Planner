@@ -27,6 +27,10 @@ import {
   ChevronDown, Heart, Flame, Target, Activity, Droplet,
   Gift, ClipboardCheck, PiggyBank, Search,
 } from "lucide-react";
+import { computeMealVariety } from "@/lib/nutrition-variety";
+import { DayVarietySummary } from "@/components/nutrition-variety-chips";
+import { getMealNutrients } from "@/lib/nutrition-insights";
+import { DayNutrientSummary, NutrientSupportWidget } from "@/components/nutrition-insights-panel";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { HealthSnapshot, GoalsPreferences, CalorieSettings, ProfileData } from "./profile-page";
 import { useToast } from "@/hooks/use-toast";
@@ -1405,6 +1409,35 @@ export default function FoodDiaryPage() {
     return base;
   }, [diary?.entries]);
 
+  // Build a name→ingredients lookup from saved meals for variety scoring.
+  const mealIngredientMap = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const m of savedMeals) {
+      map.set(m.name.toLowerCase(), m.ingredients);
+    }
+    return map;
+  }, [savedMeals]);
+
+  // Compute day-level variety from all diary entries.
+  // Matched entries use the saved meal's ingredient list; unmatched entries
+  // are passed as a single ingredient string (covers simple items like "Banana").
+  const diaryVarietyScore = useMemo(() => {
+    const allIngredients = (diary?.entries ?? []).flatMap((entry) => {
+      const found = mealIngredientMap.get(entry.name.toLowerCase());
+      return found ?? [entry.name];
+    });
+    return computeMealVariety(allIngredients);
+  }, [diary?.entries, mealIngredientMap]);
+
+  // Compute day-level nutrient tags from the same ingredient pool.
+  const diaryNutrients = useMemo(() => {
+    const allIngredients = (diary?.entries ?? []).flatMap((entry) => {
+      const found = mealIngredientMap.get(entry.name.toLowerCase());
+      return found ?? [entry.name];
+    });
+    return getMealNutrients(allIngredients);
+  }, [diary?.entries, mealIngredientMap]);
+
   const trendChartData = useMemo(() => {
     return trends.map((t) => ({
       date: t.date.slice(5),
@@ -1674,6 +1707,17 @@ export default function FoodDiaryPage() {
                     );
                   })}
                 </div>
+
+                {diaryVarietyScore.total > 0 && (
+                  <DayVarietySummary
+                    score={diaryVarietyScore}
+                    className="px-0.5"
+                  />
+                )}
+                {diaryNutrients.length > 0 && (
+                  <DayNutrientSummary nutrients={diaryNutrients} />
+                )}
+                <NutrientSupportWidget />
               </div>
 
               {/* ── Middle: Daily Signals ─────────────────────────── */}
