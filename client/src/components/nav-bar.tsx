@@ -11,8 +11,8 @@ import {
 import {
   LayoutDashboard, CalendarDays, ShoppingBasket,
   LogOut, ShieldCheck, Star,
-  Mail, Sliders, Search, ChevronLeft, ChevronRight,
-  Microscope, BookOpen, Heart, ScrollText, ChefHat,
+  Sliders, Search, ChevronLeft, ChevronRight,
+  Microscope, BookOpen, Heart, ChefHat,
   User, NotepadText,
 } from "lucide-react";
 import { api } from "@shared/routes";
@@ -598,8 +598,4 @@ export function MobileNav() {
       </div>
     </nav>
   );
-}
-
-export function NavBar() {
-  return null;
 }

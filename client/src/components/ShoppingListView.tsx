@@ -58,10 +58,7 @@ interface ShoppingListViewProps {
   pantryKeySet: Set<string>;
   measurementPref: "metric" | "imperial";
   allPriceMatches: ProductMatch[];
-  /** DB-backed status update — preferred over onToggleBought. */
   onUpdateStatus?: (id: number, status: string) => void;
-  /** Legacy: writes the boolean `checked` field. Used as fallback when onUpdateStatus is absent. */
-  onToggleBought?: (id: number, checked: boolean) => void;
   onClose: () => void;
   /** Pre-select a supermarket when the view opens. */
   initialStore?: string;
@@ -530,7 +527,6 @@ export default function ShoppingListView({
   measurementPref,
   allPriceMatches,
   onUpdateStatus,
-  onToggleBought,
   onClose,
   initialStore,
   initialPhase,
@@ -681,9 +677,6 @@ export default function ShoppingListView({
       onUpdateStatus(item.id, dbStatus);
       return;
     }
-    // Legacy local-state path
-    if (next === "in_basket" && !item.checked) onToggleBought?.(item.id, true);
-    else if (next !== "in_basket" && item.checked) onToggleBought?.(item.id, false);
     setNotInShop((prev) => {
       const s = new Set(prev);
       if (next === "not_in_shop") s.add(item.id);

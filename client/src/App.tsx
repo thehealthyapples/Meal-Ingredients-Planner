@@ -10,7 +10,7 @@ import { Loader2 } from "lucide-react";
 import { TopBar, DesktopSidebar, MobileNav } from "@/components/nav-bar";
 import OrchardBackdrop from "@/components/layout/orchard-backdrop";
 import OrchardShell from "@/components/layout/orchard-shell";
-import DemoBanner from "@/components/DemoBanner";
+import TrialBanner from "@/components/TrialBanner";
 import SiteBanner from "@/components/SiteBanner";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
@@ -30,11 +30,6 @@ import AdminRecipeSourcesPage from "@/pages/admin-recipe-sources-page";
 import SharedPlanPage from "@/pages/shared-plan-page";
 import PantryPage from "@/pages/pantry-page";
 import FoodDiaryPage from "@/pages/food-diary-page";
-import DemoRoute from "@/components/demo-route";
-import DemoOverviewPage from "@/pages/demo-overview-page";
-import DemoPlannerPage from "@/pages/demo-planner-page";
-import DemoBasketPage from "@/pages/demo-basket-page";
-import DemoMealsPage from "@/pages/demo-meals-page";
 import PartnersPage from "@/pages/partners-page";
 import QuickMealPage from "@/pages/quick-meal-page";
 import ListPage from "@/pages/list-page";
@@ -59,7 +54,7 @@ function HomeRoute() {
       <div className="relative min-h-[100dvh]">
         <OrchardBackdrop />
         <div className="relative z-10 flex flex-col h-[100dvh]">
-          {user.isDemo && <DemoBanner />}
+          {user.isDemo && <TrialBanner />}
           <TopBar />
           <SiteBanner />
           <div className="flex flex-1 overflow-hidden">
@@ -98,7 +93,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     <div className="relative min-h-[100dvh]">
       <OrchardBackdrop />
       <div className="relative z-10 flex flex-col h-[100dvh]">
-        {user?.isDemo && <DemoBanner />}
+        {user?.isDemo && <TrialBanner />}
         <TopBar />
         <SiteBanner />
         <div className="flex flex-1 overflow-hidden">
@@ -143,11 +138,6 @@ function Router() {
       <Route path="/partners" component={() => <ProtectedRoute component={PartnersPage} />} />
       <Route path="/quick-meal" component={() => <ProtectedRoute component={QuickMealPage} />} />
       <Route path="/list" component={() => <ProtectedRoute component={ListPage} />} />
-
-      <Route path="/demo" component={() => <DemoRoute component={DemoOverviewPage} />} />
-      <Route path="/demo/planner" component={() => <DemoRoute component={DemoPlannerPage} />} />
-      <Route path="/demo/basket" component={() => <DemoRoute component={DemoBasketPage} />} />
-      <Route path="/demo/meals" component={() => <DemoRoute component={DemoMealsPage} />} />
 
       <Route component={NotFound} />
     </Switch>

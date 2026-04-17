@@ -25,18 +25,18 @@ const VALUE_BLOCKS = [
 
 export default function HomePage() {
   const [, setLocation] = useLocation();
-  const [demoStarting, setDemoStarting] = useState(false);
+  const [trialStarting, setTrialStarting] = useState(false);
   const valueSectionRef = useRef<HTMLElement>(null);
 
-  const handleDemo = async () => {
-    if (demoStarting) return;
-    setDemoStarting(true);
+  const handleTrial = async () => {
+    if (trialStarting) return;
+    setTrialStarting(true);
     try {
       const res = await fetch("/api/demo/start", { method: "POST", credentials: "include" });
       if (!res.ok) throw new Error();
       window.location.href = "/";
     } catch {
-      setDemoStarting(false);
+      setTrialStarting(false);
     }
   };
 
@@ -101,16 +101,16 @@ export default function HomePage() {
                   <Button
                     size="lg"
                     className="h-auto py-3 px-7 flex flex-col items-center justify-center gap-0.5 w-full sm:min-w-[280px]"
-                    onClick={handleDemo}
-                    disabled={demoStarting}
+                    onClick={handleTrial}
+                    disabled={trialStarting}
                     data-testid="button-hero-explore"
                   >
-                    {demoStarting ? (
+                    {trialStarting ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <>
                         <span className="font-semibold">Explore The Healthy Apples →</span>
-                        <span className="text-xs opacity-75">Instant access · No signup · 20-minute demo</span>
+                        <span className="text-xs opacity-75">Instant access · No signup · 20-minute trial</span>
                       </>
                     )}
                   </Button>
@@ -228,17 +228,17 @@ export default function HomePage() {
               size="lg"
               variant="ghost"
               className="group hover:shadow-sm hover:-translate-y-px transition-all"
-              onClick={handleDemo}
-              disabled={demoStarting}
+              onClick={handleTrial}
+              disabled={trialStarting}
               data-testid="button-final-explore"
             >
-              {demoStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {trialStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Explore The Healthy Apples
               <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Button>
           </div>
           <p className="text-xs text-muted-foreground/50">
-            Instant access &nbsp;·&nbsp; No signup &nbsp;·&nbsp; 20-minute demo
+            Instant access &nbsp;·&nbsp; No signup &nbsp;·&nbsp; 20-minute trial
           </p>
         </section>
 

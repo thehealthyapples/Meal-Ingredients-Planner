@@ -7,7 +7,7 @@ async function throwIfResNotOk(res: Response) {
       try {
         const json = JSON.parse(text);
         if (json?.code === "DEMO_EXPIRED") {
-          window.location.href = "/auth?demo=expired";
+          window.location.href = "/auth?trial=expired";
           return;
         }
       } catch { }

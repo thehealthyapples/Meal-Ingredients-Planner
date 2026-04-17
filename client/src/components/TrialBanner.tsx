@@ -10,7 +10,7 @@ function formatCountdown(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-export default function DemoBanner() {
+export default function TrialBanner() {
   const { user } = useUser();
   const [msLeft, setMsLeft] = useState<number>(0);
   const [dismissed, setDismissed] = useState(false);
@@ -25,7 +25,7 @@ export default function DemoBanner() {
       const remaining = new Date(user.demoExpiresAt!).getTime() - Date.now();
       setMsLeft(Math.max(0, remaining));
       if (remaining <= 0) {
-        window.location.href = "/auth?demo=expired";
+        window.location.href = "/auth?trial=expired";
       }
     };
 
@@ -64,7 +64,7 @@ export default function DemoBanner() {
           ? "bg-amber-500 text-amber-950"
           : "bg-primary text-primary-foreground"
       }`}
-      data-testid="banner-demo-mode"
+      data-testid="banner-trial-mode"
       role="status"
       aria-live="polite"
     >
@@ -77,8 +77,8 @@ export default function DemoBanner() {
       {isWarning ? (
         <div className="flex-1 min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <span className="font-semibold whitespace-nowrap">
-            Demo ending in{" "}
-            <span className="font-mono" data-testid="text-demo-countdown">
+            Trial ending in{" "}
+            <span className="font-mono" data-testid="text-trial-countdown">
               {isExpired ? "0:00" : formatCountdown(msLeft)}
             </span>
           </span>
@@ -101,13 +101,13 @@ export default function DemoBanner() {
                   placeholder="your@email.com"
                   disabled={submitState === "loading"}
                   className="h-7 px-2.5 rounded text-sm bg-white/90 text-gray-900 placeholder-gray-400 border-0 outline-none focus:ring-2 focus:ring-amber-800/40 disabled:opacity-60 w-44"
-                  data-testid="input-demo-email"
+                  data-testid="input-trial-email"
                 />
                 <button
                   type="submit"
                   disabled={submitState === "loading" || !email.trim()}
                   className="h-7 px-3 rounded bg-amber-800 text-amber-50 text-xs font-semibold hover:bg-amber-900 disabled:opacity-50 transition-colors flex items-center gap-1"
-                  data-testid="button-demo-claim"
+                  data-testid="button-trial-claim"
                 >
                   {submitState === "loading" ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
@@ -124,17 +124,17 @@ export default function DemoBanner() {
         </div>
       ) : (
         <span className="flex-1 min-w-0">
-          <span className="font-semibold">Demo account</span>
+          <span className="font-semibold">Time trial</span>
           {" - "}
           <span className="opacity-90">
-            Some features are limited. Changes are temporary and not saved permanently.
+            You have full access to The Healthy Apples. Changes are temporary.
           </span>
           {" "}
           <span
             className="font-mono font-bold"
-            data-testid="text-demo-countdown"
+            data-testid="text-trial-countdown"
           >
-            Session expires in {isExpired ? "0:00" : formatCountdown(msLeft)}.
+            Trial expires in {isExpired ? "0:00" : formatCountdown(msLeft)}.
           </span>
         </span>
       )}
@@ -142,8 +142,8 @@ export default function DemoBanner() {
       <button
         onClick={() => setDismissed(true)}
         className="ml-2 shrink-0 opacity-70 hover:opacity-100 transition-opacity"
-        aria-label="Dismiss demo banner"
-        data-testid="button-dismiss-demo-banner"
+        aria-label="Dismiss trial banner"
+        data-testid="button-dismiss-trial-banner"
       >
         <X className="h-4 w-4" />
       </button>

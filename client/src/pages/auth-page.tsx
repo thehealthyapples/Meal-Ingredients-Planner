@@ -65,7 +65,7 @@ export default function AuthPage() {
   const [resetState, setResetState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [resetError, setResetError] = useState("");
 
-  const [demoStarting, setDemoStarting] = useState(false);
+  const [trialStarting, setTrialStarting] = useState(false);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
 
   const searchString = useSearch();
@@ -73,7 +73,7 @@ export default function AuthPage() {
   const verified = params.get("verified") === "1";
   const verifyError = params.get("verify_error");
   const resetTokenParam = params.get("reset_token");
-  const demoExpired = params.get("demo") === "expired";
+  const trialExpired = params.get("trial") === "expired";
   const forceRegister = params.get("register") === "1";
 
   useEffect(() => {
@@ -85,9 +85,9 @@ export default function AuthPage() {
     }
   }, [resetTokenParam, forceRegister]);
 
-  const handleDemoStart = async () => {
-    if (demoStarting) return;
-    setDemoStarting(true);
+  const handleTrialStart = async () => {
+    if (trialStarting) return;
+    setTrialStarting(true);
     try {
       const res = await fetch("/api/demo/start", {
         method: "POST",
@@ -96,7 +96,7 @@ export default function AuthPage() {
       if (!res.ok) throw new Error("Failed to start demo");
       window.location.href = "/";
     } catch {
-      setDemoStarting(false);
+      setTrialStarting(false);
     }
   };
 
@@ -284,10 +284,10 @@ export default function AuthPage() {
         <div className="w-full max-w-md bg-white rounded-2xl shadow-md p-8 space-y-5">
 
           {/* Status banners */}
-          {demoExpired && (
-            <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800" data-testid="banner-demo-expired">
+          {trialExpired && (
+            <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-800" data-testid="banner-trial-expired">
               <AlertTriangle className="h-5 w-5 flex-shrink-0" />
-              <p className="text-sm font-medium">Your demo session has ended. Create an account to save your progress and continue.</p>
+              <p className="text-sm font-medium">Your trial has ended. Create an account to save your progress and continue.</p>
             </div>
           )}
           {verified && (
@@ -615,17 +615,17 @@ export default function AuthPage() {
               {/* Explore CTA - secondary route, below main auth flow */}
               <div className="pt-3 border-t border-border/40">
                 <button
-                  onClick={handleDemoStart}
-                  disabled={demoStarting}
+                  onClick={handleTrialStart}
+                  disabled={trialStarting}
                   className="w-full flex flex-col items-center justify-center gap-0.5 px-4 py-3 rounded-xl border border-primary/25 bg-primary/5 text-primary hover:bg-primary/10 transition-colors disabled:opacity-60"
-                  data-testid="button-explore-demo"
+                  data-testid="button-start-trial"
                 >
-                  {demoStarting ? (
+                  {trialStarting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <>
-                      <span className="text-sm font-semibold">Explore The Healthy Apples →</span>
-                      <span className="text-xs opacity-70">Instant access · No signup · 20-minute demo</span>
+                      <span className="text-sm font-semibold">Start a free trial →</span>
+                      <span className="text-xs opacity-70">Instant access · No signup · 20-minute time trial</span>
                     </>
                   )}
                 </button>

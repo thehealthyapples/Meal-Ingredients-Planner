@@ -73,7 +73,6 @@ import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import FoodKnowledgeModal from "@/components/food-knowledge-modal";
 import WholeFoodSelector from "@/components/whole-food-selector";
 import ShoppingListView from "@/components/ShoppingListView";
-import ShopModeView from "@/components/ShopModeView";
 
 type ShoppingListItemExtended = ShoppingListItem & {
   addedByDisplayName?: string | null;
@@ -1540,8 +1539,6 @@ export default function ShoppingListPage() {
   const [viewMode, setViewMode] = useState<"basket" | "shop">(() => {
     try { return new URLSearchParams(window.location.search).get("shopMode") === "1" ? "shop" : "basket"; } catch { return "basket"; }
   });
-  // shopModeOpen kept so the inline ShopModeView section compiles until it is removed in a later step.
-  const [shopModeOpen, setShopModeOpen] = useState(false);
   const prevExtrasLenRef = useRef(0);
 
   const toggleNeededThisWeek = (id: number) => {
@@ -2406,10 +2403,6 @@ export default function ShoppingListPage() {
   );
 
   // ── Quick-list clean mode ──────────────────────────────────────────────────
-  // When entering from the List page (quickListLabel is set) with shop mode
-  // active, ShoppingListView opens as a portal overlay covering the full page.
-  // The view starts at cupboard_check (the default), which skips only the old
-  // ShopModeView intro card while preserving the cupboard check step.
   // NOTE: viewMode is seeded from ?shopMode=1 in useState, so shop view
   // opens immediately on navigation — no early return needed here.
 
@@ -3446,20 +3439,6 @@ export default function ShoppingListPage() {
           )}
         </Card>
 
-        {/* Shop Mode — inline below basket */}
-        {shopModeOpen && (
-          <ShopModeView
-            items={savedItems}
-            allPriceMatches={allPriceMatches}
-            thaPicks={thaPicks}
-            pantryKeySet={pantryKeySet}
-            initialStore={globalStore !== 'auto' ? globalStore : undefined}
-            initialPhase={quickListLabel ? "cupboard" : undefined}
-            onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
-            onRenameItem={handleRenameItem}
-            onRemoveItem={id => removeItem.mutate(id)}
-          />
-        )}
         </div>{/* end basket view wrapper */}
 
         {/* ── Shop view — inline, app shell stays intact ───────────────────── */}
