@@ -118,7 +118,7 @@ export default function SharedPlanPage() {
       mode: "keep",
     }),
     onSuccess: () => {
-      toast({ title: "Plan imported!", description: "Head to your planner to see it." });
+      toast({ title: "Plan imported" });
       window.location.href = "/weekly-planner";
     },
     onError: () => toast({ title: "Import failed", description: "Something went wrong.", variant: "destructive" }),

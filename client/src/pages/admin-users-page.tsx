@@ -150,7 +150,7 @@ export default function AdminUsersPage() {
     mutationFn: ({ userId, password }: { userId: number; password: string }) =>
       apiRequest("POST", `/api/admin/users/${userId}/reset-password`, { newPassword: password }),
     onSuccess: () => {
-      toast({ title: "Password reset", description: "The user's password has been updated successfully." });
+      toast({ title: "Password reset" });
       closeResetDialog();
     },
     onError: (err: any) => {
@@ -162,11 +162,11 @@ export default function AdminUsersPage() {
     mutationFn: (userId: number) =>
       apiRequest("POST", `/api/admin/users/${userId}/run-onboarding`, {}),
     onSuccess: () => {
-      toast({ title: "Onboarding reset", description: "The user will be taken through onboarding on their next login." });
+      toast({ title: "Onboarding reset" });
       setOnboardingDialog(null);
     },
     onError: (err: any) => {
-      toast({ title: "Failed", description: err.message || "Failed to reset onboarding.", variant: "destructive" });
+      toast({ title: "Couldn't reset onboarding", description: err.message || "Something went wrong — try again", variant: "destructive" });
     },
   });
 

@@ -66,7 +66,7 @@ function RecipeForm({ parsed, rawText, onClose }: {
       return res;
     },
     onSuccess: () => {
-      toast({ title: "Recipe saved", description: `"${title}" added to Cookbook.` });
+      toast({ title: "Recipe saved", description: title });
       qc.invalidateQueries({ queryKey: [api.meals.list.path] });
       onClose();
     },

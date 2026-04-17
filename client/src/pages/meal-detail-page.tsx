@@ -201,7 +201,7 @@ export default function MealDetailPage() {
     },
     onSuccess: (newMeal) => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
-      toast({ title: "Editable copy created", description: `"${newMeal.name}" is ready for editing.` });
+      toast({ title: "Editable copy created", description: newMeal.name });
       navigate(`/meals/${newMeal.id}`);
     },
     onError: () => {
@@ -223,7 +223,7 @@ export default function MealDetailPage() {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path, mealId] });
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
       setHasChanges(false);
-      toast({ title: "Recipe saved", description: "Your changes have been saved." });
+      toast({ title: "Recipe saved" });
     },
     onError: () => {
       toast({ title: "Failed to save", variant: "destructive" });
@@ -271,7 +271,7 @@ export default function MealDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path, mealId] });
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
-      toast({ title: "Instructions imported", description: "The method/instructions have been added to this meal." });
+      toast({ title: "Instructions imported" });
       setReimportOpen(false);
       setReimportUrl("");
     },

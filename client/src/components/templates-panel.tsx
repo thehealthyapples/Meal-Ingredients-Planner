@@ -293,13 +293,13 @@ export function TemplatesPanel({ open, onClose, user }: TemplatePanelProps) {
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });
-      toast({ title: "Template saved", description: `"${data.name}" saved with ${data.itemCount} meals.` });
+      toast({ title: "Template saved", description: data.name });
       setSaveDialogOpen(false);
       setSaveName("");
       setSaveDescription("");
     },
     onError: (err: Error) => {
-      toast({ title: "Failed to save template", description: err.message, variant: "destructive" });
+      toast({ title: "Couldn't save template", description: "Something went wrong — try again", variant: "destructive" });
     },
   });
 
@@ -339,7 +339,7 @@ export function TemplatesPanel({ open, onClose, user }: TemplatePanelProps) {
     onSuccess: (data, id) => {
       qc.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });
       qc.invalidateQueries({ queryKey: ["/api/plan-templates", id] });
-      toast({ title: "Template updated", description: `${data.itemCount} meals captured from your planner.` });
+      toast({ title: "Template updated", description: `${data.itemCount} meals captured` });
     },
     onError: () => toast({ title: "Re-snapshot failed", variant: "destructive" }),
   });
@@ -375,7 +375,7 @@ export function TemplatesPanel({ open, onClose, user }: TemplatePanelProps) {
     onSuccess: (data, id) => {
       qc.invalidateQueries({ queryKey: ["/api/admin/plan-templates"] });
       qc.invalidateQueries({ queryKey: ["/api/plan-templates", id] });
-      toast({ title: "Snapshot complete", description: `${data.itemCount} meals captured from your planner.` });
+      toast({ title: "Snapshot complete", description: `${data.itemCount} meals captured` });
     },
     onError: () => toast({ title: "Snapshot failed", variant: "destructive" }),
   });
@@ -394,7 +394,7 @@ export function TemplatesPanel({ open, onClose, user }: TemplatePanelProps) {
       qc.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });
       toast({ title: "Template updated" });
     },
-    onError: (err: Error) => toast({ title: "Failed", description: err.message, variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't update template", description: "Something went wrong — try again", variant: "destructive" }),
   });
 
   const renderGlobalTemplateCard = (t: MealPlanTemplate) => {

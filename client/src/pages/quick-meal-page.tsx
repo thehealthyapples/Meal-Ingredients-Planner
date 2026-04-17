@@ -332,7 +332,7 @@ export default function QuickMealPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
-      toast({ title: "Basket list created", description: `${parts.length} item${parts.length === 1 ? "" : "s"} added to your basket.` });
+      toast({ title: "Added to basket", description: `${parts.length} item${parts.length === 1 ? "" : "s"}` });
       navigate("/analyse-basket");
     },
     onError: () => {
@@ -344,7 +344,7 @@ export default function QuickMealPage() {
     mutationFn: async () => saveMealMutation.mutateAsync(),
     onSuccess: (meal: Meal) => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
-      toast({ title: editId ? "Meal updated" : "Meal saved", description: `${meal.name} added to Cookbook.` });
+      toast({ title: editId ? "Meal updated" : "Meal saved", description: meal.name });
       setCompletionMeal({
         id:       meal.id,
         name:     meal.name,

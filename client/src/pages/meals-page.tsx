@@ -383,7 +383,7 @@ function GroupedMealDetail({ meal, allMeals, tab, mealId }: {
   );
 }
 
-function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, audience, isFreezerEligible, onFreezeClick, servings, sourceUrl, mealFormat, instructions, hideEdit, hideBasket, onAddToList }: {
+function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, audience, isFreezerEligible, onFreezeClick, servings, sourceUrl, mealFormat, instructions, hideEdit, hideBasket, onAddToList, showListButton, onAddToQuickList }: {
   mealId: number;
   mealName: string;
   ingredients: string[];
@@ -399,6 +399,9 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
   hideEdit?: boolean;
   hideBasket?: boolean;
   onAddToList?: (ingredients: string[]) => void;
+  showListButton?: boolean;
+  /** When set, fires after "Who's eating?" dialog confirm instead of addToListMutation — routes to quick list. */
+  onAddToQuickList?: (ingredients: string[]) => void;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -438,7 +441,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
-      toast({ title: "Added to shopping list", description: `${qty}x ${mealName} added.` });
+      toast({ title: "Added to shopping list", description: qty > 1 ? `${qty} × ${mealName}` : mealName });
     },
     onError: () => {
       toast({ title: "Failed to add", description: "Could not add to shopping list.", variant: "destructive" });
@@ -714,6 +717,23 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                 <ListPlus className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
+            <TooltipContent><p className="text-xs">Add to quick list</p></TooltipContent>
+          </Tooltip>
+        )}
+
+        {showListButton && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-primary"
+                onClick={(e) => { e.stopPropagation(); setListContextOpen(true); }}
+                data-testid={`button-add-to-list-${mealId}`}
+              >
+                <ListPlus className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
             <TooltipContent><p className="text-xs">Add to list</p></TooltipContent>
           </Tooltip>
         )}
@@ -728,7 +748,11 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
         onOpenChange={setListContextOpen}
         onAdd={(ctx) => {
           addToBasket({ mealId, quantity: qty });
-          addToListMutation.mutate(ctx);
+          if (onAddToQuickList) {
+            onAddToQuickList(ingredients);
+          } else {
+            addToListMutation.mutate(ctx);
+          }
           setListContextOpen(false);
         }}
       />
@@ -1588,7 +1612,7 @@ function WebSourceBadge({ recipe }: { recipe: WebSearchRecipe }) {
   );
 }
 
-function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, nutritionMap, onFreezeClick, onAddToList }: {
+function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, nutritionMap, onFreezeClick, onAddToList, showListButton, onAddToQuickList }: {
   recipe: WebSearchRecipe;
   importedMealId: number | null;
   importedMeal: any;
@@ -1596,6 +1620,8 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
   nutritionMap: Map<number, any>;
   onFreezeClick?: () => void;
   onAddToList?: (ingredients: string[]) => void;
+  showListButton?: boolean;
+  onAddToQuickList?: (ingredients: string[]) => void;
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -1688,7 +1714,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
-      toast({ title: "Added to basket", description: `"${recipe.name}" added to shopping list.` });
+      toast({ title: "Added to shopping list", description: recipe.name });
     } catch {
       toast({ title: "Failed to add to basket", variant: "destructive" });
     }
@@ -1696,13 +1722,17 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
   };
 
   const handleAddToList = async () => {
-    if (!onAddToList) return;
+    if (!onAddToList && !showListButton) return;
+    if (showListButton) {
+      setListContextOpen(true);
+      return;
+    }
     setPendingAction("list");
     // Import the meal to cookbook first (no-op if already imported)
     const mealId = await ensureImported();
     if (!mealId) { setPendingAction(null); return; }
     const ingredients = importedMeal?.ingredients || recipe.ingredients || [];
-    onAddToList(ingredients);
+    onAddToList!(ingredients);
     setPendingAction(null);
   };
 
@@ -1722,6 +1752,8 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
           servings={importedMeal.servings || 1}
           sourceUrl={recipe.url || null}
           onAddToList={onAddToList}
+          showListButton={showListButton}
+          onAddToQuickList={onAddToQuickList}
         />
       </div>
     );
@@ -1788,7 +1820,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
           </TooltipTrigger>
           <TooltipContent><p className="text-xs">Add to planner</p></TooltipContent>
         </Tooltip>
-        {onAddToList && (
+        {(onAddToList || showListButton) && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -1817,7 +1849,12 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
         onOpenChange={setListContextOpen}
         onAdd={(ctx) => {
           setListContextOpen(false);
-          doAddToList(ctx);
+          if (onAddToQuickList) {
+            const ingredients = importedMeal?.ingredients || recipe.ingredients || [];
+            onAddToQuickList(ingredients);
+          } else {
+            doAddToList(ctx);
+          }
         }}
       />
 
@@ -2003,7 +2040,7 @@ export default function MealsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/freezer'] });
-      toast({ title: "Added to freezer", description: "Meal has been frozen successfully" });
+      toast({ title: "Added to freezer" });
       setAddToFreezerMealId(null);
       setFreezerPortions(4);
       setFreezerLabel("");
@@ -2018,7 +2055,7 @@ export default function MealsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/freezer'] });
-      toast({ title: "Portion used", description: "One frozen portion has been used" });
+      toast({ title: "Portion used" });
     },
   });
 
@@ -2376,7 +2413,7 @@ export default function MealsPage() {
       if (result?.id) {
         setImportedMealMap(prev => new Map(prev).set(recipe.id, result.id));
       }
-      toast({ title: "Meal saved", description: `"${recipe.name}" has been added to your meals.` });
+      toast({ title: "Recipe saved", description: recipe.name });
       return result?.id ?? null;
     } catch (err: any) {
       toast({ title: "Import failed", description: err?.message || "Could not import this recipe.", variant: "destructive" });
@@ -3077,6 +3114,8 @@ export default function MealsPage() {
                                         onImport={handleWebImport}
                                         nutritionMap={nutritionMap}
                                         onFreezeClick={importedMealId ? () => setAddToFreezerMealId(importedMealId) : undefined}
+                                        showListButton
+                                        onAddToQuickList={isFromList ? handleAddToListFromCookbook : undefined}
                                       />
                                     </div>
                                   )}
@@ -3440,6 +3479,8 @@ export default function MealsPage() {
                         sourceUrl={meal.sourceUrl}
                         mealFormat={meal.mealFormat}
                         instructions={meal.instructions}
+                        showListButton
+                        onAddToQuickList={isFromList ? handleAddToListFromCookbook : undefined}
                       />
                       {!meal.imageUrl && !meal.isReadyMeal && !meal.isSystemMeal && meal.mealFormat !== "grouped" && (
                         <Button
@@ -3577,6 +3618,8 @@ export default function MealsPage() {
                             sourceUrl={meal.sourceUrl}
                             mealFormat={meal.mealFormat}
                             instructions={meal.instructions}
+                            showListButton
+                            onAddToQuickList={isFromList ? handleAddToListFromCookbook : undefined}
                           />
                           {!meal.imageUrl && !meal.isReadyMeal && !meal.isSystemMeal && meal.mealFormat !== "grouped" && (
                             <Button
@@ -4260,6 +4303,8 @@ export default function MealsPage() {
                                         onImport={handleWebImport}
                                         nutritionMap={nutritionMap}
                                         onFreezeClick={importedMealId ? () => setAddToFreezerMealId(importedMealId) : undefined}
+                                        showListButton
+                                        onAddToQuickList={isFromList ? handleAddToListFromCookbook : undefined}
                                       />
                                     </div>
                                   )}

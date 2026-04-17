@@ -714,7 +714,7 @@ export default function WeeklyPlannerPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
       setClearWeekId(null);
-      toast({ title: "Week cleared", description: "All meals for this week have been removed." });
+      toast({ title: "Week cleared" });
     },
     onError: () => {
       toast({ title: "Failed to clear week", variant: "destructive" });
@@ -784,7 +784,7 @@ export default function WeeklyPlannerPage() {
       qc.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
       qc.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
       const totalServings = mealSelections.reduce((sum, s) => sum + s.count, 0);
-      toast({ title: "Added to basket", description: `${totalServings} meal serving${totalServings !== 1 ? 's' : ''} added to shopping list.` });
+      toast({ title: "Added to shopping list", description: `${totalServings} meal serving${totalServings !== 1 ? 's' : ''}` });
     },
     onError: (err) => {
       toast({ title: "Failed to add to basket", variant: "destructive" });
@@ -1189,7 +1189,7 @@ export default function WeeklyPlannerPage() {
       const desc = failedCount === 0
         ? `${smartResult.entries.length - failedCount} meals added to Week ${activeWeek}.${importedCount > 0 ? ` ${importedCount} recipes auto-imported.` : ''}`
         : `${smartResult.entries.length - failedCount} meals added. ${failedCount} could not be added.`;
-      toast({ title: "Plan applied!", description: desc });
+      toast({ title: "Plan applied", description: desc });
     } catch {
       toast({ title: "Failed to apply plan", variant: "destructive" });
     } finally {

@@ -52,9 +52,9 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
     mutationFn: () => apiRequest("POST", "/api/plan-templates/mine", { name: "My 6 Week Plan" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });
-      toast({ title: "Plan saved", description: "Your planner has been saved as a template." });
+      toast({ title: "Plan saved" });
     },
-    onError: () => toast({ title: "Error", description: "Failed to save planner.", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't save plan", description: "Something went wrong — try again", variant: "destructive" }),
   });
 
   const shareMutation = useMutation({
@@ -63,9 +63,8 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
       setShareUrl(data.url);
       queryClient.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });
     },
-    onError: (err: any) => {
-      const msg = err?.message || "Failed to generate share link.";
-      toast({ title: "Error", description: msg, variant: "destructive" });
+    onError: () => {
+      toast({ title: "Couldn't generate share link", description: "Something went wrong — try again", variant: "destructive" });
     },
   });
 
@@ -74,9 +73,9 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
     onSuccess: () => {
       setShareUrl(null);
       queryClient.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });
-      toast({ title: "Sharing stopped", description: "Your plan is now private." });
+      toast({ title: "Sharing stopped" });
     },
-    onError: () => toast({ title: "Error", description: "Failed to stop sharing.", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't stop sharing", description: "Something went wrong — try again", variant: "destructive" }),
   });
 
   function handleCopy() {

@@ -25,14 +25,10 @@ export function useMeals() {
       );
       // Force an immediate server refetch to ensure the list is fully up-to-date.
       queryClient.refetchQueries({ queryKey: [api.meals.list.path] });
-      toast({ title: "Success", description: "Meal added to your collection." });
+      toast({ title: "Recipe added" });
     },
-    onError: (error: Error) => {
-      toast({ 
-        title: "Error", 
-        description: error.message, 
-        variant: "destructive" 
-      });
+    onError: () => {
+      toast({ title: "Couldn't add recipe", description: "Something went wrong — try again", variant: "destructive" });
     },
   });
 
@@ -43,14 +39,10 @@ export function useMeals() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
-      toast({ title: "Deleted", description: "Meal removed successfully." });
+      toast({ title: "Recipe removed" });
     },
-    onError: (error: Error) => {
-      toast({ 
-        title: "Error", 
-        description: error.message, 
-        variant: "destructive" 
-      });
+    onError: () => {
+      toast({ title: "Couldn't remove recipe", description: "Something went wrong — try again", variant: "destructive" });
     },
   });
 

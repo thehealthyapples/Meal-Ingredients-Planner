@@ -136,7 +136,7 @@ export default function AdminRecipeSourcesPage() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/admin/recipe-sources"], data);
-      toast({ title: "Source updated", description: "Recipe source setting saved." });
+      toast({ title: "Source updated" });
     },
   });
 

@@ -1,17 +1,13 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
 import { parseIngredient } from "@shared/parse-ingredient";
 import {
-  Store, Sparkles, ChevronRight, Loader2,
-  Clock, X, RotateCcw, Mic, Camera, ImageUp, ArrowLeft, ChefHat, NotepadText,
+  Sparkles, Loader2,
+  Clock, X, RotateCcw, Mic, Camera, ImageUp, ChefHat, NotepadText,
 } from "lucide-react";
 import { CameraModal } from "@/components/camera-modal";
 import { FirstVisitHint } from "@/components/first-visit-hint";
@@ -86,8 +82,6 @@ export default function ListPage() {
   const recognitionRef = useRef<any>(null);
 
   const [rawText, setRawText] = useState("");
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [shopPickerOpen, setShopPickerOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
@@ -551,30 +545,66 @@ export default function ListPage() {
               <ChefHat className="h-4 w-4" />
             </button>
 
-            <div className="flex-1" />
+          </div>{/* end toolbar row */}
 
-            {/* Primary CTA */}
-            <Button
-              size="sm"
-              className="gap-1.5 font-semibold px-4 h-9"
-              disabled={parsedItems.length === 0 || isProcessing}
-              onClick={() => setSheetOpen(true)}
-              data-testid="button-create-shop-list"
-            >
-              {isProcessing ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Store className="h-3.5 w-3.5" />
-              )}
-              {isProcessing
-                ? "Building…"
-                : parsedItems.length > 0
-                ? `Create my shop list · ${parsedItems.length}`
-                : "Create my shop list"}
-            </Button>
-          </div>
-        </div>
-      </div>
+          {/* ── Send to shop (inline action bar) ──────────────────────────── */}
+          {parsedItems.length > 0 && (
+            <>
+              {/* Divider matching the toolbar divider style */}
+              <div
+                style={{
+                  height: 1,
+                  background: "rgba(0,0,0,0.055)",
+                  marginInline: 24,
+                }}
+              />
+
+              <div className="px-3 pt-4 pb-3" data-testid="section-send-to-shop">
+                {/* Auto-match primary action */}
+                <button
+                  onClick={() => processAndNavigate(null)}
+                  disabled={isProcessing}
+                  className="group flex items-center gap-3 w-full rounded-xl border border-primary/30 bg-primary/[0.06] px-4 py-3 text-left hover:bg-primary/[0.12] transition-colors disabled:opacity-60"
+                  data-testid="button-best-shop"
+                >
+                  <div className="flex items-center justify-center h-9 w-9 rounded-full bg-primary/15 text-primary shrink-0">
+                    {isProcessing
+                      ? <Loader2 className="h-4 w-4 animate-spin" />
+                      : <Sparkles className="h-4 w-4" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-primary leading-tight">Auto-match shops</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Switch freely between stores in view</p>
+                  </div>
+                </button>
+
+                {/* Store picker grid */}
+                <div className="mt-2.5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="h-px flex-1 bg-black/[0.04]" />
+                    <span className="text-[10px] text-muted-foreground/40 uppercase tracking-wide">or choose a store</span>
+                    <div className="h-px flex-1 bg-black/[0.04]" />
+                  </div>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {SHOPS.map((shop) => (
+                      <button
+                        key={shop}
+                        onClick={() => processAndNavigate(shop)}
+                        disabled={isProcessing}
+                        className="flex flex-col items-center justify-center gap-1 rounded-lg p-1.5 hover:bg-black/[0.05] transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        data-testid={`button-shop-${shop.toLowerCase().replace(/[^a-z]+/g, "-")}`}
+                      >
+                        <RetailerLogo name={shop} size="h-5" />
+                        <span className="text-[9px] font-medium text-foreground/50 text-center leading-tight">{shop}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>{/* end inner z-10 content */}
+      </div>{/* end writing surface card */}
 
       {/* ── Recent lists ─────────────────────────────────────────────────── */}
       {history.length > 0 && (
@@ -636,102 +666,6 @@ export default function ListPage() {
         onUploadInstead={() => fileInputRef.current?.click()}
       />
 
-      {/* ── Dialog: Where are you shopping? ── */}
-      <Dialog
-        open={sheetOpen}
-        onOpenChange={(v) => { if (!isProcessing) setSheetOpen(v); }}
-      >
-        <DialogContent className="max-w-sm" data-testid="sheet-shop-choice">
-          <DialogHeader>
-            <div className="flex items-center gap-2 mb-1">
-              <img src={thaAppleUrl} width={20} height={20} alt="" draggable={false} style={{ opacity: 0.8 }} />
-              <DialogTitle className="text-base font-semibold">Where are you shopping?</DialogTitle>
-            </div>
-            <DialogDescription className="text-[13px]">
-              Pick your store and THA will guide you through the healthiest choices.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-2.5 mt-1">
-            <button
-              onClick={() => { setSheetOpen(false); setShopPickerOpen(true); }}
-              className="group flex items-center gap-3.5 w-full rounded-xl border border-border bg-card px-4 py-3.5 text-left hover:border-primary/40 hover:bg-accent/30 transition-colors"
-              data-testid="button-choose-shop"
-            >
-              <div className="flex items-center justify-center h-10 w-10 rounded-full bg-muted text-foreground shrink-0">
-                <Store className="h-4.5 w-4.5" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold leading-tight">Choose a store</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Pick exactly where you're heading</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0 group-hover:text-foreground transition-colors" />
-            </button>
-
-            <button
-              onClick={() => { setSheetOpen(false); processAndNavigate(null); }}
-              disabled={isProcessing}
-              className="group flex items-center gap-3.5 w-full rounded-xl border border-primary/40 bg-primary/[0.06] px-4 py-3.5 text-left hover:bg-primary/[0.12] transition-colors disabled:opacity-60"
-              data-testid="button-best-shop"
-            >
-              <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/15 text-primary shrink-0">
-                {isProcessing
-                  ? <Loader2 className="h-4.5 w-4.5 animate-spin" />
-                  : <Sparkles className="h-4.5 w-4.5" />
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-primary leading-tight">Auto-match shops</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Switch freely between stores in view
-                </p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-primary/40 shrink-0 group-hover:text-primary transition-colors" />
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Dialog: Choose your shop ── */}
-      <Dialog
-        open={shopPickerOpen}
-        onOpenChange={(v) => { if (!isProcessing) setShopPickerOpen(v); }}
-      >
-        <DialogContent className="max-w-sm" data-testid="sheet-shop-picker">
-          <DialogHeader>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => { setShopPickerOpen(false); setSheetOpen(true); }}
-                className="p-1 -ml-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                aria-label="Back"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-              <DialogTitle className="text-base font-semibold">Choose your store</DialogTitle>
-            </div>
-            <DialogDescription className="text-[13px]">
-              THA will show you the healthiest picks for that store.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="grid grid-cols-4 gap-3 mt-1 pb-1">
-            {SHOPS.map((shop) => (
-              <button
-                key={shop}
-                onClick={() => { setShopPickerOpen(false); processAndNavigate(shop); }}
-                disabled={isProcessing}
-                className="flex flex-col items-center justify-center gap-2 rounded-xl p-3 hover:bg-accent/50 transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                data-testid={`button-shop-${shop.toLowerCase().replace(/[^a-z]+/g, "-")}`}
-              >
-                <RetailerLogo name={shop} size="h-7" />
-                <span className="text-[11px] font-medium text-foreground/70 text-center leading-tight">
-                  {shop}
-                </span>
-              </button>
-            ))}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

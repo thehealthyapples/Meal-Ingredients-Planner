@@ -217,7 +217,7 @@ export default function MealPlannerPage() {
       setSelectedPlanId(plan.id);
       setCreateDialogOpen(false);
       setNewPlanName("");
-      toast({ title: "Plan created", description: "Your weekly meal plan is ready to fill." });
+      toast({ title: "Plan created" });
     },
   });
 
@@ -268,7 +268,7 @@ export default function MealPlannerPage() {
       setSelectedPlanId(plan.id);
       setDuplicateDialogOpen(false);
       setDupName("");
-      toast({ title: "Plan duplicated", description: "Meals have been copied to the new week." });
+      toast({ title: "Plan duplicated" });
     },
   });
 
@@ -302,7 +302,7 @@ export default function MealPlannerPage() {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
-      toast({ title: "Basket created", description: "Ingredients from your plan have been added to your basket." });
+      toast({ title: "Basket created" });
       navigate("/analyse-basket");
     },
     onError: () => {
@@ -321,7 +321,7 @@ export default function MealPlannerPage() {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
       const count = variables.length;
-      toast({ title: "Added to basket", description: `${count} meal${count > 1 ? 's' : ''} added to basket.` });
+      toast({ title: "Added to shopping list", description: `${count} meal${count > 1 ? 's' : ''}` });
     },
     onError: () => {
       toast({ title: "Failed to add to basket", variant: "destructive" });
@@ -390,7 +390,7 @@ export default function MealPlannerPage() {
     }
     setSuggestDialogOpen(false);
     setSuggestion(null);
-    toast({ title: "Plan updated", description: "Suggested meals have been added to your plan." });
+    toast({ title: "Plan updated" });
   };
 
   const runSmartSuggest = async (preserveLocks = false) => {

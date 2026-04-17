@@ -551,7 +551,7 @@ function EditItemModal({ item, sources, onClose }: {
         queryClient.invalidateQueries({ queryKey: ['/api/meals'] });
         toast({ title: "Saved", description: `Basket updated. ${data.recipesUpdated} recipe${data.recipesUpdated > 1 ? 's' : ''} also corrected.` });
       } else {
-        toast({ title: "Saved", description: "Basket updated." });
+        toast({ title: "Basket saved" });
       }
       onClose();
     },
@@ -726,7 +726,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] });
-      toast({ title: "Added to basket", description: "Wholefood recipe ingredients added to your basket." });
+      toast({ title: "Ingredients added to basket" });
     },
     onError: () => {
       toast({ title: "Failed to add", description: "Could not add ingredients to basket.", variant: "destructive" });
@@ -1768,7 +1768,7 @@ export default function ShoppingListPage() {
       }
     },
     onError: () => {
-      toast({ title: "Error", description: "Could not lookup prices.", variant: "destructive" });
+      toast({ title: "Couldn't load prices", description: "Something went wrong — try again", variant: "destructive" });
     },
   });
 
@@ -1794,7 +1794,7 @@ export default function ShoppingListPage() {
       });
     },
     onError: () => {
-      toast({ title: "Error", description: "Could not update store.", variant: "destructive" });
+      toast({ title: "Couldn't update store", description: "Something went wrong — try again", variant: "destructive" });
     },
   });
 
@@ -1834,7 +1834,7 @@ export default function ShoppingListPage() {
       setEditState(null);
     },
     onError: () => {
-      toast({ title: "Error", description: "Could not update item.", variant: "destructive" });
+      toast({ title: "Couldn't update item", description: "Something went wrong — try again", variant: "destructive" });
     },
   });
 
@@ -1863,7 +1863,7 @@ export default function ShoppingListPage() {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
       queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] });
-      toast({ title: "Cleared", description: "Basket has been cleared." });
+      toast({ title: "Basket cleared" });
     },
   });
 
@@ -1907,11 +1907,13 @@ export default function ShoppingListPage() {
 
 
   const addItem = useMutation({
-    mutationFn: async (rawText: string) => {
+    mutationFn: async ({ rawText, basketLabel }: { rawText: string; basketLabel?: string | null }) => {
+      const body: Record<string, unknown> = { productName: rawText };
+      if (basketLabel) body.basketLabel = basketLabel;
       const res = await fetch(api.shoppingList.add.path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productName: rawText }),
+        body: JSON.stringify(body),
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to add item');
@@ -1921,7 +1923,7 @@ export default function ShoppingListPage() {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
     },
     onError: () => {
-      toast({ title: "Error", description: "Could not add item.", variant: "destructive" });
+      toast({ title: "Couldn't add item", description: "Something went wrong — try again", variant: "destructive" });
     },
   });
 
@@ -1934,7 +1936,7 @@ export default function ShoppingListPage() {
       : [];
     if (items.length === 0) return;
     navigator.clipboard.writeText("Basket:\n\n" + items.join("\n"));
-    toast({ title: "Copied!", description: "Basket copied to clipboard." });
+    toast({ title: "Copied to clipboard" });
   };
 
   const getCheapestForItem = useCallback((itemId: number): { price: number; supermarket: string } | null => {
@@ -2372,7 +2374,7 @@ export default function ShoppingListPage() {
         toast({ title: "Could not send", description: result.message || "Unable to create basket.", variant: "destructive" });
       }
     } catch {
-      toast({ title: "Error", description: `Failed to send basket to ${supermarket}.`, variant: "destructive" });
+      toast({ title: `Couldn't send to ${supermarket}`, description: "Something went wrong — try again", variant: "destructive" });
     } finally {
       setBasketSending(null);
     }
@@ -3475,7 +3477,7 @@ export default function ShoppingListPage() {
             onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
             onRenameItem={handleRenameItem}
             onRemoveItem={id => removeItem.mutate(id)}
-            onAddItem={async (rawText) => { console.log('[addItem] firing for:', rawText); try { const result = await addItem.mutateAsync(rawText); console.log('[addItem] success:', rawText, 'id:', (result as any)?.id); } catch (e) { console.error('[addItem] failed:', rawText, e); /* onError handles toast */ } }}
+            onAddItem={async (rawText) => { try { await addItem.mutateAsync({ rawText, basketLabel: quickListLabel }); } catch (e) { console.error('[addItem] failed:', rawText, e); /* onError handles toast */ } }}
             onMatchStore={(store) => lookupPrices.mutate(store)}
             isMatchingPrices={lookupPrices.isPending}
             onClose={() => setViewMode("basket")}

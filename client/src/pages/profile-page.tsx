@@ -89,10 +89,10 @@ export default function ProfilePage() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/profile"], data);
-      toast({ title: "Saved", description: "Your profile has been updated." });
+      toast({ title: "Profile saved" });
     },
     onError: () => {
-      toast({ title: "Error", description: "Failed to save changes.", variant: "destructive" });
+      toast({ title: "Couldn't save changes", description: "Something went wrong — try again", variant: "destructive" });
     },
   });
 
@@ -496,13 +496,13 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
 
   const joinMutation = useMutation({
     mutationFn: (inviteCode: string) => apiRequest("POST", "/api/household/join", { inviteCode }),
-    onSuccess: () => { toast({ title: "Joined household", description: "You have joined the household." }); setJoinCode(""); setShowJoin(false); invalidate(); },
+    onSuccess: () => { toast({ title: "Joined household" }); setJoinCode(""); setShowJoin(false); invalidate(); },
     onError: (err: any) => toast({ variant: "destructive", title: "Could not join", description: err?.message || "Invalid invite code." }),
   });
 
   const leaveMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/household/leave"),
-    onSuccess: () => { toast({ title: "Left household", description: "You now have your own household." }); setShowLeaveConfirm(false); invalidate(); },
+    onSuccess: () => { toast({ title: "Left household" }); setShowLeaveConfirm(false); invalidate(); },
     onError: (err: any) => toast({ variant: "destructive", title: "Could not leave", description: err?.message || "Failed to leave household." }),
   });
 
@@ -1493,7 +1493,7 @@ function AccountSettings({ profile }: { profile: ProfileData }) {
         setNewPassword("");
         setConfirmPassword("");
         setShowChangePassword(false);
-        toast({ title: "Password changed", description: "Your password has been updated successfully." });
+        toast({ title: "Password changed" });
       }
     } catch {
       setPwError("Something went wrong. Please try again.");

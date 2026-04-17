@@ -843,10 +843,10 @@ export default function ProductsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
-      toast({ title: "Added", description: "Product added to your basket." });
+      toast({ title: "Added to basket", description: "Product added" });
     },
     onError: () => {
-      toast({ title: "Error", description: "Could not add product.", variant: "destructive" });
+      toast({ title: "Couldn't add product", description: "Something went wrong — try again", variant: "destructive" });
     },
   });
 
@@ -870,10 +870,10 @@ export default function ProductsPage() {
     },
     onSuccess: (template) => {
       queryClient.invalidateQueries({ queryKey: ['/api/meal-templates'] });
-      toast({ title: "Template Created", description: `"${template.name}" template created with this product as a ready meal option.` });
+      toast({ title: "Template created", description: template.name });
     },
     onError: () => {
-      toast({ title: "Error", description: "Could not create meal template.", variant: "destructive" });
+      toast({ title: "Couldn't create template", description: "Something went wrong — try again", variant: "destructive" });
     },
   });
 

@@ -58,7 +58,7 @@ export function useUser() {
       if (ms >= 0) console.debug(`[THA perf] login completed in ${ms.toFixed(0)}ms`);
 
       queryClient.setQueryData(["/api/user"], data);
-      toast({ title: "Welcome back!", description: "You have successfully logged in." });
+      toast({ title: "Welcome back" });
     },
     onError: (error: Error) => {
       toast({
@@ -88,7 +88,7 @@ export function useUser() {
         });
       } else {
         queryClient.setQueryData(["/api/user"], data);
-        toast({ title: "Account created!", description: "Welcome to The Healthy Apples." });
+        toast({ title: "Account created" });
       }
     },
     onError: (error: Error) => {
@@ -107,7 +107,7 @@ export function useUser() {
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
       queryClient.clear();
-      toast({ title: "Logged out", description: "See you next time!" });
+      toast({ title: "Logged out" });
     },
   });
 

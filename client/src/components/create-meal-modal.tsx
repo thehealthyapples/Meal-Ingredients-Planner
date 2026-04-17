@@ -125,7 +125,7 @@ export function CreateMealModal({ open, onOpenChange, onCreated, prefill }: Prop
         prev ? [...prev, meal] : [meal]
       );
       qc.refetchQueries({ queryKey: ["/api/meals"] });
-      toast({ title: "Meal created", description: `"${meal.name}" is ready to add to your planner.` });
+      toast({ title: "Meal created", description: meal.name });
       onCreated?.(meal.id);
       handleClose();
     } catch {
