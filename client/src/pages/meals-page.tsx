@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, ShoppingCart, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown, Users, UserPlus } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown, Users, UserPlus } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateMealModal, type ImportedRecipeDraft } from "@/components/create-meal-modal";
@@ -40,6 +40,7 @@ import { Switch } from "@/components/ui/switch";
 import { shouldExcludeRecipe } from "@/lib/dietRules";
 import { useUser } from "@/hooks/use-user";
 import { scoreMealSearch } from "@shared/food-synonyms";
+import { writePendingIngredients, appendPendingIngredient } from "@/lib/quick-list";
 
 function parseIngredient(raw: string): { name: string; detail: string | null } {
   let text = raw.trim();
@@ -441,7 +442,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
-      toast({ title: "Added to shopping list", description: qty > 1 ? `${qty} × ${mealName}` : mealName });
+      toast({ title: "Added to basket", description: qty > 1 ? `${qty} × ${mealName}` : mealName });
     },
     onError: () => {
       toast({ title: "Failed to add", description: "Could not add to shopping list.", variant: "destructive" });
@@ -467,8 +468,26 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
     },
   });
 
+  const addProductToBasketMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', api.shoppingList.add.path, {
+        productName: mealName,
+        quantity: 1,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      toast({ title: "Added to basket", description: mealName });
+    },
+    onError: () => {
+      toast({ title: "Couldn't add product", description: "Something went wrong — try again", variant: "destructive" });
+    },
+  });
+
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [listContextOpen, setListContextOpen] = useState(false);
+  const [listDialogMode, setListDialogMode] = useState<'basket' | 'quicklist'>('basket');
 
   return (
     <div className="w-full flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
@@ -636,19 +655,24 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                   variant="ghost"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setListContextOpen(true);
+                    if (isReadyMeal) {
+                      addProductToBasketMutation.mutate();
+                    } else {
+                      setListDialogMode('basket');
+                      setListContextOpen(true);
+                    }
                   }}
-                  disabled={addToListMutation.isPending}
+                  disabled={isReadyMeal ? addProductToBasketMutation.isPending : addToListMutation.isPending}
                   data-testid={`button-add-basket-${mealId}`}
                 >
-                  {addToListMutation.isPending ? (
+                  {(isReadyMeal ? addProductToBasketMutation.isPending : addToListMutation.isPending) ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <ShoppingBasket className="h-4 w-4" />
                   )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent><p className="text-xs">Add to shopping list</p></TooltipContent>
+              <TooltipContent><p className="text-xs">Add to basket</p></TooltipContent>
             </Tooltip>
           )}
 
@@ -721,20 +745,29 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
           </Tooltip>
         )}
 
-        {showListButton && (
+        {showListButton && onAddToQuickList && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 size="icon"
                 variant="ghost"
                 className="text-primary"
-                onClick={(e) => { e.stopPropagation(); setListContextOpen(true); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isReadyMeal) {
+                    appendPendingIngredient(mealName);
+                    toast({ title: "Added to quick list", description: mealName });
+                  } else {
+                    setListDialogMode('quicklist');
+                    setListContextOpen(true);
+                  }
+                }}
                 data-testid={`button-add-to-list-${mealId}`}
               >
                 <ListPlus className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent><p className="text-xs">Add to list</p></TooltipContent>
+            <TooltipContent><p className="text-xs">Add to quick list</p></TooltipContent>
           </Tooltip>
         )}
         </div>
@@ -747,13 +780,13 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
         open={listContextOpen}
         onOpenChange={setListContextOpen}
         onAdd={(ctx) => {
-          addToBasket({ mealId, quantity: qty });
-          if (onAddToQuickList) {
-            onAddToQuickList(ingredients);
+          setListContextOpen(false);
+          if (listDialogMode === 'quicklist') {
+            onAddToQuickList!(ingredients);
           } else {
+            addToBasket({ mealId, quantity: qty });
             addToListMutation.mutate(ctx);
           }
-          setListContextOpen(false);
         }}
       />
 
@@ -1631,6 +1664,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
   const [localMealId, setLocalMealId] = useState<number | null>(importedMealId);
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [listContextOpen, setListContextOpen] = useState(false);
+  const [listDialogMode, setListDialogMode] = useState<'basket' | 'quicklist'>('basket');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const { isMealInBasket, addToBasket } = useBasket();
@@ -1692,6 +1726,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
   };
 
   const handleBasket = () => {
+    setListDialogMode('basket');
     setListContextOpen(true);
   };
 
@@ -1714,7 +1749,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
-      toast({ title: "Added to shopping list", description: recipe.name });
+      toast({ title: "Added to basket", description: recipe.name });
     } catch {
       toast({ title: "Failed to add to basket", variant: "destructive" });
     }
@@ -1722,13 +1757,13 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
   };
 
   const handleAddToList = async () => {
-    if (!onAddToList && !showListButton) return;
-    if (showListButton) {
+    if (showListButton && onAddToQuickList) {
+      setListDialogMode('quicklist');
       setListContextOpen(true);
       return;
     }
+    if (!onAddToList) return;
     setPendingAction("list");
-    // Import the meal to cookbook first (no-op if already imported)
     const mealId = await ensureImported();
     if (!mealId) { setPendingAction(null); return; }
     const ingredients = importedMeal?.ingredients || recipe.ingredients || [];
@@ -1790,7 +1825,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
               {pendingAction === "basket" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBasket className="h-4 w-4" />}
             </Button>
           </TooltipTrigger>
-          <TooltipContent><p className="text-xs">Add to shopping list</p></TooltipContent>
+          <TooltipContent><p className="text-xs">Add to basket</p></TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -1820,7 +1855,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
           </TooltipTrigger>
           <TooltipContent><p className="text-xs">Add to planner</p></TooltipContent>
         </Tooltip>
-        {(onAddToList || showListButton) && (
+        {(onAddToList || (showListButton && onAddToQuickList)) && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -1834,7 +1869,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
                 {pendingAction === "list" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ListPlus className="h-4 w-4" />}
               </Button>
             </TooltipTrigger>
-            <TooltipContent><p className="text-xs">Add to list</p></TooltipContent>
+            <TooltipContent><p className="text-xs">Add to quick list</p></TooltipContent>
           </Tooltip>
         )}
       </div>
@@ -1849,9 +1884,9 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
         onOpenChange={setListContextOpen}
         onAdd={(ctx) => {
           setListContextOpen(false);
-          if (onAddToQuickList) {
+          if (listDialogMode === 'quicklist') {
             const ingredients = importedMeal?.ingredients || recipe.ingredients || [];
-            onAddToQuickList(ingredients);
+            onAddToQuickList!(ingredients);
           } else {
             doAddToList(ctx);
           }
@@ -2007,7 +2042,7 @@ export default function MealsPage() {
         // Parse endpoint failed — fall back to raw strings (version 1)
         payload = ingredients;
       }
-      localStorage.setItem("tha-pending-list-ingredients", JSON.stringify(payload));
+      writePendingIngredients(payload as Parameters<typeof writePendingIngredients>[0]);
     } catch {}
     if (isFromList) {
       navigate("/list");
@@ -2283,7 +2318,7 @@ export default function MealsPage() {
         nutrition: product.nutriments,
         nutriscoreGrade: product.nutriscore_grade,
         novaGroup: product.nova_group,
-        thaRating: product.upfAnalysis?.thaRating ?? 3,
+        thaRating: product.upfAnalysis?.thaRating ?? null,
         isDrink,
         isBabyFood,
         isReadyMeal,
@@ -2305,6 +2340,25 @@ export default function MealsPage() {
       });
     }
   };
+
+  const addProductToBasketMutation = useMutation({
+    mutationFn: async (product: ProductSearchResult) => {
+      const res = await apiRequest('POST', api.shoppingList.add.path, {
+        productName: product.product_name,
+        imageUrl: product.image_url,
+        quantity: 1,
+        brand: product.brand,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      toast({ title: "Added to basket" });
+    },
+    onError: () => {
+      toast({ title: "Couldn't add product", description: "Something went wrong — try again", variant: "destructive" });
+    },
+  });
 
   const handleCookbookBarcodeScan = async (barcode: string) => {
     setBarcodeScanOpen(false);
@@ -2353,7 +2407,7 @@ export default function MealsPage() {
         nutrition: barcodeProduct.nutriments,
         nutriscoreGrade: barcodeProduct.nutriscore_grade,
         novaGroup: barcodeProduct.nova_group,
-        thaRating: barcodeProduct.upfAnalysis?.thaRating ?? 3,
+        thaRating: barcodeProduct.upfAnalysis?.thaRating ?? null,
         isDrink,
         isBabyFood,
         isReadyMeal,
@@ -3115,7 +3169,7 @@ export default function MealsPage() {
                                         nutritionMap={nutritionMap}
                                         onFreezeClick={importedMealId ? () => setAddToFreezerMealId(importedMealId) : undefined}
                                         showListButton
-                                        onAddToQuickList={isFromList ? handleAddToListFromCookbook : undefined}
+                                        onAddToQuickList={handleAddToListFromCookbook}
                                       />
                                     </div>
                                   )}
@@ -3480,7 +3534,7 @@ export default function MealsPage() {
                         mealFormat={meal.mealFormat}
                         instructions={meal.instructions}
                         showListButton
-                        onAddToQuickList={isFromList ? handleAddToListFromCookbook : undefined}
+                        onAddToQuickList={handleAddToListFromCookbook}
                       />
                       {!meal.imageUrl && !meal.isReadyMeal && !meal.isSystemMeal && meal.mealFormat !== "grouped" && (
                         <Button
@@ -3619,7 +3673,7 @@ export default function MealsPage() {
                             mealFormat={meal.mealFormat}
                             instructions={meal.instructions}
                             showListButton
-                            onAddToQuickList={isFromList ? handleAddToListFromCookbook : undefined}
+                            onAddToQuickList={handleAddToListFromCookbook}
                           />
                           {!meal.imageUrl && !meal.isReadyMeal && !meal.isSystemMeal && meal.mealFormat !== "grouped" && (
                             <Button
@@ -3944,7 +3998,7 @@ export default function MealsPage() {
                     const cats = product.categories_tags || [];
                     const isDrink = cats.some((c: string) => c.includes('beverages') || c.includes('drinks'));
                     const isReadyMeal = cats.some((c: string) => c.includes('meals') || c.includes('ready') || c.includes('prepared'));
-                    const thaRating = product.upfAnalysis?.thaRating ?? 3;
+                    const thaRating = product.upfAnalysis?.thaRating ?? null;
                     return (
                       <motion.div
                         key={productKey}
@@ -3993,9 +4047,11 @@ export default function MealsPage() {
                                   <Badge variant="outline" className="text-xs"><UtensilsCrossed className="h-3 w-3 mr-1" />Ready Meal</Badge>
                                 )}
                               </div>
-                              <div className="mt-2" data-testid={`rating-product-${productKey}`}>
-                                <ScoreBadge score={thaRating} size={20} />
-                              </div>
+                              {thaRating != null && (
+                                <div className="mt-2" data-testid={`rating-product-${productKey}`}>
+                                  <ScoreBadge score={thaRating} size={20} />
+                                </div>
+                              )}
                               {product.nutriments?.calories && (
                                 <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2" data-testid={`nutrition-product-${productKey}`}>
                                   <span className="flex items-center gap-1"><Flame className="h-3 w-3 text-orange-500" />{Math.round(Number(product.nutriments.calories))} kcal</span>
@@ -4049,6 +4105,31 @@ export default function MealsPage() {
                                       Save
                                     </>
                                   )}
+                                </Button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 gap-1.5"
+                                  onClick={() => addProductToBasketMutation.mutate(product)}
+                                  disabled={addProductToBasketMutation.isPending}
+                                  data-testid={`button-add-to-basket-${productKey}`}
+                                >
+                                  {addProductToBasketMutation.isPending
+                                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    : <ShoppingBasket className="h-3.5 w-3.5" />}
+                                  Basket
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 gap-1.5"
+                                  onClick={() => { appendPendingIngredient(product.product_name + (product.brand ? ` (${product.brand})` : "")); toast({ title: "Added to quick list" }); }}
+                                  data-testid={`button-quicklist-product-${productKey}`}
+                                >
+                                  <ListPlus className="h-3.5 w-3.5" />
+                                  Quick List
                                 </Button>
                               </div>
                             </div>
@@ -4304,7 +4385,7 @@ export default function MealsPage() {
                                         nutritionMap={nutritionMap}
                                         onFreezeClick={importedMealId ? () => setAddToFreezerMealId(importedMealId) : undefined}
                                         showListButton
-                                        onAddToQuickList={isFromList ? handleAddToListFromCookbook : undefined}
+                                        onAddToQuickList={handleAddToListFromCookbook}
                                       />
                                     </div>
                                   )}

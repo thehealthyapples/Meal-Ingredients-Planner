@@ -1,4 +1,4 @@
-import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent } from "@shared/schema";
+import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent, pantryIngredientKnowledge, PantryIngredientKnowledge } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
 import { eq, and, ilike, or, sql, inArray, isNull, isNotNull } from "drizzle-orm";
@@ -286,6 +286,32 @@ export interface IStorage {
   getFoodKnowledgeAll(): Promise<FoodKnowledge[]>;
   getFoodKnowledgeBySlug(slug: string): Promise<FoodKnowledge | null>;
   searchFoodKnowledge(q: string): Promise<FoodKnowledge[]>;
+
+  // ── Pantry Ingredient Knowledge ───────────────────────────────────────────────
+  getPantryIngredientKnowledge(ingredientKey: string): Promise<PantryIngredientKnowledge | null>;
+  upsertPantryIngredientKnowledge(
+    ingredientKey: string,
+    fields: {
+      supports: string[];
+      highlights?: string[];
+      whyItMatters: string;
+      goodToKnow?: string;
+      howToChoose?: string[];
+      tags: string[];
+    },
+    source: "ai" | "manual",
+  ): Promise<PantryIngredientKnowledge>;
+  seedStaticPantryKnowledge(
+    entries: Array<{
+      ingredientKey: string;
+      supports: string[];
+      highlights?: string[];
+      whyItMatters: string;
+      goodToKnow?: string;
+      howToChoose?: string[];
+      tags: string[];
+    }>,
+  ): Promise<void>;
 
   sessionStore: session.Store;
 }
@@ -3074,6 +3100,83 @@ export class DatabaseStorage implements IStorage {
         )
       ))
       .orderBy(foodKnowledge.title);
+  }
+
+  async getPantryIngredientKnowledge(ingredientKey: string): Promise<PantryIngredientKnowledge | null> {
+    const [row] = await db.select().from(pantryIngredientKnowledge)
+      .where(eq(pantryIngredientKnowledge.ingredientKey, ingredientKey))
+      .limit(1);
+    return row ?? null;
+  }
+
+  async upsertPantryIngredientKnowledge(
+    ingredientKey: string,
+    fields: {
+      supports: string[];
+      highlights?: string[];
+      whyItMatters: string;
+      goodToKnow?: string;
+      howToChoose?: string[];
+      tags: string[];
+    },
+    source: "ai" | "manual",
+  ): Promise<PantryIngredientKnowledge> {
+    const now = new Date();
+    const [row] = await db.insert(pantryIngredientKnowledge)
+      .values({
+        ingredientKey,
+        supports: fields.supports,
+        highlights: fields.highlights ?? null,
+        whyItMatters: fields.whyItMatters,
+        goodToKnow: fields.goodToKnow ?? null,
+        howToChoose: fields.howToChoose ?? null,
+        tags: fields.tags,
+        lastEnrichedAt: now,
+        enrichmentSource: source,
+      })
+      .onConflictDoUpdate({
+        target: pantryIngredientKnowledge.ingredientKey,
+        set: {
+          supports: sql`CASE WHEN ${pantryIngredientKnowledge.isLocked} THEN ${pantryIngredientKnowledge.supports} ELSE EXCLUDED.supports END`,
+          highlights: sql`CASE WHEN ${pantryIngredientKnowledge.isLocked} THEN ${pantryIngredientKnowledge.highlights} ELSE EXCLUDED.highlights END`,
+          whyItMatters: sql`CASE WHEN ${pantryIngredientKnowledge.isLocked} THEN ${pantryIngredientKnowledge.whyItMatters} ELSE EXCLUDED.why_it_matters END`,
+          goodToKnow: sql`CASE WHEN ${pantryIngredientKnowledge.isLocked} THEN ${pantryIngredientKnowledge.goodToKnow} ELSE EXCLUDED.good_to_know END`,
+          howToChoose: sql`CASE WHEN ${pantryIngredientKnowledge.isLocked} THEN ${pantryIngredientKnowledge.howToChoose} ELSE EXCLUDED.how_to_choose END`,
+          tags: sql`CASE WHEN ${pantryIngredientKnowledge.isLocked} THEN ${pantryIngredientKnowledge.tags} ELSE EXCLUDED.tags END`,
+          lastEnrichedAt: sql`CASE WHEN ${pantryIngredientKnowledge.isLocked} THEN ${pantryIngredientKnowledge.lastEnrichedAt} ELSE EXCLUDED.last_enriched_at END`,
+          enrichmentSource: sql`CASE WHEN ${pantryIngredientKnowledge.isLocked} THEN ${pantryIngredientKnowledge.enrichmentSource} ELSE EXCLUDED.enrichment_source END`,
+          enrichmentVersion: sql`CASE WHEN ${pantryIngredientKnowledge.isLocked} THEN ${pantryIngredientKnowledge.enrichmentVersion} ELSE ${pantryIngredientKnowledge.enrichmentVersion} + 1 END`,
+        },
+      })
+      .returning();
+    return row;
+  }
+
+  async seedStaticPantryKnowledge(
+    entries: Array<{
+      ingredientKey: string;
+      supports: string[];
+      highlights?: string[];
+      whyItMatters: string;
+      goodToKnow?: string;
+      howToChoose?: string[];
+      tags: string[];
+    }>,
+  ): Promise<void> {
+    if (entries.length === 0) return;
+    await db.insert(pantryIngredientKnowledge)
+      .values(entries.map(e => ({
+        ingredientKey: e.ingredientKey,
+        supports: e.supports,
+        highlights: e.highlights ?? null,
+        whyItMatters: e.whyItMatters,
+        goodToKnow: e.goodToKnow ?? null,
+        howToChoose: e.howToChoose ?? null,
+        tags: e.tags,
+        enrichmentSource: "manual",
+        isLocked: true,
+      })))
+      .onConflictDoNothing();
   }
 
   async getSiteSetting(key: string): Promise<string | null> {

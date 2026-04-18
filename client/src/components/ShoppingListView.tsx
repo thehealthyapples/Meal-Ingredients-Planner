@@ -192,11 +192,12 @@ function resolveDisplayMatches(
   // so curated picks beat price-match entries of identical rating.
   deduped.sort((a, b) => (b.thaRating ?? 0) - (a.thaRating ?? 0));
 
-  // If this item is a whole food, any match with a null rating should show 5 apples
-  // (whole foods are always 5 — no processing, no additives).
+  // Whole foods are always 5 apples — no processing, no additives.
+  // Override unconditionally: a price match or THA pick rating must never
+  // reduce a whole food below 5, even if the matched product has a rating set.
   const wholeFoodItem = isWholeFood(item);
   if (wholeFoodItem) {
-    return deduped.map(m => ({ ...m, thaRating: m.thaRating ?? 5 }));
+    return deduped.map(m => ({ ...m, thaRating: 5 }));
   }
   return deduped;
 }
@@ -845,11 +846,12 @@ export default function ShoppingListView({
     const resolvedMatch = resolvedMatches[currentMatchIndex] ?? null;
     const isEditing = editingItemId === item.id;
 
-    // Effective apple rating: match rating > item DB rating > whole-food inference (5).
-    // This ensures whole foods always show 5 apples even when no product match exists.
+    // Whole foods are always 5 apples — the whole-food rule takes absolute priority.
+    // Raw counts, product-match ratings, or DB values must never leak into this number.
     const itemIsWholeFood = isWholeFood(item);
-    const effectiveRating: number | null =
-      resolvedMatch?.thaRating ?? item.thaRating ?? (itemIsWholeFood ? 5 : null);
+    const effectiveRating: number | null = itemIsWholeFood
+      ? 5
+      : (resolvedMatch?.thaRating ?? item.thaRating ?? null);
 
     const rowBg =
       state === "in_basket"   ? "bg-primary/[0.04] dark:bg-primary/[0.07]"

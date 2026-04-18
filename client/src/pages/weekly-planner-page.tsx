@@ -21,7 +21,7 @@ import { TemplatesPanel } from "@/components/templates-panel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
 import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@/lib/nutrition-variety";
 import { getMealNutrients } from "@/lib/nutrition-insights";
-import { NutritionVarietyDots } from "@/components/nutrition-variety-chips";
+import { NutritionVarietyDots, PlannerVarietyLegend, MealVarietyNudge } from "@/components/nutrition-variety-chips";
 import { MealNutrientTags } from "@/components/nutrition-insights-panel";
 import { DayViewDrawer } from "@/components/day-view-drawer";
 import { useUser } from "@/hooks/use-user";
@@ -214,7 +214,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
       const res = await apiRequest('POST', '/api/shopping-list/from-meals', { mealSelections: [{ mealId, count: qty }] });
       return res.json();
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['/api/shopping-list'] }); toast({ title: "Added to shopping list" }); },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['/api/shopping-list'] }); toast({ title: "Added to basket" }); },
     onError: () => toast({ title: "Failed to add", variant: "destructive" }),
   });
 
@@ -378,7 +378,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
                 {addToListMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBasket className="h-4 w-4" />}
               </Button>
             </TooltipTrigger>
-            <TooltipContent><p className="text-xs">Add to shopping list</p></TooltipContent>
+            <TooltipContent><p className="text-xs">Add to basket</p></TooltipContent>
           </Tooltip>
         )}
 
@@ -548,6 +548,14 @@ export default function WeeklyPlannerPage() {
   const { data: categories = [] } = useQuery<MealCategory[]>({
     queryKey: ['/api/categories'],
   });
+
+  const { data: pantryItems = [] } = useQuery<{ id: number; ingredientKey: string; displayName: string | null }[]>({
+    queryKey: ['/api/pantry'],
+  });
+  const pantryNames = useMemo(
+    () => pantryItems.map(p => p.displayName ?? p.ingredientKey),
+    [pantryItems],
+  );
 
   const allMealIds = useMemo(() => {
     const ids = new Set<number>();
@@ -792,7 +800,7 @@ export default function WeeklyPlannerPage() {
       qc.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
       qc.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
       const totalServings = mealSelections.reduce((sum, s) => sum + s.count, 0);
-      toast({ title: "Added to shopping list", description: `${totalServings} meal serving${totalServings !== 1 ? 's' : ''}` });
+      toast({ title: "Added to basket", description: `${totalServings} meal serving${totalServings !== 1 ? 's' : ''}` });
     },
     onError: (err) => {
       toast({ title: "Failed to add to basket", variant: "destructive" });
@@ -1624,8 +1632,6 @@ export default function WeeklyPlannerPage() {
         {fullPlanner.map((week) => (
           <TabsContent key={week.id} value={String(week.weekNumber)} className="mt-0">
 
-
-
             {/* ── Mobile: single-day view (hidden on sm+) ── */}
             <div className="sm:hidden mb-6">
               {/* Day navigation */}
@@ -1688,7 +1694,10 @@ export default function WeeklyPlannerPage() {
                                 })}
                                 data-testid={`button-mobile-meal-${row.id}-${entry.id}`}
                               >
-                                <span className="flex-1 min-w-0 leading-snug">{meal.name}</span>
+                                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                  <span className="leading-snug">{meal.name}</span>
+                                  <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
+                                </div>
                                 {isFrozen && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
                                 {basketMealIdSet.has(meal.id) && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
                               </button>
@@ -1825,7 +1834,10 @@ export default function WeeklyPlannerPage() {
                                       })}
                                       data-testid={`button-meal-${row.id}-${day.dayOfWeek}-${entry.id}`}
                                     >
-                                      <span className="flex-1 min-w-0 break-words leading-tight">{meal.name}</span>
+                                      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                        <span className="break-words leading-tight">{meal.name}</span>
+                                        <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
+                                      </div>
                                       {isFrozen && <Snowflake className="h-2.5 w-2.5 text-blue-400 flex-shrink-0 mt-0.5" />}
                                       {basketMealIdSet.has(meal.id) && (
                                         <ShoppingCart className="h-2.5 w-2.5 text-emerald-500/70 flex-shrink-0 mt-0.5" data-testid={`icon-in-basket-${meal.id}`} />
@@ -1925,6 +1937,8 @@ export default function WeeklyPlannerPage() {
                 </Card>
               </div>
             </div>
+
+            <PlannerVarietyLegend />
 
           </TabsContent>
         ))}
@@ -2280,6 +2294,12 @@ export default function WeeklyPlannerPage() {
                       })()}
                     </div>
                   )}
+
+                  {/* Variety nudge */}
+                  <MealVarietyNudge
+                    score={computeMealVariety(meal.ingredients ?? [])}
+                    pantryItems={pantryNames}
+                  />
 
                   {/* Two-column layout: Ingredients + Instructions */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

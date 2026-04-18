@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Search, Loader2, ShoppingCart, Package, AlertTriangle, Heart,
+  Search, Loader2, ShoppingBasket, ListPlus, Package, AlertTriangle, Heart,
   Leaf, ArrowRight, X, ChevronDown, ChevronUp, Shield,
   Scale, Beaker, Star, Filter, Info, Layers,
   ScanLine,
@@ -27,6 +27,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@shared/routes";
+import { appendPendingIngredient } from "@/lib/quick-list";
 import ScoreBadge from "@/components/ui/score-badge";
 import AppleRatingWithTooltip from "@/components/AppleRating";
 import BarcodeScanner from "@/components/BarcodeScanner";
@@ -827,18 +828,12 @@ export default function ProductsPage() {
 
   const addToList = useMutation({
     mutationFn: async (product: ProductResult) => {
-      const res = await fetch(api.shoppingList.add.path, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          productName: product.product_name,
-          imageUrl: product.image_url,
-          quantity: 1,
-          brand: product.brand,
-        }),
+      const res = await apiRequest('POST', api.shoppingList.add.path, {
+        productName: product.product_name,
+        imageUrl: product.image_url,
+        quantity: 1,
+        brand: product.brand,
       });
-      if (!res.ok) throw new Error('Failed to add');
       return res.json();
     },
     onSuccess: () => {
@@ -849,6 +844,12 @@ export default function ProductsPage() {
       toast({ title: "Couldn't add product", description: "Something went wrong — try again", variant: "destructive" });
     },
   });
+
+  const handleAddToQuickList = (product: ProductResult) => {
+    const ingredient = product.product_name + (product.brand ? ` (${product.brand})` : "");
+    appendPendingIngredient(ingredient);
+    toast({ title: "Added to quick list" });
+  };
 
   const linkToTemplate = useMutation({
     mutationFn: async (product: ProductResult) => {
@@ -1364,7 +1365,10 @@ export default function ProductsPage() {
                               </div>
                               <div className="px-4 pb-4 mt-auto flex gap-2">
                                 <Button size="sm" className="flex-1 gap-1" onClick={(e) => { e.stopPropagation(); addToList.mutate(product); }} disabled={addToList.isPending} data-testid={`button-add-product-${product.barcode || index}`}>
-                                  <ShoppingCart className="h-3.5 w-3.5" />Add to List
+                                  <ShoppingBasket className="h-3.5 w-3.5" />Add to basket
+                                </Button>
+                                <Button size="sm" variant="outline" className="gap-1" onClick={(e) => { e.stopPropagation(); handleAddToQuickList(product); }} data-testid={`button-quick-list-product-grouped-${product.barcode || index}`}>
+                                  <ListPlus className="h-3.5 w-3.5" />
                                 </Button>
                                 <Button size="sm" variant={isInCompare(product) ? 'default' : 'outline'} onClick={(e) => { e.stopPropagation(); toggleCompare(product); }} className="gap-1" data-testid={`button-compare-${product.barcode || index}`}>
                                   <Scale className="h-3.5 w-3.5" />{isInCompare(product) ? 'Added' : 'Compare'}
@@ -1527,8 +1531,17 @@ export default function ProductsPage() {
                               disabled={addToList.isPending}
                               data-testid={`button-add-product-${product.barcode || index}`}
                             >
-                              <ShoppingCart className="h-3.5 w-3.5" />
-                              Add to List
+                              <ShoppingBasket className="h-3.5 w-3.5" />
+                              Add to basket
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1"
+                              onClick={(e) => { e.stopPropagation(); handleAddToQuickList(product); }}
+                              data-testid={`button-quick-list-product-${product.barcode || index}`}
+                            >
+                              <ListPlus className="h-3.5 w-3.5" />
                             </Button>
                             <Button
                               size="sm"
@@ -1557,18 +1570,22 @@ export default function ProductsPage() {
             <DialogTitle className="sr-only">
               {selectedProduct?.product_name ?? "Product detail"}
             </DialogTitle>
-            {selectedProduct && (
+            {selectedProduct && (() => {
+              const snap = selectedProduct;
+              return (
               <AnalyserDetailV2
-                product={selectedProduct}
+                product={snap}
                 otherProducts={searchResults}
-                onAddToBasket={() => addToList.mutate(selectedProduct)}
-                onLinkToTemplate={() => linkToTemplate.mutate(selectedProduct)}
+                onAddToBasket={() => addToList.mutate(snap)}
+                onAddToQuickList={() => handleAddToQuickList(snap)}
+                onLinkToTemplate={() => linkToTemplate.mutate(snap)}
                 onViewProduct={(p) => handleProductSelect(p as ProductResult)}
                 addToBasketPending={addToList.isPending}
                 linkToTemplatePending={linkToTemplate.isPending}
                 dietProfile={userProfile ?? null}
               />
-            )}
+              );
+            })()}
           </DialogContent>
         </Dialog>
 

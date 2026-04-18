@@ -1215,3 +1215,26 @@ export const userItemUsage = pgTable("user_item_usage", {
   lastUsedAt: timestamp("last_used_at", { withTimezone: true }).notNull().defaultNow(),
   useCount: integer("use_count").notNull().default(1),
 });
+
+// ── Pantry Ingredient Knowledge ────────────────────────────────────────────────
+// Shared enrichment cache — one row per canonical ingredient_key.
+// Populated from static seed data (source='manual') or OpenAI enrichment
+// (source='ai'). Locked rows are never overwritten by AI.
+export const pantryIngredientKnowledge = pgTable("pantry_ingredient_knowledge", {
+  id: serial("id").primaryKey(),
+  ingredientKey: text("ingredient_key").notNull().unique(),
+  supports:      text("supports").array().notNull().default(sql`'{}'`),
+  highlights:    text("highlights").array(),
+  whyItMatters:  text("why_it_matters"),
+  goodToKnow:    text("good_to_know"),
+  howToChoose:   text("how_to_choose").array(),
+  tags:          text("tags").array().notNull().default(sql`'{}'`),
+  lastEnrichedAt:    timestamp("last_enriched_at",    { withTimezone: true }),
+  enrichmentSource:  text("enrichment_source").notNull().default("manual"),
+  enrichmentVersion: integer("enrichment_version").notNull().default(1),
+  isLocked:      boolean("is_locked").notNull().default(false),
+  createdAt:     timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type PantryIngredientKnowledge = typeof pantryIngredientKnowledge.$inferSelect;
+export type InsertPantryIngredientKnowledge = typeof pantryIngredientKnowledge.$inferInsert;

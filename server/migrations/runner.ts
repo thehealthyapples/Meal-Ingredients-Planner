@@ -788,6 +788,82 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-04-18_fix_pantry_uniqueness",
+    statements: [
+      // ── Step 1: Remove active household-level duplicates ─────────────────────
+      // The old constraint was UNIQUE(user_id, ingredient_key), so two users in
+      // the same household could both insert the same ingredient_key. Pantry items
+      // are fetched by household_id, so these duplicates are always visible.
+      //
+      // Keep the best row per (household_id, ingredient_key):
+      //   • prefer user-added items (is_default=false) over seeded defaults
+      //   • then prefer the oldest record (lowest id) — most likely the original
+      //
+      // Only touches active (is_deleted=false) rows. Soft-deleted rows are left
+      // alone — they are hidden from all queries and represent intentional removals.
+      `DELETE FROM user_pantry_items
+       WHERE id IN (
+         SELECT id FROM (
+           SELECT id,
+                  ROW_NUMBER() OVER (
+                    PARTITION BY household_id, ingredient_key
+                    ORDER BY is_default ASC, id ASC
+                  ) AS rn
+           FROM user_pantry_items
+           WHERE household_id IS NOT NULL
+             AND is_deleted = FALSE
+         ) ranked
+         WHERE rn > 1
+       )`,
+
+      // ── Step 2: Drop the old user-scoped unique constraint ───────────────────
+      // This constraint was UNIQUE(user_id, ingredient_key). It only prevented a
+      // single user from adding the same key twice — not two household members.
+      "ALTER TABLE user_pantry_items DROP CONSTRAINT IF EXISTS user_pantry_items_user_id_ingredient_key_key",
+
+      // ── Step 3: Add the correct household-scoped partial unique index ─────────
+      // A partial index on active rows only, so:
+      //   • soft-deleted defaults do not block re-adding the same ingredient
+      //   • rows with a null household_id (legacy, should be none) are excluded
+      //     and still protected by the now-dropped user-level constraint
+      //
+      // Two users in the same household can no longer create duplicate entries.
+      // Concurrent seeding is also safe: the second seed's inserts will conflict
+      // on this index and be silently skipped via ON CONFLICT DO NOTHING.
+      `CREATE UNIQUE INDEX IF NOT EXISTS user_pantry_items_household_ingredient_active_unique
+       ON user_pantry_items (household_id, ingredient_key)
+       WHERE is_deleted = FALSE AND household_id IS NOT NULL`,
+    ],
+  },
+
+  {
+    id: "2026-04-18_pantry_ingredient_knowledge",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS pantry_ingredient_knowledge (
+        id                 SERIAL PRIMARY KEY,
+        ingredient_key     TEXT NOT NULL UNIQUE,
+        supports           TEXT[] NOT NULL DEFAULT '{}',
+        why_it_matters     TEXT,
+        good_to_know       TEXT,
+        how_to_choose      TEXT[],
+        tags               TEXT[] NOT NULL DEFAULT '{}',
+        last_enriched_at   TIMESTAMPTZ,
+        enrichment_source  TEXT NOT NULL DEFAULT 'manual',
+        enrichment_version INTEGER NOT NULL DEFAULT 1,
+        is_locked          BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+    ],
+  },
+
+  {
+    id: "2026-04-18_pantry_knowledge_highlights",
+    statements: [
+      `ALTER TABLE pantry_ingredient_knowledge ADD COLUMN IF NOT EXISTS highlights TEXT[]`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

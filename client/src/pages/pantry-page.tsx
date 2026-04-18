@@ -12,10 +12,11 @@ import {
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Trash2, Plus, Loader2, Home, Refrigerator, Archive, Layers, ShoppingCart, ChevronDown, ChevronRight, PawPrint, Settings2, Apple } from "lucide-react";
+import { Trash2, Plus, Loader2, Home, Refrigerator, Archive, Layers, ShoppingBasket, ChevronDown, ChevronRight, PawPrint, Settings2, Apple, Search, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";
+import { getPantryKnowledge, pantryItemMatchesQuery, MICRO_INSIGHTS } from "@/lib/pantry-knowledge";
 
 interface PantryItem {
   id: number;
@@ -75,6 +76,9 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [sending, setSending] = useState(false);
   const [visibleCats, setVisibleCats] = useState<Set<FoodCategory>>(loadVisibleCats);
+  const [filterQuery, setFilterQuery] = useState("");
+  const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+  const [serverKnowledge, setServerKnowledge] = useState<Map<string, "loading" | null | { supports: string[]; highlights?: string[]; whyItMatters: string; goodToKnow?: string; howToChoose?: string[]; tags: string[] }>>(new Map());
 
   const addMutation = useMutation({
     mutationFn: (data: { ingredient: string; displayName: string; category: string }) =>
@@ -110,6 +114,42 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
       ...cat,
       items: foodItems.filter(i => i.category === cat.value),
     }));
+
+  const filteredGrouped = useMemo(() => {
+    if (!filterQuery.trim()) return grouped;
+    return grouped
+      .map(group => ({
+        ...group,
+        items: group.items.filter(item =>
+          pantryItemMatchesQuery(
+            item.displayName || item.ingredientKey,
+            item.ingredientKey,
+            filterQuery,
+          )
+        ),
+      }))
+      .filter(group => group.items.length > 0);
+  }, [grouped, filterQuery]);
+
+  const toggleExpanded = (id: number, ingredientKey: string) => {
+    setExpandedItems(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+        const staticKnowledge = getPantryKnowledge(ingredientKey);
+        if (!staticKnowledge && !serverKnowledge.has(ingredientKey)) {
+          setServerKnowledge(m => new Map(m).set(ingredientKey, "loading"));
+          fetch(`/api/pantry/knowledge/${encodeURIComponent(ingredientKey)}`)
+            .then(r => r.json())
+            .then(data => setServerKnowledge(m => new Map(m).set(ingredientKey, data)))
+            .catch(() => setServerKnowledge(m => new Map(m).set(ingredientKey, null)));
+        }
+      }
+      return next;
+    });
+  };
 
   const handleAdd = () => {
     if (!ingredient.trim()) return;
@@ -195,7 +235,7 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
               disabled={sending}
               data-testid="button-food-send-to-basket"
             >
-              {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingCart className="h-3 w-3 mr-1" />}
+              {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingBasket className="h-3 w-3 mr-1" />}
               Send {selected.size} to Basket
             </Button>
           )}
@@ -261,14 +301,41 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
         </Button>
       </div>
 
+      {/* Benefit / ingredient search */}
+      <div className="relative mb-4">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Search by ingredient or benefit (e.g. gut health, omega-3)"
+          value={filterQuery}
+          onChange={e => setFilterQuery(e.target.value)}
+          className="w-full pl-8 pr-8 py-2 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+          data-testid="input-pantry-search"
+        />
+        {filterQuery && (
+          <button
+            type="button"
+            onClick={() => setFilterQuery("")}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            aria-label="Clear search"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+
       {isLoading ? (
         <div className="space-y-2">
           <Skeleton className="h-6 w-full" />
           <Skeleton className="h-6 w-3/4" />
         </div>
+      ) : filterQuery.trim() && filteredGrouped.length === 0 ? (
+        <p className="text-sm text-muted-foreground italic text-center py-6">
+          No items matched "{filterQuery}"
+        </p>
       ) : (
         <div className="border border-border rounded-md overflow-hidden">
-          {grouped.map((group, idx) => {
+          {filteredGrouped.map((group, idx) => {
             const Icon = group.icon;
             const isOpen = openSections[group.value as FoodCategory];
             const ChevronIcon = isOpen ? ChevronDown : ChevronRight;
@@ -309,31 +376,111 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
                           <span className="text-xs text-muted-foreground">Select all</span>
                         </label>
                         <div className="space-y-0 max-h-64 overflow-y-auto">
-                          {group.items.map(item => (
-                            <div key={item.id} className="flex items-center group" data-testid={`row-food-pantry-item-${item.id}`}>
-                              <label
-                                className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
-                                data-testid={`label-food-${item.id}`}
-                              >
-                                <Checkbox
-                                  checked={selected.has(item.id)}
-                                  onCheckedChange={() => toggleItem(item.id)}
-                                  data-testid={`checkbox-food-${item.id}`}
-                                />
-                                <span className="text-sm flex-1 min-w-0 truncate">{item.displayName || item.ingredientKey}</span>
-                              </label>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                                onClick={() => deleteMutation.mutate(item.id)}
-                                disabled={deleteMutation.isPending}
-                                data-testid={`button-food-pantry-delete-${item.id}`}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          ))}
+                          {group.items.map(item => {
+                            const staticKnow = getPantryKnowledge(item.ingredientKey);
+                            const serverKnow = serverKnowledge.get(item.ingredientKey);
+                            const knowledge = staticKnow ?? (serverKnow !== "loading" ? serverKnow ?? null : null);
+                            const hasKnowledge = !!staticKnow || serverKnow !== undefined;
+                            const isExpanded = expandedItems.has(item.id);
+                            const isLoadingKnowledge = serverKnow === "loading";
+                            return (
+                              <div key={item.id} className="group" data-testid={`row-food-pantry-item-${item.id}`}>
+                                <div className="flex items-center">
+                                  <label
+                                    className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
+                                    data-testid={`label-food-${item.id}`}
+                                  >
+                                    <Checkbox
+                                      checked={selected.has(item.id)}
+                                      onCheckedChange={() => toggleItem(item.id)}
+                                      data-testid={`checkbox-food-${item.id}`}
+                                    />
+                                    <span className="text-sm flex-1 min-w-0 truncate">{item.displayName || item.ingredientKey}</span>
+                                  </label>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpanded(item.id, item.ingredientKey)}
+                                    className="p-2 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors shrink-0"
+                                    title={isExpanded ? "Hide details" : "Learn about this ingredient"}
+                                    data-testid={`button-food-pantry-expand-${item.id}`}
+                                  >
+                                    <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`} />
+                                  </button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                    onClick={() => deleteMutation.mutate(item.id)}
+                                    disabled={deleteMutation.isPending}
+                                    data-testid={`button-food-pantry-delete-${item.id}`}
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                                {isExpanded && (
+                                  <div className="pl-9 pr-3 pb-3 space-y-2.5 border-t border-border/30 mt-0.5">
+                                    {isLoadingKnowledge && (
+                                      <p className="text-xs text-muted-foreground/50 italic pt-2.5">Loading ingredient info…</p>
+                                    )}
+                                    {!isLoadingKnowledge && knowledge && (
+                                      <>
+                                        {knowledge.supports.length > 0 && (
+                                          <div className="pt-2.5">
+                                            <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1.5">Supports</p>
+                                            <div className="flex flex-wrap gap-1">
+                                              {knowledge.supports.map(s => (
+                                                <span key={s} className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">
+                                                  {s}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                        {knowledge.highlights && knowledge.highlights.length > 0 && (
+                                          <div className={knowledge.supports.length === 0 ? "pt-2.5" : ""}>
+                                            <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1.5">Highlights</p>
+                                            <div className="flex flex-wrap gap-1">
+                                              {knowledge.highlights.map(h => (
+                                                <span key={h} className="text-[11px] px-2 py-0.5 rounded-full bg-accent/40 text-muted-foreground border border-border/40">
+                                                  {h}
+                                                </span>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                        <div>
+                                          <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-0.5">Why it matters</p>
+                                          <p className="text-xs text-muted-foreground/80 leading-relaxed">{knowledge.whyItMatters}</p>
+                                        </div>
+                                        {knowledge.goodToKnow && (
+                                          <div>
+                                            <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-0.5">Good to know</p>
+                                            <p className="text-xs text-muted-foreground/80 leading-relaxed">{knowledge.goodToKnow}</p>
+                                          </div>
+                                        )}
+                                        {knowledge.howToChoose && knowledge.howToChoose.length > 0 && (
+                                          <div>
+                                            <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1">How to choose</p>
+                                            <ul className="space-y-0.5">
+                                              {knowledge.howToChoose.map((tip, i) => (
+                                                <li key={i} className="text-xs text-muted-foreground/80 flex items-start gap-1.5">
+                                                  <span className="text-muted-foreground/40 mt-0.5 shrink-0">·</span>
+                                                  {tip}
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+                                    {!isLoadingKnowledge && !knowledge && (
+                                      <p className="text-xs text-muted-foreground/50 italic pt-2.5">No additional info available yet.</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -436,7 +583,7 @@ function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading
             disabled={sending}
             data-testid="button-send-to-basket"
           >
-            {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingCart className="h-3 w-3 mr-1" />}
+            {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingBasket className="h-3 w-3 mr-1" />}
             Send {selected.size} to Basket
           </Button>
         )}
@@ -521,6 +668,9 @@ export default function PantryPage() {
     queryKey: ["/api/pantry"],
   });
 
+  // Rotate by day-of-month — stable per session, different each day
+  const microInsight = MICRO_INSIGHTS[new Date().getDate() % MICRO_INSIGHTS.length];
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
       <div>
@@ -530,6 +680,9 @@ export default function PantryPage() {
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
           Your everyday choices live here.
+        </p>
+        <p className="text-xs text-muted-foreground/50 mt-2 italic" data-testid="text-pantry-micro-insight">
+          {microInsight}
         </p>
       </div>
 

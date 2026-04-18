@@ -41,7 +41,7 @@ import {
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import RetailerLogo from "@/components/RetailerLogo";
 import {
-  ShoppingCart, Copy, Trash2, RefreshCw, Scale,
+  ShoppingCart, ShoppingBasket, Copy, Trash2, RefreshCw, Scale,
   Search, ExternalLink, PoundSterling, TrendingDown, Loader2,
   ArrowUpDown, ArrowUp, ArrowDown, ArrowLeft, Pencil, Check, X,
   Beef, Fish, Milk, Egg, Leaf, Apple, Wheat, Flower2,
@@ -49,7 +49,7 @@ import {
   CircleDot, Plus, Minus, Info, Layers, Crown, Sprout, Tag,
   Download, UtensilsCrossed, Store, Maximize2, Minimize2,
   ChevronDown, ChevronUp, AlertTriangle, Microscope, Filter, SlidersHorizontal,
-  Snowflake, Home, Columns2, Clock, ChefHat, Sparkles, ListChecks, NotepadText,
+  Snowflake, Home, Columns2, Clock, ChefHat, Sparkles, ListChecks, NotepadText, ListPlus,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -72,6 +72,7 @@ import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@
 import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import FoodKnowledgeModal from "@/components/food-knowledge-modal";
 import WholeFoodSelector from "@/components/whole-food-selector";
+import { appendPendingIngredient } from "@/lib/quick-list";
 import ShoppingListView from "@/components/ShoppingListView";
 
 type ShoppingListItemExtended = ShoppingListItem & {
@@ -725,6 +726,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
       toast({ title: "Ingredients added to basket" });
     },
     onError: () => {
@@ -1090,7 +1092,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                       disabled={addWFToBasket.isPending}
                       data-testid="button-add-wf-to-basket"
                     >
-                      {addWFToBasket.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <ShoppingCart className="h-3 w-3 mr-1" />}
+                      {addWFToBasket.isPending ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <ShoppingBasket className="h-3 w-3 mr-1" />}
                       Add to basket
                     </Button>
                   </div>
@@ -1280,9 +1282,14 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                                   </div>
                                   <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                     <ScoreBadge score={thaRating} size={22} />
-                                    <Button size="sm" className="h-6 text-xs px-2" onClick={() => handleSelectProduct(product)} data-testid={`button-select-product-${idx}`}>
-                                      <Check className="h-3 w-3 mr-1" />Select
-                                    </Button>
+                                    <div className="flex items-center gap-1">
+                                      <Button size="sm" variant="outline" className="h-6 text-xs px-2" onClick={() => { appendPendingIngredient(product.product_name + (product.brand ? ` (${product.brand})` : "")); toast({ title: "Added to quick list" }); }} data-testid={`button-quicklist-product-${idx}`}>
+                                        <ListPlus className="h-3 w-3" />
+                                      </Button>
+                                      <Button size="sm" className="h-6 text-xs px-2" onClick={() => handleSelectProduct(product)} data-testid={`button-select-product-${idx}`}>
+                                        <Check className="h-3 w-3 mr-1" />Select
+                                      </Button>
+                                    </div>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1 mt-1.5 flex-wrap">
@@ -1950,6 +1957,8 @@ export default function ShoppingListPage() {
   }, [pricesByItem]);
 
   const getItemThaRating = useCallback((itemId: number, item?: ShoppingListItem): number => {
+    // Whole foods are always 5 — raw counts or product ratings must never override this.
+    if (item && isWholeFood(item)) return 5;
     if (item?.thaRating !== null && item?.thaRating !== undefined && item.thaRating > 0) {
       return item.thaRating;
     }

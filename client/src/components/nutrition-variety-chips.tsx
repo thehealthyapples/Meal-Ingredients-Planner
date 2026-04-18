@@ -1,4 +1,5 @@
 import type { VarietyScore } from "@/lib/nutrition-variety";
+import { computeMealVariety } from "@/lib/nutrition-variety";
 import {
   Tooltip,
   TooltipContent,
@@ -82,6 +83,92 @@ export function NutritionVarietyDots({ score }: { score: VarietyScore }) {
         </span>
       ))}
     </div>
+  );
+}
+
+// ── Planner legend — one static row above the grid ───────────────────────────
+
+export function PlannerVarietyLegend() {
+  return (
+    <div className="px-1 py-2.5 mb-3 space-y-1.5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+        <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/40 font-medium shrink-0 mr-1">
+          Variety at a glance
+        </span>
+        {CATEGORIES.map((cat) => (
+          <span key={cat.key} className="flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${cat.dotColor} opacity-70 flex-shrink-0`} />
+            <span className="text-[11px] text-muted-foreground/70 font-normal leading-none">
+              {cat.chipLabel}
+            </span>
+          </span>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted-foreground/45 font-normal leading-relaxed">
+        A range of these across your meals helps build a more varied diet.
+      </p>
+    </div>
+  );
+}
+
+// ── Meal-level variety nudge — one soft line per meal ────────────────────────
+
+const FALLBACKS: Record<string, string[]> = {
+  vegetables: ["spinach", "cherry tomatoes", "courgette", "cucumber", "sweet potato"],
+  wholeGrains: ["brown rice", "quinoa", "oats", "bulgur wheat"],
+  herbsSpices: ["cumin", "smoked paprika", "fresh basil", "oregano", "coriander"],
+  oliveOil: ["olive oil"],
+};
+
+function findPantryItemForCategory(
+  pantryNames: string[],
+  categoryKey: keyof Omit<VarietyScore, "total">,
+): string | null {
+  for (const name of pantryNames) {
+    const s = computeMealVariety([name]);
+    if (s[categoryKey] > 0) return name;
+  }
+  return FALLBACKS[categoryKey]?.[0] ?? null;
+}
+
+export function MealVarietyNudge({
+  score,
+  pantryItems = [],
+}: {
+  score: VarietyScore;
+  pantryItems?: string[];
+}) {
+  let text: string | null = null;
+
+  if (score.total >= 4) {
+    text = "Nice mix of ingredients in this one.";
+  } else if (score.total === 0) {
+    text = "Adding herbs, vegetables or whole grains would bring more variety to this meal.";
+  } else if (score.vegetables === 0) {
+    const suggestion = findPantryItemForCategory(pantryItems, "vegetables");
+    text = suggestion
+      ? `Adding vegetables would boost variety — ${suggestion} could work well here.`
+      : "Adding vegetables would boost variety in this meal.";
+  } else if (score.wholeGrains === 0 && score.herbsSpices === 0) {
+    text = "Try adding herbs or whole grains to mix things up.";
+  } else if (score.wholeGrains === 0) {
+    const suggestion = findPantryItemForCategory(pantryItems, "wholeGrains");
+    text = suggestion
+      ? `${suggestion.charAt(0).toUpperCase() + suggestion.slice(1)} would add a whole grain element.`
+      : "Adding whole grains would bring more variety.";
+  } else if (score.herbsSpices === 0) {
+    const suggestion = findPantryItemForCategory(pantryItems, "herbsSpices");
+    text = suggestion
+      ? `A little ${suggestion} would add some depth.`
+      : "Herbs or spices would add some depth to this meal.";
+  }
+
+  if (!text) return null;
+
+  return (
+    <p className="text-xs text-muted-foreground/55 italic leading-relaxed">
+      {text}
+    </p>
   );
 }
 

@@ -300,6 +300,7 @@ export function TopBar() {
   const [location] = useLocation();
   const { user } = useUser();
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [, navigate] = useLocation();
   const { data: shoppingListItems = [] } = useQuery<any[]>({
@@ -344,7 +345,7 @@ export function TopBar() {
               <TooltipTrigger asChild>
                 <button
                   className="flex items-center justify-center h-10 w-10 rounded-lg hover:bg-accent/60 text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => setMobileSearchOpen((v) => !v)}
+                  onClick={() => setSearchOpen(true)}
                   aria-label="Search"
                   data-testid="button-topbar-search"
                 >
@@ -461,6 +462,8 @@ export function TopBar() {
 
         </div>
       </header>
+
+      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
 
       {/* Mobile search panel */}
       {mobileSearchOpen && (

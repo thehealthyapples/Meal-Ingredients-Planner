@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  ShoppingCart, Layers, Loader2, ChevronDown, ChevronUp,
+  ShoppingBasket, ListPlus, Layers, Loader2, ChevronDown, ChevronUp,
   Clock, ArrowRight, Info,
 } from "lucide-react";
 import AppleRatingWithTooltip from "@/components/AppleRating";
@@ -21,6 +21,7 @@ interface Props {
   product: InputProduct;
   otherProducts: InputProduct[];
   onAddToBasket: () => void;
+  onAddToQuickList?: () => void;
   onLinkToTemplate: () => void;
   onViewProduct: (product: InputProduct) => void;
   addToBasketPending?: boolean;
@@ -101,6 +102,7 @@ export default function AnalyserDetailV2({
   product,
   otherProducts,
   onAddToBasket,
+  onAddToQuickList,
   onLinkToTemplate,
   onViewProduct,
   addToBasketPending,
@@ -231,17 +233,30 @@ export default function AnalyserDetailV2({
 
           {/* Action buttons */}
           <div className="flex flex-col gap-2.5">
+            <div className="flex gap-2">
             <Button
-              className="w-full gap-2"
+              className="flex-1 gap-2"
               onClick={onAddToBasket}
               disabled={addToBasketPending}
               data-testid="button-v2-add-to-basket"
             >
               {addToBasketPending
                 ? <Loader2 className="h-4 w-4 animate-spin" />
-                : <ShoppingCart className="h-4 w-4" />}
+                : <ShoppingBasket className="h-4 w-4" />}
               Add to Basket
             </Button>
+            {onAddToQuickList && (
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={onAddToQuickList}
+                data-testid="button-v2-add-to-quick-list"
+              >
+                <ListPlus className="h-4 w-4" />
+                Quick List
+              </Button>
+            )}
+            </div>
             <Button
               variant="ghost"
               className="w-full gap-2 text-muted-foreground hover:text-foreground"

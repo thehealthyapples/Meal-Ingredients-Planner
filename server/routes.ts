@@ -1588,7 +1588,7 @@ export async function registerRoutes(
               )
             : null;
 
-          const thaRating = upfResult?.thaRating ?? 3;
+          const thaRating = upfResult?.thaRating ?? null;
 
           const rawStoreTags: string[] = [
             ...(p.stores_tags || []),
@@ -1647,8 +1647,8 @@ export async function registerRoutes(
                 };
               }),
               novaGroup: novaGroup ? Number(novaGroup) : 4,
-              healthScore: Math.max(0, 100 - thaRating * 20),
-              isUltraProcessed: novaGroup === 4 || thaRating <= 2,
+              healthScore: thaRating != null ? Math.max(0, 100 - thaRating * 20) : null,
+              isUltraProcessed: novaGroup === 4 || (thaRating != null && thaRating <= 2),
               warnings: [],
               upfCount: upfResult?.upfIngredientCount || 0,
               totalIngredients: ingredientsTextDisplay.split(',').length,
@@ -6320,6 +6320,38 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     } catch (err) {
       console.error("[Pantry] DELETE error:", err);
       res.status(500).json({ message: "Failed to delete pantry item" });
+    }
+  });
+
+  // ── Pantry Ingredient Knowledge ───────────────────────────────────────────
+  app.get("/api/pantry/knowledge/:key", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { resolveIngredientAlias } = await import("@shared/ingredient-aliases");
+      const raw = req.params.key.trim();
+      const canonicalKey = resolveIngredientAlias(raw);
+
+      // Check DB first
+      let knowledge = await storage.getPantryIngredientKnowledge(canonicalKey);
+      if (knowledge) return res.json(knowledge);
+
+      // Fire async enrichment and return null — client will retry or skip
+      (async () => {
+        try {
+          const { enrichIngredient } = await import("./lib/openai-enrichment");
+          const enriched = await enrichIngredient(canonicalKey);
+          if (enriched) {
+            await storage.upsertPantryIngredientKnowledge(canonicalKey, enriched, "ai");
+          }
+        } catch (err) {
+          console.error(`[PantryKnowledge] Async enrichment failed for "${canonicalKey}":`, err);
+        }
+      })();
+
+      return res.json(null);
+    } catch (err) {
+      console.error("[PantryKnowledge] GET error:", err);
+      res.status(500).json({ message: "Failed to fetch pantry knowledge" });
     }
   });
 

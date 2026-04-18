@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingCart, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, AlarmClock } from "lucide-react";
+import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingBasket, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, AlarmClock, ListPlus } from "lucide-react";
+import { appendPendingIngredient } from "@/lib/quick-list";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
@@ -263,6 +264,23 @@ export default function MealDetailPage() {
     },
   });
 
+  const addProductToBasketMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', api.shoppingList.add.path, {
+        productName: meal!.name,
+        quantity: 1,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      toast({ title: "Added to basket", description: meal!.name });
+    },
+    onError: () => {
+      toast({ title: "Couldn't add to basket", description: "Something went wrong — try again", variant: "destructive" });
+    },
+  });
+
   const reimportMutation = useMutation({
     mutationFn: async (url: string) => {
       const res = await apiRequest('PATCH', buildUrl(api.meals.reimportInstructions.path, { id: mealId! }), { url });
@@ -349,6 +367,8 @@ export default function MealDetailPage() {
     );
   }
 
+  const isPackagedProduct = meal.mealSourceType === 'openfoodfacts';
+
   const category = allCategories.find(c => c.id === meal.categoryId);
   const CatIcon = category ? getCategoryIcon(category.name) : null;
   const dietNames = mealDiets
@@ -399,13 +419,26 @@ export default function MealDetailPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => addToListMutation.mutate()}
-            disabled={addToListMutation.isPending}
+            onClick={() => isPackagedProduct ? addProductToBasketMutation.mutate() : addToListMutation.mutate()}
+            disabled={isPackagedProduct ? addProductToBasketMutation.isPending : addToListMutation.isPending}
             data-testid="button-add-to-list"
           >
-            <ShoppingCart className="h-4 w-4 mr-1" />
-            Add to List
+            {(isPackagedProduct ? addProductToBasketMutation.isPending : addToListMutation.isPending)
+              ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              : <ShoppingBasket className="h-4 w-4 mr-1" />}
+            Add to basket
           </Button>
+          {isPackagedProduct && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { appendPendingIngredient(meal.name); toast({ title: "Added to quick list", description: meal.name }); }}
+              data-testid="button-add-to-quick-list"
+            >
+              <ListPlus className="h-4 w-4 mr-1" />
+              Quick List
+            </Button>
+          )}
           {!isEditedCopy && (
             <Button
               variant="outline"
