@@ -3476,9 +3476,29 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       // resolution_state, canonical_name, category enforcement, and ambiguity
       // detection are applied consistently regardless of source.
       const { resolveItem } = await import('./lib/item-resolver');
-      const resolved = resolveItem(input.productName, {
-        callerCategory: input.category ?? null,
-      });
+      let resolved: Awaited<ReturnType<typeof resolveItem>>;
+      try {
+        resolved = resolveItem(input.productName, {
+          callerCategory: input.category ?? null,
+        });
+      } catch (resolverErr) {
+        console.error('[ShoppingList] resolveItem failed — falling back to raw entry:', resolverErr);
+        const safeName = (input.productName ?? '').trim();
+        const safeNorm = safeName.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+        resolved = {
+          originalText: safeName,
+          productName: safeName,
+          normalizedName: safeNorm,
+          canonicalName: null,
+          category: input.category && input.category !== 'uncategorised' ? input.category : 'other',
+          subcategory: null,
+          resolutionState: 'needs_review',
+          reviewReason: 'unrecognised_item',
+          reviewSuggestions: null,
+          validationNote: 'Item could not be resolved — please verify',
+          needsReview: true,
+        };
+      }
 
       // Override productName / normalizedName with resolved values so leading
       // quantities are stripped and the name is clean.

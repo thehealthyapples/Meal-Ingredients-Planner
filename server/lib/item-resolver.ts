@@ -13,10 +13,9 @@
  *  5. Never silently force a bad category — prefer needs_review over a wrong guess.
  */
 
-import { readFileSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
 import { normalizeName, detectIngredientCategory } from './ingredient-utils';
+import canonicalMapData from '../data/canonical-map.json';
+import ambiguityMapData from '../data/ambiguity-map.json';
 
 // ── Resolution state ──────────────────────────────────────────────────────────
 
@@ -70,16 +69,9 @@ interface CanonicalEntry {
   subcategory: string | null;
 }
 
-const __dir = dirname(fileURLToPath(import.meta.url));
-
 // Keys are lowercase normalised strings.
-const CANONICAL_MAP: Record<string, CanonicalEntry> = (() => {
-  try {
-    return JSON.parse(readFileSync(join(__dir, '../data/canonical-map.json'), 'utf-8'));
-  } catch (err) {
-    throw new Error(`[item-resolver] Failed to load canonical-map.json: ${err}`);
-  }
-})();
+// JSON is imported statically so esbuild bundles it inline — no runtime file I/O.
+const CANONICAL_MAP: Record<string, CanonicalEntry> = canonicalMapData as Record<string, CanonicalEntry>;
 
 // ── Ambiguity dictionary ──────────────────────────────────────────────────────
 // Keys are normalised lowercase umbrella terms.
@@ -97,13 +89,8 @@ interface AmbiguityEntry {
   suggestions: string[];
 }
 
-const AMBIGUITY_MAP: Record<string, AmbiguityEntry> = (() => {
-  try {
-    return JSON.parse(readFileSync(join(__dir, '../data/ambiguity-map.json'), 'utf-8'));
-  } catch (err) {
-    throw new Error(`[item-resolver] Failed to load ambiguity-map.json: ${err}`);
-  }
-})();
+// JSON is imported statically so esbuild bundles it inline — no runtime file I/O.
+const AMBIGUITY_MAP: Record<string, AmbiguityEntry> = ambiguityMapData as Record<string, AmbiguityEntry>;
 
 // ── Confidence thresholds ─────────────────────────────────────────────────────
 
