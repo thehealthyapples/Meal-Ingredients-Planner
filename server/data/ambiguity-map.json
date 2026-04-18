@@ -1,8 +1,11 @@
 {
+  "fruit":           { "mode": "multi",  "suggestions": ["oranges", "bananas", "pears", "grapes", "satsumas", "apples", "berries", "citrus"] },
+  "apples":          { "mode": "multi",  "suggestions": ["Braeburn apples", "Gala apples", "Granny Smith apples", "Pink Lady apples", "Fuji apples", "Cox apples", "Golden Delicious apples"] },
+  "apple":           { "mode": "single", "suggestions": ["Braeburn apple", "Gala apple", "Granny Smith apple", "Pink Lady apple", "Fuji apple", "Cox apple"] },
   "berries":         { "mode": "multi",  "suggestions": ["strawberries", "blueberries", "raspberries", "blackberries", "mixed berries"] },
   "berry":           { "mode": "multi",  "suggestions": ["strawberries", "blueberries", "raspberries", "blackberries", "mixed berries"] },
   "mixed berries":   { "mode": "multi",  "suggestions": ["strawberries", "blueberries", "raspberries", "blackberries"] },
-  "citrus":          { "mode": "single", "suggestions": ["oranges", "lemons", "limes", "grapefruit"] },
+  "citrus":          { "mode": "multi",  "suggestions": ["oranges", "lemons", "limes", "grapefruit"] },
   "stone fruit":     { "mode": "single", "suggestions": ["peaches", "nectarines", "plums", "cherries", "apricots"] },
   "melon":           { "mode": "single", "suggestions": ["watermelon", "cantaloupe", "honeydew melon", "galia melon"] },
   "greens":          { "mode": "multi",  "suggestions": ["spinach", "kale", "spring greens", "cabbage", "broccoli"] },

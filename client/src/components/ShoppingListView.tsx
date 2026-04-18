@@ -29,6 +29,19 @@ type SLItem = ShoppingListItem & {
   }>;
 };
 
+// Client-side mirror of ambiguity-map entries that can appear as suggestions
+// in a parent term's list. When a chip matching one of these keys is tapped,
+// we drill into its children instead of renaming immediately.
+const CHILD_TERMS: Record<string, { mode: 'single' | 'multi'; suggestions: string[] }> = {
+  apples:        { mode: 'multi',  suggestions: ['Braeburn apples', 'Gala apples', 'Granny Smith apples', 'Pink Lady apples', 'Fuji apples', 'Cox apples', 'Golden Delicious apples'] },
+  berries:       { mode: 'multi',  suggestions: ['strawberries', 'blueberries', 'raspberries', 'blackberries', 'mixed berries'] },
+  berry:         { mode: 'multi',  suggestions: ['strawberries', 'blueberries', 'raspberries', 'blackberries', 'mixed berries'] },
+  citrus:        { mode: 'multi',  suggestions: ['oranges', 'lemons', 'limes', 'grapefruit'] },
+  nuts:          { mode: 'multi',  suggestions: ['almonds', 'walnuts', 'cashews', 'pistachios', 'pecans', 'mixed nuts'] },
+  seeds:         { mode: 'multi',  suggestions: ['sunflower seeds', 'pumpkin seeds', 'sesame seeds', 'chia seeds', 'flaxseeds'] },
+  'leafy greens': { mode: 'multi', suggestions: ['spinach', 'kale', 'spring greens', 'chard', 'rocket'] },
+};
+
 const SUPERMARKETS = [
   "Tesco",
   "Sainsbury's",
@@ -559,6 +572,13 @@ export default function ShoppingListView({
   // Multi-select state for group umbrella terms (e.g. "berries").
   // Keyed by item.id → set of selected suggestion strings.
   const [multiSelections, setMultiSelections] = useState<Map<number, Set<string>>>(new Map());
+  // Drill-down state: when a chip has a CHILD_TERMS entry, store the sub-group
+  // here so we can show a second-level chooser without a server trip.
+  const [drillDown, setDrillDown] = useState<Map<number, { label: string; mode: 'single' | 'multi'; suggestions: string[] }>>(new Map());
+  // Child group selections for multi-mode parents that support drill-down.
+  // Keyed by item.id → (group label → set of selected suggestion strings).
+  // Kept separate from multiSelections so the parent view can show per-group counts.
+  const [childGroupSelections, setChildGroupSelections] = useState<Map<number, Map<string, Set<string>>>>(new Map());
   // True while handleHeadToShop is committing pending selections — prevents double-tap.
   const [isCommitting, setIsCommitting] = useState(false);
   // Cupboard check: inline add-item input
@@ -595,10 +615,13 @@ export default function ShoppingListView({
   // The function awaits all add-mutations before transitioning so that the shop
   // view renders with the correct items the first time it mounts.
   const handleHeadToShop = useCallback(async () => {
-    console.log('[HTS] called — isCommitting:', isCommitting, 'multiSelections.size:', multiSelections.size);
+    console.log('[HTS] called — isCommitting:', isCommitting, 'multiSelections.size:', multiSelections.size, 'childGroupSelections.size:', childGroupSelections.size);
     if (isCommitting) return;
 
-    if (multiSelections.size > 0) {
+    const hasMulti = multiSelections.size > 0;
+    const hasChild = childGroupSelections.size > 0;
+
+    if (hasMulti || hasChild) {
       setIsCommitting(true);
       try {
         const existingNames = new Set(
@@ -607,32 +630,39 @@ export default function ShoppingListView({
         const toRemove: number[] = [];
         const addPromises: Array<Promise<void>> = [];
 
-        for (const [itemId, selected] of Array.from(multiSelections.entries())) {
-          if (selected.size === 0) continue;
-          const picks = Array.from(selected);
+        // Collect all item IDs that have any pending selection
+        const allItemIds = new Set([
+          ...Array.from(multiSelections.keys()),
+          ...Array.from(childGroupSelections.keys()),
+        ]);
+
+        for (const itemId of Array.from(allItemIds)) {
+          const topLevel = Array.from(multiSelections.get(itemId) ?? new Set<string>());
+          const childItems = Array.from(
+            (childGroupSelections.get(itemId) ?? new Map<string, Set<string>>()).values()
+          ).flatMap((s: Set<string>) => Array.from(s));
+          const picks = [...topLevel, ...childItems];
+          if (picks.length === 0) continue;
           console.log('[HTS] item', itemId, 'picks:', picks, 'onAddItem?', !!onAddItem, 'onRenameItem?', !!onRenameItem);
 
           if (picks.length === 1) {
-            // Single pick — rename the umbrella item in place
             if (onRenameItem) {
               const r = onRenameItem(itemId, picks[0]);
               if (r instanceof Promise) addPromises.push(r);
             }
           } else if (onAddItem) {
-            // Multiple picks — add each child that isn't already in the list
             for (const p of picks) {
               if (!existingNames.has(p.toLowerCase().trim())) {
                 console.log('[HTS] adding:', p);
                 const r = onAddItem(p);
                 if (r instanceof Promise) addPromises.push(r);
-                existingNames.add(p.toLowerCase().trim()); // prevent double-add within same batch
+                existingNames.add(p.toLowerCase().trim());
               } else {
                 console.log('[HTS] skipping (already exists):', p);
               }
             }
             toRemove.push(itemId);
           } else if (onRenameItem) {
-            // No add capability — rename to first pick as fallback
             const r = onRenameItem(itemId, picks[0]);
             if (r instanceof Promise) addPromises.push(r);
           }
@@ -643,6 +673,7 @@ export default function ShoppingListView({
         console.log('[HTS] adds complete — removing', toRemove.length, 'items');
         toRemove.forEach(id => onRemoveItem?.(id));
         setMultiSelections(new Map());
+        setChildGroupSelections(new Map());
       } finally {
         setIsCommitting(false);
       }
@@ -650,7 +681,7 @@ export default function ShoppingListView({
 
     console.log('[HTS] setPhase("shopping")');
     setPhase("shopping");
-  }, [isCommitting, multiSelections, items, onAddItem, onRenameItem, onRemoveItem]);
+  }, [isCommitting, multiSelections, childGroupSelections, items, onAddItem, onRenameItem, onRemoveItem]);
 
   // ── State derivation ─────────────────────────────────────────────────────
 
@@ -1444,8 +1475,74 @@ export default function ShoppingListView({
                                 {/* Ambiguity suggestion chips / checkboxes */}
                                 {isAmbiguous && suggestions.length > 0 && (() => {
                                   if (isMultiSelectGroup) {
-                                    // Multi-select: checkboxes + confirm button
+                                    // Multi-select with optional drill-down into child groups
+                                    const drill = drillDown.get(item.id);
+
+                                    if (drill) {
+                                      // ── Drill-down sub-group (e.g. apples ›, berries ›) ──
+                                      const childSelMap = childGroupSelections.get(item.id) ?? new Map<string, Set<string>>();
+                                      const drillSelected = childSelMap.get(drill.label) ?? new Set<string>();
+
+                                      const toggleDrillSel = (s: string) => setChildGroupSelections(prev => {
+                                        const next = new Map(prev);
+                                        const gMap = new Map(next.get(item.id) ?? []);
+                                        const cur = new Set(gMap.get(drill.label) ?? []);
+                                        if (cur.has(s)) cur.delete(s); else cur.add(s);
+                                        gMap.set(drill.label, cur);
+                                        next.set(item.id, gMap);
+                                        return next;
+                                      });
+
+                                      const drillCount = drillSelected.size;
+
+                                      return (
+                                        <div className="flex flex-col gap-2 mt-0.5">
+                                          <button
+                                            onClick={() => setDrillDown(prev => { const m = new Map(prev); m.delete(item.id); return m; })}
+                                            className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors w-fit mb-1"
+                                          >
+                                            <ArrowLeft className="h-2.5 w-2.5" />
+                                            {drill.label}
+                                          </button>
+                                          <div className="flex flex-wrap gap-1.5">
+                                            {drill.suggestions.map(s => {
+                                              const checked = drillSelected.has(s);
+                                              return (
+                                                <button
+                                                  key={s}
+                                                  onClick={() => toggleDrillSel(s)}
+                                                  className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors flex items-center gap-1.5 ${
+                                                    checked
+                                                      ? 'border-primary bg-primary/10 text-primary font-medium'
+                                                      : 'border-primary/30 bg-primary/5 text-primary/80 hover:bg-primary/10 hover:border-primary/50'
+                                                  }`}
+                                                >
+                                                  <span className={`inline-block w-3 h-3 rounded-sm border flex-shrink-0 ${checked ? 'bg-primary border-primary' : 'border-primary/40'}`}>
+                                                    {checked && (
+                                                      <svg viewBox="0 0 10 10" className="w-full h-full text-primary-foreground" fill="currentColor">
+                                                        <path d="M1.5 5L4 7.5 8.5 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                                                      </svg>
+                                                    )}
+                                                  </span>
+                                                  {s}
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+                                          <button
+                                            onClick={() => setDrillDown(prev => { const m = new Map(prev); m.delete(item.id); return m; })}
+                                            className="text-[11px] px-3 py-1 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors w-fit"
+                                          >
+                                            {drillCount === 0 ? '← Back' : `Save ${drillCount} item${drillCount !== 1 ? 's' : ''} & back`}
+                                          </button>
+                                        </div>
+                                      );
+                                    }
+
+                                    // ── Parent multi-select with child-group drill chips ──
                                     const selected = multiSelections.get(item.id) ?? new Set<string>();
+                                    const childSelMap = childGroupSelections.get(item.id) ?? new Map<string, Set<string>>();
+                                    const totalCount = selected.size + Array.from(childSelMap.values()).reduce((acc, s) => acc + s.size, 0);
 
                                     const toggleSelection = (s: string) => {
                                       setMultiSelections(prev => {
@@ -1458,31 +1555,46 @@ export default function ShoppingListView({
                                     };
 
                                     const confirmSelection = () => {
-                                      const picks = Array.from(selected);
-                                      if (picks.length === 0) return;
-                                      if (picks.length === 1) {
-                                        // Single pick → rename in place
-                                        if (onRenameItem) onRenameItem(item.id, picks[0]);
+                                      const topItems = Array.from(selected);
+                                      const childItems = Array.from(childSelMap.values()).flatMap(s => Array.from(s));
+                                      const all = [...topItems, ...childItems];
+                                      if (all.length === 0) return;
+                                      if (all.length === 1) {
+                                        if (onRenameItem) onRenameItem(item.id, all[0]);
                                       } else {
-                                        // Multiple picks → add each, remove original umbrella item.
-                                        // Only proceed if onAddItem is available — do not remove
-                                        // the original without being able to replace it.
                                         if (onAddItem) {
-                                          picks.forEach(p => onAddItem(p));
+                                          all.forEach(p => onAddItem(p));
                                           if (onRemoveItem) onRemoveItem(item.id);
                                         } else if (onRenameItem) {
-                                          // Fallback: rename to first pick if no add capability
-                                          onRenameItem(item.id, picks[0]);
+                                          onRenameItem(item.id, all[0]);
                                         }
                                       }
                                       setReviewDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; });
                                       setMultiSelections(prev => { const m = new Map(prev); m.delete(item.id); return m; });
+                                      setChildGroupSelections(prev => { const m = new Map(prev); m.delete(item.id); return m; });
                                     };
 
                                     return (
                                       <div className="flex flex-col gap-2 mt-0.5">
                                         <div className="flex flex-wrap gap-1.5">
                                           {suggestions.map(s => {
+                                            const childGroup = CHILD_TERMS[s.toLowerCase()];
+                                            if (childGroup) {
+                                              const groupCount = childSelMap.get(s)?.size ?? 0;
+                                              return (
+                                                <button
+                                                  key={s}
+                                                  onClick={() => setDrillDown(prev => { const m = new Map(prev); m.set(item.id, { label: s, ...childGroup }); return m; })}
+                                                  className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors flex items-center gap-1 ${
+                                                    groupCount > 0
+                                                      ? 'border-primary bg-primary/10 text-primary font-medium'
+                                                      : 'border-primary/30 bg-primary/5 text-primary/80 hover:bg-primary/10 hover:border-primary/50'
+                                                  }`}
+                                                >
+                                                  {s}{groupCount > 0 ? ` (${groupCount})` : ''} ›
+                                                </button>
+                                              );
+                                            }
                                             const checked = selected.has(s);
                                             return (
                                               <button
@@ -1515,38 +1627,151 @@ export default function ShoppingListView({
                                         <div className="flex items-center gap-2">
                                           <button
                                             onClick={confirmSelection}
-                                            disabled={selected.size === 0}
+                                            disabled={totalCount === 0}
                                             className="text-[11px] px-3 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                           >
-                                            {selected.size === 0
+                                            {totalCount === 0
                                               ? 'Select items'
-                                              : selected.size === 1
+                                              : totalCount === 1
                                                 ? 'Confirm'
-                                                : `Add ${selected.size} items`}
+                                                : `Add ${totalCount} items`}
                                           </button>
                                           <span className="text-[10px] text-muted-foreground/60">
-                                            {selected.size === 0 ? 'tap to select' : `${selected.size} selected`}
+                                            {totalCount === 0 ? 'tap to select' : `${totalCount} selected`}
                                           </span>
                                         </div>
                                       </div>
                                     );
                                   }
 
-                                  // Single-select: original chip tap behaviour
+                                  // Single-select: chip tap — may drill into a child group
+                                  const drill = drillDown.get(item.id);
+
+                                  if (drill) {
+                                    // ── Second-level chooser ──────────────────────────────
+                                    const backBtn = (
+                                      <button
+                                        onClick={() => setDrillDown(prev => { const m = new Map(prev); m.delete(item.id); return m; })}
+                                        className="flex items-center gap-1 text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors w-fit mb-1"
+                                      >
+                                        <ArrowLeft className="h-2.5 w-2.5" />
+                                        {drill.label}
+                                      </button>
+                                    );
+
+                                    if (drill.mode === 'multi') {
+                                      const selected = multiSelections.get(item.id) ?? new Set<string>();
+                                      const toggleSel = (s: string) => setMultiSelections(prev => {
+                                        const next = new Map(prev);
+                                        const cur = new Set(next.get(item.id) ?? []);
+                                        if (cur.has(s)) cur.delete(s); else cur.add(s);
+                                        next.set(item.id, cur);
+                                        return next;
+                                      });
+                                      const confirmSel = () => {
+                                        const picks = Array.from(selected);
+                                        if (picks.length === 0) return;
+                                        if (picks.length === 1) {
+                                          if (onRenameItem) onRenameItem(item.id, picks[0]);
+                                        } else if (onAddItem) {
+                                          picks.forEach(p => onAddItem(p));
+                                          if (onRemoveItem) onRemoveItem(item.id);
+                                        } else if (onRenameItem) {
+                                          onRenameItem(item.id, picks[0]);
+                                        }
+                                        setReviewDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; });
+                                        setMultiSelections(prev => { const m = new Map(prev); m.delete(item.id); return m; });
+                                        setDrillDown(prev => { const m = new Map(prev); m.delete(item.id); return m; });
+                                      };
+                                      return (
+                                        <div className="flex flex-col gap-2 mt-0.5">
+                                          {backBtn}
+                                          <div className="flex flex-wrap gap-1.5">
+                                            {drill.suggestions.map(s => {
+                                              const checked = selected.has(s);
+                                              return (
+                                                <button
+                                                  key={s}
+                                                  onClick={() => toggleSel(s)}
+                                                  className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors flex items-center gap-1.5 ${
+                                                    checked
+                                                      ? 'border-primary bg-primary/10 text-primary font-medium'
+                                                      : 'border-primary/30 bg-primary/5 text-primary/80 hover:bg-primary/10 hover:border-primary/50'
+                                                  }`}
+                                                >
+                                                  <span className={`inline-block w-3 h-3 rounded-sm border flex-shrink-0 ${checked ? 'bg-primary border-primary' : 'border-primary/40'}`}>
+                                                    {checked && (
+                                                      <svg viewBox="0 0 10 10" className="w-full h-full text-primary-foreground" fill="currentColor">
+                                                        <path d="M1.5 5L4 7.5 8.5 3" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                                                      </svg>
+                                                    )}
+                                                  </span>
+                                                  {s}
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+                                          <div className="flex items-center gap-2">
+                                            <button
+                                              onClick={confirmSel}
+                                              disabled={selected.size === 0}
+                                              className="text-[11px] px-3 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                                            >
+                                              {selected.size === 0 ? 'Select items' : selected.size === 1 ? 'Confirm' : `Add ${selected.size} items`}
+                                            </button>
+                                            <span className="text-[10px] text-muted-foreground/60">
+                                              {selected.size === 0 ? 'tap to select' : `${selected.size} selected`}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      );
+                                    }
+
+                                    // Single-mode drill-down
+                                    return (
+                                      <div className="flex flex-col gap-1 mt-0.5">
+                                        {backBtn}
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {drill.suggestions.map(s => (
+                                            <button
+                                              key={s}
+                                              onClick={() => {
+                                                if (onRenameItem) onRenameItem(item.id, s);
+                                                setReviewDismissed(prev => { const ns = new Set(prev); ns.add(item.id); return ns; });
+                                                setDrillDown(prev => { const m = new Map(prev); m.delete(item.id); return m; });
+                                              }}
+                                              className="text-[11px] px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary/80 hover:bg-primary/10 hover:border-primary/50 transition-colors"
+                                            >
+                                              {s}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+
+                                  // ── First-level chips ─────────────────────────────────
                                   return (
                                     <div className="flex flex-wrap gap-1.5 mt-0.5">
-                                      {suggestions.map(s => (
-                                        <button
-                                          key={s}
-                                          onClick={() => {
-                                            if (onRenameItem) onRenameItem(item.id, s);
-                                            setReviewDismissed(prev => { const ns = new Set(prev); ns.add(item.id); return ns; });
-                                          }}
-                                          className="text-[11px] px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary/80 hover:bg-primary/10 hover:border-primary/50 transition-colors"
-                                        >
-                                          {s}
-                                        </button>
-                                      ))}
+                                      {suggestions.map(s => {
+                                        const childGroup = CHILD_TERMS[s.toLowerCase()];
+                                        return (
+                                          <button
+                                            key={s}
+                                            onClick={() => {
+                                              if (childGroup) {
+                                                setDrillDown(prev => { const m = new Map(prev); m.set(item.id, { label: s, ...childGroup }); return m; });
+                                              } else {
+                                                if (onRenameItem) onRenameItem(item.id, s);
+                                                setReviewDismissed(prev => { const ns = new Set(prev); ns.add(item.id); return ns; });
+                                              }
+                                            }}
+                                            className="text-[11px] px-2.5 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary/80 hover:bg-primary/10 hover:border-primary/50 transition-colors"
+                                          >
+                                            {s}{childGroup ? ' ›' : ''}
+                                          </button>
+                                        );
+                                      })}
                                       <button
                                         onClick={() => { setReviewEditVal(item.productName ?? ""); setReviewEditId(item.id); }}
                                         className="text-[11px] px-2.5 py-1 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:bg-muted/50 transition-colors"
