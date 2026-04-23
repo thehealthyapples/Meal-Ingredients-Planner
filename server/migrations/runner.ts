@@ -923,6 +923,17 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // adaptation_result was defined in shared/schema.ts and used by
+    // savePlannerEntryAdaptation / the "Tailor for household" feature,
+    // but the column was never added to the DB. Safe: JSONB nullable,
+    // no default needed. Idempotent via IF NOT EXISTS guard.
+    id: "2026-04-23_add_adaptation_result_to_planner_entries",
+    statements: [
+      "ALTER TABLE planner_entries ADD COLUMN IF NOT EXISTS adaptation_result JSONB",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

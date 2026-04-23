@@ -41,7 +41,7 @@ async function run() {
       `SELECT id FROM schema_migrations ORDER BY applied_at DESC, id DESC LIMIT 1`
     );
     const latestMig = migRows[0]?.id ?? "(none)";
-    const expectedHead = "2026-04-19_backfill_shopping_list_null_resolution_state";
+    const expectedHead = "2026-04-23_add_adaptation_result_to_planner_entries";
     if (latestMig === expectedHead) {
       pass("Schema at head", latestMig);
     } else {
