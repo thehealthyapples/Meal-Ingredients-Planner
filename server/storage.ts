@@ -1024,8 +1024,25 @@ export class DatabaseStorage implements IStorage {
       return weeks;
     } catch (err: any) {
       if (err?.code === '23505') {
+        // Unique constraint on (user_id, week_number) fired. Two possible causes:
+        // 1. Concurrent request — rows were just created → householdId query finds them.
+        // 2. Legacy rows exist with household_id IS NULL (pre-household-system).
+        //    The backfill migration covers this, but as a defensive measure we also
+        //    patch any surviving null rows here and return them.
         const retried = await db.select().from(plannerWeeks).where(eq(plannerWeeks.householdId, householdId)).orderBy(plannerWeeks.weekNumber);
         if (retried.length > 0) return retried;
+
+        // Defensive: patch null-household rows for this user and return them.
+        const nullRows = await db.select().from(plannerWeeks)
+          .where(and(eq(plannerWeeks.userId, userId), isNull(plannerWeeks.householdId)))
+          .orderBy(plannerWeeks.weekNumber);
+        if (nullRows.length > 0) {
+          console.warn(`[Planner] Patching ${nullRows.length} planner_weeks with null household_id for user ${userId}`);
+          await db.update(plannerWeeks)
+            .set({ householdId })
+            .where(and(eq(plannerWeeks.userId, userId), isNull(plannerWeeks.householdId)));
+          return db.select().from(plannerWeeks).where(eq(plannerWeeks.householdId, householdId)).orderBy(plannerWeeks.weekNumber);
+        }
       }
       throw err;
     }

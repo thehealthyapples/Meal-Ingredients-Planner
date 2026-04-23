@@ -864,6 +864,65 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // RELEASE-HARDENING: Final sweep for planner_weeks rows whose household_id
+    // was never backfilled. Earlier backfills (2026-03-04 and 2026-03-13) only
+    // joined through households.created_by_user_id, missing users who became
+    // household members after those migrations ran. This join goes through
+    // household_members directly, matching every active membership.
+    // Safe: only touches rows where household_id IS NULL. Idempotent.
+    id: "2026-04-19_backfill_planner_weeks_household_id_final",
+    statements: [
+      `UPDATE planner_weeks pw
+       SET household_id = hm.household_id
+       FROM household_members hm
+       WHERE hm.user_id = pw.user_id
+         AND hm.status = 'active'
+         AND pw.household_id IS NULL`,
+    ],
+  },
+
+  {
+    // RELEASE-HARDENING: Ensure no shopping_list rows have a NULL
+    // resolution_state. The column was added with DEFAULT 'raw' on
+    // 2026-04-12, but any row inserted via a raw SQL path that bypassed
+    // the ORM default could still be NULL. Setting to 'raw' is the safe
+    // starting point — it marks items as unprocessed without losing data.
+    // Idempotent; safe to run multiple times.
+    id: "2026-04-19_backfill_shopping_list_null_resolution_state",
+    statements: [
+      `UPDATE shopping_list
+       SET resolution_state = 'raw'
+       WHERE resolution_state IS NULL`,
+    ],
+  },
+
+  {
+    id: "2026-04-19_ingredient_classifications_table",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS ingredient_classifications (
+         id              SERIAL PRIMARY KEY,
+         normalized_key  TEXT NOT NULL UNIQUE,
+         canonical_name  TEXT NOT NULL,
+         canonical_key   TEXT NOT NULL,
+         category        TEXT NOT NULL,
+         subcategory     TEXT,
+         aliases         TEXT,
+         source          TEXT NOT NULL DEFAULT 'ai',
+         ai_confidence   TEXT,
+         ai_model        TEXT,
+         review_status   TEXT NOT NULL DEFAULT 'pending',
+         notes           TEXT,
+         created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+         updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+       )`,
+      `CREATE INDEX IF NOT EXISTS idx_ic_normalized_key
+         ON ingredient_classifications(normalized_key)`,
+      `CREATE INDEX IF NOT EXISTS idx_ic_review_status
+         ON ingredient_classifications(review_status)`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

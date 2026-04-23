@@ -1,7 +1,16 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { normalizeIngredientKey } from "@shared/normalize";
-import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowLeft, ArrowRight, Store, SkipForward, Pencil, Search, AlertTriangle, Plus } from "lucide-react";
+import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowLeft, ArrowRight, Store, Pencil, Search, AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { rankDisplayMatches, type RankingMode } from "@/lib/analyser-choice";
+import RankModeSelector from "@/components/RankModeSelector";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -73,6 +82,7 @@ interface ShoppingListViewProps {
   allPriceMatches: ProductMatch[];
   onUpdateStatus?: (id: number, status: string) => void;
   onClose: () => void;
+  onClearBasket?: () => void;
   /** Pre-select a supermarket when the view opens. */
   initialStore?: string;
   /** Skip to shopping phase directly. */
@@ -89,6 +99,10 @@ interface ShoppingListViewProps {
   onMatchStore?: (store: string) => void;
   /** True while a store-scoped match is in progress. */
   isMatchingPrices?: boolean;
+  /** Shared ranking mode — lifted to parent so it persists across Quick List / Check Cupboard / Shop View. */
+  rankMode?: RankingMode;
+  /** Called when user changes ranking mode. */
+  onRankModeChange?: (mode: RankingMode) => void;
 }
 
 // ── State persistence ──────────────────────────────────────────────────────
@@ -158,11 +172,12 @@ function resolveDisplayMatches(
   allPriceMatches: ProductMatch[],
   thaPicks: Record<string, IngredientProduct[]>,
   store: string,
+  mode: RankingMode = "quality_first",
 ): ShopDisplayMatch[] {
   const itemKey = normalizeIngredientKey(item.normalizedName ?? item.productName ?? "");
   const storeNorm = store.toLowerCase();
 
-  const thaMatches: ShopDisplayMatch[] = (thaPicks[itemKey] ?? [])
+  const thaList: ShopDisplayMatch[] = (thaPicks[itemKey] ?? [])
     .filter(p => p.retailer.toLowerCase() === storeNorm)
     .sort((a, b) => {
       const rA = (a.tags as any)?.thaRating ?? a.priority ?? 0;
@@ -171,48 +186,65 @@ function resolveDisplayMatches(
     })
     .map(p => ({
       productName: p.productName,
-      // Use tags.thaRating first; fall back to the priority column which IS the 1-5 apple
-      // rating stored on ingredient_products rows. Without this fallback, curated THA picks
-      // showed no apple rating in shop view even when priority was set.
+      // tags.thaRating first; priority is the 1-5 apple rating on ingredient_products rows.
       thaRating: (p.tags as any)?.thaRating ?? (p.priority > 0 ? p.priority : null),
       price: null,
       pricePerUnit: p.size ?? null,
       productUrl: null,
     }));
 
-  const priceMatches: ShopDisplayMatch[] = allPriceMatches
-    .filter(m => m.shoppingListItemId === item.id && m.supermarket.toLowerCase() === storeNorm)
-    .sort((a, b) => (b.thaRating ?? 0) - (a.thaRating ?? 0))
-    .map(m => ({
-      productName: m.productName,
-      thaRating: m.thaRating ?? null,
-      price: m.price ?? null,
-      pricePerUnit: m.pricePerUnit ?? null,
-      productUrl: m.productUrl ?? null,
-    }));
+  // Safety: do not show price matches for items that were never resolved (raw state)
+  // unless THA picks are available to anchor the result.
+  const isRaw = item.resolutionState === "raw";
+  const priceList: ShopDisplayMatch[] = (!isRaw || thaList.length > 0)
+    ? allPriceMatches
+        .filter(m => m.shoppingListItemId === item.id && m.supermarket.toLowerCase() === storeNorm)
+        .map(m => ({
+          productName: m.productName,
+          thaRating: m.thaRating ?? null,
+          price: m.price ?? null,
+          pricePerUnit: m.pricePerUnit ?? null,
+          productUrl: m.productUrl ?? null,
+        }))
+    : [];
 
-  const combined = [...thaMatches, ...priceMatches];
-  const seen = new Set<string>();
-  const deduped = combined.filter(m => {
-    const key = m.productName.toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
+  // Merge THA picks and price matches without silently losing price data.
+  // For products present in BOTH: keep the price-match version (preserves live price)
+  // and enrich its thaRating from the THA pick where available. This ensures
+  // Quality / Balanced / Price modes can sort by real price rather than discarding
+  // it because the THA-pick version (price: null) previously won deduplication.
+  const thaByName = new Map(thaList.map(m => [m.productName.toLowerCase(), m]));
+  const priceByName = new Map(priceList.map(m => [m.productName.toLowerCase(), m]));
+
+  const merged: ShopDisplayMatch[] = priceList.map(pm => {
+    const thav = thaByName.get(pm.productName.toLowerCase());
+    return { ...pm, thaRating: thav?.thaRating ?? pm.thaRating };
   });
+  for (const tm of thaList) {
+    if (!priceByName.has(tm.productName.toLowerCase())) merged.push(tm);
+  }
 
-  // Globally sort by thaRating DESC so the highest-rated product is always shown first.
-  // This is a stable sort: ties preserve the THA-picks-first insertion order from the spread above,
-  // so curated picks beat price-match entries of identical rating.
-  deduped.sort((a, b) => (b.thaRating ?? 0) - (a.thaRating ?? 0));
+  // Track which merged products are THA picks for tha_pick mode ordering.
+  const thaNames = new Set(thaList.map(m => m.productName.toLowerCase()));
+
+  const wholeFoodItem = isWholeFood(item);
+
+  let result: ShopDisplayMatch[];
+  if (mode === "tha_pick") {
+    // THA-curated products first (sorted by thaRating DESC).
+    // Non-THA products follow, sorted by quality_first.
+    // If no THA pick exists for this item, the entire list uses quality_first.
+    const thaFirst = merged.filter(m => thaNames.has(m.productName.toLowerCase()));
+    const rest = merged.filter(m => !thaNames.has(m.productName.toLowerCase()));
+    thaFirst.sort((a, b) => (b.thaRating ?? 0) - (a.thaRating ?? 0));
+    result = [...thaFirst, ...rankDisplayMatches(rest, "quality_first")];
+  } else {
+    result = rankDisplayMatches(merged, mode);
+  }
 
   // Whole foods are always 5 apples — no processing, no additives.
-  // Override unconditionally: a price match or THA pick rating must never
-  // reduce a whole food below 5, even if the matched product has a rating set.
-  const wholeFoodItem = isWholeFood(item);
-  if (wholeFoodItem) {
-    return deduped.map(m => ({ ...m, thaRating: 5 }));
-  }
-  return deduped;
+  if (wholeFoodItem) return result.map(m => ({ ...m, thaRating: 5 }));
+  return result;
 }
 
 // Compact apple rating: N THA apple logos inline — no text, no emoji
@@ -417,7 +449,7 @@ function getItemCatKey(category: string | null | undefined, name: string): strin
     if (BAKERY_WORDS.some(w => lowerName.includes(w))) return "bakery";
     return "pantry";
   }
-  if (["oils", "condiments", "nuts", "legumes", "tinned", "pantry", "spices"].includes(raw))
+  if (["oils", "condiments", "nuts", "legumes", "tinned", "pantry", "spices", "ready_meals"].includes(raw))
     return "pantry";
 
   // ── Name-based fallback (handles null/other/unknown DB category) ──
@@ -542,6 +574,7 @@ export default function ShoppingListView({
   allPriceMatches,
   onUpdateStatus,
   onClose,
+  onClearBasket,
   initialStore,
   initialPhase,
   thaPicks = {},
@@ -550,6 +583,8 @@ export default function ShoppingListView({
   onAddItem,
   onMatchStore,
   isMatchingPrices = false,
+  rankMode: rankModeProp,
+  onRankModeChange,
 }: ShoppingListViewProps) {
   const [notInShop, setNotInShop] = useState<Set<number>>(() => loadNotInShop());
   const [selectedSupermarket, setSelectedSupermarket] = useState<string>(initialStore ?? "Tesco");
@@ -584,6 +619,14 @@ export default function ShoppingListView({
   // Cupboard check: inline add-item input
   const [addingItem, setAddingItem] = useState(false);
   const [addItemVal, setAddItemVal] = useState("");
+  // rankMode is lifted to the parent page so it is shared across Quick List,
+  // Check Cupboard and Shop View. Fall back to sessionStorage if parent doesn't pass it.
+  const [localRankMode, setLocalRankMode] = useState<RankingMode>(() => {
+    try { return (sessionStorage.getItem("tha-sl-rank-mode") as RankingMode) || "quality_first"; } catch { return "quality_first"; }
+  });
+  const rankMode = rankModeProp ?? localRankMode;
+  // Which item's "Change choice" panel is currently open (at most one at a time).
+  const [choiceOpenId, setChoiceOpenId] = useState<number | null>(null);
   const itemsScrollRef = useRef<HTMLDivElement>(null);
   const tabStripRef = useRef<HTMLDivElement>(null);
   const activeTabElRef = useRef<HTMLButtonElement>(null);
@@ -596,6 +639,17 @@ export default function ShoppingListView({
   function handleStoreChange(store: string) {
     setSelectedSupermarket(store);
     setProductIndexMap({});
+  }
+
+  function handleRankModeChange(mode: RankingMode) {
+    if (onRankModeChange) {
+      onRankModeChange(mode);
+    } else {
+      setLocalRankMode(mode);
+      try { sessionStorage.setItem("tha-sl-rank-mode", mode); } catch {}
+    }
+    setProductIndexMap({});
+    setChoiceOpenId(null);
   }
 
   function handleNextProduct(itemId: number, total: number) {
@@ -871,11 +925,29 @@ export default function ShoppingListView({
       normalizeIngredientKey(item.normalizedName ?? item.productName ?? ""),
     );
 
-    // Resolve display matches: THA picks first, then price matches
-    const resolvedMatches = resolveDisplayMatches(item, allPriceMatches, thaPicks, selectedSupermarket);
+    // Resolve display matches using the user's chosen ranking mode.
+    const resolvedMatches = resolveDisplayMatches(item, allPriceMatches, thaPicks, selectedSupermarket, rankMode);
     const currentMatchIndex = productIndexMap[item.id] ?? 0;
     const resolvedMatch = resolvedMatches[currentMatchIndex] ?? null;
     const isEditing = editingItemId === item.id;
+
+    // Alternatives for "Change choice" panel.
+    // betterMatch: higher-rated option than currently shown (if any).
+    // cheaperMatch: cheaper option than currently shown (if any, and not the same as betterMatch).
+    const betterMatch = resolvedMatch
+      ? (resolvedMatches.find(
+          (m, i) => i !== currentMatchIndex && (m.thaRating ?? 0) > (resolvedMatch.thaRating ?? 0)
+        ) ?? null)
+      : null;
+    const cheaperMatch = resolvedMatch
+      ? (resolvedMatches.find(
+          (m, i) =>
+            i !== currentMatchIndex &&
+            m !== betterMatch &&
+            m.price !== null &&
+            (resolvedMatch.price === null || m.price < resolvedMatch.price)
+        ) ?? null)
+      : null;
 
     // Whole foods are always 5 apples — the whole-food rule takes absolute priority.
     // Raw counts, product-match ratings, or DB values must never leak into this number.
@@ -949,9 +1021,10 @@ export default function ShoppingListView({
             </div>
           ) : (
             <>
-              {/* Product match hint with cycling — rating moved to centre column */}
+              {/* Product match hint with Change choice panel */}
               {state === "need" && resolvedMatch && (
-                <div className="tha-print-hide flex items-center gap-1.5 mt-0.5 flex-wrap">
+                <>
+                <div key={rankMode} className="tha-print-hide flex items-center gap-1.5 mt-0.5 flex-wrap animate-in fade-in duration-200">
                   <span className="text-[11px] text-muted-foreground/70 truncate max-w-[160px]">
                     {resolvedMatch.productName}
                   </span>
@@ -960,14 +1033,13 @@ export default function ShoppingListView({
                       £{resolvedMatch.price.toFixed(2)}
                     </span>
                   )}
-                  {resolvedMatches.length > 1 && (
+                  {(resolvedMatches.length > 1 || betterMatch || cheaperMatch) && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleNextProduct(item.id, resolvedMatches.length); }}
-                      className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/40 hover:text-foreground transition-colors"
-                      title="Next product option"
+                      onClick={(e) => { e.stopPropagation(); setChoiceOpenId(prev => prev === item.id ? null : item.id); }}
+                      className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/40 hover:text-primary/70 transition-colors"
+                      title="Change product choice"
                     >
-                      <SkipForward className="h-2.5 w-2.5" />
-                      <span>{currentMatchIndex + 1}/{resolvedMatches.length}</span>
+                      <span>Change</span>
                     </button>
                   )}
                   {onRenameItem && (
@@ -980,6 +1052,73 @@ export default function ShoppingListView({
                     </button>
                   )}
                 </div>
+                {/* Change choice panel — shows current match + better-rated + cheaper alternatives */}
+                {choiceOpenId === item.id && (
+                  <div className="tha-print-hide mt-1.5 space-y-1">
+                    {/* Current match */}
+                    <div
+                      className="flex items-center gap-1.5 px-2 py-1 rounded-md border"
+                      style={{ background: "hsl(var(--primary) / 0.08)", borderColor: "hsl(var(--primary) / 0.2)" }}
+                    >
+                      <span className="text-[10px] font-medium text-foreground/80 truncate flex-1">{resolvedMatch.productName}</span>
+                      {resolvedMatch.price != null && (
+                        <span className="text-[10px] tabular-nums text-muted-foreground flex-shrink-0">£{resolvedMatch.price.toFixed(2)}</span>
+                      )}
+                      <span className="text-[9px] text-primary/60 flex-shrink-0">Current</span>
+                    </div>
+                    {/* Better-rated alternative */}
+                    {betterMatch && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProductIndexMap(prev => ({ ...prev, [item.id]: resolvedMatches.indexOf(betterMatch) }));
+                          setChoiceOpenId(null);
+                        }}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/60 hover:bg-primary/5 hover:border-primary/30 w-full text-left transition-colors"
+                      >
+                        <span className="text-[10px] font-medium truncate flex-1">{betterMatch.productName}</span>
+                        {betterMatch.price != null && (
+                          <span className="text-[10px] tabular-nums text-muted-foreground flex-shrink-0">£{betterMatch.price.toFixed(2)}</span>
+                        )}
+                        <span className="text-[9px] bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400 px-1 py-0.5 rounded flex-shrink-0">Higher THA</span>
+                      </button>
+                    )}
+                    {/* Cheaper alternative (different from betterMatch) */}
+                    {cheaperMatch && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setProductIndexMap(prev => ({ ...prev, [item.id]: resolvedMatches.indexOf(cheaperMatch) }));
+                          setChoiceOpenId(null);
+                        }}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/60 hover:bg-primary/5 hover:border-primary/30 w-full text-left transition-colors"
+                      >
+                        <span className="text-[10px] font-medium truncate flex-1">{cheaperMatch.productName}</span>
+                        {cheaperMatch.price != null && (
+                          <span className="text-[10px] tabular-nums text-muted-foreground flex-shrink-0">£{cheaperMatch.price.toFixed(2)}</span>
+                        )}
+                        <span className="text-[9px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-400 px-1 py-0.5 rounded flex-shrink-0">Cheaper</span>
+                      </button>
+                    )}
+                    <div className="flex items-center gap-3">
+                      {onClose && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onClose(); }}
+                          className="text-[9px] text-primary/50 hover:text-primary transition-colors"
+                        >
+                          Open in Basket →
+                        </button>
+                      )}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setChoiceOpenId(null); }}
+                        className="text-[9px] text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                )}
+                </>
               )}
               {state === "need" && !resolvedMatch && (firstMeal || effectiveRating != null) && (
                 <div className="tha-print-hide flex items-center gap-1.5 mt-0.5">
@@ -1156,8 +1295,9 @@ export default function ShoppingListView({
             </p>
           </div>
 
-          {/* Right: Supermarket picker + Print + Close */}
+          {/* Right: Supermarket picker + Rank mode + Print + Close */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
+            <RankModeSelector rankMode={rankMode} onChange={handleRankModeChange} />
             {phase === "shopping" && (
               <>
                 <Select value={selectedSupermarket} onValueChange={handleStoreChange}>
@@ -1204,15 +1344,6 @@ export default function ShoppingListView({
               </Button>
             )}
             <Button
-              variant="outline"
-              size="sm"
-              onClick={() => window.print()}
-              className="gap-1.5 h-8 px-2.5 text-xs bg-background/70"
-            >
-              <Printer className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Print</span>
-            </Button>
-            <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
@@ -1221,6 +1352,27 @@ export default function ShoppingListView({
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Back to basket</span>
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center justify-center h-8 w-8 rounded-md transition-colors text-muted-foreground hover:bg-accent/60 hover:text-foreground">
+                  <img src={thaAppleUrl} alt="Menu" className="h-[32px] w-[32px] object-contain" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => window.print()}>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => onClearBasket?.()}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear Basket
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

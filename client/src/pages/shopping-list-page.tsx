@@ -69,11 +69,12 @@ import { safeParseJsonObject, safeStringifyJsonObject } from "@/lib/json-utils";
 import { resolveBestMatch, type WholeFoodIntent } from "@/lib/whole-food-matcher";
 import { calcConfidence, CONFIDENCE_LABELS, type ConfidenceLevel } from "@/lib/food-confidence";
 import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
-import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
+import { rankChoices, buildWhyBetter, type RankingMode } from "@/lib/analyser-choice";
 import FoodKnowledgeModal from "@/components/food-knowledge-modal";
 import WholeFoodSelector from "@/components/whole-food-selector";
 import { appendPendingIngredient } from "@/lib/quick-list";
 import ShoppingListView from "@/components/ShoppingListView";
+import RankModeSelector from "@/components/RankModeSelector";
 
 type ShoppingListItemExtended = ShoppingListItem & {
   addedByDisplayName?: string | null;
@@ -235,6 +236,10 @@ const BASKET_CATEGORY_MAP: Record<string, string> = {
   legumes: 'pantry',
   tinned: 'pantry',
   spices: 'pantry',
+  // DB categories added during normalisation — must be mapped or they fall to 'other'
+  frozen: 'pantry',      // basket view has no frozen tab; frozen goods sit alongside pantry
+  pantry: 'pantry',      // explicit DB value 'pantry' (e.g. potatoes) → pantry tab
+  ready_meals: 'pantry', // soups/stews align with pantry in basket planning view
 };
 
 const FRESH_HERB_NAMES = new Set([
@@ -1546,6 +1551,13 @@ export default function ShoppingListPage() {
   const [viewMode, setViewMode] = useState<"basket" | "shop">(() => {
     try { return new URLSearchParams(window.location.search).get("shopMode") === "1" ? "shop" : "basket"; } catch { return "basket"; }
   });
+  const [rankMode, setRankMode] = useState<RankingMode>(() => {
+    try { return (sessionStorage.getItem("tha-sl-rank-mode") as RankingMode) || "quality_first"; } catch { return "quality_first"; }
+  });
+  function handleRankModeChange(mode: RankingMode) {
+    setRankMode(mode);
+    try { sessionStorage.setItem("tha-sl-rank-mode", mode); } catch {}
+  }
   const prevExtrasLenRef = useRef(0);
 
   const toggleNeededThisWeek = (id: number) => {
@@ -2477,6 +2489,10 @@ export default function ShoppingListPage() {
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-wrap justify-end">
+                {/* Rank mode selector — shown in Quick List context so preference is visible before entering Shop View */}
+                {quickListLabel && (
+                  <RankModeSelector rankMode={rankMode} onChange={handleRankModeChange} />
+                )}
                 {/* Split by shop toggle */}
                 {(savedItems.length > 0) && (
                   <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1" data-testid="toggle-split-by-shop">
@@ -2511,7 +2527,13 @@ export default function ShoppingListPage() {
                   <Button
                     variant="default"
                     size="sm"
-                    onClick={() => setViewMode("shop")}
+                    onClick={() => {
+                      // Force a fresh fetch so Shop View always reflects the live DB,
+                      // not a staleTime:Infinity cache from before any server-side
+                      // corrections (e.g. category normalisation) were applied.
+                      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+                      setViewMode("shop");
+                    }}
                     className="gap-1.5"
                     data-testid="button-shopping-view"
                   >
@@ -3468,6 +3490,9 @@ export default function ShoppingListPage() {
             onAddItem={async (rawText) => { try { await addItem.mutateAsync({ rawText, basketLabel: quickListLabel }); } catch (e) { console.error('[addItem] failed:', rawText, e); /* onError handles toast */ } }}
             onMatchStore={(store) => lookupPrices.mutate(store)}
             isMatchingPrices={lookupPrices.isPending}
+            rankMode={rankMode}
+            onRankModeChange={handleRankModeChange}
+            onClearBasket={() => clearAll.mutate()}
             onClose={() => setViewMode("basket")}
           />
         )}

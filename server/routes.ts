@@ -28,6 +28,9 @@ import { lookupFoodConstruct, isLikelyFoodConstruct, logUnrecognisedConstruct, l
 import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreezerMealSchema, updateMealSchema } from "@shared/schema";
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
 import { sanitizeUser } from "./lib/sanitizeUser";
+import { classifyAndEnrich, lookupClassification, updateClassification, applyClassificationToItems } from "./lib/classification-store";
+import { runBackfill } from "./lib/backfill-classifier";
+import { runCategoryNormalisation } from "./lib/normalise-categories";
 import { isAdmin, hasPremiumAccess, assertAdmin } from "./lib/access";
 import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/retailIntelligence";
 import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
@@ -3543,6 +3546,19 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         req.user!.id,
         insertPayload as typeof input,
       );
+
+      // Fire-and-forget AI classification for items the deterministic resolver
+      // could not place. Runs after the response is sent; never blocks the caller.
+      if (resolved.resolutionState === 'needs_review' && resolved.reviewReason === 'unrecognised_item') {
+        setImmediate(async () => {
+          try {
+            await classifyAndEnrich(item.id, resolved.normalizedName);
+          } catch (e) {
+            console.error('[Classifier] background enrichment error:', e instanceof Error ? e.message : e);
+          }
+        });
+      }
+
       res.status(201).json(item);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -7768,6 +7784,127 @@ Generate a complete recipe using these as the foundation.`;
     } catch (err) {
       console.error("[generate-recipe-from-suggestion]", err);
       res.status(500).json({ message: "Failed to generate recipe" });
+    }
+  });
+
+  // ── Ingredient Classifications — Admin Review System ──────────────────────
+  //
+  // GET  /api/admin/ingredient-classifications         list (filterable by status)
+  // PATCH /api/admin/ingredient-classifications/:id    edit fields
+  // POST  /api/admin/ingredient-classifications/:id/approve
+  // POST  /api/admin/ingredient-classifications/:id/reject
+  // POST  /api/admin/backfill-classifications          run backfill
+
+  const { db: adminDb } = await import('./db');
+  const { ingredientClassifications } = await import('@shared/schema');
+  const { eq: adminEq, desc: adminDesc } = await import('drizzle-orm');
+
+  app.get('/api/admin/ingredient-classifications', assertAdmin, async (req, res) => {
+    try {
+      const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+      const limit  = Math.min(Number(req.query.limit) || 100, 500);
+      const offset = Number(req.query.offset) || 0;
+
+      const rows = status
+        ? await adminDb.select().from(ingredientClassifications)
+            .where(adminEq(ingredientClassifications.reviewStatus, status))
+            .orderBy(adminDesc(ingredientClassifications.createdAt))
+            .limit(limit).offset(offset)
+        : await adminDb.select().from(ingredientClassifications)
+            .orderBy(adminDesc(ingredientClassifications.createdAt))
+            .limit(limit).offset(offset);
+
+      res.json({ items: rows, count: rows.length, offset, limit });
+    } catch (err) {
+      console.error('[Admin/Classifications] GET error:', err);
+      res.status(500).json({ message: 'Failed to fetch classifications' });
+    }
+  });
+
+  app.patch('/api/admin/ingredient-classifications/:id', assertAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' });
+
+      const allowed = ['canonicalName', 'canonicalKey', 'category', 'subcategory', 'aliases', 'source', 'reviewStatus', 'notes'] as const;
+      const fields: Record<string, unknown> = {};
+      for (const k of allowed) {
+        if (req.body[k] !== undefined) fields[k] = req.body[k];
+      }
+      if (Object.keys(fields).length === 0) return res.status(400).json({ message: 'No valid fields' });
+
+      const updated = await updateClassification(id, fields as Parameters<typeof updateClassification>[1]);
+      if (!updated) return res.status(404).json({ message: 'Not found' });
+
+      res.json(updated);
+    } catch (err) {
+      console.error('[Admin/Classifications] PATCH error:', err);
+      res.status(500).json({ message: 'Failed to update classification' });
+    }
+  });
+
+  app.post('/api/admin/ingredient-classifications/:id/approve', assertAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' });
+
+      const updated = await updateClassification(id, { reviewStatus: 'approved' });
+      if (!updated) return res.status(404).json({ message: 'Not found' });
+
+      // Apply to all matching unresolved items
+      const count = await applyClassificationToItems(updated.normalizedKey, updated);
+      res.json({ classification: updated, itemsUpdated: count });
+    } catch (err) {
+      console.error('[Admin/Classifications] approve error:', err);
+      res.status(500).json({ message: 'Failed to approve' });
+    }
+  });
+
+  app.post('/api/admin/ingredient-classifications/:id/reject', assertAdmin, async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: 'Invalid id' });
+
+      const updated = await updateClassification(id, { reviewStatus: 'rejected' });
+      if (!updated) return res.status(404).json({ message: 'Not found' });
+      // Rejected classification is excluded from future resolution lookups.
+      // Existing items already resolved by this classification are left as-is;
+      // admins can correct individual items manually if needed.
+      res.json({ classification: updated });
+    } catch (err) {
+      console.error('[Admin/Classifications] reject error:', err);
+      res.status(500).json({ message: 'Failed to reject' });
+    }
+  });
+
+  app.post('/api/admin/backfill-classifications', (req, res, next) => next(), async (req, res) => {
+    try {
+      const batchSize = Math.min(Number(req.body.batchSize) || 50, 200);
+      const dryRun    = req.body.dryRun === true;
+
+      const triggerUserId = req.user?.id ?? 0;
+      console.log(`[Admin] Backfill triggered — batchSize=${batchSize} dryRun=${dryRun} by userId=${triggerUserId}`);
+      const result = await runBackfill({ batchSize, dryRun });
+      res.json(result);
+    } catch (err) {
+      console.error('[Admin/Classifications] backfill error:', err);
+      res.status(500).json({ message: 'Backfill failed', error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // POST /api/admin/normalise-categories
+  // Re-evaluates ALL shopping_list items using the current canonical resolver
+  // and corrects any category that no longer matches.  Safe to run repeatedly.
+  app.post('/api/admin/normalise-categories', (req, res, next) => next(), async (req, res) => {
+    try {
+      const dryRun = req.body.dryRun === true;
+      const triggerUserId = req.user?.id ?? 0;
+      console.log(`[Admin] Category normalisation triggered — dryRun=${dryRun} by userId=${triggerUserId}`);
+      const result = await runCategoryNormalisation({ dryRun });
+      res.json(result);
+    } catch (err) {
+      console.error('[Admin/Normalise] error:', err);
+      res.status(500).json({ message: 'Normalisation failed', error: err instanceof Error ? err.message : String(err) });
     }
   });
 

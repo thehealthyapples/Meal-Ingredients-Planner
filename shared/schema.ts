@@ -1237,4 +1237,30 @@ export const pantryIngredientKnowledge = pgTable("pantry_ingredient_knowledge", 
 });
 
 export type PantryIngredientKnowledge = typeof pantryIngredientKnowledge.$inferSelect;
+
+// ── Ingredient Classifications ─────────────────────────────────────────────────
+// Shared, admin-reviewable classification records — one row per canonical concept.
+// Populated by the AI classifier or manually. Reused across all users/households.
+// source priority: manual > deterministic > ai
+export const ingredientClassifications = pgTable('ingredient_classifications', {
+  id: serial('id').primaryKey(),
+  normalizedKey:  text('normalized_key').notNull().unique(),
+  canonicalName:  text('canonical_name').notNull(),
+  canonicalKey:   text('canonical_key').notNull(),
+  category:       text('category').notNull(),
+  subcategory:    text('subcategory'),
+  aliases:        text('aliases'),          // JSON-encoded string[]
+  source:         text('source').notNull().default('ai'),        // 'deterministic' | 'ai' | 'manual'
+  aiConfidence:   text('ai_confidence'),                         // 'high' | 'medium' | 'low'
+  aiModel:        text('ai_model'),
+  reviewStatus:   text('review_status').notNull().default('pending'), // 'approved' | 'pending' | 'rejected'
+  notes:          text('notes'),
+  createdAt:      timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt:      timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertIngredientClassificationSchema = createInsertSchema(ingredientClassifications)
+  .omit({ id: true, createdAt: true, updatedAt: true });
+export type IngredientClassification    = typeof ingredientClassifications.$inferSelect;
+export type InsertIngredientClassification = z.infer<typeof insertIngredientClassificationSchema>;
 export type InsertPantryIngredientKnowledge = typeof pantryIngredientKnowledge.$inferInsert;

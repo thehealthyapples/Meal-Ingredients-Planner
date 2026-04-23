@@ -73,5 +73,7 @@
   "raspberry":           { "canonicalName": "raspberries",        "category": "fruit",         "subcategory": "soft_fruit" },
   "raspberries":         { "canonicalName": "raspberries",        "category": "fruit",         "subcategory": "soft_fruit" },
   "blackberry":          { "canonicalName": "blackberries",       "category": "fruit",         "subcategory": "soft_fruit" },
-  "blackberries":        { "canonicalName": "blackberries",       "category": "fruit",         "subcategory": "soft_fruit" }
+  "blackberries":        { "canonicalName": "blackberries",       "category": "fruit",         "subcategory": "soft_fruit" },
+  "olive oil":           { "canonicalName": "olive oil",          "category": "oils",          "subcategory": null },
+  "extra virgin olive oil": { "canonicalName": "olive oil",       "category": "oils",          "subcategory": null }
 }

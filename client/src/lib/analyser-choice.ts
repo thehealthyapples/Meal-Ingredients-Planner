@@ -37,3 +37,72 @@ export function rankChoices(products: any[], currentScore: number | null, prefer
     return aAdd - bAdd;
   });
 }
+
+// ── Shop view ranking ───────────────────────────────────────────────────────
+// Central ranking logic for Quick List / Check Cupboard / Shop View.
+// Default: quality-first — highest THA rating group, then cheapest within that group.
+
+export type RankingMode = "quality_first" | "balanced" | "lowest_price" | "tha_pick";
+
+export interface RankableMatch {
+  thaRating: number | null;
+  price: number | null;
+}
+
+const priceAsc = <T extends RankableMatch>(a: T, b: T): number => {
+  if (a.price === null && b.price === null) return 0;
+  if (a.price === null) return 1;
+  if (b.price === null) return -1;
+  return a.price - b.price;
+};
+
+const ratingDesc = <T extends RankableMatch>(a: T, b: T): number =>
+  (b.thaRating ?? 0) - (a.thaRating ?? 0);
+
+/**
+ * Rank shop-view product matches according to the user's chosen mode.
+ *
+ * quality_first (default):
+ *   1. Find the highest rating in the set.
+ *   2. Take only that top group.
+ *   3. Within the group → sort by price ASC (cheapest of the best).
+ *   4. Remaining groups sorted by rating DESC then price ASC.
+ *
+ * balanced:
+ *   Rating DESC, then price ASC as tiebreaker.
+ *
+ * lowest_price:
+ *   Price ASC (nulls last), then rating DESC as tiebreaker.
+ */
+export function rankDisplayMatches<T extends RankableMatch>(
+  matches: T[],
+  mode: RankingMode = "quality_first",
+): T[] {
+  if (matches.length === 0) return matches;
+
+  switch (mode) {
+    case "quality_first": {
+      const maxRating = Math.max(...matches.map(m => m.thaRating ?? 0));
+      const topGroup = matches.filter(m => (m.thaRating ?? 0) === maxRating);
+      const rest = matches.filter(m => (m.thaRating ?? 0) < maxRating);
+      topGroup.sort(priceAsc);
+      rest.sort((a, b) => {
+        const rd = ratingDesc(a, b);
+        return rd !== 0 ? rd : priceAsc(a, b);
+      });
+      return [...topGroup, ...rest];
+    }
+    case "balanced":
+      return [...matches].sort((a, b) => {
+        const rd = ratingDesc(a, b);
+        return rd !== 0 ? rd : priceAsc(a, b);
+      });
+    case "lowest_price":
+      return [...matches].sort((a, b) => {
+        const pd = priceAsc(a, b);
+        return pd !== 0 ? pd : ratingDesc(a, b);
+      });
+    case "tha_pick":
+      return rankDisplayMatches(matches, "quality_first");
+  }
+}

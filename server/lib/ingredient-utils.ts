@@ -274,12 +274,13 @@ const INGREDIENT_CATEGORIES: Record<string, string[]> = {
   produce: ['onion', 'garlic', 'tomato', 'carrot', 'pepper', 'lettuce', 'spinach', 'broccoli', 'cauliflower', 'cabbage', 'celery', 'cucumber', 'courgette', 'zucchini', 'aubergine', 'eggplant', 'mushroom', 'leek', 'beetroot', 'turnip', 'parsnip', 'radish', 'sweetcorn', 'corn', 'pea', 'bean', 'asparagus', 'artichoke', 'kale', 'chard', 'rocket', 'watercress'],
   pantry: ['potato', 'sweet potato'],
   fruit: ['apple', 'banana', 'orange', 'lemon', 'lime', 'grape', 'strawberry', 'blueberry', 'raspberry', 'blackberry', 'mango', 'pineapple', 'melon', 'watermelon', 'peach', 'pear', 'plum', 'cherry', 'fig', 'date', 'avocado', 'coconut', 'kiwi', 'pomegranate', 'passion fruit', 'cranberry'],
-  grains: ['cornstarch', 'corn starch', 'cornflour', 'rice', 'pasta', 'noodle', 'flour', 'oat', 'quinoa', 'couscous', 'barley', 'bulgur', 'polenta', 'cornmeal', 'semolina', 'cracker', 'breadcrumb'],
-  bakery: ['bread', 'loaf', 'wrap', 'tortilla', 'pitta', 'pita', 'naan', 'focaccia', 'ciabatta', 'sourdough', 'bagel', 'croissant', 'roll', 'bun', 'cake', 'pastry', 'pie', 'tart', 'biscuit', 'cookie', 'muffin', 'scone', 'doughnut', 'brownie', 'flapjack'],
+  grains: ['cornstarch', 'corn starch', 'cornflour', 'rice', 'pasta', 'noodle', 'flour', 'oat', 'quinoa', 'couscous', 'barley', 'bulgur', 'polenta', 'cornmeal', 'semolina', 'cracker', 'breadcrumb', 'cereal', 'granola', 'muesli', 'porridge'],
+  bakery: ['bread', 'loaf', 'wrap', 'tortilla', 'pitta', 'pita', 'naan', 'focaccia', 'ciabatta', 'sourdough', 'bagel', 'croissant', 'roll', 'bun', 'cake', 'pastry', 'pie', 'tart', 'biscuit', 'cookie', 'muffin', 'scone', 'doughnut', 'brownie', 'flapjack', 'chocolate', 'cocoa', 'cacao', 'wafer'],
+  snacks: ['crisp', 'popcorn', 'pretzel', 'rice cake', 'tortilla chip', 'pork scratching', 'trail mix'],
   frozen: ['oven chip', 'oven chips', 'fish finger', 'fish stick', 'chicken nugget', 'nugget', 'ice cream', 'ice lolly', 'sorbet', 'hash brown', 'frozen pea', 'frozen corn', 'frozen spinach', 'frozen bean', 'frozen meal'],
   herbs: ['basil', 'oregano', 'thyme', 'rosemary', 'parsley', 'coriander', 'cilantro', 'mint', 'dill', 'sage', 'chive', 'tarragon', 'bay leaf', 'bay leaves', 'marjoram', 'cumin', 'paprika', 'turmeric', 'cinnamon', 'nutmeg', 'clove', 'cardamom', 'ginger', 'saffron', 'chilli', 'cayenne'],
   oils: ['olive oil', 'vegetable oil', 'sunflower oil', 'coconut oil', 'sesame oil', 'rapeseed oil', 'oil', 'vinegar', 'balsamic'],
-  condiments: ['tomato sauce', 'pasta sauce', 'tomato paste', 'tomato purée', 'tomato puree', 'tomato ketchup', 'chilli sauce', 'hot sauce', 'soy sauce', 'fish sauce', 'oyster sauce', 'hoisin sauce', 'worcestershire', 'tabasco', 'ketchup', 'mustard', 'mayonnaise', 'honey', 'maple syrup', 'sugar', 'salt', 'pepper', 'stock', 'broth', 'bouillon', 'paste', 'sauce'],
+  condiments: ['tomato sauce', 'pasta sauce', 'tomato paste', 'tomato purée', 'tomato puree', 'tomato ketchup', 'chilli sauce', 'hot sauce', 'soy sauce', 'fish sauce', 'oyster sauce', 'hoisin sauce', 'worcestershire', 'tabasco', 'ketchup', 'mustard', 'mayonnaise', 'honey', 'maple syrup', 'sugar', 'salt', 'pepper', 'stock', 'broth', 'bouillon', 'paste', 'sauce', 'passata', 'pesto', 'harissa', 'tahini', 'miso', 'sriracha', 'chutney', 'relish', 'pickle', 'tapenade', 'jam', 'marmalade'],
   nuts: ['almond', 'walnut', 'cashew', 'pecan', 'pistachio', 'peanut', 'hazelnut', 'macadamia', 'pine nut', 'brazil nut', 'chestnut', 'sesame seed', 'sunflower seed', 'pumpkin seed', 'flaxseed', 'chia seed'],
   legumes: ['lentil', 'chickpea', 'kidney bean', 'black bean', 'cannellini', 'butter bean', 'haricot', 'edamame', 'tofu', 'tempeh'],
   tinned: ['tinned', 'canned', 'tin of', 'can of'],
@@ -287,10 +288,16 @@ const INGREDIENT_CATEGORIES: Record<string, string[]> = {
 
 export function detectIngredientCategory(name: string): string {
   const lower = name.toLowerCase();
+
   // Tinned pre-check: must run before the keyword loop because produce keywords
   // like 'tomato' (6 chars) are longer than 'can ' (4 chars) and would win the
   // sort, mis-categorising "can tomato" as produce instead of tinned.
   if (/^(tinned|canned|tin of|can of|tin |can )/.test(lower)) return 'tinned';
+
+  // Prepared-food pre-check: "tomato soup" is a ready meal, not produce.
+  // Must run before keyword loop so 'tomato' (6 chars) doesn't beat 'soup' (4 chars).
+  if (/\b(soup|stew|casserole)\b/.test(lower)) return 'ready_meals';
+
   // Collect all [keyword, category] pairs and sort longest-first so multi-word
   // phrases (e.g. "tomato sauce") beat single-word overlaps (e.g. "tomato").
   const allKeywords: Array<[string, string]> = [];
@@ -300,8 +307,15 @@ export function detectIngredientCategory(name: string): string {
     }
   }
   allKeywords.sort((a, b) => b[0].length - a[0].length);
+
   for (const [kw, category] of allKeywords) {
-    if (lower.includes(kw)) return category;
+    // Multi-word keywords (e.g. "olive oil", "passion fruit"): substring match is fine.
+    // Single-word keywords: require word boundaries so "roll" doesn't match "rolled",
+    // "oil" doesn't match "foil", "ham" doesn't match "shampoo", etc.
+    const matched = kw.includes(' ')
+      ? lower.includes(kw)
+      : new RegExp(`\\b${kw}\\b`).test(lower);
+    if (matched) return category;
   }
   return 'other';
 }
