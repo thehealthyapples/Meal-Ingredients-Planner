@@ -2,6 +2,10 @@ export interface SelectorDef {
   key: string;
   label: string;
   options: string[];
+  /** When true, user can select multiple options at once (stored as comma-separated). */
+  multi?: boolean;
+  /** When set, selecting "Other" reveals a free-text input stored under this variantSelections key. */
+  freeTextKey?: string;
 }
 
 export interface IngredientDef {
@@ -26,12 +30,12 @@ export const INGREDIENT_CATALOGUE: Record<string, IngredientDef> = {
       {
         key: "variety",
         label: "Variety",
-        options: ["Braeburn", "Pink Lady", "Golden Delicious", "Granny Smith"],
+        multi: true,
+        options: ["Granny Smith", "Pink Lady", "Braeburn", "Gala", "Fuji", "Jazz", "Golden Delicious", "Cox"],
       },
     ],
-    relevantAttributes: ["organic"],
+    relevantAttributes: [],
     fallbackRuleHints: [
-      "Prefer organic if requested",
       "Fall back to any eating apple if specific variety unavailable",
     ],
   },
@@ -96,6 +100,53 @@ export const INGREDIENT_CATALOGUE: Record<string, IngredientDef> = {
       "Prefer organic free-range if both requested",
       "Fall back to free-range if organic unavailable",
       "Fall back to any eggs as last resort",
+    ],
+  },
+  mushrooms: {
+    id: "mushrooms",
+    displayName: "Mushrooms",
+    aliases: ["mushroom", "mushrooms"],
+    category: "produce",
+    itemType: "whole_food",
+    selectorSchema: [
+      {
+        key: "variety",
+        label: "Variety",
+        multi: true,
+        options: ["Chestnut", "Portobello", "Button", "Shiitake", "Oyster"],
+      },
+    ],
+    relevantAttributes: ["organic"],
+    fallbackRuleHints: [
+      "Any available variety works — chestnut is the most versatile",
+      "Prefer specified variety if available",
+    ],
+  },
+  crisps: {
+    id: "crisps",
+    displayName: "Crisps",
+    aliases: ["crisps", "crisp", "chips", "hula hoops", "tortilla chips", "popchips"],
+    category: "snacks",
+    itemType: "packaged",
+    selectorSchema: [
+      {
+        key: "type",
+        label: "Type",
+        multi: true,
+        options: ["Standard crisps", "Hula Hoops", "Doritos", "Pringles", "Kettle Chips", "Popchips", "Tortilla chips", "Lentil chips"],
+      },
+      {
+        key: "flavour",
+        label: "Flavour",
+        multi: true,
+        freeTextKey: "customFlavour",
+        options: ["Ready salted", "Salt & vinegar", "Cheese & onion", "Pickled onion", "Sweet chilli", "BBQ", "Beef", "Steak", "Prawn cocktail", "Sour cream & onion", "Other"],
+      },
+    ],
+    relevantAttributes: [],
+    fallbackRuleHints: [
+      "Match on type first (e.g. Hula Hoops, Doritos, Pringles)",
+      "Match on flavour if specified; fall back to ready salted if unavailable",
     ],
   },
 };

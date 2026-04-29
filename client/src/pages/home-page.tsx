@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, ScanLine, Lightbulb, TrendingUp, Loader2, ChevronDown } from "lucide-react";
+import { ScanLine, Lightbulb, TrendingUp, Loader2, ChevronDown } from "lucide-react";
 import OrchardBackdrop from "@/components/layout/orchard-backdrop";
 import ProductFlowVisual from "@/components/KitchenToBasketVisual";
 
@@ -9,7 +9,7 @@ const VALUE_BLOCKS = [
   {
     icon: <ScanLine className="h-5 w-5 text-primary" />,
     title: "Scan & Understand",
-    body: "Instantly see what's in your food — no confusion.",
+    body: "Instantly see what's in your food - no confusion.",
   },
   {
     icon: <Lightbulb className="h-5 w-5 text-primary" />,
@@ -93,36 +93,36 @@ export default function HomePage() {
                   className="text-base text-muted-foreground leading-relaxed mb-8 max-w-[480px]"
                   data-testid="text-hero-body"
                 >
-                  Scan food, understand what's inside, and make confidently better choices — simply.
+                  Scan food, understand what's inside, and make confidently better choices - simply.
                 </p>
 
                 <div className="flex flex-col items-stretch sm:items-start gap-3 mb-6 w-full sm:w-auto">
                   {/* Primary CTA */}
                   <Button
                     size="lg"
-                    className="h-auto py-3 px-7 flex flex-col items-center justify-center gap-0.5 w-full sm:min-w-[280px]"
-                    onClick={handleTrial}
-                    disabled={trialStarting}
-                    data-testid="button-hero-explore"
-                  >
-                    {trialStarting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <>
-                        <span className="font-semibold">Explore The Healthy Apples →</span>
-                        <span className="text-xs opacity-75">Instant access · No signup · 20-minute trial</span>
-                      </>
-                    )}
-                  </Button>
-                  {/* Secondary CTA */}
-                  <Button
-                    size="lg"
-                    variant="outline"
                     className="w-full sm:min-w-[280px]"
                     onClick={() => setLocation("/auth?register=1")}
                     data-testid="button-hero-create-account"
                   >
                     Create account
+                  </Button>
+                  {/* Secondary CTA */}
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="h-auto py-3 px-7 flex flex-col items-center justify-center gap-0.5 w-full sm:min-w-[280px]"
+                    onClick={handleTrial}
+                    disabled={trialStarting}
+                    data-testid="button-hero-trial"
+                  >
+                    {trialStarting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span className="font-semibold">Try free for 20 minutes</span>
+                        <span className="text-xs opacity-75">No signup - Instant access</span>
+                      </>
+                    )}
                   </Button>
                 </div>
 
@@ -199,7 +199,7 @@ export default function HomePage() {
                 className="text-base text-foreground/80 leading-relaxed"
                 data-testid="text-story-section"
               >
-                The Healthy Apples was built out of a genuine need — helping a family navigate confusing food choices during a period of serious health challenges. We believe that better food knowledge should be simple, practical, and within reach for everyone.
+                The Healthy Apples was built out of a genuine need - helping a family navigate confusing food choices during a period of serious health challenges. We believe that better food knowledge should be simple, practical, and within reach for everyone.
               </p>
             </div>
           </div>
@@ -227,19 +227,21 @@ export default function HomePage() {
             <Button
               size="lg"
               variant="ghost"
-              className="group hover:shadow-sm hover:-translate-y-px transition-all"
+              className="h-auto py-3 px-7 flex flex-col items-center justify-center gap-0.5 hover:shadow-sm hover:-translate-y-px transition-all"
               onClick={handleTrial}
               disabled={trialStarting}
-              data-testid="button-final-explore"
+              data-testid="button-final-trial"
             >
-              {trialStarting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Explore The Healthy Apples
-              <ArrowRight className="ml-1.5 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              {trialStarting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <span className="font-semibold">Try free for 20 minutes</span>
+                  <span className="text-xs opacity-75">No signup - Instant access - 20-minute trial</span>
+                </>
+              )}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground/50">
-            Instant access &nbsp;·&nbsp; No signup &nbsp;·&nbsp; 20-minute trial
-          </p>
         </section>
 
         {/* ── Footer ── */}

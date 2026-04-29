@@ -934,6 +934,21 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-04-25_product_matches_price_source",
+    statements: [
+      "ALTER TABLE product_matches ADD COLUMN IF NOT EXISTS price_source TEXT",
+    ],
+  },
+
+  {
+    id: "2026-04-28_add_cupboard_quantity_to_shopping_list",
+    statements: [
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS cupboard_quantity REAL",
+      "UPDATE shopping_list SET shop_status = 'pending' WHERE shop_status LIKE 'partial:%'",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

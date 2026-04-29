@@ -192,6 +192,8 @@ export const shoppingList = pgTable("shopping_list", {
   reviewReason: text("review_reason"),
   // reviewSuggestions: JSON-encoded string[] of specific variants for ambiguous terms
   reviewSuggestions: text("review_suggestions"),
+  // cupboardQuantity: how much the user already has at home (partial cupboard check)
+  cupboardQuantity: real("cupboard_quantity"),
 });
 
 export const productMatches = pgTable("product_matches", {
@@ -210,6 +212,9 @@ export const productMatches = pgTable("product_matches", {
   sainsburysProductId: text("sainsburys_product_id"),
   ocadoProductId: text("ocado_product_id"),
   thaRating: integer("smp_rating"),
+  // "provider" = price came from a real provider result; "estimate" = category-based fallback.
+  // null on legacy rows written before this field existed — rendered the same as "provider".
+  priceSource: text("price_source"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -340,6 +345,7 @@ export const insertProductMatchSchema = createInsertSchema(productMatches).pick(
   sainsburysProductId: true,
   ocadoProductId: true,
   thaRating: true,
+  priceSource: true,
 });
 
 export const insertMealAllergenSchema = createInsertSchema(mealAllergens).pick({

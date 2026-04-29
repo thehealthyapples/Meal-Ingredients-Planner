@@ -75,6 +75,7 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
   });
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [sending, setSending] = useState(false);
+  const [sendQty, setSendQty] = useState(1);
   const [visibleCats, setVisibleCats] = useState<Set<FoodCategory>>(loadVisibleCats);
   const [filterQuery, setFilterQuery] = useState("");
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
@@ -186,15 +187,18 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
     try {
       await Promise.all(
         toSend.map(item =>
-          apiRequest("POST", "/api/shopping-list/extras", {
-            name: item.displayName || item.ingredientKey,
+          apiRequest("POST", "/api/shopping-list", {
+            productName: item.displayName || item.ingredientKey,
+            quantityValue: sendQty,
+            unit: "unit",
             category: item.category,
           })
         )
       );
       toast({ title: `Added ${toSend.length} item${toSend.length > 1 ? "s" : ""} to basket` });
       setSelected(new Set());
-      qclient.invalidateQueries({ queryKey: ["/api/shopping-list/extras"] });
+      setSendQty(1);
+      qclient.invalidateQueries({ queryKey: ["/api/shopping-list"] });
     } catch {
       toast({ title: "Failed to add to basket", variant: "destructive" });
     } finally {
@@ -229,15 +233,26 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
         </div>
         <div className="flex items-center gap-2">
           {selected.size > 0 && (
-            <Button
-              size="sm"
-              onClick={sendToBasket}
-              disabled={sending}
-              data-testid="button-food-send-to-basket"
-            >
-              {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingBasket className="h-3 w-3 mr-1" />}
-              Send {selected.size} to Basket
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min={1}
+                value={sendQty}
+                onChange={e => setSendQty(Math.max(1, parseInt(e.target.value) || 1))}
+                className="w-14 h-8 text-[13px] px-2 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums text-center"
+                aria-label="Quantity to send"
+                data-testid="input-food-send-qty"
+              />
+              <Button
+                size="sm"
+                onClick={sendToBasket}
+                disabled={sending}
+                data-testid="button-food-send-to-basket"
+              >
+                {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingBasket className="h-3 w-3 mr-1" />}
+                Send {selected.size} to Basket
+              </Button>
+            </div>
           )}
           <Popover>
             <PopoverTrigger asChild>
@@ -501,6 +516,7 @@ function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading
   const [newItem, setNewItem] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [sending, setSending] = useState(false);
+  const [sendQty, setSendQty] = useState(1);
 
   const householdItems = items.filter(i => i.category === "household");
 
@@ -553,15 +569,18 @@ function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading
     try {
       await Promise.all(
         toSend.map(item =>
-          apiRequest("POST", "/api/shopping-list/extras", {
-            name: item.displayName || item.ingredientKey,
+          apiRequest("POST", "/api/shopping-list", {
+            productName: item.displayName || item.ingredientKey,
+            quantityValue: sendQty,
+            unit: "unit",
             category: "household",
           })
         )
       );
       toast({ title: `Added ${toSend.length} item${toSend.length > 1 ? "s" : ""} to basket` });
       setSelected(new Set());
-      qclient.invalidateQueries({ queryKey: ["/api/shopping-list/extras"] });
+      setSendQty(1);
+      qclient.invalidateQueries({ queryKey: ["/api/shopping-list"] });
     } catch {
       toast({ title: "Failed to add to basket", variant: "destructive" });
     } finally {
@@ -577,15 +596,26 @@ function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading
           <h2 className="text-base font-medium">Household Essentials</h2>
         </div>
         {selected.size > 0 && (
-          <Button
-            size="sm"
-            onClick={sendToBasket}
-            disabled={sending}
-            data-testid="button-send-to-basket"
-          >
-            {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingBasket className="h-3 w-3 mr-1" />}
-            Send {selected.size} to Basket
-          </Button>
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              min={1}
+              value={sendQty}
+              onChange={e => setSendQty(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-14 h-8 text-[13px] px-2 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums text-center"
+              aria-label="Quantity to send"
+              data-testid="input-household-send-qty"
+            />
+            <Button
+              size="sm"
+              onClick={sendToBasket}
+              disabled={sending}
+              data-testid="button-send-to-basket"
+            >
+              {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingBasket className="h-3 w-3 mr-1" />}
+              Send {selected.size} to Basket
+            </Button>
+          </div>
         )}
       </div>
       <p className="text-xs text-muted-foreground mb-4">

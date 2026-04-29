@@ -112,6 +112,46 @@ const ALIASES: Record<string, string> = {
   "blanched almonds":           "almonds",
   "walnut halves":              "walnuts",
   "walnut pieces":              "walnuts",
+
+  // ── Chocolate kinds → canonical ───────────────────────────────────────────
+  "dark chocolate":             "chocolate",
+  "milk chocolate":             "chocolate",
+  "white chocolate":            "chocolate",
+  "drinking chocolate":         "chocolate",
+
+  // ── Flour kinds → canonical ───────────────────────────────────────────────
+  // Specific flour types resolve to the base "flour" key for THA picks lookup.
+  // Note: normalizeIngredientKey strips hyphens, so "self-raising" → "self raising".
+  "plain flour":                "flour",
+  "strong flour":               "flour",
+  "strong white flour":         "flour",
+  "wholemeal flour":            "flour",
+  "self raising flour":         "flour",
+  "bread flour":                "flour",
+  "00 flour":                   "flour",
+
+  // ── Hot sauces → canonical ────────────────────────────────────────────────
+  "sriracha sauce":             "sriracha",
+  "sriracha hot sauce":         "sriracha",
+
+  // ── Bread kinds → canonical ───────────────────────────────────────────────
+  "white bread":                "bread",
+  "brown bread":                "bread",
+  "seeded bread":               "bread",
+  "sourdough bread":            "bread",
+
+  // ── Cheese varieties → canonical ─────────────────────────────────────────
+  "gruyere":                    "cheese",
+  "gruyere cheese":             "cheese",
+
+  // ── Apple varieties → singular canonical ─────────────────────────────────
+  "gala apple":                 "apple",
+
+  // ── Citrus varieties → canonical ─────────────────────────────────────────
+  "satsuma":                    "orange",
+  "clementine":                 "orange",
+  "clementines":                "orange",
+  "satsumas":                   "orange",
 };
 
 /**

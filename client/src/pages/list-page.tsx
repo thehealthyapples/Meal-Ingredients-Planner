@@ -88,6 +88,9 @@ export default function ListPage() {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [history, setHistory] = useState<QuickListBasket[]>(() => loadHistory());
   const [aiCleaned, setAiCleaned] = useState(false);
+  const [quickAddName, setQuickAddName] = useState("");
+  const [quickAddQty, setQuickAddQty] = useState(1);
+  const quickAddNameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     document.title = "List – The Healthy Apples";
@@ -112,6 +115,18 @@ export default function ListPage() {
     el.style.height = "auto";
     el.style.height = `${el.scrollHeight}px`;
   }, []);
+
+  // ── Quick-add row: append "{qty} {name}" to textarea ─────────────────────
+
+  const handleQuickAdd = useCallback(() => {
+    const name = quickAddName.trim();
+    if (!name) return;
+    const entry = quickAddQty > 1 ? `${quickAddQty} ${name}` : name;
+    setRawText(prev => prev ? `${prev}\n${entry}` : entry);
+    setQuickAddName("");
+    setQuickAddQty(1);
+    setTimeout(() => { resizeTextarea(); quickAddNameRef.current?.focus(); }, 0);
+  }, [quickAddName, quickAddQty, resizeTextarea]);
 
   // ── Pick up ingredients passed back from Cookbook ─────────────────────────
 
@@ -544,6 +559,40 @@ export default function ListPage() {
             >
               <ChefHat className="h-4 w-4" />
             </button>
+
+            {/* Quick-add: single item with quantity */}
+            <div className="ml-auto flex items-center gap-1">
+              <input
+                ref={quickAddNameRef}
+                type="text"
+                value={quickAddName}
+                onChange={e => setQuickAddName(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleQuickAdd(); }}
+                placeholder="Item…"
+                className="h-7 w-24 text-[12px] px-2 rounded-lg border border-black/[0.10] bg-white/70 focus:outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-foreground/30"
+                aria-label="Item name"
+                data-testid="input-quick-add-name"
+              />
+              <input
+                type="number"
+                min={1}
+                value={quickAddQty}
+                onChange={e => setQuickAddQty(Math.max(1, parseInt(e.target.value) || 1))}
+                onKeyDown={e => { if (e.key === "Enter") handleQuickAdd(); }}
+                className="h-7 w-12 text-[12px] px-1.5 rounded-lg border border-black/[0.10] bg-white/70 focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums text-center"
+                aria-label="Quantity"
+                data-testid="input-quick-add-qty"
+              />
+              <button
+                onClick={handleQuickAdd}
+                disabled={!quickAddName.trim()}
+                className="h-7 px-2.5 text-[12px] rounded-lg bg-primary/90 text-primary-foreground hover:bg-primary transition-colors disabled:opacity-40"
+                aria-label="Add item to list"
+                data-testid="button-quick-add"
+              >
+                +
+              </button>
+            </div>
 
           </div>{/* end toolbar row */}
 

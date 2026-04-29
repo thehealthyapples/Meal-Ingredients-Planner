@@ -73,7 +73,7 @@ import { rankChoices, buildWhyBetter, type RankingMode } from "@/lib/analyser-ch
 import FoodKnowledgeModal from "@/components/food-knowledge-modal";
 import WholeFoodSelector from "@/components/whole-food-selector";
 import { appendPendingIngredient } from "@/lib/quick-list";
-import ShoppingListView from "@/components/ShoppingListView";
+import ShoppingListView, { resolvePickKey } from "@/components/ShoppingListView";
 import RankModeSelector from "@/components/RankModeSelector";
 
 type ShoppingListItemExtended = ShoppingListItem & {
@@ -247,10 +247,15 @@ const FRESH_HERB_NAMES = new Set([
 ]);
 
 function getBasketCategory(item: { category?: string | null; productName: string; normalizedName?: string | null }): string {
+  const lowerName = (item.normalizedName ?? item.productName).toLowerCase();
+  // Name-based overrides before category map — fixes common miscategorisations
+  if (/\bvinegar\b/.test(lowerName) && !/\bcrisps?\b|\bchips?\b/.test(lowerName)) return 'pantry';
+  if (lowerName.includes('peanut butter')) return 'pantry';
+  if (/^pickled |^fermented |^marinated /.test(lowerName)) return 'pantry';
+
   const raw = (item.category || 'other').toLowerCase();
   if (raw === 'herbs') {
-    const name = (item.normalizedName ?? item.productName).toLowerCase();
-    return FRESH_HERB_NAMES.has(name) ? 'produce' : 'pantry';
+    return FRESH_HERB_NAMES.has(lowerName) ? 'produce' : 'pantry';
   }
   return BASKET_CATEGORY_MAP[raw] ?? 'other';
 }
@@ -316,6 +321,9 @@ type PantryDisplayRow<T> = {
   combinedSources: import('@shared/schema').IngredientSource[];
   combinedQtyValue: number | null;
   mergedCount: number;
+  allIds: number[];
+  allBasketLabels: (string | null)[];
+  allQuantities: (number | null)[];
 };
 
 function computePantryMergedRows<T extends { id: number; normalizedName?: string | null; productName: string; unit?: string | null; quantityValue?: number | null }>(
@@ -332,10 +340,16 @@ function computePantryMergedRows<T extends { id: number; normalizedName?: string
         combinedSources: [...(sourcesByItem.get(item.id) ?? [])],
         combinedQtyValue: item.quantityValue ?? null,
         mergedCount: 1,
+        allIds: [item.id],
+        allBasketLabels: [(item as any).basketLabel ?? null],
+        allQuantities: [item.quantityValue ?? null],
       });
     } else {
       const row = groups.get(key)!;
       row.mergedCount++;
+      row.allIds.push(item.id);
+      row.allBasketLabels.push((item as any).basketLabel ?? null);
+      row.allQuantities.push(item.quantityValue ?? null);
       const seenMealIds = new Set(row.combinedSources.map(s => s.mealId));
       for (const s of sourcesByItem.get(item.id) ?? []) {
         if (!seenMealIds.has(s.mealId)) {
@@ -349,6 +363,31 @@ function computePantryMergedRows<T extends { id: number; normalizedName?: string
     }
   }
   return Array.from(groups.values());
+}
+
+// Allocate a total cupboard qty across underlying rows, quick list first.
+// Returns per-row { id, qty } — qty=null means this row is not covered.
+function allocateCupboardQty(
+  totalQty: number,
+  allIds: number[],
+  allBasketLabels: (string | null)[],
+  allQuantities: (number | null)[],
+): { id: number; qty: number | null }[] {
+  const rows = allIds
+    .map((id, i) => ({
+      id,
+      isQL: !!allBasketLabels[i]?.startsWith("quick_list_"),
+      rowQty: allQuantities[i] ?? 0,
+    }))
+    .sort((a, b) => (b.isQL ? 1 : 0) - (a.isQL ? 1 : 0));
+
+  let remaining = totalQty;
+  return rows.map(row => {
+    if (remaining <= 0 || row.rowQty <= 0) return { id: row.id, qty: null };
+    const allocated = Math.min(row.rowQty, remaining);
+    remaining -= allocated;
+    return { id: row.id, qty: allocated };
+  });
 }
 
 const SUPERMARKET_NAMES = ['Tesco', "Sainsbury's", 'Asda', 'Morrisons', 'Aldi', 'Lidl', 'Waitrose', 'Marks & Spencer', 'Ocado'];
@@ -1486,14 +1525,26 @@ export default function ShoppingListPage() {
   const { data: savedItems_raw = [], isLoading: loadingSaved } = useQuery<ShoppingListItemExtended[]>({
     queryKey: [api.shoppingList.list.path],
   });
-  // In quick-list mode show only the items for that basket.
-  // In normal mode exclude all quick-list items so they never contaminate the main basket.
-  const savedItems = useMemo(
-    () => quickListLabel
-      ? savedItems_raw.filter(i => i.basketLabel === quickListLabel)
-      : savedItems_raw.filter(i => !i.basketLabel?.startsWith("quick_list")),
-    [savedItems_raw, quickListLabel],
+  // All items (planned + all quick_list_* batches) — unified source of truth.
+  const savedItems = useMemo(() => savedItems_raw, [savedItems_raw]);
+
+  // Source filter: "all" | "planned" | "quick_list"
+  // Quick-list entry point pre-selects "quick_list" so the user lands on their new batch.
+  const [listFilter, setListFilter] = useState<"all" | "planned" | "quick_list">(
+    () => quickListLabel ? "quick_list" : "all",
   );
+
+  const hasQuickListItems = useMemo(
+    () => savedItems.some(i => i.basketLabel?.startsWith("quick_list_")),
+    [savedItems],
+  );
+
+  // displayItems: items after applying the current source filter — used for all rendering.
+  const displayItems = useMemo(() => {
+    if (listFilter === "planned") return savedItems.filter(i => !i.basketLabel?.startsWith("quick_list_"));
+    if (listFilter === "quick_list") return savedItems.filter(i => !!i.basketLabel?.startsWith("quick_list_"));
+    return savedItems;
+  }, [savedItems, listFilter]);
 
   const { data: householdData } = useQuery<{ id: number; name: string; members?: unknown[] }>({
     queryKey: ['/api/household'],
@@ -1681,6 +1732,22 @@ export default function ShoppingListPage() {
     return map;
   }, [ingredientSources]);
 
+  // Merged items for shop view — same aggregation as basket view rows.
+  // Planned + quick_list_ items with the same normalised name collapse into
+  // one entry (primary item, combined qty, _allBasketLabels attached).
+  const shopDisplayItems = useMemo(() => {
+    const merged = computePantryMergedRows(displayItems, sourcesByItem);
+    const itemById = new Map(displayItems.map(i => [i.id, i]));
+    return merged.map(row => ({
+      ...row.primary,
+      quantityValue: row.combinedQtyValue ?? row.primary.quantityValue,
+      _allBasketLabels: row.allBasketLabels,
+      _allIds: row.allIds,
+      _allQuantities: row.allQuantities,
+      _allCupboardQuantities: row.allIds.map(id => (itemById.get(id) as any)?.cupboardQuantity ?? null),
+    }));
+  }, [displayItems, sourcesByItem]);
+
   const pricesByItem = useMemo(() => {
     const map = new Map<number, Map<string, ProductMatch>>();
     for (const item of savedItems) {
@@ -1765,7 +1832,7 @@ export default function ShoppingListPage() {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
       toast({ title: "Products Matched", description: "Real grocery products matched and prices loaded across supermarkets." });
       try {
-        const rawKeys = savedItems.map(i => normalizeIngredientKey((i as any).ingredientName ?? (i as any).name ?? i.normalizedName ?? i.productName ?? '')).filter(Boolean);
+        const rawKeys = savedItems.map(i => resolvePickKey(normalizeIngredientKey((i as any).ingredientName ?? (i as any).name ?? i.normalizedName ?? i.productName ?? ''))).filter(Boolean);
         const uniqueKeys = Array.from(new Set(rawKeys));
         if (uniqueKeys.length > 0) {
           const res = await fetch('/api/ingredient-products/lookup', {
@@ -1883,6 +1950,87 @@ export default function ShoppingListPage() {
     },
   });
 
+  // Dialog state for source-aware clear and remove operations.
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const [removeDialog, setRemoveDialog] = useState<{ planned: number[]; quickList: number[] } | null>(null);
+
+  // Batch-delete items by source without a new API endpoint.
+  // "all" reuses the server bulk-delete route; the others batch individual deletes.
+  const clearBySource = useCallback(async (source: "all" | "planned" | "quick_list") => {
+    setClearDialogOpen(false);
+    try {
+      if (source === "all") {
+        clearAll.mutate();
+        return;
+      }
+      const idsToRemove = savedItems
+        .filter(i => source === "quick_list"
+          ? i.basketLabel?.startsWith("quick_list_")
+          : !i.basketLabel?.startsWith("quick_list_"))
+        .map(i => i.id);
+      await Promise.all(
+        idsToRemove.map(id => {
+          const url = buildUrl(api.shoppingList.remove.path, { id });
+          return fetch(url, { method: 'DELETE', credentials: 'include' });
+        }),
+      );
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
+      toast({ title: source === "quick_list" ? "Quick list cleared" : "Planned items cleared" });
+    } catch {
+      toast({ title: "Failed to clear items", variant: "destructive" });
+    }
+  }, [savedItems, clearAll, queryClient, toast]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Remove specific IDs from a mixed-source merged row.
+  const removeBySource = useCallback(async (ids: number[]) => {
+    setRemoveDialog(null);
+    try {
+      await Promise.all(
+        ids.map(id => {
+          const url = buildUrl(api.shoppingList.remove.path, { id });
+          return fetch(url, { method: 'DELETE', credentials: 'include' });
+        }),
+      );
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
+    } catch {
+      toast({ title: "Failed to remove item", variant: "destructive" });
+    }
+  }, [queryClient, toast]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // onUpdateStatus wrapper: propagates shop state to all items sharing the same normalised name.
+  const onUpdateStatusWithSiblings = useCallback((id: number, status: string) => {
+    const item = savedItems.find(i => i.id === id);
+    if (!item) { updateItem.mutate({ id, fields: { shopStatus: status } }); return; }
+    const norm = item.normalizedName ?? item.productName;
+    savedItems
+      .filter(i => (i.normalizedName ?? i.productName) === norm)
+      .forEach(sib => updateItem.mutate({ id: sib.id, fields: { shopStatus: status } }));
+  }, [savedItems, updateItem]);
+
+  const onUpdateCupboardQty = useCallback((
+    primaryId: number,
+    totalQty: number | null,
+    ctx?: { allIds: number[]; allBasketLabels: (string | null)[]; allQuantities: (number | null)[] },
+  ) => {
+    const ids = ctx?.allIds ?? [primaryId];
+    if (totalQty === null) {
+      ids.forEach(id => updateItem.mutate({ id, fields: { cupboardQuantity: null } }));
+      return;
+    }
+    if (ids.length <= 1) {
+      updateItem.mutate({ id: primaryId, fields: { cupboardQuantity: totalQty } });
+      return;
+    }
+    const allocation = allocateCupboardQty(totalQty, ctx!.allIds, ctx!.allBasketLabels, ctx!.allQuantities);
+    allocation.forEach(({ id, qty }) => updateItem.mutate({ id, fields: { cupboardQuantity: qty } }));
+  }, [updateItem]);
+
   const recalculateScores = useMutation({
     mutationFn: async () => {
       const res = await fetch(api.shoppingList.autoSmp.path, {
@@ -1923,9 +2071,10 @@ export default function ShoppingListPage() {
 
 
   const addItem = useMutation({
-    mutationFn: async ({ rawText, basketLabel }: { rawText: string; basketLabel?: string | null }) => {
+    mutationFn: async ({ rawText, basketLabel, quantityValue }: { rawText: string; basketLabel?: string | null; quantityValue?: number }) => {
       const body: Record<string, unknown> = { productName: rawText };
       if (basketLabel) body.basketLabel = basketLabel;
+      if (quantityValue !== undefined && quantityValue > 0) body.quantityValue = quantityValue;
       const res = await fetch(api.shoppingList.add.path, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1944,8 +2093,8 @@ export default function ShoppingListPage() {
   });
 
   const copyToClipboard = () => {
-    const items = savedItems.length > 0
-      ? savedItems.map(i => {
+    const items = displayItems.length > 0
+      ? displayItems.map(i => {
           const display = formatItemDisplay(i.productName, i.quantityValue, i.unit, measurementPref);
           return `- ${display}${i.quantity > 1 ? ` (x${i.quantity})` : ''}`;
         })
@@ -1991,7 +2140,7 @@ export default function ShoppingListPage() {
   }, [pricesByItem, getCheapestForItem]);
 
   const hasPrices = allPriceMatches.length > 0;
-  const hasItemOverrides = savedItems.some(i => i.selectedTier !== null);
+  const hasItemOverrides = displayItems.some(i => i.selectedTier !== null);
 
   const filteredSupermarketTotals = useMemo(() => {
     if (!totalCostData) return [];
@@ -2001,9 +2150,9 @@ export default function ShoppingListPage() {
   }, [totalCostData, selectedRetailers]);
 
   const clientBestTotal = useMemo(() => {
-    if (!hasPrices || savedItems.length === 0) return null;
+    if (!hasPrices || displayItems.length === 0) return null;
     let total = 0;
-    for (const item of savedItems) {
+    for (const item of displayItems) {
       const tier: PriceTier =
         (item.selectedTier as PriceTier) ||
         (getCategoryDefault(item.category || 'other').tier as PriceTier) ||
@@ -2020,16 +2169,16 @@ export default function ShoppingListPage() {
       if (best !== null) total += best;
     }
     return total;
-  }, [hasPrices, savedItems, allPriceMatches, selectedRetailers, getCategoryDefault, currentTier]);
+  }, [hasPrices, displayItems, allPriceMatches, selectedRetailers, getCategoryDefault, currentTier]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const avgThaRating = useMemo(() => {
-    const rated = savedItems.filter(i => i.thaRating !== null && i.thaRating !== undefined && (i.thaRating as number) > 0);
+    const rated = displayItems.filter(i => i.thaRating !== null && i.thaRating !== undefined && (i.thaRating as number) > 0);
     if (rated.length === 0) return null;
     return rated.reduce((sum, i) => sum + (i.thaRating as number), 0) / rated.length;
-  }, [savedItems]);
+  }, [displayItems]);
 
   const overallConfidence = useMemo((): 'high' | 'medium' | 'low' | null => {
-    const wfItems = savedItems.filter(item => {
+    const wfItems = displayItems.filter(item => {
       const wfDef = getIngredientDef(item.normalizedName ?? item.productName);
       return isWholeFood(item) && !!wfDef;
     });
@@ -2051,17 +2200,17 @@ export default function ShoppingListPage() {
     if (score >= 0.7) return 'high';
     if (score >= 0.4) return 'medium';
     return 'low';
-  }, [savedItems, allPriceMatches, selectedRetailers]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [displayItems, allPriceMatches, selectedRetailers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const comparisonMatrix = useMemo(() => {
-    if (!hasPrices || savedItems.length === 0) return {} as Record<string, Record<string, number>>;
+    if (!hasPrices || displayItems.length === 0) return {} as Record<string, Record<string, number>>;
     const tiers = ['budget', 'standard', 'premium', 'organic'];
     const result: Record<string, Record<string, number>> = {};
     for (const retailer of selectedRetailers) {
       result[retailer] = {};
       for (const tier of tiers) {
         let total = 0;
-        for (const item of savedItems) {
+        for (const item of displayItems) {
           const match = allPriceMatches.find(m => m.shoppingListItemId === item.id && m.supermarket === retailer && m.tier === tier);
           if (match?.price !== null && match?.price !== undefined) total += match.price;
         }
@@ -2069,14 +2218,14 @@ export default function ShoppingListPage() {
       }
     }
     return result;
-  }, [hasPrices, savedItems, allPriceMatches, selectedRetailers]);
+  }, [hasPrices, displayItems, allPriceMatches, selectedRetailers]);
 
   const currentByRetailer = useMemo(() => {
     if (!hasPrices) return {} as Record<string, number>;
     const result: Record<string, number> = {};
     for (const retailer of selectedRetailers) {
       let total = 0;
-      for (const item of savedItems) {
+      for (const item of displayItems) {
         const itemPrices = pricesByItem.get(item.id);
         if (item.selectedStore) {
           if (item.selectedStore === retailer) {
@@ -2091,12 +2240,12 @@ export default function ShoppingListPage() {
       result[retailer] = total;
     }
     return result;
-  }, [hasPrices, savedItems, pricesByItem, selectedRetailers, getCheapestForItem]);
+  }, [hasPrices, displayItems, pricesByItem, selectedRetailers, getCheapestForItem]);
 
   const currentTotal = useMemo(() => {
     if (!hasPrices) return 0;
     let total = 0;
-    for (const item of savedItems) {
+    for (const item of displayItems) {
       const itemPrices = pricesByItem.get(item.id);
       if (item.selectedStore) {
         const price = itemPrices?.get(item.selectedStore)?.price;
@@ -2107,12 +2256,12 @@ export default function ShoppingListPage() {
       }
     }
     return total;
-  }, [hasPrices, savedItems, pricesByItem, getCheapestForItem]);
+  }, [hasPrices, displayItems, pricesByItem, getCheapestForItem]);
 
   useEffect(() => {
     if (savedItems.length === 0 || Object.keys(thaPicks).length > 0) return;
     const rawKeys = savedItems
-      .map(i => normalizeIngredientKey((i as any).ingredientName ?? (i as any).name ?? i.normalizedName ?? i.productName ?? ''))
+      .map(i => resolvePickKey(normalizeIngredientKey((i as any).ingredientName ?? (i as any).name ?? i.normalizedName ?? i.productName ?? '')))
       .filter(Boolean);
     const uniqueKeys = Array.from(new Set(rawKeys));
     if (uniqueKeys.length === 0) return;
@@ -2150,7 +2299,7 @@ export default function ShoppingListPage() {
       const res = await fetch('/api/ingredient-products/lookup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ingredientKeys: [normalizedName] }),
+        body: JSON.stringify({ ingredientKeys: [resolvePickKey(normalizedName)] }),
         credentials: 'include',
       });
       if (res.ok) {
@@ -2179,7 +2328,7 @@ export default function ShoppingListPage() {
   };
 
   const sortedItems = useMemo(() => {
-    const sorted = [...savedItems].sort((a, b) => {
+    const sorted = [...displayItems].sort((a, b) => {
       // When splitByShop is on, first sort by shop so items cluster by store
       if (splitByShop) {
         const aShop = a.selectedStore || getCheapestForItem(a.id)?.supermarket || 'zzz';
@@ -2243,7 +2392,7 @@ export default function ShoppingListPage() {
       return sortDirection === 'desc' ? -cmp : cmp;
     });
     return sorted;
-  }, [savedItems, sortColumn, sortDirection, pricesByItem, getCheapestForItem, getItemTier, getItemThaRating, sourcesByItem, splitByShop]);
+  }, [displayItems, sortColumn, sortDirection, pricesByItem, getCheapestForItem, getItemTier, getItemThaRating, sourcesByItem, splitByShop]);
 
   // Initialise collapsed-category state once data has loaded
   useEffect(() => {
@@ -2451,7 +2600,7 @@ export default function ShoppingListPage() {
                 <div>
                   <CardTitle className="text-[28px] font-semibold tracking-tight" data-testid="text-analyse-basket-title">Basket</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1" data-testid="text-items-count">
-                    {savedItems.length} items to buy
+                    {displayItems.length} item{displayItems.length !== 1 ? "s" : ""} to buy
                   </p>
                   {householdData && (
                     <div className="flex items-center gap-1.5 mt-1.5" data-testid="banner-household">
@@ -2463,7 +2612,7 @@ export default function ShoppingListPage() {
                   )}
                   {householdData && (() => {
                     const sharedCount = savedItems.filter(i => i.basketLabel === 'shared').length;
-                    const memberCount = savedItems.filter(i => i.basketLabel && i.basketLabel !== 'shared').length;
+                    const memberCount = savedItems.filter(i => i.basketLabel && i.basketLabel !== 'shared' && !i.basketLabel.startsWith('quick_list_')).length;
                     if (sharedCount === 0 && memberCount === 0) return null;
                     return (
                       <div className="mt-1.5 text-xs text-muted-foreground leading-tight space-y-0.5" data-testid="banner-basket-summary">
@@ -2476,25 +2625,34 @@ export default function ShoppingListPage() {
                       </div>
                     );
                   })()}
-                  {quickListLabel && (
-                    <div className="flex items-center gap-2 mt-2 px-2.5 py-1.5 rounded-lg bg-primary/8 border border-primary/20 text-xs" data-testid="banner-quick-list">
-                      <NotepadText className="h-3.5 w-3.5 text-primary shrink-0" />
-                      <span className="text-primary font-medium">Quick List</span>
-                      <span className="text-muted-foreground">· {savedItems.length} item{savedItems.length !== 1 ? "s" : ""}</span>
-                      <Link href="/analyse-basket" className="ml-auto text-muted-foreground hover:text-foreground underline underline-offset-2 shrink-0">
-                        Full basket
-                      </Link>
+                  {/* Source filter tabs — shown whenever quick list items exist */}
+                  {hasQuickListItems && (
+                    <div className="flex items-center gap-1 mt-2.5" data-testid="source-filter-tabs">
+                      {(["all", "planned", "quick_list"] as const).map(f => (
+                        <button
+                          key={f}
+                          onClick={() => setListFilter(f)}
+                          className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
+                            listFilter === f
+                              ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                              : "text-muted-foreground border-border hover:border-primary/20 hover:text-foreground"
+                          }`}
+                          data-testid={`filter-tab-${f}`}
+                        >
+                          {f === "all" ? "All" : f === "planned" ? "Planned" : "Quick list"}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>
               </div>
               <div className="flex items-center gap-1 flex-wrap justify-end">
-                {/* Rank mode selector — shown in Quick List context so preference is visible before entering Shop View */}
-                {quickListLabel && (
+                {/* Rank mode selector */}
+                {hasQuickListItems && (
                   <RankModeSelector rankMode={rankMode} onChange={handleRankModeChange} />
                 )}
                 {/* Split by shop toggle */}
-                {(savedItems.length > 0) && (
+                {(displayItems.length > 0) && (
                   <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1" data-testid="toggle-split-by-shop">
                     <Columns2 className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground hidden sm:inline">Split by shop</span>
@@ -2506,11 +2664,11 @@ export default function ShoppingListPage() {
                     />
                   </div>
                 )}
-                {(savedItems.length > 0 || shoppingExtras.some(e => e.inBasket || e.alwaysAdd)) && (
+                {(displayItems.length > 0 || shoppingExtras.some(e => e.inBasket || e.alwaysAdd)) && (
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => lookupPrices.mutate()}
+                    onClick={() => lookupPrices.mutate(undefined)}
                     disabled={lookupPrices.isPending}
                     data-testid="button-lookup-prices"
                     className="gap-1"
@@ -2523,7 +2681,7 @@ export default function ShoppingListPage() {
                     <span className="hidden sm:inline">Match Products</span>
                   </Button>
                 )}
-                {savedItems.length > 0 && (
+                {displayItems.length > 0 && (
                   <Button
                     variant="default"
                     size="sm"
@@ -2588,15 +2746,26 @@ export default function ShoppingListPage() {
                           {recalculateScores.isPending ? 'Recalculating…' : 'Recalculate Scores'}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => clearAll.mutate()}
-                          disabled={clearAll.isPending}
-                          className="text-destructive focus:text-destructive"
-                          data-testid="button-clear-all"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Clear Basket
-                        </DropdownMenuItem>
+                        {hasQuickListItems ? (
+                          <DropdownMenuItem
+                            onClick={() => setClearDialogOpen(true)}
+                            className="text-destructive focus:text-destructive"
+                            data-testid="button-clear-all"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Clear Basket…
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            onClick={() => clearAll.mutate()}
+                            disabled={clearAll.isPending}
+                            className="text-destructive focus:text-destructive"
+                            data-testid="button-clear-all"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Clear Basket
+                          </DropdownMenuItem>
+                        )}
                       </>
                     )}
                   </DropdownMenuContent>
@@ -2693,7 +2862,7 @@ export default function ShoppingListPage() {
                           </thead>
                           <tbody>
                             <AnimatePresence>
-                              {displayRows.map(({ primary: item, combinedSources, combinedQtyValue, mergedCount }) => {
+                              {displayRows.map(({ primary: item, combinedSources, combinedQtyValue, mergedCount, allIds, allBasketLabels }) => {
                                 const { qty, unitLabel } = formatQty(combinedQtyValue ?? item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
                                 const showStepper = !['g', 'kg', 'ml', 'L', 'oz', 'lb', 'cups', 'tbsp', 'tsp'].includes(unitLabel);
                                 const itemPrices = pricesByItem.get(item.id);
@@ -2706,8 +2875,11 @@ export default function ShoppingListPage() {
 
                                 const wfDef = getIngredientDef(item.normalizedName ?? item.productName);
                                 const isWF = isWholeFood(item) && !!wfDef;
-                                const rowVariantSelections = isWF ? safeParseJsonObject(item.variantSelections) : {};
-                                const rowAttrPreferences = isWF ? safeParseJsonObject(item.attributePreferences) : {};
+                                // hasCatDef: show variant selector for any item with a catalogue selectorSchema,
+                                // regardless of itemType (whole_food or packaged like crisps)
+                                const hasCatDef = !!(wfDef && wfDef.selectorSchema.length > 0);
+                                const rowVariantSelections = hasCatDef ? safeParseJsonObject(item.variantSelections) : {};
+                                const rowAttrPreferences = hasCatDef ? safeParseJsonObject(item.attributePreferences) : {};
                                 let wfConfLabel: typeof CONFIDENCE_LABELS[keyof typeof CONFIDENCE_LABELS] | null = null;
                                 let wfConfLevel: string | null = null;
                                 if (isWF && wfDef) {
@@ -2742,7 +2914,7 @@ export default function ShoppingListPage() {
                                 const isBranded = !!item.matchedProductId;
 
                                 const confShortLabel: Record<string, string> = { high: 'Exact', medium: 'Close', low: 'Sub.' };
-                                const variantSummary = (isWF && wfDef && Object.keys(rowVariantSelections).length > 0)
+                                const variantSummary = (hasCatDef && Object.keys(rowVariantSelections).length > 0)
                                   ? Object.values(rowVariantSelections).filter(Boolean).join(' · ')
                                   : '-';
                                 const tierShort = EXTENDED_TIER_LABELS[itemTier]?.short || itemTier;
@@ -2797,10 +2969,21 @@ export default function ShoppingListPage() {
                                               optional:          { text: "Optional topping",   className: "text-muted-foreground border-border" },
                                             };
                                             const cfg = BASKET_LABEL_CONFIG[item.basketLabel];
-                                            if (!cfg) return null;
-                                            return (
+                                            if (cfg) return (
                                               <Badge variant="outline" className={`text-[10px] ${cfg.className}`} data-testid={`badge-basket-label-${item.id}`}>
                                                 {cfg.text}
+                                              </Badge>
+                                            );
+                                            return null;
+                                          })()}
+                                          {/* Source badge — shown whenever both source types coexist */}
+                                          {hasQuickListItems && (() => {
+                                            const hasPlanned = allBasketLabels.some(l => !l?.startsWith("quick_list_"));
+                                            const hasQL = allBasketLabels.some(l => l?.startsWith("quick_list_"));
+                                            const text = hasPlanned && hasQL ? "Planned + Quick list" : hasQL ? "Quick list" : "Planned";
+                                            return (
+                                              <Badge variant="outline" className="text-[10px] text-violet-600 dark:text-violet-400 border-violet-300 dark:border-violet-600" data-testid={`badge-source-${item.id}`}>
+                                                {text}
                                               </Badge>
                                             );
                                           })()}
@@ -2885,18 +3068,36 @@ export default function ShoppingListPage() {
                                         </PopoverTrigger>
                                         <PopoverContent className="w-64 p-3" align="start">
                                           <div className="flex flex-col gap-2">
-                                            {isWF && wfDef && (
+                                            {hasCatDef && wfDef && (
                                               <div className="flex flex-col gap-0.5">
-                                                {wfDef.selectorSchema.map((selector) => (
-                                                  <div key={selector.key} className="flex flex-wrap gap-0.5">
-                                                    {selector.options.map((option) => {
-                                                      const isSel = rowVariantSelections[selector.key] === option;
-                                                      return (
-                                                        <button key={option} type="button" onClick={() => handleVariantChange(selector.key, isSel ? "" : option)} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isSel ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`} data-testid={`variant-chip-${item.id}-${selector.key}-${option.replace(/\s+/g, "-").toLowerCase()}`}>{option}</button>
-                                                      );
-                                                    })}
-                                                  </div>
-                                                ))}
+                                                {wfDef.selectorSchema.map((selector) => {
+                                                  const rawVal = rowVariantSelections[selector.key] ?? "";
+                                                  const multiVals = selector.multi
+                                                    ? rawVal.split(",").map((v: string) => v.trim()).filter(Boolean)
+                                                    : [];
+                                                  return (
+                                                    <div key={selector.key} className="flex flex-wrap gap-0.5">
+                                                      {selector.options.map((option) => {
+                                                        const isSel = selector.multi
+                                                          ? multiVals.includes(option)
+                                                          : rawVal === option;
+                                                        const handleClick = () => {
+                                                          if (selector.multi) {
+                                                            const next = isSel
+                                                              ? multiVals.filter((v: string) => v !== option)
+                                                              : [...multiVals, option];
+                                                            handleVariantChange(selector.key, next.join(","));
+                                                          } else {
+                                                            handleVariantChange(selector.key, isSel ? "" : option);
+                                                          }
+                                                        };
+                                                        return (
+                                                          <button key={option} type="button" onClick={handleClick} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isSel ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`} data-testid={`variant-chip-${item.id}-${selector.key}-${option.replace(/\s+/g, "-").toLowerCase()}`}>{option}</button>
+                                                        );
+                                                      })}
+                                                    </div>
+                                                  );
+                                                })}
                                                 {wfDef.relevantAttributes.length > 0 && (
                                                   <div className="flex flex-wrap gap-0.5">
                                                     {wfDef.relevantAttributes.map((attr) => {
@@ -3013,17 +3214,30 @@ export default function ShoppingListPage() {
                                         </div>
                                       ) : (
                                         <div className="flex items-center justify-center gap-0.5">
-                                          {showStepper && <button
-                                            onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: Math.max(0, (combinedQtyValue ?? item.quantityValue ?? 0) - 1) } })}
-                                            className="h-4 w-4 flex-shrink-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-                                            data-testid={`button-qty-minus-${item.id}`}
-                                          ><Minus className="h-2.5 w-2.5" /></button>}
-                                          <span className="cursor-pointer tabular-nums whitespace-nowrap px-0.5" onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue || 0))} data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
-                                          {showStepper && <button
-                                            onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: (combinedQtyValue ?? item.quantityValue ?? 0) + 1 } })}
-                                            className="h-4 w-4 flex-shrink-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-                                            data-testid={`button-qty-plus-${item.id}`}
-                                          ><Plus className="h-2.5 w-2.5" /></button>}
+                                          {showStepper && allIds.length <= 1 && (
+                                            <button
+                                              onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: Math.max(0, (item.quantityValue ?? 0) - 1) } })}
+                                              className="h-4 w-4 flex-shrink-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                                              data-testid={`button-qty-minus-${item.id}`}
+                                            ><Minus className="h-2.5 w-2.5" /></button>
+                                          )}
+                                          {allIds.length > 1 ? (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <span className="tabular-nums whitespace-nowrap px-0.5 cursor-default" data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
+                                              </TooltipTrigger>
+                                              <TooltipContent><p className="text-xs">Combined from {allIds.length} sources — use Planned or Quick list tab to edit.</p></TooltipContent>
+                                            </Tooltip>
+                                          ) : (
+                                            <span className="cursor-pointer tabular-nums whitespace-nowrap px-0.5" onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue ?? 0))} data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
+                                          )}
+                                          {showStepper && allIds.length <= 1 && (
+                                            <button
+                                              onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: (item.quantityValue ?? 0) + 1 } })}
+                                              className="h-4 w-4 flex-shrink-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                                              data-testid={`button-qty-plus-${item.id}`}
+                                            ><Plus className="h-2.5 w-2.5" /></button>
+                                          )}
                                         </div>
                                       )}
                                     </td>
@@ -3105,7 +3319,15 @@ export default function ShoppingListPage() {
                                         />
                                         <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7 hidden sm:inline-flex" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
                                         <Button variant="ghost" size="icon" onClick={() => setCorrectItem(item)} className="text-muted-foreground h-7 w-7 hidden sm:inline-flex" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                        <Button variant="ghost" size="icon" onClick={() => {
+                                          const plannedIds = allIds.filter((_, i) => !allBasketLabels[i]?.startsWith("quick_list_"));
+                                          const qlIds = allIds.filter((_, i) => !!allBasketLabels[i]?.startsWith("quick_list_"));
+                                          if (plannedIds.length > 0 && qlIds.length > 0) {
+                                            setRemoveDialog({ planned: plannedIds, quickList: qlIds });
+                                          } else {
+                                            allIds.forEach(id => removeItem.mutate(id));
+                                          }
+                                        }} className="text-muted-foreground h-7 w-7" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
                                       </div>
                                     </td>
                                   </motion.tr>
@@ -3475,7 +3697,7 @@ export default function ShoppingListPage() {
         {/* ── Shop view — inline, app shell stays intact ───────────────────── */}
         {viewMode === "shop" && (
           <ShoppingListView
-            items={savedItems}
+            items={shopDisplayItems as unknown as ShoppingListItemExtended[]}
             extras={shoppingExtras}
             sourcesByItem={sourcesByItem}
             pantryKeySet={pantryKeySet}
@@ -3483,21 +3705,67 @@ export default function ShoppingListPage() {
             allPriceMatches={allPriceMatches}
             thaPicks={thaPicks}
             initialStore={globalStore !== 'auto' ? globalStore : undefined}
-            initialPhase="cupboard_check"
-            onUpdateStatus={(id, status) => updateItem.mutate({ id, fields: { shopStatus: status } })}
+            onUpdateStatus={onUpdateStatusWithSiblings}
             onRenameItem={handleRenameItem}
             onRemoveItem={id => removeItem.mutate(id)}
-            onAddItem={async (rawText) => { try { await addItem.mutateAsync({ rawText, basketLabel: quickListLabel }); } catch (e) { console.error('[addItem] failed:', rawText, e); /* onError handles toast */ } }}
+            onAddItem={async (rawText, quantityValue) => { try { await addItem.mutateAsync({ rawText, basketLabel: quickListLabel, quantityValue }); } catch (e) { console.error('[addItem] failed:', rawText, e); /* onError handles toast */ } }}
             onMatchStore={(store) => lookupPrices.mutate(store)}
             isMatchingPrices={lookupPrices.isPending}
             rankMode={rankMode}
             onRankModeChange={handleRankModeChange}
-            onClearBasket={() => clearAll.mutate()}
+            onClearBasket={hasQuickListItems ? () => setClearDialogOpen(true) : () => clearAll.mutate()}
+            listFilter={hasQuickListItems ? listFilter : undefined}
+            onListFilterChange={hasQuickListItems ? setListFilter : undefined}
+            onClearBySource={hasQuickListItems ? clearBySource : undefined}
             onClose={() => setViewMode("basket")}
+            onAnalyse={(item) => setAnalyseItem(item)}
+            onVariantChange={(id, key, value) => {
+              const it = savedItems.find(i => i.id === id);
+              const prev = safeParseJsonObject(it?.variantSelections);
+              const next = { ...prev, [key]: value };
+              if (!value) delete next[key];
+              updateWholeFoodIntent.mutate({ id, fields: { variantSelections: JSON.stringify(next) } });
+            }}
+            onAttributeChange={(id, key, value) => {
+              const it = savedItems.find(i => i.id === id);
+              const prev = safeParseJsonObject(it?.attributePreferences);
+              updateWholeFoodIntent.mutate({ id, fields: { attributePreferences: JSON.stringify({ ...prev, [key]: value }) } });
+            }}
+            onUpdateCupboardQty={onUpdateCupboardQty}
           />
         )}
       </div>
 
+
+      {/* Clear basket dialog — shown when quick list items exist */}
+      <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <DialogContent className="max-w-sm" data-testid="dialog-clear-basket">
+          <DialogHeader>
+            <DialogTitle>Clear basket</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">What would you like to clear?</p>
+          <DialogFooter className="flex flex-col gap-2 mt-4 sm:flex-col">
+            <Button variant="outline" onClick={() => clearBySource("planned")} data-testid="button-clear-planned">Clear planned items</Button>
+            <Button variant="outline" onClick={() => clearBySource("quick_list")} data-testid="button-clear-quicklist">Clear quick list</Button>
+            <Button variant="destructive" onClick={() => clearBySource("all")} data-testid="button-clear-all-confirm">Clear all</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remove item dialog — shown when an item exists in both planned + quick list */}
+      <Dialog open={!!removeDialog} onOpenChange={(open) => { if (!open) setRemoveDialog(null); }}>
+        <DialogContent className="max-w-sm" data-testid="dialog-remove-item">
+          <DialogHeader>
+            <DialogTitle>Remove item</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">This item appears in both your planned list and quick list. What would you like to remove?</p>
+          <DialogFooter className="flex flex-col gap-2 mt-4 sm:flex-col">
+            <Button variant="outline" onClick={() => removeDialog && removeBySource(removeDialog.planned)} data-testid="button-remove-planned">Remove planned</Button>
+            <Button variant="outline" onClick={() => removeDialog && removeBySource(removeDialog.quickList)} data-testid="button-remove-quicklist">Remove quick list</Button>
+            <Button variant="destructive" onClick={() => removeDialog && removeBySource([...removeDialog.planned, ...removeDialog.quickList])} data-testid="button-remove-all">Remove all</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Always in Basket confirmation modal */}
       <Dialog open={!!alwaysAddModal} onOpenChange={(open) => { if (!open) setAlwaysAddModal(null); }}>

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { normalizeIngredientKey } from "@shared/normalize";
-import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowLeft, ArrowRight, Store, Pencil, Search, AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { normalizeIngredientKey, singularizeIngredientKey } from "@shared/normalize";
+import { getCanonicalKey } from "@shared/ingredient-aliases";
+import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowLeft, ArrowRight, Store, Pencil, Search, AlertTriangle, Plus, Trash2, Microscope } from "lucide-react";
 import { rankDisplayMatches, type RankingMode } from "@/lib/analyser-choice";
 import RankModeSelector from "@/components/RankModeSelector";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,8 @@ import {
 import type { ShoppingListItem, IngredientSource, ProductMatch, IngredientProduct } from "@shared/schema";
 import { cleanProductName } from "@/lib/unit-display";
 import { isWholeFood } from "@/lib/basket-item-classifier";
+import { getIngredientDef } from "@/lib/ingredient-catalogue";
+import WholeFoodSelector from "@/components/whole-food-selector";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -71,6 +74,8 @@ interface ShopDisplayMatch {
   price: number | null;
   pricePerUnit: string | null;
   productUrl: string | null;
+  /** "provider" = real provider price; "estimate" = category fallback; null = legacy row */
+  priceSource?: string | null;
 }
 
 interface ShoppingListViewProps {
@@ -94,15 +99,48 @@ interface ShoppingListViewProps {
   /** Remove an item from the shopping list entirely. */
   onRemoveItem?: (id: number) => void;
   /** Add a new item directly from within the view (e.g. from Check Cupboard). Persists to DB via resolver. */
-  onAddItem?: (rawText: string) => Promise<void> | void;
+  onAddItem?: (rawText: string, quantityValue?: number) => Promise<void> | void;
   /** Trigger store-scoped product matching for the currently selected store. */
   onMatchStore?: (store: string) => void;
   /** True while a store-scoped match is in progress. */
   isMatchingPrices?: boolean;
+  /** Open the product analyser for a specific item from within the shop view. */
+  onAnalyse?: (item: SLItem) => void;
   /** Shared ranking mode — lifted to parent so it persists across Quick List / Check Cupboard / Shop View. */
   rankMode?: RankingMode;
   /** Called when user changes ranking mode. */
   onRankModeChange?: (mode: RankingMode) => void;
+  /** Save a variant selection (type, flavour, etc.) for a catalogue item. */
+  onVariantChange?: (id: number, key: string, value: string) => void;
+  /** Save an attribute preference (organic, etc.) for a catalogue item. */
+  onAttributeChange?: (id: number, key: string, value: boolean) => void;
+  /** Active source filter — shown as tabs when provided. */
+  listFilter?: "all" | "planned" | "quick_list";
+  /** Called when the user switches source filter tabs. */
+  onListFilterChange?: (filter: "all" | "planned" | "quick_list") => void;
+  /** Clear items by source — "all" replaces the plain onClearBasket action. */
+  onClearBySource?: (source: "all" | "planned" | "quick_list") => void;
+  /** Persist partial cupboard quantity for an item (null = clear all underlying rows). */
+  onUpdateCupboardQty?: (
+    id: number,
+    qty: number | null,
+    ctx?: { allIds: number[]; allBasketLabels: (string | null)[]; allQuantities: (number | null)[] },
+  ) => void;
+}
+
+// ── Merged row context helpers ─────────────────────────────────────────────
+
+type MergedCtx = { allIds: number[]; allBasketLabels: (string | null)[]; allQuantities: (number | null)[] };
+
+// Returns allocation context if the item represents multiple underlying rows.
+function getMergedCtx(item: SLItem): MergedCtx | undefined {
+  const allIds: number[] = (item as any)._allIds ?? [item.id];
+  if (allIds.length <= 1) return undefined;
+  return {
+    allIds,
+    allBasketLabels: (item as any)._allBasketLabels ?? [(item as any).basketLabel ?? null],
+    allQuantities: (item as any)._allQuantities ?? [item.quantityValue ?? null],
+  };
 }
 
 // ── State persistence ──────────────────────────────────────────────────────
@@ -164,6 +202,114 @@ export function getLastShopSession(): ShopSession | null {
   } catch { return null; }
 }
 
+// ── THA picks key resolution ───────────────────────────────────────────────
+// Resolves a normalised item key to the best canonical THA picks key via a
+// four-step deterministic chain. Only affects THA picks display — price matches
+// are always looked up by item ID and are unaffected.
+//
+// Resolution order:
+//  1. Exact alias  (explicit variety→category, covers all apple variants)
+//  2. ALIASES canonical phrase  (via shared ingredient-aliases, e.g. "dark chocolate"→"chocolate")
+//  3. Canonical token match  (covers descriptors like "strong white flour"→"flour")
+//  4. Singularized form  (e.g. "cherries"→"cherry", "grapes"→"grape")
+//  5. Original key fallback
+//
+// If no match is found, resolveDisplayMatches falls back to thaPicks[itemKey]
+// (the key the server actually returned) so nothing is ever silently dropped.
+
+const THA_PICK_ALIASES: Record<string, string> = {
+  // Apple varieties → "apples" (matches catalogue ID and server picks key)
+  "granny smith":                "apples",
+  "granny smith apple":          "apples",
+  "granny smith apples":         "apples",
+  "pink lady":                   "apples",
+  "pink lady apple":             "apples",
+  "pink lady apples":            "apples",
+  "gala":                        "apples",
+  "gala apple":                  "apples",
+  "gala apples":                 "apples",
+  "braeburn":                    "apples",
+  "braeburn apple":              "apples",
+  "braeburn apples":             "apples",
+  "fuji":                        "apples",
+  "fuji apple":                  "apples",
+  "fuji apples":                 "apples",
+  "jazz":                        "apples",
+  "jazz apple":                  "apples",
+  "jazz apples":                 "apples",
+  "cox":                         "apples",
+  "cox apple":                   "apples",
+  "cox apples":                  "apples",
+  "golden delicious":            "apples",
+  "golden delicious apple":      "apples",
+  "golden delicious apples":     "apples",
+};
+
+// Canonical token map: each entry is [canonicalKey, tokens[]].
+// A token appearing as a WHOLE WORD in the singularised input triggers resolution.
+// Only specific, unambiguous food-identifying words are tokens — not generic
+// modifiers ("white", "strong", "dark" alone are never tokens).
+// Overly broad words (cream, milk, butter) are intentionally excluded to prevent
+// false positives like "ice cream" → "cream" or "buttermilk" → "butter".
+const CANONICAL_TOKENS: Array<[string, string[]]> = [
+  // Cheese varieties — single-word identifiers specific enough to be safe
+  ["cheese",    ["cheese", "cheddar", "gruyere", "brie", "mozzarella", "parmesan",
+                 "gouda", "edam", "camembert", "stilton", "ricotta", "feta"]],
+  // These words are specific enough that false-positive risk is negligible
+  ["flour",     ["flour"]],
+  ["chocolate", ["chocolate"]],
+  ["sriracha",  ["sriracha"]],
+  // "bread" is safe because "breadcrumbs" is one word and won't whole-word match
+  ["bread",     ["bread"]],
+  ["pasta",     ["pasta", "spaghetti", "penne", "fusilli", "tagliatelle"]],
+  ["rice",      ["rice", "basmati", "jasmine", "arborio"]],
+  ["oil",       ["oil", "olive oil", "vegetable oil", "rapeseed oil"]],
+  ["juice",     ["juice", "orange juice", "apple juice"]],
+  ["beans",     ["beans", "kidney beans", "black beans", "chickpeas"]],
+];
+
+const SAFE_LAST_TOKENS = new Set(["flour", "bread", "cheese", "chocolate", "rice", "pasta"]);
+
+function containsToken(singularKey: string, token: string): boolean {
+  if (token.includes(' ')) return singularKey.includes(token);
+  const words = singularKey.split(' ');
+  return words.includes(token);
+}
+
+export function resolvePickKey(normalizedName: string): string {
+  // 1. Exact alias
+  const exact = THA_PICK_ALIASES[normalizedName];
+  if (exact) return exact;
+
+  // 2. Singularize (cherries→cherry, apples→apple, etc.) then try alias + tokens
+  const singular = singularizeIngredientKey(normalizedName);
+
+  // 3. Canonical phrase alias via shared ingredient-aliases
+  //    Handles: "dark chocolate"→"chocolate", "strong white flour"→"flour", etc.
+  const aliased = getCanonicalKey(singular);
+  if (aliased !== singular) return aliased;
+  const aliasedOrig = getCanonicalKey(normalizedName);
+  if (aliasedOrig !== normalizedName) return aliasedOrig;
+
+  // 4. Token-based canonical matching
+  //    Handles: "strong white flour"→"flour", "gruyere cheese"→"cheese"
+  for (const [canonical, tokens] of CANONICAL_TOKENS) {
+    for (const token of tokens) {
+      if (containsToken(singular, token)) return canonical;
+    }
+  }
+
+  // 5. Last-word safe fallback — catches "organic pasta", "strong white flour", etc.
+  const lastWord = singular.split(' ').pop()!;
+  if (SAFE_LAST_TOKENS.has(lastWord)) return lastWord;
+
+  // 6. Return singularized form if it differs (e.g. "cherries"→"cherry")
+  if (singular !== normalizedName) return singular;
+
+  // 7. Original key — resolveDisplayMatches fallback handles the rest
+  return normalizedName;
+}
+
 // ── Product match resolution ───────────────────────────────────────────────
 // Priority: 1. THA curated picks for this store, 2. Price matches for this item+store.
 
@@ -174,10 +320,11 @@ function resolveDisplayMatches(
   store: string,
   mode: RankingMode = "quality_first",
 ): ShopDisplayMatch[] {
-  const itemKey = normalizeIngredientKey(item.normalizedName ?? item.productName ?? "");
+  const rawKey = normalizeIngredientKey(item.normalizedName ?? item.productName ?? "");
+  const itemKey = resolvePickKey(rawKey);
   const storeNorm = store.toLowerCase();
 
-  const thaList: ShopDisplayMatch[] = (thaPicks[itemKey] ?? [])
+  const thaList: ShopDisplayMatch[] = (thaPicks[itemKey] ?? thaPicks[rawKey] ?? [])
     .filter(p => p.retailer.toLowerCase() === storeNorm)
     .sort((a, b) => {
       const rA = (a.tags as any)?.thaRating ?? a.priority ?? 0;
@@ -205,6 +352,7 @@ function resolveDisplayMatches(
           price: m.price ?? null,
           pricePerUnit: m.pricePerUnit ?? null,
           productUrl: m.productUrl ?? null,
+          priceSource: (m as any).priceSource ?? null,
         }))
     : [];
 
@@ -272,6 +420,7 @@ function CompactRating({ rating }: { rating: number }) {
 // Clear, specific items (e.g. "oven chips", "greek yoghurt") will not match.
 
 const CLARIFICATION_OPTIONS: Record<string, { label: string; refinements: string[] }> = {
+  turmeric: { label: "Which form?", refinements: ["Ground turmeric", "Fresh turmeric root"] },
   yoghurt:  { label: "What kind?", refinements: ["Greek natural yoghurt", "Yoghurt with berries", "Kids yoghurt", "High-protein yoghurt"] },
   yogurt:   { label: "What kind?", refinements: ["Greek natural yoghurt", "Yoghurt with berries", "Kids yoghurt", "High-protein yoghurt"] },
   bread:    { label: "What kind?", refinements: ["Sourdough bread", "Wholemeal bread", "White bread", "Seeded bread"] },
@@ -415,6 +564,20 @@ const BAKERY_WORDS = [
   "bread", "loaf", "wrap", "tortilla", "pitta", "pita", "naan",
   "bagel", "roll", "bun", "sourdough", "ciabatta", "focaccia", "croissant",
 ];
+const SNACK_WORDS = ["crisps", "popcorn", "pretzel"];
+// Known crisp/snack brand names. Checked early (before DB category) so that
+// flavour-prefixed names like "Cheese & onion Hula Hoops" reach pantry before
+// DAIRY_WORDS / MEAT_WORDS / FISH_WORDS intercept the flavour word.
+const CRISP_BRANDS = [
+  "standard crisps", "hula hoops", "pringles", "doritos", "kettle chips",
+  "popchips", "tortilla chips", "lentil chips",
+];
+const DRINK_WORDS = [
+  "beer", "lager", "ale", "stout", "porter", "cider",
+  "wine", "prosecco", "champagne", "spirits",
+  "whisky", "whiskey", "vodka", "rum", "gin", "bourbon", "brandy",
+  "juice",
+];
 const FRESH_HERBS = new Set([
   "coriander", "basil", "parsley", "mint", "dill", "thyme", "rosemary", "sage", "chive",
 ]);
@@ -427,13 +590,27 @@ function getItemCatKey(category: string | null | undefined, name: string): strin
   // Tinned/canned → pantry (must be first: "canned tomato" shouldn't be produce)
   if (/^(can |tin |tinned |canned )/.test(lowerName)) return "pantry";
 
+  // Peanut butter → pantry (before dairy check intercepts "butter")
+  if (lowerName.includes("peanut butter")) return "pantry";
+
+  // Pickled / fermented items → pantry (before produce check intercepts e.g. "cucumber")
+  if (/^pickled |^fermented |^marinated /.test(lowerName)) return "pantry";
+
+  // Vinegar products → pantry; exclude snack contexts (crisps, chips)
+  if (/\bvinegar\b/.test(lowerName) && !/\bcrisps?\b|\bchips?\b/.test(lowerName)) return "pantry";
+
   // Frozen items (server had no frozen category until recently; name is authoritative)
   if (lowerName.startsWith("frozen ") || FROZEN_KEYWORDS.some(kw => lowerName.includes(kw)))
     return "frozen";
   if (lowerName === "chips" || lowerName === "oven chips") return "frozen";
 
-  // Potatoes → pantry (ambient starch, not chilled produce)
-  if (lowerName.includes("potato")) return "pantry";
+  // Potatoes → pantry (ambient starch, not chilled produce); excludes sweet potato
+  if (/\bpotato(es)?\b/.test(lowerName) && !lowerName.includes("sweet potato")) return "pantry";
+
+  // Crisps brands → pantry. Must run before DB category so that flavour-prefixed
+  // names like "Cheese & onion Hula Hoops" reach pantry before DAIRY_WORDS intercepts
+  // "cheese", and "Beef Doritos" reaches pantry before MEAT_WORDS intercepts "beef".
+  if (CRISP_BRANDS.some(b => lowerName.includes(b))) return "pantry";
 
   // ── DB category (fast path for correctly-categorised items) ──
 
@@ -449,7 +626,7 @@ function getItemCatKey(category: string | null | undefined, name: string): strin
     if (BAKERY_WORDS.some(w => lowerName.includes(w))) return "bakery";
     return "pantry";
   }
-  if (["oils", "condiments", "nuts", "legumes", "tinned", "pantry", "spices", "ready_meals"].includes(raw))
+  if (["oils", "condiments", "nuts", "legumes", "tinned", "pantry", "spices", "ready_meals", "snacks"].includes(raw))
     return "pantry";
 
   // ── Name-based fallback (handles null/other/unknown DB category) ──
@@ -460,6 +637,11 @@ function getItemCatKey(category: string | null | undefined, name: string): strin
   if (FISH_WORDS.some(w => lowerName.includes(w))) return "meat"; // meat & fish tab
   if (EGG_WORDS.some(w => lowerName === w || lowerName.startsWith(w + "s") || lowerName.startsWith(w + " "))) return "dairy";
   if (DAIRY_WORDS.some(w => lowerName.includes(w))) return "dairy";
+  // Chocolate, crisps and alcohol → pantry; checked before FRUIT_WORDS so that
+  // e.g. "apple juice" and "cranberry cider" land in pantry, not produce.
+  if (lowerName.includes("chocolate")) return "pantry";
+  if (SNACK_WORDS.some(w => lowerName.includes(w))) return "pantry";
+  if (DRINK_WORDS.some(w => lowerName.includes(w))) return "pantry";
   if (PRODUCE_WORDS.some(w => lowerName.includes(w))) return "produce";
   if (FRUIT_WORDS.some(w => lowerName.includes(w))) return "produce";
   if (BAKERY_WORDS.some(w => lowerName.includes(w))) return "bakery";
@@ -510,9 +692,9 @@ function capWords(s: string) {
 // ── State chip control ─────────────────────────────────────────────────────
 
 const STATE_CHIPS: Array<{ value: ShopState; label: string; activeClass: string }> = [
-  { value: "need",         label: "Need",      activeClass: "bg-muted text-foreground font-semibold" },
-  { value: "in_basket",    label: "Got it",    activeClass: "bg-primary text-primary-foreground font-semibold" },
-  { value: "not_in_shop",  label: "Not found", activeClass: "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 font-semibold" },
+  { value: "need",         label: "To get",       activeClass: "bg-muted text-foreground font-semibold" },
+  { value: "in_basket",    label: "In my basket", activeClass: "bg-primary text-primary-foreground font-semibold" },
+  { value: "not_in_shop",  label: "Get next time", activeClass: "bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 font-semibold" },
 ];
 
 function StateChips({
@@ -546,9 +728,9 @@ function StateChips({
 
 function PrintStateBadge({ state }: { state: ShopState }) {
   if (state === "in_basket")
-    return <span style={{ fontSize: 8, color: "#166534", fontWeight: 700 }}>✓ Got it</span>;
+    return <span style={{ fontSize: 8, color: "#166534", fontWeight: 700 }}>✓ In my basket</span>;
   if (state === "not_in_shop")
-    return <span style={{ fontSize: 8, color: "#92400e", fontWeight: 700 }}>✗ Not found</span>;
+    return <span style={{ fontSize: 8, color: "#92400e", fontWeight: 700 }}>✗ Get next time</span>;
   return (
     <span
       style={{
@@ -585,14 +767,35 @@ export default function ShoppingListView({
   isMatchingPrices = false,
   rankMode: rankModeProp,
   onRankModeChange,
+  onAnalyse,
+  onVariantChange,
+  onAttributeChange,
+  listFilter,
+  onListFilterChange,
+  onClearBySource,
+  onUpdateCupboardQty,
 }: ShoppingListViewProps) {
   const [notInShop, setNotInShop] = useState<Set<number>>(() => loadNotInShop());
   const [selectedSupermarket, setSelectedSupermarket] = useState<string>(initialStore ?? "Tesco");
   const [extraStates, setExtraStates] = useState<Map<number, "in_basket" | "not_in_shop">>(new Map());
-  const [activeTab, setActiveTab] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string | null>(() => {
+    try { return localStorage.getItem("tha-sl-shop-active-cat") ?? null; } catch { return null; }
+  });
   const [shopSession, setShopSession] = useState<ShopSession | null>(null);
   const [shareStatus, setShareStatus] = useState<"idle" | "copied">("idle");
-  const [phase, setPhase] = useState<"cupboard_check" | "shopping">(initialPhase ?? "cupboard_check");
+  const [phase, setPhase] = useState<"cupboard_check" | "shopping">(() => {
+    if (initialPhase) return initialPhase;
+    try {
+      const savedPhase = localStorage.getItem("tha-sl-shop-phase") as "cupboard_check" | "shopping" | null;
+      if (savedPhase === "shopping") {
+        const currentSig = items.map(i => i.id).sort((a, b) => a - b).join(",");
+        const savedSig = localStorage.getItem("tha-sl-shop-basket-sig");
+        // Only restore shopping phase if the basket composition matches the saved session
+        if (currentSig.length > 0 && currentSig === savedSig) return "shopping";
+      }
+    } catch {}
+    return "cupboard_check";
+  });
   const [atHomeIds, setAtHomeIds] = useState<Set<number>>(new Set());
   const [productIndexMap, setProductIndexMap] = useState<Record<number, number>>({});
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
@@ -604,6 +807,12 @@ export default function ShoppingListView({
   const [reviewDismissed, setReviewDismissed] = useState<Set<number>>(new Set());
   const [reviewEditId, setReviewEditId] = useState<number | null>(null);
   const [reviewEditVal, setReviewEditVal] = useState<string>("");
+  // Cupboard partial-quantity state — lives at display layer, no DB writes for partials.
+  const [cupboardQty, setCupboardQty] = useState<Map<number, number>>(new Map());
+  const [haveSomeOpenId, setHaveSomeOpenId] = useState<number | null>(null);
+  const [haveSomeInput, setHaveSomeInput] = useState<string>("");
+  // Remaining-quantity overrides for shopping phase, computed at "head to shop".
+  const [qtyOverrides, setQtyOverrides] = useState<Map<number, number>>(new Map());
   // Multi-select state for group umbrella terms (e.g. "berries").
   // Keyed by item.id → set of selected suggestion strings.
   const [multiSelections, setMultiSelections] = useState<Map<number, Set<string>>>(new Map());
@@ -619,6 +828,7 @@ export default function ShoppingListView({
   // Cupboard check: inline add-item input
   const [addingItem, setAddingItem] = useState(false);
   const [addItemVal, setAddItemVal] = useState("");
+  const [addItemQty, setAddItemQty] = useState(1);
   // rankMode is lifted to the parent page so it is shared across Quick List,
   // Check Cupboard and Shop View. Fall back to sessionStorage if parent doesn't pass it.
   const [localRankMode, setLocalRankMode] = useState<RankingMode>(() => {
@@ -627,14 +837,69 @@ export default function ShoppingListView({
   const rankMode = rankModeProp ?? localRankMode;
   // Which item's "Change choice" panel is currently open (at most one at a time).
   const [choiceOpenId, setChoiceOpenId] = useState<number | null>(null);
+  const [exportCopied, setExportCopied] = useState(false);
   const itemsScrollRef = useRef<HTMLDivElement>(null);
   const tabStripRef = useRef<HTMLDivElement>(null);
   const activeTabElRef = useRef<HTMLButtonElement>(null);
-
+  const sectionRefs = useRef<Map<string, HTMLElement>>(new Map());
+  /** Prevents scroll-handler from overwriting activeTab during programmatic scrolls. */
+  const isScrollingToRef = useRef(false);
+  /** Debounce timer for saving scroll position to localStorage. */
+  const scrollSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Ensures scroll is restored at most once per mount. */
+  const scrollRestoredRef = useRef(false);
+  /** Latest items array — used in phase-save effect without making items a dependency. */
+  const itemsRef = useRef(items);
+  useEffect(() => { itemsRef.current = items; }, [items]);
 
   useEffect(() => {
     saveNotInShop(notInShop, items);
   }, [notInShop, items]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("tha-sl-shop-phase", phase);
+      if (phase === "shopping") {
+        const sig = itemsRef.current.map(i => i.id).sort((a, b) => a - b).join(",");
+        localStorage.setItem("tha-sl-shop-basket-sig", sig);
+      }
+    } catch {}
+  }, [phase]);
+
+  // Sync cupboardQty from DB-persisted values when items change.
+  // Incremental: only initialises IDs not already in local state, so user-entered
+  // values are preserved during in-flight writes and filter switches get correct
+  // DB-backed values for newly visible rows.
+  useEffect(() => {
+    if (items.length === 0) return;
+    setCupboardQty(prev => {
+      let changed = false;
+      const map = new Map(prev);
+      for (const item of items) {
+        if (map.has(item.id)) continue;
+        // For merged rows, sum all underlying cupboard quantities.
+        const allCupboardQtys: (number | null)[] =
+          (item as any)._allCupboardQuantities ?? [(item as any).cupboardQuantity];
+        const total = allCupboardQtys.reduce((sum: number, q: number | null) => sum + (q ?? 0), 0);
+        if (total > 0) { map.set(item.id, total); changed = true; }
+      }
+      return changed ? map : prev;
+    });
+  }, [items]);
+
+  // Recompute qtyOverrides whenever the shopping phase is active and cupboardQty
+  // changes — handles both the fresh transition and the page-refresh restore path.
+  useEffect(() => {
+    if (phase !== "shopping") return;
+    const newOverrides = new Map<number, number>();
+    for (const [id, qty] of Array.from(cupboardQty.entries())) {
+      const it = items.find(i => i.id === id);
+      if (it?.quantityValue == null) continue;
+      const remaining = Math.max(0, it.quantityValue - qty);
+      if (remaining > 0) newOverrides.set(id, remaining);
+    }
+    setQtyOverrides(newOverrides);
+  }, [phase, cupboardQty, items]);
 
   function handleStoreChange(store: string) {
     setSelectedSupermarket(store);
@@ -669,13 +934,22 @@ export default function ShoppingListView({
   // The function awaits all add-mutations before transitioning so that the shop
   // view renders with the correct items the first time it mounts.
   const handleHeadToShop = useCallback(async () => {
-    console.log('[HTS] called — isCommitting:', isCommitting, 'multiSelections.size:', multiSelections.size, 'childGroupSelections.size:', childGroupSelections.size);
     if (isCommitting) return;
 
     const hasMulti = multiSelections.size > 0;
     const hasChild = childGroupSelections.size > 0;
 
-    if (hasMulti || hasChild) {
+    // Crisps items with ≥1 type selected need splitting into separate basket items.
+    // Any other catalogue entry (apples, mushrooms, etc.) is intentionally excluded.
+    const crispsSplitItems = items.filter(item => {
+      const catDef = getIngredientDef(item.normalizedName ?? item.productName ?? "");
+      if (catDef?.id !== "crisps") return false;
+      const v = (() => { try { return JSON.parse(item.variantSelections ?? "{}") as Record<string, string>; } catch { return {} as Record<string, string>; } })();
+      return (v["type"] ?? "").split(",").map((s: string) => s.trim()).filter(Boolean).length > 0;
+    });
+    const hasCrispsSplit = crispsSplitItems.length > 0;
+
+    if (hasMulti || hasChild || hasCrispsSplit) {
       setIsCommitting(true);
       try {
         const existingNames = new Set(
@@ -697,7 +971,6 @@ export default function ShoppingListView({
           ).flatMap((s: Set<string>) => Array.from(s));
           const picks = [...topLevel, ...childItems];
           if (picks.length === 0) continue;
-          console.log('[HTS] item', itemId, 'picks:', picks, 'onAddItem?', !!onAddItem, 'onRenameItem?', !!onRenameItem);
 
           if (picks.length === 1) {
             if (onRenameItem) {
@@ -707,12 +980,9 @@ export default function ShoppingListView({
           } else if (onAddItem) {
             for (const p of picks) {
               if (!existingNames.has(p.toLowerCase().trim())) {
-                console.log('[HTS] adding:', p);
                 const r = onAddItem(p);
                 if (r instanceof Promise) addPromises.push(r);
                 existingNames.add(p.toLowerCase().trim());
-              } else {
-                console.log('[HTS] skipping (already exists):', p);
               }
             }
             toRemove.push(itemId);
@@ -722,9 +992,47 @@ export default function ShoppingListView({
           }
         }
 
-        console.log('[HTS] awaiting', addPromises.length, 'add promises, toRemove:', toRemove);
+        // Crisps type split: one basket item per selected type.
+        // Flavour resolution per type:
+        //   flavourByType[t] = chip selection ("Pickled onion" or "Other")
+        //   customFlavourByType[t] = free text when "Other" was chosen
+        //   Falls back to a global single flavour for items saved before per-type pairing.
+        for (const item of crispsSplitItems) {
+          if (toRemove.includes(item.id)) continue;
+          const v = (() => { try { return JSON.parse(item.variantSelections ?? "{}") as Record<string, string>; } catch { return {} as Record<string, string>; } })();
+          const types = (v["type"] ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
+          const flavourByType = (() => { try { return JSON.parse(v["flavourByType"] ?? "{}") as Record<string, string>; } catch { return {} as Record<string, string>; } })();
+          const customFlavourByType = (() => { try { return JSON.parse(v["customFlavourByType"] ?? "{}") as Record<string, string>; } catch { return {} as Record<string, string>; } })();
+          const globalFlavours = (v["flavour"] ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
+          const globalSingleFlavour = globalFlavours.length === 1 && !globalFlavours.includes("Other") ? globalFlavours[0] : null;
+
+          const resolveFlavour = (t: string): string | null => {
+            const f = flavourByType[t];
+            if (!f) return globalSingleFlavour;
+            if (f === "Other") return customFlavourByType[t] || null;
+            return f;
+          };
+
+          if (types.length === 1) {
+            const flavour = resolveFlavour(types[0]);
+            const name = flavour ? `${flavour} ${types[0]}` : types[0];
+            const r = onRenameItem?.(item.id, name);
+            if (r instanceof Promise) addPromises.push(r);
+          } else {
+            for (const t of types) {
+              const flavour = resolveFlavour(t);
+              const name = flavour ? `${flavour} ${t}` : t;
+              if (!existingNames.has(name.toLowerCase().trim())) {
+                const r = onAddItem?.(name);
+                if (r instanceof Promise) addPromises.push(r);
+                existingNames.add(name.toLowerCase().trim());
+              }
+            }
+            toRemove.push(item.id);
+          }
+        }
+
         await Promise.all(addPromises);
-        console.log('[HTS] adds complete — removing', toRemove.length, 'items');
         toRemove.forEach(id => onRemoveItem?.(id));
         setMultiSelections(new Map());
         setChildGroupSelections(new Map());
@@ -733,9 +1041,18 @@ export default function ShoppingListView({
       }
     }
 
-    console.log('[HTS] setPhase("shopping")');
+    // Build display-layer quantity overrides for partially covered items.
+    const newOverrides = new Map<number, number>();
+    for (const [id, qty] of Array.from(cupboardQty.entries())) {
+      const it = items.find(i => i.id === id);
+      if (it?.quantityValue == null) continue;
+      const remaining = Math.max(0, it.quantityValue - qty);
+      if (remaining > 0) newOverrides.set(id, remaining);
+    }
+    setQtyOverrides(newOverrides);
+
     setPhase("shopping");
-  }, [isCommitting, multiSelections, childGroupSelections, items, onAddItem, onRenameItem, onRemoveItem]);
+  }, [isCommitting, multiSelections, childGroupSelections, items, onAddItem, onRenameItem, onRemoveItem, cupboardQty]);
 
   // ── State derivation ─────────────────────────────────────────────────────
 
@@ -784,13 +1101,45 @@ export default function ShoppingListView({
     });
   }, []);
 
+  // ── Cupboard partial-quantity helpers ─────────────────────────────────────
+
+  function confirmHaveSome(item: SLItem) {
+    const needed = item.quantityValue ?? 0;
+    const raw = parseFloat(haveSomeInput);
+    const clamped = isNaN(raw) ? 0 : Math.min(Math.max(0, Math.round(raw * 100) / 100), needed);
+    const ctx = getMergedCtx(item);
+    if (clamped >= needed) {
+      if (onUpdateStatus) onUpdateStatus(item.id, "already_got");
+      else setAtHomeIds(prev => { const s = new Set(prev); s.add(item.id); return s; });
+      setCupboardQty(prev => { const m = new Map(prev); m.delete(item.id); return m; });
+      if (onUpdateCupboardQty) onUpdateCupboardQty(item.id, null, ctx);
+    } else if (clamped > 0) {
+      setCupboardQty(prev => { const m = new Map(prev); m.set(item.id, clamped); return m; });
+      if (onUpdateCupboardQty) onUpdateCupboardQty(item.id, clamped, ctx);
+    }
+    setHaveSomeOpenId(null);
+    setHaveSomeInput("");
+  }
+
+  function cancelHaveSome() {
+    setHaveSomeOpenId(null);
+    setHaveSomeInput("");
+  }
+
   // ── Filtered item list (excludes at-home items once in shopping phase) ────
 
   const shoppingItems = useMemo(
     () => (phase === "shopping"
-      ? items.filter((i) => onUpdateStatus ? i.shopStatus !== "already_got" : !atHomeIds.has(i.id))
+      ? items.filter((i) => {
+          const isGot = onUpdateStatus ? i.shopStatus === "already_got" : atHomeIds.has(i.id);
+          if (isGot) return false;
+          // Also hide items fully covered by cupboard quantity (remaining = 0).
+          const covered = cupboardQty.get(i.id);
+          if (covered !== undefined && i.quantityValue != null && i.quantityValue > 0 && covered >= i.quantityValue) return false;
+          return true;
+        })
       : items),
-    [items, atHomeIds, phase, onUpdateStatus],
+    [items, atHomeIds, phase, onUpdateStatus, cupboardQty],
   );
 
   // ── Progress ─────────────────────────────────────────────────────────────
@@ -854,10 +1203,56 @@ export default function ShoppingListView({
     }
   }
 
+  function handleExportList() {
+    const lines: string[] = [
+      "The Healthy Apples – Shopping List",
+      `Store: ${selectedSupermarket}`,
+      "",
+    ];
+
+    for (const cat of groupedCategories) {
+      lines.push(cat.label.toUpperCase());
+      for (const item of cat.savedItems) {
+        const state = getItemState(item);
+        const stateLabel =
+          state === "in_basket" ? "In my basket" :
+          state === "not_in_shop" ? "Get next time" : "To get";
+        const matches = resolveDisplayMatches(item, allPriceMatches, thaPicks, selectedSupermarket, rankMode);
+        const match = matches[0] ?? null;
+        let pricingPart: string;
+        if (match) {
+          if (match.priceSource === "estimate" && match.price != null) {
+            pricingPart = `Estimated ~£${match.price.toFixed(2)}`;
+          } else if (match.price != null) {
+            pricingPart = `${match.productName} £${match.price.toFixed(2)}`;
+          } else {
+            pricingPart = match.productName;
+          }
+        } else {
+          pricingPart = "No price yet";
+        }
+        lines.push(`- ${capWords(item.productName)} — ${pricingPart} — ${stateLabel}`);
+      }
+      for (const extra of cat.extraItems) {
+        const state = getExtraState(extra.id);
+        const stateLabel =
+          state === "in_basket" ? "In my basket" :
+          state === "not_in_shop" ? "Get next time" : "To get";
+        lines.push(`- ${capWords(extra.name)} — ${stateLabel}`);
+      }
+      lines.push("");
+    }
+
+    const text = lines.join("\n").trimEnd();
+    navigator.clipboard.writeText(text).then(() => {
+      setExportCopied(true);
+      setTimeout(() => setExportCopied(false), 2200);
+    }).catch(() => {});
+  }
+
   // ── Category grouping ─────────────────────────────────────────────────────
 
   const groupedCategories = useMemo(() => {
-    console.log('[groupedCats] recomputing — shoppingItems.length:', shoppingItems.length, 'phase:', phase, 'items.length:', items.length);
     const map = new Map<string, { savedItems: SLItem[]; extraItems: typeof extras }>();
     for (const cat of SHOPPING_CATS) map.set(cat.key, { savedItems: [], extraItems: [] });
     for (const item of shoppingItems) {
@@ -878,9 +1273,45 @@ export default function ShoppingListView({
   const activeCatKey = activeTab ?? groupedCategories[0]?.key ?? null;
   const activeCat = groupedCategories.find((c) => c.key === activeCatKey) ?? groupedCategories[0] ?? null;
 
+  // Restore scroll position and active category once the shopping list is ready.
+  useEffect(() => {
+    if (phase !== "shopping" || groupedCategories.length === 0) return;
+    if (scrollRestoredRef.current) return;
+    scrollRestoredRef.current = true;
+    // Double rAF: first fires after layout commit, second after paint — ensures
+    // DOM is ready before we attempt scrolling.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        try {
+          const savedCat = localStorage.getItem("tha-sl-shop-active-cat");
+          if (savedCat && groupedCategories.some((c) => c.key === savedCat)) {
+            setActiveTab(savedCat);
+            const section = sectionRefs.current.get(savedCat);
+            const container = itemsScrollRef.current;
+            // Use direct scrollTop (instant) so the user doesn't see a scroll animation on load
+            if (section && container) {
+              container.scrollTop = section.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+            }
+          }
+        } catch {}
+      });
+    });
+  }, [phase, groupedCategories]);
+
   function handleTabChange(key: string) {
     setActiveTab(key);
-    itemsScrollRef.current?.scrollTo({ top: 0 });
+    try { localStorage.setItem("tha-sl-shop-active-cat", key); } catch {}
+    const container = itemsScrollRef.current;
+    const section = sectionRefs.current.get(key);
+    isScrollingToRef.current = true;
+    setTimeout(() => { isScrollingToRef.current = false; }, 650);
+    if (section && container) {
+      // Direct scrollTo gives pixel-precise control independent of scroll-padding-top.
+      const top = section.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+      container.scrollTo({ top, behavior: "smooth" });
+    } else if (container) {
+      container.scrollTo({ top: 0 });
+    }
   }
 
   // Scroll the active tab button into view within the tab strip
@@ -895,6 +1326,53 @@ export default function ShoppingListView({
     if (btnLeft < stripLeft + 8) strip.scrollLeft = btnLeft - 8;
     else if (btnRight > stripRight - 8) strip.scrollLeft = btnRight - strip.clientWidth + 8;
   }, [activeCatKey]);
+
+  // Update active tab as user scrolls; also debounce-save active category.
+  // Listens on BOTH the inner container and window so active-tab tracking works
+  // regardless of whether itemsScrollRef or the page <main> is the scroll host.
+  useEffect(() => {
+    const container = itemsScrollRef.current;
+    if (!container || groupedCategories.length === 0) return;
+    let ticking = false;
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        if (!isScrollingToRef.current) {
+          const containerTop = container.getBoundingClientRect().top;
+          let activeKey: string | null = null;
+          for (const cat of groupedCategories) {
+            const el = sectionRefs.current.get(cat.key);
+            if (!el) continue;
+            // elTop: section's offset from container's visible top (negative = scrolled above)
+            // Use a tight threshold so the active category only advances when the next
+            // section's ref element is genuinely at or within 8px of the scroll top.
+            const elTop = el.getBoundingClientRect().top - containerTop;
+            if (Math.round(elTop) <= 8) activeKey = cat.key;
+          }
+          if (activeKey) setActiveTab(activeKey);
+
+          if (scrollSaveTimerRef.current) clearTimeout(scrollSaveTimerRef.current);
+          scrollSaveTimerRef.current = setTimeout(() => {
+            try {
+              if (activeKey) localStorage.setItem("tha-sl-shop-active-cat", activeKey);
+            } catch {}
+          }, 300);
+        }
+        ticking = false;
+      });
+    };
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", handleScroll);
+      if (scrollSaveTimerRef.current) {
+        clearTimeout(scrollSaveTimerRef.current);
+        scrollSaveTimerRef.current = null;
+      }
+    };
+  }, [groupedCategories]);
 
   const today = new Date().toLocaleDateString("en-GB", {
     weekday: "long",
@@ -918,7 +1396,14 @@ export default function ShoppingListView({
 
   function renderSavedItem(item: SLItem) {
     const state = getItemState(item);
-    const qty = fmtQty(item.quantityValue, item.unit, item.quantityInGrams, measurementPref);
+    // Apply partial cupboard override: show remaining quantity instead of total.
+    const qtyOverride = qtyOverrides.get(item.id);
+    const qty = fmtQty(
+      qtyOverride !== undefined ? qtyOverride : item.quantityValue,
+      item.unit,
+      qtyOverride !== undefined ? null : item.quantityInGrams,
+      measurementPref,
+    );
     const sources = sourcesByItem.get(item.id) ?? [];
     const firstMeal = (sources[0] as any)?.mealName as string | undefined;
     const isPantryStaple = pantryKeySet.has(
@@ -982,7 +1467,42 @@ export default function ShoppingListView({
                 {qty}
               </span>
             )}
+            {listFilter !== undefined && (() => {
+              const labels: (string | null)[] = (item as any)._allBasketLabels ?? [item.basketLabel ?? null];
+              const hasPlanned = labels.some(l => !l?.startsWith("quick_list_"));
+              const hasQL = labels.some(l => l?.startsWith("quick_list_"));
+              const text = hasPlanned && hasQL ? "Planned + Quick list" : hasQL ? "Quick list" : "Planned";
+              return (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full border text-violet-600 dark:text-violet-400 border-violet-300 dark:border-violet-600" data-testid={`shop-badge-source-${item.id}`}>
+                  {text}
+                </span>
+              );
+            })()}
           </div>
+
+          {/* Variant selections summary */}
+          {!isEditing && (() => {
+            const variantsRaw = (() => { try { return JSON.parse(item.variantSelections ?? "{}") as Record<string, string>; } catch { return {} as Record<string, string>; } })();
+            const catDef = getIngredientDef(item.normalizedName ?? item.productName ?? "");
+            if (!catDef?.selectorSchema.length) return null;
+            const parts = catDef.selectorSchema
+              .filter(sel => !!variantsRaw[sel.key])
+              .map(sel => {
+                const raw = variantsRaw[sel.key];
+                const vals = raw.split(",").map((v: string) => v.trim()).filter(Boolean);
+                const customVal = sel.freeTextKey ? (variantsRaw[sel.freeTextKey] ?? "") : "";
+                const displayVals = vals.includes("Other") && customVal
+                  ? [...vals.filter((v: string) => v !== "Other"), customVal]
+                  : vals;
+                return `${sel.label}: ${displayVals.join(", ")}`;
+              });
+            if (!parts.length) return null;
+            return (
+              <p className="text-[10.5px] text-muted-foreground/60 leading-tight mt-0.5">
+                {parts.join(" · ")}
+              </p>
+            );
+          })()}
 
           {/* Inline rename input */}
           {isEditing ? (
@@ -1025,13 +1545,23 @@ export default function ShoppingListView({
               {state === "need" && resolvedMatch && (
                 <>
                 <div key={rankMode} className="tha-print-hide flex items-center gap-1.5 mt-0.5 flex-wrap animate-in fade-in duration-200">
-                  <span className="text-[11px] text-muted-foreground/70 truncate max-w-[160px]">
-                    {resolvedMatch.productName}
-                  </span>
-                  {resolvedMatch.price != null && (
-                    <span className="text-[11px] text-muted-foreground/70 tabular-nums">
-                      £{resolvedMatch.price.toFixed(2)}
-                    </span>
+                  {resolvedMatch.priceSource === "estimate" ? (
+                    resolvedMatch.price != null && (
+                      <span className="text-[11px] text-muted-foreground/55 italic tabular-nums">
+                        Estimated ~£{resolvedMatch.price.toFixed(2)}
+                      </span>
+                    )
+                  ) : (
+                    <>
+                      <span className="text-[11px] text-muted-foreground/70 truncate max-w-[160px]">
+                        {resolvedMatch.productName}
+                      </span>
+                      {resolvedMatch.price != null && (
+                        <span className="text-[11px] text-muted-foreground/70 tabular-nums">
+                          £{resolvedMatch.price.toFixed(2)}
+                        </span>
+                      )}
+                    </>
                   )}
                   {(resolvedMatches.length > 1 || betterMatch || cheaperMatch) && (
                     <button
@@ -1049,6 +1579,15 @@ export default function ShoppingListView({
                       title="Refine item name"
                     >
                       <Pencil className="h-2.5 w-2.5" />
+                    </button>
+                  )}
+                  {onAnalyse && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onAnalyse(item); }}
+                      className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground/40 hover:text-foreground transition-colors"
+                      title="Analyse product"
+                    >
+                      <Microscope className="h-2.5 w-2.5" />
                     </button>
                   )}
                 </div>
@@ -1120,8 +1659,9 @@ export default function ShoppingListView({
                 )}
                 </>
               )}
-              {state === "need" && !resolvedMatch && (firstMeal || effectiveRating != null) && (
-                <div className="tha-print-hide flex items-center gap-1.5 mt-0.5">
+              {state === "need" && !resolvedMatch && (
+                <div className="tha-print-hide flex items-center gap-1.5 mt-0.5 flex-wrap">
+                  <span className="text-[11px] text-muted-foreground/40 italic">No price yet</span>
                   {firstMeal && (
                     <p className="text-[11px] text-muted-foreground/55 leading-tight">
                       {firstMeal}{isPantryStaple ? " · staple" : ""}
@@ -1140,7 +1680,7 @@ export default function ShoppingListView({
               )}
               {state === "not_in_shop" && (
                 <p className="tha-print-hide text-[11px] text-amber-600/70 dark:text-amber-500/70 leading-tight mt-0.5">
-                  Try next shop
+                  Saved for next shop
                 </p>
               )}
               {/* Vague-item clarification chips — only when needed, not already clarified */}
@@ -1248,7 +1788,7 @@ export default function ShoppingListView({
     <div
       id="tha-shopping-print-area"
       className="relative flex flex-col overflow-hidden rounded-xl border border-border bg-card/82 backdrop-blur-md"
-      style={{ minHeight: "calc(100vh - 9rem)" }}
+      style={{ height: "calc(100vh - 9rem)" }}
     >
 
 
@@ -1299,38 +1839,17 @@ export default function ShoppingListView({
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <RankModeSelector rankMode={rankMode} onChange={handleRankModeChange} />
             {phase === "shopping" && (
-              <>
-                <Select value={selectedSupermarket} onValueChange={handleStoreChange}>
-                  <SelectTrigger className="h-8 text-xs bg-background/70 gap-1 pr-2" style={{ minWidth: 0, width: "auto" }}>
-                    <Store className="h-3.5 w-3.5 shrink-0" />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUPERMARKETS.map(s => (
-                      <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {onMatchStore && (() => {
-                  const storeNorm = selectedSupermarket.toLowerCase();
-                  const hasMatchesForStore = allPriceMatches.some(
-                    m => m.supermarket.toLowerCase() === storeNorm
-                  );
-                  if (hasMatchesForStore || isMatchingPrices) return null;
-                  return (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => onMatchStore(selectedSupermarket)}
-                      className="h-8 px-2.5 text-xs bg-background/70 gap-1"
-                      title={`Find products at ${selectedSupermarket}`}
-                    >
-                      <Search className="h-3 w-3" />
-                      <span className="hidden sm:inline">Find</span>
-                    </Button>
-                  );
-                })()}
-              </>
+              <Select value={selectedSupermarket} onValueChange={handleStoreChange}>
+                <SelectTrigger className="h-8 text-xs bg-background/70 gap-1 pr-2" style={{ minWidth: 0, width: "auto" }}>
+                  <Store className="h-3.5 w-3.5 shrink-0" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPERMARKETS.map(s => (
+                    <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
             {inBasketCount > 0 && !shopSession && (
               <Button
@@ -1359,23 +1878,116 @@ export default function ShoppingListView({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {onMatchStore && phase === "shopping" && (
+                  <DropdownMenuItem
+                    onClick={() => onMatchStore(selectedSupermarket)}
+                    disabled={isMatchingPrices}
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    {isMatchingPrices ? "Finding prices…" : "Find prices"}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onClick={handleExportList}
+                  disabled={groupedCategories.length === 0}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  {exportCopied ? "Copied!" : "Export list"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => window.print()}>
                   <Printer className="h-4 w-4 mr-2" />
                   Print
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => onClearBasket?.()}
-                  className="text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Clear Basket
-                </DropdownMenuItem>
+                {onClearBySource ? (
+                  <>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        try {
+                          localStorage.removeItem("tha-sl-shop-phase");
+                          localStorage.removeItem("tha-sl-shop-basket-sig");
+                          localStorage.removeItem("tha-sl-shop-scroll");
+                          localStorage.removeItem("tha-sl-shop-active-cat");
+                        } catch {}
+                        onClearBySource("planned");
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Clear planned
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        try {
+                          localStorage.removeItem("tha-sl-shop-phase");
+                          localStorage.removeItem("tha-sl-shop-basket-sig");
+                          localStorage.removeItem("tha-sl-shop-scroll");
+                          localStorage.removeItem("tha-sl-shop-active-cat");
+                        } catch {}
+                        onClearBySource("quick_list");
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Clear quick list
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        try {
+                          localStorage.removeItem("tha-sl-shop-phase");
+                          localStorage.removeItem("tha-sl-shop-basket-sig");
+                          localStorage.removeItem("tha-sl-shop-scroll");
+                          localStorage.removeItem("tha-sl-shop-active-cat");
+                        } catch {}
+                        onClearBySource("all");
+                      }}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Clear all
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={() => {
+                      try {
+                        localStorage.removeItem("tha-sl-shop-phase");
+                        localStorage.removeItem("tha-sl-shop-basket-sig");
+                        localStorage.removeItem("tha-sl-shop-scroll");
+                        localStorage.removeItem("tha-sl-shop-active-cat");
+                      } catch {}
+                      onClearBasket?.();
+                    }}
+                    className="text-destructive focus:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Clear Basket
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
 
+        {onListFilterChange && listFilter && (
+          <div className="flex items-center gap-1 px-3 pb-2 sm:px-5 max-w-3xl mx-auto" data-testid="shop-source-filter-tabs">
+            {(["all", "planned", "quick_list"] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => onListFilterChange(f)}
+                className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
+                  listFilter === f
+                    ? "bg-primary/10 text-primary border-primary/30 font-medium"
+                    : "text-muted-foreground border-border hover:border-primary/20 hover:text-foreground"
+                }`}
+                data-testid={`shop-filter-tab-${f}`}
+              >
+                {f === "all" ? "All" : f === "planned" ? "Planned" : "Quick list"}
+              </button>
+            ))}
+          </div>
+        )}
         {totalItems > 0 && (
           <div className="h-0.5 w-full" style={{ background: "hsl(var(--border) / 0.35)" }}>
             <div
@@ -1510,7 +2122,15 @@ export default function ShoppingListView({
                   const displayName = capWords(cleanProductName(item.productName, item.quantityValue));
 
                   // ── Unrecognised-item review card ──────────────────────────
-                  if (item.needsReview && !reviewDismissed.has(item.id)) {
+                  // Skip the old ambiguity card when the catalogue already has a
+                  // selector for this ingredient (e.g. apples). The WholeFoodSelector
+                  // rendered in the normal-item path below handles variety picking.
+                  const catalogueDefForReview = (item as any).reviewReason === 'ambiguous_term'
+                    ? getIngredientDef(item.normalizedName ?? item.productName ?? "")
+                    : undefined;
+                  const hasCatalogueSelectorForItem = !!(catalogueDefForReview && catalogueDefForReview.selectorSchema.length > 0);
+
+                  if (item.needsReview && !reviewDismissed.has(item.id) && !hasCatalogueSelectorForItem) {
                     return (
                       <div
                         key={item.id}
@@ -1942,10 +2562,20 @@ export default function ShoppingListView({
                   }
 
                   // ── Normal recognised item ─────────────────────────────────
+                  const cupboardCatDef = onVariantChange
+                    ? getIngredientDef(item.normalizedName ?? item.productName ?? "")
+                    : undefined;
+                  const hasCupboardSelector = !!(cupboardCatDef && cupboardCatDef.selectorSchema.length > 0);
+                  const cupboardVariantSelections: Record<string, string> = hasCupboardSelector
+                    ? (() => { try { return JSON.parse(item.variantSelections ?? "{}") as Record<string, string>; } catch { return {}; } })()
+                    : {};
+                  const cupboardAttrPreferences: Record<string, boolean> = hasCupboardSelector
+                    ? (() => { try { return JSON.parse(item.attributePreferences ?? "{}") as Record<string, boolean>; } catch { return {}; } })()
+                    : {};
                   return (
                     <div
                       key={item.id}
-                      className={`flex items-center gap-3 px-4 py-3 transition-colors duration-100 ${isAtHome ? "bg-primary/[0.04] dark:bg-primary/[0.07]" : ""}`}
+                      className={`flex items-start gap-3 px-4 py-3 transition-colors duration-100 ${isAtHome ? "bg-primary/[0.04] dark:bg-primary/[0.07]" : ""}`}
                     >
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2 flex-wrap">
@@ -1965,31 +2595,117 @@ export default function ShoppingListView({
                             </span>
                           )}
                         </div>
+                        {hasCupboardSelector && cupboardCatDef && !isAtHome && (
+                          <WholeFoodSelector
+                            item={item}
+                            catalogueDef={cupboardCatDef}
+                            variantSelections={cupboardVariantSelections}
+                            attributePreferences={cupboardAttrPreferences}
+                            onVariantChange={(key, value) => onVariantChange!(item.id, key, value)}
+                            onAttributeChange={(key, value) => onAttributeChange?.(item.id, key, value)}
+                          />
+                        )}
                       </div>
-                      {isAtHome ? (
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-[11px] text-primary/80 font-medium">✓ At home</span>
-                          <button
-                            onClick={() => onUpdateStatus
-                              ? onUpdateStatus(item.id, "pending")
-                              : setAtHomeIds((prev) => { const s = new Set(prev); s.delete(item.id); return s; })
-                            }
-                            className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2"
-                          >
-                            undo
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => onUpdateStatus
-                            ? onUpdateStatus(item.id, "already_got")
-                            : setAtHomeIds((prev) => { const s = new Set(prev); s.add(item.id); return s; })
-                          }
-                          className="inline-flex items-center text-[11px] px-3 py-1.5 rounded-lg border border-border/60 bg-background/70 text-foreground/80 hover:bg-muted/50 hover:border-border transition-colors flex-shrink-0 whitespace-nowrap"
-                        >
-                          In my cupboard
-                        </button>
-                      )}
+                      {(() => {
+                        const hasSomeAtHome = cupboardQty.has(item.id);
+                        const isInputOpen = haveSomeOpenId === item.id;
+                        const canPartial = item.quantityValue != null && item.quantityValue > 0;
+                        const unitSuffix = item.unit && item.unit !== "unit" ? item.unit : null;
+
+                        if (isAtHome) return (
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="text-[11px] text-primary/80 font-medium">✓ Have all</span>
+                            <button
+                              onClick={() => onUpdateStatus
+                                ? onUpdateStatus(item.id, "pending")
+                                : setAtHomeIds(prev => { const s = new Set(prev); s.delete(item.id); return s; })
+                              }
+                              className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2"
+                            >
+                              undo
+                            </button>
+                          </div>
+                        );
+
+                        if (isInputOpen) return (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <input
+                              type="number"
+                              autoFocus
+                              min={0}
+                              max={item.quantityValue ?? undefined}
+                              step="any"
+                              value={haveSomeInput}
+                              onChange={e => setHaveSomeInput(e.target.value)}
+                              onKeyDown={e => {
+                                if (e.key === "Enter") confirmHaveSome(item);
+                                if (e.key === "Escape") cancelHaveSome();
+                              }}
+                              className="h-6 w-14 text-[11px] text-center rounded border border-border bg-background/90 focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums"
+                              data-testid={`cupboard-partial-input-${item.id}`}
+                            />
+                            {unitSuffix && <span className="text-[10px] text-muted-foreground">{unitSuffix}</span>}
+                            <button
+                              onClick={() => confirmHaveSome(item)}
+                              className="h-6 w-6 rounded bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
+                              data-testid={`cupboard-partial-confirm-${item.id}`}
+                            >
+                              <Check className="h-3 w-3" />
+                            </button>
+                            <button
+                              onClick={cancelHaveSome}
+                              className="h-6 w-6 rounded border border-border/60 text-muted-foreground flex items-center justify-center hover:bg-muted/50 transition-colors"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        );
+
+                        if (hasSomeAtHome) return (
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <span className="text-[11px] text-muted-foreground/70 font-medium">
+                              {cupboardQty.get(item.id)}{unitSuffix ? ` ${unitSuffix}` : ""} at home
+                            </span>
+                            <button
+                              onClick={() => {
+                                setCupboardQty(prev => { const m = new Map(prev); m.delete(item.id); return m; });
+                                if (onUpdateCupboardQty) onUpdateCupboardQty(item.id, null, getMergedCtx(item));
+                              }}
+                              className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2"
+                            >
+                              undo
+                            </button>
+                          </div>
+                        );
+
+                        return (
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <button
+                              onClick={() => {
+                                if (onUpdateStatus) onUpdateStatus(item.id, "already_got");
+                                else setAtHomeIds(prev => { const s = new Set(prev); s.add(item.id); return s; });
+                                if (onUpdateCupboardQty) onUpdateCupboardQty(item.id, null, getMergedCtx(item));
+                              }}
+                              className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/80 hover:bg-muted/50 hover:border-border transition-colors whitespace-nowrap"
+                              data-testid={`cupboard-have-all-${item.id}`}
+                            >
+                              Have all
+                            </button>
+                            {canPartial && (
+                              <button
+                                onClick={() => {
+                                  setHaveSomeOpenId(item.id);
+                                  setHaveSomeInput(String(cupboardQty.get(item.id) ?? ""));
+                                }}
+                                className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/80 hover:bg-muted/50 hover:border-border transition-colors whitespace-nowrap"
+                                data-testid={`cupboard-have-some-${item.id}`}
+                              >
+                                Have some
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   );
                 })}
@@ -2007,24 +2723,32 @@ export default function ShoppingListView({
                         onKeyDown={e => {
                           if (e.key === "Enter") {
                             const trimmed = addItemVal.trim();
-                            if (trimmed) { onAddItem(trimmed); setAddItemVal(""); setAddingItem(false); }
+                            if (trimmed) { onAddItem(trimmed, addItemQty > 1 ? addItemQty : undefined); setAddItemVal(""); setAddItemQty(1); setAddingItem(false); }
                           }
-                          if (e.key === "Escape") { setAddItemVal(""); setAddingItem(false); }
+                          if (e.key === "Escape") { setAddItemVal(""); setAddItemQty(1); setAddingItem(false); }
                         }}
                         className="flex-1 h-8 text-[13px] px-2.5 rounded-lg border border-border bg-background/80 focus:outline-none focus:ring-1 focus:ring-primary/30"
                         placeholder="Add an item…"
                       />
+                      <input
+                        type="number"
+                        min={1}
+                        value={addItemQty}
+                        onChange={e => setAddItemQty(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-14 h-8 text-[13px] px-2 rounded-lg border border-border bg-background/80 focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums text-center"
+                        aria-label="Quantity"
+                      />
                       <button
                         onClick={() => {
                           const trimmed = addItemVal.trim();
-                          if (trimmed) { onAddItem(trimmed); setAddItemVal(""); setAddingItem(false); }
+                          if (trimmed) { onAddItem(trimmed, addItemQty > 1 ? addItemQty : undefined); setAddItemVal(""); setAddItemQty(1); setAddingItem(false); }
                         }}
                         className="h-8 px-3 text-[11px] rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
                       >
                         Add
                       </button>
                       <button
-                        onClick={() => { setAddItemVal(""); setAddingItem(false); }}
+                        onClick={() => { setAddItemVal(""); setAddItemQty(1); setAddingItem(false); }}
                         className="h-8 px-2 text-[11px] rounded-lg border border-border/60 text-muted-foreground hover:bg-muted/50 transition-colors"
                       >
                         Cancel
@@ -2044,9 +2768,11 @@ export default function ShoppingListView({
 
               {/* CTA */}
               {(() => {
-                const atHomeCount = onUpdateStatus
+                const fullCount = onUpdateStatus
                   ? items.filter(i => i.shopStatus === "already_got").length
                   : atHomeIds.size;
+                const partialCount = cupboardQty.size;
+                const checkedCount = fullCount + partialCount;
                 return (
                   <div className="px-4 py-4">
                     <button
@@ -2056,8 +2782,8 @@ export default function ShoppingListView({
                     >
                       {isCommitting
                         ? "Saving…"
-                        : atHomeCount > 0
-                          ? `Done — ${atHomeCount} item${atHomeCount > 1 ? "s" : ""} at home`
+                        : checkedCount > 0
+                          ? `Done — ${checkedCount} item${checkedCount > 1 ? "s" : ""} checked`
                           : "Head to the shop"}
                       {!isCommitting && <ArrowRight className="h-4 w-4" />}
                     </button>
@@ -2200,102 +2926,108 @@ export default function ShoppingListView({
         </div>
       )}
 
-      {/* ── 4b. Category Panel ────────────────────────────────────────────────
-          Fills all remaining viewport height (flex-1).
-          Category header is PINNED - user always knows which aisle they're in.
-          ONLY the item list scrolls, via overflow-y-auto on the inner div.
-          No full-page scroll - the orchard background stays fixed behind.
+      {/* ── 4b. Category Scroll View ──────────────────────────────────────────
+          All categories rendered in one scrollable list.
+          Tabs jump to the corresponding section; sticky headers keep context.
       ─────────────────────────────────────────────────────────────────── */}
       {phase === "shopping" && !shopSession && <div className="tha-print-hide relative z-10 flex-1 overflow-hidden flex flex-col px-3 sm:px-5 pt-3 pb-3 w-full max-w-3xl mx-auto">
-        {activeCat ? (() => {
-          const { total, got, allDone } = getCatProgress(activeCat);
-          return (
+        {groupedCategories.length > 0 ? (
+          <div
+            className="flex-1 flex flex-col min-h-0 rounded-xl overflow-hidden"
+            style={{ border: "1px solid hsl(var(--border) / 0.45)" }}
+          >
+            {/* Pinned category header — lives outside the scroll container so items can never pass under it */}
+            {activeCat && (() => {
+              const { total: hTotal, got: hGot, allDone: hDone } = getCatProgress(activeCat);
+              return (
+                <div
+                  className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-2.5 border-b"
+                  style={{
+                    background: `${activeCat.tabAccent}18`,
+                    backdropFilter: "blur(12px)",
+                    WebkitBackdropFilter: "blur(12px)",
+                    borderColor: activeCat.panelBorderColor,
+                  }}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-[18px] leading-none" aria-hidden>{activeCat.emoji}</span>
+                    <span
+                      className="font-semibold text-[15px]"
+                      style={{ color: activeCat.tabAccent, fontFamily: "var(--font-display)" }}
+                    >
+                      {activeCat.label}
+                    </span>
+                    <span className="text-[12px] text-muted-foreground/60">
+                      {hGot > 0 ? `${hGot} / ${hTotal}` : `${hTotal} item${hTotal !== 1 ? "s" : ""}`}
+                    </span>
+                  </div>
+                  {hDone && (
+                    <span
+                      className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                      style={{ color: activeCat.tabAccent, background: `${activeCat.tabAccent}20` }}
+                    >
+                      All done ✓
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Scrollable items — sections flow in normal document order, no sticky inside */}
             <div
-              key={activeCat.key}
-              className="flex flex-col flex-1 min-h-0 rounded-xl overflow-hidden"
-              style={{
-                background: "hsl(var(--card) / 0.30)",
-                border: "1px solid hsl(var(--border) / 0.45)",
-                borderTop: `3px solid ${activeCat.tabAccent}`,
-              }}
+              ref={itemsScrollRef}
+              className="flex-1 overflow-y-auto"
+              style={{ background: "hsl(var(--card) / 0.30)" }}
             >
-              {/* Category header - pinned, never scrolls */}
-              <div
-                className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-3 border-b"
-                style={{
-                  background: `${activeCat.tabAccent}18`,
-                  borderColor: activeCat.panelBorderColor,
-                }}
-              >
-                <div className="flex items-center gap-2.5">
-                  <span className="text-[18px] leading-none" aria-hidden>{activeCat.emoji}</span>
-                  <span
-                    className="font-semibold text-[15px]"
-                    style={{ color: activeCat.tabAccent, fontFamily: "var(--font-display)" }}
-                  >
-                    {activeCat.label}
-                  </span>
-                  <span className="text-[12px] text-muted-foreground/60">
-                    {got > 0 ? `${got} / ${total}` : `${total} item${total !== 1 ? "s" : ""}`}
-                  </span>
-                </div>
-                {allDone && (
-                  <span
-                    className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                    style={{ color: activeCat.tabAccent, background: `${activeCat.tabAccent}20` }}
-                  >
-                    All done ✓
-                  </span>
-                )}
-              </div>
-
-              {/* Item list - the ONLY thing that scrolls */}
-              <div
-                ref={itemsScrollRef}
-                className="flex-1 overflow-y-auto"
-                style={{ background: "hsl(var(--card) / 0.30)" }}
-              >
-                <div className="divide-y divide-border/25">
-                  {activeCat.savedItems.map((item) => renderSavedItem(item))}
-                  {activeCat.extraItems.map((extra) => renderExtraItem(extra))}
-                </div>
-
-                {activeCat.savedItems.length === 0 && activeCat.extraItems.length === 0 && (
-                  <div className="flex items-center justify-center py-16 text-muted-foreground/50 text-sm">
-                    Nothing here
-                  </div>
-                )}
-
-                {/* All-sorted celebration - at the bottom of the scroll area */}
-                {allSorted && (
+              {groupedCategories.map((cat, catIndex) => {
+                const { total, got, allDone } = getCatProgress(cat);
+                return (
                   <div
-                    className="mx-3 my-3 text-center py-4 rounded-xl border border-primary/15"
-                    style={{ background: "hsl(var(--primary) / 0.04)" }}
+                    key={cat.key}
+                    id={`cat-section-${cat.key}`}
+                    ref={(el) => {
+                      if (el) sectionRefs.current.set(cat.key, el);
+                      else sectionRefs.current.delete(cat.key);
+                    }}
                   >
-                    <p className="font-medium text-sm text-primary" style={{ fontFamily: "var(--font-display)" }}>
-                      {notFoundCount > 0
-                        ? `Almost there — ${notFoundCount} item${notFoundCount > 1 ? "s" : ""} not found`
-                        : "All sorted! Happy shopping 🌿"}
-                    </p>
-                    {!shopSession && (
-                      <button
-                        onClick={handleFinishShop}
-                        className="mt-2 text-[11px] text-primary/70 underline underline-offset-2"
-                      >
-                        Tap "Done here" to finish this trip
-                      </button>
-                    )}
+                    {/* Items in this category */}
+                    <div className="divide-y divide-border/25">
+                      {cat.savedItems.map((item) => renderSavedItem(item))}
+                      {cat.extraItems.map((extra) => renderExtraItem(extra))}
+                    </div>
                   </div>
-                )}
-                {notFoundCount > 0 && (
-                  <p className="my-2 text-center text-[11px] text-muted-foreground/50">
-                    "Not found" items are saved for your next shop.
+                );
+              })}
+
+              {/* All-sorted celebration */}
+              {allSorted && (
+                <div
+                  className="mx-3 my-3 text-center py-4 rounded-xl border border-primary/15"
+                  style={{ background: "hsl(var(--primary) / 0.04)" }}
+                >
+                  <p className="font-medium text-sm text-primary" style={{ fontFamily: "var(--font-display)" }}>
+                    {notFoundCount > 0
+                      ? `Almost there — ${notFoundCount} item${notFoundCount > 1 ? "s" : ""} not found`
+                      : "All sorted! Happy shopping 🌿"}
                   </p>
-                )}
-              </div>
+                  {!shopSession && (
+                    <button
+                      onClick={handleFinishShop}
+                      className="mt-2 text-[11px] text-primary/70 underline underline-offset-2"
+                    >
+                      Tap "Done here" to finish this trip
+                    </button>
+                  )}
+                </div>
+              )}
+              {notFoundCount > 0 && (
+                <p className="my-2 text-center text-[11px] text-muted-foreground/50">
+                  "Get next time" items are saved for your next shop.
+                </p>
+              )}
             </div>
-          );
-        })() : (
+          </div>
+        ) : (
           /* Empty basket state */
           <div
             className="flex-1 rounded-xl flex flex-col items-center justify-center py-20 text-center"

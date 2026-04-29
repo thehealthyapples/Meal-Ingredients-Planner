@@ -10,6 +10,8 @@ export interface PriceResult {
   currency: string;
   productWeight: string | null;
   tier: string;
+  /** "provider" = price from Spoonacular result; "estimate" = category-rate fallback */
+  priceSource: "provider" | "estimate";
 }
 
 interface SpoonacularProduct {
@@ -271,6 +273,7 @@ export async function lookupPricesForIngredient(
   const product = await searchSpoonacular(searchTerm);
 
   let basePrice: number;
+  let priceSource: "provider" | "estimate";
   let productLabel: string;
   let productImage: string | null;
   let productWeight: string | null;
@@ -294,7 +297,13 @@ export async function lookupPricesForIngredient(
     if (convertedPrice && maxPrice && convertedPrice > maxPrice) {
       convertedPrice = null;
     }
-    basePrice = convertedPrice || estimateFallbackPrice(category, quantity, unit);
+    if (convertedPrice !== null) {
+      basePrice = convertedPrice;
+      priceSource = "provider";
+    } else {
+      basePrice = estimateFallbackPrice(category, quantity, unit);
+      priceSource = "estimate";
+    }
     productLabel = sanitizeProductTitle(product.title || ingredientName);
     productImage = getProductImage(product);
     productWeight = getProductWeight(product);
@@ -311,16 +320,13 @@ export async function lookupPricesForIngredient(
       }
     }
   } else {
-    // No Spoonacular product found. For unrecognised categories ('other' /
-    // 'uncategorised') we have no basis for a price estimate — return nothing
-    // rather than fabricating a Tesco Value fallback.
-    if (category === 'other' || category === 'uncategorised') {
-      return [];
-    }
+    // No Spoonacular product found — fall back to category-rate estimates so the
+    // user always sees a price signal rather than "No price data" in Shop View.
     basePrice = estimateFallbackPrice(category, quantity, unit);
+    priceSource = "estimate";
     productLabel = ingredientName;
     productImage = null;
-    productWeight = null;
+    productWeight = unit === 'g' ? `${quantity}g` : unit === 'ml' ? `${quantity}ml` : null;
     detectedTier = 'standard';
   }
 
@@ -350,7 +356,7 @@ export async function lookupPricesForIngredient(
 
       results.push({
         supermarket: storeName,
-        productName: getStoreTierProductName(storeName, productLabel, tier),
+        productName: productLabel,
         price: adjusted > 0 ? adjusted : null,
         pricePerUnit: pricePerUnitStr,
         productUrl: searchUrl,
@@ -358,6 +364,7 @@ export async function lookupPricesForIngredient(
         currency: 'GBP',
         productWeight: productWeight || (unit === 'g' ? `${quantity}g` : unit === 'ml' ? `${quantity}ml` : 'each'),
         tier,
+        priceSource,
       });
     }
   }

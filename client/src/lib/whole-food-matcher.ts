@@ -33,8 +33,14 @@ export function scoreCandidate(
 
   const variantValues = Object.values(intent.variantSelections);
   for (const variant of variantValues) {
-    if (variant && nameLower.includes(variant.toLowerCase())) {
-      score += WEIGHT_VARIANT_MATCH;
+    if (!variant) continue;
+    // Support comma-separated multi-select (e.g. "Chestnut,Portobello")
+    const parts = variant.split(",").map((v) => v.trim()).filter(Boolean);
+    for (const part of parts) {
+      if (nameLower.includes(part.toLowerCase())) {
+        score += WEIGHT_VARIANT_MATCH;
+        break; // Don't award multiple times for the same selector
+      }
     }
   }
 

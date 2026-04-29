@@ -1291,7 +1291,7 @@ export default function ProductsPage() {
                         const product = group.representative;
                         const displayName = getDisplayName(product.product_name);
                         const isSelected = group.variants.some(v => v.barcode === selectedProduct?.barcode);
-                        const variantSizes = [...new Set(group.variants.flatMap(v => v.packVariants?.length ? v.packVariants : (v.quantity ? [v.quantity] : [])))].sort();
+                        const variantSizes = Array.from(new Set(group.variants.flatMap(v => v.packVariants?.length ? v.packVariants : (v.quantity ? [v.quantity] : [])))).sort();
                         return (
                           <motion.div
                             key={group.key || index}
@@ -1390,7 +1390,7 @@ export default function ProductsPage() {
                     const product = group.representative;
                     const displayName = getDisplayName(product.product_name);
                     const isSelected = group.variants.some(v => v.barcode === selectedProduct?.barcode);
-                    const variantSizes = [...new Set(group.variants.flatMap(v => v.packVariants?.length ? v.packVariants : (v.quantity ? [v.quantity] : [])))].sort();
+                    const variantSizes = Array.from(new Set(group.variants.flatMap(v => v.packVariants?.length ? v.packVariants : (v.quantity ? [v.quantity] : [])))).sort();
                     return (
                       <motion.div
                         key={group.key || index}

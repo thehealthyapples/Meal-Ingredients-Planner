@@ -1,5 +1,29 @@
 # Production Release Rules — The Healthy Apples
 
+### 🔍 Release Classification (MANDATORY)
+
+Before proceeding, the following MUST be declared:
+
+- RISK LEVEL:
+- USER IMPACT:
+- MATRIX CELL:
+- RELEASE TIMING RULE:
+
+❌ If ANY field is missing → STOP IMMEDIATELY
+❌ Do NOT continue the release
+
+### 🔓 Override Rule
+
+This step can ONLY be bypassed if the user explicitly states:
+
+"OVERRIDE APPROVED — proceed without full matrix classification"
+
+If override is used:
+- Risk must still be stated
+- Reason must be stated
+- All verification steps remain mandatory
+
+
 Never deploy code that expects new data without upgrading old production data.
 
 If a change touches shopping list, planner, pantry, AI matching, product matching, pricing, required fields, schema, or how existing data is interpreted, assume production data may need reconciliation.

@@ -3672,6 +3672,18 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       }
       updates.shopStatus = val;
     }
+    if (req.body.cupboardQuantity !== undefined) {
+      const val = req.body.cupboardQuantity;
+      if (val === null) {
+        updates.cupboardQuantity = null;
+      } else {
+        const num = Number(val);
+        if (isNaN(num) || num < 0) {
+          return res.status(400).json({ message: 'Invalid cupboard quantity' });
+        }
+        updates.cupboardQuantity = num;
+      }
+    }
     if (updates.quantityValue !== undefined && updates.unit !== undefined) {
       const grams = convertToGrams(updates.quantityValue, updates.unit);
       if (grams !== null) updates.quantityInGrams = grams;
@@ -4108,6 +4120,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
               tier: 'standard',
               productWeight: null,
               thaRating: item.thaRating || null,
+              priceSource: 'provider',
             });
             allMatches.push(match);
           }
@@ -4134,6 +4147,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
             currency: p.currency,
             tier: p.tier || 'standard',
             productWeight: p.productWeight || null,
+            priceSource: p.priceSource,
           });
           allMatches.push(match);
         }
