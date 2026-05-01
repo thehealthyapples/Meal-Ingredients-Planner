@@ -1602,6 +1602,9 @@ export default function ShoppingListPage() {
   const [viewMode, setViewMode] = useState<"basket" | "shop">(() => {
     try { return new URLSearchParams(window.location.search).get("shopMode") === "1" ? "shop" : "basket"; } catch { return "basket"; }
   });
+  // True once the user has navigated away from ShoppingListView back to basket —
+  // used to show the "← Check your cupboards" back link.
+  const [hasLeftShopView, setHasLeftShopView] = useState(false);
   const [rankMode, setRankMode] = useState<RankingMode>(() => {
     try { return (sessionStorage.getItem("tha-sl-rank-mode") as RankingMode) || "quality_first"; } catch { return "quality_first"; }
   });
@@ -2598,6 +2601,19 @@ export default function ShoppingListPage() {
             <div className="flex justify-between items-center gap-1 flex-wrap">
               <div className="flex items-center gap-4">
                 <div>
+                  {hasLeftShopView && (
+                    <button
+                      onClick={() => {
+                        try { localStorage.setItem("tha-sl-shop-phase", "cupboard_check"); } catch {}
+                        setViewMode("shop");
+                      }}
+                      className="flex items-center gap-1 text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors mb-1.5"
+                      data-testid="button-back-to-cyc"
+                    >
+                      <ArrowLeft className="h-3 w-3" />
+                      Check your cupboards
+                    </button>
+                  )}
                   <CardTitle className="text-[28px] font-semibold tracking-tight" data-testid="text-analyse-basket-title">Basket</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1" data-testid="text-items-count">
                     {displayItems.length} item{displayItems.length !== 1 ? "s" : ""} to buy
@@ -3708,7 +3724,7 @@ export default function ShoppingListPage() {
             onUpdateStatus={onUpdateStatusWithSiblings}
             onRenameItem={handleRenameItem}
             onRemoveItem={id => removeItem.mutate(id)}
-            onAddItem={async (rawText, quantityValue) => { try { await addItem.mutateAsync({ rawText, basketLabel: quickListLabel, quantityValue }); } catch (e) { console.error('[addItem] failed:', rawText, e); /* onError handles toast */ } }}
+            onAddItem={async (rawText, quantityValue, itemBasketLabel) => { try { await addItem.mutateAsync({ rawText, basketLabel: itemBasketLabel ?? quickListLabel, quantityValue }); } catch (e) { console.error('[addItem] failed:', rawText, e); /* onError handles toast */ } }}
             onMatchStore={(store) => lookupPrices.mutate(store)}
             isMatchingPrices={lookupPrices.isPending}
             rankMode={rankMode}
@@ -3717,7 +3733,7 @@ export default function ShoppingListPage() {
             listFilter={hasQuickListItems ? listFilter : undefined}
             onListFilterChange={hasQuickListItems ? setListFilter : undefined}
             onClearBySource={hasQuickListItems ? clearBySource : undefined}
-            onClose={() => setViewMode("basket")}
+            onClose={() => { setHasLeftShopView(true); setViewMode("basket"); }}
             onAnalyse={(item) => setAnalyseItem(item)}
             onVariantChange={(id, key, value) => {
               const it = savedItems.find(i => i.id === id);
@@ -3732,6 +3748,9 @@ export default function ShoppingListPage() {
               updateWholeFoodIntent.mutate({ id, fields: { attributePreferences: JSON.stringify({ ...prev, [key]: value }) } });
             }}
             onUpdateCupboardQty={onUpdateCupboardQty}
+            onUpdateItemQty={(id, qty) => {
+              updateItem.mutate({ id, fields: { quantityValue: qty } });
+            }}
           />
         )}
       </div>

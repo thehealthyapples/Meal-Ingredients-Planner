@@ -3,6 +3,7 @@ import type { ShoppingListItem } from "@shared/schema";
 import type { IngredientDef } from "@/lib/ingredient-catalogue";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Minus, Plus } from "lucide-react";
 
 interface WholeFoodSelectorProps {
   item: ShoppingListItem;
@@ -11,13 +12,23 @@ interface WholeFoodSelectorProps {
   attributePreferences: Record<string, boolean>;
   onVariantChange: (key: string, value: string) => void;
   onAttributeChange: (key: string, value: boolean) => void;
+  /** When true, renders variant rows full-width with right-aligned qty steppers */
+  showVariantQty?: boolean;
 }
 
-// Flavour options shown per-type for crisps — mirrors the catalogue flavour selector.
-const CRISP_FLAVOUR_OPTIONS = [
-  "Ready salted", "Salt & vinegar", "Cheese & onion", "Pickled onion",
-  "Sweet chilli", "BBQ", "Beef", "Steak", "Prawn cocktail", "Sour cream & onion", "Other",
-];
+const SELECT_CLASS = "text-[11px] h-5 px-1.5 rounded border border-border/60 bg-background/70 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 cursor-pointer max-w-[110px]";
+const OTHER_INPUT_CLASS = "text-[11px] h-5 px-1.5 rounded border border-border/60 bg-background/70 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 w-[120px] placeholder:text-muted-foreground/40";
+const QTY_BTN_CLASS = "h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors";
+const QTY_INPUT_CLASS = "h-5 w-8 text-[11px] tabular-nums text-center rounded border border-border/60 bg-background/80 focus:outline-none focus:ring-1 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+
+function parseMultiRaw(raw: string): string[] {
+  return raw.split(",").map(v => v.trim()).filter(Boolean);
+}
+
+/** True when a catalogue item has both "type" and "flavour" selectors — uses the type→flavour pairing pattern. */
+function hasTypeFlavourPattern(def: IngredientDef): boolean {
+  return def.selectorSchema.some(s => s.key === "type") && def.selectorSchema.some(s => s.key === "flavour");
+}
 
 export default function WholeFoodSelector({
   item,
@@ -26,244 +37,365 @@ export default function WholeFoodSelector({
   attributePreferences,
   onVariantChange,
   onAttributeChange,
+  showVariantQty = false,
 }: WholeFoodSelectorProps) {
-  // Local draft for free-text fields — flush to parent only on blur/Enter to avoid per-keystroke DB writes.
-  const [freeTextDraft, setFreeTextDraft] = useState<Record<string, string>>(() => {
-    const init: Record<string, string> = {};
-    for (const sel of catalogueDef.selectorSchema) {
-      if (sel.freeTextKey) init[sel.freeTextKey] = variantSelections[sel.freeTextKey] ?? "";
-    }
-    return init;
-  });
+  const isTypeFlavourItem = hasTypeFlavourPattern(catalogueDef);
 
-  useEffect(() => {
-    setFreeTextDraft(prev => {
-      const next = { ...prev };
-      let changed = false;
-      for (const sel of catalogueDef.selectorSchema) {
-        const k = sel.freeTextKey;
-        if (!k) continue;
-        const saved = variantSelections[k] ?? "";
-        if (saved && prev[k] === "") { next[k] = saved; changed = true; }
-      }
-      return changed ? next : prev;
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variantSelections]);
+  const firstTypeFlavourType = isTypeFlavourItem
+    ? (variantSelections["type"] ?? "").split(",")[0].trim()
+    : "";
 
-  // ── Crisps-specific: per-type flavour ─────────────────────────────────────
-  // flavourByType     → variantSelections["flavourByType"]       (JSON Record<type, option>)
-  // customFlavourByType → variantSelections["customFlavourByType"] (JSON Record<type, freeText>)
-  // Chip clicks flush immediately (single PATCH). Custom text is drafted locally and
-  // flushed on blur/Enter to avoid per-keystroke writes.
-  const isCrisps = catalogueDef.id === "crisps";
-
-  // Parse saved chip selections directly from the prop — no local draft needed for chips.
   const flavourByType: Record<string, string> = (() => {
     try { return JSON.parse(variantSelections["flavourByType"] ?? "{}") as Record<string, string>; }
     catch { return {}; }
   })();
 
-  // Local draft for the "Other" free-text input, keyed by crisp type.
-  const [customFlavourByTypeDraft, setCustomFlavourByTypeDraft] = useState<Record<string, string>>(() => {
+  const customFlavourByType: Record<string, string> = (() => {
     try { return JSON.parse(variantSelections["customFlavourByType"] ?? "{}") as Record<string, string>; }
     catch { return {}; }
+  })();
+
+  function selectFlavourForType(type: string, option: string) {
+    const next = { ...flavourByType };
+    if (option) { next[type] = option; } else { delete next[type]; }
+    onVariantChange("flavourByType", JSON.stringify(next));
+  }
+
+  function selectCustomFlavourForType(type: string, text: string) {
+    const next = { ...customFlavourByType };
+    if (text) { next[type] = text; } else { delete next[type]; }
+    onVariantChange("customFlavourByType", JSON.stringify(next));
+  }
+
+  const [multiSlots, setMultiSlots] = useState<Record<string, string[]>>(() => {
+    const init: Record<string, string[]> = {};
+    for (const sel of catalogueDef.selectorSchema) {
+      if (sel.multi) {
+        init[sel.key] = parseMultiRaw(variantSelections[sel.key] ?? "");
+      }
+    }
+    return init;
   });
+  // Draft qty values while user is typing (keyed by variety name)
+  const [variantQtyDraft, setVariantQtyDraft] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (!isCrisps) return;
-    setCustomFlavourByTypeDraft(prev => {
-      try {
-        const saved = JSON.parse(variantSelections["customFlavourByType"] ?? "{}") as Record<string, string>;
-        const next = { ...prev };
-        let changed = false;
-        for (const [k, v] of Object.entries(saved)) {
-          if (!prev[k]) { next[k] = v; changed = true; }
+    setMultiSlots(prev => {
+      let changed = false;
+      const next = { ...prev };
+      for (const sel of catalogueDef.selectorSchema) {
+        if (!sel.multi) continue;
+        const newCommitted = parseMultiRaw(variantSelections[sel.key] ?? "");
+        const prevSlots = prev[sel.key] ?? [];
+        const prevCommitted = prevSlots.filter(Boolean);
+        if (JSON.stringify(prevCommitted) !== JSON.stringify(newCommitted)) {
+          const pendingCount = prevSlots.filter(v => v === "").length;
+          next[sel.key] = [...newCommitted, ...Array(pendingCount).fill("")];
+          changed = true;
         }
-        return changed ? next : prev;
-      } catch { return prev; }
+      }
+      return changed ? next : prev;
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variantSelections]);
+  }, [variantSelections, catalogueDef]);
 
-  const crispsTypeRaw = isCrisps ? (variantSelections["type"] ?? "") : "";
-  const selectedCrispsTypes = crispsTypeRaw
-    ? crispsTypeRaw.split(",").map(v => v.trim()).filter(Boolean)
-    : [];
+  const hasSelectors = catalogueDef.selectorSchema.length > 0;
+  const hasAttributes = catalogueDef.relevantAttributes.length > 0;
+  if (!hasSelectors && !hasAttributes) return null;
 
-  // Chip click: toggle a single flavour option for one crisp type (immediate flush).
-  function selectFlavourForType(type: string, option: string) {
-    const current = flavourByType[type];
-    const next = { ...flavourByType };
-    if (current === option) { delete next[type]; } else { next[type] = option; }
-    onVariantChange("flavourByType", JSON.stringify(next));
-    // When navigating away from "Other", clear the custom draft for that type so it
-    // doesn't surface stale text if the user re-selects "Other" later.
-    if (current === "Other" && option !== "Other") {
-      setCustomFlavourByTypeDraft(prev => { const d = { ...prev }; delete d[type]; return d; });
+  const variantQuantities: Record<string, number> = (() => {
+    try { return JSON.parse(variantSelections["variantQuantities"] ?? "{}") as Record<string, number>; }
+    catch { return {}; }
+  })();
+
+  function updateVariantQty(selectorKey: string, variety: string, next: number) {
+    const allVarieties = (multiSlots[selectorKey] ?? []).filter(Boolean);
+    const qties: Record<string, number> = {};
+    for (const v of allVarieties) {
+      qties[v] = v === variety ? next : (variantQuantities[v] ?? 1);
     }
+    onVariantChange("variantQuantities", JSON.stringify(qties));
   }
 
-  // Flush custom text for one type (called on blur/Enter when "Other" is selected).
-  function flushCustomFlavourForType(type: string, value: string) {
-    const parsed = (() => {
-      try { return JSON.parse(variantSelections["customFlavourByType"] ?? "{}") as Record<string, string>; }
-      catch { return {} as Record<string, string>; }
-    })();
-    const updated = { ...parsed };
-    if (value) { updated[type] = value; } else { delete updated[type]; }
-    onVariantChange("customFlavourByType", JSON.stringify(updated));
+  function updateMultiSlot(key: string, idx: number, value: string) {
+    const next = [...(multiSlots[key] ?? [])];
+    next[idx] = value;
+    setMultiSlots(m => ({ ...m, [key]: next }));
+    onVariantChange(key, next.filter(Boolean).join(","));
   }
+
+  function removeMultiSlot(key: string, idx: number) {
+    const next = (multiSlots[key] ?? []).filter((_, i) => i !== idx);
+    setMultiSlots(m => ({ ...m, [key]: next }));
+    onVariantChange(key, next.filter(Boolean).join(","));
+  }
+
+  function addMultiSlot(key: string) {
+    const current = multiSlots[key] ?? [];
+    setMultiSlots(m => ({ ...m, [key]: [...current, ""] }));
+  }
+
+  const flavourSelectorDef = catalogueDef.selectorSchema.find(s => s.key === "flavour");
 
   return (
     <div
-      className="mt-2 space-y-2"
+      className={showVariantQty
+        ? "flex flex-col gap-1 mt-1.5 w-full"
+        : "flex items-start flex-wrap gap-x-3 gap-y-1 mt-1.5"}
       data-testid={`whole-food-selector-${item.id}`}
     >
       {catalogueDef.selectorSchema.map((selector) => {
-        // For crisps with types selected: suppress the global "Flavour" multi-select.
-        // The per-type flavour section below replaces it.
-        if (isCrisps && selector.key === "flavour" && selectedCrispsTypes.length > 0) return null;
+        if (isTypeFlavourItem && selector.key === "flavour") return null;
 
-        const currentRaw = variantSelections[selector.key] ?? "";
-        const currentValues = selector.multi
-          ? currentRaw.split(",").map((v) => v.trim()).filter(Boolean)
-          : [];
+        if (selector.multi) {
+          const slots = multiSlots[selector.key] ?? [];
+          const displaySlots = slots.length === 0 ? [""] : slots;
+          const hasMultiple = displaySlots.length > 1;
 
-        function toggleMulti(option: string) {
-          const next = currentValues.includes(option)
-            ? currentValues.filter((v) => v !== option)
-            : [...currentValues, option];
-          onVariantChange(selector.key, next.join(","));
-          if (option === "Other" && selector.freeTextKey && currentValues.includes(option)) {
-            onVariantChange(selector.freeTextKey, "");
+          // ── showVariantQty mode: full-width 2-column rows ──────────────
+          if (showVariantQty) {
+            return (
+              <div key={selector.key} className="flex flex-col gap-1 w-full">
+                {displaySlots.map((val, idx) => {
+                  const isLast = idx === displaySlots.length - 1;
+                  const vQty = val !== "" ? (variantQuantities[val] ?? 1) : 1;
+                  const draft = variantQtyDraft[val];
+                  return (
+                    <div key={idx} className="flex items-center w-full gap-2">
+                      {/* LEFT: label + select + optional free-text + remove + add-another */}
+                      <div className="flex items-center gap-1 flex-1 min-w-0">
+                        <span className="text-[10.5px] text-muted-foreground/70 whitespace-nowrap shrink-0">
+                          {selector.label} {idx + 1}:
+                        </span>
+                        <select
+                          value={val}
+                          onChange={e => updateMultiSlot(selector.key, idx, e.target.value)}
+                          className={SELECT_CLASS}
+                          data-testid={`variant-select-${item.id}-${selector.key}-${idx}`}
+                        >
+                          <option value="">Any</option>
+                          {selector.options.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                        {val === "Other" && selector.freeTextKey && (
+                          <input
+                            type="text"
+                            value={variantSelections[selector.freeTextKey] ?? ""}
+                            onChange={e => onVariantChange(selector.freeTextKey!, e.target.value)}
+                            placeholder="Enter…"
+                            className={OTHER_INPUT_CLASS}
+                            data-testid={`variant-other-input-${item.id}-${selector.key}-${idx}`}
+                          />
+                        )}
+                        {hasMultiple && (
+                          <button
+                            onClick={() => removeMultiSlot(selector.key, idx)}
+                            className="h-4 w-4 flex items-center justify-center text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                            aria-label={`Remove ${selector.label} ${idx + 1}`}
+                          >
+                            <Minus className="h-2.5 w-2.5" />
+                          </button>
+                        )}
+                        {isLast && (
+                          <button
+                            onClick={() => addMultiSlot(selector.key)}
+                            className="text-[10px] text-primary/70 hover:text-primary ml-1 transition-colors whitespace-nowrap"
+                            aria-label={`Add another ${selector.label.toLowerCase()}`}
+                          >
+                            + another {selector.label.toLowerCase()}
+                          </button>
+                        )}
+                      </div>
+                      {/* RIGHT: qty stepper, right-aligned */}
+                      <div className="flex items-center gap-0.5 flex-shrink-0">
+                        {val !== "" ? (
+                          <>
+                            <button
+                              onClick={() => {
+                                const next = Math.max(1, vQty - 1);
+                                setVariantQtyDraft(d => { const n = { ...d }; delete n[val]; return n; });
+                                updateVariantQty(selector.key, val, next);
+                              }}
+                              className={QTY_BTN_CLASS}
+                              aria-label={`Decrease qty for ${val}`}
+                              data-testid={`cyc-variant-qty-minus-${item.id}-${val.replace(/\s+/g, "-").toLowerCase()}`}
+                            >
+                              <Minus className="h-2.5 w-2.5" />
+                            </button>
+                            <input
+                              type="number"
+                              min={1}
+                              value={draft ?? String(vQty)}
+                              onChange={e => setVariantQtyDraft(d => ({ ...d, [val]: e.target.value }))}
+                              onBlur={e => {
+                                const parsed = parseInt(e.target.value);
+                                const clamped = Math.max(1, isNaN(parsed) ? 1 : parsed);
+                                setVariantQtyDraft(d => { const n = { ...d }; delete n[val]; return n; });
+                                if (clamped !== vQty) updateVariantQty(selector.key, val, clamped);
+                              }}
+                              onKeyDown={e => {
+                                if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                                if (e.key === "Escape") {
+                                  setVariantQtyDraft(d => { const n = { ...d }; delete n[val]; return n; });
+                                  (e.target as HTMLInputElement).blur();
+                                }
+                              }}
+                              className={QTY_INPUT_CLASS}
+                              data-testid={`cyc-variant-qty-input-${item.id}-${val.replace(/\s+/g, "-").toLowerCase()}`}
+                            />
+                            <button
+                              onClick={() => {
+                                setVariantQtyDraft(d => { const n = { ...d }; delete n[val]; return n; });
+                                updateVariantQty(selector.key, val, vQty + 1);
+                              }}
+                              className={QTY_BTN_CLASS}
+                              aria-label={`Increase qty for ${val}`}
+                              data-testid={`cyc-variant-qty-plus-${item.id}-${val.replace(/\s+/g, "-").toLowerCase()}`}
+                            >
+                              <Plus className="h-2.5 w-2.5" />
+                            </button>
+                          </>
+                        ) : (
+                          // Invisible spacer keeps column width stable when slot is unselected
+                          <span className="w-[68px]" aria-hidden />
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
           }
-          // For crisps type deselect: clear the per-type custom flavour draft.
-          // We do NOT call onVariantChange for flavourByType/customFlavourByType here to
-          // avoid a race (two simultaneous PATCHes reading stale savedItems). The stale
-          // DB entries are harmless — handleHeadToShop iterates the current type list only.
-          if (isCrisps && selector.key === "type" && currentValues.includes(option)) {
-            setCustomFlavourByTypeDraft(prev => { const d = { ...prev }; delete d[option]; return d; });
-          }
+
+          // ── Default inline mode ────────────────────────────────────────
+          return (
+            <div key={selector.key} className="flex flex-col gap-1">
+              {displaySlots.map((val, idx) => (
+                <div key={idx} className="flex items-center gap-1">
+                  <span className="text-[10.5px] text-muted-foreground/70">
+                    {selector.label} {idx + 1}:
+                  </span>
+                  <select
+                    value={val}
+                    onChange={e => updateMultiSlot(selector.key, idx, e.target.value)}
+                    className={SELECT_CLASS}
+                    data-testid={`variant-select-${item.id}-${selector.key}-${idx}`}
+                  >
+                    <option value="">Any</option>
+                    {selector.options.map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                  {val === "Other" && selector.freeTextKey && (
+                    <input
+                      type="text"
+                      value={variantSelections[selector.freeTextKey] ?? ""}
+                      onChange={e => onVariantChange(selector.freeTextKey!, e.target.value)}
+                      placeholder="Enter…"
+                      className={OTHER_INPUT_CLASS}
+                      data-testid={`variant-other-input-${item.id}-${selector.key}-${idx}`}
+                    />
+                  )}
+                  {hasMultiple && (
+                    <button
+                      onClick={() => removeMultiSlot(selector.key, idx)}
+                      className="h-4 w-4 flex items-center justify-center text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                      aria-label={`Remove ${selector.label} ${idx + 1}`}
+                    >
+                      <Minus className="h-2.5 w-2.5" />
+                    </button>
+                  )}
+                  {idx === displaySlots.length - 1 && (
+                    <button
+                      onClick={() => addMultiSlot(selector.key)}
+                      className="text-[10px] text-primary/70 hover:text-primary ml-1 transition-colors whitespace-nowrap"
+                      aria-label={`Add another ${selector.label.toLowerCase()}`}
+                    >
+                      + another {selector.label.toLowerCase()}
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
         }
 
+        const currentValue = variantSelections[selector.key] ?? "";
+
         return (
-          <div key={selector.key}>
-            <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-              {selector.label}
-            </p>
-            <div className="flex flex-wrap gap-1">
-              {selector.options.map((option) => {
-                const isSelected = selector.multi
-                  ? currentValues.includes(option)
-                  : currentRaw === option;
-                return (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() =>
-                      selector.multi
-                        ? toggleMulti(option)
-                        : onVariantChange(selector.key, isSelected ? "" : option)
-                    }
-                    className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
-                      isSelected
-                        ? "bg-primary/10 text-primary border-primary/20 font-medium"
-                        : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
-                    }`}
-                    data-testid={`variant-chip-${item.id}-${selector.key}-${option.replace(/\s+/g, "-").toLowerCase()}`}
-                  >
-                    {option}
-                  </button>
-                );
-              })}
-            </div>
-            {selector.freeTextKey && currentValues.includes("Other") && (
+          <div key={selector.key} className="flex items-center gap-1">
+            <span className="text-[10.5px] text-muted-foreground/70">{selector.label}:</span>
+            <select
+              value={currentValue}
+              onChange={e => onVariantChange(selector.key, e.target.value)}
+              className={SELECT_CLASS}
+              data-testid={`variant-select-${item.id}-${selector.key}`}
+            >
+              <option value="">Any</option>
+              {selector.options.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+            {currentValue === "Other" && selector.freeTextKey && (
               <input
                 type="text"
-                placeholder="Describe flavour..."
-                value={freeTextDraft[selector.freeTextKey] ?? variantSelections[selector.freeTextKey] ?? ""}
-                onChange={(e) => setFreeTextDraft(prev => ({ ...prev, [selector.freeTextKey!]: e.target.value }))}
-                onBlur={() => onVariantChange(selector.freeTextKey!, freeTextDraft[selector.freeTextKey!] ?? "")}
-                onKeyDown={(e) => { if (e.key === "Enter") onVariantChange(selector.freeTextKey!, freeTextDraft[selector.freeTextKey!] ?? ""); }}
-                className="mt-1 w-full text-[11px] px-2 py-0.5 rounded border border-border bg-transparent focus:outline-none focus:border-primary/40"
-                data-testid={`variant-freetext-${item.id}-${selector.freeTextKey}`}
+                value={variantSelections[selector.freeTextKey] ?? ""}
+                onChange={e => onVariantChange(selector.freeTextKey!, e.target.value)}
+                placeholder="Enter…"
+                className={OTHER_INPUT_CLASS}
+                data-testid={`variant-other-input-${item.id}-${selector.key}`}
               />
             )}
           </div>
         );
       })}
 
-      {/* Crisps-specific: per-type flavour chips + optional custom text */}
-      {isCrisps && selectedCrispsTypes.length > 0 && (
-        <div>
-          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
-            Flavour
-          </p>
-          <div className="space-y-2">
-            {selectedCrispsTypes.map(type => {
-              const selectedFlavour = flavourByType[type] ?? "";
-              return (
-                <div key={type}>
-                  <p className="text-[10px] text-muted-foreground/55 mb-0.5">{type}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {CRISP_FLAVOUR_OPTIONS.map(option => (
-                      <button
-                        key={option}
-                        type="button"
-                        onClick={() => selectFlavourForType(type, option)}
-                        className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
-                          selectedFlavour === option
-                            ? "bg-primary/10 text-primary border-primary/20 font-medium"
-                            : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
-                        }`}
-                        data-testid={`crisp-flavour-chip-${item.id}-${type.replace(/\s+/g, "-").toLowerCase()}-${option.replace(/\s+/g, "-").toLowerCase()}`}
-                      >
-                        {option}
-                      </button>
-                    ))}
-                  </div>
-                  {selectedFlavour === "Other" && (
-                    <input
-                      type="text"
-                      placeholder="Describe flavour..."
-                      value={customFlavourByTypeDraft[type] ?? ""}
-                      onChange={(e) => setCustomFlavourByTypeDraft(prev => ({ ...prev, [type]: e.target.value }))}
-                      onBlur={() => flushCustomFlavourForType(type, customFlavourByTypeDraft[type] ?? "")}
-                      onKeyDown={(e) => { if (e.key === "Enter") flushCustomFlavourForType(type, customFlavourByTypeDraft[type] ?? ""); }}
-                      className="mt-1 w-full text-[11px] px-2 py-0.5 rounded border border-border bg-transparent focus:outline-none focus:border-primary/40"
-                      data-testid={`crisp-custom-flavour-${item.id}-${type.replace(/\s+/g, "-").toLowerCase()}`}
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      {/* Per-type flavour selector — shown for any type-flavour pattern item */}
+      {isTypeFlavourItem && firstTypeFlavourType && flavourSelectorDef && (
+        <div className="flex items-center gap-1">
+          <span className="text-[10.5px] text-muted-foreground/70">{flavourSelectorDef.label}:</span>
+          <select
+            value={flavourByType[firstTypeFlavourType] ?? ""}
+            onChange={e => selectFlavourForType(firstTypeFlavourType, e.target.value)}
+            className={SELECT_CLASS}
+            data-testid={`variant-flavour-${item.id}-${firstTypeFlavourType}`}
+          >
+            <option value="">Any</option>
+            {flavourSelectorDef.options.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+          {flavourByType[firstTypeFlavourType] === "Other" && (
+            <input
+              type="text"
+              value={customFlavourByType[firstTypeFlavourType] ?? ""}
+              onChange={e => selectCustomFlavourForType(firstTypeFlavourType, e.target.value)}
+              placeholder="Enter…"
+              className={OTHER_INPUT_CLASS}
+              data-testid={`variant-flavour-other-input-${item.id}`}
+            />
+          )}
         </div>
       )}
 
-      {catalogueDef.relevantAttributes.length > 0 && (
-        <div className="flex flex-wrap gap-3">
-          {catalogueDef.relevantAttributes.map((attr) => {
-            const id = `attr-${item.id}-${attr}`;
-            const label = attr.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-            return (
-              <div key={attr} className="flex items-center gap-1.5">
-                <Checkbox
-                  id={id}
-                  checked={!!attributePreferences[attr]}
-                  onCheckedChange={(checked) => onAttributeChange(attr, !!checked)}
-                  data-testid={`attr-checkbox-${item.id}-${attr}`}
-                  className="h-3.5 w-3.5"
-                />
-                <Label htmlFor={id} className="text-[11px] text-muted-foreground cursor-pointer select-none">
-                  {label}
-                </Label>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {catalogueDef.relevantAttributes.map((attr) => {
+        const label = attr.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+        const id = `attr-${item.id}-${attr}`;
+        return (
+          <div key={attr} className="flex items-center gap-1">
+            <Checkbox
+              id={id}
+              checked={!!attributePreferences[attr]}
+              onCheckedChange={checked => onAttributeChange(attr, !!checked)}
+              data-testid={`attr-checkbox-${item.id}-${attr}`}
+              className="h-3.5 w-3.5"
+            />
+            <Label htmlFor={id} className="text-[11px] text-muted-foreground cursor-pointer select-none">
+              {label}
+            </Label>
+          </div>
+        );
+      })}
     </div>
   );
 }

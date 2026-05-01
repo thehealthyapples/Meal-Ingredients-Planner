@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { normalizeIngredientKey, singularizeIngredientKey } from "@shared/normalize";
 import { getCanonicalKey } from "@shared/ingredient-aliases";
-import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowLeft, ArrowRight, Store, Pencil, Search, AlertTriangle, Plus, Trash2, Microscope } from "lucide-react";
+import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowLeft, ArrowRight, Store, Pencil, Search, AlertTriangle, Plus, Minus, Trash2, Microscope } from "lucide-react";
 import { rankDisplayMatches, type RankingMode } from "@/lib/analyser-choice";
 import RankModeSelector from "@/components/RankModeSelector";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ import {
 import type { ShoppingListItem, IngredientSource, ProductMatch, IngredientProduct } from "@shared/schema";
 import { cleanProductName } from "@/lib/unit-display";
 import { isWholeFood } from "@/lib/basket-item-classifier";
-import { getIngredientDef } from "@/lib/ingredient-catalogue";
+import { getIngredientDef, isResolvedVariantItem } from "@/lib/ingredient-catalogue";
 import WholeFoodSelector from "@/components/whole-food-selector";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 
@@ -99,7 +99,9 @@ interface ShoppingListViewProps {
   /** Remove an item from the shopping list entirely. */
   onRemoveItem?: (id: number) => void;
   /** Add a new item directly from within the view (e.g. from Check Cupboard). Persists to DB via resolver. */
-  onAddItem?: (rawText: string, quantityValue?: number) => Promise<void> | void;
+  onAddItem?: (rawText: string, quantityValue?: number, basketLabel?: string | null) => Promise<void> | void;
+  /** Update the needed quantity for an item (quantityValue only — does not touch cupboardQuantity). */
+  onUpdateItemQty?: (id: number, quantityValue: number) => void;
   /** Trigger store-scoped product matching for the currently selected store. */
   onMatchStore?: (store: string) => void;
   /** True while a store-scoped match is in progress. */
@@ -774,6 +776,7 @@ export default function ShoppingListView({
   onListFilterChange,
   onClearBySource,
   onUpdateCupboardQty,
+  onUpdateItemQty,
 }: ShoppingListViewProps) {
   const [notInShop, setNotInShop] = useState<Set<number>>(() => loadNotInShop());
   const [selectedSupermarket, setSelectedSupermarket] = useState<string>(initialStore ?? "Tesco");
@@ -809,8 +812,6 @@ export default function ShoppingListView({
   const [reviewEditVal, setReviewEditVal] = useState<string>("");
   // Cupboard partial-quantity state — lives at display layer, no DB writes for partials.
   const [cupboardQty, setCupboardQty] = useState<Map<number, number>>(new Map());
-  const [haveSomeOpenId, setHaveSomeOpenId] = useState<number | null>(null);
-  const [haveSomeInput, setHaveSomeInput] = useState<string>("");
   // Remaining-quantity overrides for shopping phase, computed at "head to shop".
   const [qtyOverrides, setQtyOverrides] = useState<Map<number, number>>(new Map());
   // Multi-select state for group umbrella terms (e.g. "berries").
@@ -829,6 +830,8 @@ export default function ShoppingListView({
   const [addingItem, setAddingItem] = useState(false);
   const [addItemVal, setAddItemVal] = useState("");
   const [addItemQty, setAddItemQty] = useState(1);
+  // CYC quantity editing: draft values while user is typing (keyed by item id)
+  const [cycQtyDraft, setCycQtyDraft] = useState<Map<number, string>>(new Map());
   // rankMode is lifted to the parent page so it is shared across Quick List,
   // Check Cupboard and Shop View. Fall back to sessionStorage if parent doesn't pass it.
   const [localRankMode, setLocalRankMode] = useState<RankingMode>(() => {
@@ -939,17 +942,33 @@ export default function ShoppingListView({
     const hasMulti = multiSelections.size > 0;
     const hasChild = childGroupSelections.size > 0;
 
-    // Crisps items with ≥1 type selected need splitting into separate basket items.
-    // Any other catalogue entry (apples, mushrooms, etc.) is intentionally excluded.
-    const crispsSplitItems = items.filter(item => {
+    // Items using the type→flavour pattern (crisps, pizza, …) with ≥1 type selected
+    // need splitting into separate basket items — one per type with its flavour resolved.
+    const typeFlavourSplitItems = items.filter(item => {
       const catDef = getIngredientDef(item.normalizedName ?? item.productName ?? "");
-      if (catDef?.id !== "crisps") return false;
+      if (!catDef) return false;
+      if (!catDef.selectorSchema.some(s => s.key === "type") || !catDef.selectorSchema.some(s => s.key === "flavour")) return false;
       const v = (() => { try { return JSON.parse(item.variantSelections ?? "{}") as Record<string, string>; } catch { return {} as Record<string, string>; } })();
       return (v["type"] ?? "").split(",").map((s: string) => s.trim()).filter(Boolean).length > 0;
     });
-    const hasCrispsSplit = crispsSplitItems.length > 0;
+    const hasTypeFlavourSplit = typeFlavourSplitItems.length > 0;
 
-    if (hasMulti || hasChild || hasCrispsSplit) {
+    // Pure-variety items (apples, mushrooms, …) with >1 variety selected need splitting
+    // into individual rows. Items using the type→flavour pattern are handled above.
+    const multiVarietySplitItems = items.filter(item => {
+      const catDef = getIngredientDef(item.normalizedName ?? item.productName ?? "");
+      if (!catDef) return false;
+      if (catDef.selectorSchema.some(s => s.key === "type") && catDef.selectorSchema.some(s => s.key === "flavour")) return false;
+      if (multiSelections.has(item.id) || childGroupSelections.has(item.id)) return false;
+      const v = (() => { try { return JSON.parse(item.variantSelections ?? "{}") as Record<string, string>; } catch { return {} as Record<string, string>; } })();
+      return catDef.selectorSchema.some(sel => {
+        if (!sel.multi) return false;
+        return (v[sel.key] ?? "").split(",").map((s: string) => s.trim()).filter(Boolean).length > 1;
+      });
+    });
+    const hasMultiVarietySplit = multiVarietySplitItems.length > 0;
+
+    if (hasMulti || hasChild || hasTypeFlavourSplit || hasMultiVarietySplit) {
       setIsCommitting(true);
       try {
         const existingNames = new Set(
@@ -992,19 +1011,25 @@ export default function ShoppingListView({
           }
         }
 
-        // Crisps type split: one basket item per selected type.
-        // Flavour resolution per type:
-        //   flavourByType[t] = chip selection ("Pickled onion" or "Other")
-        //   customFlavourByType[t] = free text when "Other" was chosen
+        // Type-flavour split: one basket item per selected type, with flavour resolved per type.
+        //   flavourByType[t]       = chosen flavour option ("Pepperoni" or "Other")
+        //   customFlavourByType[t] = free text when flavour is "Other"
+        //   customType             = free text when type slot is "Other"
+        //   appendDisplayNameInSplit adds the catalogue displayName as a suffix (e.g. "Pizza")
         //   Falls back to a global single flavour for items saved before per-type pairing.
-        for (const item of crispsSplitItems) {
+        for (const item of typeFlavourSplitItems) {
           if (toRemove.includes(item.id)) continue;
+          const catDef = getIngredientDef(item.normalizedName ?? item.productName ?? "");
+          if (!catDef) continue;
           const v = (() => { try { return JSON.parse(item.variantSelections ?? "{}") as Record<string, string>; } catch { return {} as Record<string, string>; } })();
           const types = (v["type"] ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
           const flavourByType = (() => { try { return JSON.parse(v["flavourByType"] ?? "{}") as Record<string, string>; } catch { return {} as Record<string, string>; } })();
           const customFlavourByType = (() => { try { return JSON.parse(v["customFlavourByType"] ?? "{}") as Record<string, string>; } catch { return {} as Record<string, string>; } })();
           const globalFlavours = (v["flavour"] ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
           const globalSingleFlavour = globalFlavours.length === 1 && !globalFlavours.includes("Other") ? globalFlavours[0] : null;
+
+          const resolveType = (t: string): string =>
+            t === "Other" ? (v["customType"] || "Other") : t;
 
           const resolveFlavour = (t: string): string | null => {
             const f = flavourByType[t];
@@ -1013,15 +1038,19 @@ export default function ShoppingListView({
             return f;
           };
 
+          const suffix = catDef.appendDisplayNameInSplit ? ` ${catDef.displayName}` : "";
+
           if (types.length === 1) {
+            const resolvedT = resolveType(types[0]);
             const flavour = resolveFlavour(types[0]);
-            const name = flavour ? `${flavour} ${types[0]}` : types[0];
+            const name = flavour ? `${flavour} ${resolvedT}${suffix}` : `${resolvedT}${suffix}`;
             const r = onRenameItem?.(item.id, name);
             if (r instanceof Promise) addPromises.push(r);
           } else {
             for (const t of types) {
+              const resolvedT = resolveType(t);
               const flavour = resolveFlavour(t);
-              const name = flavour ? `${flavour} ${t}` : t;
+              const name = flavour ? `${flavour} ${resolvedT}${suffix}` : `${resolvedT}${suffix}`;
               if (!existingNames.has(name.toLowerCase().trim())) {
                 const r = onAddItem?.(name);
                 if (r instanceof Promise) addPromises.push(r);
@@ -1029,6 +1058,34 @@ export default function ShoppingListView({
               }
             }
             toRemove.push(item.id);
+          }
+        }
+
+        // Multi-variety split: one row per selected variety for apples, mushrooms, etc.
+        // Each new row uses the persisted variantQuantities (set inline in CYC) or defaults to 1.
+        for (const item of multiVarietySplitItems) {
+          if (toRemove.includes(item.id)) continue;
+          const catDef = getIngredientDef(item.normalizedName ?? item.productName ?? "");
+          if (!catDef) continue;
+          const v = (() => { try { return JSON.parse(item.variantSelections ?? "{}") as Record<string, string>; } catch { return {} as Record<string, string>; } })();
+          const persistedVarQties: Record<string, number> = (() => { try { return JSON.parse(v["variantQuantities"] ?? "{}") as Record<string, number>; } catch { return {}; } })();
+          const itemBasketLabel = (item as any).basketLabel as string | null ?? null;
+          for (const sel of catDef.selectorSchema) {
+            if (!sel.multi) continue;
+            const varieties = (v[sel.key] ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
+            if (varieties.length <= 1) continue;
+            const displayName = catDef.displayName.toLowerCase();
+            for (const variety of varieties) {
+              const name = `${variety} ${displayName}`;
+              if (!existingNames.has(name.toLowerCase().trim())) {
+                const variantQty = persistedVarQties[variety] ?? 1;
+                const r = onAddItem?.(name, variantQty, itemBasketLabel);
+                if (r instanceof Promise) addPromises.push(r);
+                existingNames.add(name.toLowerCase().trim());
+              }
+            }
+            toRemove.push(item.id);
+            break;
           }
         }
 
@@ -1102,29 +1159,6 @@ export default function ShoppingListView({
   }, []);
 
   // ── Cupboard partial-quantity helpers ─────────────────────────────────────
-
-  function confirmHaveSome(item: SLItem) {
-    const needed = item.quantityValue ?? 0;
-    const raw = parseFloat(haveSomeInput);
-    const clamped = isNaN(raw) ? 0 : Math.min(Math.max(0, Math.round(raw * 100) / 100), needed);
-    const ctx = getMergedCtx(item);
-    if (clamped >= needed) {
-      if (onUpdateStatus) onUpdateStatus(item.id, "already_got");
-      else setAtHomeIds(prev => { const s = new Set(prev); s.add(item.id); return s; });
-      setCupboardQty(prev => { const m = new Map(prev); m.delete(item.id); return m; });
-      if (onUpdateCupboardQty) onUpdateCupboardQty(item.id, null, ctx);
-    } else if (clamped > 0) {
-      setCupboardQty(prev => { const m = new Map(prev); m.set(item.id, clamped); return m; });
-      if (onUpdateCupboardQty) onUpdateCupboardQty(item.id, clamped, ctx);
-    }
-    setHaveSomeOpenId(null);
-    setHaveSomeInput("");
-  }
-
-  function cancelHaveSome() {
-    setHaveSomeOpenId(null);
-    setHaveSomeInput("");
-  }
 
   // ── Filtered item list (excludes at-home items once in shopping phase) ────
 
@@ -1862,15 +1896,27 @@ export default function ShoppingListView({
                 <span>Done here</span>
               </Button>
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="h-8 px-2.5 text-xs gap-1.5"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Back to basket</span>
-            </Button>
+            <div className="flex flex-col items-end justify-center gap-0.5 px-1">
+              <button
+                onClick={onClose}
+                className="flex items-center gap-1 text-xs font-medium text-foreground/80 hover:text-foreground transition-colors leading-none"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Back to basket</span>
+              </button>
+              {phase === "shopping" && (
+                <button
+                  onClick={() => {
+                    try { localStorage.setItem("tha-sl-shop-phase", "cupboard_check"); } catch {}
+                    setPhase("cupboard_check");
+                  }}
+                  className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground/60 transition-colors leading-none"
+                >
+                  <ArrowLeft className="h-2.5 w-2.5" />
+                  <span className="hidden sm:inline">Check your cupboards</span>
+                </button>
+              )}
+            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center justify-center h-8 w-8 rounded-md transition-colors text-muted-foreground hover:bg-accent/60 hover:text-foreground">
@@ -2565,147 +2611,134 @@ export default function ShoppingListView({
                   const cupboardCatDef = onVariantChange
                     ? getIngredientDef(item.normalizedName ?? item.productName ?? "")
                     : undefined;
-                  const hasCupboardSelector = !!(cupboardCatDef && cupboardCatDef.selectorSchema.length > 0);
+                  // Resolved items (e.g. "Granny Smith apples", "Pepperoni Thin Crust Pizza")
+                  // already encode a specific variety — suppress selectors for them.
+                  const isResolvedVariant = !!(cupboardCatDef && isResolvedVariantItem(
+                    item.productName ?? item.normalizedName ?? "",
+                    cupboardCatDef,
+                  ));
+                  const hasCupboardSelector = !isResolvedVariant && !!(cupboardCatDef && (cupboardCatDef.selectorSchema.length > 0 || cupboardCatDef.relevantAttributes.length > 0));
                   const cupboardVariantSelections: Record<string, string> = hasCupboardSelector
                     ? (() => { try { return JSON.parse(item.variantSelections ?? "{}") as Record<string, string>; } catch { return {}; } })()
                     : {};
                   const cupboardAttrPreferences: Record<string, boolean> = hasCupboardSelector
                     ? (() => { try { return JSON.parse(item.attributePreferences ?? "{}") as Record<string, boolean>; } catch { return {}; } })()
                     : {};
+
+                  // Detect variant-mode: a multi selector with >1 value selected.
+                  // Excluded: type-flavour pattern items (crisps, pizza) — those use
+                  // the type→flavour split path, not the per-variety row path.
+                  const isTypeFlavourItem = !!(cupboardCatDef &&
+                    cupboardCatDef.selectorSchema.some(s => s.key === "type") &&
+                    cupboardCatDef.selectorSchema.some(s => s.key === "flavour"));
+                  const variantEntries: Array<{ variety: string; displayLabel: string }> = [];
+                  if (cupboardCatDef && !isTypeFlavourItem && !isResolvedVariant) {
+                    for (const sel of cupboardCatDef.selectorSchema) {
+                      if (!sel.multi) continue;
+                      const vals = (cupboardVariantSelections[sel.key] ?? "")
+                        .split(",").map((s: string) => s.trim()).filter(Boolean);
+                      if (vals.length > 1) {
+                        const catDisplayLower = cupboardCatDef.displayName.toLowerCase();
+                        for (const v of vals) {
+                          variantEntries.push({ variety: v, displayLabel: `${v} ${catDisplayLower}` });
+                        }
+                        break;
+                      }
+                    }
+                  }
+                  const isVariantMode = variantEntries.length > 1;
+
                   return (
                     <div
                       key={item.id}
-                      className={`flex items-start gap-3 px-4 py-3 transition-colors duration-100 ${isAtHome ? "bg-primary/[0.04] dark:bg-primary/[0.07]" : ""}`}
+                      className={`px-4 py-2.5 transition-colors duration-100 ${isAtHome ? "bg-primary/[0.04] dark:bg-primary/[0.07]" : ""}`}
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-baseline gap-2 flex-wrap">
-                          <span
-                            className={`font-medium text-[13.5px] leading-snug ${
-                              isAtHome ? "line-through text-muted-foreground/70" : "text-foreground"
-                            }`}
-                          >
-                            {displayName}
-                          </span>
-                          {qty && (
-                            <span className="text-[11.5px] tabular-nums text-muted-foreground/70">{qty}</span>
-                          )}
-                          {isLikelyInStock && !isAtHome && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 border border-amber-200/70 dark:border-amber-700/40">
-                              likely in stock
-                            </span>
-                          )}
-                        </div>
-                        {hasCupboardSelector && cupboardCatDef && !isAtHome && (
-                          <WholeFoodSelector
-                            item={item}
-                            catalogueDef={cupboardCatDef}
-                            variantSelections={cupboardVariantSelections}
-                            attributePreferences={cupboardAttrPreferences}
-                            onVariantChange={(key, value) => onVariantChange!(item.id, key, value)}
-                            onAttributeChange={(key, value) => onAttributeChange?.(item.id, key, value)}
-                          />
+                      {/* Row 1: name (left, flex-1) · qty stepper (right, suppressed in variant-mode) */}
+                      <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                        <span
+                          className={`flex-1 min-w-0 font-medium text-[13.5px] leading-snug truncate ${
+                            isAtHome ? "line-through text-muted-foreground/70" : "text-foreground"
+                          }`}
+                        >
+                          {displayName}
+                        </span>
+
+                        {/* Quantity stepper — suppressed in variant-mode (qty lives inline per variety) */}
+                        {!isVariantMode && (
+                          <div className="flex items-center gap-0.5 flex-shrink-0" data-testid={`cyc-qty-stepper-${item.id}`}>
+                            {!isAtHome && onUpdateItemQty ? (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    const next = Math.max(1, (item.quantityValue ?? 1) - 1);
+                                    setCycQtyDraft(m => { const n = new Map(m); n.delete(item.id); return n; });
+                                    onUpdateItemQty(item.id, next);
+                                  }}
+                                  className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                  aria-label="Decrease quantity"
+                                  data-testid={`cyc-qty-minus-${item.id}`}
+                                >
+                                  <Minus className="h-2.5 w-2.5" />
+                                </button>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  value={cycQtyDraft.get(item.id) ?? String(item.quantityValue ?? 1)}
+                                  onChange={e => {
+                                    const raw = e.target.value;
+                                    setCycQtyDraft(m => { const n = new Map(m); n.set(item.id, raw); return n; });
+                                  }}
+                                  onBlur={e => {
+                                    const parsed = parseInt(e.target.value);
+                                    const clamped = Math.max(1, isNaN(parsed) ? 1 : parsed);
+                                    setCycQtyDraft(m => { const n = new Map(m); n.delete(item.id); return n; });
+                                    if (clamped !== (item.quantityValue ?? 1)) onUpdateItemQty(item.id, clamped);
+                                  }}
+                                  onKeyDown={e => {
+                                    if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                                    if (e.key === "Escape") {
+                                      setCycQtyDraft(m => { const n = new Map(m); n.delete(item.id); return n; });
+                                      (e.target as HTMLInputElement).blur();
+                                    }
+                                  }}
+                                  className="h-5 w-10 text-[11.5px] tabular-nums text-center rounded border border-border/60 bg-background/80 focus:outline-none focus:ring-1 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  data-testid={`cyc-qty-input-${item.id}`}
+                                />
+                                {item.unit && item.unit !== "unit" && (
+                                  <span className="text-[10px] text-muted-foreground/60">{item.unit}</span>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    const next = (item.quantityValue ?? 1) + 1;
+                                    setCycQtyDraft(m => { const n = new Map(m); n.delete(item.id); return n; });
+                                    onUpdateItemQty(item.id, next);
+                                  }}
+                                  className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+                                  aria-label="Increase quantity"
+                                  data-testid={`cyc-qty-plus-${item.id}`}
+                                >
+                                  <Plus className="h-2.5 w-2.5" />
+                                </button>
+                              </>
+                            ) : qty ? (
+                              <span className="text-[11.5px] tabular-nums text-muted-foreground/70">{qty}</span>
+                            ) : null}
+                          </div>
                         )}
                       </div>
-                      {(() => {
-                        const hasSomeAtHome = cupboardQty.has(item.id);
-                        const isInputOpen = haveSomeOpenId === item.id;
-                        const canPartial = item.quantityValue != null && item.quantityValue > 0;
-                        const unitSuffix = item.unit && item.unit !== "unit" ? item.unit : null;
 
-                        if (isAtHome) return (
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className="text-[11px] text-primary/80 font-medium">✓ Have all</span>
-                            <button
-                              onClick={() => onUpdateStatus
-                                ? onUpdateStatus(item.id, "pending")
-                                : setAtHomeIds(prev => { const s = new Set(prev); s.delete(item.id); return s; })
-                              }
-                              className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2"
-                            >
-                              undo
-                            </button>
-                          </div>
-                        );
-
-                        if (isInputOpen) return (
-                          <div className="flex items-center gap-1 flex-shrink-0">
-                            <input
-                              type="number"
-                              autoFocus
-                              min={0}
-                              max={item.quantityValue ?? undefined}
-                              step="any"
-                              value={haveSomeInput}
-                              onChange={e => setHaveSomeInput(e.target.value)}
-                              onKeyDown={e => {
-                                if (e.key === "Enter") confirmHaveSome(item);
-                                if (e.key === "Escape") cancelHaveSome();
-                              }}
-                              className="h-6 w-14 text-[11px] text-center rounded border border-border bg-background/90 focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums"
-                              data-testid={`cupboard-partial-input-${item.id}`}
-                            />
-                            {unitSuffix && <span className="text-[10px] text-muted-foreground">{unitSuffix}</span>}
-                            <button
-                              onClick={() => confirmHaveSome(item)}
-                              className="h-6 w-6 rounded bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors"
-                              data-testid={`cupboard-partial-confirm-${item.id}`}
-                            >
-                              <Check className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={cancelHaveSome}
-                              className="h-6 w-6 rounded border border-border/60 text-muted-foreground flex items-center justify-center hover:bg-muted/50 transition-colors"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        );
-
-                        if (hasSomeAtHome) return (
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className="text-[11px] text-muted-foreground/70 font-medium">
-                              {cupboardQty.get(item.id)}{unitSuffix ? ` ${unitSuffix}` : ""} at home
-                            </span>
-                            <button
-                              onClick={() => {
-                                setCupboardQty(prev => { const m = new Map(prev); m.delete(item.id); return m; });
-                                if (onUpdateCupboardQty) onUpdateCupboardQty(item.id, null, getMergedCtx(item));
-                              }}
-                              className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground underline underline-offset-2"
-                            >
-                              undo
-                            </button>
-                          </div>
-                        );
-
-                        return (
-                          <div className="flex items-center gap-1.5 flex-shrink-0">
-                            <button
-                              onClick={() => {
-                                if (onUpdateStatus) onUpdateStatus(item.id, "already_got");
-                                else setAtHomeIds(prev => { const s = new Set(prev); s.add(item.id); return s; });
-                                if (onUpdateCupboardQty) onUpdateCupboardQty(item.id, null, getMergedCtx(item));
-                              }}
-                              className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/80 hover:bg-muted/50 hover:border-border transition-colors whitespace-nowrap"
-                              data-testid={`cupboard-have-all-${item.id}`}
-                            >
-                              Have all
-                            </button>
-                            {canPartial && (
-                              <button
-                                onClick={() => {
-                                  setHaveSomeOpenId(item.id);
-                                  setHaveSomeInput(String(cupboardQty.get(item.id) ?? ""));
-                                }}
-                                className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/80 hover:bg-muted/50 hover:border-border transition-colors whitespace-nowrap"
-                                data-testid={`cupboard-have-some-${item.id}`}
-                              >
-                                Have some
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })()}
+                      {/* Detail line: variety selectors + inline qty inputs (no child rows) */}
+                      {hasCupboardSelector && cupboardCatDef && !isAtHome && (
+                        <WholeFoodSelector
+                          item={item}
+                          catalogueDef={cupboardCatDef}
+                          variantSelections={cupboardVariantSelections}
+                          attributePreferences={cupboardAttrPreferences}
+                          onVariantChange={(key, value) => onVariantChange!(item.id, key, value)}
+                          onAttributeChange={(key, value) => onAttributeChange?.(item.id, key, value)}
+                          showVariantQty={isVariantMode}
+                        />
+                      )}
                     </div>
                   );
                 })}
