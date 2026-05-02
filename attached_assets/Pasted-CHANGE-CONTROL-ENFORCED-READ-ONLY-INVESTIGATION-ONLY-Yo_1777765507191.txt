@@ -1,0 +1,105 @@
+CHANGE CONTROL: ENFORCED
+READ-ONLY INVESTIGATION ONLY
+
+You are NOT implementing anything.
+You are NOT modifying code.
+You are NOT suggesting refactors unless explicitly asked.
+
+Your task is to READ the codebase and produce clear, plain-English documentation.
+
+GOAL:
+Explain how The Healthy Apples app works in a way that:
+- a non-technical founder understands
+- a new developer can onboard quickly
+- a support person can troubleshoot issues
+
+OUTPUT FORMAT (MANDATORY):
+
+----------------------------------------
+1. APP OVERVIEW (PLAIN ENGLISH)
+----------------------------------------
+- What the app does
+- Who it is for
+- The core user journey from start to finish
+
+----------------------------------------
+2. CORE USER FLOWS
+----------------------------------------
+Explain step-by-step:
+- Creating a list
+- Check Your Cupboards (CYC)
+- Moving to Shop View
+- Basket behaviour
+- Quantity handling (how it works)
+- Category grouping (how items are grouped)
+
+Use simple language. No code terms.
+
+----------------------------------------
+3. HOW THE SYSTEM ACTUALLY WORKS (SIMPLIFIED)
+----------------------------------------
+Explain in plain English:
+- Where data is stored
+- How items are created
+- How quantities are stored and used
+- How categories are assigned
+- How pricing is calculated (at a high level)
+
+Avoid code names unless necessary.
+
+----------------------------------------
+4. KNOWN LIMITATIONS / EDGE CASES
+----------------------------------------
+Identify real issues such as:
+- unit vs quantity behaviour (e.g. ml/g stepping)
+- pricing using pack count vs quantityValue
+- any assumptions in the system
+- any confusing UX behaviour
+
+Be honest and clear.
+
+----------------------------------------
+5. COMMON ISSUES (SUPPORT GUIDE)
+----------------------------------------
+Examples:
+- “My quantity disappeared”
+- “Items are in the wrong category”
+- “Basket doesn’t match shop”
+- “Why does milk increment by 1ml?”
+
+Explain:
+- why it happens
+- what the user sees
+- how to resolve or workaround
+
+----------------------------------------
+6. HOW TO USE THE APP (USER GUIDE)
+----------------------------------------
+Write as if for a real user:
+- step-by-step instructions
+- simple language
+- no technical jargon
+
+----------------------------------------
+7. DEVELOPER QUICK START
+----------------------------------------
+For a new dev:
+- where main logic lives
+- key files/components
+- where to look for:
+  - quantities
+  - categories
+  - basket logic
+  - API routes
+
+----------------------------------------
+RULES
+----------------------------------------
+- DO NOT write code
+- DO NOT suggest improvements unless under a clearly labelled "SUGGESTION" section
+- DO NOT change anything
+- DO NOT guess — if unsure, say "unclear from code"
+- KEEP LANGUAGE SIMPLE AND CLEAR
+
+OUTPUT:
+One structured document following the sections above.
