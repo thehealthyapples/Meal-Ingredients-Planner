@@ -1,0 +1,130 @@
+CHANGE CONTROL: ENFORCED
+RELEASE MATRIX: VERIFIED
+
+You are fixing ONE approved DEV issue only.
+
+APPROVED SCOPE:
+Resolve dual picker inconsistency by removing overlap between ambiguity chooser and catalogue picker.
+
+DO NOT:
+- deploy
+- push
+- change pricing
+- change AI/matching
+- change basket persistence
+- change resolver/category logic
+- rewrite picker systems
+- change UI layout or styling
+- standardise labels
+- run backfills
+- modify existing DB rows
+
+----------------------------------------
+PROBLEM
+----------------------------------------
+
+Items like apples, milk, eggs, pasta exist in BOTH:
+- server ambiguity map (ambiguous_term)
+- client catalogue picker
+
+This causes:
+- ambiguity flags written to DB
+- UI suppression hack hiding chips
+- inconsistent behaviour + dirty data state
+
+----------------------------------------
+APPROVED FIX (MINIMAL)
+----------------------------------------
+
+1. Remove overlap entries from:
+   server/data/ambiguity-map.json
+
+Remove ONLY the known overlapping items:
+
+- apples
+- apple
+- mushrooms
+- mushroom
+- beans
+- lentils
+- chicken
+- fish
+- sausages
+- cheese
+- milk
+- yogurt
+- yoghurt
+- cream
+- eggs
+- bread
+- pasta
+
+2. Remove UI suppression logic in:
+   client/src/components/ShoppingListView.tsx
+
+Specifically:
+- the conditional that hides ambiguity chooser when catalogue selector exists
+- (lines referenced around ~2175 in investigation)
+
+3. DO NOT:
+- modify catalogue picker
+- modify ambiguity chooser behaviour
+- modify resolver logic
+- modify DB writes
+- modify labels
+- modify “Other” handling
+
+----------------------------------------
+DEFINITION OF DONE
+----------------------------------------
+
+- Adding apples → ONLY catalogue picker appears
+- Adding eggs → ONLY catalogue picker appears
+- Adding pasta → ONLY catalogue picker appears
+- Adding berries → ambiguity chooser still appears
+- Adding mince → ambiguity chooser still appears
+- No suppression logic exists
+- No ambiguity flags created for overlap items going forward
+- Existing items remain unchanged
+- Build/typecheck passes
+
+----------------------------------------
+DATA IMPACT DECLARATION
+----------------------------------------
+
+- Reads existing data: no
+- Writes new data: no
+- Changes meaning of existing data: no
+- Requires backfill: no
+- Requires migration: no
+
+----------------------------------------
+TRUST CHECK
+----------------------------------------
+
+- Could this mislead users? No — removes hidden logic
+- Could this fabricate certainty? No
+- If item not in catalogue or ambiguity map? Existing fallback unchanged
+
+----------------------------------------
+SCOPE LOCK
+----------------------------------------
+
+Implement ONLY the overlap removal + suppression removal.
+
+If you detect:
+- existing DB rows still marked ambiguous for these items
+→ list under SUGGESTION only
+
+----------------------------------------
+OUTPUT
+----------------------------------------
+
+- Files changed
+- Exact ambiguity-map entries removed
+- Exact suppression logic removed
+- Before behaviour
+- After behaviour
+- Build/typecheck result
+- Manual test steps
+- Any remaining blockers

@@ -802,23 +802,10 @@ export default function ShoppingListView({
     if (initialPhase) return initialPhase;
     try {
       const savedPhase = localStorage.getItem("tha-sl-shop-phase") as "cupboard_check" | "shopping" | null;
-      if (savedPhase === "shopping") return "shopping"; // defer sig check; items not loaded yet
+      if (savedPhase === "shopping") return "shopping";
     } catch {}
     return "cupboard_check";
   });
-  // Sig guard: once items load, if basket composition changed since saved session drop back to CYC.
-  const phaseRestoredRef = useRef(false);
-  useEffect(() => {
-    if (phaseRestoredRef.current) return;
-    if (items.length === 0) return;
-    phaseRestoredRef.current = true;
-    if (phase !== "shopping") return;
-    const currentSig = items.map(i => i.id).sort((a, b) => a - b).join(",");
-    const savedSig = localStorage.getItem("tha-sl-shop-basket-sig");
-    if (currentSig !== savedSig) {
-      setPhase("cupboard_check");
-    }
-  }, [items, phase]);
   const [atHomeIds, setAtHomeIds] = useState<Set<number>>(new Set());
   const [productIndexMap, setProductIndexMap] = useState<Record<number, number>>({});
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
@@ -880,13 +867,7 @@ export default function ShoppingListView({
   }, [notInShop, items]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem("tha-sl-shop-phase", phase);
-      if (phase === "shopping") {
-        const sig = itemsRef.current.map(i => i.id).sort((a, b) => a - b).join(",");
-        localStorage.setItem("tha-sl-shop-basket-sig", sig);
-      }
-    } catch {}
+    try { localStorage.setItem("tha-sl-shop-phase", phase); } catch {}
   }, [phase]);
 
   // Sync cupboardQty from DB-persisted values when items change.
@@ -2188,15 +2169,7 @@ export default function ShoppingListView({
                   const displayName = capWords(cleanProductName(item.productName, item.quantityValue));
 
                   // ── Unrecognised-item review card ──────────────────────────
-                  // Skip the old ambiguity card when the catalogue already has a
-                  // selector for this ingredient (e.g. apples). The WholeFoodSelector
-                  // rendered in the normal-item path below handles variety picking.
-                  const catalogueDefForReview = (item as any).reviewReason === 'ambiguous_term'
-                    ? getIngredientDef(item.normalizedName ?? item.productName ?? "")
-                    : undefined;
-                  const hasCatalogueSelectorForItem = !!(catalogueDefForReview && catalogueDefForReview.selectorSchema.length > 0);
-
-                  if (item.needsReview && !reviewDismissed.has(item.id) && !hasCatalogueSelectorForItem) {
+                  if (item.needsReview && !reviewDismissed.has(item.id)) {
                     return (
                       <div
                         key={item.id}

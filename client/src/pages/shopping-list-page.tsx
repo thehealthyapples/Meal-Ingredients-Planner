@@ -1602,7 +1602,12 @@ export default function ShoppingListPage() {
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const collapsedInitRef = useRef(false);
   const [viewMode, setViewMode] = useState<"basket" | "shop">(() => {
-    try { return new URLSearchParams(window.location.search).get("shopMode") === "1" ? "shop" : "basket"; } catch { return "basket"; }
+    try {
+      if (new URLSearchParams(window.location.search).get("shopMode") === "1") return "shop";
+      const saved = localStorage.getItem("tha-sl-view-mode") as "basket" | "shop" | null;
+      if (saved === "shop" || saved === "basket") return saved;
+    } catch {}
+    return "basket";
   });
   // True once the user has navigated away from ShoppingListView back to basket —
   // used to show the "← Check your cupboards" back link.
@@ -1614,6 +1619,9 @@ export default function ShoppingListPage() {
     setRankMode(mode);
     try { sessionStorage.setItem("tha-sl-rank-mode", mode); } catch {}
   }
+  useEffect(() => {
+    try { localStorage.setItem("tha-sl-view-mode", viewMode); } catch {}
+  }, [viewMode]);
   const prevExtrasLenRef = useRef(0);
 
   const toggleNeededThisWeek = (id: number) => {
