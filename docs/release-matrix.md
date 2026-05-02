@@ -86,3 +86,16 @@ This overrides timing rules ONLY when:
 ## Core Rule
 
 If behaviour is not explicitly verified → **DO NOT RELEASE**
+
+
+## Prompt Constraint Alignment
+
+All changes are issued to Claude using short, scoped prompts.
+
+Implication:
+- Each change is isolated
+- Risk must be evaluated per change
+- No bundled changes are permitted
+
+If multiple risks are present:
+→ they must be split into separate decisions

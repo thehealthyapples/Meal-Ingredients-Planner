@@ -2,6 +2,32 @@
 
 ### 🔍 Release Classification (MANDATORY)
 
+## Execution Rules (Strict)
+
+Claude operates under constrained prompts.
+
+This means:
+- Claude must NOT infer intent beyond explicit instructions
+- Claude must NOT assume behaviour is "probably correct"
+- Claude must validate using:
+  - actual code
+  - actual data
+  - actual runtime behaviour
+  - actual API responses where applicable
+
+If something is unclear:
+→ STOP and report
+
+Never:
+- fabricate certainty
+- skip verification
+- rely on assumptions
+
+All release decisions must be:
+- proven
+- verified
+- reproducible
+
 Before proceeding, the following MUST be declared:
 
 - RISK LEVEL:

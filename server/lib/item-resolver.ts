@@ -123,6 +123,30 @@ function detectModifierCategory(productName: string): string | null {
   return null;
 }
 
+// ── Shared category resolution helper ────────────────────────────────────────
+// Precedence: canonical → modifier → caller → keyword-detected → "other"
+// callerCategory values of null, 'uncategorised', and 'other' are not trusted
+// (they represent missing data or a previously failed resolution).
+
+export function resolveCategory(
+  canonical: CanonicalEntry | null,
+  modifierCategory: string | null,
+  callerCategory: string | null | undefined,
+  normalizedName: string,
+): string {
+  if (canonical?.category) return canonical.category;
+  if (modifierCategory) return modifierCategory;
+  if (
+    callerCategory != null &&
+    callerCategory !== 'uncategorised' &&
+    callerCategory !== 'other'
+  ) {
+    return callerCategory;
+  }
+  const kw = detectIngredientCategory(normalizedName);
+  return UNCERTAIN_CATEGORIES.has(kw) ? 'other' : kw;
+}
+
 // ── Main resolver ─────────────────────────────────────────────────────────────
 
 export interface ResolveOptions {
@@ -157,7 +181,7 @@ export function resolveItem(rawText: string, options: ResolveOptions = {}): Reso
       productName,
       normalizedName,
       canonicalName: canonical?.canonicalName ?? null,
-      category: canonical?.category ?? modCat ?? options.callerCategory ?? 'other',
+      category: resolveCategory(canonical, modCat, options.callerCategory, normalizedName),
       subcategory: canonical?.subcategory ?? null,
       resolutionState: 'needs_review',
       reviewReason: 'ambiguous_term',
@@ -220,12 +244,7 @@ export function resolveItem(rawText: string, options: ResolveOptions = {}): Reso
   // perpetuate the weak assignment.  This is essential for the rename flow — editing
   // "mixed veg" → "frozen mixed veg" must not inherit the old 'other' category.
   const modifierCategory = detectModifierCategory(productName);
-  const detectedCategory =
-    options.callerCategory != null &&
-    options.callerCategory !== 'uncategorised' &&
-    options.callerCategory !== 'other'
-      ? options.callerCategory
-      : modifierCategory ?? detectIngredientCategory(normalizedName);
+  const detectedCategory = resolveCategory(null, modifierCategory, options.callerCategory, normalizedName);
 
   if (UNCERTAIN_CATEGORIES.has(detectedCategory)) {
     return {

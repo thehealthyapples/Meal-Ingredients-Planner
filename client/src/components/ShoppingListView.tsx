@@ -500,6 +500,15 @@ const SHOPPING_CATS = [
     printHeaderBg: "#f8f5f1",
   },
   {
+    key: "drinks",
+    label: "Drinks",
+    emoji: "🥤",
+    tabAccent: "#2a7a6b",
+    panelHeaderBg: "rgba(42,122,107,0.06)",
+    panelBorderColor: "#2a7a6b26",
+    printHeaderBg: "#eef8f6",
+  },
+  {
     key: "frozen",
     label: "Frozen",
     emoji: "❄️",
@@ -628,6 +637,7 @@ function getItemCatKey(category: string | null | undefined, name: string): strin
     if (BAKERY_WORDS.some(w => lowerName.includes(w))) return "bakery";
     return "pantry";
   }
+  if (raw === "drinks") return "drinks";
   if (["oils", "condiments", "nuts", "legumes", "tinned", "pantry", "spices", "ready_meals", "snacks"].includes(raw))
     return "pantry";
 
@@ -658,6 +668,7 @@ function getExtraCatKey(category: string): string {
   if (category === "dairy" || category === "eggs") return "dairy";
   if (category === "produce") return "produce";
   if (category === "bakery") return "bakery";
+  if (category === "drinks") return "drinks";
   return "pantry";
 }
 
@@ -682,7 +693,8 @@ function fmtQty(
     }
     return gramsVal >= 453 ? `${+(gramsVal / 453.592).toFixed(1)} lb` : `${+(gramsVal / 28.35).toFixed(1)} oz`;
   }
-  if (value == null || !unit) return "";
+  if (value == null) return "";
+  if (!unit) return String(value % 1 === 0 ? value : value.toFixed(1));
   if (unit === "unit") return value === 1 ? "1" : String(value);
   return `${value % 1 === 0 ? value : value.toFixed(1)} ${unit}`;
 }
@@ -790,15 +802,23 @@ export default function ShoppingListView({
     if (initialPhase) return initialPhase;
     try {
       const savedPhase = localStorage.getItem("tha-sl-shop-phase") as "cupboard_check" | "shopping" | null;
-      if (savedPhase === "shopping") {
-        const currentSig = items.map(i => i.id).sort((a, b) => a - b).join(",");
-        const savedSig = localStorage.getItem("tha-sl-shop-basket-sig");
-        // Only restore shopping phase if the basket composition matches the saved session
-        if (currentSig.length > 0 && currentSig === savedSig) return "shopping";
-      }
+      if (savedPhase === "shopping") return "shopping"; // defer sig check; items not loaded yet
     } catch {}
     return "cupboard_check";
   });
+  // Sig guard: once items load, if basket composition changed since saved session drop back to CYC.
+  const phaseRestoredRef = useRef(false);
+  useEffect(() => {
+    if (phaseRestoredRef.current) return;
+    if (items.length === 0) return;
+    phaseRestoredRef.current = true;
+    if (phase !== "shopping") return;
+    const currentSig = items.map(i => i.id).sort((a, b) => a - b).join(",");
+    const savedSig = localStorage.getItem("tha-sl-shop-basket-sig");
+    if (currentSig !== savedSig) {
+      setPhase("cupboard_check");
+    }
+  }, [items, phase]);
   const [atHomeIds, setAtHomeIds] = useState<Set<number>>(new Set());
   const [productIndexMap, setProductIndexMap] = useState<Record<number, number>>({});
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
@@ -3009,7 +3029,7 @@ export default function ShoppingListView({
             {/* Scrollable items — sections flow in normal document order, no sticky inside */}
             <div
               ref={itemsScrollRef}
-              className="flex-1 overflow-y-auto"
+              className="flex-1 min-h-0 overflow-y-auto"
               style={{ background: "hsl(var(--card) / 0.30)" }}
             >
               {groupedCategories.map((cat, catIndex) => {

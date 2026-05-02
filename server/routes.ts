@@ -31,6 +31,7 @@ import { sanitizeUser } from "./lib/sanitizeUser";
 import { classifyAndEnrich, lookupClassification, updateClassification, applyClassificationToItems } from "./lib/classification-store";
 import { runBackfill } from "./lib/backfill-classifier";
 import { runCategoryNormalisation } from "./lib/normalise-categories";
+import { runAmbiguousCategoryBackfill } from "./lib/backfill-ambiguous-categories";
 import { isAdmin, hasPremiumAccess, assertAdmin } from "./lib/access";
 import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/retailIntelligence";
 import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
@@ -7919,6 +7920,19 @@ Generate a complete recipe using these as the foundation.`;
     } catch (err) {
       console.error('[Admin/Normalise] error:', err);
       res.status(500).json({ message: 'Normalisation failed', error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  app.post('/api/admin/backfill-ambiguous-categories', (req, res, next) => next(), async (req, res) => {
+    try {
+      const dryRun = req.body.dryRun === true;
+      const triggerUserId = req.user?.id ?? 0;
+      console.log(`[Admin] Ambiguous category backfill triggered — dryRun=${dryRun} by userId=${triggerUserId}`);
+      const result = await runAmbiguousCategoryBackfill({ dryRun });
+      res.json(result);
+    } catch (err) {
+      console.error('[Admin/AmbiguousBackfill] error:', err);
+      res.status(500).json({ message: 'Backfill failed', error: err instanceof Error ? err.message : String(err) });
     }
   });
 

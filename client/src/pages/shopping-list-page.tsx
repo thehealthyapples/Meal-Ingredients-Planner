@@ -122,7 +122,8 @@ function formatQty(val: number | null, unit: string | null, pref: 'metric' | 'im
       return { qty: (gramsVal / 28.3495).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'oz' };
     }
   }
-  if (val === null || val === undefined || !unit) return { qty: '-', unitLabel: '-' };
+  if (val === null || val === undefined) return { qty: '-', unitLabel: '-' };
+  if (!unit) return { qty: val % 1 === 0 ? val.toString() : val.toFixed(1), unitLabel: '' };
   if (unit === 'unit' && val === 1) return { qty: '1', unitLabel: '' };
   if (pref === 'metric') {
     if (unit === 'g') {
@@ -173,7 +174,7 @@ const CATEGORY_ICONS: Record<string, typeof Beef> = {
 };
 
 const BASKET_DISPLAY_CATEGORIES = [
-  'produce', 'dairy', 'eggs', 'meat', 'fish', 'bakery', 'pantry', 'other',
+  'produce', 'dairy', 'eggs', 'meat', 'fish', 'bakery', 'pantry', 'drinks', 'other',
 ];
 
 const HOUSEHOLD_SUBCATEGORIES: Array<{ key: string; label: string; keywords: string[] }> = [
@@ -240,6 +241,7 @@ const BASKET_CATEGORY_MAP: Record<string, string> = {
   frozen: 'pantry',      // basket view has no frozen tab; frozen goods sit alongside pantry
   pantry: 'pantry',      // explicit DB value 'pantry' (e.g. potatoes) → pantry tab
   ready_meals: 'pantry', // soups/stews align with pantry in basket planning view
+  drinks: 'drinks',
 };
 
 const FRESH_HERB_NAMES = new Set([

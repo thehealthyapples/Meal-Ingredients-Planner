@@ -284,6 +284,12 @@ const INGREDIENT_CATEGORIES: Record<string, string[]> = {
   nuts: ['almond', 'walnut', 'cashew', 'pecan', 'pistachio', 'peanut', 'hazelnut', 'macadamia', 'pine nut', 'brazil nut', 'chestnut', 'sesame seed', 'sunflower seed', 'pumpkin seed', 'flaxseed', 'chia seed'],
   legumes: ['lentil', 'chickpea', 'kidney bean', 'black bean', 'cannellini', 'butter bean', 'haricot', 'edamame', 'tofu', 'tempeh'],
   tinned: ['tinned', 'canned', 'tin of', 'can of'],
+  drinks: [
+    'beer', 'lager', 'ale', 'stout', 'porter', 'cider',
+    'wine', 'prosecco', 'champagne', 'spirit',
+    'whisky', 'whiskey', 'vodka', 'rum', 'gin', 'bourbon', 'brandy',
+    'juice', 'lemonade', 'cola', 'coke',
+  ],
 };
 
 export function detectIngredientCategory(name: string): string {

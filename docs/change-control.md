@@ -105,3 +105,29 @@ For 🔴 production changes only, require rollback thinking before release:
 No behaviour is implemented without explicit approval.
 
 If unclear, STOP and ask.
+
+## Prompt Discipline (Claude Execution Model)
+
+Claude does NOT receive full system context in each prompt.
+
+All tasks are issued as SHORT, SINGLE-PURPOSE prompts.
+
+Rules:
+- One task per prompt
+- No multi-part instructions
+- No "also fix" or bundled changes
+- No large context unless strictly required
+
+Claude must:
+- Identify ONE root cause
+- Propose ONE minimal fix
+- Stay within scope
+
+Claude must NOT:
+- Scan the entire codebase unless explicitly instructed in the task
+- Redesign systems
+- Infer behaviour beyond the task
+- Make multiple changes in one step
+
+If the task is unclear:
+→ STOP and request clarification
