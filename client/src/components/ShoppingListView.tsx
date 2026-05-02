@@ -703,13 +703,6 @@ function capWords(s: string) {
   return s.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-/** Returns a sensible CYC step size based on the item's unit. */
-function cycStepSize(unit: string | null | undefined): number {
-  if (unit === "ml") return 100;
-  if (unit === "g") return 50;
-  return 1;
-}
-
 // ── State chip control ─────────────────────────────────────────────────────
 
 const STATE_CHIPS: Array<{ value: ShopState; label: string; activeClass: string }> = [
@@ -2670,8 +2663,7 @@ export default function ShoppingListView({
                               <>
                                 <button
                                   onClick={() => {
-                                    const step = cycStepSize(item.unit);
-                                    const next = Math.max(1, (item.quantityValue ?? 1) - step);
+                                    const next = Math.max(1, (item.quantityValue ?? 1) - 1);
                                     setCycQtyDraft(m => { const n = new Map(m); n.delete(item.id); return n; });
                                     onUpdateItemQty(item.id, next);
                                   }}
@@ -2690,7 +2682,7 @@ export default function ShoppingListView({
                                     setCycQtyDraft(m => { const n = new Map(m); n.set(item.id, raw); return n; });
                                   }}
                                   onBlur={e => {
-                                    const parsed = parseFloat(e.target.value);
+                                    const parsed = parseInt(e.target.value);
                                     const clamped = Math.max(1, isNaN(parsed) ? 1 : parsed);
                                     setCycQtyDraft(m => { const n = new Map(m); n.delete(item.id); return n; });
                                     if (clamped !== (item.quantityValue ?? 1)) onUpdateItemQty(item.id, clamped);
@@ -2710,8 +2702,7 @@ export default function ShoppingListView({
                                 )}
                                 <button
                                   onClick={() => {
-                                    const step = cycStepSize(item.unit);
-                                    const next = (item.quantityValue ?? 1) + step;
+                                    const next = (item.quantityValue ?? 1) + 1;
                                     setCycQtyDraft(m => { const n = new Map(m); n.delete(item.id); return n; });
                                     onUpdateItemQty(item.id, next);
                                   }}
