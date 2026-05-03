@@ -25,6 +25,7 @@ import { cleanProductName } from "@/lib/unit-display";
 import { isWholeFood } from "@/lib/basket-item-classifier";
 import { getIngredientDef, isResolvedVariantItem } from "@/lib/ingredient-catalogue";
 import WholeFoodSelector from "@/components/whole-food-selector";
+import { SpellSuggestions } from "@/components/SpellSuggestions";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -1591,38 +1592,45 @@ export default function ShoppingListView({
 
           {/* Inline rename input */}
           {isEditing ? (
-            <div className="tha-print-hide flex items-center gap-1.5 mt-1.5">
-              <input
-                autoFocus
-                value={editValue}
-                onChange={e => setEditValue(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === "Enter") {
+            <div className="tha-print-hide flex flex-col gap-1 mt-1.5">
+              <div className="flex items-center gap-1.5">
+                <input
+                  autoFocus
+                  value={editValue}
+                  onChange={e => setEditValue(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter") {
+                      const trimmed = editValue.trim();
+                      if (trimmed && onRenameItem) onRenameItem(item.id, trimmed);
+                      setEditingItemId(null);
+                    }
+                    if (e.key === "Escape") setEditingItemId(null);
+                  }}
+                  className="flex-1 h-6 text-[11px] rounded-md border border-primary/40 bg-background px-2 focus:outline-none focus:ring-1 focus:ring-primary/40"
+                  placeholder="Refine item name…"
+                />
+                <button
+                  onClick={() => {
                     const trimmed = editValue.trim();
                     if (trimmed && onRenameItem) onRenameItem(item.id, trimmed);
                     setEditingItemId(null);
-                  }
-                  if (e.key === "Escape") setEditingItemId(null);
-                }}
-                className="flex-1 h-6 text-[11px] rounded-md border border-primary/40 bg-background px-2 focus:outline-none focus:ring-1 focus:ring-primary/40"
-                placeholder="Refine item name…"
+                  }}
+                  className="h-6 w-6 flex items-center justify-center rounded bg-primary text-primary-foreground"
+                >
+                  <Check className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={() => setEditingItemId(null)}
+                  className="h-6 w-6 flex items-center justify-center rounded border border-border text-muted-foreground"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+              <SpellSuggestions
+                term={editValue}
+                onPick={(word) => setEditValue(word)}
+                testIdPrefix={`edit-item-${item.id}`}
               />
-              <button
-                onClick={() => {
-                  const trimmed = editValue.trim();
-                  if (trimmed && onRenameItem) onRenameItem(item.id, trimmed);
-                  setEditingItemId(null);
-                }}
-                className="h-6 w-6 flex items-center justify-center rounded bg-primary text-primary-foreground"
-              >
-                <Check className="h-3 w-3" />
-              </button>
-              <button
-                onClick={() => setEditingItemId(null)}
-                className="h-6 w-6 flex items-center justify-center rounded border border-border text-muted-foreground"
-              >
-                <X className="h-3 w-3" />
-              </button>
             </div>
           ) : (
             <>

@@ -1,0 +1,168 @@
+We are implementing ONE approved change only:
+
+Add top-3 safe spelling suggestions in the edit flow for ⚠ Review items
+
+----------------------------------------
+GOAL
+----------------------------------------
+
+Help users fix items faster WITHOUT:
+- auto-correcting
+- guessing
+- changing existing behaviour
+
+User must remain in control.
+
+----------------------------------------
+SCOPE
+----------------------------------------
+
+When user taps ⚠ Review → edit opens:
+
+- show up to 3 suggested corrections
+- based on existing dictionary + similarity logic
+- user can tap to apply suggestion
+
+DO NOT:
+- auto-apply suggestions
+- use AI
+- change classification or matching logic
+- persist anything until user saves
+
+----------------------------------------
+SOURCE OF SUGGESTIONS
+----------------------------------------
+
+Reuse existing:
+
+- SPELLFIX_DICTIONARY
+- similarity function (Levenshtein-based)
+
+----------------------------------------
+SUGGESTION RULES
+----------------------------------------
+
+1. Generate candidates from dictionary
+2. Score similarity to input
+3. Sort descending by similarity
+
+4. Only include suggestions where:
+   - similarity ≥ 0.75 (slightly lower than auto-correct threshold)
+   - different from original input
+
+5. Return top 3 results
+
+6. If no candidates meet threshold:
+   → show NO suggestions
+
+----------------------------------------
+IMPORTANT DISTINCTION
+----------------------------------------
+
+Auto-correct threshold: 0.85 (unchanged)
+
+Suggestion threshold: 0.75
+
+Reason:
+- suggestions can be broader (user decides)
+- system still does not guess automatically
+
+----------------------------------------
+UI BEHAVIOUR
+----------------------------------------
+
+Inside edit panel:
+
+- show suggestions below input field
+
+Example:
+
+Did you mean:
+[ chocolate ] [ chocolates ] [ cocoa ]
+
+Each suggestion:
+- clickable
+- replaces input value immediately
+- does NOT auto-save
+
+----------------------------------------
+INTERACTION RULES
+----------------------------------------
+
+- user taps suggestion → input field updates
+- user must still press save to apply
+
+----------------------------------------
+DEFINITION OF DONE
+----------------------------------------
+
+Success:
+
+- ⚠ Review → edit → suggestions visible
+- suggestions relevant and limited to 3
+- tapping suggestion updates input
+- no auto-save
+- no change to existing flows
+
+Must NOT break:
+
+- edit behaviour
+- classification pipeline
+- matching
+- pricing
+- totals
+- ⚠ Review logic
+
+----------------------------------------
+DATA IMPACT
+----------------------------------------
+
+- Reads existing data: yes (dictionary)
+- Writes new data: no (until user saves)
+- Changes meaning: no
+- Requires backfill: no
+
+----------------------------------------
+TRUST CHECK
+----------------------------------------
+
+- Are we guessing? → NO (user selects)
+- Are suggestions safe? → YES (dictionary + similarity)
+- Can user ignore? → YES
+
+----------------------------------------
+MANUAL TESTS
+----------------------------------------
+
+1. "choalaote"
+→ suggestions appear (e.g. chocolate)
+→ user taps → input updates
+
+2. "boorboans"
+→ suggestions (bourbon, biscuits etc if in dict)
+
+3. "skampee"
+→ likely no suggestions → correct behaviour
+
+4. "milk"
+→ no suggestions needed
+
+----------------------------------------
+OUTPUT REQUIRED
+----------------------------------------
+
+- files changed
+- suggestion logic summary
+- threshold used
+- UI placement
+- manual test results
+- edge cases
+
+----------------------------------------
+SCOPE LOCK
+----------------------------------------
+
+Only implement:
+- suggestion display + interaction
+
+Anything else → SUGGESTION only

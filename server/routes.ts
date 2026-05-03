@@ -20,7 +20,7 @@ import { generateSmartSuggestion, type SmartSuggestSettings, type LockedEntry } 
 import { searchAllRecipes, searchJamieOliver, searchSeriousEats, searchEdamam, searchApiNinjas, searchBigOven, searchFatSecret, type ExternalMealCandidate } from "./lib/external-meal-service";
 import { seedSourceSettings, isSourceCallable, getSourceKeyForUrl, logAuditEvent, getAllSourceSettings, updateSourceSettings, getAuditLogs } from "./lib/recipe-source-gate";
 import { shouldExcludeRecipe, scoreRecipeForDiet } from "./lib/dietRules";
-import { expandSearchQuery, correctFoodSpelling, conservativeSpellCorrect } from "@shared/food-synonyms";
+import { expandSearchQuery, correctFoodSpelling, conservativeSpellCorrect, suggestSpellings } from "@shared/food-synonyms";
 import { parseIngredient as parseIngredientShared } from "@shared/parse-ingredient";
 import { INGREDIENT_TAXONOMY } from "@shared/ingredient-taxonomy";
 import { normalizeIngredientKey } from "@shared/normalize";
@@ -3804,6 +3804,30 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
     await storage.removeShoppingListItem(Number(req.params.id));
     res.sendStatus(204);
+  });
+
+  // Top-N spelling suggestions for the manual ⚠ Review edit flow.
+  // Read-only; never auto-applies. Uses the same SPELLFIX_DICTIONARY as the
+  // import-time conservative correction, but with a lower similarity threshold
+  // (0.75) so the user sees plausible candidates and decides for themselves.
+  app.get(api.shoppingList.suggestSpellings.path, (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const term = String(req.query.term ?? '').trim();
+    if (!term) return res.json({ suggestions: [] });
+
+    // Suggest per-word; merge results so multi-word inputs ("brocoli rabe")
+    // still surface candidates for each word. Cap at 3 overall.
+    const seen = new Set<string>();
+    const merged: { word: string; similarity: number }[] = [];
+    for (const w of term.toLowerCase().split(/\s+/).filter(Boolean)) {
+      for (const s of suggestSpellings(w, SPELLFIX_DICTIONARY, 3)) {
+        if (seen.has(s.word)) continue;
+        seen.add(s.word);
+        merged.push(s);
+      }
+    }
+    merged.sort((a, b) => b.similarity - a.similarity || a.word.localeCompare(b.word));
+    res.json({ suggestions: merged.slice(0, 3) });
   });
 
   app.post(api.shoppingList.autoSmp.path, async (req, res) => {

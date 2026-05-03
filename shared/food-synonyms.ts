@@ -371,6 +371,50 @@ export function conservativeSpellCorrect(
 }
 
 // ---------------------------------------------------------------------------
+// Spelling suggestions (top-N) for the manual ⚠ Review edit flow.
+//
+// Broader than `conservativeSpellCorrect` — uses a lower threshold so the
+// user sees plausible candidates, but still NEVER auto-applies.
+// ---------------------------------------------------------------------------
+export const SUGGESTION_THRESHOLD = 0.75;
+export const SUGGESTION_MIN_LEN   = 4;
+export const MAX_SUGGESTIONS      = 3;
+
+export interface SpellSuggestion {
+  word:       string;
+  similarity: number;
+}
+
+/**
+ * Return up to `max` distinct dictionary words similar to `term`,
+ * sorted by similarity DESC. Empty array if none meet the threshold,
+ * if the input is too short, or if the input is already a known word.
+ */
+export function suggestSpellings(
+  term: string,
+  extraDictionary?: Iterable<string>,
+  max: number = MAX_SUGGESTIONS,
+): SpellSuggestion[] {
+  const t = (term ?? '').toLowerCase().trim();
+  if (t.length < SUGGESTION_MIN_LEN) return [];
+
+  const dict = extraDictionary ? buildConservativeDictionary(extraDictionary) : DEFAULT_CONSERVATIVE_DICT;
+
+  // If the input already exists in the dictionary, no suggestions are useful.
+  if (dict.has(t) || SYNONYM_LOOKUP.has(t)) return [];
+
+  const scored: SpellSuggestion[] = [];
+  dict.forEach((word) => {
+    if (word === t) return;
+    const s = similarity(t, word);
+    if (s >= SUGGESTION_THRESHOLD) scored.push({ word, similarity: s });
+  });
+
+  scored.sort((a, b) => b.similarity - a.similarity || a.word.localeCompare(b.word));
+  return scored.slice(0, Math.max(0, max));
+}
+
+// ---------------------------------------------------------------------------
 // Query expansion
 // Returns all candidate search strings: corrected form + all synonyms
 // ---------------------------------------------------------------------------

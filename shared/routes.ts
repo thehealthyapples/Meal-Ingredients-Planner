@@ -218,6 +218,10 @@ export const api = {
       method: 'POST' as const,
       path: '/api/shopping-list/auto-smp' as const,
     },
+    suggestSpellings: {
+      method: 'GET' as const,
+      path: '/api/shopping-list/suggest-spellings' as const,
+    },
   },
   priceTier: {
     update: {

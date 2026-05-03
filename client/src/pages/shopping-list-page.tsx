@@ -54,6 +54,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
+import { SpellSuggestions } from "@/components/SpellSuggestions";
 import { useToast } from "@/hooks/use-toast";
 import { api, buildUrl } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
@@ -2989,10 +2990,17 @@ export default function ShoppingListPage() {
                                   >
                                     <td className="px-1.5 py-1 sticky left-0 z-10">
                                       {isEditing && editState?.field === 'productName' ? (
-                                        <div className="flex items-center gap-1">
-                                          <Input value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-6 text-xs" autoFocus data-testid={`input-edit-name-${item.id}`} />
-                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit} data-testid={`button-save-edit-${item.id}`}><Check className="h-3 w-3" /></Button>
-                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
+                                        <div className="flex flex-col gap-1">
+                                          <div className="flex items-center gap-1">
+                                            <Input value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-6 text-xs" autoFocus data-testid={`input-edit-name-${item.id}`} />
+                                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit} data-testid={`button-save-edit-${item.id}`}><Check className="h-3 w-3" /></Button>
+                                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
+                                          </div>
+                                          <SpellSuggestions
+                                            term={editState.value}
+                                            onPick={(word) => setEditState({ ...editState, value: word })}
+                                            testIdPrefix={`edit-item-${item.id}`}
+                                          />
                                         </div>
                                       ) : (
                                         <div className="flex items-center justify-between gap-3">
