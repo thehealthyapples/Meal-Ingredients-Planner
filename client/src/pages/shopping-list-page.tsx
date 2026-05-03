@@ -2998,6 +2998,19 @@ export default function ShoppingListPage() {
                                         <div className="flex items-center justify-between gap-3">
                                           <div className="flex items-center gap-1 flex-wrap min-w-0 flex-1">
                                           <span className="font-medium text-foreground cursor-pointer" onClick={() => startEdit(item.id, 'productName', item.productName)} data-testid={`text-item-name-${item.id}`}>{capitalizeWords(cleanProductName(item.productName, item.quantityValue))}</span>
+                                          {/* Match-status signal: shown after a price-matching pass when this
+                                              item has no real ProductMatch (covers unmatched and estimate-only).
+                                              Purely visual, non-blocking, no tooltip. Distinct from the
+                                              parser-driven `item.needsReview` "Check item" badge below. */}
+                                          {hasPrices && !allPriceMatches.some(m => m.shoppingListItemId === item.id && m.price !== null && m.price !== undefined) && (
+                                            <span
+                                              className="inline-flex items-center gap-0.5 text-[10.5px] font-medium text-amber-600 dark:text-amber-400"
+                                              data-testid={`signal-review-${item.id}`}
+                                            >
+                                              <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                                              Review
+                                            </span>
+                                          )}
                                           {item.quantity > 1 && <Badge variant="secondary" className="text-[10px]" data-testid={`badge-quantity-${item.id}`}>x{item.quantity}</Badge>}
                                           {mergedCount > 1 && <Badge variant="outline" className="text-[10px] text-blue-500 dark:text-blue-400 border-blue-300 dark:border-blue-600" data-testid={`badge-merged-${item.id}`}>×{mergedCount}</Badge>}
                                           {sources.some(s => frozenMealIds.has(s.mealId)) && (

@@ -1,0 +1,141 @@
+We are implementing ONE approved change only:
+
+Add a lightweight "Needs review" signal for unresolved items
+
+----------------------------------------
+SCOPE
+----------------------------------------
+
+- Add a subtle visual indicator for items that need user attention
+- Use:
+  ⚠ icon + "Review"
+
+- Apply ONLY to items that:
+  - have NO real product match
+
+DO NOT:
+- Block user actions
+- Force resolution
+- Change pricing logic
+- Change matching logic
+- Change totals
+- Add new states or DB fields
+
+----------------------------------------
+DISPLAY RULES (CRITICAL)
+----------------------------------------
+
+Show "⚠ Review" ONLY when:
+
+- Item has NO real ProductMatch
+- AND item is not fully resolved
+
+This includes:
+- unmatched items
+- estimate-only items (~£X)
+
+Do NOT show when:
+- item has real product + real price
+
+----------------------------------------
+UI PLACEMENT
+----------------------------------------
+
+- Place directly under the item name
+OR
+- inline right of item name (if cleaner)
+
+Style:
+- small text
+- muted colour (amber / warning tone)
+- icon + text together
+
+Must be:
+- consistent across all items
+- responsive (mobile safe)
+- not visually dominant
+
+----------------------------------------
+BEHAVIOUR
+----------------------------------------
+
+- purely visual (no click required)
+- no tooltip required
+- no hover dependency
+
+----------------------------------------
+DEFINITION OF DONE
+----------------------------------------
+
+Success:
+- All unresolved items show ⚠ Review
+- Real matched items show nothing
+- Mixed baskets clearly distinguish resolved vs unresolved
+- No disruption to existing flows
+
+Must NOT break:
+- ~£ estimate display
+- Basket total incl. estimates
+- Comparison label
+- Matching logic
+- Rendering performance
+
+----------------------------------------
+DATA IMPACT
+----------------------------------------
+
+- Reads existing data: yes (match presence)
+- Writes new data: no
+- Changes meaning of existing data: no
+- Requires backfill: no
+
+----------------------------------------
+TRUST CHECK
+----------------------------------------
+
+- Is user aware item needs attention? → YES
+- Is anything misleading? → NO
+- Are we blocking user unnecessarily? → NO
+
+----------------------------------------
+MANUAL TESTS
+----------------------------------------
+
+1. Skampee
+→ ⚠ Review visible
+→ no price
+
+2. Broccoli (~£)
+→ ⚠ Review visible
+→ ~£ shown
+
+3. Tahini (£ real)
+→ NO ⚠ Review
+
+4. Mixed basket
+→ clear distinction between items
+
+5. All resolved
+→ no ⚠ Review anywhere
+
+----------------------------------------
+OUTPUT REQUIRED
+----------------------------------------
+
+- files changed
+- UI placement description
+- logic condition used
+- confirmation no behaviour changes
+- data impact declaration
+- trust check
+- manual test results
+- edge cases
+
+----------------------------------------
+SCOPE LOCK
+----------------------------------------
+
+Only implement:
+- visual "⚠ Review" signal
+
+Anything else → SUGGESTION only

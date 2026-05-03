@@ -1532,6 +1532,19 @@ export default function ShoppingListView({
                 {qty}
               </span>
             )}
+            {/* Match-status signal: surfaced whenever an active item has no real
+                ProductMatch attached (covers both unmatched and estimate-only).
+                Purely visual, non-blocking, no tooltip. Distinct from the
+                parser-driven `item.needsReview` "Check item" badge. */}
+            {state === "need" && !resolvedMatch && (
+              <span
+                className="inline-flex items-center gap-0.5 text-[10.5px] font-medium text-amber-600 dark:text-amber-400"
+                data-testid={`signal-review-${item.id}`}
+              >
+                <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                Review
+              </span>
+            )}
             {listFilter !== undefined && (() => {
               const labels: (string | null)[] = (item as any)._allBasketLabels ?? [item.basketLabel ?? null];
               const hasPlanned = labels.some(l => !l?.startsWith("quick_list_"));
