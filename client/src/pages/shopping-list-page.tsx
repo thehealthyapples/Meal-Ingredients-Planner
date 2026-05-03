@@ -58,6 +58,7 @@ import { useToast } from "@/hooks/use-toast";
 import { api, buildUrl } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { normalizeIngredientKey } from "@shared/normalize";
+import { estimateFallbackPrice } from "@shared/price-estimates";
 import { formatItemDisplay, cleanProductName } from "@/lib/unit-display";
 import ScoreBadge from "@/components/ui/score-badge";
 import AppleRating from "@/components/AppleRating";
@@ -2162,27 +2163,52 @@ export default function ShoppingListPage() {
     );
   }, [totalCostData, selectedRetailers]);
 
-  const clientBestTotal = useMemo(() => {
-    if (!hasPrices || displayItems.length === 0) return null;
-    let total = 0;
+  // Sum of estimated (~£X) prices for items with NO real match anywhere in the
+  // selected retailers but with a recognised category.  Trust-layer rule:
+  // estimates are price-only, never persisted, never attached to a product.
+  // Used to top up the visible basket total so the figure reflects every item
+  // the user can see in the list.
+  const estimatedExtra = useMemo(() => {
+    if (displayItems.length === 0) return 0;
+    let extra = 0;
     for (const item of displayItems) {
-      const tier: PriceTier =
-        (item.selectedTier as PriceTier) ||
-        (getCategoryDefault(item.category || 'other').tier as PriceTier) ||
-        currentTier;
-      let best: number | null = null;
-      for (const retailer of selectedRetailers) {
-        const match = allPriceMatches.find(
-          m => m.shoppingListItemId === item.id && m.supermarket === retailer && m.tier === tier
-        );
-        if (match?.price !== null && match?.price !== undefined) {
-          if (best === null || match.price < best) best = match.price;
-        }
-      }
-      if (best !== null) total += best;
+      const hasReal = allPriceMatches.some(
+        m => m.shoppingListItemId === item.id && m.price !== null && m.price !== undefined,
+      );
+      if (hasReal) continue;
+      const est = estimateFallbackPrice(item.category, item.quantityValue, item.unit);
+      if (est != null) extra += est;
     }
-    return total;
-  }, [hasPrices, displayItems, allPriceMatches, selectedRetailers, getCategoryDefault, currentTier]); // eslint-disable-line react-hooks/exhaustive-deps
+    return extra;
+  }, [displayItems, allPriceMatches]);
+
+  const hasAnyEstimateInTotal = estimatedExtra > 0;
+
+  const clientBestTotal = useMemo(() => {
+    if (displayItems.length === 0) return null;
+    let total = 0;
+    let anyContribution = hasAnyEstimateInTotal;
+    if (hasPrices) {
+      for (const item of displayItems) {
+        const tier: PriceTier =
+          (item.selectedTier as PriceTier) ||
+          (getCategoryDefault(item.category || 'other').tier as PriceTier) ||
+          currentTier;
+        let best: number | null = null;
+        for (const retailer of selectedRetailers) {
+          const match = allPriceMatches.find(
+            m => m.shoppingListItemId === item.id && m.supermarket === retailer && m.tier === tier
+          );
+          if (match?.price !== null && match?.price !== undefined) {
+            if (best === null || match.price < best) best = match.price;
+          }
+        }
+        if (best !== null) { total += best; anyContribution = true; }
+      }
+    }
+    total += estimatedExtra;
+    return anyContribution ? total : null;
+  }, [hasPrices, displayItems, allPriceMatches, selectedRetailers, getCategoryDefault, currentTier, estimatedExtra, hasAnyEstimateInTotal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const avgThaRating = useMemo(() => {
     const rated = displayItems.filter(i => i.thaRating !== null && i.thaRating !== undefined && (i.thaRating as number) > 0);
@@ -2256,20 +2282,25 @@ export default function ShoppingListPage() {
   }, [hasPrices, displayItems, pricesByItem, selectedRetailers, getCheapestForItem]);
 
   const currentTotal = useMemo(() => {
-    if (!hasPrices) return 0;
     let total = 0;
-    for (const item of displayItems) {
-      const itemPrices = pricesByItem.get(item.id);
-      if (item.selectedStore) {
-        const price = itemPrices?.get(item.selectedStore)?.price;
-        if (price !== null && price !== undefined) total += price;
-      } else {
-        const cheapest = getCheapestForItem(item.id);
-        if (cheapest) total += cheapest.price;
+    if (hasPrices) {
+      for (const item of displayItems) {
+        const itemPrices = pricesByItem.get(item.id);
+        if (item.selectedStore) {
+          const price = itemPrices?.get(item.selectedStore)?.price;
+          if (price !== null && price !== undefined) total += price;
+        } else {
+          const cheapest = getCheapestForItem(item.id);
+          if (cheapest) total += cheapest.price;
+        }
       }
     }
+    // Top up with client-side estimates for items that have no real match —
+    // keeps the visible total aligned with the visible list.  Marked in the UI
+    // by the "incl. estimates" label whenever this contribution is non-zero.
+    total += estimatedExtra;
     return total;
-  }, [hasPrices, displayItems, pricesByItem, getCheapestForItem]);
+  }, [hasPrices, displayItems, pricesByItem, getCheapestForItem, estimatedExtra]);
 
   useEffect(() => {
     if (savedItems.length === 0 || Object.keys(thaPicks).length > 0) return;
@@ -3635,7 +3666,7 @@ export default function ShoppingListPage() {
                   <tbody>
                     <tr className="bg-muted/30 font-semibold">
                       <td colSpan={4} className="px-1.5 py-1.5 text-right text-xs font-semibold text-muted-foreground sticky left-0 z-10 bg-muted/30">
-                        Basket total · {savedItems.length} {savedItems.length === 1 ? 'item' : 'items'}
+                        {hasAnyEstimateInTotal ? 'Basket total incl. estimates' : 'Basket total'} · {savedItems.length} {savedItems.length === 1 ? 'item' : 'items'}
                         {overallConfidence !== null && (
                           <span className={`ml-2 font-normal ${overallConfidence === 'high' ? 'text-green-600 dark:text-green-400' : overallConfidence === 'medium' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}`}>
                             · {overallConfidence === 'high' ? 'High' : overallConfidence === 'medium' ? 'Medium' : 'Low'} confidence

@@ -1,0 +1,152 @@
+We are implementing ONE approved change only:
+
+Include estimated prices in basket totals + label total clearly
+
+----------------------------------------
+SCOPE
+----------------------------------------
+
+- Update total calculation to include:
+  - real product prices
+  - estimated prices (~£X)
+- Update total label to:
+  "Total incl. estimates"
+
+DO NOT:
+- Reintroduce fake products
+- Persist estimates to DB
+- Change product matching logic
+- Touch unrelated UI or flows
+
+----------------------------------------
+TOTAL CALCULATION RULES
+----------------------------------------
+
+For each item:
+
+IF real product price exists:
+→ include in total
+
+IF estimated price exists (~£X):
+→ include in total
+
+IF no price:
+→ exclude from total
+
+----------------------------------------
+IMPORTANT CONSTRAINT
+----------------------------------------
+
+Estimates MUST remain:
+
+- client-side only
+- not stored in ProductMatch
+- not written to DB
+- not treated as real product data
+
+----------------------------------------
+UI CHANGES
+----------------------------------------
+
+1. Total label:
+
+Change from:
+"Total"
+
+To:
+"Total incl. estimates"
+
+2. Total value:
+
+- Display combined sum
+- Keep formatting consistent (£X.XX)
+
+3. Optional (only if already easy):
+
+If ALL items are real:
+→ label can remain "Total"
+
+(If not trivial → skip. Do not expand scope.)
+
+----------------------------------------
+DEFINITION OF DONE
+----------------------------------------
+
+Success:
+- Total reflects visible list (real + ~ items)
+- No fake products introduced
+- Estimates still clearly marked (~)
+- Legend still present when needed
+- No DB changes
+
+Must NOT break:
+- Tahini real pricing
+- Broccoli estimate behaviour
+- Skampee unmatched behaviour
+- Basket rendering
+- Shop view rendering
+
+----------------------------------------
+DATA IMPACT DECLARATION
+----------------------------------------
+
+- Reads existing data: yes
+- Writes new data: no
+- Changes meaning of existing data: no
+- Requires backfill: no
+
+If any changes → STOP
+
+----------------------------------------
+TRUST CHECK
+----------------------------------------
+
+Confirm:
+
+- Is uncertainty visible? → YES (~ + legend)
+- Is total misleading? → NO (label includes estimates)
+- Are fake prices introduced? → NO
+
+----------------------------------------
+MANUAL TESTS
+----------------------------------------
+
+1. Broccoli only (~£0.50)
+→ Total incl. estimates = ~£0.50
+
+2. Tahini only (£3.20)
+→ Total = £3.20
+
+3. Mixed (Tahini + Broccoli)
+→ Total incl. estimates = £3.70
+
+4. All unknown items
+→ Total = £0 OR not shown (existing behaviour unchanged)
+
+5. Legend:
+→ still appears when estimates exist
+
+----------------------------------------
+OUTPUT REQUIRED
+----------------------------------------
+
+Return:
+
+- files changed
+- total logic summary
+- UI change summary
+- confirmation no fake products
+- data impact declaration
+- trust check
+- manual test results
+- edge cases
+
+----------------------------------------
+SCOPE LOCK
+----------------------------------------
+
+Only implement:
+- total calculation change
+- label change
+
+Anything else → SUGGESTION only
