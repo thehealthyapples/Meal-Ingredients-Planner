@@ -1,0 +1,147 @@
+We are implementing ONE approved change only:
+
+Make "⚠ Review" tappable to open the existing edit item flow
+
+----------------------------------------
+SCOPE
+----------------------------------------
+
+- Add tap/click interaction ONLY to the "⚠ Review" label
+- On tap → open existing edit item UI for that item
+
+DO NOT:
+- Create a new review system
+- Add new modals/screens
+- Change matching logic
+- Change pricing logic
+- Change totals
+- Add new DB fields or API calls
+
+----------------------------------------
+BEHAVIOUR
+----------------------------------------
+
+When user taps:
+
+⚠ Review
+
+→ trigger the same function used when:
+- user edits an item manually
+
+Expected result:
+- edit panel / modal opens
+- item pre-filled
+- user can:
+  - rename item
+  - adjust quantity
+  - save → existing pipeline re-runs
+
+----------------------------------------
+IMPLEMENTATION DETAILS
+----------------------------------------
+
+1. Locate existing edit trigger:
+- likely something like:
+  openEditItem(item)
+  or setEditingItem(item)
+
+2. Wrap the "⚠ Review" element:
+
+- add onClick / onPress handler
+- pass the correct item
+
+3. Cursor / affordance:
+
+- cursor: pointer
+- slight hover/tap feedback (optional, minimal)
+
+----------------------------------------
+IMPORTANT CONSTRAINTS
+----------------------------------------
+
+- ONLY "⚠ Review" is clickable
+- Item row behaviour must NOT change
+- No accidental navigation or toggles
+- Must work on mobile (tap)
+
+----------------------------------------
+DEFINITION OF DONE
+----------------------------------------
+
+Success:
+- Tapping ⚠ Review opens edit UI
+- Item is pre-filled correctly
+- User can fix and save
+- Matching re-runs via existing flow
+- No change to other interactions
+
+Must NOT break:
+- Row click behaviour (if any)
+- Basket toggle
+- Quantity editing
+- ~£ estimate display
+- Totals
+- Comparison logic
+
+----------------------------------------
+DATA IMPACT
+----------------------------------------
+
+- Reads existing data: yes
+- Writes new data: no (uses existing edit flow)
+- Changes meaning of existing data: no
+- Requires backfill: no
+
+----------------------------------------
+TRUST CHECK
+----------------------------------------
+
+- Can user act on review signal? → YES
+- Is behaviour predictable? → YES
+- Any hidden side effects? → NO
+
+----------------------------------------
+MANUAL TESTS
+----------------------------------------
+
+1. Skampee
+→ tap ⚠ Review
+→ edit opens
+→ rename → save
+→ item reprocessed
+
+2. Broccoli (~£)
+→ tap ⚠ Review
+→ edit opens
+→ adjust → save
+
+3. Tahini (real match)
+→ no ⚠ → nothing to tap
+
+4. Mobile tap
+→ works cleanly
+
+5. Ensure:
+→ no accidental row click triggered
+
+----------------------------------------
+OUTPUT REQUIRED
+----------------------------------------
+
+- files changed
+- handler used
+- UI change summary
+- confirmation no behaviour conflicts
+- data impact declaration
+- trust check
+- manual test results
+- edge cases
+
+----------------------------------------
+SCOPE LOCK
+----------------------------------------
+
+Only implement:
+- tap interaction on ⚠ Review
+
+Anything else → SUGGESTION only

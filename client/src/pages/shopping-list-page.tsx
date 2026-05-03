@@ -3003,13 +3003,16 @@ export default function ShoppingListPage() {
                                               Purely visual, non-blocking, no tooltip. Distinct from the
                                               parser-driven `item.needsReview` "Check item" badge below. */}
                                           {hasPrices && !allPriceMatches.some(m => m.shoppingListItemId === item.id && m.price !== null && m.price !== undefined) && (
-                                            <span
-                                              className="inline-flex items-center gap-0.5 text-[10.5px] font-medium text-amber-600 dark:text-amber-400"
+                                            <button
+                                              type="button"
+                                              onClick={(e) => { e.stopPropagation(); startEdit(item.id, 'productName', item.productName); }}
+                                              className="inline-flex items-center gap-0.5 text-[10.5px] font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline cursor-pointer rounded px-0.5 -mx-0.5 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
                                               data-testid={`signal-review-${item.id}`}
+                                              aria-label={`Review ${item.productName}`}
                                             >
                                               <AlertTriangle className="h-3 w-3" aria-hidden="true" />
                                               Review
-                                            </span>
+                                            </button>
                                           )}
                                           {item.quantity > 1 && <Badge variant="secondary" className="text-[10px]" data-testid={`badge-quantity-${item.id}`}>x{item.quantity}</Badge>}
                                           {mergedCount > 1 && <Badge variant="outline" className="text-[10px] text-blue-500 dark:text-blue-400 border-blue-300 dark:border-blue-600" data-testid={`badge-merged-${item.id}`}>×{mergedCount}</Badge>}
