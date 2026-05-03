@@ -115,9 +115,10 @@ export async function classifyAndEnrich(itemId: number, normalizedKey: string): 
   const result = await classifyItem(key);
   if (!result) return;
 
-  // Step 3: Validation gate — only accept high-confidence food products
-  if (result.confidence !== 'high' || !result.likelyFoodProduct) {
-    console.log(`[Classifier] Rejected "${key}" — confidence=${result.confidence}, likelyFood=${result.likelyFoodProduct}`);
+  // Step 3: Validation gate — classifyItem already enforces whitelist + threshold.
+  // Defence in depth: refuse anything that slipped through.
+  if (!result.likelyFoodProduct) {
+    console.log(`[Classifier] Rejected "${key}" — likelyFood=false`);
     return;
   }
 
@@ -130,7 +131,7 @@ export async function classifyAndEnrich(itemId: number, normalizedKey: string): 
     subcategory:    result.subcategory ?? null,
     aliases:        JSON.stringify(result.aliases),
     source:         'ai',
-    aiConfidence:   result.confidence,
+    aiConfidence:   result.confidence.toFixed(2),
     aiModel:        'gpt-4o-mini',
     reviewStatus:   'pending',
     notes:          result.notes || null,

@@ -119,9 +119,10 @@ export async function runBackfill(options: BackfillOptions = {}): Promise<Backfi
         continue;
       }
 
-      // 3c. Validation gate
-      if (aiResult.confidence !== 'high' || !aiResult.likelyFoodProduct) {
-        console.log(`[Backfill] Rejected "${key}" — confidence=${aiResult.confidence}, likelyFood=${aiResult.likelyFoodProduct}`);
+      // 3c. Validation gate — classifyItem already enforces whitelist + threshold.
+      // Defence in depth: refuse anything that isn't a likely food product.
+      if (!aiResult.likelyFoodProduct) {
+        console.log(`[Backfill] Rejected "${key}" — likelyFood=false`);
         result.rejected++;
         continue;
       }
@@ -136,7 +137,7 @@ export async function runBackfill(options: BackfillOptions = {}): Promise<Backfi
           subcategory:    aiResult.subcategory ?? null,
           aliases:        JSON.stringify(aiResult.aliases),
           source:         'ai',
-          aiConfidence:   aiResult.confidence,
+          aiConfidence:   aiResult.confidence.toFixed(2),
           aiModel:        'gpt-4o-mini',
           reviewStatus:   'pending',
           notes:          aiResult.notes || null,
