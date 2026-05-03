@@ -1544,9 +1544,14 @@ export default function ShoppingListPage() {
   );
 
   // displayItems: items after applying the current source filter — used for all rendering.
+  // Prefer the explicit `source` column; fall back to the legacy basket_label
+  // prefix so pre-2026-05-03 rows (where source IS NULL) keep behaving as before.
+  const isQuickListRow = (i: ShoppingListItem): boolean =>
+    (i as any).source === "quick_list" ||
+    (((i as any).source == null) && !!i.basketLabel?.startsWith("quick_list_"));
   const displayItems = useMemo(() => {
-    if (listFilter === "planned") return savedItems.filter(i => !i.basketLabel?.startsWith("quick_list_"));
-    if (listFilter === "quick_list") return savedItems.filter(i => !!i.basketLabel?.startsWith("quick_list_"));
+    if (listFilter === "planned") return savedItems.filter(i => !isQuickListRow(i));
+    if (listFilter === "quick_list") return savedItems.filter(i => isQuickListRow(i));
     return savedItems;
   }, [savedItems, listFilter]);
 

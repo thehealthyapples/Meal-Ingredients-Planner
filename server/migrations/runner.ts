@@ -949,6 +949,32 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // Additive: explicit per-row origin tag. Nullable; existing rows keep
+    // working via the legacy basket_label / ingredient_sources fall-back in
+    // application code. Backfill uses ONLY explicit signals — never guesses:
+    //   • basket_label LIKE 'quick_list\_%' → 'quick_list' (only the Quick
+    //     List entry path writes that prefix).
+    //   • presence of an ingredient_sources join row → 'planner'.
+    //   • everything else stays NULL.
+    // Both UPDATEs are guarded by `source IS NULL` so re-runs are no-ops.
+    id: "2026-05-03_add_source_to_shopping_list",
+    statements: [
+      "ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS source TEXT",
+      `UPDATE shopping_list
+         SET source = 'quick_list'
+       WHERE source IS NULL
+         AND basket_label LIKE 'quick_list\\_%' ESCAPE '\\'`,
+      `UPDATE shopping_list sl
+         SET source = 'planner'
+       WHERE sl.source IS NULL
+         AND EXISTS (
+           SELECT 1 FROM ingredient_sources ig
+           WHERE ig.shopping_list_item_id = sl.id
+         )`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

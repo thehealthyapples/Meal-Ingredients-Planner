@@ -177,6 +177,10 @@ export const shoppingList = pgTable("shopping_list", {
   confidenceLevel: text("confidence_level"),
   confidenceReason: text("confidence_reason"),
   basketLabel: text("basket_label"),
+  // Explicit origin tag — values: 'quick_list' | 'planner' | 'basket' | null.
+  // Nullable & additive: legacy rows pre-2026-05-03 may be NULL, in which case
+  // origin still falls back to basket_label prefix + ingredient_sources presence.
+  source: text("source"),
   // Guided shop mode state — values: pending | already_got | need_to_buy | in_basket | alternate_selected | deferred
   shopStatus: text("shop_status"),
   // ── Item Resolution Layer ──────────────────────────────────────────────────
@@ -321,6 +325,7 @@ export const insertShoppingListItemSchema = createInsertSchema(shoppingList).pic
   validationNote: true,
   selectedStore: true,
   basketLabel: true,
+  source: true,
   shopStatus: true,
   originalText: true,
   canonicalName: true,

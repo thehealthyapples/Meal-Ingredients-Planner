@@ -497,7 +497,13 @@ export class DatabaseStorage implements IStorage {
 
   async addShoppingListItem(userId: number, item: InsertShoppingListItem, addedByUserId?: number): Promise<ShoppingListItem> {
     const householdId = await getHouseholdForUser(userId);
-    const [result] = await db.insert(shoppingList).values({ ...item, userId, householdId, addedByUserId: addedByUserId ?? userId }).returning();
+    // Derive source from the explicit Quick-List basket_label prefix when caller
+    // did not pass one. Only the Quick List entry path writes that prefix, so
+    // this is an explicit signal, not a guess. Caller-supplied source wins.
+    const derivedSource =
+      (item as any).source ??
+      (item.basketLabel?.startsWith("quick_list_") ? "quick_list" : null);
+    const [result] = await db.insert(shoppingList).values({ ...item, source: derivedSource, userId, householdId, addedByUserId: addedByUserId ?? userId }).returning();
     return result;
   }
 
@@ -547,7 +553,10 @@ export class DatabaseStorage implements IStorage {
         return result;
       }
     }
-    const [result] = await db.insert(shoppingList).values({ ...item, userId, householdId, addedByUserId: addedByUserId ?? userId }).returning();
+    const derivedSource =
+      (item as any).source ??
+      (item.basketLabel?.startsWith("quick_list_") ? "quick_list" : null);
+    const [result] = await db.insert(shoppingList).values({ ...item, source: derivedSource, userId, householdId, addedByUserId: addedByUserId ?? userId }).returning();
     return result;
   }
 

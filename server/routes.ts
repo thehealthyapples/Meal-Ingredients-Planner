@@ -3559,6 +3559,14 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       );
       insertPayload.ingredientId = ingredient.id;
 
+      // Tag origin explicitly. Quick-List path sets basketLabel='quick_list_*'
+      // and storage will derive 'quick_list' from that; otherwise this is a
+      // direct basket add.
+      if ((insertPayload as any).source == null) {
+        (insertPayload as any).source = (insertPayload as any).basketLabel?.startsWith("quick_list_")
+          ? "quick_list"
+          : "basket";
+      }
       const item = await storage.addShoppingListItem(
         req.user!.id,
         insertPayload as typeof input,
@@ -4016,6 +4024,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           ingredientId: null,
           needsReview: false,
           validationNote: null,
+          source: 'planner',
         });
         items.push(item);
         const rmCtx = mealContextMap.get(rm.mealId);
@@ -4054,6 +4063,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           resolutionState: resolved.resolutionState,
           reviewReason: resolved.reviewReason,
           reviewSuggestions: resolved.reviewSuggestions,
+          source: 'planner',
         } as any);
         const inferredItemType2 = WHOLE_FOOD_CATS_SERVER2.has((resolved.category || '').toLowerCase()) ? 'whole_food' : 'packaged';
         if (!item.itemType) {
