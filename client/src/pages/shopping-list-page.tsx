@@ -3699,7 +3699,17 @@ export default function ShoppingListPage() {
           {/* Comparison Strip */}
           {hasPrices && selectedRetailers.length > 0 && savedItems.length > 0 && (
             <div className="border-t border-border px-4 py-4 bg-muted/5" data-testid="section-comparison-strip">
-              <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mb-3">Price Comparison</p>
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Price Comparison</p>
+                {hasAnyEstimateInTotal && (
+                  <p
+                    className="text-[10px] italic text-muted-foreground/80"
+                    data-testid="text-comparison-excludes-estimates"
+                  >
+                    Store comparison excludes estimated items
+                  </p>
+                )}
+              </div>
               <div className="overflow-x-auto rounded-md border border-border">
                 <table className="text-xs" style={{ borderCollapse: 'separate', borderSpacing: 0, minWidth: '480px' }} data-testid="table-comparison-strip">
                   <thead>
