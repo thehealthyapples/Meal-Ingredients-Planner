@@ -73,37 +73,9 @@ function classifyProductTier(product: SpoonacularProduct): string {
   return 'standard';
 }
 
-const CATEGORY_PRICE_ESTIMATES: Record<string, { perKg: number; perUnit: number; perLitre: number }> = {
-  meat: { perKg: 8.00, perUnit: 3.50, perLitre: 0 },
-  fish: { perKg: 12.00, perUnit: 4.00, perLitre: 0 },
-  dairy: { perKg: 3.50, perUnit: 1.50, perLitre: 1.20 },
-  eggs: { perKg: 0, perUnit: 0.25, perLitre: 0 },
-  produce: { perKg: 2.00, perUnit: 0.50, perLitre: 0 },
-  fruit: { perKg: 3.00, perUnit: 0.40, perLitre: 0 },
-  grains: { perKg: 1.50, perUnit: 1.00, perLitre: 0 },
-  herbs: { perKg: 15.00, perUnit: 0.80, perLitre: 0 },
-  oils: { perKg: 4.00, perUnit: 3.00, perLitre: 4.00 },
-  condiments: { perKg: 5.00, perUnit: 2.00, perLitre: 3.00 },
-  nuts: { perKg: 10.00, perUnit: 2.50, perLitre: 0 },
-  legumes: { perKg: 2.50, perUnit: 1.00, perLitre: 0 },
-  bakery: { perKg: 4.00, perUnit: 1.50, perLitre: 0 },
-  tinned: { perKg: 2.00, perUnit: 1.00, perLitre: 0 },
-  other: { perKg: 3.00, perUnit: 1.50, perLitre: 2.00 },
-};
-
-function estimateFallbackPrice(category: string, quantity: number, unit: string): number {
-  const rates = CATEGORY_PRICE_ESTIMATES[category] || CATEGORY_PRICE_ESTIMATES['other'];
-  if (unit === 'g') {
-    const packKg = quantity >= 1000 ? Math.ceil(quantity / 1000) : 1;
-    return Math.round(packKg * rates.perKg * 100) / 100;
-  }
-  if (unit === 'ml') {
-    const packL = quantity >= 1000 ? Math.ceil(quantity / 1000) : 1;
-    const price = Math.round(packL * rates.perLitre * 100) / 100;
-    return price > 0 ? price : Math.round(rates.perUnit * 100) / 100;
-  }
-  return Math.round(rates.perUnit * 100) / 100;
-}
+// Estimate helper lives in shared/price-estimates.ts so server and client share
+// one source of truth.  Re-exported here for any legacy server-side caller.
+export { estimateFallbackPrice, CATEGORY_PRICE_ESTIMATES } from '@shared/price-estimates';
 
 const SUPERMARKET_VARIANCE: Record<string, number> = {
   'Tesco': 1.0,

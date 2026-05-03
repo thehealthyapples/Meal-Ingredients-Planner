@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { normalizeIngredientKey, singularizeIngredientKey } from "@shared/normalize";
+import { estimateFallbackPrice } from "@shared/price-estimates";
 import { getCanonicalKey } from "@shared/ingredient-aliases";
 import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowLeft, ArrowRight, Store, Pencil, Search, AlertTriangle, Plus, Minus, Trash2, Microscope } from "lucide-react";
 import { rankDisplayMatches, type RankingMode } from "@/lib/analyser-choice";
@@ -1200,6 +1201,20 @@ export default function ShoppingListView({
   const needCount = totalItems - inBasketCount - notFoundCount;
   const allSorted = totalItems > 0 && needCount === 0;
 
+  // Legend visibility: true when ANY visible item is showing an estimated
+  // (~£X.XX) price.  An item shows an estimate only when it has no real
+  // matched product but does have a recognised category.
+  const hasAnyEstimate = useMemo(() => {
+    for (const i of shoppingItems) {
+      if (getItemState(i) !== "need") continue;
+      const matches = resolveDisplayMatches(i, allPriceMatches, thaPicks, selectedSupermarket, rankMode);
+      if (matches.length > 0) continue;
+      if (estimateFallbackPrice(i.category, i.quantityValue, i.unit) != null) return true;
+    }
+    return false;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shoppingItems, allPriceMatches, thaPicks, selectedSupermarket, rankMode]);
+
   // ── Shopping trip completion ──────────────────────────────────────────────
 
   function handleFinishShop() {
@@ -1264,14 +1279,15 @@ export default function ShoppingListView({
         let pricingPart: string;
         if (match) {
           if (match.priceSource === "estimate" && match.price != null) {
-            pricingPart = `Estimated ~£${match.price.toFixed(2)}`;
+            pricingPart = `~£${match.price.toFixed(2)}`;
           } else if (match.price != null) {
             pricingPart = `${match.productName} £${match.price.toFixed(2)}`;
           } else {
             pricingPart = match.productName;
           }
         } else {
-          pricingPart = "No price yet";
+          const est = estimateFallbackPrice(item.category, item.quantityValue, item.unit);
+          pricingPart = est != null ? `~£${est.toFixed(2)}` : "No price yet";
         }
         lines.push(`- ${capWords(item.productName)} — ${pricingPart} — ${stateLabel}`);
       }
@@ -1457,6 +1473,13 @@ export default function ShoppingListView({
     const currentMatchIndex = productIndexMap[item.id] ?? 0;
     const resolvedMatch = resolvedMatches[currentMatchIndex] ?? null;
     const isEditing = editingItemId === item.id;
+
+    // Trust-layer estimate: only computed when there is NO real match and the
+    // item has a recognised category.  Renders as "~£X.XX" with a legend at
+    // the bottom of the list.  Never attaches a product or supermarket link.
+    const itemEstimate: number | null = resolvedMatch
+      ? null
+      : estimateFallbackPrice(item.category, item.quantityValue, item.unit);
 
     // Alternatives for "Change choice" panel.
     // betterMatch: higher-rated option than currently shown (if any).
@@ -1703,7 +1726,17 @@ export default function ShoppingListView({
               )}
               {state === "need" && !resolvedMatch && (
                 <div className="tha-print-hide flex items-center gap-1.5 mt-0.5 flex-wrap">
-                  <span className="text-[11px] text-muted-foreground/40 italic">No price yet</span>
+                  {itemEstimate != null ? (
+                    <span
+                      className="text-[11px] text-muted-foreground/55 italic tabular-nums"
+                      data-testid={`text-estimate-${item.id}`}
+                      title="Estimated price — no real product matched"
+                    >
+                      ~£{itemEstimate.toFixed(2)}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground/40 italic">No price yet</span>
+                  )}
                   {firstMeal && (
                     <p className="text-[11px] text-muted-foreground/55 leading-tight">
                       {firstMeal}{isPantryStaple ? " · staple" : ""}
@@ -3033,6 +3066,18 @@ export default function ShoppingListView({
                   </div>
                 );
               })}
+
+              {/* Estimated-price legend — only shown when at least one visible
+                  item is currently displaying a "~£X.XX" estimated price. */}
+              {hasAnyEstimate && (
+                <div
+                  className="tha-print-hide flex items-center justify-center gap-1.5 px-4 py-2 mt-1 border-t border-border/30"
+                  data-testid="legend-estimated-price"
+                >
+                  <span className="text-[11px] text-muted-foreground/60 italic tabular-nums">~</span>
+                  <span className="text-[11px] text-muted-foreground/60 italic">Estimated price</span>
+                </div>
+              )}
 
               {/* All-sorted celebration */}
               {allSorted && (

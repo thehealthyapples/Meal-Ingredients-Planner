@@ -1,0 +1,194 @@
+We are implementing ONE approved change only:
+
+Safe estimated pricing with tilde (~) + legend
+
+Scope:
+- Restore estimated prices WITHOUT reintroducing fake products
+- Use "~£X" format for estimated prices
+- Add a clear legend at the bottom of Basket / Shop View
+
+DO NOT:
+- Attach fake products
+- Attach prices to unmatched items
+- Reintroduce category-based product fabrication
+- Change unrelated UI or flows
+
+----------------------------------------
+BEHAVIOUR RULES (NON-NEGOTIABLE)
+----------------------------------------
+
+1. Real product match exists + real price:
+→ show normal price
+Example:
+£1.20
+
+2. NO real product match BUT category is known:
+→ show estimated price ONLY
+→ DO NOT attach a product
+→ item remains unmatched / needs review
+→ price format:
+~£0.80
+
+3. NO category / low confidence:
+→ show NO price
+→ item remains unmatched
+
+----------------------------------------
+SAFE MATCH RULE (MUST HOLD)
+----------------------------------------
+
+A product is only attached if:
+- category is valid
+- real product exists
+- real price exists
+
+Otherwise:
+- NO product
+- NO product name
+- NO fake supermarket link
+
+----------------------------------------
+ESTIMATE LOGIC
+----------------------------------------
+
+Reintroduce estimateFallbackPrice BUT:
+
+- It MUST return price only (no product object)
+- It MUST NOT create ProductMatch rows
+- It MUST NOT simulate supermarkets or tiers
+- It MUST NOT attach product metadata
+
+It should return something like:
+{ estimatedPrice: number }
+
+----------------------------------------
+UI CHANGES (LIMITED)
+----------------------------------------
+
+Where prices are rendered (Basket / Shop View):
+
+IF real price:
+→ show:
+£X.XX
+
+IF estimated:
+→ show:
+~£X.XX
+
+IF no price:
+→ show nothing
+
+----------------------------------------
+LEGEND (REQUIRED)
+----------------------------------------
+
+At the bottom of the list (below items, near total):
+
+Add:
+~ Estimated price
+
+Rules:
+- Always visible (not behind scroll or hover)
+- Only show if at least one estimated price exists
+- Do not show if all prices are real
+
+----------------------------------------
+DEFINITION OF DONE
+----------------------------------------
+
+Success:
+- No fake products created
+- No fake ProductMatch rows
+- Estimated prices visible where appropriate
+- Legend appears correctly
+- Real product matching unchanged
+
+Must NOT break:
+- Broccoli behaviour (no fake estimate unless category known)
+- Tahini real match
+- Quick List flow
+- Basket rendering
+- Shop View rendering
+- Existing DB records
+
+----------------------------------------
+DATA IMPACT DECLARATION
+----------------------------------------
+
+Before coding, confirm:
+
+- Reads existing data: yes
+- Writes new data: no (no new tables or rows)
+- Changes meaning of existing data: no
+- Requires backfill: no
+
+If any answer changes → STOP
+
+----------------------------------------
+TRUST CHECK
+----------------------------------------
+
+Confirm:
+
+- Are we fabricating certainty? → NO
+- Are estimates clearly marked? → YES (~)
+- Can user tell real vs estimate? → YES
+- What if estimate is wrong? → user sees "~" + legend
+
+----------------------------------------
+MANUAL TESTS
+----------------------------------------
+
+1. Skampee
+→ no product
+→ no price
+→ no estimate
+→ remains unmatched
+
+2. Choalaote
+→ same as above unless confidently categorised
+
+3. Boorboans
+→ same as above
+
+4. Broccoli
+→ if category known:
+   show ~£X
+→ no product
+
+5. Tahini
+→ real product + real price
+→ no tilde
+
+6. Mixed basket
+→ both £X and ~£X present
+→ legend visible
+
+7. All real prices
+→ no legend shown
+
+----------------------------------------
+OUTPUT REQUIRED
+----------------------------------------
+
+Return:
+
+- files changed
+- estimate logic summary
+- UI change summary
+- confirmation no fake products
+- data impact declaration
+- trust check
+- manual test results
+- edge cases
+
+----------------------------------------
+SCOPE LOCK
+----------------------------------------
+
+Only implement:
+- estimate price logic (safe)
+- tilde display
+- legend
+
+Anything else → list under SUGGESTION only
