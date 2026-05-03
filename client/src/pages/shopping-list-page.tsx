@@ -77,6 +77,7 @@ import WholeFoodSelector from "@/components/whole-food-selector";
 import { appendPendingIngredient } from "@/lib/quick-list";
 import ShoppingListView, { resolvePickKey } from "@/components/ShoppingListView";
 import RankModeSelector from "@/components/RankModeSelector";
+import { matchesSourceFilter, sourceLabel, sourcePriority, type SourceFilter } from "@/lib/source-helpers";
 
 type ShoppingListItemExtended = ShoppingListItem & {
   addedByDisplayName?: string | null;
@@ -1532,10 +1533,10 @@ export default function ShoppingListPage() {
   // All items (planned + all quick_list_* batches) — unified source of truth.
   const savedItems = useMemo(() => savedItems_raw, [savedItems_raw]);
 
-  // Source filter: "all" | "planned" | "quick_list"
-  // Quick-list entry point pre-selects "quick_list" so the user lands on their new batch.
-  const [listFilter, setListFilter] = useState<"all" | "planned" | "quick_list">(
-    () => quickListLabel ? "quick_list" : "all",
+  // Source filter: All | Planned | Extras | Home (see lib/source-helpers).
+  // Quick-list entry point pre-selects "extras" so the user lands on their new batch.
+  const [listFilter, setListFilter] = useState<SourceFilter>(
+    () => quickListLabel ? "extras" : "all",
   );
 
   const hasQuickListItems = useMemo(
@@ -1546,14 +1547,10 @@ export default function ShoppingListPage() {
   // displayItems: items after applying the current source filter — used for all rendering.
   // Prefer the explicit `source` column; fall back to the legacy basket_label
   // prefix so pre-2026-05-03 rows (where source IS NULL) keep behaving as before.
-  const isQuickListRow = (i: ShoppingListItem): boolean =>
-    (i as any).source === "quick_list" ||
-    (((i as any).source == null) && !!i.basketLabel?.startsWith("quick_list_"));
-  const displayItems = useMemo(() => {
-    if (listFilter === "planned") return savedItems.filter(i => !isQuickListRow(i));
-    if (listFilter === "quick_list") return savedItems.filter(i => isQuickListRow(i));
-    return savedItems;
-  }, [savedItems, listFilter]);
+  const displayItems = useMemo(
+    () => savedItems.filter(i => matchesSourceFilter(i as any, listFilter)),
+    [savedItems, listFilter],
+  );
 
   const { data: householdData } = useQuery<{ id: number; name: string; members?: unknown[] }>({
     queryKey: ['/api/household'],
@@ -2385,6 +2382,11 @@ export default function ShoppingListPage() {
         const bShop = b.selectedStore || getCheapestForItem(b.id)?.supermarket || 'zzz';
         if (aShop !== bShop) return aShop.localeCompare(bShop);
       }
+      // Soft grouping by source within each category (planner → extras → home → legacy).
+      // Filter happens per-category at render time, so applying this globally
+      // preserves the order within each grouped section.
+      const sp = sourcePriority(a as any) - sourcePriority(b as any);
+      if (sp !== 0) return sp;
       if (!sortColumn) return 0;
       let cmp = 0;
       switch (sortColumn) {
@@ -2688,10 +2690,10 @@ export default function ShoppingListPage() {
                       </div>
                     );
                   })()}
-                  {/* Source filter tabs — shown whenever quick list items exist */}
-                  {hasQuickListItems && (
+                  {/* Source filter tabs — All / Planned / Extras / Home. */}
+                  {savedItems.length > 0 && (
                     <div className="flex items-center gap-1 mt-2.5" data-testid="source-filter-tabs">
-                      {(["all", "planned", "quick_list"] as const).map(f => (
+                      {(["all", "planned", "extras", "home"] as const).map(f => (
                         <button
                           key={f}
                           onClick={() => setListFilter(f)}
@@ -2702,7 +2704,7 @@ export default function ShoppingListPage() {
                           }`}
                           data-testid={`filter-tab-${f}`}
                         >
-                          {f === "all" ? "All" : f === "planned" ? "Planned" : "Quick list"}
+                          {f === "all" ? "All" : f === "planned" ? "Planned" : f === "extras" ? "Extras" : "Home"}
                         </button>
                       ))}
                     </div>
@@ -3062,11 +3064,10 @@ export default function ShoppingListPage() {
                                             );
                                             return null;
                                           })()}
-                                          {/* Source badge — shown whenever both source types coexist */}
-                                          {hasQuickListItems && (() => {
-                                            const hasPlanned = allBasketLabels.some(l => !l?.startsWith("quick_list_"));
-                                            const hasQL = allBasketLabels.some(l => l?.startsWith("quick_list_"));
-                                            const text = hasPlanned && hasQL ? "Planned + Quick list" : hasQL ? "Quick list" : "Planned";
+                                          {/* Source label — shown for all items with an explicit source. */}
+                                          {(() => {
+                                            const text = sourceLabel(item as any);
+                                            if (!text) return null;
                                             return (
                                               <Badge variant="outline" className="text-[10px] text-violet-600 dark:text-violet-400 border-violet-300 dark:border-violet-600" data-testid={`badge-source-${item.id}`}>
                                                 {text}
@@ -3810,8 +3811,8 @@ export default function ShoppingListPage() {
             rankMode={rankMode}
             onRankModeChange={handleRankModeChange}
             onClearBasket={hasQuickListItems ? () => setClearDialogOpen(true) : () => clearAll.mutate()}
-            listFilter={hasQuickListItems ? listFilter : undefined}
-            onListFilterChange={hasQuickListItems ? setListFilter : undefined}
+            listFilter={savedItems.length > 0 ? listFilter : undefined}
+            onListFilterChange={savedItems.length > 0 ? setListFilter : undefined}
             onClearBySource={hasQuickListItems ? clearBySource : undefined}
             onClose={() => { setHasLeftShopView(true); setViewMode("basket"); }}
             onAnalyse={(item) => setAnalyseItem(item)}

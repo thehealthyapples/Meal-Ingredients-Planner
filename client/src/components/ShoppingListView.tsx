@@ -26,6 +26,7 @@ import { isWholeFood } from "@/lib/basket-item-classifier";
 import { getIngredientDef, isResolvedVariantItem } from "@/lib/ingredient-catalogue";
 import WholeFoodSelector from "@/components/whole-food-selector";
 import { SpellSuggestions } from "@/components/SpellSuggestions";
+import { sourceLabel, sourcePriority, type SourceFilter } from "@/lib/source-helpers";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -119,9 +120,9 @@ interface ShoppingListViewProps {
   /** Save an attribute preference (organic, etc.) for a catalogue item. */
   onAttributeChange?: (id: number, key: string, value: boolean) => void;
   /** Active source filter — shown as tabs when provided. */
-  listFilter?: "all" | "planned" | "quick_list";
+  listFilter?: SourceFilter;
   /** Called when the user switches source filter tabs. */
-  onListFilterChange?: (filter: "all" | "planned" | "quick_list") => void;
+  onListFilterChange?: (filter: SourceFilter) => void;
   /** Clear items by source — "all" replaces the plain onClearBasket action. */
   onClearBySource?: (source: "all" | "planned" | "quick_list") => void;
   /** Persist partial cupboard quantity for an item (null = clear all underlying rows). */
@@ -1553,11 +1554,9 @@ export default function ShoppingListView({
                 Review
               </button>
             )}
-            {listFilter !== undefined && (() => {
-              const labels: (string | null)[] = (item as any)._allBasketLabels ?? [item.basketLabel ?? null];
-              const hasPlanned = labels.some(l => !l?.startsWith("quick_list_"));
-              const hasQL = labels.some(l => l?.startsWith("quick_list_"));
-              const text = hasPlanned && hasQL ? "Planned + Quick list" : hasQL ? "Quick list" : "Planned";
+            {(() => {
+              const text = sourceLabel(item as any);
+              if (!text) return null;
               return (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full border text-violet-600 dark:text-violet-400 border-violet-300 dark:border-violet-600" data-testid={`shop-badge-source-${item.id}`}>
                   {text}
@@ -2087,7 +2086,7 @@ export default function ShoppingListView({
 
         {onListFilterChange && listFilter && (
           <div className="flex items-center gap-1 px-3 pb-2 sm:px-5 max-w-3xl mx-auto" data-testid="shop-source-filter-tabs">
-            {(["all", "planned", "quick_list"] as const).map(f => (
+            {(["all", "planned", "extras", "home"] as const).map(f => (
               <button
                 key={f}
                 onClick={() => onListFilterChange(f)}
@@ -2098,7 +2097,7 @@ export default function ShoppingListView({
                 }`}
                 data-testid={`shop-filter-tab-${f}`}
               >
-                {f === "all" ? "All" : f === "planned" ? "Planned" : "Quick list"}
+                {f === "all" ? "All" : f === "planned" ? "Planned" : f === "extras" ? "Extras" : "Home"}
               </button>
             ))}
           </div>
@@ -3086,9 +3085,11 @@ export default function ShoppingListView({
                       else sectionRefs.current.delete(cat.key);
                     }}
                   >
-                    {/* Items in this category */}
+                    {/* Items in this category — soft-grouped by source priority */}
                     <div className="divide-y divide-border/25">
-                      {cat.savedItems.map((item) => renderSavedItem(item))}
+                      {[...cat.savedItems]
+                        .sort((a, b) => sourcePriority(a as any) - sourcePriority(b as any))
+                        .map((item) => renderSavedItem(item))}
                       {cat.extraItems.map((extra) => renderExtraItem(extra))}
                     </div>
                   </div>

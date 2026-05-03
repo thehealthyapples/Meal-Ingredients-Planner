@@ -1,0 +1,127 @@
+Implement source-based filters, labels, and soft grouping across BOTH Basket and Shop View.
+
+----------------------------------------
+SCOPE (LOCKED)
+----------------------------------------
+
+Apply changes ONLY to:
+- Basket display (shopping-list page grid)
+- Shop View (ShoppingListView)
+
+DO NOT:
+- change categories
+- change product matching or pricing
+- change API routes
+- change schema
+- change source write logic
+- touch AI flows
+
+----------------------------------------
+SOURCE MODEL (FINAL)
+----------------------------------------
+
+Valid source values:
+- planner
+- quick_list
+- pantry
+- household
+- manual
+- null (legacy)
+
+Priority (for display):
+planner > quick_list > manual > pantry > household
+
+----------------------------------------
+FILTERS (REPLACE EXISTING LOGIC)
+----------------------------------------
+
+All:
+- include all items
+
+Planned:
+- source === 'planner'
+
+Extras:
+- source === 'quick_list' OR source === 'manual'
+
+Home:
+- source === 'pantry' OR source === 'household'
+
+Fallback:
+- if source is NULL:
+  - preserve current behaviour using basketLabel prefix logic
+
+----------------------------------------
+LABELS (INLINE, AFTER ITEM NAME)
+----------------------------------------
+
+Show for ALL items:
+
+planner → "From plan"
+quick_list → "Quick list"
+manual → "Added manually"
+pantry → "From pantry"
+household → "Household"
+
+For NULL:
+- no label (legacy items)
+
+----------------------------------------
+SOFT GROUPING (ORDER ONLY, NO HEADERS)
+----------------------------------------
+
+Within each category group items by:
+
+1. planner
+2. quick_list + manual (Extras)
+3. pantry + household (Home)
+
+Implementation:
+- sort items within each category using this priority
+- DO NOT duplicate items
+- DO NOT create visual section headers
+
+----------------------------------------
+IMPLEMENTATION NOTES
+----------------------------------------
+
+- Replace filter predicate in parent page (shopping-list-page.tsx)
+- Apply same filter logic to Shop View inputs
+- Add label rendering to item row component (used by both views)
+- Apply sorting before rendering list per category
+- Ensure fallback for NULL source uses existing logic
+
+----------------------------------------
+VERIFICATION REQUIRED
+----------------------------------------
+
+Test:
+
+1. Planner item → shows "From plan", appears in Planned filter
+2. Quick list item → shows "Quick list", appears in Extras
+3. Manual add → shows "Added manually", appears in Extras
+4. Pantry add → shows "From pantry", appears in Home
+5. Household add → shows "Household", appears in Home
+6. Legacy item (NULL source) → behaves exactly as before
+7. No duplicate items appear
+8. Category grouping unchanged
+9. Basket and Shop View show identical results for same filter
+
+----------------------------------------
+OUTPUT FORMAT
+----------------------------------------
+
+SOURCE UI ACTIVATION COMPLETE: YES/NO
+
+FILTERS UPDATED: YES/NO
+LABELS ADDED: YES/NO
+GROUPING APPLIED: YES/NO
+
+FILES CHANGED:
+- 
+
+OUT OF SCOPE CHANGES:
+- none / list
+
+KNOWN EDGE CASES:
+-
