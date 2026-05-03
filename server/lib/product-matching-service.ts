@@ -1,5 +1,5 @@
 import { lookupPricesForIngredient, type PriceResult } from './price-lookup';
-import { detectIngredientCategory, isGarbageIngredient } from './ingredient-utils';
+import { isGarbageIngredient } from './ingredient-utils';
 import type { InsertGroceryProduct } from '@shared/schema';
 
 export interface MatchedProductResult {
@@ -14,6 +14,8 @@ export interface MatchedProductResult {
   } | null;
 }
 
+const UNRECOGNISED_CATEGORIES = new Set(['', 'other', 'uncategorised']);
+
 export async function matchProductsForIngredient(
   ingredientName: string,
   category: string,
@@ -24,7 +26,15 @@ export async function matchProductsForIngredient(
     return { ingredientName, products: [], bestMatch: null };
   }
 
-  const detectedCategory = category || detectIngredientCategory(ingredientName);
+  // TRUST LAYER FAIL-SAFE: never run a fuzzy keyword fallback for the category
+  // here.  If the caller could not assign a recognised category, the item must
+  // stay unmatched rather than silently inheriting one from the user's typed
+  // text (which may be a misspelling, AI guess, or pure nonsense).
+  if (!category || UNRECOGNISED_CATEGORIES.has(category)) {
+    return { ingredientName, products: [], bestMatch: null };
+  }
+
+  const detectedCategory = category;
   const priceResults = await lookupPricesForIngredient(
     ingredientName,
     detectedCategory,
@@ -88,7 +98,10 @@ export async function matchProductsForItems(
 
   for (const item of items) {
     if (isGarbageIngredient(item.productName)) continue;
-    const category = item.category || detectIngredientCategory(item.productName);
+    // TRUST LAYER FAIL-SAFE: do NOT keyword-detect a category from the item
+    // name as a fallback.  If the stored category is missing or unrecognised
+    // the matcher will (correctly) return no products.
+    const category = item.category ?? '';
     const result = await matchProductsForIngredient(
       item.productName,
       category,

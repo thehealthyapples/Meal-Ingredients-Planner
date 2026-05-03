@@ -269,16 +269,24 @@ export async function lookupPricesForIngredient(
 ): Promise<PriceResult[]> {
   const results: PriceResult[] = [];
 
+  // ── TRUST LAYER FAIL-SAFE ───────────────────────────────────────────────
+  // Refuse to fabricate matches.  A product/price may only be attached when
+  // ALL three are true:
+  //   1. category is recognised (caller is responsible for this gate)
+  //   2. Spoonacular returned a real product
+  //   3. that product carried a plausible real price
+  // If any leg fails we return [] so the caller leaves the item unmatched
+  // and the UI shows "needs review" / no fake supermarket and no fake price.
+  if (!category || category === 'other' || category === 'uncategorised') {
+    return [];
+  }
+
   const searchTerm = getGrocerySearchTerm(ingredientName);
   const product = await searchSpoonacular(searchTerm);
+  if (!product) return [];
 
-  let basePrice: number;
-  let priceSource: "provider" | "estimate";
-  let productLabel: string;
-  let productImage: string | null;
-  let productWeight: string | null;
-  let detectedTier: string;
-  let pricePerUnitStr: string | null = null;
+  const rawPrice = product.price && product.price > 0 ? product.price : null;
+  if (rawPrice === null) return [];
 
   const MAX_REASONABLE_PRICE: Record<string, number> = {
     herbs: 4.00,
@@ -290,52 +298,26 @@ export async function lookupPricesForIngredient(
     oils: 8.00,
   };
 
-  if (product) {
-    const rawPrice = product.price && product.price > 0 ? product.price : null;
-    let convertedPrice = rawPrice ? convertUsdToGbp(rawPrice / 100) : null;
-    const maxPrice = MAX_REASONABLE_PRICE[category];
-    if (convertedPrice && maxPrice && convertedPrice > maxPrice) {
-      convertedPrice = null;
-    }
-    if (convertedPrice !== null) {
-      basePrice = convertedPrice;
-      priceSource = "provider";
-    } else {
-      basePrice = estimateFallbackPrice(category, quantity, unit);
-      priceSource = "estimate";
-    }
-    productLabel = sanitizeProductTitle(product.title || ingredientName);
-    productImage = getProductImage(product);
-    productWeight = getProductWeight(product);
-    detectedTier = classifyProductTier(product);
+  const convertedPrice = convertUsdToGbp(rawPrice / 100);
+  const maxPrice = MAX_REASONABLE_PRICE[category];
+  if (maxPrice && convertedPrice > maxPrice) return [];
 
-    if (convertedPrice && product.servings?.size && product.servings?.unit) {
-      const servingUnit = product.servings.unit.toLowerCase();
-      if (servingUnit.includes('oz') || servingUnit.includes('g') || servingUnit.includes('ml')) {
-        const totalSize = product.servings.number * product.servings.size;
-        if (totalSize > 0) {
-          const pricePerOz = basePrice / totalSize;
-          pricePerUnitStr = `\u00A3${pricePerOz.toFixed(2)}/${servingUnit}`;
-        }
+  const basePrice = convertedPrice;
+  const priceSource: "provider" | "estimate" = "provider";
+  const productLabel = sanitizeProductTitle(product.title || ingredientName);
+  const productImage = getProductImage(product);
+  const productWeight = getProductWeight(product);
+  const detectedTier = classifyProductTier(product);
+  let pricePerUnitStr: string | null = null;
+
+  if (product.servings?.size && product.servings?.unit) {
+    const servingUnit = product.servings.unit.toLowerCase();
+    if (servingUnit.includes('oz') || servingUnit.includes('g') || servingUnit.includes('ml')) {
+      const totalSize = product.servings.number * product.servings.size;
+      if (totalSize > 0) {
+        const pricePerOz = basePrice / totalSize;
+        pricePerUnitStr = `\u00A3${pricePerOz.toFixed(2)}/${servingUnit}`;
       }
-    }
-  } else {
-    // No Spoonacular product found — fall back to category-rate estimates so the
-    // user always sees a price signal rather than "No price data" in Shop View.
-    basePrice = estimateFallbackPrice(category, quantity, unit);
-    priceSource = "estimate";
-    productLabel = ingredientName;
-    productImage = null;
-    productWeight = unit === 'g' ? `${quantity}g` : unit === 'ml' ? `${quantity}ml` : null;
-    detectedTier = 'standard';
-  }
-
-  if (!pricePerUnitStr) {
-    const rates = CATEGORY_PRICE_ESTIMATES[category] || CATEGORY_PRICE_ESTIMATES['other'];
-    if (unit === 'g' && rates.perKg > 0) {
-      pricePerUnitStr = `\u00A3${rates.perKg.toFixed(2)}/kg`;
-    } else if (unit === 'ml' && rates.perLitre > 0) {
-      pricePerUnitStr = `\u00A3${rates.perLitre.toFixed(2)}/L`;
     }
   }
 

@@ -1,0 +1,132 @@
+We are fixing one approved scope only:
+
+TRUST LAYER: AI + ingredient recognition + product matching + pricing safety.
+
+Do not redesign the app.
+Do not touch unrelated UX/navigation/planner/pantry flows.
+Do not optimise beyond this task.
+
+GOAL
+Stop unknown or low-confidence ingredients from becoming fake supermarket products or fake prices.
+
+ROOT TASK
+Trace one bad input end-to-end and find the exact point where false confidence is introduced.
+
+Use examples:
+- Skampee
+- Choalaote
+- Boorboans
+
+At the top of your response write:
+
+ROOT CAUSE: _______
+
+TRACE REQUIRED
+Trace the actual runtime path through:
+
+1. raw input on Quick List/List page
+2. parse/import request payload
+3. deterministic parse result
+4. AI gating decision
+5. AI result if called
+6. final parse response
+7. client insertion payload
+8. shopping list DB record
+9. price lookup request
+10. price lookup route
+11. product match result
+12. DB update after lookup
+13. final shop view render source
+
+FIX REQUIRED
+Add a hard fail-safe:
+
+A product may only be assigned if ALL are true:
+
+1. ingredient recognition is confident
+2. category is not uncategorised / unknown
+3. product lookup returned a real confident match
+
+If any fail:
+
+- keep original user-entered item
+- mark item as unmatched / needs review
+- do NOT attach product
+- do NOT attach price
+- do NOT use generic fallback product
+- do NOT silently convert to Tesco Value or similar
+- allow user to continue with visible unresolved item
+
+This must work when:
+
+- AI is disabled
+- AI key is missing
+- AI returns bad output
+- spelling correction fails
+- taxonomy fails
+- product matching fails
+
+DEFINITION OF DONE
+Success looks like:
+
+- nonsense inputs no longer receive fake products
+- nonsense inputs no longer receive fake prices
+- bad misspellings are either confidently corrected or left unmatched
+- real normal items still work
+- unmatched/review state is visible enough for the user to understand
+- no unrelated flows changed
+
+Must NOT break:
+
+- Broccoli normal matching
+- Tahini normal matching if real product exists
+- Quick List submission
+- Basket rendering
+- Shop View rendering
+- Existing shopping list records
+
+DATA IMPACT DECLARATION
+Before coding, state:
+
+- Reads existing data: yes/no
+- Writes new data: yes/no
+- Changes meaning of existing data: yes/no
+- Requires backfill: yes/no
+
+If unsure, stop and ask.
+
+TRUST CHECK
+Before coding, answer:
+
+- Could this mislead the user?
+- Could this fabricate certainty?
+- Is anything guessed but shown as real?
+- What happens if the system is wrong?
+
+MANUAL TESTS
+Run and report:
+
+1. Skampee → unmatched, no product, no price, review needed
+2. Choalaote → unmatched unless confidently corrected, otherwise no product/no price
+3. Boorboans → unmatched, no fake product/no fake price
+4. Broccoli → still works normally
+5. Tahini → still works if real confident match exists
+6. AI disabled or missing key → safety behaviour still works
+7. AI enabled but bad output → safety behaviour still works
+
+FINAL RESPONSE FORMAT
+Return:
+
+- ROOT CAUSE
+- files changed
+- exact fix summary
+- exact fail-safe summary
+- data impact declaration
+- trust check
+- manual test results
+- remaining edge cases
+- whether production backfill is required
+
+Scope lock:
+Implement only this approved trust-layer fix.
+List any extra ideas under SUGGESTION only.
