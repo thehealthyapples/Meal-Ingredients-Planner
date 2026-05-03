@@ -1,0 +1,142 @@
+CHANGE CONTROL: ENFORCED
+READ-ONLY INVESTIGATION ONLY
+
+You are creating a MASTER PRODUCT GUIDE for The Healthy Apples.
+
+IMPORTANT:
+This is NOT a coding task.
+Do NOT change files.
+Do NOT implement anything.
+Do NOT refactor.
+Do NOT run migrations.
+Do NOT deploy.
+Do NOT push.
+
+TASK:
+Scan the entire codebase and produce a plain-English document for someone who cannot code.
+
+GOAL:
+A non-technical person should be able to read this and understand:
+- everything The Healthy Apples can do
+- how the app works
+- what each menu item / button / screen is for
+- how all flows connect
+- what happens behind the scenes in simple language
+- what is known, unclear, or unfinished
+
+AREAS TO COVER:
+- Top navigation icons
+- Left menu
+- Cookbook
+- Planner
+- Pantry
+- Analyser
+- My Diary
+- Basket
+- Quick List
+- Check Your Cupboards
+- Shop View
+- Product matching / prices
+- Apple Rating / health scoring
+- Households / users
+- Recipe import
+- Freezer / stored meals if present
+- Admin or hidden tools if present
+
+OUTPUT FORMAT:
+
+1. EXECUTIVE SUMMARY
+- What the app is
+- Who it is for
+- The main value proposition
+
+2. COMPLETE UI MAP
+For every visible menu item, icon, button, and main screen:
+- What it does
+- Who uses it
+- What happens when clicked
+- What data it affects
+- Any confusing behaviour
+
+3. END-TO-END USER FLOWS
+Explain step-by-step:
+- Add/import recipe
+- Search cookbook
+- Add meal to planner
+- Use planner
+- Add meal/item to basket
+- Generate shopping list
+- Check cupboards
+- Resolve vague items
+- Adjust quantities
+- Go to shop view
+- Analyse basket
+- Use pantry
+- Use diary
+- Any freezer/stored-meal flow if present
+
+4. HOW THE APP WORKS BEHIND THE SCENES
+Plain English only:
+- where data is stored
+- how recipes become ingredients
+- how ingredients become shopping items
+- how quantities work
+- how categories work
+- how prices work
+- how Apple Ratings work
+- how AI is used
+- what happens when AI/pricing fails
+
+5. KEY TECHNICAL DETAILS FOR NON-CODERS
+Explain simply:
+- frontend vs backend
+- database
+- API
+- user accounts / households
+- environment variables
+- deployment basics
+
+6. KNOWN LIMITATIONS AND RISKS
+Be honest:
+- unclear flows
+- incomplete features
+- confusing naming
+- price estimate limitations
+- AI trust limitations
+- places where data may not behave as users expect
+
+7. COMMON USER QUESTIONS / HOW-TO STARTERS
+Create starter sections for future guides:
+- How do I add a recipe?
+- How do I find a meal?
+- How do I plan a week?
+- How do I use the basket?
+- How do I check cupboards?
+- How do I use pantry/freezer?
+- How do I understand Apple Ratings?
+- Why are prices estimates?
+
+8. SUPPORT / TROUBLESHOOTING GUIDE
+For common problems:
+- what user sees
+- likely cause
+- safe workaround
+- when it is a bug
+
+9. WHAT IS UNCLEAR FROM CODE
+Do not guess.
+List anything that cannot be confirmed from code.
+
+RULES:
+- Use plain English
+- Avoid code language unless needed
+- If you mention a technical detail, explain what it means
+- Do not claim features exist unless code supports them
+- Do not hide uncertainty
+- Do not suggest changes except under SUGGESTION
+- Keep it structured and useful as a future source for user guides
+
+FINAL OUTPUT:
+One complete structured document titled:
+
+“The Healthy Apples — Master Product Guide”
