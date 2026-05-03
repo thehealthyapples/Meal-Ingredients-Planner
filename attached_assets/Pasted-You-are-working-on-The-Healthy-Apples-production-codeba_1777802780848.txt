@@ -1,0 +1,118 @@
+You are working on The Healthy Apples production codebase.
+
+AUDIT ONLY — DO NOT CHANGE CODE.
+
+We need to understand how Basket, Quick List, and Shop View currently work together.
+
+Context:
+- Shop View already supports filters: Planned / Quick List / All
+- Basket also reflects these views
+- However, behaviour suggests there may still be inconsistencies depending on entry point
+
+Your task is to explain the current system in plain English.
+
+DO NOT:
+- modify code
+- suggest refactors yet
+- rename anything
+- implement anything
+
+----------------------------------------
+
+1. CURRENT DATA MODEL
+
+Explain:
+- Where Basket items are stored
+- Where Quick List items are stored
+- Whether they are the same or separate
+- What fields exist on a shopping item
+
+Include:
+- shopStatus
+- sources
+- any flags that differentiate planned vs quick list
+
+----------------------------------------
+
+2. SOURCE IDENTIFICATION
+
+Explain how the system currently determines:
+- planned items
+- quick list items
+
+Is this:
+- explicit (field like sourceType)?
+- inferred (e.g. presence/absence of mealId)?
+
+----------------------------------------
+
+3. SHOP VIEW ENTRY POINTS
+
+List ALL ways Shop View is opened.
+
+For each:
+- file + component
+- trigger (button / navigation)
+- what data is passed into ShoppingListView
+- initialPhase value
+- default filters (if any)
+- onClose behaviour
+
+----------------------------------------
+
+4. SHOP VIEW IMPLEMENTATION
+
+Confirm:
+- Is there only ONE ShoppingListView component?
+- Or multiple implementations?
+
+Explain:
+- whether Basket and Quick List both use it
+- what differs between the two entry paths
+
+----------------------------------------
+
+5. FILTER LOGIC
+
+Explain how these filters work:
+- All
+- Planned
+- Quick List
+
+Specifically:
+- what logic determines which items appear
+- whether this logic is shared across Basket + Shop View
+
+----------------------------------------
+
+6. KNOWN INCONSISTENCIES (IMPORTANT)
+
+Based on code, identify any likely causes of:
+
+- “Two shop views” feeling
+- Items behaving differently depending on entry point
+- Variants not appearing consistently
+- Pricing mismatches
+- Category differences
+
+----------------------------------------
+
+7. SUMMARY
+
+Provide:
+
+CURRENT ARCHITECTURE:
+(single vs multiple systems)
+
+MAIN RISKS:
+(where inconsistencies likely come from)
+
+LOWEST-RISK NEXT STEP:
+(do NOT implement, just recommend)
+
+----------------------------------------
+
+IMPORTANT:
+This is an audit only.
+Be precise, not generic.
+Use plain English, not code language.
