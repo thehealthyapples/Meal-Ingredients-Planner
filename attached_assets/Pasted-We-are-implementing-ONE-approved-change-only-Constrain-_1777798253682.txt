@@ -1,0 +1,209 @@
+We are implementing ONE approved change only:
+
+Constrain AI category assignment using a strict whitelist + confidence gating
+
+----------------------------------------
+GOAL
+----------------------------------------
+
+Ensure category assignment is:
+
+- deterministic OR safely AI-assisted
+- NEVER guessed with low confidence
+- NEVER outside an allowed category list
+
+If unsure:
+→ return "unknown"
+→ trigger ⚠ Review downstream
+
+----------------------------------------
+SCOPE
+----------------------------------------
+
+Update ONLY the category assignment step in the parsing pipeline.
+
+DO NOT:
+- Change matching logic
+- Change pricing logic
+- Change UI
+- Add new DB fields
+- Modify totals or estimates
+
+----------------------------------------
+STEP 1 — DEFINE CATEGORY WHITELIST
+----------------------------------------
+
+Create a fixed list of allowed categories (example — adjust to your schema):
+
+[
+  "produce",
+  "dairy",
+  "meat",
+  "fish",
+  "bakery",
+  "frozen",
+  "pantry",
+  "drinks",
+  "snacks",
+  "household",
+  "other"
+]
+
+Rules:
+- AI MUST return exactly one of these
+- No free-text categories allowed
+
+----------------------------------------
+STEP 2 — UPDATE AI PROMPT
+----------------------------------------
+
+Modify the categorisation prompt:
+
+- Provide the whitelist explicitly
+- Force structured output
+
+Example:
+
+"You must assign ONE category from this list:
+[produce, dairy, meat, fish, bakery, frozen, pantry, drinks, snacks, household, other]
+
+If you are unsure, return: unknown
+
+Also return a confidence score between 0 and 1.
+
+Output JSON only:
+{
+  "category": "...",
+  "confidence": 0.0
+}
+"
+
+----------------------------------------
+STEP 3 — VALIDATION LAYER (CRITICAL)
+----------------------------------------
+
+After AI returns:
+
+1. If category NOT in whitelist:
+   → reject → category = "unknown"
+
+2. If confidence < threshold (e.g. 0.7):
+   → reject → category = "unknown"
+
+3. If AI returns "unknown":
+   → accept as-is
+
+4. If AI fails / times out:
+   → fallback to deterministic rules
+   → if still unclear → "unknown"
+
+----------------------------------------
+STEP 4 — REMOVE SILENT FALLBACKS
+----------------------------------------
+
+Ensure:
+
+- No mapping like:
+  "close match" → assign anyway
+- No default category assignment
+- No “best guess” behaviour
+
+Only:
+- valid category
+- OR unknown
+
+----------------------------------------
+STEP 5 — LOGGING (LIGHTWEIGHT)
+----------------------------------------
+
+Add temporary logging:
+
+- input → category → confidence → accepted/rejected
+
+This is for debugging only (no DB persistence needed)
+
+----------------------------------------
+DEFINITION OF DONE
+----------------------------------------
+
+Success:
+
+- All categories come from whitelist OR "unknown"
+- Low-confidence AI outputs are rejected
+- No nonsense category assignments
+- Unknown items flow into ⚠ Review correctly
+- Existing correct items still categorised properly
+
+Must NOT break:
+
+- Broccoli → produce
+- Milk → dairy
+- Eggs → dairy (or your schema equivalent)
+- Drinks remain drinks (no cross-category drift)
+- Existing matching + pricing logic
+
+----------------------------------------
+DATA IMPACT DECLARATION
+----------------------------------------
+
+- Reads existing data: yes
+- Writes new data: no (unless existing pipeline already writes category)
+- Changes meaning of existing data: no
+- Requires backfill: no
+
+If this changes → STOP
+
+----------------------------------------
+TRUST CHECK
+----------------------------------------
+
+- Are we fabricating certainty? → NO
+- Do unknowns increase? → YES (expected)
+- Is that acceptable? → YES (they surface via ⚠ Review)
+
+----------------------------------------
+MANUAL TESTS
+----------------------------------------
+
+1. "broccoli"
+→ category: produce
+→ confidence high
+→ accepted
+
+2. "milk"
+→ dairy
+→ accepted
+
+3. "skampee"
+→ unknown
+→ ⚠ Review triggered
+
+4. "choalaote"
+→ either:
+   - corrected + high confidence → pantry/snacks
+   - OR unknown
+
+5. AI failure (simulate)
+→ deterministic fallback
+→ if unclear → unknown
+
+----------------------------------------
+OUTPUT REQUIRED
+----------------------------------------
+
+- files changed
+- updated AI prompt
+- validation logic summary
+- confidence threshold used
+- logging output example
+- manual test results
+- edge cases
+
+----------------------------------------
+SCOPE LOCK
+----------------------------------------
+
+Only implement:
+- category constraint + validation
+
+Anything else → SUGGESTION only
