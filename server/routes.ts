@@ -6,7 +6,7 @@ import { api } from "@shared/routes";
 import { z } from "zod";
 import axios from "axios";
 import * as cheerio from "cheerio";
-import { parseIngredient, consolidateIngredients, formatQuantityMetric, formatQuantityImperial, detectIngredientCategory, isGarbageIngredient } from "./lib/ingredient-utils";
+import { parseIngredient, consolidateIngredients, formatQuantityMetric, formatQuantityImperial, detectIngredientCategory, isGarbageIngredient, INGREDIENT_CATEGORIES } from "./lib/ingredient-utils";
 import { lookupPricesForIngredient } from "./lib/price-lookup";
 import { consolidateAndNormalize, normalizeIngredient, convertToGrams } from "./lib/ingredient-normalization-service";
 import { matchProductsForIngredient } from "./lib/product-matching-service";
@@ -20,7 +20,7 @@ import { generateSmartSuggestion, type SmartSuggestSettings, type LockedEntry } 
 import { searchAllRecipes, searchJamieOliver, searchSeriousEats, searchEdamam, searchApiNinjas, searchBigOven, searchFatSecret, type ExternalMealCandidate } from "./lib/external-meal-service";
 import { seedSourceSettings, isSourceCallable, getSourceKeyForUrl, logAuditEvent, getAllSourceSettings, updateSourceSettings, getAuditLogs } from "./lib/recipe-source-gate";
 import { shouldExcludeRecipe, scoreRecipeForDiet } from "./lib/dietRules";
-import { expandSearchQuery, correctFoodSpelling } from "@shared/food-synonyms";
+import { expandSearchQuery, correctFoodSpelling, conservativeSpellCorrect } from "@shared/food-synonyms";
 import { parseIngredient as parseIngredientShared } from "@shared/parse-ingredient";
 import { INGREDIENT_TAXONOMY } from "@shared/ingredient-taxonomy";
 import { normalizeIngredientKey } from "@shared/normalize";
@@ -70,6 +70,17 @@ function ingredientMatchesMeal(consolidatedName: string, mealIngredients: string
   }
   return false;
 }
+
+// Conservative spelling dictionary for the import pipeline.
+// Union of curated taxonomy keys + categorisation keyword lists. Built once.
+const SPELLFIX_DICTIONARY: string[] = (() => {
+  const set = new Set<string>();
+  for (const k of Object.keys(INGREDIENT_TAXONOMY)) set.add(k.toLowerCase());
+  for (const arr of Object.values(INGREDIENT_CATEGORIES)) {
+    for (const w of arr) set.add(String(w).toLowerCase());
+  }
+  return Array.from(set);
+})();
 
 const MACRO_KEYWORDS = [
   'calories', 'cal', 'energy', 'protein', 'fat', 'carbs', 'carbohydrates',
@@ -2835,11 +2846,16 @@ Rules:
       const parsed = parseIngredientShared(line);
       const hasQuantityOrUnit = parsed.quantity !== null || parsed.unit !== null;
 
-      // Apply word-level food spelling correction (deterministic, no AI required).
-      // e.g. "brocoli" → "broccoli", "aurbegine" → "aubergine"
+      // Apply CONSERVATIVE word-level food spelling correction (deterministic, no AI).
+      // Only corrects when:
+      //   - similarity ≥ 0.85
+      //   - exactly one clear best match exists
+      //   - target is a known food term (FOOD_TERM_DICTIONARY ∪ taxonomy keys)
+      //   - input is ≥ 4 chars
+      // Otherwise leaves the word unchanged so ⚠ Review can handle it.
       const correctedName = parsed.productName
         .split(/\s+/)
-        .map(w => correctFoodSpelling(w))
+        .map(w => conservativeSpellCorrect(w, SPELLFIX_DICTIONARY))
         .join(' ');
       const correctedNormalized = correctedName !== parsed.productName
         ? normalizeIngredientKey(correctedName)

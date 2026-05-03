@@ -266,7 +266,7 @@ const STRIP_PHRASES = [
   /\binto\b.*$/gi,
 ];
 
-const INGREDIENT_CATEGORIES: Record<string, string[]> = {
+export const INGREDIENT_CATEGORIES: Record<string, string[]> = {
   meat: ['chicken', 'beef', 'pork', 'lamb', 'bacon', 'steak', 'ham', 'turkey', 'duck', 'sausage', 'mince', 'veal', 'venison', 'chorizo', 'salami', 'prosciutto', 'pancetta'],
   fish: ['salmon', 'tuna', 'cod', 'haddock', 'mackerel', 'trout', 'bass', 'halibut', 'sardine', 'anchovy', 'fish', 'prawn', 'shrimp', 'crab', 'lobster', 'mussel', 'squid', 'calamari', 'scallop', 'clam', 'oyster'],
   dairy: ['milk', 'cheese', 'cream', 'butter', 'yogurt', 'yoghurt', 'cheddar', 'mozzarella', 'parmesan', 'ricotta', 'mascarpone', 'brie', 'camembert', 'feta', 'gouda', 'gruyere', 'ghee', 'curd', 'whey'],

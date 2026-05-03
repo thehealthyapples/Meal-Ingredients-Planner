@@ -1,0 +1,200 @@
+We are implementing ONE approved change only:
+
+Add a CONSERVATIVE spelling correction layer before category classification
+
+----------------------------------------
+GOAL
+----------------------------------------
+
+Improve input quality WITHOUT introducing guessing.
+
+Only correct when:
+- highly confident
+- target is a known food item
+
+Otherwise:
+→ leave unchanged
+→ let ⚠ Review handle it
+
+----------------------------------------
+SCOPE
+----------------------------------------
+
+Insert a preprocessing step BEFORE:
+- AI classification
+- deterministic categorisation
+
+Pipeline becomes:
+
+raw input
+→ spelling correction (NEW)
+→ classification (existing)
+→ matching / pricing (unchanged)
+
+DO NOT:
+- modify classification logic
+- modify matching logic
+- add AI here
+- persist corrections automatically
+
+----------------------------------------
+STEP 1 — DICTIONARY (SOURCE OF TRUTH)
+----------------------------------------
+
+Use an existing controlled vocabulary:
+
+- known ingredients
+- common grocery items
+- categories or product keywords already in system
+
+Examples:
+["milk", "chocolate", "bourbon", "eggs", "broccoli", "tahini", ...]
+
+Rules:
+- only correct TO items in this dictionary
+- never invent new words
+
+----------------------------------------
+STEP 2 — SIMILARITY CHECK
+----------------------------------------
+
+Use a deterministic string similarity:
+
+Recommended:
+- Levenshtein distance OR
+- normalized similarity score
+
+Rules:
+
+- Only correct if similarity ≥ 0.85
+- Only if ONE clear best match exists
+- If multiple close matches → DO NOT correct
+
+----------------------------------------
+STEP 3 — CORRECTION RULE
+----------------------------------------
+
+IF:
+- similarity ≥ threshold
+- unique best match
+- match exists in dictionary
+
+THEN:
+→ replace input with corrected term
+
+ELSE:
+→ leave original input unchanged
+
+----------------------------------------
+STEP 4 — NO OVER-CORRECTION
+----------------------------------------
+
+Explicitly prevent:
+
+- correcting short words (≤ 3 chars)
+- correcting to different semantic roots
+- aggressive substitutions
+
+Examples:
+
+"eg" → DO NOT correct automatically
+"ham" → DO NOT guess
+"skampee" → leave unchanged
+
+----------------------------------------
+STEP 5 — LOGGING (TEMPORARY)
+----------------------------------------
+
+Log:
+
+[SpellFix]
+input="choalaote"
+→ corrected="chocolate"
+confidence=0.91
+
+OR
+
+input="skampee"
+→ no correction
+
+----------------------------------------
+DEFINITION OF DONE
+----------------------------------------
+
+Success:
+
+- obvious typos corrected
+- unclear inputs left unchanged
+- no false corrections introduced
+- classification accuracy improves downstream
+- ⚠ Review volume reduces for typo cases
+
+Must NOT break:
+
+- existing correct inputs
+- category classification logic
+- matching pipeline
+- pricing behaviour
+- trust model (no guessing)
+
+----------------------------------------
+DATA IMPACT DECLARATION
+----------------------------------------
+
+- Reads existing data: yes (dictionary)
+- Writes new data: no
+- Changes meaning of existing data: no
+- Requires backfill: no
+
+----------------------------------------
+TRUST CHECK
+----------------------------------------
+
+- Are we guessing? → NO
+- Are we correcting only when confident? → YES
+- Could we mislead user? → NO (corrections are high-confidence only)
+
+----------------------------------------
+MANUAL TESTS
+----------------------------------------
+
+1. "choalaote"
+→ corrected to "chocolate"
+→ classified correctly
+
+2. "boorboans"
+→ corrected to "bourbon"
+→ classified correctly
+
+3. "skampee"
+→ NO correction
+→ remains unknown
+→ ⚠ Review
+
+4. "milk"
+→ unchanged
+
+5. "eg"
+→ unchanged (too short)
+
+----------------------------------------
+OUTPUT REQUIRED
+----------------------------------------
+
+- files changed
+- similarity method used
+- threshold used
+- dictionary source
+- correction examples
+- logs
+- manual test results
+- edge cases
+
+----------------------------------------
+SCOPE LOCK
+----------------------------------------
+
+Only implement:
+- conservative spelling correction layer
+
+Anything else → SUGGESTION only

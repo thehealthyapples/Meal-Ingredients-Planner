@@ -224,6 +224,153 @@ export function correctFoodSpelling(term: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Conservative spelling correction (preprocessing layer)
+//
+// Stricter than `correctFoodSpelling`:
+//   - higher similarity threshold (≥ 0.85)
+//   - longer minimum length (≥ 4 chars; words ≤ 3 chars are NEVER corrected)
+//   - requires a UNIQUE best match (if two candidates tie or are both within
+//     tolerance, we abort and leave the input unchanged)
+//   - dictionary union: FOOD_TERM_DICTIONARY + single-word SYNONYM_LOOKUP keys
+//     (callers may extend at runtime via `conservativeSpellCorrectWith`)
+//
+// Returns the original term if no confident, unique correction exists.
+// Used as a preprocessing step BEFORE classification, where over-correction
+// would mislead the user. No guessing.
+// ---------------------------------------------------------------------------
+const CONSERVATIVE_THRESHOLD = 0.85;
+const CONSERVATIVE_MIN_LEN   = 4;
+// A second candidate that is "almost as good" as the best one means we are
+// not confident. Tolerance is in similarity units.
+const CONSERVATIVE_TIE_EPSILON = 0.05;
+
+function buildConservativeDictionary(extra?: Iterable<string>): Set<string> {
+  const dict = new Set<string>();
+  for (const w of FOOD_TERM_DICTIONARY) {
+    const lw = w.toLowerCase();
+    if (!lw.includes(' ') && lw.length >= CONSERVATIVE_MIN_LEN) dict.add(lw);
+  }
+  SYNONYM_LOOKUP.forEach((_, key) => {
+    if (!key.includes(' ') && key.length >= CONSERVATIVE_MIN_LEN) dict.add(key);
+  });
+  if (extra) {
+    const arr = Array.isArray(extra) ? extra : Array.from(extra);
+    for (const w of arr) {
+      const lw = String(w).toLowerCase().trim();
+      if (lw && !lw.includes(' ') && lw.length >= CONSERVATIVE_MIN_LEN) dict.add(lw);
+    }
+  }
+  return dict;
+}
+
+const DEFAULT_CONSERVATIVE_DICT = buildConservativeDictionary();
+
+export interface SpellFixResult {
+  corrected: string;        // either the original term or the corrected one
+  changed:   boolean;
+  confidence: number;       // 0..1; similarity to best dictionary match (0 if unchanged)
+  reason:    'unchanged_short'
+           | 'unchanged_known'
+           | 'unchanged_no_match'
+           | 'unchanged_ambiguous'
+           | 'corrected';
+  candidate?: string;       // the runner-up (when ambiguous)
+}
+
+function bestUniqueMatch(
+  term: string,
+  dict: Set<string>,
+): { best: string | null; bestSim: number; runnerUp: string | null; runnerSim: number } {
+  let best: string | null = null;
+  let bestSim = 0;
+  let runnerUp: string | null = null;
+  let runnerSim = 0;
+
+  dict.forEach((word) => {
+    const s = similarity(term, word);
+    if (s > bestSim) {
+      runnerUp = best;
+      runnerSim = bestSim;
+      best = word;
+      bestSim = s;
+    } else if (s > runnerSim) {
+      runnerUp = word;
+      runnerSim = s;
+    }
+  });
+
+  return { best, bestSim, runnerUp, runnerSim };
+}
+
+/**
+ * Conservative single-word spelling correction with diagnostics.
+ * Default dictionary: FOOD_TERM_DICTIONARY ∪ single-word synonym keys.
+ * Pass `extraDictionary` to add app-specific known terms (e.g. taxonomy keys).
+ */
+export function conservativeSpellCorrectWith(
+  term: string,
+  extraDictionary?: Iterable<string>,
+): SpellFixResult {
+  const original = term;
+  const t = (term ?? '').toLowerCase().trim();
+
+  if (t.length < CONSERVATIVE_MIN_LEN) {
+    return { corrected: original, changed: false, confidence: 0, reason: 'unchanged_short' };
+  }
+
+  const dict = extraDictionary ? buildConservativeDictionary(extraDictionary) : DEFAULT_CONSERVATIVE_DICT;
+
+  // Already a known dictionary word — leave it alone.
+  if (dict.has(t) || SYNONYM_LOOKUP.has(t)) {
+    return { corrected: original, changed: false, confidence: 1, reason: 'unchanged_known' };
+  }
+
+  const { best, bestSim, runnerUp, runnerSim } = bestUniqueMatch(t, dict);
+
+  if (!best || bestSim < CONSERVATIVE_THRESHOLD) {
+    return { corrected: original, changed: false, confidence: bestSim, reason: 'unchanged_no_match' };
+  }
+
+  // Require a UNIQUE best match: the runner-up must be clearly worse.
+  if (runnerUp && runnerSim >= CONSERVATIVE_THRESHOLD && (bestSim - runnerSim) < CONSERVATIVE_TIE_EPSILON) {
+    return {
+      corrected: original,
+      changed: false,
+      confidence: bestSim,
+      reason: 'unchanged_ambiguous',
+      candidate: runnerUp,
+    };
+  }
+
+  // Don't correct to a semantically distant root: enforce shared first letter.
+  // Cheap heuristic that prevents "ham" → anything, "eg" → anything, etc.
+  if (t[0] !== best[0]) {
+    return { corrected: original, changed: false, confidence: bestSim, reason: 'unchanged_no_match' };
+  }
+
+  return { corrected: best, changed: true, confidence: bestSim, reason: 'corrected' };
+}
+
+/**
+ * Convenience wrapper: returns the corrected term (or the original if no
+ * confident, unique correction exists). Logs a [SpellFix] line for visibility.
+ */
+export function conservativeSpellCorrect(
+  term: string,
+  extraDictionary?: Iterable<string>,
+): string {
+  const r = conservativeSpellCorrectWith(term, extraDictionary);
+  if (r.changed) {
+    console.log(`[SpellFix] input="${term}" → corrected="${r.corrected}" confidence=${r.confidence.toFixed(2)}`);
+  } else if (r.reason === 'unchanged_ambiguous') {
+    console.log(`[SpellFix] input="${term}" → no correction (ambiguous: ${r.candidate} ~ ${r.confidence.toFixed(2)})`);
+  }
+  // 'unchanged_short' / 'unchanged_known' / 'unchanged_no_match' are silent
+  // to keep logs lightweight (the spec's logging examples cover the noisy paths).
+  return r.corrected;
+}
+
+// ---------------------------------------------------------------------------
 // Query expansion
 // Returns all candidate search strings: corrected form + all synonyms
 // ---------------------------------------------------------------------------
