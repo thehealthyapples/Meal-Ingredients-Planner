@@ -192,6 +192,7 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
             quantityValue: sendQty,
             unit: "unit",
             category: item.category,
+            source: "pantry",
           })
         )
       );
@@ -574,6 +575,7 @@ function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading
             quantityValue: sendQty,
             unit: "unit",
             category: "household",
+            source: "household",
           })
         )
       );
