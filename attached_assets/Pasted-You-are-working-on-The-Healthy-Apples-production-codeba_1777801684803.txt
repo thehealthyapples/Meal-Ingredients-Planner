@@ -1,0 +1,119 @@
+You are working on The Healthy Apples production codebase.
+
+NEW BRANCH OF WORK: UNIFIED BASKET + QUICK LIST SHOP VIEW.
+
+DO NOT CHANGE CODE.
+This is an audit and product-model review only.
+
+Product decision we are exploring:
+Basket should become the single source of truth for shopping.
+Quick List should feed into Basket, not maintain a separate hidden Shop View.
+
+Target mental model:
+Basket = everything I need to buy
+Quick List = fast way to add items
+Shop View = shopping mode for Basket
+
+Desired behaviour:
+1. There should be ONE Shop View.
+2. Basket Shop View should show exactly what is in Basket.
+3. Quick List items should be added into Basket.
+4. Basket items must retain source:
+   - planned / basket / recipe / planner
+   - quick_list
+5. Shop View should support filters:
+   - All
+   - Planned
+   - Quick List
+6. Opening Shop View from Basket should default to All.
+7. Opening Shop View from Quick List should default to Quick List.
+8. User should never lose access to Quick List items from Basket.
+9. User should never need to remember which Shop View they entered from.
+
+AUDIT TASKS:
+
+1. CURRENT MODEL
+Find how Basket items are currently stored.
+Find how Quick List items are currently stored.
+Confirm whether they share the same DB table or different storage.
+
+2. SOURCE TRACKING
+Check whether basket/list items already have fields that identify origin/source.
+Examples:
+- sourceType
+- mealSourceType
+- addedFrom
+- listType
+- quickList flag
+- mealId/source rows
+- metadata
+
+3. SHOP VIEW ENTRY POINTS
+Find every place Shop View is opened.
+Search for:
+- ShoppingListView
+- setViewMode("shop")
+- quick list
+- basket
+- initialPhase
+- onClose
+- viewMode
+
+For each entry point, report:
+- file
+- component
+- trigger/button
+- data passed into ShoppingListView
+- default phase/filter
+- close behaviour
+
+4. IMPLEMENTATION REALITY
+Confirm:
+- Is there one ShoppingListView component reused?
+- Or are there multiple shop view implementations?
+- What props differ?
+- Are category grouping, pricing, variant selectors, and status updates shared?
+
+5. MERGE / UNIFICATION OPTIONS
+Propose 2 options:
+
+Option A — minimal safe unification:
+- keep existing storage
+- combine data in UI/view-model
+- label source if possible
+- add filters All / Planned / Quick List
+
+Option B — cleaner long-term model:
+- persist source on basket items
+- Quick List writes directly into Basket
+- remove separate Quick List shop state
+
+For each option:
+- required files
+- DB schema needed yes/no
+- migration/backfill needed yes/no
+- risk level
+- pros/cons
+
+6. RECOMMENDATION
+Recommend the safest path for production.
+
+Important:
+Do NOT implement anything.
+Do NOT rename fields.
+Do NOT add migrations.
+Do NOT remove Quick List.
+Do NOT change Shop View yet.
+
+OUTPUT FORMAT:
+
+CURRENT MODEL:
+DATA STORAGE:
+SOURCE TRACKING:
+SHOP VIEW ENTRY POINTS:
+SHOP VIEW IMPLEMENTATION:
+CAN SUPPORT FILTERS WITHOUT DB CHANGE:
+MERGE OPTIONS:
+RECOMMENDED PATH:
+RISKS:
+OPEN QUESTIONS:
