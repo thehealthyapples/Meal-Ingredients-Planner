@@ -975,6 +975,15 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // Scope correction: 'basket' is not an approved source value. Any rows
+    // tagged 'basket' by an interim build are remapped to 'manual'. Idempotent.
+    id: "2026-05-03_rename_source_basket_to_manual",
+    statements: [
+      "UPDATE shopping_list SET source = 'manual' WHERE source = 'basket'",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

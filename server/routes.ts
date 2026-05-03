@@ -3565,7 +3565,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       if ((insertPayload as any).source == null) {
         (insertPayload as any).source = (insertPayload as any).basketLabel?.startsWith("quick_list_")
           ? "quick_list"
-          : "basket";
+          : "manual";
       }
       const item = await storage.addShoppingListItem(
         req.user!.id,
