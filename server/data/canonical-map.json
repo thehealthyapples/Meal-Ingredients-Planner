@@ -75,5 +75,44 @@
   "blackberry":          { "canonicalName": "blackberries",       "category": "fruit",         "subcategory": "soft_fruit" },
   "blackberries":        { "canonicalName": "blackberries",       "category": "fruit",         "subcategory": "soft_fruit" },
   "olive oil":           { "canonicalName": "olive oil",          "category": "oils",          "subcategory": null },
-  "extra virgin olive oil": { "canonicalName": "olive oil",       "category": "oils",          "subcategory": null }
+  "extra virgin olive oil": { "canonicalName": "olive oil",       "category": "oils",          "subcategory": null },
+
+  "plain flour":         { "canonicalName": "plain flour",        "category": "grains",        "subcategory": null },
+  "self-raising flour":  { "canonicalName": "self-raising flour", "category": "grains",        "subcategory": null },
+  "wholemeal flour":     { "canonicalName": "wholemeal flour",    "category": "grains",        "subcategory": null },
+  "bread flour":         { "canonicalName": "bread flour",        "category": "grains",        "subcategory": null },
+  "spelt flour":         { "canonicalName": "spelt flour",        "category": "grains",        "subcategory": null },
+
+  "salted butter":       { "canonicalName": "salted butter",      "category": "dairy",         "subcategory": null },
+  "unsalted butter":     { "canonicalName": "unsalted butter",    "category": "dairy",         "subcategory": null },
+  "spreadable butter":   { "canonicalName": "spreadable butter",  "category": "dairy",         "subcategory": null },
+  "plant-based butter":  { "canonicalName": "plant-based butter", "category": "dairy",         "subcategory": null },
+
+  "whole milk":          { "canonicalName": "whole milk",         "category": "dairy",         "subcategory": null },
+  "semi-skimmed milk":   { "canonicalName": "semi-skimmed milk",  "category": "dairy",         "subcategory": null },
+  "skimmed milk":        { "canonicalName": "skimmed milk",       "category": "dairy",         "subcategory": null },
+  "oat milk":            { "canonicalName": "oat milk",           "category": "dairy",         "subcategory": null },
+  "almond milk":         { "canonicalName": "almond milk",        "category": "dairy",         "subcategory": null },
+
+  "sourdough bread":     { "canonicalName": "sourdough bread",    "category": "bakery",        "subcategory": null },
+  "wholemeal bread":     { "canonicalName": "wholemeal bread",    "category": "bakery",        "subcategory": null },
+  "white bread":         { "canonicalName": "white bread",        "category": "bakery",        "subcategory": null },
+  "seeded bread":        { "canonicalName": "seeded bread",       "category": "bakery",        "subcategory": null },
+
+  "greek yoghurt":       { "canonicalName": "greek yoghurt",      "category": "dairy",         "subcategory": null },
+  "natural yoghurt":     { "canonicalName": "natural yoghurt",    "category": "dairy",         "subcategory": null },
+  "flavoured yoghurt":   { "canonicalName": "flavoured yoghurt",  "category": "dairy",         "subcategory": null },
+  "dairy-free yoghurt":  { "canonicalName": "dairy-free yoghurt", "category": "dairy",         "subcategory": null },
+
+  "turmeric":            { "canonicalName": "turmeric",           "category": "herbs",         "subcategory": null },
+  "ground turmeric":     { "canonicalName": "ground turmeric",    "category": "herbs",         "subcategory": null },
+  "fresh turmeric root": { "canonicalName": "fresh turmeric root","category": "herbs",         "subcategory": null },
+
+  "prawns":              { "canonicalName": "prawns",             "category": "fish",          "subcategory": null },
+  "raw king prawns":     { "canonicalName": "raw king prawns",    "category": "fish",          "subcategory": null },
+  "cooked king prawns":  { "canonicalName": "cooked king prawns", "category": "fish",          "subcategory": null },
+  "raw tiger prawns":    { "canonicalName": "raw tiger prawns",   "category": "fish",          "subcategory": null },
+  "cooked tiger prawns": { "canonicalName": "cooked tiger prawns","category": "fish",          "subcategory": null },
+
+  "duck eggs":           { "canonicalName": "duck eggs",          "category": "eggs",          "subcategory": null }
 }

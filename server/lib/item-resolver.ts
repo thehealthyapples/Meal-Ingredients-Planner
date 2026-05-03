@@ -169,8 +169,11 @@ export function resolveItem(rawText: string, options: ResolveOptions = {}): Reso
   // 2. Check canonical map first — this enforces correct categories for known items
   const canonical = lookupCanonical(lowerKey, productName);
 
-  // 3. Check ambiguity dictionary — before we try to categorise
-  const ambiguity = lookupAmbiguity(lowerKey, productName);
+  // 3. Check ambiguity dictionary — skip if canonical entry already exists.
+  // A canonical match means we already know exactly what this item is (e.g. the
+  // user picked "prawns" from a seafood picker and "prawns" is in canonical-map),
+  // so re-running ambiguity would cause a loop.
+  const ambiguity = canonical ? null : lookupAmbiguity(lowerKey, productName);
   if (ambiguity) {
     // Use canonical category if found, otherwise try modifier (e.g. "frozen berries"
     // should be category=frozen even though "berries" is ambiguous), then callerCategory,
@@ -321,22 +324,48 @@ function lookupCanonical(lowerKey: string, rawProductName: string): CanonicalEnt
  * directly.
  */
 function lookupAmbiguity(lowerKey: string, rawProductName: string): AmbiguityEntry | null {
+  const lowerRaw = rawProductName.toLowerCase().trim();
+
+  // Guard: if the raw product name already appears in an entry's suggestions list,
+  // the item was previously disambiguated and must not be re-flagged.  Without this
+  // check, modifier-stripping in normalizeName() causes loops — e.g. "plain flour"
+  // normalises to "flour" which would re-match the flour ambiguity entry even
+  // though the user already made an explicit selection.
+  function isSuggestion(entry: AmbiguityEntry): boolean {
+    return entry.suggestions.some(s => s.toLowerCase() === lowerRaw);
+  }
+
   // Exact match on normalised key
-  if (AMBIGUITY_MAP[lowerKey]) return AMBIGUITY_MAP[lowerKey];
+  if (AMBIGUITY_MAP[lowerKey]) {
+    const entry = AMBIGUITY_MAP[lowerKey];
+    if (isSuggestion(entry)) return null;
+    return entry;
+  }
 
   // Exact match on raw name lowercased (handles "frozen berries" → strip modifier
   // → "berries", but also plain raw matches before normalisation)
-  const lowerRaw = rawProductName.toLowerCase().trim();
-  if (AMBIGUITY_MAP[lowerRaw]) return AMBIGUITY_MAP[lowerRaw];
+  if (AMBIGUITY_MAP[lowerRaw]) {
+    const entry = AMBIGUITY_MAP[lowerRaw];
+    if (isSuggestion(entry)) return null;
+    return entry;
+  }
 
   // Modifier-stripped lookup: strip a leading modifier word so "frozen berries"
   // → normalised key "berries" and "dried lentils" → "lentils" both hit their
   // ambiguity entries even when normalizeName() already stripped the modifier.
   const strippedKey = lowerKey.replace(/^(frozen|tinned|canned|dried)\s+/, '').trim();
-  if (strippedKey !== lowerKey && AMBIGUITY_MAP[strippedKey]) return AMBIGUITY_MAP[strippedKey];
+  if (strippedKey !== lowerKey && AMBIGUITY_MAP[strippedKey]) {
+    const entry = AMBIGUITY_MAP[strippedKey];
+    if (isSuggestion(entry)) return null;
+    return entry;
+  }
 
   const strippedRaw = lowerRaw.replace(/^(frozen|tinned|canned|dried)\s+/, '').trim();
-  if (strippedRaw !== lowerRaw && AMBIGUITY_MAP[strippedRaw]) return AMBIGUITY_MAP[strippedRaw];
+  if (strippedRaw !== lowerRaw && AMBIGUITY_MAP[strippedRaw]) {
+    const entry = AMBIGUITY_MAP[strippedRaw];
+    if (isSuggestion(entry)) return null;
+    return entry;
+  }
 
   // Only trigger for very short / generic inputs — avoid false positives on
   // specific items like "strawberry yogurt" matching "yogurt"
@@ -346,7 +375,9 @@ function lookupAmbiguity(lowerKey: string, rawProductName: string): AmbiguityEnt
       // The normalised key must equal the ambiguity key, not merely contain it,
       // to avoid "chicken breast" triggering the "chicken" umbrella.
       if (lowerKey === key || lowerRaw === key) {
-        return AMBIGUITY_MAP[key];
+        const entry = AMBIGUITY_MAP[key];
+        if (isSuggestion(entry)) return null;
+        return entry;
       }
     }
   }

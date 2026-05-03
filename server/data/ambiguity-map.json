@@ -39,5 +39,18 @@
   "stock":           { "mode": "single", "suggestions": ["chicken stock", "vegetable stock", "beef stock", "fish stock"] },
   "herbs":           { "mode": "multi",  "suggestions": ["basil", "parsley", "coriander", "thyme", "rosemary", "mint"] },
   "spices":          { "mode": "multi",  "suggestions": ["cumin", "paprika", "turmeric", "cinnamon", "chilli powder", "garam masala"] },
-  "chilli":          { "mode": "single", "suggestions": ["red chilli", "green chilli", "dried chilli flakes", "chilli powder"] }
+  "chilli":          { "mode": "single", "suggestions": ["red chilli", "green chilli", "dried chilli flakes", "chilli powder"] },
+  "milk":            { "mode": "single", "suggestions": ["whole milk", "semi-skimmed milk", "skimmed milk", "oat milk", "almond milk"] },
+  "bread":           { "mode": "single", "suggestions": ["sourdough bread", "wholemeal bread", "white bread", "seeded bread"] },
+  "cheese":          { "mode": "single", "suggestions": ["cheddar cheese", "mozzarella", "cream cheese", "brie", "feta"] },
+  "yoghurt":         { "mode": "single", "suggestions": ["greek yoghurt", "natural yoghurt", "flavoured yoghurt", "dairy-free yoghurt"] },
+  "yogurt":          { "mode": "single", "suggestions": ["greek yoghurt", "natural yoghurt", "flavoured yoghurt", "dairy-free yoghurt"] },
+  "cream":           { "mode": "single", "suggestions": ["single cream", "double cream", "soured cream", "crème fraîche"] },
+  "pasta":           { "mode": "single", "suggestions": ["spaghetti", "penne", "fusilli", "tagliatelle", "rigatoni"] },
+  "fish":            { "mode": "single", "suggestions": ["salmon", "cod", "tuna", "sea bass", "haddock", "mackerel"] },
+  "crackers":        { "mode": "single", "suggestions": ["oatcakes", "cream crackers", "rice cakes", "rye crispbread"] },
+  "juice":           { "mode": "single", "suggestions": ["orange juice", "apple juice", "cranberry juice", "pineapple juice", "tomato juice"] },
+  "cereal":          { "mode": "single", "suggestions": ["porridge oats", "cornflakes", "granola", "muesli", "bran flakes"] },
+  "turmeric":        { "mode": "single", "suggestions": ["ground turmeric", "fresh turmeric root"] },
+  "eggs":            { "mode": "multi",  "suggestions": ["hen eggs", "duck eggs", "quail eggs", "goose eggs"] }
 }
