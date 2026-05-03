@@ -12,3 +12,9 @@ id = "N4R3XGQwaS01rrEBEYru-"
 uri = "file://.local/planner-bug-plan.md"
 type = "text"
 title = "Planner Bug — Root Cause & Fix Plan"
+
+[[outputs]]
+id = "k9cIdwy9Q9GLXg0UZqCgY"
+uri = "file://attached_assets/The_Healthy_Apples_Master_Product_Guide.md"
+type = "text"
+title = "The Healthy Apples — Master Product Guide"
