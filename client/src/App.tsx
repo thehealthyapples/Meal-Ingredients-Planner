@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useUser } from "@/hooks/use-user";
@@ -40,6 +40,17 @@ let _contentRenderMeasured = false;
 function HomeRoute() {
   const { user, isLoading } = useUser();
 
+  // Shopping list is the best available proxy for meaningful activity without
+  // backend changes. Covers items from all sources (quick list, planner-generated,
+  // basket). Enabled only once onboarding is done.
+  const { data: savedItems, isLoading: isLoadingItems, isError: isErrorItems } = useQuery<{ id: number }[]>({
+    queryKey: ['/api/shopping-list'],
+    enabled: !!user && !!user.onboardingCompleted,
+    staleTime: 60_000,
+  });
+
+  // Block only on user resolution. For returning users whose shopping list is
+  // cached (stale or fresh), isLoadingItems is already false so no extra wait.
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -50,6 +61,33 @@ function HomeRoute() {
 
   if (user) {
     if (!user.onboardingCompleted) return <Redirect to="/onboarding" />;
+
+    // While shopping list is loading (cold cache — no prior data for this session),
+    // show a spinner rather than flashing the full Dashboard layout.
+    if (isLoadingItems) {
+      return (
+        <div className="flex h-screen items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+        </div>
+      );
+    }
+
+    // Only redirect to /list when activity is CONFIRMED absent.
+    // Uncertain states (API error) default to Dashboard, not Quick List.
+    //
+    // Known gap: Planner/Cookbook/Pantry users who have never generated a shopping
+    // list will still be routed to /list. Closing this gap requires a lightweight
+    // backend activity-summary endpoint — not possible with frontend data alone.
+    const hasActivity = (() => {
+      if (isErrorItems) return true;                   // error → uncertain → Dashboard
+      if (Array.isArray(savedItems) && savedItems.length > 0) return true;
+      try {
+        const h = JSON.parse(localStorage.getItem("tha-quick-list-history") || "[]");
+        return Array.isArray(h) && h.length > 0;
+      } catch { return false; }
+    })();
+    if (!hasActivity) return <Redirect to="/list" />;
+
     return (
       <div className="relative min-h-[100dvh]">
         <OrchardBackdrop />

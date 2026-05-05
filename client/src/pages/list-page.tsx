@@ -334,7 +334,7 @@ export default function ListPage() {
       saveToHistory(basket);
       setHistory(loadHistory());
 
-      const navParams = new URLSearchParams({ quickList: basketLabel, shopMode: "1" });
+      const navParams = new URLSearchParams({ quickList: basketLabel, shopMode: "1", fromQuickList: "1" });
       if (shop) navParams.set("store", shop);
       navigate(`/analyse-basket?${navParams.toString()}`);
 
@@ -371,10 +371,10 @@ export default function ListPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2" data-testid="text-list-title">
           <NotepadText className="h-5 w-5 text-primary" />
-          Quick List
+          Start your shopping list
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Popping to the shop? create a quick list here. The Healthy Apples will quickly help you choose better, effortlessly.
+          Type or paste your items — we'll organise the rest.
         </p>
       </div>
 

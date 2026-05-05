@@ -1453,6 +1453,8 @@ export default function ShoppingListPage() {
   const [correctItem, setCorrectItem] = useState<ShoppingListItem | null>(null);
   const [optimizerSelections, setOptimizerSelections] = useState<Record<number, string[]>>({});
   const [splitByShop, setSplitByShop] = useState(false);
+  const [showUpgradeHint, setShowUpgradeHint] = useState(false);
+  const upgradeHintShownRef = useRef(false);
 
   const [selectedRetailers, setSelectedRetailers] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem("tha-basket-retailers") || '["Tesco","Sainsbury\'s","Asda"]'); } catch { return ["Tesco", "Sainsbury's", "Asda"]; }
@@ -1527,6 +1529,11 @@ export default function ShoppingListPage() {
     try { return new URLSearchParams(search).get("quickList") || null; } catch { return null; }
   }, [search]);
 
+  // Explicit intent flag set by list-page when redirecting after a Quick List submission.
+  const fromQuickList = useMemo(() => {
+    try { return new URLSearchParams(search).get("fromQuickList") === "1"; } catch { return false; }
+  }, [search]);
+
   const { data: savedItems_raw = [], isLoading: loadingSaved } = useQuery<ShoppingListItemExtended[]>({
     queryKey: [api.shoppingList.list.path],
   });
@@ -1551,6 +1558,17 @@ export default function ShoppingListPage() {
     () => savedItems.filter(i => matchesSourceFilter(i as any, listFilter)),
     [savedItems, listFilter],
   );
+
+  // Upgrade hint: show once per render cycle when arriving from Quick List submission with ≥3 items.
+  // In-memory only — no storage, resets on navigation or page reload.
+  useEffect(() => {
+    if (!fromQuickList) return;
+    if (upgradeHintShownRef.current) return;
+    if (savedItems.length >= 3) {
+      upgradeHintShownRef.current = true;
+      setShowUpgradeHint(true);
+    }
+  }, [fromQuickList, savedItems.length]);
 
   const { data: householdData } = useQuery<{ id: number; name: string; members?: unknown[] }>({
     queryKey: ['/api/household'],
@@ -2667,6 +2685,20 @@ export default function ShoppingListPage() {
                   <p className="text-sm text-muted-foreground mt-1" data-testid="text-items-count">
                     {displayItems.length} item{displayItems.length !== 1 ? "s" : ""} to buy
                   </p>
+                  {/* Value copy — always visible */}
+                  <p className="text-xs text-muted-foreground mt-2" data-testid="text-basket-value-copy">
+                    We've organised your list and estimated prices.
+                  </p>
+                  {/* Subtle planning hint — always on */}
+                  <p className="text-xs text-muted-foreground/60 mt-0.5" data-testid="text-planning-hint">
+                    Want this done automatically? Try planning meals.
+                  </p>
+                  {/* Upgrade trigger — first render from quick list, ≥3 items, once per session */}
+                  {showUpgradeHint && (
+                    <p className="text-xs text-primary/80 mt-1 font-medium" data-testid="text-upgrade-trigger">
+                      Next time, skip this — plan your meals instead.
+                    </p>
+                  )}
                   {householdData && (
                     <div className="flex items-center gap-1.5 mt-1.5" data-testid="banner-household">
                       <Home className="h-3 w-3 text-muted-foreground" />
