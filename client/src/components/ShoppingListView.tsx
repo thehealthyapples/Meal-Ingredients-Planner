@@ -1054,6 +1054,15 @@ export default function ShoppingListView({
     setPhase("shopping");
   }, [isCommitting, multiSelections, items, onAddItem, onRenameItem, onRemoveItem, cupboardQty]);
 
+  const trackCycEvent = (eventType: "cyc_head_to_shop" | "cyc_skip") => {
+    fetch("/api/events/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ eventType }),
+    }).catch(() => {});
+  };
+
   // ── State derivation ─────────────────────────────────────────────────────
 
   function getItemState(item: SLItem): ShopState {
@@ -2112,7 +2121,7 @@ export default function ShoppingListView({
                 <p className="text-[11px] text-muted-foreground/70 mt-0.5">Mark anything you already have at home.</p>
               </div>
               <button
-                onClick={handleHeadToShop}
+                onClick={() => { trackCycEvent("cyc_skip"); handleHeadToShop(); }}
                 className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground underline underline-offset-2 flex-shrink-0"
               >
                 Skip
@@ -2533,7 +2542,7 @@ export default function ShoppingListView({
                 return (
                   <div className="px-4 py-4">
                     <button
-                      onClick={handleHeadToShop}
+                      onClick={() => { trackCycEvent("cyc_head_to_shop"); handleHeadToShop(); }}
                       disabled={isCommitting}
                       className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 hover:bg-primary/90 active:bg-primary/80 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
                     >

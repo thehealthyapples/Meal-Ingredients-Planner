@@ -343,6 +343,17 @@ export default function ListPage() {
         title: `${addedCount} item${addedCount !== 1 ? "s" : ""} added`,
         description: shop ? `Opening ${shop}…` : "Opening shop view…",
       });
+
+      // Track quick list sent — fire-and-forget, never blocks UX
+      fetch("/api/events/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          eventType: "quicklist_sent_to_cyc",
+          metadata: { itemCount: addedCount, source: "quicklist" },
+        }),
+      }).catch(() => {});
     } catch (err: any) {
       console.error("[ListPage] processAndNavigate error:", err);
       toast({

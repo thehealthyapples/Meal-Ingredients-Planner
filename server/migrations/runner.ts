@@ -984,6 +984,44 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-05-05_add_product_events_and_activity_summary",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS product_events (
+        id               SERIAL PRIMARY KEY,
+        event_type       TEXT NOT NULL,
+        feature_area     TEXT NOT NULL,
+        user_id          INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        household_id     INTEGER NOT NULL,
+        meal_id          INTEGER,
+        planner_entry_id INTEGER,
+        pantry_item_id   INTEGER,
+        basket_item_id   INTEGER,
+        product_id       INTEGER,
+        metadata         JSONB,
+        created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS product_events_user_id_idx    ON product_events (user_id)`,
+      `CREATE INDEX IF NOT EXISTS product_events_event_type_idx ON product_events (event_type)`,
+      `CREATE INDEX IF NOT EXISTS product_events_created_at_idx ON product_events (created_at)`,
+      `CREATE TABLE IF NOT EXISTS activity_summary (
+        id                      SERIAL PRIMARY KEY,
+        user_id                 INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        household_id            INTEGER NOT NULL,
+        current_shopping_items  INTEGER NOT NULL DEFAULT 0,
+        current_planner_meals   INTEGER NOT NULL DEFAULT 0,
+        current_pantry_items    INTEGER NOT NULL DEFAULT 0,
+        current_recipes         INTEGER NOT NULL DEFAULT 0,
+        lifetime_shopping_adds  INTEGER NOT NULL DEFAULT 0,
+        lifetime_planner_adds   INTEGER NOT NULL DEFAULT 0,
+        lifetime_pantry_adds    INTEGER NOT NULL DEFAULT 0,
+        lifetime_recipe_adds    INTEGER NOT NULL DEFAULT 0,
+        updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT activity_summary_user_id_unique UNIQUE (user_id)
+      )`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

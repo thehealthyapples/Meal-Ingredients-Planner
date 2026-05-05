@@ -42,6 +42,8 @@ import multer from "multer";
 import { extractTextFromImage, OcrError } from "./services/ocr";
 import { parseScannedText } from "./services/recipeParser";
 import { isLikelyNonEnglishIngredients, hasEnglishIngredients } from "./lib/ingredient-language";
+import { logProductEvent, extractDomain } from "./lib/product-event-logger";
+import { EventTypes, CLIENT_TRACKABLE_EVENTS } from "@shared/product-events";
 
 // ---------------------------------------------------------------------------
 
@@ -1059,7 +1061,24 @@ export async function registerRoutes(
       }
       
       res.status(201).json(meal);
-      
+
+      const _userId = req.user!.id;
+      const _mealId = meal.id;
+      const _sourceType: string = (mealData as any).mealSourceType ?? "scratch";
+      const _sourceUrl: string | undefined = (mealData as any).sourceUrl;
+      const _isImport = _sourceType !== "scratch" && _sourceType !== "openfoodfacts";
+      getHouseholdForUser(_userId).then(hid =>
+        logProductEvent({
+          eventType: _isImport ? EventTypes.MEAL_IMPORTED : EventTypes.MEAL_SAVED,
+          userId: _userId,
+          householdId: hid,
+          mealId: _mealId,
+          metadata: _isImport && _sourceUrl
+            ? { inputType: "url", domain: extractDomain(_sourceUrl) ?? undefined }
+            : undefined,
+        })
+      ).catch(() => {});
+
       if (!nutritionData || !Object.values(nutritionData).some(v => v)) {
         autoAnalyzeMeal(meal.id).catch(() => {});
       }
@@ -1106,6 +1125,12 @@ export async function registerRoutes(
       }
 
       res.status(201).json(meal);
+
+      const _spUserId = req.user!.id;
+      const _spMealId = meal.id;
+      getHouseholdForUser(_spUserId).then(hid =>
+        logProductEvent({ eventType: EventTypes.MEAL_SAVED, userId: _spUserId, householdId: hid, mealId: _spMealId })
+      ).catch(() => {});
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({
@@ -2066,6 +2091,20 @@ export async function registerRoutes(
       }
 
       res.json({ products: pagedProducts, hasMore });
+
+      // Track search performed — no query text stored
+      if (pagedProducts.length > 0) {
+        const _asUserId = req.user!.id;
+        const _asCount = pagedProducts.length;
+        getHouseholdForUser(_asUserId).then(hid =>
+          logProductEvent({
+            eventType: EventTypes.ANALYSER_SEARCH,
+            userId: _asUserId,
+            householdId: hid,
+            metadata: { itemCount: _asCount },
+          })
+        ).catch(() => {});
+      }
     } catch (error) {
       console.error('Product search error:', error);
       res.json({ products: [], hasMore: false });
@@ -2283,6 +2322,24 @@ export async function registerRoutes(
 
     try {
       const { url } = api.import.recipe.input.parse(req.body);
+      const _importUserId = req.user!.id;
+      const _importDomain = extractDomain(url);
+
+      const _trackImportFailure = (stage: string) => {
+        getHouseholdForUser(_importUserId).then(hid =>
+          logProductEvent({
+            eventType: EventTypes.MEAL_IMPORT_FAILED,
+            userId: _importUserId,
+            householdId: hid,
+            metadata: {
+              reasonCode: "parse_error",
+              failureStage: stage,
+              inputType: "url",
+              domain: _importDomain ?? undefined,
+            },
+          })
+        ).catch(() => {});
+      };
 
       // Detect source platform from hostname
       const urlHostname = (() => { try { return new URL(url).hostname.toLowerCase(); } catch { return ''; } })();
@@ -2378,6 +2435,7 @@ export async function registerRoutes(
       }
 
       if (!html) {
+        _trackImportFailure("parse");
         // Social platforms failing to load is expected — return structured failure
         if (sourcePlatform === 'instagram' || sourcePlatform === 'tiktok') {
           const platformName = sourcePlatform === 'instagram' ? 'Instagram' : 'TikTok';
@@ -2611,6 +2669,8 @@ export async function registerRoutes(
           ? 'partial' as const
           : 'failed' as const;
 
+      if (fallbackConfidence === 'failed') _trackImportFailure("match");
+
       res.json({
         title, ingredients, instructions: finalInstructions, imageUrl, nutrition: nutritionData, servings,
         confidence: fallbackConfidence,
@@ -2668,6 +2728,17 @@ export async function registerRoutes(
         hasTitle && hasIngredients && hasInstructions ? 'high' as const
         : hasIngredients || hasInstructions ? 'partial' as const
         : 'failed' as const;
+      if (confidence === 'failed') {
+        const _tirtUserId = req.user!.id;
+        getHouseholdForUser(_tirtUserId).then(hid =>
+          logProductEvent({
+            eventType: EventTypes.MEAL_IMPORT_FAILED,
+            userId: _tirtUserId,
+            householdId: hid,
+            metadata: { reasonCode: "parse_error", failureStage: "parse", inputType: "text" },
+          })
+        ).catch(() => {});
+      }
       return res.json({
         title: parsed.title,
         ingredients: parsed.ingredients,
@@ -3585,6 +3656,20 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       }
 
       res.status(201).json(item);
+
+      // Track pantry-to-basket adds (source tag set by pantry page)
+      const _slSource: string | undefined = (insertPayload as any).source;
+      if (_slSource === "pantry") {
+        const _slUserId = req.user!.id;
+        getHouseholdForUser(_slUserId).then(hid =>
+          logProductEvent({
+            eventType: EventTypes.PANTRY_SENT_TO_BASKET,
+            userId: _slUserId,
+            householdId: hid,
+            metadata: { itemCount: 1, source: "pantry" },
+          })
+        ).catch(() => {});
+      }
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
@@ -4088,6 +4173,17 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       }
 
       res.status(201).json(items);
+
+      const _fmUserId = req.user!.id;
+      const _fmItemCount = items.length;
+      getHouseholdForUser(_fmUserId).then(hid =>
+        logProductEvent({
+          eventType: EventTypes.PLANNER_SENT_TO_BASKET,
+          userId: _fmUserId,
+          householdId: hid,
+          metadata: { itemCount: _fmItemCount, source: "planner" },
+        })
+      ).catch(() => {});
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({ message: err.errors[0].message });
@@ -4534,6 +4630,19 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const { mealId, quantity } = req.body;
       const item = await storage.addBasketItem(req.user!.id, Number(mealId), Number(quantity) || 1);
       res.json(item);
+
+      const _ubUserId = req.user!.id;
+      const _ubMealId = Number(mealId);
+      const _ubItemId = item.id;
+      getHouseholdForUser(_ubUserId).then(hid =>
+        logProductEvent({
+          eventType: EventTypes.MEAL_ADDED_TO_BASKET,
+          userId: _ubUserId,
+          householdId: hid,
+          mealId: _ubMealId,
+          basketItemId: _ubItemId,
+        })
+      ).catch(() => {});
     } catch (err) {
       console.error('Add basket item error:', err);
       res.status(500).json({ message: 'Failed to add to basket' });
@@ -4571,6 +4680,44 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     } catch (err) {
       console.error('Clear basket error:', err);
       res.status(500).json({ message: 'Failed to clear basket' });
+    }
+  });
+
+  // ── Client-side event tracking ────────────────────────────────────────────
+  // Accepts a restricted set of client-originated events (CYC, Quick List).
+  // All writes go through logProductEvent() — no raw input is stored.
+  app.post("/api/events/track", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const schema = z.object({
+        eventType: z.string(),
+        metadata: z.object({
+          itemCount: z.number().int().optional(),
+          source: z.string().optional(),
+          retailer: z.string().optional(),
+        }).optional(),
+      });
+      const { eventType, metadata } = schema.parse(req.body);
+
+      if (!CLIENT_TRACKABLE_EVENTS.has(eventType as any)) {
+        return res.status(400).json({ error: "Event type not accepted via this endpoint" });
+      }
+
+      const userId = req.user!.id;
+      const householdId = await getHouseholdForUser(userId);
+
+      await logProductEvent({
+        eventType: eventType as any,
+        userId,
+        householdId,
+        metadata: metadata ?? undefined,
+      });
+
+      res.json({ ok: true });
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors[0].message });
+      console.error("[Events] track error:", err);
+      res.status(500).json({ error: "Failed to record event" });
     }
   });
 
@@ -5062,6 +5209,18 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       }
 
       res.status(201).json(entry);
+
+      const _pUserId = req.user!.id;
+      const _pHid = householdId;
+      const _pEntryId = entry.id;
+      const _pMealId = parsed.mealId;
+      logProductEvent({
+        eventType: EventTypes.PLANNER_MEAL_ADDED,
+        userId: _pUserId,
+        householdId: _pHid,
+        mealId: _pMealId,
+        plannerEntryId: _pEntryId,
+      }).catch(() => {});
     } catch (err: any) {
       if (err?.name === "ZodError") return res.status(400).json({ message: "Invalid input", errors: err.errors });
       console.error("Error adding planner item:", err);
@@ -5100,6 +5259,10 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         await storage.deletePlannerEntry(entry.id);
       }
       res.json({ success: true });
+
+      const _pcUserId = req.user!.id;
+      const _pcHid = householdId;
+      logProductEvent({ eventType: EventTypes.PLANNER_CLEARED, userId: _pcUserId, householdId: _pcHid }).catch(() => {});
     } catch (err) {
       console.error("Error clearing planner week:", err);
       res.status(500).json({ message: "Failed to clear week" });
@@ -5650,6 +5813,12 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       if (!meal.isFreezerEligible) return res.status(400).json({ message: "This meal is not marked as freezer eligible" });
       const item = await storage.addFreezerMeal(req.user!.id, data);
       res.json(item);
+
+      const _fzUserId = req.user!.id;
+      const _fzMealId = data.mealId;
+      getHouseholdForUser(_fzUserId).then(hid =>
+        logProductEvent({ eventType: EventTypes.MEAL_FROZEN, userId: _fzUserId, householdId: hid, mealId: _fzMealId })
+      ).catch(() => {});
     } catch (err) {
       console.error("Error adding freezer meal:", err);
       res.status(500).json({ message: "Failed to add freezer meal" });
@@ -6400,6 +6569,17 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const { ingredient, displayName, category, notes } = schema.parse(req.body);
       const item = await storage.addPantryItem(req.user!.id, ingredient, category, notes, displayName ?? ingredient);
       res.status(201).json(item);
+
+      const _piUserId = req.user!.id;
+      const _piItemId = item.id;
+      getHouseholdForUser(_piUserId).then(hid =>
+        logProductEvent({
+          eventType: EventTypes.PANTRY_ITEM_ADDED,
+          userId: _piUserId,
+          householdId: hid,
+          pantryItemId: _piItemId,
+        })
+      ).catch(() => {});
     } catch (err) {
       if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
       const msg = String((err as any)?.message ?? "");

@@ -1274,4 +1274,55 @@ export const insertIngredientClassificationSchema = createInsertSchema(ingredien
   .omit({ id: true, createdAt: true, updatedAt: true });
 export type IngredientClassification    = typeof ingredientClassifications.$inferSelect;
 export type InsertIngredientClassification = z.infer<typeof insertIngredientClassificationSchema>;
+
+// ─── Product Event Tracking ────────────────────────────────────────────────────
+
+import type { ProductEventMetadata } from "./product-events";
+
+export const productEvents = pgTable("product_events", {
+  id: serial("id").primaryKey(),
+  eventType: text("event_type").notNull(),
+  featureArea: text("feature_area").notNull(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  householdId: integer("household_id").notNull(),
+  // Nullable relational context
+  mealId: integer("meal_id"),
+  plannerEntryId: integer("planner_entry_id"),
+  pantryItemId: integer("pantry_item_id"),
+  basketItemId: integer("basket_item_id"),
+  productId: integer("product_id"),
+  // Sanitised metadata — no raw user input ever stored here
+  metadata: jsonb("metadata").$type<ProductEventMetadata>(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdIdx: index("product_events_user_id_idx").on(table.userId),
+  eventTypeIdx: index("product_events_event_type_idx").on(table.eventType),
+  createdAtIdx: index("product_events_created_at_idx").on(table.createdAt),
+}));
+
+export type ProductEvent = typeof productEvents.$inferSelect;
+
+// ─── Activity Summary (cached counts) ─────────────────────────────────────────
+// One row per user. Current counts are derived from live tables; lifetime counts
+// are accumulated on success events only.
+export const activitySummary = pgTable("activity_summary", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  householdId: integer("household_id").notNull(),
+  // Current counts — re-derived from source tables on each event
+  currentShoppingItems: integer("current_shopping_items").notNull().default(0),
+  currentPlannerMeals: integer("current_planner_meals").notNull().default(0),
+  currentPantryItems: integer("current_pantry_items").notNull().default(0),
+  currentRecipes: integer("current_recipes").notNull().default(0),
+  // Lifetime counts — incremented on success events only
+  lifetimeShoppingAdds: integer("lifetime_shopping_adds").notNull().default(0),
+  lifetimePlannerAdds: integer("lifetime_planner_adds").notNull().default(0),
+  lifetimePantryAdds: integer("lifetime_pantry_adds").notNull().default(0),
+  lifetimeRecipeAdds: integer("lifetime_recipe_adds").notNull().default(0),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  userIdUnique: unique("activity_summary_user_id_unique").on(table.userId),
+}));
+
+export type ActivitySummary = typeof activitySummary.$inferSelect;
 export type InsertPantryIngredientKnowledge = typeof pantryIngredientKnowledge.$inferInsert;
