@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { Switch, Route, Redirect } from "wouter";
+import { useEffect, useRef } from "react";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -15,7 +15,6 @@ import SiteBanner from "@/components/SiteBanner";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
 import OnboardingPage from "@/pages/onboarding-page";
-import Dashboard from "@/pages/dashboard";
 import MealsPage from "@/pages/meals-page";
 import ShoppingListPage from "@/pages/shopping-list-page";
 import ImportRecipePage from "@/pages/import-recipe-page";
@@ -37,20 +36,57 @@ import HomePage from "@/pages/home-page";
 
 let _contentRenderMeasured = false;
 
+// Tracks the page the routing system landed the user on, so fast page switches
+// can be detected and recorded as correction events.
+let _routingLanding: { path: string; at: number } | null = null;
+
+function routeToPath(route: string): string {
+  if (route === "planner") return "/weekly-planner";
+  if (route === "cookbook") return "/meals";
+  if (route === "analyser") return "/analyse-basket";
+  return "/list";
+}
+
+// Detects when a user navigates away from their routed landing page within 15s
+// and posts a routing_correction event so future routing can learn from it.
+function useRoutingCorrectionTracker() {
+  const [location] = useLocation();
+  const prevRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const prev = prevRef.current;
+    prevRef.current = location;
+
+    if (!_routingLanding || prev === null) return;
+    if (location === _routingLanding.path) return;
+    if (prev !== _routingLanding.path) return;
+
+    const elapsed = Date.now() - _routingLanding.at;
+    _routingLanding = null;
+
+    if (elapsed < 15_000) {
+      fetch("/api/events/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventType: "routing_correction",
+          metadata: { destination: location },
+        }),
+      }).catch(() => {});
+    }
+  }, [location]);
+}
+
 function HomeRoute() {
   const { user, isLoading } = useUser();
 
-  // Shopping list is the best available proxy for meaningful activity without
-  // backend changes. Covers items from all sources (quick list, planner-generated,
-  // basket). Enabled only once onboarding is done.
-  const { data: savedItems, isLoading: isLoadingItems, isError: isErrorItems } = useQuery<{ id: number }[]>({
-    queryKey: ['/api/shopping-list'],
+  const { data: routingData, isLoading: isLoadingRoute } = useQuery<{ route: string }>({
+    queryKey: ["/api/routing"],
     enabled: !!user && !!user.onboardingCompleted,
     staleTime: 60_000,
+    retry: false,
   });
 
-  // Block only on user resolution. For returning users whose shopping list is
-  // cached (stale or fresh), isLoadingItems is already false so no extra wait.
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -62,9 +98,7 @@ function HomeRoute() {
   if (user) {
     if (!user.onboardingCompleted) return <Redirect to="/onboarding" />;
 
-    // While shopping list is loading (cold cache — no prior data for this session),
-    // show a spinner rather than flashing the full Dashboard layout.
-    if (isLoadingItems) {
+    if (isLoadingRoute) {
       return (
         <div className="flex h-screen items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
@@ -72,39 +106,9 @@ function HomeRoute() {
       );
     }
 
-    // Only redirect to /list when activity is CONFIRMED absent.
-    // Uncertain states (API error) default to Dashboard, not Quick List.
-    //
-    // Known gap: Planner/Cookbook/Pantry users who have never generated a shopping
-    // list will still be routed to /list. Closing this gap requires a lightweight
-    // backend activity-summary endpoint — not possible with frontend data alone.
-    const hasActivity = (() => {
-      if (isErrorItems) return true;                   // error → uncertain → Dashboard
-      if (Array.isArray(savedItems) && savedItems.length > 0) return true;
-      try {
-        const h = JSON.parse(localStorage.getItem("tha-quick-list-history") || "[]");
-        return Array.isArray(h) && h.length > 0;
-      } catch { return false; }
-    })();
-    if (!hasActivity) return <Redirect to="/list" />;
-
-    return (
-      <div className="relative min-h-[100dvh]">
-        <OrchardBackdrop />
-        <div className="relative z-10 flex flex-col h-[100dvh]">
-          {user.isDemo && <TrialBanner />}
-          <TopBar />
-          <SiteBanner />
-          <div className="flex flex-1 overflow-hidden">
-            <DesktopSidebar />
-            <main className="flex-1 overflow-y-auto main-safe bg-background/25">
-              <Dashboard />
-            </main>
-          </div>
-          <MobileNav />
-        </div>
-      </div>
-    );
+    const path = routingData ? routeToPath(routingData.route) : "/list";
+    _routingLanding = { path, at: Date.now() };
+    return <Redirect to={path} />;
   }
 
   return <HomePage />;
@@ -153,6 +157,8 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 }
 
 function Router() {
+  useRoutingCorrectionTracker();
+
   return (
     <Switch>
       <Route path="/auth" component={() => <OrchardShell><AuthPage /></OrchardShell>} />
@@ -182,7 +188,21 @@ function Router() {
   );
 }
 
+const LOCAL_VERSION = (window as any).__APP_VERSION__ || "unknown";
+
 function App() {
+  useEffect(() => {
+    fetch('/api/version')
+      .then(res => res.json())
+      .then(({ version }) => {
+        if (version !== LOCAL_VERSION) {
+          console.log('Version mismatch detected — reloading app');
+          window.location.reload();
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>

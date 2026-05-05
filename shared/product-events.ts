@@ -20,6 +20,8 @@ export const EventTypes = {
 
   CYC_SKIP: "cyc_skip",
   CYC_HEAD_TO_SHOP: "cyc_head_to_shop",
+
+  ROUTING_CORRECTION: "routing_correction",
 } as const;
 
 export type EventType = (typeof EventTypes)[keyof typeof EventTypes];
@@ -31,6 +33,7 @@ export const FeatureAreas = {
   ANALYSER: "analyser",
   SHOPPING: "shopping",
   CYC: "cyc",
+  ROUTING: "routing",
 } as const;
 
 export type FeatureArea = (typeof FeatureAreas)[keyof typeof FeatureAreas];
@@ -61,6 +64,7 @@ export const EVENT_FEATURE_AREAS: Record<EventType, FeatureArea> = {
   quicklist_sent_to_cyc: "shopping",
   cyc_skip: "cyc",
   cyc_head_to_shop: "cyc",
+  routing_correction: "routing",
 };
 
 // Only these fields may appear in the metadata JSONB column.
@@ -73,6 +77,7 @@ export const ALLOWED_METADATA_FIELDS = new Set([
   "source",
   "retailer",
   "domain",
+  "destination",
 ]);
 
 // Events that drive lifetime counter increments in activity_summary
@@ -93,6 +98,7 @@ export const CLIENT_TRACKABLE_EVENTS = new Set<EventType>([
   "cyc_skip",
   "cyc_head_to_shop",
   "product_clicked",
+  "routing_correction",
 ]);
 
 export interface ProductEventMetadata {
@@ -103,4 +109,5 @@ export interface ProductEventMetadata {
   source?: string;
   retailer?: string;
   domain?: string;
+  destination?: string;
 }

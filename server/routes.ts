@@ -44,6 +44,7 @@ import { parseScannedText } from "./services/recipeParser";
 import { isLikelyNonEnglishIngredients, hasEnglishIngredients } from "./lib/ingredient-language";
 import { logProductEvent, extractDomain } from "./lib/product-event-logger";
 import { EventTypes, CLIENT_TRACKABLE_EVENTS } from "@shared/product-events";
+import { getUserRouting } from "./lib/routing";
 
 // ---------------------------------------------------------------------------
 
@@ -715,11 +716,17 @@ async function autoAnalyzeMeal(mealId: number) {
   }
 }
 
+import { APP_VERSION } from "./app-version";
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   setupAuth(app);
+
+  app.get('/api/version', (_req, res) => {
+    res.json({ version: APP_VERSION });
+  });
 
   // Seed default recipe source settings (idempotent)
   seedSourceSettings().catch(e => console.warn("[recipe-source-gate] Seed failed:", e));
@@ -4695,6 +4702,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           itemCount: z.number().int().optional(),
           source: z.string().optional(),
           retailer: z.string().optional(),
+          destination: z.string().optional(),
         }).optional(),
       });
       const { eventType, metadata } = schema.parse(req.body);
@@ -4718,6 +4726,20 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       if (err instanceof z.ZodError) return res.status(400).json({ error: err.errors[0].message });
       console.error("[Events] track error:", err);
       res.status(500).json({ error: "Failed to record event" });
+    }
+  });
+
+  // ── Hybrid routing ───────────────────────────────────────────────────────────
+  // Returns the most relevant entry point for the authenticated user based on
+  // session count, data state, and behaviour history.
+  app.get("/api/routing", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const result = await getUserRouting(req.user!.id);
+      res.json(result);
+    } catch (err) {
+      console.error("[Routing] error:", err);
+      res.status(500).json({ error: "Failed to determine route" });
     }
   });
 

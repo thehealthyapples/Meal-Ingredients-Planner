@@ -488,11 +488,11 @@ export default function OnboardingPage() {
                         </div>
                         <div className="text-left max-w-sm mx-auto rounded-xl border border-border/50 bg-muted/30 p-4">
                           <p className="text-sm text-muted-foreground leading-relaxed">
-                            Use Healthy Apples through your{" "}
-                            <span className="text-foreground font-medium">Cookbook</span>,{" "}
-                            <span className="text-foreground font-medium">Planner</span>,{" "}
-                            <span className="text-foreground font-medium">Pantry</span>, or{" "}
-                            <span className="text-foreground font-medium">Diary</span> — whichever feels right for you.
+                            Start your shopping list to quickly add what you need and see how it works. You can explore the{" "}
+                            <span className="text-foreground font-medium">cookbook</span>,{" "}
+                            <span className="text-foreground font-medium">planner</span>,{" "}
+                            <span className="text-foreground font-medium">pantry</span> and{" "}
+                            <span className="text-foreground font-medium">diary</span> anytime.
                           </p>
                         </div>
                       </div>
@@ -735,7 +735,7 @@ export default function OnboardingPage() {
                         <div>
                           <h2 className="text-xl font-semibold mb-1">Where would you like to start?</h2>
                           <p className="text-sm text-muted-foreground leading-relaxed">
-                            You can explore everything — this just helps you begin.
+                            We'll start you on your shopping list so you can quickly experience how we enhance your shopping experience - you can explore the planner, pantry, cookbook and diary anytime. When you get there, we'll guide you.
                           </p>
                         </div>
                         <div className="space-y-2">

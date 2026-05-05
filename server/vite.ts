@@ -5,6 +5,7 @@ import viteConfig from "../vite.config";
 import fs from "fs";
 import path from "path";
 import { nanoid } from "nanoid";
+import { APP_VERSION } from "./app-version";
 
 const viteLogger = createLogger();
 
@@ -47,6 +48,10 @@ export async function setupVite(server: Server, app: Express) {
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
+      );
+      template = template.replace(
+        "</head>",
+        `<script>window.__APP_VERSION__ = "${APP_VERSION}";</script></head>`,
       );
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);

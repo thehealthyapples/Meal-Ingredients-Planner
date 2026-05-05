@@ -157,3 +157,73 @@ If any of these happen, stop immediately and fix or rollback:
 - failed verify script
 - migration not at head
 - unexpected runtime errors
+
+---
+
+## RELEASE RISK MATRIX
+
+All releases MUST be classified before deployment.
+
+---
+
+## RISK LEVELS
+
+🟢 GREEN
+
+* UI or text changes only
+* No logic or behaviour changes
+* No data impact
+
+USER IMPACT:
+
+* None or cosmetic only
+
+RELEASE TIMING RULE:
+
+* Can be deployed anytime
+
+🟡 AMBER
+
+* Behaviour, routing, or logic changes
+* No schema changes
+* No change to meaning of existing data
+* System must have safe fallback
+
+USER IMPACT:
+
+* Users may experience different behaviour
+* No data loss risk
+
+RELEASE TIMING RULE:
+
+* Deploy during low traffic
+* Must monitor logs after release
+
+🔴 RED
+
+* Schema changes
+* Data shape or meaning changes
+* AI, matching, pricing logic changes
+* Requires migrations or backfill
+
+USER IMPACT:
+
+* Risk of data inconsistency or incorrect behaviour
+
+RELEASE TIMING RULE:
+
+* Controlled release only
+* Must include rollback plan
+* Must verify data after deploy
+
+---
+
+## MANDATORY CLASSIFICATION
+
+Before any release, the following MUST be declared:
+
+RISK LEVEL:
+USER IMPACT:
+RELEASE TIMING RULE:
+
+If any field is missing → STOP
