@@ -33,6 +33,7 @@ import PartnersPage from "@/pages/partners-page";
 import QuickMealPage from "@/pages/quick-meal-page";
 import ListPage from "@/pages/list-page";
 import HomePage from "@/pages/home-page";
+import DashboardPage from "@/pages/dashboard";
 
 let _contentRenderMeasured = false;
 
@@ -41,10 +42,10 @@ let _contentRenderMeasured = false;
 let _routingLanding: { path: string; at: number } | null = null;
 
 function routeToPath(route: string): string {
-  if (route === "planner") return "/weekly-planner";
-  if (route === "cookbook") return "/meals";
-  if (route === "analyser") return "/analyse-basket";
-  return "/list";
+  if (route === "planner") return "/planner";
+  if (route === "cookbook") return "/cookbook";
+  if (route === "analyser") return "/analyser";
+  return "/shopping-list";
 }
 
 // Detects when a user navigates away from their routed landing page within 15s
@@ -108,7 +109,7 @@ function HomeRoute() {
       );
     }
 
-    const path = routingData ? routeToPath(routingData.route) : "/list";
+    const path = routingData ? routeToPath(routingData.route) : "/shopping-list";
     _routingLanding = { path, at: Date.now() };
     return <Redirect to={path} />;
   }
@@ -167,6 +168,7 @@ function Router() {
       <Route path="/onboarding" component={() => <OrchardShell><OnboardingPage /></OrchardShell>} />
 
       <Route path="/" component={HomeRoute} />
+      <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />
       <Route path="/meals/:id" component={() => <ProtectedRoute component={MealDetailPage} />} />
       <Route path="/meals" component={() => <ProtectedRoute component={MealsPage} />} />
       <Route path="/cookbook" component={() => <ProtectedRoute component={MealsPage} />} />

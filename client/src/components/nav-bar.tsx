@@ -34,19 +34,19 @@ function PantryIcon({ className }: { className?: string }) {
 
 // Sidebar nav - high-frequency items (Dashboard, Search, Basket, Profile) live in the top bar
 const NAV_ITEMS_MAIN = [
-  { href: "/meals", label: "Cookbook", icon: ChefHat },
-  { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
+  { href: "/cookbook", label: "Cookbook", icon: ChefHat },
+  { href: "/planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
-  { href: "/products", label: "Analyser", icon: Microscope },
+  { href: "/analyser", label: "Analyser", icon: Microscope },
   { href: "/diary", label: "My Diary", icon: BookOpen },
 ];
 
 // Mobile bottom nav - 5 core tools (no More layer)
 const MOBILE_BOTTOM_ITEMS = [
-  { href: "/meals", label: "Cookbook", icon: ChefHat },
-  { href: "/weekly-planner", label: "Planner", icon: CalendarDays },
+  { href: "/cookbook", label: "Cookbook", icon: ChefHat },
+  { href: "/planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
-  { href: "/products", label: "Analyser", icon: Microscope },
+  { href: "/analyser", label: "Analyser", icon: Microscope },
   { href: "/diary", label: "Diary", icon: BookOpen },
 ];
 
@@ -202,7 +202,7 @@ function SearchModal({ open, onClose }: { open: boolean; onClose: () => void }) 
 
   const submit = () => {
     if (value.trim()) {
-      navigate(`/meals?q=${encodeURIComponent(value.trim())}`);
+      navigate(`/cookbook?q=${encodeURIComponent(value.trim())}`);
       onClose();
     }
   };
@@ -314,7 +314,7 @@ export function TopBar() {
 
   const handleMobileSearch = () => {
     if (searchValue.trim()) {
-      navigate(`/meals?q=${encodeURIComponent(searchValue.trim())}`);
+      navigate(`/cookbook?q=${encodeURIComponent(searchValue.trim())}`);
       setMobileSearchOpen(false);
       setSearchValue("");
     }
@@ -331,8 +331,8 @@ export function TopBar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/"
-                  className={`flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/" ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+                  href="/dashboard"
+                  className={`flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/dashboard" ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
                   aria-label="Dashboard"
                   data-testid="button-topbar-dashboard"
                 >
@@ -357,8 +357,8 @@ export function TopBar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/list"
-                  className={`flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/list" ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+                  href="/shopping-list"
+                  className={`flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/shopping-list" || location === "/list" ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
                   aria-label="List"
                   data-testid="button-topbar-list"
                 >
@@ -370,7 +370,7 @@ export function TopBar() {
           </div>
 
           {/* Center: logo */}
-          <Link href="/" data-testid="link-logo" className="flex items-center justify-center">
+          <Link href="/dashboard" data-testid="link-logo" className="flex items-center justify-center">
             <img
               src="/logo-long.png"
               alt="The Healthy Apples"
@@ -383,8 +383,8 @@ export function TopBar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/analyse-basket"
-                  className={`relative flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/analyse-basket" ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+                  href="/basket"
+                  className={`relative flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/basket" || location === "/analyse-basket" ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
                   aria-label="Basket"
                   data-testid="button-topbar-basket"
                 >
@@ -408,8 +408,8 @@ export function TopBar() {
           {/* Left: Dashboard + Search + List */}
           <div className="flex items-center">
             <Link
-              href="/"
-              className={`flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/" ? "text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+              href="/dashboard"
+              className={`flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/dashboard" ? "text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
               aria-label="Dashboard"
               data-testid="button-topbar-dashboard"
             >
@@ -424,8 +424,8 @@ export function TopBar() {
               <Search className="h-5 w-5" />
             </button>
             <Link
-              href="/list"
-              className={`flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/list" ? "text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+              href="/shopping-list"
+              className={`flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/shopping-list" || location === "/list" ? "text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
               aria-label="List"
               data-testid="button-topbar-list-mobile"
             >
@@ -434,7 +434,7 @@ export function TopBar() {
           </div>
 
           {/* Center: logo */}
-          <Link href="/" data-testid="link-logo-mobile" className="flex items-center">
+          <Link href="/dashboard" data-testid="link-logo-mobile" className="flex items-center">
             <img
               src="/logo-long.png"
               alt="The Healthy Apples"
@@ -445,8 +445,8 @@ export function TopBar() {
           {/* Right: Basket + Apple menu */}
           <div className="flex items-center">
             <Link
-              href="/analyse-basket"
-              className={`relative flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/analyse-basket" ? "text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+              href="/basket"
+              className={`relative flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/basket" || location === "/analyse-basket" ? "text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
               aria-label="Basket"
               data-testid="button-topbar-basket"
             >

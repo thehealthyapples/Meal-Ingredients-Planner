@@ -2392,7 +2392,7 @@ export default function WeeklyPlannerPage() {
                           const query = meal.brand
                             ? `${meal.brand} ${meal.name.replace(`${meal.brand} – `, "")}`
                             : meal.name;
-                          navigate(`/products?q=${encodeURIComponent(query)}`);
+                          navigate(`/analyser?q=${encodeURIComponent(query)}`);
                         }}
                         data-testid="button-meal-detail-analyse"
                       >
@@ -2608,7 +2608,7 @@ export default function WeeklyPlannerPage() {
                 const analyserQuery = product.brand
                   ? `${product.brand} ${product.product_name}`
                   : product.product_name;
-                const analyserUrl = `/products?q=${encodeURIComponent(analyserQuery)}${productRetailer ? `&shop=${encodeURIComponent(productRetailer)}` : ""}`;
+                const analyserUrl = `/analyser?q=${encodeURIComponent(analyserQuery)}${productRetailer ? `&shop=${encodeURIComponent(productRetailer)}` : ""}`;
                 return (
                   <div
                     key={`${product.barcode ?? product.product_name}-${i}`}

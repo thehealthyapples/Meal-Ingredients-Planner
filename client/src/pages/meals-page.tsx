@@ -2045,7 +2045,7 @@ export default function MealsPage() {
       writePendingIngredients(payload as Parameters<typeof writePendingIngredients>[0]);
     } catch {}
     if (isFromList) {
-      navigate("/list");
+      navigate("/shopping-list");
     } else {
       toast({ title: "Added to your list", description: "Open List to see and edit your quick list." });
     }
@@ -2618,7 +2618,7 @@ export default function MealsPage() {
           </p>
           <button
             className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            onClick={() => navigate("/list")}
+            onClick={() => navigate("/shopping-list")}
             aria-label="Back to list"
             data-testid="button-back-to-list"
           >

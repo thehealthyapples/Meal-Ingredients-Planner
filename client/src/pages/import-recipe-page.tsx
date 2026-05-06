@@ -3,6 +3,6 @@ import { useLocation } from "wouter";
 
 export default function ImportRecipePage() {
   const [, setLocation] = useLocation();
-  useEffect(() => { setLocation("/meals"); }, [setLocation]);
+  useEffect(() => { setLocation("/cookbook"); }, [setLocation]);
   return null;
 }

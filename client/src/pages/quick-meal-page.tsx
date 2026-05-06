@@ -333,7 +333,7 @@ export default function QuickMealPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
       toast({ title: "Added to basket", description: `${parts.length} item${parts.length === 1 ? "" : "s"}` });
-      navigate("/analyse-basket");
+      navigate("/basket");
     },
     onError: () => {
       toast({ title: "Failed to create basket list", variant: "destructive" });
@@ -712,7 +712,7 @@ export default function QuickMealPage() {
           open={true}
           onClose={() => {
             setCompletionMeal(null);
-            navigate("/meals");
+            navigate("/cookbook");
           }}
           meal={completionMeal}
         />

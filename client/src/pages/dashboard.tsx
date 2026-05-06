@@ -243,7 +243,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
               {/* Cookbook */}
-              <Link href="/meals" aria-label="Go to Cookbook">
+              <Link href="/cookbook" aria-label="Go to Cookbook">
                 <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-total-meals"
                   style={{ background: GREEN_PALE, borderColor: "hsl(132,18%,85%)" }}>
                   <CardContent className="p-5">
@@ -262,7 +262,7 @@ export default function Dashboard() {
               </Link>
 
               {/* Basket - neutral blue, not a warning colour */}
-              <Link href="/analyse-basket" aria-label="Go to Basket">
+              <Link href="/basket" aria-label="Go to Basket">
                 <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-basket-items"
                   style={{ background: BASKET_BG, borderColor: BASKET_BORDER }}>
                   <CardContent className="p-5">
@@ -281,7 +281,7 @@ export default function Dashboard() {
               </Link>
 
               {/* This Week */}
-              <Link href="/weekly-planner" aria-label="Go to Planner">
+              <Link href="/planner" aria-label="Go to Planner">
                 <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-week-progress"
                   style={{ background: SAGE, borderColor: "hsl(118,14%,84%)" }}>
                   <CardContent className="p-5">
@@ -309,7 +309,7 @@ export default function Dashboard() {
               </Link>
 
               {/* THA Health Score */}
-              <Link href="/analyse-basket" aria-label="Go to Basket Analysis" className="col-span-2 lg:col-span-1">
+              <Link href="/basket" aria-label="Go to Basket Analysis" className="col-span-2 lg:col-span-1">
                 <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-tha-score"
                   style={{ background: APPLE_BG, borderColor: APPLE_BORDER }}>
                   <CardContent className="p-5">
@@ -354,7 +354,7 @@ export default function Dashboard() {
           <motion.div variants={item}>
             <div className="flex items-baseline justify-between mb-3">
               <h2 className="title-section">This Week's Plan</h2>
-              <Link href="/weekly-planner">
+              <Link href="/planner">
                 <Button variant="ghost" className="text-sm text-muted-foreground gap-1" data-testid="link-go-planner">
                   Open planner <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
@@ -368,7 +368,7 @@ export default function Dashboard() {
                     <p className="text-sm text-muted-foreground text-center max-w-xs">
                       No meals planned yet - head to the planner to map out your week.
                     </p>
-                    <Link href="/weekly-planner">
+                    <Link href="/planner">
                       <Button variant="outline" size="sm" data-testid="button-start-planning">Start planning</Button>
                     </Link>
                   </div>
@@ -456,7 +456,7 @@ export default function Dashboard() {
                               </div>
                             </div>
                           ))}
-                          <Link href="/meals" className="mt-1">
+                          <Link href="/cookbook" className="mt-1">
                             <Button variant="ghost" size="sm" className="h-7 text-xs px-2 gap-1 text-muted-foreground" data-testid="link-view-all-meals-mix">
                               View all <ArrowRight className="h-3 w-3" />
                             </Button>
@@ -472,7 +472,7 @@ export default function Dashboard() {
               <div>
                 <h2 className="title-section mb-3">Quick Actions</h2>
                 <div className="flex flex-col gap-3">
-                  <Link href="/meals">
+                  <Link href="/cookbook">
                     <Card className="group cursor-pointer hover-elevate transition-all duration-200" data-testid="action-add-meal">
                       <CardContent className="p-4 flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
@@ -486,7 +486,7 @@ export default function Dashboard() {
                       </CardContent>
                     </Card>
                   </Link>
-                  <Link href="/weekly-planner">
+                  <Link href="/planner">
                     <Card className="group cursor-pointer hover-elevate transition-all duration-200" data-testid="action-view-planner">
                       <CardContent className="p-4 flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
@@ -500,7 +500,7 @@ export default function Dashboard() {
                       </CardContent>
                     </Card>
                   </Link>
-                  <Link href="/analyse-basket">
+                  <Link href="/basket">
                     <Card className="group cursor-pointer hover-elevate transition-all duration-200" data-testid="action-analyse-basket">
                       <CardContent className="p-4 flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
@@ -552,7 +552,7 @@ export default function Dashboard() {
                 <p className="text-xs text-muted-foreground mt-0.5">Your latest additions</p>
               </div>
               {userMeals.length > 4 && (
-                <Link href="/meals">
+                <Link href="/cookbook">
                   <Button variant="ghost" className="text-sm text-muted-foreground gap-1" data-testid="link-view-all-meals">
                     View all <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
@@ -570,7 +570,7 @@ export default function Dashboard() {
                   <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
                     Start by adding your favourite recipes to build your personal collection.
                   </p>
-                  <Link href="/meals">
+                  <Link href="/cookbook">
                     <Button className="mt-5" data-testid="button-add-first-meal">
                       <Plus className="h-4 w-4 mr-2" />
                       Add Your First Meal

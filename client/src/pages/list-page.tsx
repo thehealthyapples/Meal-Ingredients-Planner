@@ -336,7 +336,7 @@ export default function ListPage() {
 
       const navParams = new URLSearchParams({ quickList: basketLabel, shopMode: "1", fromQuickList: "1" });
       if (shop) navParams.set("store", shop);
-      navigate(`/analyse-basket?${navParams.toString()}`);
+      navigate(`/basket?${navParams.toString()}`);
 
       const addedCount = merged.size;
       toast({
@@ -547,7 +547,7 @@ export default function ListPage() {
 
             {/* Cookbook */}
             <button
-              onClick={() => navigate("/meals?from=list")}
+              onClick={() => navigate("/cookbook?from=list")}
               className="p-2 rounded-full text-muted-foreground/45 hover:text-foreground hover:bg-black/[0.05] transition-colors"
               title="Add ingredients from Cookbook"
               aria-label="Add ingredients from Cookbook"

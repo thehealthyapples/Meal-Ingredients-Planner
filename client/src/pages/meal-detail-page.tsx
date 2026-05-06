@@ -238,7 +238,7 @@ export default function MealDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
       toast({ title: "Meal deleted" });
-      navigate("/meals");
+      navigate("/cookbook");
     },
     onError: () => {
       toast({ title: "Failed to delete meal", variant: "destructive" });
@@ -360,7 +360,7 @@ export default function MealDetailPage() {
     return (
       <div className="container max-w-4xl mx-auto px-4 py-8" data-testid="meal-not-found">
         <p className="text-muted-foreground text-center">Meal not found.</p>
-        <Button variant="outline" className="mx-auto mt-4 block" onClick={() => navigate("/meals")} data-testid="button-back-to-meals">
+        <Button variant="outline" className="mx-auto mt-4 block" onClick={() => navigate("/cookbook")} data-testid="button-back-to-meals">
           Back to Meals
         </Button>
       </div>
@@ -386,7 +386,7 @@ export default function MealDetailPage() {
       className="container max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
     >
       <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/meals")} data-testid="button-back">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/cookbook")} data-testid="button-back">
           <ArrowLeft className="h-4 w-4" />
         </Button>
         {isEditedCopy ? (
