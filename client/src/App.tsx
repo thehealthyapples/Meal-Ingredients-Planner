@@ -169,10 +169,14 @@ function Router() {
       <Route path="/" component={HomeRoute} />
       <Route path="/meals/:id" component={() => <ProtectedRoute component={MealDetailPage} />} />
       <Route path="/meals" component={() => <ProtectedRoute component={MealsPage} />} />
+      <Route path="/cookbook" component={() => <ProtectedRoute component={MealsPage} />} />
       <Route path="/import-recipe" component={() => <ProtectedRoute component={ImportRecipePage} />} />
       <Route path="/analyse-basket" component={() => <ProtectedRoute component={ShoppingListPage} />} />
+      <Route path="/basket" component={() => <ProtectedRoute component={ShoppingListPage} />} />
       <Route path="/products" component={() => <ProtectedRoute component={ProductsPage} />} />
-<Route path="/weekly-planner" component={() => <ProtectedRoute component={WeeklyPlannerPage} />} />
+      <Route path="/analyser" component={() => <ProtectedRoute component={ProductsPage} />} />
+      <Route path="/weekly-planner" component={() => <ProtectedRoute component={WeeklyPlannerPage} />} />
+      <Route path="/planner" component={() => <ProtectedRoute component={WeeklyPlannerPage} />} />
       <Route path="/supermarkets" component={() => <ProtectedRoute component={SupermarketsPage} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersPage} />} />
@@ -184,6 +188,7 @@ function Router() {
       <Route path="/partners" component={() => <ProtectedRoute component={PartnersPage} />} />
       <Route path="/quick-meal" component={() => <ProtectedRoute component={QuickMealPage} />} />
       <Route path="/list" component={() => <ProtectedRoute component={ListPage} />} />
+      <Route path="/shopping-list" component={() => <ProtectedRoute component={ListPage} />} />
 
       <Route component={NotFound} />
     </Switch>
