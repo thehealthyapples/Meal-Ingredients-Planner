@@ -38,7 +38,7 @@ const NAV_ITEMS_MAIN = [
   { href: "/planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/analyser", label: "Analyser", icon: Microscope },
-  { href: "/diary", label: "My Diary", icon: BookOpen },
+  { href: "/my-diary", label: "My Diary", icon: BookOpen },
 ];
 
 // Mobile bottom nav - 5 core tools (no More layer)
@@ -47,7 +47,7 @@ const MOBILE_BOTTOM_ITEMS = [
   { href: "/planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/analyser", label: "Analyser", icon: Microscope },
-  { href: "/diary", label: "Diary", icon: BookOpen },
+  { href: "/my-diary", label: "Diary", icon: BookOpen },
 ];
 
 export type SidebarContextValue = { isCollapsed: boolean };
@@ -167,7 +167,7 @@ function SidebarBody({
             label={item.label}
             icon={item.icon}
             isCollapsed={isCollapsed}
-            isActive={location === item.href}
+            isActive={location === item.href || (item.href === "/my-diary" && location === "/diary")}
             onClick={onClose}
           />
         ))}
@@ -582,7 +582,7 @@ export function MobileNav() {
     >
       <div className="flex items-center justify-around px-1 py-1 max-w-lg mx-auto">
         {MOBILE_BOTTOM_ITEMS.map((item) => {
-          const isActive = location === item.href;
+          const isActive = location === item.href || (item.href === "/my-diary" && location === "/diary");
           const Icon = item.icon;
           return (
             <Link

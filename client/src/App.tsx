@@ -186,6 +186,7 @@ function Router() {
       <Route path="/admin/recipe-sources" component={() => <ProtectedRoute component={AdminRecipeSourcesPage} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
       <Route path="/diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
+      <Route path="/my-diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
       <Route path="/shared/:token" component={SharedPlanPage} />
       <Route path="/partners" component={() => <ProtectedRoute component={PartnersPage} />} />
       <Route path="/quick-meal" component={() => <ProtectedRoute component={QuickMealPage} />} />
