@@ -36,15 +36,20 @@ export function CameraModal({ open, onOpenChange, onCapture, onUploadInstead }: 
     setCapturedFile(null);
 
     try {
+      // Omit explicit width/height so the browser negotiates the best resolution
+      // for the current device orientation (portrait on phones).
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { facingMode: facing },
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        video.play().catch(() => {});
+        // "live" is set via the onLoadedMetadata handler below, not here,
+        // so takePhoto() only becomes available once the first frame is decoded
+        // and video.videoWidth/videoHeight are valid.
       }
-      setStatus("live");
     } catch (err: any) {
       stopStream();
       if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
@@ -71,13 +76,23 @@ export function CameraModal({ open, onOpenChange, onCapture, onUploadInstead }: 
     return () => { stopStream(); };
   }, [open]);
 
+  // Called by the video element once metadata (including videoWidth/videoHeight) is ready.
+  // Only transition to "live" if the stream is still active, guarding against stale callbacks
+  // after a rapid flip/restart.
+  const handleVideoReady = useCallback(() => {
+    if (streamRef.current) {
+      setStatus("live");
+    }
+  }, []);
+
   const takePhoto = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas) return;
+    // Require valid frame dimensions — videoWidth/Height are 0 until the first frame arrives.
+    if (!video || !canvas || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
 
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -119,8 +134,15 @@ export function CameraModal({ open, onOpenChange, onCapture, onUploadInstead }: 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
-        <DialogHeader className="px-5 pt-5 pb-3">
+      {/*
+        Mobile: cover the entire viewport so the camera preview fills the screen.
+        Desktop (sm+): revert to the standard centred modal card.
+        - max-w-full overrides the base max-w-lg on mobile
+        - h-[100dvh] fills the dynamic viewport height (respects browser chrome hiding/showing)
+        - flex flex-col lets the camera div flex-grow between the fixed header and footer
+      */}
+      <DialogContent className="p-0 overflow-hidden flex flex-col w-full max-w-full sm:max-w-lg h-[100dvh] sm:h-auto rounded-none sm:rounded-lg border-0 sm:border">
+        <DialogHeader className="px-5 pt-5 pb-3 shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Camera className="h-5 w-5 text-primary" />
             Scan Recipe
@@ -130,14 +152,20 @@ export function CameraModal({ open, onOpenChange, onCapture, onUploadInstead }: 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="relative bg-black aspect-video w-full overflow-hidden" data-testid="container-camera-preview">
+        {/*
+          flex-1 + min-h-0: fills remaining space between header and footer.
+          min-h-0 is essential — without it a flex child won't shrink below its content height.
+          The video/img use absolute inset-0 so they always fill this container exactly.
+        */}
+        <div className="relative bg-black flex-1 min-h-0 overflow-hidden" data-testid="container-camera-preview">
           {status !== "captured" && (
             <video
               ref={videoRef}
               autoPlay
               playsInline
               muted
-              className={`w-full h-full object-cover ${status === "live" ? "opacity-100" : "opacity-0"}`}
+              onLoadedMetadata={handleVideoReady}
+              className={`absolute inset-0 w-full h-full object-cover ${status === "live" ? "opacity-100" : "opacity-0"}`}
               data-testid="video-camera-feed"
             />
           )}
@@ -146,7 +174,7 @@ export function CameraModal({ open, onOpenChange, onCapture, onUploadInstead }: 
             <img
               src={capturedUrl}
               alt="Captured"
-              className="w-full h-full object-contain"
+              className="absolute inset-0 w-full h-full object-contain"
               data-testid="img-camera-capture"
             />
           )}
@@ -178,7 +206,7 @@ export function CameraModal({ open, onOpenChange, onCapture, onUploadInstead }: 
 
         <canvas ref={canvasRef} className="hidden" />
 
-        <div className="px-5 pb-5 pt-3 flex items-center gap-3">
+        <div className="px-5 pb-5 pt-3 flex items-center gap-3 shrink-0">
           {status === "live" && (
             <>
               <Button
