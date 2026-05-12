@@ -133,80 +133,120 @@ Rules:
 const VALID_PLANNER_DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 const VALID_MEAL_SLOTS = ["breakfast","lunch","dinner","snacks"];
 
-const PLANNER_VISION_PROMPT = `Look at this image of a meal plan (weekly planner, meal schedule, or similar document). Your task is to extract every visible meal entry, combining printed row anchors with any nearby handwritten context to produce the most helpful interpretation for a household cook.
+const PLANNER_VISION_PROMPT = `You are analysing a household meal planner image. Your job is to extract EVERY piece of useful content — not just the main meal table. Many planners contain multiple distinct sections alongside the main grid, such as a lunch ideas list, a shopping list, handwritten notes, and batch-cook reminders. You must find and extract all of them.
 
-Return ONLY valid JSON in this exact shape:
-{"mode":"planner","rawText":"all text visible in the image transcribed exactly","meals":[{"label":"exact text as written","interpretedName":"full interpreted meal name including contextual additions","day":null,"mealSlot":null,"proposedType":"scheduled","confidence":"high","sourceText":"the exact line it appears on","contextNote":null}],"shoppingItems":[],"warnings":[]}
+Return ONLY valid JSON — no markdown, no explanation — in this exact shape:
+{"mode":"planner","rawText":"ALL readable text in the image transcribed verbatim","meals":[{"label":"exact text as written","interpretedName":"full interpreted name","day":null,"mealSlot":null,"proposedType":"scheduled","confidence":"high","sourceText":"exact line(s)","contextNote":null}],"shoppingItems":[{"label":"item as written","quantity":null,"confidence":"high","sourceText":"exact line"}],"warnings":[]}
 
-CORE INTERPRETATION RULES:
+═══════════════════════════════════════════════
+PHASE 1 — SCAN THE ENTIRE IMAGE FOR SECTIONS
+═══════════════════════════════════════════════
+Before extracting anything, look at every area of the image:
+• Top margin / header area
+• Main printed table / grid
+• Left side notes or lists
+• Right side notes or lists
+• Bottom margin notes
+• Handwritten overlays anywhere on the page
+• Sticky notes, circled text, arrows
 
-1. CONTEXTUAL GROUPING
-Look for handwritten text that appears near, beside, below, or adjacent to a printed row header — in the same cell, same row, or spatially close. These are likely meal modifications, side dish notes, or additions. Combine them with the printed row anchor into a richer interpretedName.
-Examples:
-- Printed "Fish cakes" + nearby handwritten "new pots salad" → interpretedName: "Fish cakes with new potatoes and salad"
-- Printed "Chicken noodles" + nearby handwritten "stir fry veg" → interpretedName: "Chicken noodle stir fry with vegetables"
-- Printed "Bean casserole" + nearby "w/ wraps" → interpretedName: "Bean casserole with wraps"
-- Printed "Veg fried rice" + nearby "chick pea sw pot" → interpretedName: "Chickpea and sweet potato curry with rice"
+Identify every distinct section you can see. Common section headings include:
+"Lunches", "Lunch ideas", "Packed lunches", "Meal ideas", "Flexible meals",
+"Shopping", "Shopping list", "Ingredients", "To buy", "Batch cook", "Notes",
+"This week", "Extras", "Snacks"
 
-2. SEMANTIC SHORTHAND EXPANSION
-Expand common household cooking shorthand in interpretedName (never in label, which stays exact):
+Make a mental list of every section before proceeding to Phase 2.
+
+═══════════════════════════════════════════════
+PHASE 2 — EXTRACT EACH SECTION SEPARATELY
+═══════════════════════════════════════════════
+
+── SECTION A: PLANNED MEALS (main grid / table) ──
+Extract each row as a separate meal entry with proposedType="scheduled".
+• label: exact printed text of the row, preserving abbreviations
+• Check for handwritten text inside the same cell or immediately adjacent — if present, combine into interpretedName and set contextNote explaining what was combined
+• day: set ONLY if a weekday name is clearly shown (Monday/Tuesday/etc.). If the plan shows "Week 6" or a week number, set day to null for all entries.
+• mealSlot: set ONLY if clearly labelled (breakfast/lunch/dinner/snacks)
+
+DO NOT MERGE SEPARATE ROWS — each row in the table is a separate meal:
+BAD: one entry "Chicken noodle vegetable spaghetti salad"
+GOOD: two entries — "Chicken noodles" and "Veg spag salad" as separate items
+
+Only combine a printed row with handwriting if the handwriting is clearly inside the same cell or annotating that specific row. Do NOT combine two separate table rows just because they are near each other.
+
+── SECTION B: LUNCH IDEAS / FLEXIBLE MEAL IDEAS ──
+Look for any list of items that is NOT part of the main grid — labelled with headings like "Lunches", "Lunch ideas", "Packed lunches", "Meal ideas", "Flexible meals", or any standalone handwritten list of foods away from the main table.
+
+CRITICAL: Every item in such a list MUST be extracted as proposedType="meal_idea".
+These must NOT be omitted. If you see a "Lunches" column or list, every item in it is a meal_idea.
+
+Examples of lunch idea items: "ham bread", "pizza toast", "veg & hummus", "fish fingers", "sandwiches"
+
+── SECTION C: SHOPPING LIST / INGREDIENTS ──
+Look for any section with a heading like "Shopping", "To buy", "Ingredients", "Shopping list", or a bulleted/numbered list of ingredients/quantities that is NOT a meal name.
+
+Every such item goes into shoppingItems[], NOT meals[].
+Shopping items look like: "passata x4", "yogurt", "basil", "carrots", "eggs x40", "olive oil"
+
+If you see quantity indicators (x2, x4, ×6, "2 packs", etc.), put the quantity in the "quantity" field.
+
+── SECTION D: HANDWRITTEN NOTES / BATCH COOK REMINDERS ──
+Look for standalone handwritten notes such as:
+• "Batch cook: casserole, fish cakes"
+• "Sunday prep"
+• "Freeze portions"
+• Circled reminders
+
+If a note is a meal-related reminder (e.g. "batch cook X"), create a meal entry with proposedType="unknown" and low/medium confidence, using sourceText to show the note verbatim.
+If a note is clearly not a meal (e.g. a general reminder), still include its text in rawText.
+
+── SECTION E: ANYTHING ELSE ──
+Any visible text that does not fit the above categories:
+• Include it in rawText (mandatory)
+• If it looks meal-like (a food name, a dish), add it as proposedType="unknown" with low confidence
+• If it is clearly not food-related, still capture it in rawText but do NOT create a meals[] entry
+
+═══════════════════════════════════════════════
+PHASE 3 — FIELD RULES
+═══════════════════════════════════════════════
+
+rawText: Transcribe EVERY readable word visible in the image, from all sections. This field must reflect the full text content of the image — not just the table rows. If the image contains a shopping list with 10 items, all 10 must appear in rawText. If it contains a lunch ideas list, all items must appear in rawText.
+
+label: Copy the text EXACTLY as written, preserving abbreviations, typos, and shorthand.
+
+interpretedName: Expand shorthand and abbreviations to produce a full readable name:
 - "new pots" → "new potatoes"
-- "sw pot", "sweet pot", or "swp" → "sweet potato"
-- "pots" (standalone, clear context) → "potatoes"
-- "h/m" or "hm" (before a food type) → "homemade"
+- "sw pot" / "swp" / "sweet pot" → "sweet potato"
+- "h/m" / "hm" → "homemade"
 - "avo" → "avocado"
 - "yog" → "yogurt"
 - "spag" → "spaghetti"
-- "chick" (before a dish type) → "chicken"
-- "veg" → "vegetables" or "vegetable" depending on context
 - "chick pea" → "chickpeas"
+- "veg" → "vegetables"
 - "w/" → "with"
-- Other clear shorthand → expand to the full word
+CAUTION: If a word is unusual, regional, or you are unsure of its meaning, keep it verbatim. "army rice" stays "army rice". "jerk" stays "jerk". Only expand shorthand you are highly confident about.
 
-CAUTION — NEVER SUBSTITUTE UNKNOWN WORDS:
-- If a word is unusual, foreign, or you are not certain of its meaning, keep it verbatim in interpretedName
-- Examples of words to NEVER change: "army rice" stays "army rice", "tarte" stays "tarte", "jerk" stays "jerk", unusual regional terms stay as-is
-- Only expand shorthand when you are highly confident of the intended meaning
-- When uncertain about a word or expansion, keep the original and set confidence to "medium" or "low"
+contextNote: Set to a brief explanation whenever you combined handwritten context with a printed row, or expanded shorthand. Set to null otherwise.
 
-3. LAYOUT-AWARE INTERPRETATION
-Use the table/grid structure, row alignment, cell boundaries, and spatial position to determine which handwritten notes belong to which printed meal row. Handwriting inside the same cell or immediately adjacent to a printed entry is part of that meal.
+confidence:
+- "high": clear, readable, unambiguous
+- "medium": likely correct but some ambiguity or partially unclear handwriting
+- "low": speculative, garbled, or uncertain — stay close to raw text in interpretedName
 
-4. MEAL RECONSTRUCTION
-When a printed row title plus nearby handwritten context together suggest a complete meal, reconstruct the full meal name. Aim for natural plain-English that a household cook would recognise.
+warnings: Add a warning if handwriting is difficult, parts are obscured, or section classification is uncertain. Avoid duplicates.
 
-5. CONFIDENCE CALIBRATION FOR INTERPRETATIONS
-- "high": printed row + clearly readable nearby context; combination is unambiguous
-- "medium": combination is likely correct but some handwriting is partially unclear or context is slightly ambiguous; also use "medium" when a shorthand expansion is probable but not certain
-- "low": handwriting unclear, context uncertain, or interpretation is speculative — stay closer to raw text in interpretedName; also use "low" when an unusual or foreign word is kept as-is because its meaning cannot be confidently determined
+═══════════════════════════════════════════════
+ABSOLUTE RULES
+═══════════════════════════════════════════════
+• NEVER invent food items not visible in the image
+• NEVER fabricate weekday names
+• NEVER merge two separate table rows into one meal
+• NEVER put shopping items into meals[]
+• NEVER put meal ideas into shoppingItems[]
+• NEVER omit a visible section — if you see a list, extract it
+• NEVER add prices, store names, or product codes
+• Return only JSON, no markdown`;
 
-6. contextNote field (optional short string, or null)
-When you use contextual grouping or semantic expansion, set contextNote to a brief note explaining the interpretation basis. Examples:
-- "Combined with nearby handwritten 'new pots salad'"
-- "Expanded shorthand: sw pot → sweet potato"
-- "Nearby note 'w/ wraps' added"
-Set to null when label and interpretedName are identical or no contextual reasoning was needed.
-
-SAFETY LIMITS — NEVER:
-- Invent ingredients with no textual basis anywhere near the meal row
-- Fabricate weekday names not visible in the image
-- Create meals not hinted at by visible text
-- Treat shopping list items (if in a separate section) as meal modifications
-
-Other fields:
-- rawText (top level): transcribe every word visible in the image
-- label: copy the meal text EXACTLY as written, preserving abbreviations and typos
-- day: ONLY set if clearly labelled. Use exactly one of: "Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday". If the plan uses week numbers (e.g. "Week 6") instead of weekdays, set day to null.
-- mealSlot: ONLY if clearly labelled: "breakfast","lunch","dinner","snacks". Otherwise null.
-- proposedType: classify based on position in the image:
-  - "scheduled": under a weekday header or in a day-column grid
-  - "meal_idea": in a standalone list with no day assignment. CRITICAL: If you see section headings like "Lunches", "Lunch ideas", "Packed lunches", "Easy meals", "Flexible meals", "Snacks", "Meal ideas" — ALL items under that heading must be "meal_idea", regardless of nearby text. Handwritten lists separate from the main grid also qualify.
-  - "unknown": cannot determine
-- sourceText: the exact line(s) from the image where this meal appears
-- shoppingItems: ONLY if the image contains a clearly separate shopping list section: {"label":"item as written","quantity":null,"confidence":"high","sourceText":"exact line"}. Use [] if no shopping section.
-- NEVER add prices, store names, or product codes
-- warnings: note layout ambiguities, unclear handwriting, or uncertain interpretations
-- Return only JSON, no markdown`;
 
 const PLANNER_TEXT_PROMPT = `You are a meal planner reader with contextual interpretation capability. Given OCR text from a meal plan image, extract every visible meal entry. Expand abbreviations and combine related text fragments to produce human-readable meal names.
 

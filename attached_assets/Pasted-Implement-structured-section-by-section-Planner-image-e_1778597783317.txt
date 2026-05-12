@@ -1,0 +1,297 @@
+Implement structured section-by-section Planner image extraction.
+
+APPROVED SCOPE
+Fix planner scan extraction coverage only.
+
+Do NOT:
+
+* redesign planner review UI
+* change planner save behaviour
+* change schema
+* change recipe linking
+* change shopping-list scan behaviour
+* change recipe scan behaviour
+* deploy
+
+RISK CLASSIFICATION
+🟡 AMBER — planner AI extraction behaviour
+
+CURRENT CONFIRMED PROBLEM
+The issue is NOT token truncation.
+
+The debug report showed:
+
+* token limit was not hit
+* no JSON parse error
+* no OCR fallback
+* no validation stripping
+* client did not hide the missing items
+
+The AI simply failed to extract all visible content from the image.
+
+It focused on the obvious planned-meal table and ignored:
+
+* lunch ideas
+* shopping-list items
+* handwritten notes
+* other visible sections
+
+REQUIRED FIX
+Rewrite the planner vision extraction prompt to force structured, exhaustive section-by-section extraction.
+
+The AI must inspect the image in phases:
+
+1. Planned meals
+2. Lunch ideas / flexible meal ideas
+3. Shopping-list items
+4. Handwritten notes / contextual modifiers
+5. Uncategorised visible text
+
+IMPORTANT
+This is planner mode only.
+
+RESPONSE SHAPE
+Keep the existing response shape compatible if possible:
+
+{
+"mode": "planner",
+"rawText": "...",
+"meals": [
+{
+"label": "...",
+"interpretedName": "...",
+"day": null,
+"mealSlot": null,
+"proposedType": "scheduled" | "meal_idea" | "unknown",
+"confidence": "high" | "medium" | "low",
+"sourceText": "...",
+"contextNote": "optional short explanation"
+}
+],
+"shoppingItems": [
+{
+"label": "...",
+"quantity": "...",
+"confidence": "high" | "medium" | "low",
+"sourceText": "..."
+}
+],
+"warnings": []
+}
+
+If adding contextNote requires type updates, keep it optional and in-memory only.
+
+EXTRACTION RULES
+
+1. Exhaustive scan rule
+   The AI must not stop after finding the main table.
+
+It must inspect:
+
+* top margin
+* bottom margin
+* left side notes
+* right side notes
+* handwritten overlays
+* printed table
+* handwritten additions near table rows
+
+2. Section-first rule
+   Before extracting items, identify visible sections such as:
+
+* Lunches
+* lunch ideas
+* meal ideas
+* batch cook
+* shopping list
+* ingredients
+* notes
+* table rows
+
+3. Planned meals
+   Extract scheduled/table meals into meals[] with proposedType="scheduled" where appropriate.
+
+4. Lunch ideas
+   Extract top/side standalone lunch/flexible meal lists into meals[] with proposedType="meal_idea".
+
+Example:
+"Lunches"
+
+* ham bread
+* pizza toast
+* veg & hummus
+* fish fingers salad / sandwiches
+
+These must not disappear.
+
+5. Shopping items
+   Extract ingredient/shopping-list style items into shoppingItems[].
+
+Examples:
+
+* passata x4
+* yogurt
+* basil
+* carrots
+* eggs x40
+
+These must not be placed in planned meals.
+
+6. Handwritten modifiers
+   If a handwritten note modifies a printed row, combine it into interpretedName but preserve sourceText.
+
+Example:
+Printed row:
+Fish cakes
+
+Nearby handwriting:
+new pots salad
+
+Result:
+label: "Fish cakes new pots salad"
+interpretedName: "Fish cakes with new potatoes and salad"
+contextNote: "Combined printed row with nearby handwritten note"
+
+7. Do not over-merge unrelated rows
+   Do NOT combine separate meals just because they are visually nearby.
+
+Bad:
+"Chicken noodle vegetable spaghetti salad"
+
+Better:
+
+* "Chicken noodle salad"
+* "Vegetable spaghetti salad"
+
+If uncertain, split rather than merge.
+
+8. Raw text coverage
+   rawText must include substantially all readable text, not just the table.
+
+If the image clearly contains lots of handwritten shopping items, rawText should reflect that.
+
+9. Unknown section
+   If visible text cannot be confidently classified:
+
+* include it in rawText
+* optionally create unknown meal proposal only if it looks meal-like
+* do not discard it silently
+
+10. Warnings
+    Add a warning if:
+
+* handwriting is difficult
+* parts are obscured
+* section classification is uncertain
+
+But avoid duplicate warnings.
+
+VALIDATION REQUIREMENTS
+Update validation only as needed to pass through:
+
+* proposedType
+* interpretedName
+* optional contextNote
+
+Do not loosen validation so much that invalid shapes pass silently.
+
+MANDATORY BENCHMARK
+Retest server/test-assets/vision-real/week6.jpeg.
+
+Expected improvement:
+
+* more than 6 total extracted useful items OR separated sections
+* lunch ideas extracted if visible
+* shoppingItems extracted if visible
+* rawText length meaningfully larger than previous 269 characters
+* fewer bad over-merges
+
+DEFINITION OF DONE
+
+* Planner prompt uses explicit phased extraction
+* Lunch/flexible meal ideas are extracted
+* Shopping items are extracted separately
+* Raw text coverage improves
+* Over-merging reduced
+* Week 6 benchmark proves improvement
+* Existing planner review UI still renders
+* Existing recipe scan unchanged
+* Existing shopping-list scan unchanged
+* No schema changes
+
+DATA IMPACT DECLARATION
+
+* Reads existing data: no
+* Writes new data: no, except existing user-confirmed planner import behaviour
+* Changes meaning of existing data: yes — planner image extraction becomes more exhaustive and section-aware
+* Requires backfill: no
+
+TRUST CHECK
+Could this mislead users?
+
+* yes if AI over-classifies uncertain handwritten content
+
+Mitigation:
+
+* confidence levels
+* contextNote
+* raw scan text
+* editable review
+* explicit confirmation before save
+
+Could this fabricate certainty?
+
+* yes if it over-interprets notes as meals
+
+Mitigation:
+
+* split rather than merge when uncertain
+* use unknown/low-confidence for ambiguous items
+* do not auto-save
+
+ROLLBACK PLAN
+If release fails:
+
+* revert planner prompt changes
+* revert optional contextNote pass-through if added
+* keep token safety fix if already working unless it caused issues
+* no data cleanup required
+
+MANDATORY CHECKS
+Run:
+
+* git status
+* npm run build
+* npx tsc --noEmit
+
+Manual tests:
+
+1. Week 6 planner image retested
+2. Planned meals extracted
+3. Lunch ideas extracted separately
+4. Shopping items extracted separately
+5. Raw text coverage improved
+6. Bad over-merging reduced
+7. Review UI still works
+8. Recipe scan still works
+9. Shopping-list scan still works
+10. No schema changes made
+
+FINAL RESPONSE REQUIRED
+At the top write exactly:
+
+STRUCTURED PLANNER EXTRACTION IMPLEMENTED: YES
+
+Then report:
+
+* files changed
+* prompt changes
+* section extraction logic
+* rawText improvement
+* Week 6 benchmark before/after
+* lunch extraction result
+* shoppingItems extraction result
+* over-merge result
+* build result
+* manual test result
+* rollback notes

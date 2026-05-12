@@ -22,6 +22,8 @@ async function main() {
     console.log("[test] --- SCHEDULED MEALS ---");
     for (const m of scheduled) {
       console.log(`[meal] day=${m.day ?? "null"} slot=${m.mealSlot ?? "null"} type=${m.proposedType} conf=${m.confidence} label="${m.label}"`);
+      if (m.interpretedName && m.interpretedName !== m.label) console.log(`  → interpretedName="${m.interpretedName}"`);
+      if (m.contextNote) console.log(`  → contextNote="${m.contextNote}"`);
     }
     if (ideas.length > 0) {
       console.log("[test] --- MEAL IDEAS ---");
