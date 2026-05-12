@@ -1,0 +1,158 @@
+Debug why Planner image import is still losing detail.
+
+APPROVED SCOPE
+Debugging and tracing only.
+
+Do NOT:
+
+* change planner UX
+* change save behaviour
+* change schema
+* change recipe linking
+* change shopping-list persistence
+* deploy
+* tune prompts yet
+* increase tokens yet
+
+RISK CLASSIFICATION
+🟡 AMBER — observability/debugging only
+
+CURRENT PROBLEM
+The latest planner scan still returns only 6 planned meals.
+
+It is still missing:
+
+* lunch ideas
+* shopping-list section
+* richer handwritten context
+
+It is also over-merging some meals, for example:
+
+* “Chicken noodle vegetable spaghetti salad”
+
+This suggests the earlier token/prompt changes may not actually be affecting the live planner scan path, OR data is being dropped after AI returns it.
+
+TASK
+Trace the actual live Planner image import path end-to-end.
+
+At the top of your final response write exactly:
+
+PLANNER SCAN DETAIL DEBUG: YES
+
+Then answer these questions with proof from code/logs:
+
+1. Which route handles Planner image import?
+2. Which parser function is called?
+3. Which model is used?
+4. Is this using direct vision or OCR fallback?
+5. What exact prompt is used for planner scans?
+6. What is the current max output token setting?
+7. Is the response being truncated?
+8. What raw JSON does the AI return before validation/filtering?
+9. Are lunch ideas present in raw AI output?
+10. Are shopping items present in raw AI output?
+11. If present, where are they dropped?
+12. If absent, why is the AI not extracting them?
+13. Does client-side review filtering hide any returned groups?
+14. Does the UI currently support separate planned/lunch/shopping sections?
+15. Are warnings/errors being swallowed?
+
+REQUIRED TRACE LOGS
+Add temporary debug logs only.
+
+Use clear labels:
+[planner-scan-debug]
+
+Log:
+
+* scan mode
+* route reached
+* parsedBy
+* model
+* prompt name/version
+* max output tokens
+* image size/file size
+* whether vision path attempted
+* whether OCR fallback used
+* raw AI response length
+* parsed meals count
+* parsed lunch/meal_idea count
+* parsed shoppingItems count
+* validation drops
+* final response shape sent to client
+
+IMPORTANT PRIVACY RULE
+Do NOT log the uploaded image.
+Do NOT log user personal data.
+For raw AI JSON, log only in local/dev debug output, not production logging.
+
+MANDATORY TEST
+Run the Week 6 real planner image again.
+
+Capture:
+
+* raw AI response counts
+* validated server response counts
+* client received counts
+* UI rendered counts
+
+EXPECTED DEBUG OUTCOME
+We need to know exactly which of these is true:
+
+A. AI never extracted lunch/shopping detail
+B. AI extracted it but server validation dropped it
+C. server returned it but client ignored it
+D. UI cannot render it
+E. OCR fallback is being used instead of vision
+F. token/output limit is truncating the response
+G. wrong prompt/model/path is being used
+
+DEFINITION OF DONE
+
+* Actual failure point identified
+* No production behaviour changed
+* No prompt tuning performed
+* No token tuning performed
+* No schema changes
+* Debug evidence provided
+* Next recommended fix clearly scoped
+
+DATA IMPACT DECLARATION
+
+* Reads existing data: no
+* Writes new data: no
+* Changes meaning of existing data: no
+* Requires backfill: no
+
+TRUST CHECK
+Could this mislead us?
+
+* yes, if Claude guesses based on intended code instead of runtime trace
+
+Mitigation:
+
+* require runtime logs
+* require raw counts at each stage
+* require Week 6 benchmark evidence
+
+FINAL RESPONSE REQUIRED
+At the top write exactly:
+
+PLANNER SCAN DETAIL DEBUG: YES
+
+Then report:
+
+* route traced
+* parser function traced
+* model used
+* prompt used
+* max token setting
+* vision vs OCR status
+* raw AI output counts
+* server validation counts
+* client received counts
+* UI rendered counts
+* exact failure point
+* recommended next fix
+* files temporarily changed
+* confirmation no production behaviour changed

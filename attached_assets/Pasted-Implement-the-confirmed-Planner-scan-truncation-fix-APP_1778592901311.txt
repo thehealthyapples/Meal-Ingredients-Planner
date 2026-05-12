@@ -1,0 +1,205 @@
+Implement the confirmed Planner scan truncation fix.
+
+APPROVED SCOPE
+Fix ONLY the confirmed planner vision truncation / silent fallback issue.
+
+Do NOT:
+
+* redesign planner UX
+* change planner save behaviour
+* change schema
+* change recipe linking
+* tune planner interpretation prompt wording
+* change shopping-list scan behaviour
+* change recipe scan behaviour
+* deploy
+
+RISK CLASSIFICATION
+🔴 RED — AI planner import behaviour
+
+CONFIRMED ROOT CAUSE
+Planner scans can exceed the shared 2000-token OpenAI output limit.
+
+When this happens:
+
+* vision output is truncated
+* JSON.parse fails
+* extractWithVision returns null
+* extractDestination silently falls back to OCR/heuristic
+* lunch ideas disappear
+* shopping items disappear
+* richer context disappears
+
+REQUIRED FIX
+
+1. Planner-only token budget
+
+Use a higher output token limit ONLY for mode="planner".
+
+Suggested:
+
+* planner: 4096 or 6000
+* recipe/shopping_list: unchanged
+
+Do not globally raise token limits.
+
+2. Explicit finish_reason handling
+
+Read:
+response.choices[0]?.finish_reason
+
+If finish_reason === "length":
+
+* treat this as truncation
+* do NOT silently continue as normal
+* emit a clear warning in the parsed response
+* log it in dev with [planner-scan-debug]
+* preserve user-facing trust state
+
+3. Prevent silent fallback masking truncation
+
+If planner vision truncates:
+
+* do not silently fall back to OCR as though normal
+* either retry once with the higher planner token budget if this occurs after a first attempt
+  OR
+* return a clear planner scan warning that the result was incomplete
+
+Preferred:
+
+* planner mode should use the higher token budget on first attempt
+* fallback should only be used for genuine vision failure, not hidden token truncation
+
+4. Keep fallback but classify it correctly
+
+OCR fallback can remain for:
+
+* vision API failure
+* invalid response not due to token length
+* image unreadable
+
+But:
+
+* fallback must add a warning like:
+  “Detailed planner interpretation was unavailable, so THA used a simpler scan result.”
+
+Do not expose technical wording like:
+
+* token limit
+* JSON parse
+* OpenAI failure
+  in primary user-facing messages.
+
+5. Preserve mode isolation
+
+Only planner scans should change.
+
+Confirm recipe and shopping-list scans still use existing token behaviour.
+
+6. Verify no client-side changes are required unless needed for warning display
+
+The client already supports:
+
+* planned meals
+* lunch ideas
+* shopping items
+
+Do not redesign UI.
+
+7. Keep debug logs controlled
+
+Keep useful [planner-scan-debug] logs in development only.
+
+Do not log:
+
+* uploaded image
+* personal data
+* full user content in production
+
+DEFINITION OF DONE
+
+* Planner mode uses higher output token budget
+* finish_reason is checked
+* truncation is no longer silently swallowed
+* OCR fallback does not hide truncation
+* Week 6 planner returns richer detail if vision succeeds
+* Lunch ideas can reach client
+* Shopping items can reach client
+* Recipe scans unchanged
+* Shopping-list scans unchanged
+* No schema changes
+
+DATA IMPACT DECLARATION
+
+* Reads existing data: no
+* Writes new data: no, except existing user-confirmed planner import behaviour
+* Changes meaning of existing data: no
+* Requires backfill: no
+
+TRUST CHECK
+Could this mislead users?
+
+* yes if fallback appears as full AI interpretation
+
+Mitigation:
+
+* add warning when detailed planner interpretation is unavailable
+* preserve review-before-save flow
+* preserve raw scan text and confidence
+
+Could this fabricate certainty?
+
+* yes if truncated output is treated as valid
+
+Mitigation:
+
+* finish_reason check
+* no silent parse failure masking
+* explicit degraded-confidence state
+
+ROLLBACK PLAN
+If release fails:
+
+* revert token-budget change
+* revert finish_reason handling
+* restore previous fallback behaviour
+* no data cleanup required
+
+MANDATORY CHECKS
+Run:
+
+* git status
+* npm run build
+* npx tsc --noEmit
+
+Manual tests:
+
+1. Week 6 planner image retested
+2. Vision path confirmed for Week 6 if available
+3. finish_reason logged/checked
+4. Lunch ideas present if AI extracts them
+5. Shopping items present if AI extracts them
+6. No silent OCR fallback on truncation
+7. If fallback occurs, warning is present
+8. Existing recipe scan still works
+9. Existing shopping-list scan still works
+10. Planner review UI still renders planned/lunch/shopping sections
+
+FINAL RESPONSE REQUIRED
+At the top write exactly:
+
+PLANNER VISION TRUNCATION FIXED: YES
+
+Then report:
+
+* files changed
+* planner token budget
+* finish_reason handling
+* fallback handling
+* Week 6 benchmark result
+* lunch/shopping extraction result
+* recipe scan regression result
+* shopping-list scan regression result
+* build result
+* manual test result
+* rollback notes
