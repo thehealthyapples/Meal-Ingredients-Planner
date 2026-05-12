@@ -261,6 +261,10 @@ async function extractWithVision(
 ): Promise<VisionRawResult | null> {
   if (!process.env.OPENAI_API_KEY) return null;
 
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`[planner-scan-debug] extractWithVision-entry mode=${mode} imageBytes=${imageBuffer.length}`);
+  }
+
   const prompt = mode === "shopping_list" ? SHOPPING_LIST_VISION_PROMPT
     : mode === "planner" ? PLANNER_VISION_PROMPT
     : RECIPE_VISION_PROMPT;
@@ -298,7 +302,7 @@ async function extractWithVision(
     if (finishReason === "length" && mode === "planner") {
       console.error(`[recipeParser] Vision truncated mode=${mode} completionTokens=${completionTokens}/${tokenLimit} — returning truncated sentinel`);
       if (process.env.NODE_ENV !== "production") {
-        console.log(`[planner-scan-debug] vision-TRUNCATED mode=${mode} completionTokens=${completionTokens}/${tokenLimit}`);
+        console.log(`[planner-scan-debug] finish_reason=length mode=${mode} completionTokens=${completionTokens}/${tokenLimit} — truncated sentinel returned`);
       }
       return { parsed: null, rawText: "", truncated: true };
     }
