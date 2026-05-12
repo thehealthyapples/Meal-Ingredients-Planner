@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Camera, Upload, X, Loader2, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid } from "lucide-react";
+import { Camera, Upload, X, Loader2, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import type { AssistantMode } from "@/contexts/PlannerContext";
 import { TemplatesPanel } from "@/components/templates-panel";
-import type { User } from "@shared/schema";
+import type { User, Meal } from "@shared/schema";
+import { PlannerMealPickerPanel } from "@/components/PlannerMealPickerPanel";
+import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMealPickerPanel";
 
 interface PlannerAssistantPanelProps {
   mode: AssistantMode;
@@ -34,6 +36,13 @@ interface PlannerAssistantPanelProps {
   smartLeftovers: boolean;
   setSmartLeftovers: (v: boolean) => void;
   onRunSmartSuggest: () => void;
+  pickerTarget: EntryTarget | null;
+  meals: Meal[];
+  plannerMealIdSet: Set<number>;
+  categoryIdForSlot: Record<string, number | undefined>;
+  onPickerSelect: (mealId: number) => void;
+  addingEntry: boolean;
+  onAddProduct: (product: PlannerProductResult) => void;
 }
 
 function useIsMobile() {
@@ -267,6 +276,7 @@ function SmartContent({
 function getPanelIcon(mode: AssistantMode) {
   if (mode === "smart") return <Sparkles className="h-4 w-4 text-primary" />;
   if (mode === "templates") return <LayoutGrid className="h-4 w-4 text-primary" />;
+  if (mode === "manual") return <Plus className="h-4 w-4 text-primary" />;
   return <ScanLine className="h-4 w-4 text-primary" />;
 }
 
@@ -274,6 +284,7 @@ function getPanelTitle(mode: AssistantMode) {
   if (mode === "smart") return "Plan My Week";
   if (mode === "scan") return "Scan Planner";
   if (mode === "templates") return "Templates";
+  if (mode === "manual") return "Add Meal";
   return "Planner Assistant";
 }
 
@@ -294,6 +305,13 @@ export function PlannerAssistantPanel({
   smartVegDays, setSmartVegDays,
   smartLeftovers, setSmartLeftovers,
   onRunSmartSuggest,
+  pickerTarget,
+  meals,
+  plannerMealIdSet,
+  categoryIdForSlot,
+  onPickerSelect,
+  addingEntry,
+  onAddProduct,
 }: PlannerAssistantPanelProps) {
   const isMobile = useIsMobile();
 
@@ -335,6 +353,18 @@ export function PlannerAssistantPanel({
       )}
       {mode === "templates" && (
         <TemplatesPanel inline open onClose={onClose} user={user} />
+      )}
+      {mode === "manual" && (
+        <PlannerMealPickerPanel
+          key={pickerTarget ? `${pickerTarget.dayId}-${pickerTarget.mealType}-${pickerTarget.audience}` : "empty"}
+          target={pickerTarget}
+          meals={meals}
+          plannerMealIdSet={plannerMealIdSet}
+          categoryIdForSlot={categoryIdForSlot}
+          onSelect={onPickerSelect}
+          addingEntry={addingEntry}
+          onAddProduct={onAddProduct}
+        />
       )}
     </>
   );

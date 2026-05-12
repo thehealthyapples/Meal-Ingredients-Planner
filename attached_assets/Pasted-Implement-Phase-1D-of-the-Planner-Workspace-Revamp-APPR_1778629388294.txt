@@ -1,0 +1,103 @@
+Implement Phase 1D of the Planner Workspace Revamp.
+
+APPROVED SCOPE:
+Move ONLY the Meal Picker / manual meal assignment workflow into the Planner Assistant panel.
+
+Do NOT:
+- add drag/drop
+- change schema
+- change API contracts
+- change meal assignment logic
+- change basket logic
+- migrate Day Drawer
+- migrate Bulk Assign
+- implement intent layer
+- add AI preference parsing
+
+GOAL:
+Manual meal assignment should happen from the Planner Assistant panel while the planner grid remains visible on desktop/tablet.
+
+USE EXISTING FOUNDATION:
+- PlannerContext
+- assistantMode
+- PlannerAssistantPanel
+- existing meal picker logic
+- existing meal search/filter logic
+- existing product search logic
+- existing addEntryMutation/selectMeal behaviour
+
+REQUIREMENTS:
+1. Wire assistantMode = "manual".
+2. When user clicks a planner cell add button, open the assistant panel in manual mode.
+3. Preserve pickerTarget logic.
+4. Preserve meal search.
+5. Preserve filters:
+   - All
+   - Cookbook
+   - From Planner
+   - Ready Meals
+   - Shop-bought
+6. Preserve product search and retailer filter behaviour.
+7. Preserve product-to-meal creation behaviour.
+8. Preserve existing selectMeal / addEntryMutation behaviour.
+9. Preserve existing meal assignment API calls and query invalidation.
+10. Keep existing Meal Picker dialog only as fallback if absolutely necessary.
+11. Scan, Smart, and Templates assistant modes must continue working.
+12. Planner grid must remain visible during manual assignment where screen size allows.
+
+IMPORTANT:
+This is a UI/container migration only.
+Do not rewrite planner assignment logic.
+Do not change how meals are saved.
+Do not introduce drag/drop.
+Do not introduce intent entries.
+
+DEFINITION OF DONE:
+- Planner grid still renders
+- Assistant panel opens
+- Scan mode still works
+- Smart mode still works
+- Templates mode still works
+- Manual mode opens when adding a meal
+- Meal filters work
+- Meal search works
+- Product search works
+- Selecting a meal saves to planner
+- Selecting a shop-bought product still creates/adds meal as before
+- Existing non-assistant flows still work
+- Build passes
+- Typecheck passes
+
+DATA IMPACT:
+Reads existing data: yes
+Writes new data: yes - only existing meal assignment/product-add behaviour
+Changes meaning of existing data: no
+Requires backfill: no
+
+TRUST CHECK:
+- No hidden meal assignment
+- User still explicitly selects meal/product
+- No AI logic added
+- No automatic planner modifications
+- No fake product confidence introduced
+
+ROLLBACK:
+Use:
+planner-phase0-complete-baseline-v1
+
+FINAL RESPONSE:
+PHASE 1D MANUAL ASSIGNMENT ASSISTANT WORKFLOW COMPLETE: YES / NO
+
+Then report:
+- files changed
+- assistant shell changes
+- manual assignment migration summary
+- scan mode regression result
+- smart mode regression result
+- templates mode regression result
+- unchanged flows confirmed
+- build result
+- typecheck result
+- manual/e2e test results
+- rollback notes
+- remaining limitations
