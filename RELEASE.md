@@ -7,6 +7,7 @@
 | Tag | Date | Branch | Commit | Purpose |
 |-----|------|--------|--------|---------|
 | `planner-pre-revamp-baseline-v1` | 2026-05-12 | main | e18e746 | Planner state before Phase 0 architecture refactor |
+| `planner-phase0-complete-baseline-v1` | 2026-05-12 | main | 824cf1f | Phase 0 complete — context + hooks extracted, pre-workspace shell |
 
 ### Rollback instruction
 
@@ -21,6 +22,95 @@ To create a rollback branch from a tag:
 ```bash
 git checkout -b rollback/planner-pre-revamp planner-pre-revamp-baseline-v1
 ```
+
+---
+
+### planner-phase0-complete-baseline-v1 — Phase 0 Completion Notes
+
+**Tag:** `planner-phase0-complete-baseline-v1`  
+**Date:** 2026-05-12 UTC  
+**Branch:** main  
+**Commit:** 824cf1f  
+**Build:** PASS (vite + esbuild, zero errors)  
+**TypeCheck:** PASS (tsc --noEmit, zero errors)
+
+**Phase 0 summary:**  
+State extraction from `WeeklyPlannerPage` into isolated, reusable domain modules. No behavioural change. No schema change. No API change. No UI redesign.
+
+**What was extracted:**
+
+| Module | File | Domain |
+|--------|------|--------|
+| `PlannerContext` | `client/src/contexts/PlannerContext.tsx` | `assistantMode`, `plannerRefresh()` |
+| `useSmartSuggest` | `client/src/hooks/use-smart-suggest.ts` | Smart Suggest: state, run, apply, regenerate, lock |
+| `usePlannerScan` | `client/src/hooks/use-planner-scan.ts` | Scan: camera, file upload, open/cancel, plannerDays |
+| `planner-types` | `client/src/lib/planner-types.ts` | `FullDay`, `FullWeek`, `SmartSuggestResult`, etc. |
+
+**Architectural status at this tag:**
+
+| Area | Status |
+|------|--------|
+| PlannerContext | Introduced — `assistantMode` wired but non-behavioural |
+| Smart Suggest domain | Isolated in `useSmartSuggest` hook |
+| Scan domain | Isolated in `usePlannerScan` hook |
+| Planner types | Centralised in `planner-types.ts` |
+| `WeeklyPlannerPage` | 3104 → 2810 lines (294 lines removed) |
+| Modal behaviour | Unchanged — all 9 modals still present |
+| Workspace shell | Not yet — planned Phase 1 |
+| Intent layer (nullable mealId) | Not yet — planned Phase 3 |
+| Drag-and-drop | Not yet — planned Phase 4 |
+| Schema | No changes |
+| Server routes | No changes |
+| Migrations | No changes |
+
+**Planner behaviours verified at this tag:**
+
+| Behaviour | Status |
+|-----------|--------|
+| Planner grid renders (6 weeks, day columns, meal rows) | Verified |
+| Planner loads existing weeks | Verified |
+| Smart Suggest opens (preferences → proposal dialog) | Verified |
+| Smart Suggest apply writes meals to planner | Verified |
+| Scan planner opens (camera → review dialog) | Verified |
+| Scan cancel works without data corruption | Verified |
+| Templates panel opens | Verified |
+| Meal picker opens on slot click | Verified |
+| Basket generation (+Week) works | Verified |
+| Day drawer opens per column | Verified |
+| Planner saves persist across refresh | Verified |
+
+**Deferred hotspots — intentionally NOT extracted in Phase 0:**
+
+These clusters remain inline in `WeeklyPlannerPage` and are candidates for future hook extraction in later phases or a Phase 0b pass:
+
+| Cluster | State variables | Phase target |
+|---------|----------------|--------------|
+| Meal picker cluster | `mealPickerOpen`, `pickerTarget`, `mealSearch`, `mealFilter`, `productQuery`, `productResults`, `productSearching`, `productRetailer` | Phase 2 (panel migration) |
+| Bulk assign cluster | `bulkAssignOpen`, `bulkMeal`, `bulkWeeks`, `bulkDays`, `bulkSlots`, `bulkMealSearch`, `bulkMealFilter`, `bulkStep` | Phase 2 |
+| Household override cluster | `weekDietsOpen`, `weekOverrides`, `setOverrideMutation`, `deleteOverrideMutation` | Phase 2 |
+| Guest eater cluster | `addGuestOpen`, `guestName`, `guestDietTypes`, `guestRestrictions` | Phase 2 |
+| Meal detail / adaptation cluster | `mealDetail`, `adaptationOpen`, `adaptMutation` | Phase 2 |
+
+**Known architectural cautions for Phase 1:**
+
+1. `assistantMode` is wired but has no visual effect yet — Phase 1 must render conditional panel UI based on it
+2. `PlannerProvider` is scoped to planner routes only via `PlannerPageWrapper` — correct, do not widen scope
+3. Smart Suggest `applySmartSuggestion` is a one-click bulk-write with no per-item confirm — this is a trust risk to address in Phase 3
+4. Scan stubs (`mealSourceType: "planner-placeholder"`) accumulate in cookbook without cleanup — deferred to Phase 3
+5. `plannerEntries.mealId` remains `NOT NULL` — intent layer not yet started
+
+**Rollback to Phase 0 complete state:**
+```bash
+git checkout -b rollback/planner-phase0 planner-phase0-complete-baseline-v1
+```
+
+**Rollback to pre-revamp state (before any Phase 0 work):**
+```bash
+git checkout -b rollback/planner-pre-revamp planner-pre-revamp-baseline-v1
+```
+
+**Readiness for Phase 1:**  
+READY. `PlannerContext` is mounted and functional. `assistantMode` is available to all planner child components. Layout expansion (right-panel shell) can proceed without touching Phase 0 modules.
 
 ---
 
