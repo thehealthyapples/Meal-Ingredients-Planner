@@ -295,7 +295,7 @@ async function extractWithVision(
       console.log(`[planner-scan-debug] vision-api-response mode=${mode} finish_reason=${finishReason} completionTokens=${completionTokens}/${tokenLimit} hitLimit=${completionTokens >= tokenLimit - 50}`);
     }
 
-    if (finishReason === "length") {
+    if (finishReason === "length" && mode === "planner") {
       console.error(`[recipeParser] Vision truncated mode=${mode} completionTokens=${completionTokens}/${tokenLimit} — returning truncated sentinel`);
       if (process.env.NODE_ENV !== "production") {
         console.log(`[planner-scan-debug] vision-TRUNCATED mode=${mode} completionTokens=${completionTokens}/${tokenLimit}`);
@@ -632,7 +632,7 @@ export async function extractDestination(
     console.warn(`[scan-timing] vision-exception mode=${mode} elapsed=${Date.now() - t0}ms err=${err instanceof Error ? err.message : err}`);
   }
 
-  if (visionResult?.truncated) {
+  if (visionResult?.truncated && mode === "planner") {
     console.error(`[recipeParser] Vision truncated even at extended budget mode=${mode} — returning failed`);
     if (process.env.NODE_ENV !== "production") {
       console.log(`[planner-scan-debug] extractDestination-vision-TRUNCATED mode=${mode} — parsedBy=failed`);
