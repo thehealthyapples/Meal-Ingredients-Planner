@@ -680,6 +680,10 @@ export async function extractDestination(
     const confidence = computeConfidence(aiResult, mode);
     const parsedWarnings = (aiResult.mode === "recipe" || aiResult.mode === "planner") ? aiResult.warnings : [];
     console.log(`[scan-timing] ocr-fallback-ai-success mode=${mode} confidence=${confidence} totalElapsed=${Date.now() - t0}ms`);
+    if (process.env.NODE_ENV !== "production" && mode === "planner" && aiResult.mode === "planner") {
+      const ideaCount = aiResult.meals.filter(m => m.proposedType === "meal_idea").length;
+      console.log(`[planner-scan-debug] extractDestination-ocr-ai-SUCCESS meals=${aiResult.meals.length} meal_ideas=${ideaCount} shoppingItems=${aiResult.shoppingItems.length} confidence=${confidence}`);
+    }
     return {
       result: aiResult,
       parsedBy: "ocr-fallback",
@@ -697,6 +701,10 @@ export async function extractDestination(
       ? buildPlannerHeuristic(ocrText)
       : buildRecipeHeuristic(ocrText);
   const heuristicWarnings = (heuristic.mode === "recipe" || heuristic.mode === "planner") ? heuristic.warnings : [];
+  if (process.env.NODE_ENV !== "production" && mode === "planner" && heuristic.mode === "planner") {
+    const ideaCount = heuristic.meals.filter(m => m.proposedType === "meal_idea").length;
+    console.log(`[planner-scan-debug] extractDestination-heuristic-FALLBACK meals=${heuristic.meals.length} meal_ideas=${ideaCount} shoppingItems=${heuristic.shoppingItems.length} confidence=low`);
+  }
   return {
     result: heuristic,
     parsedBy: "ocr-fallback",

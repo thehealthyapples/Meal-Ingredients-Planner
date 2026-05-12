@@ -7121,9 +7121,9 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const totalMs = Date.now() - t_server;
       console.log(`[scan-timing] response-sent scanId=${scanId} mode=${mode} parsedBy=${parsedBy} confidence=${confidence} totalServer=${totalMs}ms`);
       if (process.env.NODE_ENV !== "production" && mode === "planner" && parsed?.mode === "planner") {
-        const mealCount = parsed.meals?.length ?? 0;
-        const ideaCount = (parsed.meals as any[])?.filter((m: any) => m.proposedType === "meal_idea").length ?? 0;
-        const shopCount = parsed.shoppingItems?.length ?? 0;
+        const mealCount = parsed.meals.length;
+        const ideaCount = parsed.meals.filter(m => m.proposedType === "meal_idea").length;
+        const shopCount = parsed.shoppingItems.length;
         console.log(`[planner-scan-debug] route-final scanId=${scanId} meals=${mealCount} meal_ideas=${ideaCount} shoppingItems=${shopCount} parsedBy=${parsedBy} confidence=${confidence}`);
       }
       res.json({ mode, rawText, parsed, parsedBy, confidence, warnings });
