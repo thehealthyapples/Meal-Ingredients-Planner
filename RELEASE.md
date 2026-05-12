@@ -1,5 +1,76 @@
 # Release Process (THA)
 
+---
+
+## Restore Points / Baseline Tags
+
+| Tag | Date | Branch | Commit | Purpose |
+|-----|------|--------|--------|---------|
+| `planner-pre-revamp-baseline-v1` | 2026-05-12 | main | e18e746 | Planner state before Phase 0 architecture refactor |
+
+### Rollback instruction
+
+To restore the codebase to any tagged baseline:
+
+```bash
+git checkout <tag-name>
+```
+
+To create a rollback branch from a tag:
+
+```bash
+git checkout -b rollback/planner-pre-revamp planner-pre-revamp-baseline-v1
+```
+
+---
+
+### planner-pre-revamp-baseline-v1 — Baseline Notes
+
+**Tag:** `planner-pre-revamp-baseline-v1`  
+**Date:** 2026-05-12 21:58 UTC  
+**Branch:** main  
+**Commit:** e18e7463ce106db63ca50213826c939fc1cb3212  
+**Build:** PASS (vite + esbuild, no errors)  
+**TypeCheck:** PASS (tsc --noEmit, zero errors)
+
+**Why this baseline exists:**  
+Captured immediately before Phase 0 of the THA planner architecture revamp begins. The revamp will progressively evolve the planner toward a persistent workspace model with a right-side assistant panel. This tag allows a clean rollback if any phase introduces regressions.
+
+**What future work it protects against:**  
+- Phase 0: State extraction from WeeklyPlannerPage into PlannerContext  
+- Phase 1: Right-side assistant panel shell  
+- Phase 2: Modal-to-panel migration (scan, templates, smart suggest, meal picker)  
+- Phase 3: Planner meal intent layer (nullable mealId, intentText column)  
+- Phase 4: Drag-and-drop / tap-to-assign meal assignment  
+
+**Current planner behaviour at this tag:**
+
+| Behaviour | Status |
+|-----------|--------|
+| Planner grid loads (6 weeks, day columns, meal rows) | Working |
+| Manual meal add (+ Add button → meal picker dialog) | Working |
+| Scan planner flow (Camera → PlannerScanReview dialog) | Working |
+| Smart Planner (Plan My Week preferences → proposal dialog) | Working |
+| Templates panel (THA + My Templates dialog) | Working |
+| Existing planner entries display correctly | Working |
+| Multi-recipe slots (position-ordered, Day View drawer) | Working |
+| Household adaptation (per-entry AI tailoring) | Working |
+| Session recovery in scan review (sessionStorage) | Working |
+| Week eater diet overrides | Working |
+| Bulk assign dialog | Working |
+| Share plan | Working |
+| Add week to basket | Working |
+
+**Key architectural facts at this tag:**  
+- `weekly-planner-page.tsx`: 3,104 lines, monolithic, 9 active modal surfaces  
+- `plannerEntries.mealId`: `INTEGER NOT NULL` (pre-intent-layer schema)  
+- `mealSourceType: "planner-placeholder"`: coined in scan flow stub creation  
+- Smart Suggest: deterministic scoring engine (not LLM)  
+- Scan: GPT-4o-mini vision API  
+- No drag-and-drop library installed  
+
+---
+
 ## Overview
 
 - Development happens in Replit
