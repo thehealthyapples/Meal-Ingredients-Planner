@@ -22,6 +22,7 @@ import ProductsPage from "@/pages/products-page";
 import SupermarketsPage from "@/pages/supermarkets-page";
 import MealDetailPage from "@/pages/meal-detail-page";
 import WeeklyPlannerPage from "@/pages/weekly-planner-page";
+import { PlannerProvider } from "@/contexts/PlannerContext";
 import ProfilePage from "@/pages/profile-page";
 import AdminUsersPage from "@/pages/admin-users-page";
 import AdminIngredientProductsPage from "@/pages/admin-ingredient-products-page";
@@ -159,6 +160,14 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   );
 }
 
+function PlannerPageWrapper() {
+  return (
+    <PlannerProvider>
+      <WeeklyPlannerPage />
+    </PlannerProvider>
+  );
+}
+
 function Router() {
   useRoutingCorrectionTracker();
 
@@ -177,8 +186,8 @@ function Router() {
       <Route path="/basket" component={() => <ProtectedRoute component={ShoppingListPage} />} />
       <Route path="/products" component={() => <ProtectedRoute component={ProductsPage} />} />
       <Route path="/analyser" component={() => <ProtectedRoute component={ProductsPage} />} />
-      <Route path="/weekly-planner" component={() => <ProtectedRoute component={WeeklyPlannerPage} />} />
-      <Route path="/planner" component={() => <ProtectedRoute component={WeeklyPlannerPage} />} />
+      <Route path="/weekly-planner" component={() => <ProtectedRoute component={PlannerPageWrapper} />} />
+      <Route path="/planner" component={() => <ProtectedRoute component={PlannerPageWrapper} />} />
       <Route path="/supermarkets" component={() => <ProtectedRoute component={SupermarketsPage} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersPage} />} />

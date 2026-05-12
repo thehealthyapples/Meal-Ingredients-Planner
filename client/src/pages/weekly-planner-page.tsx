@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { usePlannerContext } from "@/contexts/PlannerContext";
+import { useSmartSuggest } from "@/hooks/use-smart-suggest";
+import { usePlannerScan } from "@/hooks/use-planner-scan";
+import type { FullDay, FullWeek, SmartCandidate, MealExplanation, SmartSuggestEntry, SmartSuggestResult } from "@/lib/planner-types";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { TemplatesPanel } from "@/components/templates-panel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
@@ -36,14 +40,6 @@ import type { HouseholdEater, GuestEater } from "@shared/household-eater";
 import type { AdaptationResult } from "@shared/meal-adaptation";
 import { ONBOARDING_DIET_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
 import { PageHeader } from "@/components/PageHeader";
-
-interface FullDay extends PlannerDay {
-  entries: PlannerEntry[];
-}
-
-interface FullWeek extends PlannerWeek {
-  days: FullDay[];
-}
 
 interface EntryTarget {
   dayId: number;
@@ -75,51 +71,6 @@ interface MatrixRow {
   iconColor: string;
 }
 
-interface SmartCandidate {
-  id: string | number;
-  name: string;
-  image?: string | null;
-  isExternal?: boolean;
-  externalId?: string;
-  source?: string | null;
-  sourceUrl?: string | null;
-  estimatedCost?: number | null;
-  estimatedUPFScore?: number | null;
-  scoreBreakdown?: Record<string, number>;
-  category?: string | null;
-  cuisine?: string | null;
-  primaryProtein?: string | null;
-  dietTypes?: string[];
-  ingredients?: string[];
-  servings?: number | null;
-}
-interface MealExplanation {
-  title: string;
-  reasons: string[];
-  scoreBreakdown: { healthScore: number; upfScore: number; budgetScore: number; preferenceMatch: number };
-}
-interface SmartSuggestEntry {
-  dayOfWeek: number;
-  day: string;
-  slot: string;
-  candidate: SmartCandidate;
-  locked: boolean;
-  explanation?: MealExplanation;
-}
-interface SmartSuggestResult {
-  entries: SmartSuggestEntry[];
-  stats: {
-    totalMeals: number;
-    userMeals: number;
-    externalMeals: number;
-    estimatedWeeklyCost: number;
-    averageUPFScore: number;
-    uniqueIngredients: number;
-    ingredientReuse: number;
-    proteinDistribution: Record<string, number>;
-    sharedIngredients: string[];
-  };
-}
 
 interface MealDetailState {
   entry: PlannerEntry;
@@ -458,34 +409,6 @@ export default function WeeklyPlannerPage() {
   const { user } = useUser();
   const [, navigate] = useLocation();
 
-  const [smartLoading, setSmartLoading] = useState(false);
-  const [smartResult, setSmartResult] = useState<SmartSuggestResult | null>(null);
-  const [smartDialogOpen, setSmartDialogOpen] = useState(false);
-  const [smartNutritionMap, setSmartNutritionMap] = useState<Map<number, Nutrition>>(new Map());
-  const [nutritionLoading, setNutritionLoading] = useState(false);
-  const [nutritionFetchTick, setNutritionFetchTick] = useState(0);
-  const [smartControlsOpen, setSmartControlsOpen] = useState(false);
-  const [smartMealsPerDay, setSmartMealsPerDay] = useState("3");
-  const [smartCuisine, setSmartCuisine] = useState("");
-  const [smartBudget, setSmartBudget] = useState("");
-  const [smartMaxUPF, setSmartMaxUPF] = useState("");
-  const [smartFishPerWeek, setSmartFishPerWeek] = useState("2");
-  const [smartRedMeatPerWeek, setSmartRedMeatPerWeek] = useState("3");
-  const [smartVegDays, setSmartVegDays] = useState(false);
-  const [smartLeftovers, setSmartLeftovers] = useState(false);
-  const [lockedEntries, setLockedEntries] = useState<Set<string>>(new Set());
-  const [expandedExplanation, setExpandedExplanation] = useState<string | null>(null);
-  const [applyingSmartPlan, setApplyingSmartPlan] = useState(false);
-
-  // Planner image scan state
-  const [plannerCameraOpen, setPlannerCameraOpen] = useState(false);
-  const [plannerScanOpen, setPlannerScanOpen] = useState(false);
-  const [plannerScanData, setPlannerScanData] = useState<PlannerScanData | null>(null);
-  const [plannerScanLoading, setPlannerScanLoading] = useState(false);
-  const [plannerScanError, setPlannerScanError] = useState<string | null>(null);
-  const plannerScanFileRef = useRef<HTMLInputElement>(null);
-  const plannerScanCancelledRef = useRef(false);
-
   // Product search within meal picker
   const [productQuery, setProductQuery] = useState("");
   const [productResults, setProductResults] = useState<PlannerProductResult[]>([]);
@@ -556,6 +479,42 @@ export default function WeeklyPlannerPage() {
   });
   const basketMealIdSet = useMemo(() => new Set(basketMealIds), [basketMealIds]);
   const mealById = useMemo(() => new Map(meals.map(m => [m.id, m])), [meals]);
+
+  // ── Active week data (needed by domain hooks before other queries) ─────────
+  const activeWeekData = fullPlanner.find((w) => w.weekNumber === Number(activeWeek));
+
+  // ── Planner context (Phase 0: architecture boundary) ──────────────────────
+  // assistantMode will drive panel routing in a future phase
+  const { assistantMode } = usePlannerContext();
+
+  // ── Smart Suggest domain ──────────────────────────────────────────────────
+  const {
+    smartLoading, smartResult,
+    smartDialogOpen, setSmartDialogOpen,
+    smartNutritionMap, nutritionLoading,
+    nutritionFetchTick, setNutritionFetchTick,
+    smartControlsOpen, setSmartControlsOpen,
+    smartMealsPerDay, setSmartMealsPerDay,
+    smartCuisine, setSmartCuisine,
+    smartBudget, setSmartBudget,
+    smartMaxUPF, setSmartMaxUPF,
+    smartFishPerWeek, setSmartFishPerWeek,
+    smartRedMeatPerWeek, setSmartRedMeatPerWeek,
+    smartVegDays, setSmartVegDays,
+    smartLeftovers, setSmartLeftovers,
+    lockedEntries, expandedExplanation, setExpandedExplanation,
+    applyingSmartPlan,
+    runSmartSuggest, toggleLockEntry, applySmartSuggestion, regenerateSingleEntry,
+  } = useSmartSuggest({ meals, fullPlanner, activeWeek, activeWeekData });
+
+  // ── Planner scan domain ───────────────────────────────────────────────────
+  const {
+    plannerCameraOpen, setPlannerCameraOpen,
+    plannerScanOpen,
+    plannerScanData, plannerScanLoading, plannerScanError,
+    plannerScanFileRef, plannerDays,
+    handlePlannerScanFile, handlePlannerScanOpenChange,
+  } = usePlannerScan({ activeWeekData });
 
   const { data: categories = [] } = useQuery<MealCategory[]>({
     queryKey: ['/api/categories'],
@@ -1077,201 +1036,6 @@ export default function WeeklyPlannerPage() {
     return "High";
   };
 
-  useEffect(() => {
-    if (!smartResult || !smartDialogOpen) return;
-    const internalIds = smartResult.entries
-      .filter(e => !e.candidate.isExternal)
-      .map(e => Number(e.candidate.id))
-      .filter(id => !isNaN(id));
-    if (internalIds.length === 0) return;
-
-    let cancelled = false;
-    const retryDelays = [0, 5000, 10000, 20000, 35000];
-    let attempt = 0;
-
-    const fetchOnce = async (): Promise<boolean> => {
-      const r = await apiRequest('POST', '/api/nutrition/bulk', { mealIds: internalIds });
-      const data: Nutrition[] = await r.json();
-      if (cancelled) return true;
-      const map = new Map<number, Nutrition>();
-      data.forEach(n => { if (n.mealId) map.set(n.mealId, n); });
-      setSmartNutritionMap(map);
-      const allLoaded = internalIds.every(id => data.some(n => n.mealId === id && n.calories));
-      return allLoaded;
-    };
-
-    const runWithRetry = async () => {
-      setNutritionLoading(true);
-      try {
-        for (attempt = 0; attempt < retryDelays.length; attempt++) {
-          if (cancelled) break;
-          if (attempt > 0) {
-            await new Promise(r => setTimeout(r, retryDelays[attempt]));
-          }
-          if (cancelled) break;
-          const done = await fetchOnce();
-          if (done || cancelled) break;
-        }
-      } catch {
-        // swallow fetch errors
-      } finally {
-        if (!cancelled) setNutritionLoading(false);
-      }
-    };
-
-    runWithRetry();
-    return () => { cancelled = true; };
-  }, [smartResult, smartDialogOpen, nutritionFetchTick]);
-
-  const runSmartSuggest = async (preserveLocks = false) => {
-    setSmartLoading(true);
-    try {
-      const locked: { dayOfWeek: number; slot: string; candidateId: string | number; candidateName: string }[] = [];
-
-      // Always include meals already planned in the current week as locked entries
-      // so the AI builds around what's there rather than ignoring it.
-      const mealNameById = new Map(meals.map(m => [m.id, m.name]));
-      const currentWeek = fullPlanner.find(w => String(w.weekNumber) === activeWeek);
-      if (currentWeek) {
-        for (const day of currentWeek.days) {
-          for (const entry of day.entries) {
-            const slot = entry.mealType === 'snacks' ? 'snack' : entry.mealType;
-            locked.push({
-              dayOfWeek: day.dayOfWeek,
-              slot,
-              candidateId: entry.mealId,
-              candidateName: mealNameById.get(entry.mealId) ?? '',
-            });
-          }
-        }
-      }
-
-      if (preserveLocks && smartResult) {
-        for (const entry of smartResult.entries) {
-          const key = `${entry.dayOfWeek}-${entry.slot}`;
-          if (lockedEntries.has(key)) {
-            // Only add if not already present from existing planner entries
-            const alreadyLocked = locked.some(l => l.dayOfWeek === entry.dayOfWeek && l.slot === entry.slot);
-            if (!alreadyLocked) {
-              locked.push({ dayOfWeek: entry.dayOfWeek, slot: entry.slot, candidateId: entry.candidate.id, candidateName: entry.candidate.name });
-            }
-          }
-        }
-      }
-
-      const res = await apiRequest('POST', '/api/meal-plans/smart-suggest', {
-        mealsPerDay: Number(smartMealsPerDay) || 3,
-        includeLeftovers: smartLeftovers,
-        maxWeeklyBudget: smartBudget ? Number(smartBudget) : undefined,
-        maxWeeklyUPF: smartMaxUPF ? Number(smartMaxUPF) : undefined,
-        preferredCuisine: smartCuisine || undefined,
-        fishPerWeek: Number(smartFishPerWeek),
-        redMeatPerWeek: Number(smartRedMeatPerWeek),
-        vegetarianDays: smartVegDays,
-        lockedEntries: locked.length > 0 ? locked : undefined,
-      });
-      const data = await res.json() as SmartSuggestResult;
-      setSmartResult(data);
-      if (!preserveLocks) setLockedEntries(new Set());
-      setSmartDialogOpen(true);
-      setSmartControlsOpen(false);
-    } catch {
-      toast({ title: "Plan generation failed", description: "Could not propose a plan. Try again.", variant: "destructive" });
-    } finally {
-      setSmartLoading(false);
-    }
-  };
-
-  const toggleLockEntry = (key: string) => {
-    setLockedEntries(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  };
-
-  const applySmartSuggestion = async () => {
-    if (!smartResult || !activeWeekData) return;
-    setApplyingSmartPlan(true);
-    let importedCount = 0;
-    let failedCount = 0;
-    try {
-      for (const entry of smartResult.entries) {
-        const day = activeWeekData.days.find(d => d.dayOfWeek === entry.dayOfWeek);
-        if (!day) continue;
-        try {
-          let mealId: number;
-          if (entry.candidate.isExternal) {
-            const importRes = await apiRequest('POST', '/api/smart-suggest/auto-import', { candidate: entry.candidate });
-            const importData = await importRes.json();
-            mealId = importData.mealId;
-            importedCount++;
-          } else {
-            mealId = Number(entry.candidate.id);
-          }
-          await apiRequest('POST', `/api/planner/days/${day.id}/items`, {
-            mealSlot: entry.slot,
-            mealId,
-            position: 0,
-            audience: 'adult',
-            isDrink: false,
-            drinkType: null,
-          });
-        } catch {
-          failedCount++;
-        }
-      }
-      qc.invalidateQueries({ queryKey: ['/api/planner/full'] });
-      setSmartDialogOpen(false);
-      setSmartResult(null);
-      const desc = failedCount === 0
-        ? `${smartResult.entries.length - failedCount} meals added to Week ${activeWeek}.${importedCount > 0 ? ` ${importedCount} recipes auto-imported.` : ''}`
-        : `${smartResult.entries.length - failedCount} meals added. ${failedCount} could not be added.`;
-      toast({ title: "Plan applied", description: desc });
-    } catch {
-      toast({ title: "Failed to apply plan", variant: "destructive" });
-    } finally {
-      setApplyingSmartPlan(false);
-    }
-  };
-
-  const regenerateSingleEntry = async (targetEntry: SmartSuggestEntry) => {
-    if (!smartResult) return;
-    const targetKey = `${targetEntry.dayOfWeek}-${targetEntry.slot}`;
-    const locked = smartResult.entries
-      .filter(e => `${e.dayOfWeek}-${e.slot}` !== targetKey)
-      .map(e => ({ dayOfWeek: e.dayOfWeek, slot: e.slot, candidateId: e.candidate.id, candidateName: e.candidate.name }));
-    setSmartLoading(true);
-    try {
-      const res = await apiRequest('POST', '/api/meal-plans/smart-suggest', {
-        mealsPerDay: Number(smartMealsPerDay) || 3,
-        includeLeftovers: smartLeftovers,
-        maxWeeklyBudget: smartBudget ? Number(smartBudget) : undefined,
-        maxWeeklyUPF: smartMaxUPF ? Number(smartMaxUPF) : undefined,
-        preferredCuisine: smartCuisine || undefined,
-        fishPerWeek: Number(smartFishPerWeek),
-        redMeatPerWeek: Number(smartRedMeatPerWeek),
-        vegetarianDays: smartVegDays,
-        lockedEntries: locked,
-      });
-      const data = await res.json() as SmartSuggestResult;
-      const newEntry = data.entries.find(e => e.dayOfWeek === targetEntry.dayOfWeek && e.slot === targetEntry.slot);
-      if (newEntry) {
-        setSmartResult(prev => prev ? {
-          ...prev,
-          entries: prev.entries.map(e =>
-            e.dayOfWeek === targetEntry.dayOfWeek && e.slot === targetEntry.slot ? newEntry : e
-          ),
-          stats: data.stats,
-        } : null);
-      }
-    } catch {
-      toast({ title: "Could not refresh this meal", variant: "destructive" });
-    } finally {
-      setSmartLoading(false);
-    }
-  };
-
   const addSlotToBasket = (mealType: string) => {
     const selections = collectMealSelections(sortedDays, mealType);
     if (selections.length === 0) {
@@ -1288,64 +1052,6 @@ export default function WeeklyPlannerPage() {
       return;
     }
     addToBasketMutation.mutate(selections);
-  };
-
-  const activeWeekData = fullPlanner.find((w) => w.weekNumber === Number(activeWeek));
-
-  // Map active week's days to PlannerDayEntry for the scan review component
-  const plannerDays = useMemo((): PlannerDayEntry[] => {
-    return (activeWeekData?.days ?? []).map(d => ({
-      id: d.id,
-      dayOfWeek: d.dayOfWeek,
-      dayName: DAY_NAMES[d.dayOfWeek] ?? "Unknown",
-    }));
-  }, [activeWeekData]);
-
-  const handlePlannerScanFile = async (file: File) => {
-    plannerScanCancelledRef.current = false;
-    setPlannerScanData(null);
-    setPlannerScanError(null);
-    setPlannerScanLoading(true);
-    setPlannerScanOpen(true);
-
-    const scanId = Math.random().toString(36).slice(2, 10);
-    const formData = new FormData();
-    formData.append("image", file);
-    formData.append("mode", "planner");
-
-    try {
-      const res = await fetch("/api/scan", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-        headers: { "X-Scan-Id": scanId },
-      });
-      if (plannerScanCancelledRef.current) return;
-      const data = await res.json();
-      if (plannerScanCancelledRef.current) return;
-      if (!res.ok) {
-        setPlannerScanError(data.message || "Scan failed.");
-      } else {
-        setPlannerScanData(data as PlannerScanData);
-      }
-    } catch {
-      if (!plannerScanCancelledRef.current) setPlannerScanError("Scan failed. Please try again.");
-    } finally {
-      if (!plannerScanCancelledRef.current) setPlannerScanLoading(false);
-      if (plannerScanFileRef.current) plannerScanFileRef.current.value = "";
-    }
-  };
-
-  const handlePlannerScanOpenChange = (open: boolean) => {
-    if (!open && plannerScanLoading) {
-      plannerScanCancelledRef.current = true;
-      setPlannerScanLoading(false);
-    }
-    setPlannerScanOpen(open);
-    if (!open) {
-      setPlannerScanData(null);
-      setPlannerScanError(null);
-    }
   };
 
   const sortedDays = activeWeekData?.days?.slice().sort((a, b) => {

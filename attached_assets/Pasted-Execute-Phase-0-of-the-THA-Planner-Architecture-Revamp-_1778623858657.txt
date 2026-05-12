@@ -1,0 +1,254 @@
+Execute Phase 0 of the THA Planner Architecture Revamp.
+
+IMPORTANT:
+This phase is strictly limited to planner foundation architecture extraction.
+
+Do NOT:
+- change planner UX
+- redesign layout
+- add side panels
+- migrate modals
+- change schema
+- add drag/drop
+- add AI features
+- change planner behaviour
+- alter planner flows
+- change API contracts
+
+This phase is architecture-only.
+
+RESTORE POINT:
+planner-pre-revamp-baseline-v1
+
+You MUST preserve the ability to fully rollback to this baseline.
+
+GOAL
+
+Safely extract planner state architecture from the monolithic WeeklyPlannerPage into isolated, reusable planner domains.
+
+The purpose is to prepare the planner for future:
+- assistant panel architecture
+- workspace layout
+- proposal systems
+- intent layer
+- drag/drop assignment
+
+WITHOUT changing current functionality.
+
+CURRENT KNOWN CONSTRAINTS
+
+- weekly-planner-page.tsx is ~3,104 lines
+- ~60+ useState hooks are co-located
+- planner state is tightly coupled
+- modal state is mixed into planner rendering state
+- scan + Smart Suggest + templates share closure scope
+
+This phase addresses ONLY those architectural problems.
+
+APPROVED PHASE 0 SCOPE
+
+1. Create PlannerContext architecture
+
+Goal:
+Centralise planner-level shared state.
+
+PlannerContext should support:
+- activeWeek
+- assistantMode
+- planner refresh triggers
+- planner UI state
+- proposal state references
+- shared planner actions
+
+IMPORTANT:
+Do NOT over-engineer.
+Do NOT introduce Redux.
+Do NOT introduce Zustand unless absolutely required.
+
+Preferred:
+React Context + existing TanStack Query patterns.
+
+2. Extract Smart Suggest state domain
+
+Move Smart Suggest state out of WeeklyPlannerPage into:
+- isolated hook
+OR
+- context domain
+
+Preserve:
+- all existing behaviour
+- deterministic planning engine
+- proposal review flow
+- lock/unlock behaviour
+- existing API calls
+
+3. Extract planner scan state domain
+
+Move scan-related state into isolated domain.
+
+Preserve:
+- session recovery
+- proposal workflow
+- confidence behaviour
+- save flow
+- close guards
+
+4. Introduce assistantMode state
+
+Create future-safe assistant routing state.
+
+Example:
+- null
+- "scan"
+- "smart"
+- "templates"
+- "manual"
+
+IMPORTANT:
+This does NOT create a panel yet.
+
+This is architecture preparation only.
+
+5. Preserve all existing modal behaviour
+
+Current modal flows MUST continue working:
+- Smart Suggest dialog
+- Templates dialog
+- Meal Picker
+- Scan review
+- Settings
+- Bulk assign
+- Day drawer
+
+No visual regressions allowed.
+
+6. Add architecture boundaries
+
+Goal:
+Make future planner tools independently movable.
+
+Expected outcome:
+WeeklyPlannerPage becomes:
+- orchestration layer
+- layout compositor
+- planner grid owner
+
+NOT:
+- giant shared state container
+
+7. Session persistence extension
+
+Extend existing session persistence patterns where safe.
+
+Target:
+- Smart Suggest proposal recovery
+- in-progress proposal safety
+
+Reuse existing scan-review session patterns where possible.
+
+Do NOT add:
+- server-side persistence
+- schema changes
+- new tables
+
+8. Intent placeholder visual preparation (optional only if extremely low-risk)
+
+Allowed ONLY if:
+- zero behavioural risk
+- no schema change
+- purely presentational
+
+Example:
+- internal utility/helper preparation
+- rendering abstraction
+
+Do NOT:
+- introduce nullable mealId
+- add intentText
+- alter planner save logic
+
+MANDATORY ARCHITECTURE RULES
+
+- Keep existing APIs unchanged
+- Keep existing mutations unchanged
+- Keep existing query invalidation unchanged
+- Keep existing planner routes unchanged
+- Keep existing modal components functional
+- No database migration
+- No backend contract changes
+- No planner behaviour changes
+
+DEFINITION OF DONE
+
+Success means:
+- planner state domains isolated
+- WeeklyPlannerPage reduced in responsibility
+- PlannerContext introduced safely
+- existing planner behaviour preserved
+- build passes
+- typecheck passes
+- no regression in planner flows
+- future panel architecture enabled
+
+Must NOT break:
+- planner rendering
+- planner save flow
+- scan review
+- Smart Suggest
+- templates
+- meal assignment
+- basket generation
+- multi-recipe ordering
+- household adaptation
+
+DATA IMPACT DECLARATION
+
+Reads existing data: yes
+Writes new data: no
+Changes meaning of existing data: no
+Requires backfill: no
+
+TRUST CHECK
+
+Verify:
+- no planner automation increased
+- no AI behaviour changed
+- no hidden state introduced
+- no silent planner modifications occur
+
+ROLLBACK REQUIREMENTS
+
+If anything becomes unstable:
+- STOP
+- report issue
+- reference rollback tag:
+  planner-pre-revamp-baseline-v1
+
+FINAL RESPONSE FORMAT
+
+At the top write exactly:
+
+PHASE 0 FOUNDATION REFACTOR COMPLETE: YES / NO
+
+Then report:
+1. files created
+2. files modified
+3. architecture extracted
+4. state domains isolated
+5. remaining monolith areas
+6. regression risks found
+7. build result
+8. typecheck result
+9. planner behaviours manually verified
+10. rollback safety status
+11. recommended next step
+
+IMPORTANT:
+Do NOT continue into:
+- side panel work
+- layout changes
+- drag/drop
+- schema work
+- intent layer implementation
+
+Stop strictly at Phase 0.
