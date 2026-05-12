@@ -251,6 +251,7 @@ INTERPRETATION RULES:
 interface VisionRawResult {
   parsed: DestinationParsed | null;
   rawText: string;
+  truncated?: boolean;
 }
 
 async function extractWithVision(
@@ -283,15 +284,23 @@ async function extractWithVision(
         },
       ],
       temperature: 0,
-      max_tokens: 2000,
+      max_tokens: mode === "planner" ? 4096 : 2000,
     });
     const usage = response.usage;
     const finishReason = response.choices[0]?.finish_reason;
     const completionTokens = usage?.completion_tokens ?? 0;
-    const tokenLimit = 2000;
+    const tokenLimit = mode === "planner" ? 4096 : 2000;
     console.log(`[scan-timing] vision-${mode} duration=${Date.now() - t0}ms promptTokens=${usage?.prompt_tokens ?? "?"} completionTokens=${completionTokens}`);
     if (process.env.NODE_ENV !== "production") {
       console.log(`[planner-scan-debug] vision-api-response mode=${mode} finish_reason=${finishReason} completionTokens=${completionTokens}/${tokenLimit} hitLimit=${completionTokens >= tokenLimit - 50}`);
+    }
+
+    if (finishReason === "length") {
+      console.error(`[recipeParser] Vision truncated mode=${mode} completionTokens=${completionTokens}/${tokenLimit} — returning truncated sentinel`);
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[planner-scan-debug] vision-TRUNCATED mode=${mode} completionTokens=${completionTokens}/${tokenLimit}`);
+      }
+      return { parsed: null, rawText: "", truncated: true };
     }
 
     const raw = response.choices[0]?.message?.content?.trim() ?? "";
@@ -307,7 +316,7 @@ async function extractWithVision(
     } catch {
       console.error(`[recipeParser] Vision JSON parse failed mode=${mode} finish_reason=${finishReason} completionTokens=${completionTokens} raw="${raw.slice(0, 200)}"`);
       if (process.env.NODE_ENV !== "production") {
-        console.log(`[planner-scan-debug] vision-json-parse-FAILED mode=${mode} finish_reason=${finishReason} completionTokens=${completionTokens} — likely truncation if finish_reason=length`);
+        console.log(`[planner-scan-debug] vision-json-parse-FAILED mode=${mode} finish_reason=${finishReason} completionTokens=${completionTokens}`);
       }
       return null;
     }
@@ -597,6 +606,10 @@ const OCR_FALLBACK_WARNING =
   "We had trouble reaching the AI image service. Results may be less accurate — " +
   "please check each item carefully. If this looks wrong, try retaking the photo in better light.";
 
+const PLANNER_TRUNCATION_WARNING =
+  "Detailed planner interpretation was unavailable — THA used a simpler scan result. " +
+  "Try retaking the photo in good light.";
+
 export async function extractDestination(
   imageBuffer: Buffer,
   mode: ScanMode,
@@ -617,6 +630,20 @@ export async function extractDestination(
     visionResult = await extractWithVision(imageBuffer, mimeType, mode);
   } catch (err) {
     console.warn(`[scan-timing] vision-exception mode=${mode} elapsed=${Date.now() - t0}ms err=${err instanceof Error ? err.message : err}`);
+  }
+
+  if (visionResult?.truncated) {
+    console.error(`[recipeParser] Vision truncated even at extended budget mode=${mode} — returning failed`);
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[planner-scan-debug] extractDestination-vision-TRUNCATED mode=${mode} — parsedBy=failed`);
+    }
+    return {
+      result: null,
+      parsedBy: "failed",
+      confidence: "none",
+      warnings: [PLANNER_TRUNCATION_WARNING],
+      rawText: "",
+    };
   }
 
   if (visionResult?.parsed) {
