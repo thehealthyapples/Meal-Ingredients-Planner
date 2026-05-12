@@ -1,0 +1,90 @@
+Implement Phase 1B of the Planner Workspace Revamp.
+
+APPROVED SCOPE:
+Move ONLY Smart Suggest into the Planner Assistant panel.
+
+Do NOT:
+- migrate Templates
+- migrate Meal Picker
+- add drag/drop
+- change schema
+- change API contracts
+- change Smart Suggest algorithm
+- add AI preference parsing
+- alter basket logic
+- implement intent layer
+
+GOAL:
+Smart Suggest should run and review from the Planner Assistant panel while the planner grid remains visible on desktop/tablet.
+
+USE EXISTING FOUNDATION:
+- PlannerContext
+- assistantMode
+- PlannerAssistantPanel
+- useSmartSuggest
+- existing Smart Suggest logic
+- existing Smart Suggest proposal cards
+
+REQUIREMENTS:
+1. Wire assistantMode = "smart".
+2. Move Smart Suggest entry point into Planner Assistant panel.
+3. Preserve existing Smart Suggest settings.
+4. Preserve existing generated proposal review.
+5. Preserve lock/regenerate/apply behaviour.
+6. Preserve nutrition retry behaviour.
+7. Preserve all existing API calls and query invalidations.
+8. Keep current Smart Suggest dialog available only if required as fallback.
+9. Planner grid must remain visible during Smart Suggest assistant use where screen size allows.
+10. Scan assistant mode must continue working exactly as Phase 1A delivered.
+
+IMPORTANT:
+This is a UI/container migration only.
+Do not rewrite the Smart Suggest algorithm.
+Do not change proposal scoring.
+Do not change apply behaviour.
+
+DEFINITION OF DONE:
+- Planner grid still renders
+- Assistant panel opens
+- Scan mode still works
+- Smart mode opens from assistant
+- Smart Suggest settings render in assistant
+- Generate plan works
+- Proposal review renders
+- Lock/regenerate works
+- Apply to week works
+- Existing non-assistant flows still work
+- Build passes
+- Typecheck passes
+
+DATA IMPACT:
+Reads existing data: yes
+Writes new data: yes - only existing Smart Suggest apply behaviour
+Changes meaning of existing data: no
+Requires backfill: no
+
+TRUST CHECK:
+- Smart Suggest still requires user action before applying
+- No new auto-apply behaviour
+- No hidden planner modifications
+- No new AI certainty claims
+- Existing one-click apply risk should be documented but not solved in this phase
+
+ROLLBACK:
+Use:
+planner-phase0-complete-baseline-v1
+
+FINAL RESPONSE:
+PHASE 1B SMART ASSISTANT WORKFLOW COMPLETE: YES / NO
+
+Then report:
+- files changed
+- assistant shell changes
+- Smart Suggest migration summary
+- scan mode regression result
+- unchanged flows confirmed
+- build result
+- typecheck result
+- manual/e2e test results
+- rollback notes
+- remaining limitations

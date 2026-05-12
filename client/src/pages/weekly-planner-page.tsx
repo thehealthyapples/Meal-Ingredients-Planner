@@ -1180,7 +1180,7 @@ export default function WeeklyPlannerPage() {
           <Button
             size="sm"
             className="px-2.5 text-xs"
-            onClick={() => setSmartControlsOpen(!smartControlsOpen)}
+            onClick={() => setAssistantMode("smart")}
             disabled={smartLoading}
             data-testid="button-plan-my-week"
           >
@@ -1248,101 +1248,6 @@ export default function WeeklyPlannerPage() {
       {/* ── Week Content ── */}
       <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full">
 
-        <AnimatePresence>
-          {smartControlsOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <Card className="mb-6">
-                <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    Plan My Week - Preferences
-                  </CardTitle>
-                  <Button size="icon" variant="ghost" onClick={() => setSmartControlsOpen(false)} data-testid="button-close-smart-controls">
-                    <X className="h-4 w-4" />
-                  </Button>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-muted-foreground">Meals per day</label>
-                      <Select value={smartMealsPerDay} onValueChange={setSmartMealsPerDay}>
-                        <SelectTrigger data-testid="select-meals-per-day"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">1 meal</SelectItem>
-                          <SelectItem value="2">2 meals</SelectItem>
-                          <SelectItem value="3">3 meals</SelectItem>
-                          <SelectItem value="4">3 meals + snack</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-muted-foreground">Cuisine preference</label>
-                      <Select value={smartCuisine || "any"} onValueChange={v => setSmartCuisine(v === "any" ? "" : v)}>
-                        <SelectTrigger data-testid="select-cuisine"><SelectValue placeholder="Any" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="any">Any cuisine</SelectItem>
-                          <SelectItem value="british">British</SelectItem>
-                          <SelectItem value="italian">Italian</SelectItem>
-                          <SelectItem value="mexican">Mexican</SelectItem>
-                          <SelectItem value="indian">Indian</SelectItem>
-                          <SelectItem value="chinese">Chinese</SelectItem>
-                          <SelectItem value="japanese">Japanese</SelectItem>
-                          <SelectItem value="thai">Thai</SelectItem>
-                          <SelectItem value="mediterranean">Mediterranean</SelectItem>
-                          <SelectItem value="middle-eastern">Middle Eastern</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><DollarSign className="h-3 w-3" />Weekly budget (£)</label>
-                      <Input placeholder="e.g. 80" value={smartBudget} onChange={e => setSmartBudget(e.target.value)} data-testid="input-smart-budget" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Shield className="h-3 w-3" />Max UPF %</label>
-                      <Input placeholder="e.g. 30" value={smartMaxUPF} onChange={e => setSmartMaxUPF(e.target.value)} data-testid="input-smart-upf" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Fish className="h-3 w-3" />Fish meals/week</label>
-                      <Select value={smartFishPerWeek} onValueChange={setSmartFishPerWeek}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {[0,1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-medium text-muted-foreground flex items-center gap-1"><Beef className="h-3 w-3" />Red meat meals/week</label>
-                      <Select value={smartRedMeatPerWeek} onValueChange={setSmartRedMeatPerWeek}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {[0,1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex items-center gap-2 pt-4">
-                      <Switch id="smart-veg-days" checked={smartVegDays} onCheckedChange={(c) => setSmartVegDays(!!c)} data-testid="toggle-smart-veg" />
-                      <label htmlFor="smart-veg-days" className="text-sm flex items-center gap-1 cursor-pointer"><Salad className="h-3.5 w-3.5 text-green-500" />Vegetarian days</label>
-                    </div>
-                    <div className="flex items-center gap-2 pt-4">
-                      <Switch id="smart-leftovers" checked={smartLeftovers} onCheckedChange={(c) => setSmartLeftovers(!!c)} data-testid="toggle-smart-leftovers" />
-                      <label htmlFor="smart-leftovers" className="text-sm cursor-pointer">Include leftovers</label>
-                    </div>
-                  </div>
-                  <Button onClick={() => runSmartSuggest()} disabled={smartLoading} data-testid="button-run-smart-suggest">
-                    {smartLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                    {smartLoading ? "Planning your week..." : "Propose My Plan"}
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* ── Phase 4: This week's household diet overrides ── */}
         {householdEaters.length > 0 && activeWeekId && (
@@ -1744,6 +1649,24 @@ export default function WeeklyPlannerPage() {
         onOpenCamera={() => setPlannerCameraOpen(true)}
         onUploadFile={() => plannerScanFileRef.current?.click()}
         scanLoading={plannerScanLoading}
+        smartLoading={smartLoading}
+        smartMealsPerDay={smartMealsPerDay}
+        setSmartMealsPerDay={setSmartMealsPerDay}
+        smartCuisine={smartCuisine}
+        setSmartCuisine={setSmartCuisine}
+        smartBudget={smartBudget}
+        setSmartBudget={setSmartBudget}
+        smartMaxUPF={smartMaxUPF}
+        setSmartMaxUPF={setSmartMaxUPF}
+        smartFishPerWeek={smartFishPerWeek}
+        setSmartFishPerWeek={setSmartFishPerWeek}
+        smartRedMeatPerWeek={smartRedMeatPerWeek}
+        setSmartRedMeatPerWeek={setSmartRedMeatPerWeek}
+        smartVegDays={smartVegDays}
+        setSmartVegDays={setSmartVegDays}
+        smartLeftovers={smartLeftovers}
+        setSmartLeftovers={setSmartLeftovers}
+        onRunSmartSuggest={() => runSmartSuggest()}
       />
       </div>{/* end flex gap-4 */}
 
