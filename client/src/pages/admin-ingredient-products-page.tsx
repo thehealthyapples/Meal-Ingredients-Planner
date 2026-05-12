@@ -83,7 +83,7 @@ export default function AdminIngredientProductsPage() {
       setForm(emptyForm);
     },
     onError: (err: any) => {
-      const msg = err?.error === "already_exists" ? "A pick with that key + product + retailer already exists" : "Something went wrong — try again";
+      const msg = err?.error === "already_exists" ? "A pick with that key + product + retailer already exists" : "Something went wrong - try again";
       toast({ title: "Couldn't create THA Pick", description: msg, variant: "destructive" });
     },
   });
@@ -101,7 +101,7 @@ export default function AdminIngredientProductsPage() {
       setForm(emptyForm);
     },
     onError: () => {
-      toast({ title: "Couldn't update THA Pick", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't update THA Pick", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -113,7 +113,7 @@ export default function AdminIngredientProductsPage() {
       setDeactivateItem(null);
     },
     onError: () => {
-      toast({ title: "Couldn't deactivate pick", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't deactivate pick", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -128,7 +128,7 @@ export default function AdminIngredientProductsPage() {
       toast({ title: "THA Pick re-activated" });
     },
     onError: () => {
-      toast({ title: "Couldn't re-activate pick", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't re-activate pick", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 

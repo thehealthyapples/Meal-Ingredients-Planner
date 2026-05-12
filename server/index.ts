@@ -7,6 +7,7 @@ import { seedReadyMeals } from "./lib/seed-ready-meals";
 import { seedFoodKnowledge } from "./lib/seed-food-knowledge";
 import { runMigrations } from "./migrations/runner";
 import { storage } from "./storage";
+import { getUploadDir } from "./lib/media-storage";
 
 const app = express();
 const httpServer = createServer(app);
@@ -129,6 +130,12 @@ app.use((req, res, next) => {
   // does not delay server startup. Idempotent: only inserts missing defaults,
   // never overwrites user-created or user-modified items.
   storage.syncAllPantryDefaults().catch(err => console.error("[Pantry Sync] Error:", err));
+  // Serve locally-uploaded meal photos.
+  // PRODUCTION NOTE: Replace with object storage (R2/S3) for multi-instance deployments.
+  const uploadDir = getUploadDir();
+  console.log(`[Startup] Meal photo uploads stored in: ${uploadDir}`);
+  app.use("/uploads/meal-photos", express.static(uploadDir));
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

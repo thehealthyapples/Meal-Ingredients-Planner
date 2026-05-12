@@ -6,7 +6,7 @@ const RANK_OPTIONS: { key: RankingMode; label: string; apple?: true; icon?: stri
   { key: "quality_first", label: "Quality",  apple: true },
   { key: "balanced",      label: "Balanced", icon: "⚖" },
   { key: "lowest_price",  label: "Price",    icon: "£" },
-  { key: "tha_pick",      label: "THA Pick", img: thaPickUrl },
+  { key: "tha_pick",      label: "Our Pick", img: thaPickUrl },
 ];
 
 interface RankModeSelectorProps {
@@ -38,17 +38,17 @@ export default function RankModeSelector({ rankMode, onChange }: RankModeSelecto
             {opt.apple ? (
               <img src={thaAppleUrl} alt="" className="h-5 w-5 object-contain flex-shrink-0" />
             ) : opt.img ? (
-              <img src={opt.img} alt="" className="h-5 w-5 object-contain flex-shrink-0" />
+              <img src={opt.img} alt="Our Pick" className="h-5 w-5 object-contain flex-shrink-0" />
             ) : (
               <span className="text-[14px] leading-none flex-shrink-0">{opt.icon}</span>
             )}
-            <span>{opt.label}</span>
+            {!opt.img && <span>{opt.label}</span>}
           </button>
         ))}
       </div>
       {rankMode === "tha_pick" && (
         <p className="text-[10px] text-muted-foreground/70 pl-0.5 leading-tight max-w-[220px]">
-          THA recommended products prioritised where available.
+          Our recommended products prioritised where available.
         </p>
       )}
     </div>

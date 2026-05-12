@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import { getPantryKnowledge, pantryItemMatchesQuery, MICRO_INSIGHTS } from "@/lib/pantry-knowledge";
+import { PageHeader } from "@/components/PageHeader";
 
 interface PantryItem {
   id: number;
@@ -700,31 +701,31 @@ export default function PantryPage() {
     queryKey: ["/api/pantry"],
   });
 
-  // Rotate by day-of-month — stable per session, different each day
+  // Rotate by day-of-month - stable per session, different each day
   const microInsight = MICRO_INSIGHTS[new Date().getDate() % MICRO_INSIGHTS.length];
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2" data-testid="text-pantry-title">
-          <PantryIcon className="h-5 w-5 text-primary" />
-          My Pantry
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Your everyday choices live here.
-        </p>
-        <p className="text-xs text-muted-foreground/50 mt-2 italic" data-testid="text-pantry-micro-insight">
+    <>
+      <PageHeader
+        title="My Pantry"
+        icon={<PantryIcon className="h-5 w-5" />}
+        realm="pantry"
+        titleTestId="text-pantry-title"
+        context="Your everyday choices live here."
+      />
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-6">
+        <p className="text-xs text-muted-foreground/50 italic" data-testid="text-pantry-micro-insight">
           {microInsight}
         </p>
+
+        <FirstVisitHint
+          areaKey="pantry"
+          message="Add the ingredients you have at home - fridge, freezer, and larder. Your pantry helps tailor meal suggestions and avoids duplicates when you shop."
+        />
+
+        <FoodPantrySection items={items} isLoading={isLoading} />
+        <HouseholdSection items={items} isLoading={isLoading} />
       </div>
-
-      <FirstVisitHint
-        areaKey="pantry"
-        message="Add the ingredients you have at home — fridge, freezer, and larder. Your pantry helps tailor meal suggestions and avoids duplicates when you shop."
-      />
-
-      <FoodPantrySection items={items} isLoading={isLoading} />
-      <HouseholdSection items={items} isLoading={isLoading} />
-    </div>
+    </>
   );
 }

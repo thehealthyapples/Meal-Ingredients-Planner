@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import type { NutrientTag, NutrientGoal } from "@/lib/nutrition-insights";
 import { NUTRIENT_GOALS } from "@/lib/nutrition-insights";
 
-// ── Per-meal display — used inside compact planner slot entries ───────────────
+// ── Per-meal display - used inside compact planner slot entries ───────────────
 
 export function MealNutrientTags({ nutrients }: { nutrients: NutrientTag[] }) {
   if (nutrients.length === 0) return null;
@@ -17,7 +17,7 @@ export function MealNutrientTags({ nutrients }: { nutrients: NutrientTag[] }) {
   );
 }
 
-// ── Day-level nutrient summary — rendered below DayVarietySummary in diary ────
+// ── Day-level nutrient summary - rendered below DayVarietySummary in diary ────
 
 export function DayNutrientSummary({ nutrients }: { nutrients: NutrientTag[] }) {
   if (nutrients.length === 0) return null;
@@ -42,7 +42,7 @@ export function DayNutrientSummary({ nutrients }: { nutrients: NutrientTag[] }) 
   );
 }
 
-// ── "I want to support…" widget — optional, dismissible ──────────────────────
+// ── "I want to support…" widget - optional, dismissible ──────────────────────
 
 export function NutrientSupportWidget() {
   const [open, setOpen] = useState(false);
@@ -74,7 +74,7 @@ export function NutrientSupportWidget() {
       >
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] text-muted-foreground/60 font-medium">
-            {selected.label} — try adding
+            {selected.label} - try adding
           </span>
           <button
             type="button"
@@ -96,7 +96,7 @@ export function NutrientSupportWidget() {
           ))}
         </div>
         <p className="text-[9px] text-muted-foreground/30">
-          These are suggestions only — not a plan or recommendation.
+          These are suggestions only - not a plan or recommendation.
         </p>
       </div>
     );

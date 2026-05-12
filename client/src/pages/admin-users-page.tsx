@@ -166,7 +166,7 @@ export default function AdminUsersPage() {
       setOnboardingDialog(null);
     },
     onError: (err: any) => {
-      toast({ title: "Couldn't reset onboarding", description: err.message || "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't reset onboarding", description: err.message || "Something went wrong - try again", variant: "destructive" });
     },
   });
 

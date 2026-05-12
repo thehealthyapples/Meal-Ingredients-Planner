@@ -299,7 +299,7 @@ export function TemplatesPanel({ open, onClose, user }: TemplatePanelProps) {
       setSaveDescription("");
     },
     onError: (err: Error) => {
-      toast({ title: "Couldn't save template", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't save template", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -394,7 +394,7 @@ export function TemplatesPanel({ open, onClose, user }: TemplatePanelProps) {
       qc.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });
       toast({ title: "Template updated" });
     },
-    onError: () => toast({ title: "Couldn't update template", description: "Something went wrong — try again", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't update template", description: "Something went wrong - try again", variant: "destructive" }),
   });
 
   const renderGlobalTemplateCard = (t: MealPlanTemplate) => {

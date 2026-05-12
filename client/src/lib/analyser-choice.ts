@@ -40,7 +40,7 @@ export function rankChoices(products: any[], currentScore: number | null, prefer
 
 // ── Shop view ranking ───────────────────────────────────────────────────────
 // Central ranking logic for Quick List / Check Cupboard / Shop View.
-// Default: quality-first — highest THA rating group, then cheapest within that group.
+// Default: quality-first - highest THA rating group, then cheapest within that group.
 
 export type RankingMode = "quality_first" | "balanced" | "lowest_price" | "tha_pick";
 

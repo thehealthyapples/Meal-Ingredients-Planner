@@ -75,7 +75,7 @@ export const PANTRY_KNOWLEDGE: Record<string, PantryKnowledge> = {
   },
   "tinned chickpeas": {
     supports: ["Fibre", "Plant protein"],
-    whyItMatters: "A convenient form of chickpeas — rinsing before use reduces sodium content.",
+    whyItMatters: "A convenient form of chickpeas - rinsing before use reduces sodium content.",
     tags: ["gut health", "plant protein", "legume", "fibre"],
   },
   "lentils": {
@@ -91,7 +91,7 @@ export const PANTRY_KNOWLEDGE: Record<string, PantryKnowledge> = {
   },
   "green lentils": {
     supports: ["Fibre", "Plant protein", "Iron"],
-    whyItMatters: "A firmer lentil that holds its shape well — good for salads and hearty dishes.",
+    whyItMatters: "A firmer lentil that holds its shape well - good for salads and hearty dishes.",
     tags: ["gut health", "plant protein", "legume", "iron"],
   },
   "tinned lentils": {
@@ -232,7 +232,7 @@ export const PANTRY_KNOWLEDGE: Record<string, PantryKnowledge> = {
   },
   "linseed": {
     supports: ["Omega-3", "Fibre"],
-    whyItMatters: "The same seed as flaxseed — a useful plant-based source of omega-3 and fibre.",
+    whyItMatters: "The same seed as flaxseed - a useful plant-based source of omega-3 and fibre.",
     goodToKnow: "Ground or milled versions are easier to digest than whole seeds.",
     tags: ["omega-3", "fibre", "seeds"],
   },
@@ -278,7 +278,7 @@ export const PANTRY_KNOWLEDGE: Record<string, PantryKnowledge> = {
   },
   "tinned mackerel": {
     supports: ["Omega-3", "Protein"],
-    whyItMatters: "A convenient oily fish option — one of the most affordable sources of omega-3.",
+    whyItMatters: "A convenient oily fish option - one of the most affordable sources of omega-3.",
     tags: ["omega-3", "oily fish", "protein"],
   },
 

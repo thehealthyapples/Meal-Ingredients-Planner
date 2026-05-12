@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Sparkles,
 } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { useEffect } from "react";
 import { getActivePartners, getFeaturedPartners } from "@/data/partners";
 import { PARTNER_CATEGORIES } from "@/types/partner";
@@ -386,7 +387,14 @@ export default function PartnersPage() {
   ];
 
   return (
-    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-14">
+    <>
+    <PageHeader
+      realm="pantry"
+      title="Partners"
+      icon={<Heart className="h-5 w-5" />}
+      context="Trusted wellness partners to support your healthy lifestyle"
+    />
+    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe space-y-14">
 
       {/* Hero */}
       <section className="rounded-3xl bg-gradient-to-br from-primary/8 via-background to-primary/4 border border-border px-6 sm:px-12 py-7 sm:py-10 text-center space-y-3" data-testid="partners-hero">
@@ -629,5 +637,6 @@ export default function PartnersPage() {
         onClose={() => setApplyModalOpen(false)}
       />
     </div>
+    </>
   );
 }

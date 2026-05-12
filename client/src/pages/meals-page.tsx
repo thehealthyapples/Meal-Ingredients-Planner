@@ -12,7 +12,8 @@ import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplet
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateMealModal, type ImportedRecipeDraft } from "@/components/create-meal-modal";
-import { ScanConfirmDialog } from "@/components/scan-confirm-dialog";
+import { RecipeScanReview, type RecipeScanData } from "@/components/RecipeScanReview";
+import { MealImageWidget } from "@/components/MealImageWidget";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { MealCompletionDialog, type CompletionMeal } from "@/components/meal-completion-dialog";
 import { IngredientRow, buildIngredientString, parseIngredientString } from "@/components/ingredient-input";
@@ -41,6 +42,7 @@ import { shouldExcludeRecipe } from "@/lib/dietRules";
 import { useUser } from "@/hooks/use-user";
 import { scoreMealSearch } from "@shared/food-synonyms";
 import { writePendingIngredients, appendPendingIngredient } from "@/lib/quick-list";
+import { PageHeader } from "@/components/PageHeader";
 
 function parseIngredient(raw: string): { name: string; detail: string | null } {
   let text = raw.trim();
@@ -401,7 +403,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
   hideBasket?: boolean;
   onAddToList?: (ingredients: string[]) => void;
   showListButton?: boolean;
-  /** When set, fires after "Who's eating?" dialog confirm instead of addToListMutation — routes to quick list. */
+  /** When set, fires after "Who's eating?" dialog confirm instead of addToListMutation - routes to quick list. */
   onAddToQuickList?: (ingredients: string[]) => void;
 }) {
   const { toast } = useToast();
@@ -481,7 +483,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
       toast({ title: "Added to basket", description: mealName });
     },
     onError: () => {
-      toast({ title: "Couldn't add product", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't add product", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -1013,7 +1015,7 @@ function AddToPlannerDialog({ mealId, mealName, isDrink, audience: mealAudience,
               </p>
             )}
             {step === 2 && (
-              <p className="text-sm text-muted-foreground">Optional — skip to add without context.</p>
+              <p className="text-sm text-muted-foreground">Optional - skip to add without context.</p>
             )}
           </DialogHeader>
 
@@ -1382,7 +1384,7 @@ function AddToShoppingListDialog({ mealName, open, onOpenChange, onAdd }: {
         <DialogHeader>
           <DialogTitle>Who's eating this meal?</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Optional — skip to add <span className="font-medium text-foreground">{mealName}</span> without context.
+            Optional - skip to add <span className="font-medium text-foreground">{mealName}</span> without context.
           </p>
         </DialogHeader>
 
@@ -1965,9 +1967,11 @@ export default function MealsPage() {
   const [webSearchQuery, setWebSearchQuery] = useState("");
   const [scanLoading, setScanLoading] = useState(false);
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
-  const [scanData, setScanData] = useState<{ rawText: string; parsed: any } | null>(null);
+  const [scanData, setScanData] = useState<any | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
   const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const scanFileRef = useRef<HTMLInputElement>(null);
+  const scanCancelledRef = useRef(false);
   const [visibleCount, setVisibleCount] = useState(48);
   const [webImportingIds, setWebImportingIds] = useState<Set<string>>(new Set());
   const [webImportCategoryMap, setWebImportCategoryMap] = useState<Record<string, number | undefined>>({});
@@ -1986,6 +1990,21 @@ export default function MealsPage() {
   const [barcodeProduct, setBarcodeProduct] = useState<ProductSearchResult | null>(null);
   const [barcodeProductOpen, setBarcodeProductOpen] = useState(false);
   const [barcodeSaving, setBarcodeSaving] = useState(false);
+
+  // ── Planner import context ────────────────────────────────────────────────────
+  interface PlannerImportCtx {
+    mealName: string;
+    day: string;
+    slot: string;
+    plannerDayId: number | null;
+    plannerEntryId: number | null;
+    openScan: boolean;
+  }
+  const [plannerImportCtx, setPlannerImportCtx] = useState<PlannerImportCtx | null>(null);
+  const [plannerImportDialogOpen, setPlannerImportDialogOpen] = useState(false);
+  const [plannerLinkOpen, setPlannerLinkOpen] = useState(false);
+  const [plannerLinkData, setPlannerLinkData] = useState<{ mealId: number; mealName: string } | null>(null);
+
   const { data: allCategories = [] } = useQuery<MealCategory[]>({
     queryKey: ['/api/categories'],
   });
@@ -1995,7 +2014,6 @@ export default function MealsPage() {
   });
   const [addToFreezerMealId, setAddToFreezerMealId] = useState<number | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | string | null>(null);
-  const [generatingImageFor, setGeneratingImageFor] = useState<number | null>(null);
   const [webPreviewCache, setWebPreviewCache] = useState<Record<string, { ingredients: string[]; instructions: string[]; loading?: boolean; error?: string }>>({});
 
   const [expandedTab, setExpandedTab] = useState<"ingredients" | "method">("ingredients");
@@ -2005,27 +2023,12 @@ export default function MealsPage() {
 
   const isFromList = useMemo(() => new URLSearchParams(searchStr).get("from") === "list", [searchStr]);
 
-  const handleGenerateMealImage = useCallback(async (meal: Meal) => {
-    setGeneratingImageFor(meal.id);
-    try {
-      const res = await apiRequest("POST", buildUrl(api.meals.generateImage.path, { id: meal.id }));
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        toast({ title: "Image generation failed", description: (err as any).message || "We couldn't generate an image right now. Try again.", variant: "destructive" });
-        return;
-      }
-      const updated: Meal = await res.json();
-      // Update the meal in the query cache immediately
-      queryClient.setQueryData<Meal[]>([api.meals.list.path], (prev) =>
-        prev ? prev.map(m => m.id === updated.id ? updated : m) : prev
-      );
-      toast({ title: "Image generated", description: `Photo added to "${updated.name}".` });
-    } catch {
-      toast({ title: "Image generation failed", description: "We couldn't generate an image right now. Try again.", variant: "destructive" });
-    } finally {
-      setGeneratingImageFor(null);
-    }
-  }, [queryClient, toast]);
+  // Called by MealImageWidget when any image operation completes (upload/generate/remove).
+  const handleMealImageChange = useCallback((mealId: number, newImageUrl: string | null) => {
+    queryClient.setQueryData<Meal[]>([api.meals.list.path], (prev) =>
+      prev ? prev.map(m => m.id === mealId ? { ...m, imageUrl: newImageUrl } : m) : prev
+    );
+  }, [queryClient]);
 
   const handleAddToListFromCookbook = useCallback(async (ingredients: string[]) => {
     try {
@@ -2039,7 +2042,7 @@ export default function MealsPage() {
         const { items } = (await parseRes.json()) as { items: unknown[] };
         payload = { version: 2, items };
       } catch {
-        // Parse endpoint failed — fall back to raw strings (version 1)
+        // Parse endpoint failed - fall back to raw strings (version 1)
         payload = ingredients;
       }
       writePendingIngredients(payload as Parameters<typeof writePendingIngredients>[0]);
@@ -2057,9 +2060,80 @@ export default function MealsPage() {
     if (q) setSearchTerm(q);
   }, [searchStr]);
 
+  // Detect planner import context from URL params (fires once on mount)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("plannerImport") !== "1") return;
+    const ctx: PlannerImportCtx = {
+      mealName: params.get("mealName") || "",
+      day: params.get("day") || "Unassigned",
+      slot: params.get("slot") || "dinner",
+      plannerDayId: params.get("dayId") ? parseInt(params.get("dayId")!, 10) : null,
+      plannerEntryId: params.get("entryId") ? parseInt(params.get("entryId")!, 10) : null,
+      openScan: params.get("openScan") === "1",
+    };
+    setPlannerImportCtx(ctx);
+    if (ctx.openScan) {
+      setCameraModalOpen(true);
+    } else {
+      setPlannerImportDialogOpen(true);
+    }
+    // Replace URL to remove params without page reload
+    navigate("/meals", { replace: true } as any);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     setVisibleCount(48);
   }, [searchTerm, categoryFilter, activeGroups, activeAudiences, mealsDietPattern, mealsDietRestrictions, mealsUpfFilter]);
+
+  // Called when a recipe is created while in planner import context
+  const handlePlannerImportMealCreated = useCallback(async (meal: Meal, hasSourceUrl: boolean) => {
+    setActiveGroups(prev => { const n = new Set(prev); n.add(hasSourceUrl ? "recipes" : "cookbook"); return n; });
+    if (plannerImportCtx?.plannerDayId) {
+      setPlannerImportDialogOpen(false);
+      setPlannerLinkData({ mealId: meal.id, mealName: meal.name });
+      setPlannerLinkOpen(true);
+    }
+  }, [plannerImportCtx]);
+
+  // Called when a scanned recipe is created while in planner import context
+  const handlePlannerImportScanMealCreated = useCallback((mealId: number, mealName: string) => {
+    if (plannerImportCtx?.plannerDayId) {
+      setScanDialogOpen(false);
+      setPlannerLinkData({ mealId, mealName });
+      setPlannerLinkOpen(true);
+    }
+  }, [plannerImportCtx]);
+
+  const handlePlannerLink = async () => {
+    if (!plannerImportCtx?.plannerDayId || !plannerLinkData) return;
+    try {
+      const slot = plannerImportCtx.slot && plannerImportCtx.slot !== "unspecified"
+        ? plannerImportCtx.slot : "dinner";
+      await apiRequest("POST", `/api/planner/days/${plannerImportCtx.plannerDayId}/items`, {
+        mealSlot: slot,
+        mealId: plannerLinkData.mealId,
+        position: 0,
+        audience: "adult",
+        isDrink: false,
+        drinkType: null,
+      });
+      if (plannerImportCtx.plannerEntryId) {
+        await apiRequest("DELETE", `/api/planner/entries/${plannerImportCtx.plannerEntryId}`);
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/meals"] });
+      toast({
+        title: "Linked to planner",
+        description: `${plannerLinkData.mealName} added to ${plannerImportCtx.day}`,
+      });
+      setPlannerLinkOpen(false);
+      setPlannerImportCtx(null);
+      navigate("/planner");
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Could not link to planner", description: err?.message || "Please try again." });
+    }
+  };
 
   const addToFreezerMutation = useMutation({
     mutationFn: async (data: { mealId: number; totalPortions: number; batchLabel?: string; notes?: string }) => {
@@ -2131,23 +2205,59 @@ export default function MealsPage() {
   });
 
   const handleScanFile = async (file: File) => {
+    // Open the modal immediately so users see loading state rather than nothing.
+    scanCancelledRef.current = false;
+    setScanData(null);
+    setScanError(null);
     setScanLoading(true);
+    setScanDialogOpen(true);
+
+    const scanId = Math.random().toString(36).slice(2, 10);
+    const t0 = performance.now();
+    console.log(`[recipe-scan-timing] upload-start scanId=${scanId} fileSize=${file.size}bytes mimeType=${file.type}`);
     const formData = new FormData();
     formData.append("image", file);
+    formData.append("mode", "recipe");
     try {
-      const res = await fetch("/api/scan", { method: "POST", body: formData, credentials: "include" });
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+        headers: { "X-Scan-Id": scanId },
+      });
+      if (scanCancelledRef.current) return;
+      const networkMs = Math.round(performance.now() - t0);
       const data = await res.json();
+      if (scanCancelledRef.current) return;
+      const parseMs = Math.round(performance.now() - t0);
       if (!res.ok) {
-        toast({ variant: "destructive", title: "Scan failed", description: data.message || "Could not read image." });
+        console.log(`[recipe-scan-timing] upload-error scanId=${scanId} status=${res.status} elapsed=${parseMs}ms`);
+        setScanError(data.message || "Could not read image. Please try again.");
         return;
       }
+      console.log(`[recipe-scan-timing] upload-complete scanId=${scanId} network=${networkMs}ms total=${parseMs}ms parsedBy=${data.parsedBy} mode=${data.mode}`);
       setScanData(data);
-      setScanDialogOpen(true);
+      console.log(`[recipe-scan-timing] ui-rendered scanId=${scanId} elapsed=${Math.round(performance.now() - t0)}ms`);
     } catch {
-      toast({ variant: "destructive", title: "Scan failed", description: "Could not connect to server. Please try again." });
+      if (scanCancelledRef.current) return;
+      console.log(`[recipe-scan-timing] upload-exception scanId=${scanId} elapsed=${Math.round(performance.now() - t0)}ms`);
+      setScanError("Could not connect to server. Please try again.");
     } finally {
-      setScanLoading(false);
+      if (!scanCancelledRef.current) setScanLoading(false);
       if (scanFileRef.current) scanFileRef.current.value = "";
+    }
+  };
+
+  const handleScanDialogChange = (v: boolean) => {
+    if (!v && scanLoading) {
+      // User explicitly cancelled during scan - stop waiting for result.
+      scanCancelledRef.current = true;
+      setScanLoading(false);
+    }
+    setScanDialogOpen(v);
+    if (!v) {
+      setScanData(null);
+      setScanError(null);
     }
   };
 
@@ -2356,7 +2466,7 @@ export default function MealsPage() {
       toast({ title: "Added to basket" });
     },
     onError: () => {
-      toast({ title: "Couldn't add product", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't add product", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -2487,6 +2597,8 @@ export default function MealsPage() {
     const q = searchTerm.trim();
 
     const filtered = meals?.filter(meal => {
+      // Hide planner-import placeholders from cookbook view
+      if (meal.mealSourceType === "planner-placeholder") return false;
       // Demo mode: never show drinks
       if (user?.isDemo && (meal.isDrink || meal.mealFormat === "drink")) return false;
       // "Recipes" source: hide user-created meals so only web/system meals show
@@ -2608,7 +2720,95 @@ export default function MealsPage() {
     (audienceChanged ? 1 : 0);
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-x-hidden">
+    <>
+    <PageHeader
+      title="Cookbook"
+      icon={<ChefHat className="h-5 w-5" />}
+      realm="cookbook"
+      wide
+      context="Create, search, import and organise your recipes and meals."
+      titleTestId="text-meals-title"
+      actions={
+        <div className="flex items-center gap-2 flex-wrap">
+          <input
+            ref={scanFileRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            data-testid="input-scan-file"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleScanFile(f); }}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            className="px-2 sm:px-3"
+            onClick={() => navigate("/quick-meal")}
+            data-testid="button-quick-meal"
+          >
+            <Zap className="h-4 w-4 mr-1.5" />
+            Build a Meal
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="px-2 sm:px-3"
+            onClick={() => setBarcodeScanOpen(true)}
+            disabled={barcodeFetching}
+            data-testid="button-scan-product"
+          >
+            {barcodeFetching ? (
+              <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
+            ) : (
+              <ScanLine className="h-4 w-4 sm:mr-1.5" />
+            )}
+            <span className="hidden sm:inline">Scan</span>
+          </Button>
+          <CreateMealDialog onScan={() => setCameraModalOpen(true)} onMealCreated={(_, hasSourceUrl) => { setActiveGroups(prev => { const n = new Set(prev); n.add(hasSourceUrl ? "recipes" : "cookbook"); return n; }); }} />
+          {!importStatusLoading && (!importStatus || importStatus.totalImported === 0) && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="px-2 sm:px-3"
+              onClick={() => importLibraryMutation.mutate()}
+              disabled={importLibraryMutation.isPending}
+              data-testid="button-import-library"
+            >
+              {importLibraryMutation.isPending ? (
+                <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 sm:mr-1.5" />
+              )}
+              <span className="hidden sm:inline">{importLibraryMutation.isPending ? "Importing..." : "Import Library"}</span>
+            </Button>
+          )}
+        </div>
+      }
+    />
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 overflow-x-hidden">
+      {/* Planner import context banner */}
+      {plannerImportCtx && (
+        <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 mb-4">
+          <CalendarDays className="h-4 w-4 text-primary shrink-0" />
+          <div className="flex-1 text-sm">
+            <span className="font-medium">Adding recipe for: {plannerImportCtx.mealName}</span>
+            {plannerImportCtx.day !== "Unassigned" && (
+              <span className="text-muted-foreground ml-2">
+                · {plannerImportCtx.day}
+                {plannerImportCtx.slot && plannerImportCtx.slot !== "unspecified" ? ` (${plannerImportCtx.slot})` : ""}
+              </span>
+            )}
+          </div>
+          <button
+            className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            onClick={() => { setPlannerImportCtx(null); setPlannerImportDialogOpen(false); }}
+            aria-label="Clear planner context"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* "from list" mode banner */}
       {isFromList && (
         <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 mb-4" data-testid="banner-add-to-list-mode">
@@ -2626,71 +2826,6 @@ export default function MealsPage() {
           </button>
         </div>
       )}
-
-      {/* Row A: compact title + action buttons */}
-      <div className="flex justify-between items-center gap-4 mb-3">
-        <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2" data-testid="text-meals-title">
-          <ChefHat className="h-5 w-5 text-primary" />
-          Cookbook
-        </h1>
-        <div className="flex items-center gap-2 shrink-0">
-          <input
-            ref={scanFileRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            className="hidden"
-            data-testid="input-scan-file"
-            onChange={e => { const f = e.target.files?.[0]; if (f) handleScanFile(f); }}
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            title="Build a Meal"
-            className="px-2 sm:px-3"
-            onClick={() => navigate("/quick-meal")}
-            data-testid="button-quick-meal"
-          >
-            <Zap className="h-4 w-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">Build a Meal</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            title="Scan Product"
-            className="px-2 sm:px-3"
-            onClick={() => setBarcodeScanOpen(true)}
-            disabled={barcodeFetching}
-            data-testid="button-scan-product"
-          >
-            {barcodeFetching ? (
-              <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
-            ) : (
-              <ScanLine className="h-4 w-4 sm:mr-1.5" />
-            )}
-            <span className="hidden sm:inline">Scan Product</span>
-          </Button>
-          <CreateMealDialog onScan={() => setCameraModalOpen(true)} onMealCreated={(_, hasSourceUrl) => { setActiveGroups(prev => { const n = new Set(prev); n.add(hasSourceUrl ? "recipes" : "cookbook"); return n; }); }} />
-          {!importStatusLoading && (!importStatus || importStatus.totalImported === 0) && (
-            <Button
-              variant="outline"
-              size="sm"
-              title="Import Library"
-              className="px-2 sm:px-3"
-              onClick={() => importLibraryMutation.mutate()}
-              disabled={importLibraryMutation.isPending}
-              data-testid="button-import-library"
-            >
-              {importLibraryMutation.isPending ? (
-                <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 sm:mr-1.5" />
-              )}
-              <span className="hidden sm:inline">{importLibraryMutation.isPending ? "Importing..." : "Import Library"}</span>
-            </Button>
-          )}
-        </div>
-      </div>
 
       {/* Row B: search + category */}
       <div className="flex w-full gap-3 items-center mb-3">
@@ -2733,7 +2868,7 @@ export default function MealsPage() {
           <ChefHat className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-medium text-foreground">Find recipes from across the web</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Type a meal name above to search thousands of recipes — pasta, chicken curry, stir fry, anything you're craving.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Type a meal name above to search thousands of recipes - pasta, chicken curry, stir fry, anything you're craving.</p>
           </div>
         </div>
       )}
@@ -2952,7 +3087,7 @@ export default function MealsPage() {
         </div>
       )}
 
-      {/* Web results appear FIRST when searching — most relevant content for new/demo users */}
+      {/* Web results appear FIRST when searching - most relevant content for new/demo users */}
       {(webSearchResults.length > 0 || webIsSearching) && searchSource !== "products" && (
         <div className="mb-6" data-testid="section-web-results">
           <div className="flex items-center gap-3 mb-4 flex-wrap">
@@ -3321,49 +3456,16 @@ export default function MealsPage() {
                           <span className="text-sm font-semibold text-center px-3 mt-1 leading-tight text-foreground">{meal.name}</span>
                           <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70 mt-0.5">Grouped Meal</span>
                         </div>
-                      ) : meal.imageUrl ? (
-                        <>
-                          <img
-                            src={meal.imageUrl}
-                            alt={meal.name}
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                            data-testid={`img-meal-${meal.id}`}
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
-                          {meal.audience === 'baby' && (
-                            <MealWatermark type="baby" size="md" className="bottom-2 right-2" />
-                          )}
-                          {meal.audience === 'child' && (
-                            <MealWatermark type="child" size="md" className="bottom-2 right-2" />
-                          )}
-                          {!meal.isSystemMeal && meal.audience !== 'baby' && meal.audience !== 'child' && (
-                            <MealWatermark type="adult" size="md" className="bottom-2 right-2" />
-                          )}
-                        </>
                       ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center gap-2 px-3 relative bg-accent/30" data-testid={`placeholder-meal-${meal.id}`}>
-                          {meal.audience === 'baby' ? (
-                            <MealWatermark type="baby" size="lg" className="relative" />
-                          ) : meal.audience === 'child' ? (
-                            <MealWatermark type="child" size="lg" className="relative" />
-                          ) : (
-                            <>
-                              <ChefHat className="h-10 w-10 text-muted-foreground/40 relative z-10" />
-                              {!meal.isSystemMeal && (
-                                <MealWatermark type="adult" size="lg" className="inset-0 m-auto flex items-center justify-center" />
-                              )}
-                              {meal.isReadyMeal && meal.isSystemMeal && (
-                                <MealWatermark type="ready" size="lg" className="inset-0 m-auto flex items-center justify-center" />
-                              )}
-                              {meal.isDrink && (
-                                <MealWatermark type="drink" size="lg" className="inset-0 m-auto flex items-center justify-center" />
-                              )}
-                            </>
-                          )}
-                          <span className="text-sm font-semibold text-center leading-tight relative z-10 text-foreground line-clamp-2 px-1">{meal.name}</span>
-                        </div>
+                        <MealImageWidget
+                          mealId={meal.id}
+                          imageUrl={meal.imageUrl}
+                          mealName={meal.name}
+                          audience={meal.audience}
+                          isSystemMeal={!!meal.isSystemMeal}
+                          canEdit={!meal.isSystemMeal}
+                          onImageChange={handleMealImageChange}
+                        />
                       )}
                       {!meal.isReadyMeal && meal.imageUrl && (
                         <div className="absolute bottom-1.5 left-1.5 z-10 flex items-center gap-1.5" data-testid={`name-overlay-meal-${meal.id}`}>
@@ -3536,20 +3638,6 @@ export default function MealsPage() {
                         showListButton
                         onAddToQuickList={handleAddToListFromCookbook}
                       />
-                      {!meal.imageUrl && !meal.isReadyMeal && !meal.isSystemMeal && meal.mealFormat !== "grouped" && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full h-7 text-xs text-muted-foreground hover:text-foreground gap-1.5"
-                          disabled={generatingImageFor === meal.id}
-                          onClick={() => handleGenerateMealImage(meal)}
-                          data-testid={`button-generate-image-${meal.id}`}
-                        >
-                          {generatingImageFor === meal.id
-                            ? <><Loader2 className="h-3 w-3 animate-spin" />Generating image…</>
-                            : <><Wand2 className="h-3 w-3" />Generate image with THA AI</>}
-                        </Button>
-                      )}
                     </CardFooter>
                   </Card>
                 </motion.div>
@@ -3597,27 +3685,6 @@ export default function MealsPage() {
                             {meal.audience === 'baby' ? 'Baby Meal' : meal.audience === 'child' ? 'Kids Meal' : 'Ready Meal'}
                           </span>
                         </div>
-                      ) : meal.imageUrl ? (
-                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md relative">
-                          <img
-                            src={meal.imageUrl}
-                            alt={meal.name}
-                            className="w-full h-full object-cover"
-                            data-testid={`img-meal-${meal.id}`}
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
-                          {meal.audience === 'baby' && (
-                            <MealWatermark type="baby" size="sm" className="bottom-1 right-1" />
-                          )}
-                          {meal.audience === 'child' && (
-                            <MealWatermark type="child" size="sm" className="bottom-1 right-1" />
-                          )}
-                          {!meal.isSystemMeal && meal.audience !== 'baby' && meal.audience !== 'child' && (
-                            <MealWatermark type="adult" size="sm" className="bottom-1 right-1" />
-                          )}
-                        </div>
                       ) : meal.audience === 'baby' || meal.audience === 'child' ? (
                         <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex items-center justify-center bg-accent/30">
                           <MealWatermark type={meal.audience === 'baby' ? 'baby' : 'child'} size="sm" className="relative" />
@@ -3626,12 +3693,19 @@ export default function MealsPage() {
                         <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center bg-primary/5" data-testid={`placeholder-grouped-list-${meal.id}`}>
                           <img src={thaAppleLogo} alt="THA" className="h-24 w-24 object-contain" />
                         </div>
-                      ) : !meal.isSystemMeal && !meal.imageUrl ? (
-                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex items-center justify-center bg-accent/30 relative">
-                          <MealWatermark type="adult" size="sm" className="inset-0 m-auto flex items-center justify-center" />
-                          <ChefHat className="h-8 w-8 text-muted-foreground/30 relative z-10" />
+                      ) : (
+                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md relative">
+                          <MealImageWidget
+                            mealId={meal.id}
+                            imageUrl={meal.imageUrl}
+                            mealName={meal.name}
+                            audience={meal.audience}
+                            isSystemMeal={!!meal.isSystemMeal}
+                            canEdit={!meal.isSystemMeal}
+                            onImageChange={handleMealImageChange}
+                          />
                         </div>
-                      ) : null}
+                      )}
                       <div className="flex-1 min-w-0 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-2 flex-wrap">
@@ -3675,20 +3749,6 @@ export default function MealsPage() {
                             showListButton
                             onAddToQuickList={handleAddToListFromCookbook}
                           />
-                          {!meal.imageUrl && !meal.isReadyMeal && !meal.isSystemMeal && meal.mealFormat !== "grouped" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs gap-1.5 text-muted-foreground"
-                              disabled={generatingImageFor === meal.id}
-                              onClick={(e) => { e.stopPropagation(); handleGenerateMealImage(meal); }}
-                              data-testid={`button-generate-image-${meal.id}`}
-                            >
-                              {generatingImageFor === meal.id
-                                ? <><Loader2 className="h-3 w-3 animate-spin" />Generating…</>
-                                : <><Wand2 className="h-3 w-3" />Generate image</>}
-                            </Button>
-                          )}
                           {!meal.isSystemMeal && (
                             <Button
                               variant="ghost"
@@ -4562,11 +4622,72 @@ export default function MealsPage() {
         onUploadInstead={() => scanFileRef.current?.click()}
       />
 
-      <ScanConfirmDialog
+      <RecipeScanReview
         open={scanDialogOpen}
-        onOpenChange={setScanDialogOpen}
-        scanData={scanData}
+        onOpenChange={handleScanDialogChange}
+        scanData={scanData as RecipeScanData | null}
+        scanning={scanLoading}
+        scanError={scanError ?? undefined}
+        onMealCreated={plannerImportCtx ? handlePlannerImportScanMealCreated : undefined}
       />
+
+      {/* Planner import: externally-controlled CreateMealDialog with prefilled name */}
+      {plannerImportCtx && !plannerImportCtx.openScan && (
+        <CreateMealDialog
+          externalOpen={plannerImportDialogOpen}
+          onExternalOpenChange={(open) => {
+            setPlannerImportDialogOpen(open);
+            if (!open) setPlannerImportCtx(null);
+          }}
+          initialName={plannerImportCtx.mealName}
+          onScan={() => { setPlannerImportDialogOpen(false); setCameraModalOpen(true); }}
+          onMealCreated={handlePlannerImportMealCreated}
+        />
+      )}
+
+      {/* Planner link confirmation dialog */}
+      {plannerImportCtx && plannerLinkData && (
+        <Dialog open={plannerLinkOpen} onOpenChange={setPlannerLinkOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-primary" />
+                Link recipe to planner?
+              </DialogTitle>
+              <DialogDescription>
+                Add this recipe to your planner
+                {plannerImportCtx.day !== "Unassigned" ? ` for ${plannerImportCtx.day}` : ""}.
+                {plannerImportCtx.plannerEntryId ? " The placeholder entry will be replaced." : ""}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 pt-1">
+              <div className="rounded-lg border bg-muted/40 px-3 py-2.5">
+                <p className="text-sm font-medium">{plannerLinkData.mealName}</p>
+                {plannerImportCtx.day !== "Unassigned" && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {plannerImportCtx.day}
+                    {plannerImportCtx.slot && plannerImportCtx.slot !== "unspecified"
+                      ? ` · ${plannerImportCtx.slot.charAt(0).toUpperCase() + plannerImportCtx.slot.slice(1)}`
+                      : ""}
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => { setPlannerLinkOpen(false); setPlannerImportCtx(null); }}
+                >
+                  Skip
+                </Button>
+                <Button onClick={handlePlannerLink}>
+                  <CalendarDays className="h-4 w-4 mr-1.5" />
+                  Add to planner
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <BarcodeScanner
         isOpen={barcodeScanOpen}
@@ -4643,6 +4764,7 @@ export default function MealsPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }
 
@@ -4656,7 +4778,7 @@ interface ImportPreview {
   confidence?: 'high' | 'partial' | 'failed';
   sourcePlatform?: 'instagram' | 'tiktok' | 'website' | 'manual';
   failureReason?: string | null;
-  /** Raw text scraped from the page — present when scraping succeeded but
+  /** Raw text scraped from the page - present when scraping succeeded but
    *  recipe extraction failed.  Surfaced so the user can paste it into the
    *  text tab to retry without re-typing everything. */
   extractedText?: string | null;
@@ -4988,7 +5110,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
           data.failureReason ||
           "We couldn't find a recipe in this text. Make sure it includes ingredients and steps, then try again."
         );
-        // Don't clear the textarea — leave it so the user can edit and retry
+        // Don't clear the textarea - leave it so the user can edit and retry
         return;
       }
       openModal(data, '');
@@ -5074,7 +5196,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
             <TabsContent value="text" className="space-y-3 mt-3">
               <Textarea
                 data-testid="input-import-recipe-text"
-                placeholder={"Paste recipe text here — from a TikTok caption, blog, or anywhere else.\n\nE.g.:\nEasy Pasta\nIngredients: 200g pasta, 2 cloves garlic...\nMethod: Boil pasta, fry garlic..."}
+                placeholder={"Paste recipe text here - from a TikTok caption, blog, or anywhere else.\n\nE.g.:\nEasy Pasta\nIngredients: 200g pasta, 2 cloves garlic...\nMethod: Boil pasta, fry garlic..."}
                 value={pastedText}
                 onChange={(e) => { setPastedText(e.target.value); setFailureMsg(null); }}
                 disabled={isImporting}
@@ -5097,7 +5219,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
             </TabsContent>
           </Tabs>
 
-          {/* Inline failure message — shown below either tab */}
+          {/* Inline failure message - shown below either tab */}
           {failureMsg && (
             <div className="flex items-start gap-2.5 rounded-lg border border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5 mt-1">
               <Info className="h-4 w-4 text-amber-600/80 dark:text-amber-400/70 shrink-0 mt-0.5" />
@@ -5114,7 +5236,7 @@ function ImportRecipeDialog({ externalOpen, onExternalOpenChange }: { externalOp
         </DialogContent>
       </Dialog>
 
-      {/* Review modal — opens after a successful high/partial import */}
+      {/* Review modal - opens after a successful high/partial import */}
       <CreateMealModal
         open={createModalOpen}
         onOpenChange={setCreateModalOpen}
@@ -5154,8 +5276,12 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
   const toggleSection = (s: typeof openSection) => setOpenSection(prev => prev === s ? '' : s);
 
   interface IngredientSuggestion { title: string; description: string; extraIngredients: string[]; effort: 'easy' | 'medium' | 'involved'; }
+  interface SmartMealResult { id: number; name: string; score: number; primaryMatches: string[]; stapleMatches: string[]; }
   const [suggestions, setSuggestions] = useState<IngredientSuggestion[] | null>(null);
   const [ingredientSource, setIngredientSource] = useState("");
+  const [ingredientDecision, setIngredientDecision] = useState(false);
+  const [smartMealResults, setSmartMealResults] = useState<SmartMealResult[] | null>(null);
+  const [isFindingMeals, setIsFindingMeals] = useState(false);
 
   const isIngredientList = (text: string): boolean => {
     if (/^https?:\/\//i.test(text)) return false;
@@ -5216,6 +5342,9 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     setPendingVoiceImport(null);
     setSuggestions(null);
     setIngredientSource("");
+    setIngredientDecision(false);
+    setSmartMealResults(null);
+    setIsFindingMeals(false);
     speechTranscriptRef.current = "";
     // Reset before stopping so onend doesn't falsely trigger "no speech captured"
     wasListeningRef.current = false;
@@ -5342,25 +5471,10 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     setSuggestions(null);
     try {
       if (!isUrl && isIngredientList(val)) {
-        // Ingredient list detected — fetch 3 meal suggestions
-        const res = await fetch('/api/suggest-from-ingredients', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ingredients: val }),
-          credentials: 'include',
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          setImportFailureMsg((err as any).message || "Could not generate suggestions.");
-          return;
-        }
-        const data = await res.json();
-        if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
-          setIngredientSource(val);
-          setSuggestions(data.suggestions.slice(0, 3));
-        } else {
-          setImportFailureMsg("Couldn't generate suggestions. Try pasting fuller recipe text instead.");
-        }
+        // Ingredient list detected - show decision step
+        setIngredientSource(val);
+        setIngredientDecision(true);
+        return;
       } else if (isUrl) {
         const res = await fetch('/api/import-recipe', {
           method: 'POST',
@@ -5405,6 +5519,61 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     }
   };
 
+  const handleFindMeals = async () => {
+    const ingredients = ingredientSource.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+    setIngredientDecision(false);
+    setIsFindingMeals(true);
+    setImportFailureMsg(null);
+    try {
+      const res = await fetch('/api/meals/smart-create-from-ingredients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients }),
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setImportFailureMsg((err as any).message || "Could not find meals.");
+        return;
+      }
+      const data: SmartMealResult[] = await res.json();
+      setSmartMealResults(data);
+    } catch {
+      setImportFailureMsg("Could not reach the server. Check your connection and try again.");
+    } finally {
+      setIsFindingMeals(false);
+    }
+  };
+
+  const handleCreateRecipe = async () => {
+    setIngredientDecision(false);
+    setIsImporting(true);
+    setImportFailureMsg(null);
+    try {
+      const res = await fetch('/api/suggest-from-ingredients', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ingredients: ingredientSource }),
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setImportFailureMsg((err as any).message || "Could not generate suggestions.");
+        return;
+      }
+      const data = await res.json();
+      if (Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+        setSuggestions(data.suggestions.slice(0, 3));
+      } else {
+        setImportFailureMsg("Couldn't generate suggestions. Try pasting fuller recipe text instead.");
+      }
+    } catch {
+      setImportFailureMsg("Could not reach the server. Check your connection and try again.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const SpeechRecognition = typeof window !== "undefined"
     ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     : null;
@@ -5418,7 +5587,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-    // Use browser default language — specifying en-GB can silently fail for non-UK users
+    // Use browser default language - specifying en-GB can silently fail for non-UK users
     recognition.onresult = (event: any) => {
       // Accumulate all results (both interim and final) into a single transcript
       let transcript = "";
@@ -5453,7 +5622,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     setListening(false);
   };
 
-  // Detect the moment listening stops — snapshot the ref and queue voice import
+  // Detect the moment listening stops - snapshot the ref and queue voice import
   useEffect(() => {
     if (wasListeningRef.current && !listening) {
       const captured = speechTranscriptRef.current.trim();
@@ -5461,7 +5630,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
       if (captured) {
         setPendingVoiceImport(captured);
       } else {
-        // Recording stopped with no captured text — let the user know
+        // Recording stopped with no captured text - let the user know
         setImportFailureMsg("No speech was captured. Please try again and speak clearly.");
       }
     }
@@ -5657,10 +5826,10 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                   : <ExternalLink className="h-3.5 w-3.5 text-amber-600/80 dark:text-amber-400/70 shrink-0" />}
                 <p className="text-[12px] text-amber-700/90 dark:text-amber-300/80 flex-1 min-w-0 leading-none truncate">
                   {importBanner.partial
-                    ? (importBanner.isVoice ? "Partial voice import — please review and complete." : "Partial import — some fields may be incomplete.")
+                    ? (importBanner.isVoice ? "Partial voice import - please review and complete." : "Partial import - some fields may be incomplete.")
                     : importBanner.isVoice
-                    ? "Voice recipe structured — please review before saving."
-                    : "Imported — please validate before saving."}
+                    ? "Voice recipe structured - please review before saving."
+                    : "Imported - please validate before saving."}
                   {importBanner.sourceUrl && !importBanner.isVoice && (
                     <a href={importBanner.sourceUrl} target="_blank" rel="noopener noreferrer" className="ml-1.5 underline underline-offset-2 text-amber-600/70 dark:text-amber-400/60">
                       {importBanner.sourceUrl.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
@@ -5677,7 +5846,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
                   We couldn't extract all of this recipe from the source. Paste the recipe text here to improve the import.
                 </p>
                 <Textarea
-                  placeholder={"Paste the full recipe text here — e.g. from the post caption, comments, or the recipe website."}
+                  placeholder={"Paste the full recipe text here - e.g. from the post caption, comments, or the recipe website."}
                   value={pasteHelperText}
                   onChange={e => { setPasteHelperText(e.target.value); setPasteHelperMsg(null); }}
                   className="min-h-[100px] text-sm resize-none"
@@ -5742,8 +5911,66 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
               </div>
             )}
 
+            {/* ── DECISION STEP ───────────────────────────────────────────── */}
+            {ingredientDecision && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium">What would you like to do?</p>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleFindMeals}
+                    data-testid="button-decision-find-meals"
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    Find meals
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleCreateRecipe}
+                    data-testid="button-decision-create-recipe"
+                  >
+                    <ChefHat className="h-4 w-4 mr-2" />
+                    Create recipe
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* ── SMART MEAL RESULTS ──────────────────────────────────────── */}
+            {isFindingMeals && (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
+                <span className="text-sm text-muted-foreground">Finding meals…</span>
+              </div>
+            )}
+            {smartMealResults && !isFindingMeals && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  {smartMealResults.length > 0
+                    ? "Meals you can make with these ingredients:"
+                    : "No matching meals found. Try creating a new recipe instead."}
+                </p>
+                {smartMealResults.map((r) => (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2.5"
+                    data-testid={`smart-meal-result-${r.id}`}
+                  >
+                    <span className="text-sm font-medium">{r.name}</span>
+                    <span className="text-xs text-muted-foreground shrink-0 ml-2">
+                      {r.primaryMatches.length} match{r.primaryMatches.length !== 1 ? "es" : ""}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* ── ACCORDION SECTIONS ──────────────────────────────────────── */}
-            {!suggestions && (() => {
+            {!suggestions && !ingredientDecision && !smartMealResults && !isFindingMeals && (() => {
               const recipeName = form.watch("name");
               const ingredientCount = fields.filter(f => f.name?.trim()).length;
               const instructionStepCount = instructionsText.split('\n').filter(s => s.trim()).length;

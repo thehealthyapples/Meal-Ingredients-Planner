@@ -28,7 +28,7 @@ export function useMeals() {
       toast({ title: "Recipe added" });
     },
     onError: () => {
-      toast({ title: "Couldn't add recipe", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't add recipe", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -42,7 +42,7 @@ export function useMeals() {
       toast({ title: "Recipe removed" });
     },
     onError: () => {
-      toast({ title: "Couldn't remove recipe", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't remove recipe", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 

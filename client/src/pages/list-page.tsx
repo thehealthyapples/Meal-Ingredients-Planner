@@ -13,6 +13,7 @@ import { CameraModal } from "@/components/camera-modal";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 import RetailerLogo from "@/components/RetailerLogo";
+import { PageHeader } from "@/components/PageHeader";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -195,6 +196,9 @@ export default function ListPage() {
 
   const handleImageCapture = useCallback(async (file: File) => {
     setIsScanning(true);
+    const scanId = Math.random().toString(36).slice(2, 10);
+    const t0 = performance.now();
+    console.log(`[recipe-scan-timing] upload-start scanId=${scanId} fileSize=${file.size}bytes mimeType=${file.type}`);
     try {
       const form = new FormData();
       form.append("image", file);
@@ -202,8 +206,12 @@ export default function ListPage() {
         method: "POST",
         credentials: "include",
         body: form,
+        headers: { "X-Scan-Id": scanId },
       });
+      const networkMs = Math.round(performance.now() - t0);
       const data = await res.json();
+      const parseMs = Math.round(performance.now() - t0);
+      console.log(`[recipe-scan-timing] upload-complete scanId=${scanId} network=${networkMs}ms total=${parseMs}ms parsedBy=${data.parsedBy} resultType=${data.parsed?.type}`);
       const extracted: string =
         data.rawText ?? (data.parsed as any)?.rawText ?? "";
       if (extracted.trim()) {
@@ -211,7 +219,7 @@ export default function ListPage() {
           prev ? `${prev}\n${extracted.trim()}` : extracted.trim()
         );
         setTimeout(resizeTextarea, 0);
-        toast({ title: "List scanned", description: "Text added — edit freely." });
+        toast({ title: "List scanned", description: "Text added - edit freely." });
       } else {
         toast({
           title: "Nothing readable",
@@ -219,7 +227,9 @@ export default function ListPage() {
           variant: "destructive",
         });
       }
+      console.log(`[recipe-scan-timing] ui-rendered scanId=${scanId} elapsed=${Math.round(performance.now() - t0)}ms`);
     } catch {
+      console.log(`[recipe-scan-timing] upload-exception scanId=${scanId} elapsed=${Math.round(performance.now() - t0)}ms`);
       toast({ title: "Scan failed", description: "Please try again.", variant: "destructive" });
     } finally {
       setIsScanning(false);
@@ -295,13 +305,13 @@ export default function ListPage() {
             continue;
           }
         }
-        // Units differ, non-numeric, or one is null — keep first, discard duplicate.
+        // Units differ, non-numeric, or one is null - keep first, discard duplicate.
       }
 
       // Insert deduplicated items.
       for (const item of Array.from(merged.values())) {
         // quantity from parseIngredient is a measurement string (e.g. "500", "2").
-        // The DB `quantity` column is an integer count-of-packs (defaults to 1) — do not send.
+        // The DB `quantity` column is an integer count-of-packs (defaults to 1) - do not send.
         // Send measurement as quantityValue (real) + unit (text) instead.
         const quantityValue = item.quantity ? parseFloat(item.quantity) : undefined;
         await apiRequest("POST", api.shoppingList.add.path, {
@@ -309,11 +319,11 @@ export default function ListPage() {
           normalizedName: item.normalizedName,
           ...(quantityValue && !isNaN(quantityValue) ? { quantityValue } : {}),
           ...(item.unit ? { unit: item.unit } : {}),
-          // Always send the category — including 'uncategorised' — so the add
+          // Always send the category - including 'uncategorised' - so the add
           // route never runs keyword detection on an AI-generated name and
           // silently promotes a nonsense input to a real category.
           category: item.category || 'uncategorised',
-          ...(item.needsReview ? { needsReview: true, validationNote: 'Item not confidently recognised — please verify' } : {}),
+          ...(item.needsReview ? { needsReview: true, validationNote: 'Item not confidently recognised - please verify' } : {}),
           basketLabel,
         });
       }
@@ -344,7 +354,7 @@ export default function ListPage() {
         description: shop ? `Opening ${shop}…` : "Opening shop view…",
       });
 
-      // Track quick list sent — fire-and-forget, never blocks UX
+      // Track quick list sent - fire-and-forget, never blocks UX
       fetch("/api/events/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -376,23 +386,20 @@ export default function ListPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-5">
-
-      {/* ── Page header ──────────────────────────────────────────────────── */}
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2" data-testid="text-list-title">
-          <NotepadText className="h-5 w-5 text-primary" />
-          Start your shopping list
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Type or paste your items — we'll organise the rest.
-        </p>
-      </div>
+    <>
+      <PageHeader
+        title="Shopping List"
+        icon={<NotepadText className="h-5 w-5" />}
+        realm="list"
+        titleTestId="text-list-title"
+        context="Type or paste your items - we'll organise the rest."
+      />
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-5">
 
       {/* ── First-visit hint ─────────────────────────────────────────────── */}
       <FirstVisitHint
         areaKey="quick-list"
-        message="Write your list naturally — THA will organise it, find better products, and guide you in-store."
+        message="Write your list naturally - THA will organise it, find better products, and guide you in-store."
       />
 
       {/* ── Writing surface ──────────────────────────────────────────────── */}
@@ -677,6 +684,7 @@ export default function ListPage() {
         onUploadInstead={() => fileInputRef.current?.click()}
       />
 
-    </div>
+      </div>
+    </>
   );
 }

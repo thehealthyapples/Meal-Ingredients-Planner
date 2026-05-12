@@ -424,7 +424,7 @@ export class DatabaseStorage implements IStorage {
     return meal;
   }
 
-  async updateMealImageUrl(id: number, imageUrl: string): Promise<Meal | undefined> {
+  async updateMealImageUrl(id: number, imageUrl: string | null): Promise<Meal | undefined> {
     const [meal] = await db.update(meals).set({ imageUrl }).where(eq(meals.id, id)).returning();
     return meal;
   }

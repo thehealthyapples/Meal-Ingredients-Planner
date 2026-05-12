@@ -50,6 +50,49 @@ const MOBILE_BOTTOM_ITEMS = [
   { href: "/my-diary", label: "Diary", icon: BookOpen },
 ];
 
+const REALM_STYLES: Record<string, { active: string; hover: string; inactive: string; mobileActive: string; mobileInactive: string }> = {
+  "/cookbook": {
+    // wheat amber - warm baked honey tones
+    active:         "bg-[hsl(38,50%,87%)] text-[hsl(38,65%,20%)] dark:bg-[hsl(38,28%,17%)] dark:text-[hsl(38,55%,78%)]",
+    hover:          "hover:bg-[hsl(38,42%,92%)] hover:text-[hsl(38,58%,27%)] dark:hover:bg-[hsl(38,22%,14%)] dark:hover:text-[hsl(38,45%,65%)]",
+    inactive:       "bg-[hsl(38,28%,94%)] text-[hsl(38,40%,40%)] dark:bg-[hsl(38,15%,12%)] dark:text-[hsl(38,28%,52%)]",
+    mobileActive:   "bg-[hsl(38,50%,85%)] text-[hsl(38,65%,20%)] dark:bg-[hsl(38,28%,19%)] dark:text-[hsl(38,55%,78%)]",
+    mobileInactive: "bg-[hsl(38,30%,92%)] text-[hsl(38,38%,40%)] dark:bg-[hsl(38,16%,14%)] dark:text-[hsl(38,24%,50%)]",
+  },
+  "/planner": {
+    // teal-green - cooler, clearer separation from pantry
+    active:         "bg-[hsl(172,26%,87%)] text-[hsl(172,38%,18%)] dark:bg-[hsl(172,16%,17%)] dark:text-[hsl(172,30%,72%)]",
+    hover:          "hover:bg-[hsl(172,20%,92%)] hover:text-[hsl(172,32%,26%)] dark:hover:bg-[hsl(172,12%,14%)] dark:hover:text-[hsl(172,24%,60%)]",
+    inactive:       "bg-[hsl(172,14%,94%)] text-[hsl(172,22%,42%)] dark:bg-[hsl(172,8%,12%)] dark:text-[hsl(172,14%,48%)]",
+    mobileActive:   "bg-[hsl(172,26%,85%)] text-[hsl(172,38%,18%)] dark:bg-[hsl(172,16%,19%)] dark:text-[hsl(172,30%,72%)]",
+    mobileInactive: "bg-[hsl(172,16%,92%)] text-[hsl(172,20%,44%)] dark:bg-[hsl(172,8%,14%)] dark:text-[hsl(172,12%,46%)]",
+  },
+  "/pantry": {
+    // orchard green - warm mid-green, grounded home-storage
+    active:         "bg-[hsl(115,22%,88%)] text-[hsl(115,30%,22%)] dark:bg-[hsl(115,15%,17%)] dark:text-[hsl(115,26%,70%)]",
+    hover:          "hover:bg-[hsl(115,16%,92%)] hover:text-[hsl(115,26%,28%)] dark:hover:bg-[hsl(115,10%,14%)] dark:hover:text-[hsl(115,20%,58%)]",
+    inactive:       "bg-[hsl(115,10%,94%)] text-[hsl(115,20%,40%)] dark:bg-[hsl(115,8%,12%)] dark:text-[hsl(115,14%,46%)]",
+    mobileActive:   "bg-[hsl(115,22%,86%)] text-[hsl(115,30%,22%)] dark:bg-[hsl(115,15%,19%)] dark:text-[hsl(115,26%,70%)]",
+    mobileInactive: "bg-[hsl(115,12%,92%)] text-[hsl(115,18%,42%)] dark:bg-[hsl(115,8%,14%)] dark:text-[hsl(115,12%,44%)]",
+  },
+  "/analyser": {
+    // warm olive - shifted toward golden-olive for clear separation from pantry
+    active:         "bg-[hsl(74,22%,89%)] text-[hsl(74,32%,18%)] dark:bg-[hsl(74,12%,18%)] dark:text-[hsl(74,25%,70%)]",
+    hover:          "hover:bg-[hsl(74,16%,93%)] hover:text-[hsl(74,26%,26%)] dark:hover:bg-[hsl(74,8%,15%)] dark:hover:text-[hsl(74,18%,58%)]",
+    inactive:       "bg-[hsl(74,10%,94%)] text-[hsl(74,18%,44%)] dark:bg-[hsl(74,6%,12%)] dark:text-[hsl(74,10%,44%)]",
+    mobileActive:   "bg-[hsl(74,22%,87%)] text-[hsl(74,32%,18%)] dark:bg-[hsl(74,12%,20%)] dark:text-[hsl(74,25%,70%)]",
+    mobileInactive: "bg-[hsl(74,12%,92%)] text-[hsl(74,14%,44%)] dark:bg-[hsl(74,6%,14%)] dark:text-[hsl(74,10%,42%)]",
+  },
+  "/my-diary": {
+    // apple blossom rose - warm muted berry, reflective and gentle
+    active:         "bg-[hsl(348,35%,89%)] text-[hsl(348,45%,24%)] dark:bg-[hsl(348,22%,18%)] dark:text-[hsl(348,35%,72%)]",
+    hover:          "hover:bg-[hsl(348,26%,93%)] hover:text-[hsl(348,38%,30%)] dark:hover:bg-[hsl(348,16%,15%)] dark:hover:text-[hsl(348,28%,60%)]",
+    inactive:       "bg-[hsl(348,16%,94%)] text-[hsl(348,28%,44%)] dark:bg-[hsl(348,10%,12%)] dark:text-[hsl(348,18%,48%)]",
+    mobileActive:   "bg-[hsl(348,35%,87%)] text-[hsl(348,45%,24%)] dark:bg-[hsl(348,22%,20%)] dark:text-[hsl(348,35%,72%)]",
+    mobileInactive: "bg-[hsl(348,18%,92%)] text-[hsl(348,24%,46%)] dark:bg-[hsl(348,10%,14%)] dark:text-[hsl(348,14%,44%)]",
+  },
+};
+
 export type SidebarContextValue = { isCollapsed: boolean };
 export const SidebarContext = createContext<SidebarContextValue>({ isCollapsed: false });
 export const useSidebar = () => useContext(SidebarContext);
@@ -94,6 +137,7 @@ function SidebarNavItem({
   href: string; label: string; icon: React.ComponentType<{ className?: string }>;
   isCollapsed: boolean; isActive: boolean; onClick?: () => void; badge?: number;
 }) {
+  const realm = REALM_STYLES[href];
   const linkEl = (
     <Link
       href={href}
@@ -102,8 +146,12 @@ function SidebarNavItem({
         isCollapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5"
       } ${
         isActive
-          ? "bg-accent text-primary font-medium"
-          : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+          ? realm
+            ? `${realm.active} font-medium`
+            : "bg-accent text-primary font-medium"
+          : realm
+            ? `${realm.inactive} ${realm.hover}`
+            : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
       }`}
       data-testid={`sidebar-nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
     >
@@ -279,7 +327,7 @@ function AppleMenu({ location, isAdmin }: { location: string; isAdmin: boolean }
             <DropdownMenuItem asChild>
               <Link href="/admin/ingredient-products" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-admin-picks">
                 <Star className="h-4 w-4" />
-                THA Picks
+                Picks
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
@@ -332,7 +380,7 @@ export function TopBar() {
               <TooltipTrigger asChild>
                 <Link
                   href="/dashboard"
-                  className={`flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/dashboard" ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+                  className={`flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/dashboard" ? "bg-[hsl(42,45%,88%)] text-[hsl(42,58%,20%)] dark:bg-[hsl(42,22%,17%)] dark:text-[hsl(42,48%,72%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
                   aria-label="Dashboard"
                   data-testid="button-topbar-dashboard"
                 >
@@ -358,7 +406,7 @@ export function TopBar() {
               <TooltipTrigger asChild>
                 <Link
                   href="/shopping-list"
-                  className={`flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/shopping-list" || location === "/list" ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+                  className={`flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/shopping-list" || location === "/list" ? "bg-[hsl(95,32%,88%)] text-[hsl(95,40%,22%)] dark:bg-[hsl(95,16%,17%)] dark:text-[hsl(95,32%,70%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
                   aria-label="List"
                   data-testid="button-topbar-list"
                 >
@@ -384,7 +432,7 @@ export function TopBar() {
               <TooltipTrigger asChild>
                 <Link
                   href="/basket"
-                  className={`relative flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/basket" || location === "/analyse-basket" ? "text-primary bg-accent" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+                  className={`relative flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/basket" || location === "/analyse-basket" ? "bg-[hsl(62,28%,86%)] text-[hsl(62,38%,22%)] dark:bg-[hsl(62,15%,17%)] dark:text-[hsl(62,28%,68%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
                   aria-label="Basket"
                   data-testid="button-topbar-basket"
                 >
@@ -409,7 +457,7 @@ export function TopBar() {
           <div className="flex items-center">
             <Link
               href="/dashboard"
-              className={`flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/dashboard" ? "text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+              className={`flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/dashboard" ? "text-[hsl(42,58%,20%)] dark:text-[hsl(42,48%,72%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
               aria-label="Dashboard"
               data-testid="button-topbar-dashboard"
             >
@@ -425,7 +473,7 @@ export function TopBar() {
             </button>
             <Link
               href="/shopping-list"
-              className={`flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/shopping-list" || location === "/list" ? "text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+              className={`flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/shopping-list" || location === "/list" ? "text-[hsl(95,40%,22%)] dark:text-[hsl(95,32%,70%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
               aria-label="List"
               data-testid="button-topbar-list-mobile"
             >
@@ -446,7 +494,7 @@ export function TopBar() {
           <div className="flex items-center">
             <Link
               href="/basket"
-              className={`relative flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/basket" || location === "/analyse-basket" ? "text-primary" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+              className={`relative flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/basket" || location === "/analyse-basket" ? "text-[hsl(62,38%,22%)] dark:text-[hsl(62,28%,68%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
               aria-label="Basket"
               data-testid="button-topbar-basket"
             >
@@ -584,12 +632,15 @@ export function MobileNav() {
         {MOBILE_BOTTOM_ITEMS.map((item) => {
           const isActive = location === item.href || (item.href === "/my-diary" && location === "/diary");
           const Icon = item.icon;
+          const realm = REALM_STYLES[item.href];
           return (
             <Link
               key={item.href}
               href={item.href}
               className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors min-w-[52px] min-h-[44px] justify-center ${
-                isActive ? "text-primary" : "text-muted-foreground"
+                isActive
+                  ? realm ? realm.mobileActive : "bg-accent text-primary"
+                  : realm ? realm.mobileInactive : "text-muted-foreground"
               }`}
               data-testid={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
             >

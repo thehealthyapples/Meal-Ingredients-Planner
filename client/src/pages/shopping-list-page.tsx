@@ -50,6 +50,7 @@ import {
   Download, UtensilsCrossed, Store, Maximize2, Minimize2,
   ChevronDown, ChevronUp, AlertTriangle, Microscope, Filter, SlidersHorizontal,
   Snowflake, Home, Columns2, Clock, ChefHat, Sparkles, ListChecks, NotepadText, ListPlus,
+  ScanLine,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -76,8 +77,10 @@ import FoodKnowledgeModal from "@/components/food-knowledge-modal";
 import WholeFoodSelector from "@/components/whole-food-selector";
 import { appendPendingIngredient } from "@/lib/quick-list";
 import ShoppingListView, { resolvePickKey } from "@/components/ShoppingListView";
-import RankModeSelector from "@/components/RankModeSelector";
 import { matchesSourceFilter, sourceLabel, sourcePriority, type SourceFilter } from "@/lib/source-helpers";
+import { CameraModal } from "@/components/camera-modal";
+import { ShoppingListScanReview, type ShoppingListScanData } from "@/components/ShoppingListScanReview";
+import { PageHeader } from "@/components/PageHeader";
 
 type ShoppingListItemExtended = ShoppingListItem & {
   addedByDisplayName?: string | null;
@@ -240,7 +243,7 @@ const BASKET_CATEGORY_MAP: Record<string, string> = {
   legumes: 'pantry',
   tinned: 'pantry',
   spices: 'pantry',
-  // DB categories added during normalisation — must be mapped or they fall to 'other'
+  // DB categories added during normalisation - must be mapped or they fall to 'other'
   frozen: 'pantry',      // basket view has no frozen tab; frozen goods sit alongside pantry
   pantry: 'pantry',      // explicit DB value 'pantry' (e.g. potatoes) → pantry tab
   ready_meals: 'pantry', // soups/stews align with pantry in basket planning view
@@ -253,7 +256,7 @@ const FRESH_HERB_NAMES = new Set([
 
 function getBasketCategory(item: { category?: string | null; productName: string; normalizedName?: string | null }): string {
   const lowerName = (item.normalizedName ?? item.productName).toLowerCase();
-  // Name-based overrides before category map — fixes common miscategorisations
+  // Name-based overrides before category map - fixes common miscategorisations
   if (/\bvinegar\b/.test(lowerName) && !/\bcrisps?\b|\bchips?\b/.test(lowerName)) return 'pantry';
   if (lowerName.includes('peanut butter')) return 'pantry';
   if (/^pickled |^fermented |^marinated /.test(lowerName)) return 'pantry';
@@ -371,7 +374,7 @@ function computePantryMergedRows<T extends { id: number; normalizedName?: string
 }
 
 // Allocate a total cupboard qty across underlying rows, quick list first.
-// Returns per-row { id, qty } — qty=null means this row is not covered.
+// Returns per-row { id, qty } - qty=null means this row is not covered.
 function allocateCupboardQty(
   totalQty: number,
   allIds: number[],
@@ -1537,7 +1540,7 @@ export default function ShoppingListPage() {
   const { data: savedItems_raw = [], isLoading: loadingSaved } = useQuery<ShoppingListItemExtended[]>({
     queryKey: [api.shoppingList.list.path],
   });
-  // All items (planned + all quick_list_* batches) — unified source of truth.
+  // All items (planned + all quick_list_* batches) - unified source of truth.
   const savedItems = useMemo(() => savedItems_raw, [savedItems_raw]);
 
   // Source filter: All | Planned | Extras | Home (see lib/source-helpers).
@@ -1551,7 +1554,7 @@ export default function ShoppingListPage() {
     [savedItems],
   );
 
-  // displayItems: items after applying the current source filter — used for all rendering.
+  // displayItems: items after applying the current source filter - used for all rendering.
   // Prefer the explicit `source` column; fall back to the legacy basket_label
   // prefix so pre-2026-05-03 rows (where source IS NULL) keep behaving as before.
   const displayItems = useMemo(
@@ -1560,7 +1563,7 @@ export default function ShoppingListPage() {
   );
 
   // Upgrade hint: show once per render cycle when arriving from Quick List submission with ≥3 items.
-  // In-memory only — no storage, resets on navigation or page reload.
+  // In-memory only - no storage, resets on navigation or page reload.
   useEffect(() => {
     if (!fromQuickList) return;
     if (upgradeHintShownRef.current) return;
@@ -1615,6 +1618,42 @@ export default function ShoppingListPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] }),
   });
 
+  // ── Shopping list scan state ──────────────────────────────────────────────
+  const [slCameraOpen, setSlCameraOpen] = useState(false);
+  const [slScanLoading, setSlScanLoading] = useState(false);
+  const [slScanData, setSlScanData] = useState<ShoppingListScanData | null>(null);
+  const [slReviewOpen, setSlReviewOpen] = useState(false);
+  const slFileRef = useRef<HTMLInputElement>(null);
+
+  const handleShoppingListScan = async (file: File) => {
+    setSlScanLoading(true);
+    const scanId = Math.random().toString(36).slice(2, 10);
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("mode", "shopping_list");
+    try {
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+        headers: { "X-Scan-Id": scanId },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ variant: "destructive", title: "Scan failed", description: data.message || "Could not read image." });
+        return;
+      }
+      setSlScanData(data as ShoppingListScanData);
+      setSlReviewOpen(true);
+    } catch {
+      toast({ variant: "destructive", title: "Scan failed", description: "Could not connect to server. Please try again." });
+    } finally {
+      setSlScanLoading(false);
+      if (slFileRef.current) slFileRef.current.value = "";
+    }
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
   const [neededThisWeek, setNeededThisWeek] = useState<Set<number>>(new Set());
   const [staplesOpen, setStaplesOpen] = useState(false);
   const [thaPicks, setThaPicks] = useState<Record<string, IngredientProduct[]>>({});
@@ -1631,9 +1670,33 @@ export default function ShoppingListPage() {
     } catch {}
     return "basket";
   });
-  // True once the user has navigated away from ShoppingListView back to basket —
-  // used to show the "← Check your cupboards" back link.
-  const [hasLeftShopView, setHasLeftShopView] = useState(false);
+  const [shopPhase, setShopPhase] = useState<"cupboard_check" | "shopping">(() => {
+    try {
+      const saved = localStorage.getItem("tha-sl-shop-phase") as "cupboard_check" | "shopping" | null;
+      if (saved === "cupboard_check" || saved === "shopping") return saved;
+    } catch {}
+    return "cupboard_check";
+  });
+  type BasketMode = "review" | "check-cupboards" | "shopping-assistant";
+  const basketMode: BasketMode = viewMode === "basket" ? "review"
+    : shopPhase === "cupboard_check" ? "check-cupboards" : "shopping-assistant";
+  function handleBasketModeChange(mode: BasketMode) {
+    if (mode === "review") {
+      setViewMode("basket");
+    } else if (mode === "check-cupboards") {
+      const next = "cupboard_check" as const;
+      setShopPhase(next);
+      try { localStorage.setItem("tha-sl-shop-phase", next); } catch {}
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      setViewMode("shop");
+    } else {
+      const next = "shopping" as const;
+      setShopPhase(next);
+      try { localStorage.setItem("tha-sl-shop-phase", next); } catch {}
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      setViewMode("shop");
+    }
+  }
   const [rankMode, setRankMode] = useState<RankingMode>(() => {
     try { return (sessionStorage.getItem("tha-sl-rank-mode") as RankingMode) || "quality_first"; } catch { return "quality_first"; }
   });
@@ -1767,7 +1830,7 @@ export default function ShoppingListPage() {
     return map;
   }, [ingredientSources]);
 
-  // Merged items for shop view — same aggregation as basket view rows.
+  // Merged items for shop view - same aggregation as basket view rows.
   // Planned + quick_list_ items with the same normalised name collapse into
   // one entry (primary item, combined qty, _allBasketLabels attached).
   const shopDisplayItems = useMemo(() => {
@@ -1886,7 +1949,7 @@ export default function ShoppingListPage() {
       }
     },
     onError: () => {
-      toast({ title: "Couldn't load prices", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't load prices", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -1912,7 +1975,7 @@ export default function ShoppingListPage() {
       });
     },
     onError: () => {
-      toast({ title: "Couldn't update store", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't update store", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -1952,7 +2015,7 @@ export default function ShoppingListPage() {
       setEditState(null);
     },
     onError: () => {
-      toast({ title: "Couldn't update item", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't update item", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -2123,7 +2186,7 @@ export default function ShoppingListPage() {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
     },
     onError: () => {
-      toast({ title: "Couldn't add item", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't add item", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -2153,7 +2216,7 @@ export default function ShoppingListPage() {
   }, [pricesByItem]);
 
   const getItemThaRating = useCallback((itemId: number, item?: ShoppingListItem): number => {
-    // Whole foods are always 5 — raw counts or product ratings must never override this.
+    // Whole foods are always 5 - raw counts or product ratings must never override this.
     if (item && isWholeFood(item)) return 5;
     if (item?.thaRating !== null && item?.thaRating !== undefined && item.thaRating > 0) {
       return item.thaRating;
@@ -2611,7 +2674,7 @@ export default function ShoppingListPage() {
         toast({ title: "Could not send", description: result.message || "Unable to create basket.", variant: "destructive" });
       }
     } catch {
-      toast({ title: `Couldn't send to ${supermarket}`, description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: `Couldn't send to ${supermarket}`, description: "Something went wrong - try again", variant: "destructive" });
     } finally {
       setBasketSending(null);
     }
@@ -2644,11 +2707,187 @@ export default function ShoppingListPage() {
 
   // ── Quick-list clean mode ──────────────────────────────────────────────────
   // NOTE: viewMode is seeded from ?shopMode=1 in useState, so shop view
-  // opens immediately on navigation — no early return needed here.
+  // opens immediately on navigation - no early return needed here.
 
   return (
+    <>
+    {!isFullscreen && (
+      <PageHeader
+        title="Basket"
+        icon={<ShoppingBasket className="h-5 w-5" />}
+        realm="basket"
+        wide
+        center={
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+
+            {/* ── Mode ── */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex flex-col items-start px-2.5 py-1.5 rounded-lg border border-border/60 bg-background/60 hover:bg-accent/40 transition-colors min-w-[88px]" data-testid="dropdown-mode">
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-[0.08em] leading-none font-medium select-none">Mode</span>
+                  <span className="flex items-center gap-1 text-[12px] font-semibold leading-none mt-1 realm-title">
+                    {basketMode === "review" ? "Review" : basketMode === "check-cupboards" ? "Cupboards" : "Shop"}
+                    <ChevronDown className="h-2.5 w-2.5 opacity-50 flex-shrink-0" />
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[180px]">
+                <DropdownMenuItem onClick={() => handleBasketModeChange("review")} className="flex items-center justify-between" data-testid="basket-mode-review">
+                  <span className="flex items-center gap-2"><ListChecks className="h-3.5 w-3.5" />Review</span>
+                  {basketMode === "review" && <Check className="h-3.5 w-3.5 text-primary ml-2" />}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleBasketModeChange("check-cupboards")} className="flex items-center justify-between" data-testid="basket-mode-check-cupboards">
+                  <span className="flex items-center gap-2"><Home className="h-3.5 w-3.5" />Check cupboards</span>
+                  {basketMode === "check-cupboards" && <Check className="h-3.5 w-3.5 text-primary ml-2" />}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleBasketModeChange("shopping-assistant")} className="flex items-center justify-between" data-testid="basket-mode-shopping-assistant">
+                  <span className="flex items-center gap-2"><ShoppingBasket className="h-3.5 w-3.5" />Shopping Assistant</span>
+                  {basketMode === "shopping-assistant" && <Check className="h-3.5 w-3.5 text-primary ml-2" />}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* ── View ── */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex flex-col items-start px-2.5 py-1.5 rounded-lg border border-border/60 bg-background/60 hover:bg-accent/40 transition-colors min-w-[68px]" data-testid="dropdown-view">
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-[0.08em] leading-none font-medium select-none">View</span>
+                  <span className="flex items-center gap-1 text-[12px] font-semibold leading-none mt-1 realm-title">
+                    {listFilter === "all" ? "All" : listFilter === "planned" ? "Planned" : listFilter === "extras" ? "Extras" : "Home"}
+                    <ChevronDown className="h-2.5 w-2.5 opacity-50 flex-shrink-0" />
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[140px]">
+                {(["all", "planned", "extras", "home"] as const).map(f => (
+                  <DropdownMenuItem key={f} onClick={() => setListFilter(f)} className="flex items-center justify-between" data-testid={`filter-tab-${f}`}>
+                    {f === "all" ? "All" : f === "planned" ? "Planned" : f === "extras" ? "Extras" : "Home"}
+                    {listFilter === f && <Check className="h-3.5 w-3.5 text-primary ml-2" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            {/* ── Sort ── */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex flex-col items-start px-2.5 py-1.5 rounded-lg border border-border/60 bg-background/60 hover:bg-accent/40 transition-colors min-w-[68px]" data-testid="dropdown-sort">
+                  <span className="text-[9px] text-muted-foreground uppercase tracking-[0.08em] leading-none font-medium select-none">Sort</span>
+                  <span className="flex items-center gap-1 text-[12px] font-semibold leading-none mt-1 realm-title">
+                    {rankMode === "quality_first" ? "Quality" : rankMode === "balanced" ? "Balanced" : rankMode === "lowest_price" ? "Price" : "THA Pick"}
+                    <ChevronDown className="h-2.5 w-2.5 opacity-50 flex-shrink-0" />
+                  </span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="min-w-[140px]">
+                {([
+                  { key: "quality_first" as const, label: "Quality" },
+                  { key: "balanced" as const, label: "Balanced" },
+                  { key: "lowest_price" as const, label: "Price" },
+                  { key: "tha_pick" as const, label: "THA Pick" },
+                ]).map(s => (
+                  <DropdownMenuItem key={s.key} onClick={() => handleRankModeChange(s.key)} className="flex items-center justify-between" data-testid={`sort-${s.key}`}>
+                    {s.label}
+                    {rankMode === s.key && <Check className="h-3.5 w-3.5 text-primary ml-2" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+          </div>
+        }
+        meta={(() => {
+          const unchecked = displayItems.filter(i => !i.checked).length;
+          const unresolved = displayItems.filter(i => i.needsReview && !i.checked).length;
+          return (
+            <>
+              <span>{unchecked > 0 ? `${unchecked} item${unchecked !== 1 ? "s" : ""} to buy` : "Basket is empty"}</span>
+              {unresolved > 0 && (
+                <><span className="opacity-30">·</span><span className="text-amber-600 dark:text-amber-400">{unresolved} to check</span></>
+              )}
+              {householdData && (
+                <><span className="opacity-30">·</span><span>{householdData.name} · Shared</span></>
+              )}
+            </>
+          );
+        })()}
+        actions={
+          /* ── Healthy Apples menu ── */
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center justify-center h-[52px] w-[52px] rounded-lg transition-colors hover:bg-accent/60" data-testid="button-more-actions">
+                <img src={thaAppleSrc} alt="Menu" className="h-[48px] w-[48px] object-contain" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                onClick={() => lookupPrices.mutate(undefined)}
+                disabled={lookupPrices.isPending || (displayItems.length === 0 && !shoppingExtras.some(e => e.inBasket || e.alwaysAdd))}
+                data-testid="button-lookup-prices"
+              >
+                {lookupPrices.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+                {lookupPrices.isPending ? "Matching products…" : "Match Products"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSplitByShop(!splitByShop)} data-testid="toggle-split-by-shop">
+                <Columns2 className="h-4 w-4 mr-2" />
+                Split by shop
+                {splitByShop && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setSlCameraOpen(true)} disabled={slScanLoading} data-testid="button-scan-shopping-list">
+                {slScanLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <ScanLine className="h-4 w-4 mr-2" />}
+                {slScanLoading ? "Scanning…" : "Scan list"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setIsFullscreen(!isFullscreen)} data-testid="button-fullscreen-toggle">
+                {isFullscreen ? <Minimize2 className="h-4 w-4 mr-2" /> : <Maximize2 className="h-4 w-4 mr-2" />}
+                {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => togglePreference.mutate()} disabled={togglePreference.isPending} data-testid="button-toggle-units">
+                <Scale className="h-4 w-4 mr-2" />
+                {measurementPref === "metric" ? "Switch to Imperial" : "Switch to Metric"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setBasketDialogOpen(true)}
+                disabled={savedItems.length === 0 && !shoppingExtras.some(e => e.inBasket || e.alwaysAdd)}
+                data-testid="button-send-to-supermarket"
+              >
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                Send to Supermarket
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setExportDialogOpen(true)}
+                disabled={savedItems.length === 0 && !shoppingExtras.some(e => e.inBasket || e.alwaysAdd)}
+                data-testid="button-export-list"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export / Download
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => recalculateScores.mutate()} disabled={recalculateScores.isPending} data-testid="button-recalculate-scores">
+                <RefreshCw className={`h-4 w-4 mr-2 ${recalculateScores.isPending ? "animate-spin" : ""}`} />
+                {recalculateScores.isPending ? "Recalculating…" : "Recalculate Scores"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {hasQuickListItems ? (
+                <DropdownMenuItem onClick={() => setClearDialogOpen(true)} className="text-destructive focus:text-destructive" data-testid="button-clear-all">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear Basket…
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => clearAll.mutate()} disabled={clearAll.isPending} className="text-destructive focus:text-destructive" data-testid="button-clear-all">
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear Basket
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
+      />
+    )}
     <div
-      className={`${isFullscreen ? 'fixed inset-0 z-50 overflow-auto flex flex-col' : 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8'}`}
+      className={`${isFullscreen ? 'fixed inset-0 z-50 overflow-auto flex flex-col' : 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6'}`}
       style={isFullscreen ? { backgroundImage: "url('/orchard-bg.png')", backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
     >
 
@@ -2663,213 +2902,28 @@ export default function ShoppingListPage() {
       <div className={`flex flex-col ${isFullscreen ? 'flex-1 overflow-auto p-4 sm:p-6' : ''}`}>
         {/* ── Basket view ──────────────────────────────────────────────────── */}
         <div className={viewMode === "shop" ? "hidden" : ""}>
-        <Card className="flex-1 flex flex-col">
-          <CardHeader className="pb-6 border-b border-border">
-            <div className="flex justify-between items-center gap-1 flex-wrap">
-              <div className="flex items-center gap-4">
-                <div>
-                  {hasLeftShopView && (
-                    <button
-                      onClick={() => {
-                        try { localStorage.setItem("tha-sl-shop-phase", "cupboard_check"); } catch {}
-                        setViewMode("shop");
-                      }}
-                      className="flex items-center gap-1 text-[11px] text-muted-foreground/70 hover:text-foreground transition-colors mb-1.5"
-                      data-testid="button-back-to-cyc"
-                    >
-                      <ArrowLeft className="h-3 w-3" />
-                      Check your cupboards
-                    </button>
-                  )}
-                  <CardTitle className="text-[28px] font-semibold tracking-tight" data-testid="text-analyse-basket-title">Basket</CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1" data-testid="text-items-count">
-                    {displayItems.length} item{displayItems.length !== 1 ? "s" : ""} to buy
-                  </p>
-                  {/* Value copy — always visible */}
-                  <p className="text-xs text-muted-foreground mt-2" data-testid="text-basket-value-copy">
-                    We've organised your list and estimated prices.
-                  </p>
-                  {/* Subtle planning hint — always on */}
-                  <p className="text-xs text-muted-foreground/60 mt-0.5" data-testid="text-planning-hint">
-                    Want this done automatically? Try planning meals.
-                  </p>
-                  {/* Upgrade trigger — first render from quick list, ≥3 items, once per session */}
-                  {showUpgradeHint && (
-                    <p className="text-xs text-primary/80 mt-1 font-medium" data-testid="text-upgrade-trigger">
-                      Next time, skip this — plan your meals instead.
-                    </p>
-                  )}
-                  {householdData && (
-                    <div className="flex items-center gap-1.5 mt-1.5" data-testid="banner-household">
-                      <Home className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">
-                        {householdData.name} · Shared basket
-                      </span>
-                    </div>
-                  )}
-                  {householdData && (() => {
-                    const sharedCount = savedItems.filter(i => i.basketLabel === 'shared').length;
-                    const memberCount = savedItems.filter(i => i.basketLabel && i.basketLabel !== 'shared' && !i.basketLabel.startsWith('quick_list_')).length;
-                    if (sharedCount === 0 && memberCount === 0) return null;
-                    return (
-                      <div className="mt-1.5 text-xs text-muted-foreground leading-tight space-y-0.5" data-testid="banner-basket-summary">
-                        {sharedCount > 0 && (
-                          <div data-testid="text-shared-count">{sharedCount} ingredient{sharedCount !== 1 ? 's' : ''} shared across all plates</div>
-                        )}
-                        {memberCount > 0 && (
-                          <div data-testid="text-member-count">{memberCount} item{memberCount !== 1 ? 's' : ''} specific to one member</div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                  {/* Source filter tabs — All / Planned / Extras / Home. */}
-                  {savedItems.length > 0 && (
-                    <div className="flex items-center gap-1 mt-2.5" data-testid="source-filter-tabs">
-                      {(["all", "planned", "extras", "home"] as const).map(f => (
-                        <button
-                          key={f}
-                          onClick={() => setListFilter(f)}
-                          className={`text-[11px] px-2.5 py-1 rounded-full border transition-colors ${
-                            listFilter === f
-                              ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                              : "text-muted-foreground border-border hover:border-primary/20 hover:text-foreground"
-                          }`}
-                          data-testid={`filter-tab-${f}`}
-                        >
-                          {f === "all" ? "All" : f === "planned" ? "Planned" : f === "extras" ? "Extras" : "Home"}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
+        <Card className="flex-1 flex flex-col overflow-hidden"
+          style={{ borderTop: "3px solid hsl(var(--basket-realm) / 0.55)" }}>
+          {householdData && (
+            <CardHeader className="py-2 px-4 border-b border-border">
+              <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground" data-testid="banner-household">
+                <span className="flex items-center gap-1">
+                  <Home className="h-3 w-3" />
+                  {householdData.name} · Shared basket
+                </span>
+                {(() => {
+                  const sharedCount = savedItems.filter(i => i.basketLabel === 'shared').length;
+                  const memberCount = savedItems.filter(i => i.basketLabel && i.basketLabel !== 'shared' && !i.basketLabel.startsWith('quick_list_')).length;
+                  return (
+                    <>
+                      {sharedCount > 0 && <span data-testid="text-shared-count">· {sharedCount} shared ingredient{sharedCount !== 1 ? 's' : ''}</span>}
+                      {memberCount > 0 && <span data-testid="text-member-count">· {memberCount} member item{memberCount !== 1 ? 's' : ''}</span>}
+                    </>
+                  );
+                })()}
               </div>
-              <div className="flex items-center gap-1 flex-wrap justify-end">
-                {/* Rank mode selector */}
-                {hasQuickListItems && (
-                  <RankModeSelector rankMode={rankMode} onChange={handleRankModeChange} />
-                )}
-                {/* Split by shop toggle */}
-                {(displayItems.length > 0) && (
-                  <div className="flex items-center gap-1.5 border border-border rounded-md px-2 py-1" data-testid="toggle-split-by-shop">
-                    <Columns2 className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground hidden sm:inline">Split by shop</span>
-                    <Switch
-                      checked={splitByShop}
-                      onCheckedChange={setSplitByShop}
-                      className="scale-75"
-                      data-testid="switch-split-by-shop"
-                    />
-                  </div>
-                )}
-                {(displayItems.length > 0 || shoppingExtras.some(e => e.inBasket || e.alwaysAdd)) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => lookupPrices.mutate(undefined)}
-                    disabled={lookupPrices.isPending}
-                    data-testid="button-lookup-prices"
-                    className="gap-1"
-                  >
-                    {lookupPrices.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Search className="h-3 w-3" />
-                    )}
-                    <span className="hidden sm:inline">Match Products</span>
-                  </Button>
-                )}
-                {displayItems.length > 0 && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    onClick={() => {
-                      // Force a fresh fetch so Shop View always reflects the live DB,
-                      // not a staleTime:Infinity cache from before any server-side
-                      // corrections (e.g. category normalisation) were applied.
-                      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
-                      setViewMode("shop");
-                    }}
-                    className="gap-1.5"
-                    data-testid="button-shopping-view"
-                  >
-                    <ListChecks className="h-3.5 w-3.5" />
-                    <span>Shop View</span>
-                  </Button>
-                )}
-                {/* Apple overflow menu - far right */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      className="flex items-center justify-center h-11 w-11 rounded-lg transition-colors text-muted-foreground hover:bg-accent/60 hover:text-foreground"
-                      data-testid="button-more-actions"
-                    >
-                      <img src={thaAppleSrc} alt="Menu" className="h-[60px] w-[60px] object-contain" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-52">
-                    <DropdownMenuItem
-                      onClick={() => setIsFullscreen(!isFullscreen)}
-                      data-testid="button-fullscreen-toggle"
-                    >
-                      {isFullscreen ? <Minimize2 className="h-4 w-4 mr-2" /> : <Maximize2 className="h-4 w-4 mr-2" />}
-                      {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => togglePreference.mutate()}
-                      disabled={togglePreference.isPending}
-                      data-testid="button-toggle-units"
-                    >
-                      <Scale className="h-4 w-4 mr-2" />
-                      {measurementPref === 'metric' ? 'Switch to Imperial' : 'Switch to Metric'}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {(savedItems.length > 0 || shoppingExtras.some(e => e.inBasket || e.alwaysAdd)) && (
-                      <>
-                        <DropdownMenuItem onClick={() => setBasketDialogOpen(true)} data-testid="button-send-to-supermarket">
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          Send to Supermarket
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setExportDialogOpen(true)} data-testid="button-export-list">
-                          <Download className="h-4 w-4 mr-2" />
-                          Export / Download
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => recalculateScores.mutate()}
-                          disabled={recalculateScores.isPending}
-                          data-testid="button-recalculate-scores"
-                        >
-                          <RefreshCw className={`h-4 w-4 mr-2 ${recalculateScores.isPending ? 'animate-spin' : ''}`} />
-                          {recalculateScores.isPending ? 'Recalculating…' : 'Recalculate Scores'}
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        {hasQuickListItems ? (
-                          <DropdownMenuItem
-                            onClick={() => setClearDialogOpen(true)}
-                            className="text-destructive focus:text-destructive"
-                            data-testid="button-clear-all"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Clear Basket…
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem
-                            onClick={() => clearAll.mutate()}
-                            disabled={clearAll.isPending}
-                            className="text-destructive focus:text-destructive"
-                            data-testid="button-clear-all"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Clear Basket
-                          </DropdownMenuItem>
-                        )}
-                      </>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </div>
-          </CardHeader>
+            </CardHeader>
+          )}
 
           <CardContent className="flex-1 overflow-y-auto p-0">
             {loadingSaved ? (
@@ -3096,7 +3150,7 @@ export default function ShoppingListPage() {
                                             );
                                             return null;
                                           })()}
-                                          {/* Source label — shown for all items with an explicit source. */}
+                                          {/* Source label - shown for all items with an explicit source. */}
                                           {(() => {
                                             const text = sourceLabel(item as any);
                                             if (!text) return null;
@@ -3318,7 +3372,7 @@ export default function ShoppingListPage() {
                                       ) : <span className="text-muted-foreground">-</span>}
                                       {hasPrices && showHint && (
                                         <div className="flex items-center gap-1 mt-0.5">
-                                          <span className="text-[10px] text-amber-600 dark:text-amber-400" data-testid={`text-tha-pick-${item.id}`}>⭐ {topPick.productName}</span>
+                                          <span className="text-[10px] text-amber-600 dark:text-amber-400 inline-flex items-center gap-0.5" data-testid={`text-tha-pick-${item.id}`}><img src={thaAppleSrc} alt="" className="h-3.5 w-3.5 object-contain flex-shrink-0" />{topPick.productName}</span>
                                           <button className="text-[10px] text-primary hover:underline font-medium" onClick={() => updateItem.mutate({ id: item.id, fields: { matchedStore: topPick.retailer, matchedProductId: null, matchedPrice: null } })} data-testid={`button-use-tha-pick-${item.id}`}>[Use]</button>
                                         </div>
                                       )}
@@ -3345,7 +3399,7 @@ export default function ShoppingListPage() {
                                               <TooltipTrigger asChild>
                                                 <span className="tabular-nums whitespace-nowrap px-0.5 cursor-default" data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
                                               </TooltipTrigger>
-                                              <TooltipContent><p className="text-xs">Combined from {allIds.length} sources — use Planned or Quick list tab to edit.</p></TooltipContent>
+                                              <TooltipContent><p className="text-xs">Combined from {allIds.length} sources - use Planned or Quick list tab to edit.</p></TooltipContent>
                                             </Tooltip>
                                           ) : (
                                             <span className="cursor-pointer tabular-nums whitespace-nowrap px-0.5" onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue ?? 0))} data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
@@ -3823,7 +3877,7 @@ export default function ShoppingListPage() {
 
         </div>{/* end basket view wrapper */}
 
-        {/* ── Shop view — inline, app shell stays intact ───────────────────── */}
+        {/* ── Shop view - inline, app shell stays intact ───────────────────── */}
         {viewMode === "shop" && (
           <ShoppingListView
             items={shopDisplayItems as unknown as ShoppingListItemExtended[]}
@@ -3846,7 +3900,9 @@ export default function ShoppingListPage() {
             listFilter={savedItems.length > 0 ? listFilter : undefined}
             onListFilterChange={savedItems.length > 0 ? setListFilter : undefined}
             onClearBySource={hasQuickListItems ? clearBySource : undefined}
-            onClose={() => { setHasLeftShopView(true); setViewMode("basket"); }}
+            onClose={() => { setViewMode("basket"); }}
+            targetPhase={shopPhase}
+            onPhaseChange={setShopPhase}
             onAnalyse={(item) => setAnalyseItem(item)}
             onVariantChange={(id, key, value) => {
               const it = savedItems.find(i => i.id === id);
@@ -3869,7 +3925,7 @@ export default function ShoppingListPage() {
       </div>
 
 
-      {/* Clear basket dialog — shown when quick list items exist */}
+      {/* Clear basket dialog - shown when quick list items exist */}
       <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
         <DialogContent className="max-w-sm" data-testid="dialog-clear-basket">
           <DialogHeader>
@@ -3884,7 +3940,7 @@ export default function ShoppingListPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Remove item dialog — shown when an item exists in both planned + quick list */}
+      {/* Remove item dialog - shown when an item exists in both planned + quick list */}
       <Dialog open={!!removeDialog} onOpenChange={(open) => { if (!open) setRemoveDialog(null); }}>
         <DialogContent className="max-w-sm" data-testid="dialog-remove-item">
           <DialogHeader>
@@ -4195,6 +4251,30 @@ export default function ShoppingListPage() {
         />
       )}
 
+      {/* Hidden file input for shopping list scan upload fallback */}
+      <input
+        ref={slFileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handleShoppingListScan(f); }}
+      />
+
+      <CameraModal
+        open={slCameraOpen}
+        onOpenChange={setSlCameraOpen}
+        onCapture={handleShoppingListScan}
+        onUploadInstead={() => slFileRef.current?.click()}
+      />
+
+      <ShoppingListScanReview
+        open={slReviewOpen}
+        onOpenChange={setSlReviewOpen}
+        scanData={slScanData}
+      />
+
     </div>
+    </>
   );
 }

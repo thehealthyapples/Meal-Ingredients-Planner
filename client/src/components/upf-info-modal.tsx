@@ -27,11 +27,11 @@ export function UPFInfoModal({ trigger }: Props) {
 
           <div className="space-y-5 text-sm leading-relaxed">
 
-            {/* Part 1 — What is UPF */}
+            {/* Part 1 - What is UPF */}
             <div className="space-y-2">
               <p className="font-semibold text-foreground">What is it?</p>
               <p className="text-muted-foreground">
-                Ultra-processed foods are made mainly from industrial ingredients — things
+                Ultra-processed foods are made mainly from industrial ingredients - things
                 you wouldn't find in a home kitchen. Think emulsifiers, artificial flavours,
                 modified starches, and colour additives. They're engineered to taste great
                 and last a long time, but eating a lot of them regularly is linked to
@@ -39,14 +39,14 @@ export function UPFInfoModal({ trigger }: Props) {
               </p>
               <p className="text-muted-foreground">
                 Foods are classified using the <strong className="text-foreground">NOVA system</strong>,
-                which looks at how processed something is — not just what's on the nutrition label.
+                which looks at how processed something is - not just what's on the nutrition label.
                 A product can look fine nutritionally but still be heavily processed.
               </p>
             </div>
 
             <hr className="border-border" />
 
-            {/* Part 2 — THA approach */}
+            {/* Part 2 - THA approach */}
             <div className="space-y-3">
               <p className="font-semibold text-foreground">The Healthy Apples approach</p>
               <div className="space-y-2.5">

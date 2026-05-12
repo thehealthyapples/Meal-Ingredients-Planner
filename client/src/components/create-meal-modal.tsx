@@ -43,7 +43,7 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   /** Called with the new meal id after creation */
   onCreated?: (mealId: number) => void;
-  /** Prefill from recipe import — optional, best-effort */
+  /** Prefill from recipe import - optional, best-effort */
   prefill?: ImportedRecipeDraft;
 }
 
@@ -71,7 +71,7 @@ export function CreateMealModal({ open, onOpenChange, onCreated, prefill }: Prop
 
   const { data: meals = [] } = useQuery<Meal[]>({
     queryKey: ["/api/meals"],
-    enabled: open && !prefill, // don't fetch in import mode — not needed
+    enabled: open && !prefill, // don't fetch in import mode - not needed
   });
 
   const { data: productHistory = [] } = useQuery<ProductHistoryItem[]>({
@@ -198,7 +198,7 @@ export function CreateMealModal({ open, onOpenChange, onCreated, prefill }: Prop
                   <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
                     <p className="text-[12px] font-medium text-amber-800 dark:text-amber-300 leading-snug">
-                      THA AI has partially imported this recipe. Some fields are missing — please complete before saving.
+                      THA AI has partially imported this recipe. Some fields are missing - please complete before saving.
                     </p>
                     {prefill.sourceUrl && (
                       <a
@@ -263,7 +263,7 @@ export function CreateMealModal({ open, onOpenChange, onCreated, prefill }: Prop
                     ))}
                   </div>
                 )}
-                {/* Add extra ingredient inline — no tabs noise during import */}
+                {/* Add extra ingredient inline - no tabs noise during import */}
                 <div className="flex gap-2 pt-0.5">
                   <Input
                     placeholder="Add ingredient…"
@@ -305,7 +305,7 @@ export function CreateMealModal({ open, onOpenChange, onCreated, prefill }: Prop
               </div>
             </>
           ) : (
-            /* ── STANDARD (NON-IMPORT) MODE — unchanged ──────────────────── */
+            /* ── STANDARD (NON-IMPORT) MODE - unchanged ──────────────────── */
             <>
               <Input
                 placeholder="Meal name"

@@ -19,10 +19,15 @@
     "test:ingredient-language": "tsx server/tests/test-ingredient-language.ts",
     "test:product-dedup": "tsx server/tests/test-product-dedup.ts",
     "test:household-eater": "tsx server/tests/test-household-eater.ts",
-    "test:guest-eater": "tsx server/tests/test-guest-eater.ts"
+    "test:guest-eater": "tsx server/tests/test-guest-eater.ts",
+    "eval:vision": "tsx server/scripts/eval-vision-comparison.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.89.0",
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/cli": "^8.3.1",
+    "@capacitor/core": "^8.3.1",
+    "@capacitor/ios": "^8.3.1",
     "@hookform/resolvers": "^3.10.0",
     "@jridgewell/trace-mapping": "^0.3.25",
     "@radix-ui/react-accordion": "^1.2.4",

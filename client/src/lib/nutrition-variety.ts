@@ -73,10 +73,10 @@ const HERBS_SPICES = [
   "bay leaf", "bay leaves",
   "dried thyme", "dried oregano", "dried basil", "dried parsley",
   "dried rosemary", "dried herbs", "fresh herbs", "mixed herbs",
-  // common spices — single word forms
+  // common spices - single word forms
   "cumin", "turmeric", "paprika", "cayenne", "cinnamon", "nutmeg",
   "cardamom", "allspice", "saffron", "sumac", "lemongrass",
-  // compound/ground forms — listed explicitly so they aren't caught by veg list first
+  // compound/ground forms - listed explicitly so they aren't caught by veg list first
   "ground cumin", "ground turmeric", "ground coriander", "ground ginger",
   "ground cinnamon", "ground nutmeg", "ground cardamom",
   "coriander seeds", "fennel seeds", "mustard seeds", "mustard powder",

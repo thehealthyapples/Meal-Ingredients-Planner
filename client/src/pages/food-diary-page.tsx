@@ -38,6 +38,7 @@ import { apiRequest } from "@/lib/queryClient";
 import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
 import AppleRating from "@/components/AppleRating";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
+import { PageHeader } from "@/components/PageHeader";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -136,7 +137,7 @@ function getInsightText(trends: DiaryMetrics[], range: ProgressRange): string {
 
   if (consistency >= 0.8) return "Focus on what matters, not just what's measurable. You're building a useful picture over time.";
   if (consistency >= 0.5) return "Small steps add up. Better choices today, stronger health over time.";
-  if (daysWithData >= 3) return "Every entry helps — your trends will become clearer as you go.";
+  if (daysWithData >= 3) return "Every entry helps - your trends will become clearer as you go.";
   return "You're just getting started. A few more entries will reveal useful patterns.";
 }
 
@@ -380,7 +381,7 @@ function AddEntryModal({
             </div>
           )}
 
-          {/* Saved meals — search + filter */}
+          {/* Saved meals - search + filter */}
           {savedMeals.filter((m) => m.kind !== "component").length > 0 && (
             <div className="space-y-2">
               <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Saved meals</p>
@@ -594,7 +595,7 @@ function DailySignalsPanel({
     notes: "",
     stuckToPlan: false,
   });
-  // Custom metric values — server is source of truth, localStorage is fallback
+  // Custom metric values - server is source of truth, localStorage is fallback
   const [customValues, setCustomValues] = useState<Record<string, string>>(() => {
     try { return JSON.parse(localStorage.getItem(`tha_custom_values_${date}`) || "{}"); }
     catch { return {}; }
@@ -711,9 +712,9 @@ function DailySignalsPanel({
         </CardHeader>
 
         <CardContent className="px-4 pb-3 pt-0 space-y-2" data-testid="metrics-form">
-          {/* Microcopy — supportive context at the top */}
+          {/* Microcopy - supportive context at the top */}
           <p className="text-[11px] text-muted-foreground/55 leading-relaxed">
-            Your numbers don't define you — they simply help you understand your habits.
+            Your numbers don't define you - they simply help you understand your habits.
           </p>
 
           {/* Weight */}
@@ -934,7 +935,7 @@ function LookingForwardWidget() {
       <CardContent className="px-4 pb-4 pt-0 space-y-2">
         {items.length === 0 && !adding && (
           <p className="text-xs text-muted-foreground/50">
-            Add something to look forward to — it helps.
+            Add something to look forward to - it helps.
           </p>
         )}
 
@@ -1345,7 +1346,7 @@ export default function FoodDiaryPage() {
       qc.invalidateQueries({ queryKey: ["/api/user-items/recent"] });
       qc.invalidateQueries({ queryKey: ["/api/user-items/frequent"] });
       qc.invalidateQueries({ queryKey: ["/api/savings/aggregates"] });
-      toast({ title: "Logged", description: "Nice — that likely saved about £10 vs takeaway.", duration: 3000 });
+      toast({ title: "Logged", description: "Nice - that likely saved about £10 vs takeaway.", duration: 3000 });
     },
     onError: () => toast({ title: "Failed to log item", variant: "destructive" }),
   });
@@ -1365,7 +1366,7 @@ export default function FoodDiaryPage() {
       qc.invalidateQueries({ queryKey: ["/api/savings/aggregates"] });
       toast({
         title: "Meal logged",
-        description: `${data.logged.length} item${data.logged.length !== 1 ? "s" : ""} added — likely saved about £10 vs takeaway.`,
+        description: `${data.logged.length} item${data.logged.length !== 1 ? "s" : ""} added - likely saved about £10 vs takeaway.`,
         duration: 3000,
       });
     },
@@ -1465,20 +1466,13 @@ export default function FoodDiaryPage() {
       : null;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4">
-
-      {/* ── Page header ───────────────────────────────────────────── */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-primary" />
-              My Diary
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">No pressure. Just clearer choices.</p>
-          </div>
-
-          {/* THA apple settings button */}
+    <>
+      <PageHeader
+        title="My Diary"
+        icon={<BookOpen className="h-5 w-5" />}
+        realm="diary"
+        context="No pressure. Just clearer choices."
+        actions={
           <button
             type="button"
             className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/60 transition-colors"
@@ -1488,7 +1482,9 @@ export default function FoodDiaryPage() {
           >
             <img src={thaAppleSrc} alt="" className="h-7 w-7 object-contain opacity-70 hover:opacity-100 transition-opacity" />
           </button>
-        </div>
+        }
+      />
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
 
         {/* UPF awareness banner */}
         {!upfDismissed && (
@@ -1581,7 +1577,6 @@ export default function FoodDiaryPage() {
             </div>
           )}
         </div>
-      </div>
 
       {/* ── Daily Log ────────────────────────────────────────────── */}
       {activeTab === "diary" && (
@@ -1610,7 +1605,7 @@ export default function FoodDiaryPage() {
               <div className="space-y-3">
                 <FirstVisitHint
                   areaKey="diary"
-                  message="Log what you eat each day. Tap Add on any meal slot to record food — your entries build a clearer picture of your habits over time."
+                  message="Log what you eat each day. Tap Add on any meal slot to record food - your entries build a clearer picture of your habits over time."
                 />
 
                 {(diary?.entries?.length ?? 0) > 0 && (
@@ -1656,7 +1651,7 @@ export default function FoodDiaryPage() {
                         {isExpanded && (
                           <div className="px-3 pb-2.5 pt-1.5 bg-muted/10 space-y-1 border-t border-border/40">
                             {slotEntries.length === 0 && (
-                              <p className="text-xs text-muted-foreground/50 py-0.5">Nothing added yet — tap Add to log something.</p>
+                              <p className="text-xs text-muted-foreground/50 py-0.5">Nothing added yet - tap Add to log something.</p>
                             )}
                             {slotEntries.map((entry) => {
                               const isEditing = editingEntry?.id === entry.id;
@@ -1755,7 +1750,7 @@ export default function FoodDiaryPage() {
           {trends.length < 2 ? (
             <div className="text-center py-16 space-y-2" data-testid="text-empty-trends">
               <TrendingUp className="h-10 w-10 mx-auto text-muted-foreground/30" />
-              <p className="text-sm font-medium text-muted-foreground">When things drift, we help you find your way back — simply.</p>
+              <p className="text-sm font-medium text-muted-foreground">When things drift, we help you find your way back - simply.</p>
               <p className="text-xs text-muted-foreground/60">Record a few days to start seeing useful patterns emerge.</p>
             </div>
           ) : (
@@ -1904,5 +1899,6 @@ export default function FoodDiaryPage() {
         onSaveProfile={(data) => updateProfileMutation.mutate(data)}
       />
     </div>
+    </>
   );
 }

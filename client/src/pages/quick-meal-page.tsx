@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, X, ShoppingBasket, Loader2, ChefHat, Leaf, Save, Globe, UtensilsCrossed, Snowflake, Check, ChevronDown, ChevronUp, Utensils, ImageOff, Camera, Store } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { getWholeFoodAlternative } from "@/lib/whole-food-alternatives";
@@ -263,15 +264,27 @@ export default function QuickMealPage() {
 
   const handlePhotoScan = async (file: File) => {
     setPhotoScanning(true);
+    const scanId = Math.random().toString(36).slice(2, 10);
+    const t0 = performance.now();
+    console.log(`[recipe-scan-timing] upload-start scanId=${scanId} fileSize=${file.size}bytes mimeType=${file.type}`);
     const formData = new FormData();
     formData.append("image", file);
     try {
-      const res = await fetch("/api/scan", { method: "POST", body: formData, credentials: "include" });
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+        headers: { "X-Scan-Id": scanId },
+      });
+      const networkMs = Math.round(performance.now() - t0);
       const data = await res.json();
+      const parseMs = Math.round(performance.now() - t0);
       if (!res.ok) {
+        console.log(`[recipe-scan-timing] upload-error scanId=${scanId} status=${res.status} elapsed=${parseMs}ms`);
         toast({ variant: "destructive", title: "Scan failed", description: data.message || "Could not read image." });
         return;
       }
+      console.log(`[recipe-scan-timing] upload-complete scanId=${scanId} network=${networkMs}ms total=${parseMs}ms parsedBy=${data.parsedBy} resultType=${data.parsed?.type}`);
       if (data.parsed?.type === "recipe" && Array.isArray(data.parsed.ingredients) && data.parsed.ingredients.length > 0) {
         const newParts: MealPart[] = data.parsed.ingredients.map((label: string) => ({
           id: makeId(), label, source: { type: "basic" as const },
@@ -282,7 +295,9 @@ export default function QuickMealPage() {
       } else {
         toast({ title: "No recipe detected", description: "Try adding meal components manually." });
       }
+      console.log(`[recipe-scan-timing] ui-rendered scanId=${scanId} elapsed=${Math.round(performance.now() - t0)}ms`);
     } catch {
+      console.log(`[recipe-scan-timing] upload-exception scanId=${scanId} elapsed=${Math.round(performance.now() - t0)}ms`);
       toast({ variant: "destructive", title: "Scan failed", description: "Could not connect to server." });
     } finally {
       setPhotoScanning(false);
@@ -360,13 +375,13 @@ export default function QuickMealPage() {
   const isWorking = createBasketMutation.isPending || saveToMealsMutation.isPending || isLoadingMeal;
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-6">
-      <div className="flex items-center gap-2 mb-6">
-        <ChefHat className="h-5 w-5 text-primary" />
-        <h1 className="text-xl font-semibold tracking-tight">
-          {editId ? "Edit Meal" : "Build a Meal"}
-        </h1>
-      </div>
+    <>
+    <PageHeader
+      realm="cookbook"
+      title={editId ? "Edit Meal" : "Build a Meal"}
+      icon={<ChefHat className="h-5 w-5" />}
+    />
+    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe">
 
       {isLoadingMeal ? (
         <div className="flex items-center justify-center py-12">
@@ -718,5 +733,6 @@ export default function QuickMealPage() {
         />
       )}
     </div>
+    </>
   );
 }

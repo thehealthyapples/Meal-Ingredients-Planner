@@ -22,7 +22,7 @@ export type DietRestrictionValue = (typeof DIET_RESTRICTIONS)[number]["value"];
 
 // ─── Canonical shared options (used across all dietary input surfaces) ────────
 
-/** Diet pattern chips — used on profile, eater form, guest form, planner. */
+/** Diet pattern chips - used on profile, eater form, guest form, planner. */
 export const DIET_PATTERN_OPTIONS = [
   { value: "Mediterranean", label: "Mediterranean" },
   { value: "DASH",          label: "DASH" },
@@ -36,7 +36,7 @@ export const DIET_PATTERN_OPTIONS = [
   { value: "Carnivore",     label: "Carnivore" },
 ] as const;
 
-/** Allergy & intolerance chips — hard constraints, used everywhere. */
+/** Allergy & intolerance chips - hard constraints, used everywhere. */
 export const ALLERGY_INTOLERANCE_OPTIONS = [
   { value: "Gluten-Free", label: "Gluten-Free" },
   { value: "Dairy-Free",  label: "Dairy-Free" },
@@ -75,9 +75,9 @@ export const ONBOARDING_DIET_OPTIONS: OnboardingDietOption[] = [
   { value: "Gluten-free",   label: "Gluten-free",     def: "No wheat, barley, or rye." },
   { value: "Keto",          label: "Keto",            def: "Very low carbohydrate, high fat approach." },
   { value: "Low-Carb",      label: "Low-carb",        def: "Reduced carbohydrates, focuses on protein and vegetables." },
-  { value: "Paleo",         label: "Paleo",           def: "Whole, unprocessed foods — no grains or dairy." },
+  { value: "Paleo",         label: "Paleo",           def: "Whole, unprocessed foods - no grains or dairy." },
   { value: "DASH",          label: "DASH",            def: "Heart-healthy approach, low in sodium and saturated fat." },
-  { value: "MIND",          label: "MIND",            def: "Brain-healthy foods — leafy greens, berries, nuts, and fish." },
+  { value: "MIND",          label: "MIND",            def: "Brain-healthy foods - leafy greens, berries, nuts, and fish." },
 ];
 
 // ─── Onboarding: allergy options ────────────────────────────────────────────

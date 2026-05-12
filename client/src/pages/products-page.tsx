@@ -36,6 +36,7 @@ import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import { useSoundEffects } from "@/hooks/use-sound-effects";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import AnalyserDetailV2 from "@/components/analyser/AnalyserDetailV2";
+import { PageHeader } from "@/components/PageHeader";
 
 interface ParsedIngredient {
   name: string;
@@ -147,7 +148,7 @@ interface ProductResult {
   canonicalProductName?: string;
   /** How many raw OFF variants were merged into this result */
   variantCount?: number;
-  /** Original raw product names before canonicalisation — for detail views */
+  /** Original raw product names before canonicalisation - for detail views */
   nameVariants?: string[];
   nutriments: {
     calories: string | null;
@@ -572,7 +573,7 @@ export default function ProductsPage() {
     if (intelligenceSettings === undefined) return;
 
     const key = `${urlParams.q}||${urlParams.shop}`;
-    // Same params as the last auto-search — nothing to do.
+    // Same params as the last auto-search - nothing to do.
     if (key === lastAutoSearchKey.current) return;
     lastAutoSearchKey.current = key;
 
@@ -604,9 +605,9 @@ export default function ProductsPage() {
     const prev = prevRegulatoryRef.current;
     prevRegulatoryRef.current = current;
 
-    // First load: setting arrives for the first time — record and skip.
+    // First load: setting arrives for the first time - record and skip.
     if (prev === undefined) return;
-    // No actual change (re-render without toggle) — skip.
+    // No actual change (re-render without toggle) - skip.
     if (prev === current) return;
     // Nothing visible to refresh.
     if (!hasSearched) return;
@@ -614,7 +615,7 @@ export default function ProductsPage() {
     const includeRegulatory = current ?? true;
 
     if (lastBarcode) {
-      // Last result came from a barcode scan — re-fetch that single product silently.
+      // Last result came from a barcode scan - re-fetch that single product silently.
       setBarcodeLoading(true);
       fetch(`/api/products/barcode/${lastBarcode}?includeRegulatoryInScoring=${includeRegulatory}`, { credentials: 'include' })
         .then(r => r.ok ? r.json() : null)
@@ -627,7 +628,7 @@ export default function ProductsPage() {
         .catch(() => {})
         .finally(() => setBarcodeLoading(false));
     } else if (searchQuery.trim()) {
-      // Last result came from a text search — re-run it silently.
+      // Last result came from a text search - re-run it silently.
       handleSearch();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -678,7 +679,7 @@ export default function ProductsPage() {
         }
 
         if (data.product.scanConfidence === 'low') {
-          toast({ title: "Product Found", description: `${data.product.product_name} — ingredient data is limited` });
+          toast({ title: "Product Found", description: `${data.product.product_name} - ingredient data is limited` });
         } else {
           toast({ title: "Product Found", description: data.product.product_name });
         }
@@ -841,7 +842,7 @@ export default function ProductsPage() {
       toast({ title: "Added to basket", description: "Product added" });
     },
     onError: () => {
-      toast({ title: "Couldn't add product", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't add product", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -874,7 +875,7 @@ export default function ProductsPage() {
       toast({ title: "Template created", description: template.name });
     },
     onError: () => {
-      toast({ title: "Couldn't create template", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't create template", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -939,17 +940,16 @@ export default function ProductsPage() {
   ].filter(Boolean).length;
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="space-y-6">
-        <div className="flex justify-between items-start gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2" data-testid="text-products-title">
-              <Microscope className="h-5 w-5 text-primary" />
-              Analyser
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">Search packaged foods, detect ultra-processed ingredients, and find healthier alternatives</p>
-          </div>
-          <div className="flex items-center gap-2 mt-1 shrink-0">
+    <>
+    <PageHeader
+      title="Analyser"
+      icon={<Microscope className="h-5 w-5" />}
+      realm="analyser"
+      wide
+      titleTestId="text-products-title"
+      context="Search packaged foods, detect ultra-processed ingredients, and find healthier alternatives"
+      actions={
+        <div className="flex items-center gap-2">
             {compareProducts.length >= 2 && (
               <Button
                 onClick={() => setShowCompare(true)}
@@ -1055,9 +1055,11 @@ export default function ProductsPage() {
                 </div>
               </PopoverContent>
             </Popover>
-          </div>
         </div>
-
+      }
+    />
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+      <div className="space-y-6">
         <FirstVisitHint
           areaKey="analyser"
           message="Search any packaged food to see its ingredients, additives, and health rating. Spot ultra-processed products and find cleaner alternatives before you buy."
@@ -1730,6 +1732,7 @@ export default function ProductsPage() {
         onClose={() => setShowBarcodeScanner(false)}
       />
     </div>
+    </>
   );
 }
 

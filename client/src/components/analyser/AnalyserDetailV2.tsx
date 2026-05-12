@@ -195,7 +195,7 @@ export default function AnalyserDetailV2({
                 <div className="flex items-start gap-2.5 px-3.5 py-3 rounded-lg bg-amber-50 dark:bg-amber-950/25 border border-amber-200/70 dark:border-amber-800/40">
                   <Info className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-px" />
                   <p className="text-sm text-amber-800 dark:text-amber-300 leading-snug">
-                    Contains {formatConcernList(dietConcerns)} — may not suit your diet
+                    Contains {formatConcernList(dietConcerns)} - may not suit your diet
                   </p>
                 </div>
               ) : (
@@ -280,7 +280,7 @@ export default function AnalyserDetailV2({
           <CardContent className="p-5 space-y-4">
             <p className={SECTION_LABEL}>Best swap in {primaryStore}</p>
 
-            {/* Best option — always visible */}
+            {/* Best option - always visible */}
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground leading-snug" data-testid="text-shop-alt-name">
@@ -310,7 +310,7 @@ export default function AnalyserDetailV2({
               </button>
             </div>
 
-            {/* Expand toggle — only when more than 1 option */}
+            {/* Expand toggle - only when more than 1 option */}
             {topOptions.length > 1 && (
               <button
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -324,7 +324,7 @@ export default function AnalyserDetailV2({
               </button>
             )}
 
-            {/* Expanded list — options 2–5 */}
+            {/* Expanded list - options 2–5 */}
             {showMoreAlternatives && topOptions.length > 1 && (
               <div className="space-y-4 pt-1 border-t border-border/60" data-testid="section-more-alternatives">
                 {topOptions.slice(1).map((opt, idx) => {

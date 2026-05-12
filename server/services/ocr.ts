@@ -12,9 +12,11 @@ export class OcrError extends Error {
 
 export async function extractTextFromImage(buffer: Buffer): Promise<string> {
   try {
+    const t0 = Date.now();
     const result = await Tesseract.recognize(buffer, "eng", {
       logger: () => {},
     });
+    console.log(`[recipe-scan-timing] ocr-tesseract duration=${Date.now() - t0}ms`);
 
     const text = result.data.text.trim();
 

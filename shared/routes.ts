@@ -65,6 +65,10 @@ export const api = {
       method: 'POST' as const,
       path: '/api/meals/:id/generate-image' as const,
     },
+    updateImage: {
+      method: 'PATCH' as const,
+      path: '/api/meals/:id/image' as const,
+    },
     saveProduct: {
       method: 'POST' as const,
       path: '/api/meals/save-product' as const,
@@ -117,6 +121,12 @@ export const api = {
         source: z.enum(['speech', 'ocr', 'ingredients']),
         hint: z.enum(['shopping_list', 'recipe']).optional(),
       }),
+    },
+  },
+  media: {
+    upload: {
+      method: 'POST' as const,
+      path: '/api/media/upload' as const,
     },
   },
   search: {

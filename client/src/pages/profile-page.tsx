@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { normalizeIngredientKey } from "@shared/normalize";
+import { PageHeader } from "@/components/PageHeader";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES, ONBOARDING_DIET_OPTIONS, ALLERGY_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
 import { GOAL_OPTIONS, STORE_OPTIONS, UPF_OPTIONS, BUDGET_OPTIONS, deriveGoalType } from "@/lib/shared-options";
@@ -92,7 +93,7 @@ export default function ProfilePage() {
       toast({ title: "Profile saved" });
     },
     onError: () => {
-      toast({ title: "Couldn't save changes", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't save changes", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -108,48 +109,77 @@ export default function ProfilePage() {
     updateMutation.mutate({ preferences: prefs });
   };
 
+  const handleBack = () => {
+    const prev = sessionStorage.getItem("profileReturnPath");
+    if (prev) {
+      sessionStorage.removeItem("profileReturnPath");
+      window.location.href = prev;
+    } else {
+      window.history.back();
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
+      <>
+      <PageHeader
+        realm="diary"
+        title="Profile"
+        icon={<User className="h-5 w-5" />}
+        actions={
+          <Button variant="ghost" size="sm" onClick={handleBack} data-testid="button-back-profile">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+        }
+      />
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-4">
         <Skeleton className="h-36 w-full rounded-xl" />
         <Skeleton className="h-32 w-full rounded-xl" />
         <Skeleton className="h-32 w-full rounded-xl" />
         <Skeleton className="h-32 w-full rounded-xl" />
       </div>
+      </>
     );
   }
 
   if (!profile) {
     return (
+      <>
+      <PageHeader
+        realm="diary"
+        title="Profile"
+        icon={<User className="h-5 w-5" />}
+        actions={
+          <Button variant="ghost" size="sm" onClick={handleBack} data-testid="button-back-profile">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+        }
+      />
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">Unable to load profile.</p>
       </div>
+      </>
     );
   }
 
   const prefs = profile.preferences || {};
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 space-y-4" data-testid="page-profile">
-      <div className="flex items-center gap-3 mb-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            data-testid="button-back-profile"
-            onClick={() => {
-              const prev = sessionStorage.getItem("profileReturnPath");
-              if (prev) {
-                sessionStorage.removeItem("profileReturnPath");
-                window.location.href = prev;
-              } else {
-                window.history.back();
-              }
-            }}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-        <h1 className="text-xl font-semibold tracking-tight" data-testid="text-profile-title">Profile</h1>
-      </div>
+    <>
+    <PageHeader
+      realm="diary"
+      title="Profile"
+      icon={<User className="h-5 w-5" />}
+      actions={
+        <Button variant="ghost" size="sm" onClick={handleBack} data-testid="button-back-profile">
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back
+        </Button>
+      }
+    />
+    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe space-y-4" data-testid="page-profile">
 
       <ProfileHeader
         profile={profile}
@@ -187,6 +217,7 @@ export default function ProfilePage() {
 
       <AccountSettings profile={profile} />
     </div>
+    </>
   );
 }
 

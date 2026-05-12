@@ -25,7 +25,7 @@ function parseMultiRaw(raw: string): string[] {
   return raw.split(",").map(v => v.trim()).filter(Boolean);
 }
 
-/** True when a catalogue item has both "type" and "flavour" selectors — uses the type→flavour pairing pattern. */
+/** True when a catalogue item has both "type" and "flavour" selectors - uses the type→flavour pairing pattern. */
 function hasTypeFlavourPattern(def: IngredientDef): boolean {
   return def.selectorSchema.some(s => s.key === "type") && def.selectorSchema.some(s => s.key === "flavour");
 }
@@ -350,7 +350,7 @@ export default function WholeFoodSelector({
         );
       })}
 
-      {/* Per-type flavour selector — shown for any type-flavour pattern item */}
+      {/* Per-type flavour selector - shown for any type-flavour pattern item */}
       {isTypeFlavourItem && firstTypeFlavourType && flavourSelectorDef && (
         <div className="flex items-center gap-1">
           <span className="text-[10.5px] text-muted-foreground/70">{flavourSelectorDef.label}:</span>

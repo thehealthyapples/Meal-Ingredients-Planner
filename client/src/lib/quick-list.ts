@@ -5,14 +5,14 @@
 const PENDING_LIST_KEY = "tha-pending-list-ingredients";
 
 export type PendingListPayload =
-  | string[]                                    // version 1 — plain ingredient names
-  | { version: 2; items: { productName: string; [k: string]: unknown }[] }; // version 2 — parsed
+  | string[]                                    // version 1 - plain ingredient names
+  | { version: 2; items: { productName: string; [k: string]: unknown }[] }; // version 2 - parsed
 
 export function writePendingIngredients(payload: PendingListPayload): void {
   try {
     localStorage.setItem(PENDING_LIST_KEY, JSON.stringify(payload));
   } catch {
-    // localStorage unavailable (private browse quota, etc.) — silently skip
+    // localStorage unavailable (private browse quota, etc.) - silently skip
   }
 }
 

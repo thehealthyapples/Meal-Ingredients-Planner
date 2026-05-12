@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store, Users, Wand2 } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store, Users, Wand2, Camera } from "lucide-react";
 import { CreateMealModal } from "@/components/create-meal-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -19,6 +19,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { TemplatesPanel } from "@/components/templates-panel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
+import { CameraModal } from "@/components/camera-modal";
+import { PlannerScanReview, type PlannerScanData, type PlannerDayEntry } from "@/components/PlannerScanReview";
 import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@/lib/nutrition-variety";
 import { getMealNutrients } from "@/lib/nutrition-insights";
 import { NutritionVarietyDots, PlannerVarietyLegend, MealVarietyNudge } from "@/components/nutrition-variety-chips";
@@ -33,6 +35,7 @@ import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutritio
 import type { HouseholdEater, GuestEater } from "@shared/household-eater";
 import type { AdaptationResult } from "@shared/meal-adaptation";
 import { ONBOARDING_DIET_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
+import { PageHeader } from "@/components/PageHeader";
 
 interface FullDay extends PlannerDay {
   entries: PlannerEntry[];
@@ -474,6 +477,15 @@ export default function WeeklyPlannerPage() {
   const [expandedExplanation, setExpandedExplanation] = useState<string | null>(null);
   const [applyingSmartPlan, setApplyingSmartPlan] = useState(false);
 
+  // Planner image scan state
+  const [plannerCameraOpen, setPlannerCameraOpen] = useState(false);
+  const [plannerScanOpen, setPlannerScanOpen] = useState(false);
+  const [plannerScanData, setPlannerScanData] = useState<PlannerScanData | null>(null);
+  const [plannerScanLoading, setPlannerScanLoading] = useState(false);
+  const [plannerScanError, setPlannerScanError] = useState<string | null>(null);
+  const plannerScanFileRef = useRef<HTMLInputElement>(null);
+  const plannerScanCancelledRef = useRef(false);
+
   // Product search within meal picker
   const [productQuery, setProductQuery] = useState("");
   const [productResults, setProductResults] = useState<PlannerProductResult[]>([]);
@@ -833,7 +845,7 @@ export default function WeeklyPlannerPage() {
   }, [categories]);
 
   const filteredMeals = useMemo(() => {
-    let result = meals;
+    let result = meals.filter(m => m.mealSourceType !== "planner-placeholder");
     if (pickerTarget) {
       if (pickerTarget.isDrink) {
         result = result.filter((m) => m.isDrink);
@@ -867,17 +879,27 @@ export default function WeeklyPlannerPage() {
         result = [...matching, ...rest];
       }
     }
+    if (mealFilter === "all") {
+      const nonReady = result.filter((m) => !m.isReadyMeal);
+      const ready = result.filter((m) => m.isReadyMeal);
+      result = [...nonReady, ...ready];
+    }
     return result.slice(0, 100);
   }, [meals, mealFilter, mealSearch, pickerTarget, categoryIdForSlot, plannerMealIdSet]);
 
   const bulkFilteredMeals = useMemo(() => {
-    let result = meals;
+    let result = meals.filter(m => m.mealSourceType !== "planner-placeholder");
     if (bulkMealFilter === "cookbook") result = result.filter((m) => !m.isReadyMeal && !m.isSystemMeal);
     else if (bulkMealFilter === "planner") result = result.filter((m) => plannerMealIdSet.has(m.id));
     else if (bulkMealFilter === "ready") result = result.filter((m) => m.isReadyMeal);
     if (bulkMealSearch.trim()) {
       const q = bulkMealSearch.toLowerCase();
       result = result.filter((m) => m.name.toLowerCase().includes(q));
+    }
+    if (bulkMealFilter === "all") {
+      const nonReady = result.filter((m) => !m.isReadyMeal);
+      const ready = result.filter((m) => m.isReadyMeal);
+      result = [...nonReady, ...ready];
     }
     return result.slice(0, 100);
   }, [meals, bulkMealFilter, bulkMealSearch, plannerMealIdSet]);
@@ -1270,6 +1292,62 @@ export default function WeeklyPlannerPage() {
 
   const activeWeekData = fullPlanner.find((w) => w.weekNumber === Number(activeWeek));
 
+  // Map active week's days to PlannerDayEntry for the scan review component
+  const plannerDays = useMemo((): PlannerDayEntry[] => {
+    return (activeWeekData?.days ?? []).map(d => ({
+      id: d.id,
+      dayOfWeek: d.dayOfWeek,
+      dayName: DAY_NAMES[d.dayOfWeek] ?? "Unknown",
+    }));
+  }, [activeWeekData]);
+
+  const handlePlannerScanFile = async (file: File) => {
+    plannerScanCancelledRef.current = false;
+    setPlannerScanData(null);
+    setPlannerScanError(null);
+    setPlannerScanLoading(true);
+    setPlannerScanOpen(true);
+
+    const scanId = Math.random().toString(36).slice(2, 10);
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("mode", "planner");
+
+    try {
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+        headers: { "X-Scan-Id": scanId },
+      });
+      if (plannerScanCancelledRef.current) return;
+      const data = await res.json();
+      if (plannerScanCancelledRef.current) return;
+      if (!res.ok) {
+        setPlannerScanError(data.message || "Scan failed.");
+      } else {
+        setPlannerScanData(data as PlannerScanData);
+      }
+    } catch {
+      if (!plannerScanCancelledRef.current) setPlannerScanError("Scan failed. Please try again.");
+    } finally {
+      if (!plannerScanCancelledRef.current) setPlannerScanLoading(false);
+      if (plannerScanFileRef.current) plannerScanFileRef.current.value = "";
+    }
+  };
+
+  const handlePlannerScanOpenChange = (open: boolean) => {
+    if (!open && plannerScanLoading) {
+      plannerScanCancelledRef.current = true;
+      setPlannerScanLoading(false);
+    }
+    setPlannerScanOpen(open);
+    if (!open) {
+      setPlannerScanData(null);
+      setPlannerScanError(null);
+    }
+  };
+
   const sortedDays = activeWeekData?.days?.slice().sort((a, b) => {
     const aIdx = MONDAY_FIRST_ORDER.indexOf(a.dayOfWeek);
     const bIdx = MONDAY_FIRST_ORDER.indexOf(b.dayOfWeek);
@@ -1324,24 +1402,15 @@ export default function WeeklyPlannerPage() {
   }
 
   return (
-    <div className="w-full px-3 py-6">
-      {/* ── Page Header ── */}
-      <FirstVisitHint
-        areaKey="planner"
-        message="Plan your meals for the week ahead. Add meals to each day, use templates to get started fast, or tap Plan to get suggestions — then send the whole week to your basket."
-      />
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-6">
-        <div className="flex-1 min-w-[160px]">
-          <h1 className="text-[28px] font-semibold tracking-tight flex items-center gap-2" data-testid="text-weekly-planner-title">
-            <CalendarDays className="h-6 w-6 text-primary" />
-            Planner
-          </h1>
-          <p className="text-sm text-muted-foreground mt-0.5" data-testid="text-week-progress">
-            {weekStats.filled} meals planned out of {weekStats.total} this week
-          </p>
-        </div>
+    <>
+    <PageHeader
+      title="Planner"
+      icon={<CalendarDays className="h-5 w-5" />}
+      realm="planner"
+      titleTestId="text-weekly-planner-title"
+      context={<span data-testid="text-week-progress">{weekStats.filled} meals planned out of {weekStats.total} this week</span>}
+      actions={
         <div className="flex flex-wrap items-center gap-1">
-          {/* Week chooser - left of Plan My Week */}
           {renameWeekId === activeWeekData?.id ? (
             <input
               value={renameValue}
@@ -1393,6 +1462,17 @@ export default function WeeklyPlannerPage() {
           <div className="h-4 w-px bg-border" />
           <Button
             size="sm"
+            variant="outline"
+            className="px-2.5 text-xs"
+            onClick={() => setPlannerCameraOpen(true)}
+            data-testid="button-planner-scan-primary"
+            title="Photograph your paper planner"
+          >
+            <Camera className="h-3 w-3 mr-1" />
+            Plan
+          </Button>
+          <Button
+            size="sm"
             className="px-2.5 text-xs"
             onClick={() => setSmartControlsOpen(!smartControlsOpen)}
             disabled={smartLoading}
@@ -1423,7 +1503,7 @@ export default function WeeklyPlannerPage() {
                 <img src={thaAppleSrc} alt="Menu" className="h-[60px] w-[60px] object-contain" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
+            <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuItem onClick={() => setSettingsOpen(true)} data-testid="button-planner-settings">
                 <Settings className="h-4 w-4 mr-2" />
                 Options
@@ -1449,7 +1529,13 @@ export default function WeeklyPlannerPage() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </div>
+      }
+    />
+    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+      <FirstVisitHint
+        areaKey="planner"
+        message="Plan your meals for the week ahead. Add meals to each day, use templates to get started fast, or tap Plan to get suggestions - then send the whole week to your basket."
+      />
 
       {/* ── Week Content ── */}
       <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full">
@@ -2201,7 +2287,7 @@ export default function WeeklyPlannerPage() {
                   {/* Tailor for household (Phase 3) */}
                   {(householdEaters.length > 1 || entryGuests.length > 0) && (
                     <div className="border border-border rounded-lg overflow-hidden">
-                      {/* Header row — always visible */}
+                      {/* Header row - always visible */}
                       <div className="flex items-center justify-between px-3 py-2 bg-muted/30">
                         <div className="flex items-center gap-2">
                           <Users className="h-3.5 w-3.5 text-muted-foreground" />
@@ -2225,7 +2311,7 @@ export default function WeeklyPlannerPage() {
                               <><Wand2 className="h-3 w-3 mr-1" />Tailor</>
                             )}
                           </Button>
-                          {/* Collapse toggle — shown only when result exists */}
+                          {/* Collapse toggle - shown only when result exists */}
                           {(entry.adaptationResult || adaptMutation.data) && !adaptMutation.isPending && (
                             <Button
                               variant="ghost"
@@ -2241,7 +2327,7 @@ export default function WeeklyPlannerPage() {
                         </div>
                       </div>
 
-                      {/* Result body — collapsed by default */}
+                      {/* Result body - collapsed by default */}
                       {(() => {
                         const result: AdaptationResult | null | undefined =
                           adaptMutation.data ?? (entry.adaptationResult as AdaptationResult | null);
@@ -2335,7 +2421,7 @@ export default function WeeklyPlannerPage() {
                       </div>
                     )}
 
-                    {/* Source URL — only for recipe-sourced meals, not shop-bought */}
+                    {/* Source URL - only for recipe-sourced meals, not shop-bought */}
                     {meal.sourceUrl && !meal.isReadyMeal && (
                       <div className="sm:col-span-2">
                         <a
@@ -2555,6 +2641,9 @@ export default function WeeklyPlannerPage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium truncate">{meal.name}</p>
                       <div className="flex items-center gap-1.5">
+                        {!meal.isReadyMeal && !meal.isSystemMeal && (
+                          <Badge variant="outline" className="text-xs border-blue-400/60 text-blue-500">Cookbook</Badge>
+                        )}
                         {meal.isReadyMeal && <Badge variant="outline" className="text-xs">Ready Meal</Badge>}
                         {meal.audience === "baby" && (
                           <Badge variant="outline" className="text-xs border-pink-400/60 text-pink-500">
@@ -2595,7 +2684,7 @@ export default function WeeklyPlannerPage() {
                 </div>
               )}
               {!productSearching && productResults.length === 0 && productQuery.trim() && (
-                <p className="text-center text-muted-foreground py-8 text-sm">No products found — try a different term</p>
+                <p className="text-center text-muted-foreground py-8 text-sm">No products found - try a different term</p>
               )}
               {!productSearching && productResults.map((product, i) => {
                 const stores = [
@@ -2637,7 +2726,7 @@ export default function WeeklyPlannerPage() {
                         </div>
                       </div>
                     </button>
-                    {/* Analyse link — opens Analyser with this product pre-searched */}
+                    {/* Analyse link - opens Analyser with this product pre-searched */}
                     <a
                       href={analyserUrl}
                       onClick={(e) => { e.stopPropagation(); setMealPickerOpen(false); }}
@@ -2889,6 +2978,31 @@ export default function WeeklyPlannerPage() {
 
       <SharePlanDialog open={sharePlanOpen} onOpenChange={setSharePlanOpen} />
 
+      {/* ── Planner Image Scan ── */}
+      <input
+        ref={plannerScanFileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) handlePlannerScanFile(f); }}
+        data-testid="input-planner-scan-file"
+      />
+      <CameraModal
+        open={plannerCameraOpen}
+        onOpenChange={setPlannerCameraOpen}
+        onCapture={handlePlannerScanFile}
+        onUploadInstead={() => plannerScanFileRef.current?.click()}
+      />
+      <PlannerScanReview
+        open={plannerScanOpen}
+        onOpenChange={handlePlannerScanOpenChange}
+        scanData={plannerScanData}
+        scanning={plannerScanLoading}
+        scanError={plannerScanError ?? undefined}
+        plannerDays={plannerDays}
+        onSaved={() => qc.invalidateQueries({ queryKey: ["/api/planner/full"] })}
+      />
+
       <Dialog open={smartDialogOpen} onOpenChange={(v) => { if (!v) setSmartDialogOpen(false); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-smart-suggest">
           <DialogHeader>
@@ -2985,5 +3099,6 @@ export default function WeeklyPlannerPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }

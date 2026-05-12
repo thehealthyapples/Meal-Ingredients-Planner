@@ -88,7 +88,7 @@ export function CameraModal({ open, onOpenChange, onCapture, onUploadInstead }: 
   const takePhoto = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    // Require valid frame dimensions — videoWidth/Height are 0 until the first frame arrives.
+    // Require valid frame dimensions - videoWidth/Height are 0 until the first frame arrives.
     if (!video || !canvas || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
 
     canvas.width = video.videoWidth;
@@ -97,8 +97,13 @@ export function CameraModal({ open, onOpenChange, onCapture, onUploadInstead }: 
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+    const t0 = performance.now();
+    console.log(`[recipe-scan-timing] capture-start frame=${canvas.width}x${canvas.height}`);
+
     canvas.toBlob(blob => {
       if (!blob) return;
+      const blobMs = Math.round(performance.now() - t0);
+      console.log(`[recipe-scan-timing] blob-ready duration=${blobMs}ms size=${blob.size}bytes`);
       const file = new File([blob], "scan-capture.jpg", { type: "image/jpeg" });
       const url = URL.createObjectURL(blob);
       setCapturedUrl(url);
@@ -154,7 +159,7 @@ export function CameraModal({ open, onOpenChange, onCapture, onUploadInstead }: 
 
         {/*
           flex-1 + min-h-0: fills remaining space between header and footer.
-          min-h-0 is essential — without it a flex child won't shrink below its content height.
+          min-h-0 is essential - without it a flex child won't shrink below its content height.
           The video/img use absolute inset-0 so they always fill this container exactly.
         */}
         <div className="relative bg-black flex-1 min-h-0 overflow-hidden" data-testid="container-camera-preview">

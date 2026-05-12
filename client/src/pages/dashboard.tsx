@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useUser } from "@/hooks/use-user";
+import { PageHeader } from "@/components/PageHeader";
 import { useMealsSummary } from "@/hooks/use-meals-summary";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,15 +12,15 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   Utensils, ShoppingBasket, Plus, ArrowRight,
-  CalendarDays, Leaf, CheckCircle2, Circle, Apple, Scale,
+  CalendarDays, CheckCircle2, Circle, Apple, Scale,
   Sparkles, Moon, Zap, Activity, Droplet, Heart, ClipboardCheck,
+  LayoutDashboard,
 } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import OrchardHero from "@/components/illustrations/orchard-hero";
 import AppleRating from "@/components/ui/apple-rating";
 import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
 import {
@@ -193,47 +194,28 @@ export default function Dashboard() {
   const displayName = user?.displayName || user?.username || "there";
 
   return (
+    <>
+    <PageHeader
+      realm="home"
+      title="Dashboard"
+      icon={<LayoutDashboard className="h-5 w-5" />}
+      context="Your health journey at a glance"
+      actions={
+        <div className="text-right" data-testid="text-welcome">
+          <p className="text-sm font-medium realm-title leading-snug">
+            {getGreeting()}, {displayName.split("@")[0]}
+          </p>
+          <p className="text-xs mt-0.5 realm-title opacity-60 leading-snug">
+            {mealsPlannedThisWeek > 0
+              ? `${mealsPlannedThisWeek} meal${mealsPlannedThisWeek !== 1 ? "s" : ""} planned this week · ${userMeals.length} in your collection`
+              : userMeals.length > 0
+                ? `${userMeals.length} meal${userMeals.length !== 1 ? "s" : ""} in your collection`
+                : "Start building your healthy meal collection"}
+          </p>
+        </div>
+      }
+    />
     <div>
-      {/* ── Hero ── */}
-      <div className="relative overflow-hidden">
-        <div
-          className="absolute inset-0"
-          style={{
-            background: `linear-gradient(160deg, hsl(132,22%,90%) 0%, hsl(118,19%,94%) 50%, hsl(var(--background)) 100%)`,
-          }}
-        />
-        <div className="absolute bottom-0 left-0 right-0 pointer-events-none" style={{ height: 90, opacity: 0.45 }}>
-          <OrchardHero />
-        </div>
-        <div className="relative z-10" style={{ padding: "var(--space-5) 0 56px" }}>
-          <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <Leaf className="h-3.5 w-3.5" style={{ color: GREEN_DEEP }} />
-              <span className="text-[10px] uppercase tracking-[0.12em]" style={{ color: GREEN_DEEP, opacity: 0.65 }}>
-                The Healthy Apples
-              </span>
-            </div>
-            <h1 className="title-page" data-testid="text-welcome" style={{ color: GREEN_DEEP }}>
-              {getGreeting()}, {displayName.split("@")[0]}
-            </h1>
-            <p className="text-sm mt-1" style={{ color: GREEN_MID }}>
-              {mealsPlannedThisWeek > 0
-                ? `${mealsPlannedThisWeek} meal${mealsPlannedThisWeek !== 1 ? "s" : ""} planned this week · ${userMeals.length} in your collection`
-                : userMeals.length > 0
-                  ? `${userMeals.length} meal${userMeals.length !== 1 ? "s" : ""} in your collection - ready to plan your week?`
-                  : "Start building your healthy meal collection"}
-            </p>
-          </motion.div>
-          </div>
-        </div>
-        <div className="relative z-10">
-          <svg viewBox="0 0 1440 24" fill="none" xmlns="http://www.w3.org/2000/svg"
-            className="w-full" preserveAspectRatio="none" style={{ height: 24, display: "block" }}>
-            <path d="M0 0C240 24 480 24 720 12C960 0 1200 0 1440 12V24H0V0Z" fill="hsl(var(--background))" />
-          </svg>
-        </div>
-      </div>
 
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
@@ -812,5 +794,6 @@ export default function Dashboard() {
         </DialogContent>
       </Dialog>
     </div>
+    </>
   );
 }

@@ -4,7 +4,6 @@ import { estimateFallbackPrice } from "@shared/price-estimates";
 import { getCanonicalKey } from "@shared/ingredient-aliases";
 import { Printer, X, CheckCircle2, Share2, ShoppingBag, Copy, Check, ArrowLeft, ArrowRight, Store, Pencil, Search, AlertTriangle, Plus, Minus, Trash2, Microscope } from "lucide-react";
 import { rankDisplayMatches, type RankingMode } from "@/lib/analyser-choice";
-import RankModeSelector from "@/components/RankModeSelector";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -91,7 +90,7 @@ interface ShoppingListViewProps {
   onRemoveItem?: (id: number) => void;
   /** Add a new item directly from within the view (e.g. from Check Cupboard). Persists to DB via resolver. */
   onAddItem?: (rawText: string, quantityValue?: number, basketLabel?: string | null) => Promise<void> | void;
-  /** Update the needed quantity for an item (quantityValue only — does not touch cupboardQuantity). */
+  /** Update the needed quantity for an item (quantityValue only - does not touch cupboardQuantity). */
   onUpdateItemQty?: (id: number, quantityValue: number) => void;
   /** Trigger store-scoped product matching for the currently selected store. */
   onMatchStore?: (store: string) => void;
@@ -99,7 +98,7 @@ interface ShoppingListViewProps {
   isMatchingPrices?: boolean;
   /** Open the product analyser for a specific item from within the shop view. */
   onAnalyse?: (item: SLItem) => void;
-  /** Shared ranking mode — lifted to parent so it persists across Quick List / Check Cupboard / Shop View. */
+  /** Shared ranking mode - lifted to parent so it persists across Quick List / Check Cupboard / Shop View. */
   rankMode?: RankingMode;
   /** Called when user changes ranking mode. */
   onRankModeChange?: (mode: RankingMode) => void;
@@ -107,11 +106,11 @@ interface ShoppingListViewProps {
   onVariantChange?: (id: number, key: string, value: string) => void;
   /** Save an attribute preference (organic, etc.) for a catalogue item. */
   onAttributeChange?: (id: number, key: string, value: boolean) => void;
-  /** Active source filter — shown as tabs when provided. */
+  /** Active source filter - shown as tabs when provided. */
   listFilter?: SourceFilter;
   /** Called when the user switches source filter tabs. */
   onListFilterChange?: (filter: SourceFilter) => void;
-  /** Clear items by source — "all" replaces the plain onClearBasket action. */
+  /** Clear items by source - "all" replaces the plain onClearBasket action. */
   onClearBySource?: (source: "all" | "planned" | "quick_list") => void;
   /** Persist partial cupboard quantity for an item (null = clear all underlying rows). */
   onUpdateCupboardQty?: (
@@ -119,6 +118,10 @@ interface ShoppingListViewProps {
     qty: number | null,
     ctx?: { allIds: number[]; allBasketLabels: (string | null)[]; allQuantities: (number | null)[] },
   ) => void;
+  /** Controlled phase driven from parent - if provided, parent drives phase transitions. */
+  targetPhase?: "cupboard_check" | "shopping";
+  /** Called when phase changes internally (e.g. "Head to shop"). */
+  onPhaseChange?: (phase: "cupboard_check" | "shopping") => void;
 }
 
 // ── Merged row context helpers ─────────────────────────────────────────────
@@ -187,7 +190,7 @@ function saveShopSession(session: ShopSession) {
   try { localStorage.setItem(SHOP_SESSION_KEY, JSON.stringify(session)); } catch {}
 }
 
-/** Read the most recent shop session — useful for future in-app reminder logic. */
+/** Read the most recent shop session - useful for future in-app reminder logic. */
 export function getLastShopSession(): ShopSession | null {
   try {
     const raw = localStorage.getItem(SHOP_SESSION_KEY);
@@ -197,7 +200,7 @@ export function getLastShopSession(): ShopSession | null {
 
 // ── THA picks key resolution ───────────────────────────────────────────────
 // Resolves a normalised item key to the best canonical THA picks key via a
-// four-step deterministic chain. Only affects THA picks display — price matches
+// four-step deterministic chain. Only affects THA picks display - price matches
 // are always looked up by item ID and are unaffected.
 //
 // Resolution order:
@@ -240,12 +243,12 @@ const THA_PICK_ALIASES: Record<string, string> = {
 
 // Canonical token map: each entry is [canonicalKey, tokens[]].
 // A token appearing as a WHOLE WORD in the singularised input triggers resolution.
-// Only specific, unambiguous food-identifying words are tokens — not generic
+// Only specific, unambiguous food-identifying words are tokens - not generic
 // modifiers ("white", "strong", "dark" alone are never tokens).
 // Overly broad words (cream, milk, butter) are intentionally excluded to prevent
 // false positives like "ice cream" → "cream" or "buttermilk" → "butter".
 const CANONICAL_TOKENS: Array<[string, string[]]> = [
-  // Cheese varieties — single-word identifiers specific enough to be safe
+  // Cheese varieties - single-word identifiers specific enough to be safe
   ["cheese",    ["cheese", "cheddar", "gruyere", "brie", "mozzarella", "parmesan",
                  "gouda", "edam", "camembert", "stilton", "ricotta", "feta"]],
   // These words are specific enough that false-positive risk is negligible
@@ -292,14 +295,14 @@ export function resolvePickKey(normalizedName: string): string {
     }
   }
 
-  // 5. Last-word safe fallback — catches "organic pasta", "strong white flour", etc.
+  // 5. Last-word safe fallback - catches "organic pasta", "strong white flour", etc.
   const lastWord = singular.split(' ').pop()!;
   if (SAFE_LAST_TOKENS.has(lastWord)) return lastWord;
 
   // 6. Return singularized form if it differs (e.g. "cherries"→"cherry")
   if (singular !== normalizedName) return singular;
 
-  // 7. Original key — resolveDisplayMatches fallback handles the rest
+  // 7. Original key - resolveDisplayMatches fallback handles the rest
   return normalizedName;
 }
 
@@ -383,12 +386,12 @@ function resolveDisplayMatches(
     result = rankDisplayMatches(merged, mode);
   }
 
-  // Whole foods are always 5 apples — no processing, no additives.
+  // Whole foods are always 5 apples - no processing, no additives.
   if (wholeFoodItem) return result.map(m => ({ ...m, thaRating: 5 }));
   return result;
 }
 
-// Compact apple rating: N THA apple logos inline — no text, no emoji
+// Compact apple rating: N THA apple logos inline - no text, no emoji
 function CompactRating({ rating }: { rating: number }) {
   const clamped = Math.max(1, Math.min(5, Math.round(rating || 1)));
   return (
@@ -549,7 +552,7 @@ const FRESH_HERBS = new Set([
 function getItemCatKey(category: string | null | undefined, name: string): string {
   const lowerName = name.toLowerCase();
 
-  // ── Name-based overrides (run before DB category — correct regardless of stored value) ──
+  // ── Name-based overrides (run before DB category - correct regardless of stored value) ──
 
   // Tinned/canned → pantry (must be first: "canned tomato" shouldn't be produce)
   if (/^(can |tin |tinned |canned )/.test(lowerName)) return "pantry";
@@ -749,6 +752,8 @@ export default function ShoppingListView({
   onClearBySource,
   onUpdateCupboardQty,
   onUpdateItemQty,
+  targetPhase,
+  onPhaseChange,
 }: ShoppingListViewProps) {
   const [notInShop, setNotInShop] = useState<Set<number>>(() => loadNotInShop());
   const [selectedSupermarket, setSelectedSupermarket] = useState<string>(initialStore ?? "Tesco");
@@ -766,6 +771,10 @@ export default function ShoppingListView({
     } catch {}
     return "cupboard_check";
   });
+  const changePhase = (next: "cupboard_check" | "shopping") => {
+    setPhase(next);
+    onPhaseChange?.(next);
+  };
   const [atHomeIds, setAtHomeIds] = useState<Set<number>>(new Set());
   const [productIndexMap, setProductIndexMap] = useState<Record<number, number>>({});
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
@@ -775,14 +784,14 @@ export default function ShoppingListView({
   const [reviewDismissed, setReviewDismissed] = useState<Set<number>>(new Set());
   const [reviewEditId, setReviewEditId] = useState<number | null>(null);
   const [reviewEditVal, setReviewEditVal] = useState<string>("");
-  // Cupboard partial-quantity state — lives at display layer, no DB writes for partials.
+  // Cupboard partial-quantity state - lives at display layer, no DB writes for partials.
   const [cupboardQty, setCupboardQty] = useState<Map<number, number>>(new Map());
   // Remaining-quantity overrides for shopping phase, computed at "head to shop".
   const [qtyOverrides, setQtyOverrides] = useState<Map<number, number>>(new Map());
   // Multi-select state for group umbrella terms (e.g. "berries").
   // Keyed by item.id → set of selected suggestion strings.
   const [multiSelections, setMultiSelections] = useState<Map<number, Set<string>>>(new Map());
-  // True while handleHeadToShop is committing pending selections — prevents double-tap.
+  // True while handleHeadToShop is committing pending selections - prevents double-tap.
   const [isCommitting, setIsCommitting] = useState(false);
   // Cupboard check: inline add-item input
   const [addingItem, setAddingItem] = useState(false);
@@ -809,7 +818,7 @@ export default function ShoppingListView({
   const scrollSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Ensures scroll is restored at most once per mount. */
   const scrollRestoredRef = useRef(false);
-  /** Latest items array — used in phase-save effect without making items a dependency. */
+  /** Latest items array - used in phase-save effect without making items a dependency. */
   const itemsRef = useRef(items);
   useEffect(() => { itemsRef.current = items; }, [items]);
 
@@ -820,6 +829,13 @@ export default function ShoppingListView({
   useEffect(() => {
     try { localStorage.setItem("tha-sl-shop-phase", phase); } catch {}
   }, [phase]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (targetPhase !== undefined && targetPhase !== phase) {
+      changePhase(targetPhase);
+    }
+  }, [targetPhase]);
 
   // Sync cupboardQty from DB-persisted values when items change.
   // Incremental: only initialises IDs not already in local state, so user-entered
@@ -843,7 +859,7 @@ export default function ShoppingListView({
   }, [items]);
 
   // Recompute qtyOverrides whenever the shopping phase is active and cupboardQty
-  // changes — handles both the fresh transition and the page-refresh restore path.
+  // changes - handles both the fresh transition and the page-refresh restore path.
   useEffect(() => {
     if (phase !== "shopping") return;
     const newOverrides = new Map<number, number>();
@@ -894,7 +910,7 @@ export default function ShoppingListView({
     const hasMulti = multiSelections.size > 0;
 
     // Items using the type→flavour pattern (crisps, pizza, …) with ≥1 type selected
-    // need splitting into separate basket items — one per type with its flavour resolved.
+    // need splitting into separate basket items - one per type with its flavour resolved.
     const typeFlavourSplitItems = items.filter(item => {
       const catDef = getIngredientDef(item.normalizedName ?? item.productName ?? "");
       if (!catDef) return false;
@@ -1051,7 +1067,7 @@ export default function ShoppingListView({
     }
     setQtyOverrides(newOverrides);
 
-    setPhase("shopping");
+    changePhase("shopping");
   }, [isCommitting, multiSelections, items, onAddItem, onRenameItem, onRemoveItem, cupboardQty]);
 
   const trackCycEvent = (eventType: "cyc_head_to_shop" | "cyc_skip") => {
@@ -1143,6 +1159,7 @@ export default function ShoppingListView({
 
   const needCount = totalItems - inBasketCount - notFoundCount;
   const allSorted = totalItems > 0 && needCount === 0;
+  const unresolvedCount = shoppingItems.filter(i => i.needsReview).length;
 
   // Legend visibility: true when ANY visible item is showing an estimated
   // (~£X.XX) price.  An item shows an estimate only when it has no real
@@ -1232,14 +1249,14 @@ export default function ShoppingListView({
           const est = estimateFallbackPrice(item.category, item.quantityValue, item.unit);
           pricingPart = est != null ? `~£${est.toFixed(2)}` : "No price yet";
         }
-        lines.push(`- ${capWords(item.productName)} — ${pricingPart} — ${stateLabel}`);
+        lines.push(`- ${capWords(item.productName)} - ${pricingPart} - ${stateLabel}`);
       }
       for (const extra of cat.extraItems) {
         const state = getExtraState(extra.id);
         const stateLabel =
           state === "in_basket" ? "In my basket" :
           state === "not_in_shop" ? "Get next time" : "To get";
-        lines.push(`- ${capWords(extra.name)} — ${stateLabel}`);
+        lines.push(`- ${capWords(extra.name)} - ${stateLabel}`);
       }
       lines.push("");
     }
@@ -1279,7 +1296,7 @@ export default function ShoppingListView({
     if (phase !== "shopping" || groupedCategories.length === 0) return;
     if (scrollRestoredRef.current) return;
     scrollRestoredRef.current = true;
-    // Double rAF: first fires after layout commit, second after paint — ensures
+    // Double rAF: first fires after layout commit, second after paint - ensures
     // DOM is ready before we attempt scrolling.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -1442,7 +1459,7 @@ export default function ShoppingListView({
         ) ?? null)
       : null;
 
-    // Whole foods are always 5 apples — the whole-food rule takes absolute priority.
+    // Whole foods are always 5 apples - the whole-food rule takes absolute priority.
     // Raw counts, product-match ratings, or DB values must never leak into this number.
     const itemIsWholeFood = isWholeFood(item);
     const effectiveRating: number | null = itemIsWholeFood
@@ -1624,7 +1641,7 @@ export default function ShoppingListView({
                     </button>
                   )}
                 </div>
-                {/* Change choice panel — shows current match + better-rated + cheaper alternatives */}
+                {/* Change choice panel - shows current match + better-rated + cheaper alternatives */}
                 {choiceOpenId === item.id && (
                   <div className="tha-print-hide mt-1.5 space-y-1">
                     {/* Current match */}
@@ -1678,7 +1695,7 @@ export default function ShoppingListView({
                           onClick={(e) => { e.stopPropagation(); onClose(); }}
                           className="text-[9px] text-primary/50 hover:text-primary transition-colors"
                         >
-                          Open in Basket →
+                          Open in Review →
                         </button>
                       )}
                       <button
@@ -1698,7 +1715,7 @@ export default function ShoppingListView({
                     <span
                       className="text-[11px] text-muted-foreground/55 italic tabular-nums"
                       data-testid={`text-estimate-${item.id}`}
-                      title="Estimated price — no real product matched"
+                      title="Estimated price - no real product matched"
                     >
                       ~£{itemEstimate.toFixed(2)}
                     </span>
@@ -1729,7 +1746,7 @@ export default function ShoppingListView({
             </>
           )}
         </div>
-        {/* Centre column: apple rating — prominent, vertically centred, separate from product text */}
+        {/* Centre column: apple rating - prominent, vertically centred, separate from product text */}
         {state === "need" && effectiveRating != null && (
           <div className="tha-print-hide flex-shrink-0 flex items-center justify-center">
             <CompactRating rating={effectiveRating} />
@@ -1809,18 +1826,13 @@ export default function ShoppingListView({
           No logo here - branding is handled by the header above.
       ─────────────────────────────────────────────────────────────────── */}
       <header
-        className="tha-print-hide relative z-20 flex-shrink-0 border-b border-border"
+        className="tha-print-hide relative z-20 flex-shrink-0"
+        style={{ borderBottom: "1px solid hsl(var(--border))", borderTop: "3px solid hsl(var(--basket-realm) / 0.55)" }}
       >
         <div className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-5 sm:py-3 max-w-3xl mx-auto">
-          {/* Left: title + progress */}
+          {/* Left: progress */}
           <div className="min-w-0">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h1
-                className="font-semibold text-[18px] sm:text-[20px] leading-tight text-foreground"
-                style={{ fontFamily: "var(--font-display)", letterSpacing: "-0.015em" }}
-              >
-                {phase === "cupboard_check" ? "Check your cupboards" : "Shop View"}
-              </h1>
+            <div className="flex items-center gap-2 flex-wrap">
               {totalItems > 0 && (
                 <span
                   className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-full"
@@ -1835,17 +1847,19 @@ export default function ShoppingListView({
                 </span>
               )}
             </div>
-            <p className="sm:hidden text-[11px] text-muted-foreground leading-tight">
+            <p className="text-[11px] text-muted-foreground leading-tight mt-0.5">
               {inBasketCount > 0 && `${inBasketCount} in basket`}
               {inBasketCount > 0 && notFoundCount > 0 && " · "}
               {notFoundCount > 0 && <span className="text-amber-600">{notFoundCount} not found</span>}
               {inBasketCount === 0 && notFoundCount === 0 && `${totalItems} items`}
+              {unresolvedCount > 0 && (
+                <span className="ml-1 text-amber-600 dark:text-amber-400"> · {unresolvedCount} to check</span>
+              )}
             </p>
           </div>
 
-          {/* Right: Supermarket picker + Rank mode + Print + Close */}
+          {/* Right: Supermarket picker + Done + Menu */}
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <RankModeSelector rankMode={rankMode} onChange={handleRankModeChange} />
             {phase === "shopping" && (
               <Select value={selectedSupermarket} onValueChange={handleStoreChange}>
                 <SelectTrigger className="h-8 text-xs bg-background/70 gap-1 pr-2" style={{ minWidth: 0, width: "auto" }}>
@@ -1870,27 +1884,6 @@ export default function ShoppingListView({
                 <span>Done here</span>
               </Button>
             )}
-            <div className="flex flex-col items-end justify-center gap-0.5 px-1">
-              <button
-                onClick={onClose}
-                className="flex items-center gap-1 text-xs font-medium text-foreground/80 hover:text-foreground transition-colors leading-none"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Back to basket</span>
-              </button>
-              {phase === "shopping" && (
-                <button
-                  onClick={() => {
-                    try { localStorage.setItem("tha-sl-shop-phase", "cupboard_check"); } catch {}
-                    setPhase("cupboard_check");
-                  }}
-                  className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground/60 transition-colors leading-none"
-                >
-                  <ArrowLeft className="h-2.5 w-2.5" />
-                  <span className="hidden sm:inline">Check your cupboards</span>
-                </button>
-              )}
-            </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center justify-center h-8 w-8 rounded-md transition-colors text-muted-foreground hover:bg-accent/60 hover:text-foreground">
@@ -2245,7 +2238,7 @@ export default function ShoppingListView({
                                     )}
                                   </div>
                                 </div>
-                                {/* Universal ambiguity picker — dropdown + removable tags + confirm */}
+                                {/* Universal ambiguity picker - dropdown + removable tags + confirm */}
                                 {isAmbiguous && suggestions.length > 0 && (() => {
                                   const selected = multiSelections.get(item.id) ?? new Set<string>();
                                   const available = suggestions.filter(s => !selected.has(s));
@@ -2343,7 +2336,7 @@ export default function ShoppingListView({
                     ? getIngredientDef(item.normalizedName ?? item.productName ?? "")
                     : undefined;
                   // Resolved items (e.g. "Granny Smith apples", "Pepperoni Thin Crust Pizza")
-                  // already encode a specific variety — suppress selectors for them.
+                  // already encode a specific variety - suppress selectors for them.
                   const isResolvedVariant = !!(cupboardCatDef && isResolvedVariantItem(
                     item.productName ?? item.normalizedName ?? "",
                     cupboardCatDef,
@@ -2357,7 +2350,7 @@ export default function ShoppingListView({
                     : {};
 
                   // Detect variant-mode: a multi selector with >1 value selected.
-                  // Excluded: type-flavour pattern items (crisps, pizza) — those use
+                  // Excluded: type-flavour pattern items (crisps, pizza) - those use
                   // the type→flavour split path, not the per-variety row path.
                   const isTypeFlavourItem = !!(cupboardCatDef &&
                     cupboardCatDef.selectorSchema.some(s => s.key === "type") &&
@@ -2394,7 +2387,7 @@ export default function ShoppingListView({
                           {displayName}
                         </span>
 
-                        {/* Quantity stepper — suppressed in variant-mode (qty lives inline per variety) */}
+                        {/* Quantity stepper - suppressed in variant-mode (qty lives inline per variety) */}
                         {!isVariantMode && (
                           <div className="flex items-center gap-0.5 flex-shrink-0" data-testid={`cyc-qty-stepper-${item.id}`}>
                             {!isAtHome && onUpdateItemQty ? (
@@ -2477,7 +2470,7 @@ export default function ShoppingListView({
                 })}
               </div>
 
-              {/* Add item row — persists to DB via onAddItem → resolver */}
+              {/* Add item row - persists to DB via onAddItem → resolver */}
               {onAddItem && (
                 <div className="border-t border-border/25 px-4 py-3">
                   {addingItem ? (
@@ -2549,7 +2542,7 @@ export default function ShoppingListView({
                       {isCommitting
                         ? "Saving…"
                         : checkedCount > 0
-                          ? `Done — ${checkedCount} item${checkedCount > 1 ? "s" : ""} checked`
+                          ? `Done - ${checkedCount} item${checkedCount > 1 ? "s" : ""} checked`
                           : "Head to the shop"}
                       {!isCommitting && <ArrowRight className="h-4 w-4" />}
                     </button>
@@ -2637,7 +2630,7 @@ export default function ShoppingListView({
                 style={{ background: "rgba(217,119,6,0.06)" }}
               >
                 <span className="text-[12px] font-semibold text-amber-700 dark:text-amber-400">
-                  Still needed — on your list for next time
+                  Still needed - on your list for next time
                 </span>
               </div>
               <div className="divide-y divide-border/20">
@@ -2702,7 +2695,7 @@ export default function ShoppingListView({
             className="flex-1 flex flex-col min-h-0 rounded-xl overflow-hidden"
             style={{ border: "1px solid hsl(var(--border) / 0.45)" }}
           >
-            {/* Pinned category header — lives outside the scroll container so items can never pass under it */}
+            {/* Pinned category header - lives outside the scroll container so items can never pass under it */}
             {activeCat && (() => {
               const { total: hTotal, got: hGot, allDone: hDone } = getCatProgress(activeCat);
               return (
@@ -2739,7 +2732,7 @@ export default function ShoppingListView({
               );
             })()}
 
-            {/* Scrollable items — sections flow in normal document order, no sticky inside */}
+            {/* Scrollable items - sections flow in normal document order, no sticky inside */}
             <div
               ref={itemsScrollRef}
               className="flex-1 min-h-0 overflow-y-auto"
@@ -2756,7 +2749,7 @@ export default function ShoppingListView({
                       else sectionRefs.current.delete(cat.key);
                     }}
                   >
-                    {/* Items in this category — soft-grouped by source priority */}
+                    {/* Items in this category - soft-grouped by source priority */}
                     <div className="divide-y divide-border/25">
                       {[...cat.savedItems]
                         .sort((a, b) => sourcePriority(a as any) - sourcePriority(b as any))
@@ -2767,7 +2760,7 @@ export default function ShoppingListView({
                 );
               })}
 
-              {/* Estimated-price legend — only shown when at least one visible
+              {/* Estimated-price legend - only shown when at least one visible
                   item is currently displaying a "~£X.XX" estimated price. */}
               {hasAnyEstimate && (
                 <div
@@ -2787,7 +2780,7 @@ export default function ShoppingListView({
                 >
                   <p className="font-medium text-sm text-primary" style={{ fontFamily: "var(--font-display)" }}>
                     {notFoundCount > 0
-                      ? `Almost there — ${notFoundCount} item${notFoundCount > 1 ? "s" : ""} not found`
+                      ? `Almost there - ${notFoundCount} item${notFoundCount > 1 ? "s" : ""} not found`
                       : "All sorted! Happy shopping 🌿"}
                   </p>
                   {!shopSession && (

@@ -3,7 +3,7 @@ import { X } from "lucide-react";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 
 interface FirstVisitHintProps {
-  /** Unique key for this area — used to persist dismissed state in localStorage */
+  /** Unique key for this area - used to persist dismissed state in localStorage */
   areaKey: string;
   /** The hint message to display */
   message: string;
@@ -24,7 +24,7 @@ export function FirstVisitHint({ areaKey, message, className }: FirstVisitHintPr
       const seen = localStorage.getItem(storageKey);
       if (!seen) setVisible(true);
     } catch {
-      // localStorage unavailable — silently skip
+      // localStorage unavailable - silently skip
     }
   }, [storageKey]);
 

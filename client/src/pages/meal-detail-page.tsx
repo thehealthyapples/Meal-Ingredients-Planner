@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingBasket, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, AlarmClock, ListPlus } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { appendPendingIngredient } from "@/lib/quick-list";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { useToast } from "@/hooks/use-toast";
@@ -277,7 +278,7 @@ export default function MealDetailPage() {
       toast({ title: "Added to basket", description: meal!.name });
     },
     onError: () => {
-      toast({ title: "Couldn't add to basket", description: "Something went wrong — try again", variant: "destructive" });
+      toast({ title: "Couldn't add to basket", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
 
@@ -358,7 +359,7 @@ export default function MealDetailPage() {
 
   if (!meal) {
     return (
-      <div className="container max-w-4xl mx-auto px-4 py-8" data-testid="meal-not-found">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8" data-testid="meal-not-found">
         <p className="text-muted-foreground text-center">Meal not found.</p>
         <Button variant="outline" className="mx-auto mt-4 block" onClick={() => navigate("/cookbook")} data-testid="button-back-to-meals">
           Back to Meals
@@ -380,15 +381,24 @@ export default function MealDetailPage() {
   const groupedSources = isGrouped ? decodeGroupedSources(instructions) : null;
 
   return (
+    <>
+    <PageHeader
+      realm="cookbook"
+      title={isEditedCopy ? editName : meal.name}
+      icon={<ChefHat className="h-5 w-5" />}
+      actions={
+        <Button variant="ghost" size="sm" onClick={() => navigate("/cookbook")} data-testid="button-back">
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Cookbook
+        </Button>
+      }
+    />
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="container max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+      className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe"
     >
       <div className="flex items-center gap-3 mb-6">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/cookbook")} data-testid="button-back">
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
         {isEditedCopy ? (
           <Input
             value={editName}
@@ -1043,5 +1053,6 @@ export default function MealDetailPage() {
         </DialogContent>
       </Dialog>
     </motion.div>
+    </>
   );
 }

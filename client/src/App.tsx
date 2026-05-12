@@ -82,7 +82,7 @@ function HomeRoute() {
   const { user, isLoading } = useUser();
 
   // isPending (not isLoading) so the spinner shows even on the tick before the
-  // fetch starts — isLoading is false in TanStack Query v5 until isFetching=true.
+  // fetch starts - isLoading is false in TanStack Query v5 until isFetching=true.
   const { data: routingData, isPending: isLoadingRoute } = useQuery<{ route: string }>({
     queryKey: ["/api/routing"],
     enabled: !!user && !!user.onboardingCompleted,
@@ -202,14 +202,14 @@ const LOCAL_VERSION = (window as any).__APP_VERSION__ || "unknown";
 
 function App() {
   useEffect(() => {
-    // Skip when injection failed — a missing LOCAL_VERSION must not trigger
+    // Skip when injection failed - a missing LOCAL_VERSION must not trigger
     // a reload, or it would loop forever if __APP_VERSION__ is never set.
     if (LOCAL_VERSION === "unknown") return;
     fetch('/api/version')
       .then(res => res.json())
       .then(({ version }) => {
         if (version !== LOCAL_VERSION) {
-          console.log('Version mismatch detected — reloading app');
+          console.log('Version mismatch detected - reloading app');
           window.location.reload();
         }
       })

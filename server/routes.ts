@@ -17,6 +17,7 @@ import { analyzeProductUPF, buildTHAExplanation } from "./lib/upf-analysis-servi
 import { isWholeFoodIngredient } from "./lib/smp-rating-service";
 import { createBasket, getBasketSupermarkets } from "./lib/supermarket-basket-service";
 import { generateSmartSuggestion, type SmartSuggestSettings, type LockedEntry } from "./lib/smart-suggest-service";
+import { rankMealsByIngredients } from "./lib/smart-meal-creation-engine";
 import { searchAllRecipes, searchJamieOliver, searchSeriousEats, searchEdamam, searchApiNinjas, searchBigOven, searchFatSecret, type ExternalMealCandidate } from "./lib/external-meal-service";
 import { seedSourceSettings, isSourceCallable, getSourceKeyForUrl, logAuditEvent, getAllSourceSettings, updateSourceSettings, getAuditLogs } from "./lib/recipe-source-gate";
 import { shouldExcludeRecipe, scoreRecipeForDiet } from "./lib/dietRules";
@@ -39,8 +40,9 @@ import { getHouseholdForUser } from "./lib/household";
 import { pool } from "./db";
 import { SAVINGS_RATES } from "./lib/savings-config";
 import multer from "multer";
-import { extractTextFromImage, OcrError } from "./services/ocr";
-import { parseScannedText } from "./services/recipeParser";
+
+import { extractDestination, type ScanMode, type ExtractionMethod, type ExtractionConfidence } from "./services/recipeParser";
+import { saveMediaFile, deleteMediaFile } from "./lib/media-storage";
 import { isLikelyNonEnglishIngredients, hasEnglishIngredients } from "./lib/ingredient-language";
 import { logProductEvent, extractDomain } from "./lib/product-event-logger";
 import { EventTypes, CLIENT_TRACKABLE_EVENTS } from "@shared/product-events";
@@ -1316,6 +1318,123 @@ export async function registerRoutes(
         : "We couldn't generate an image right now. Try again.";
       res.status(500).json({ message: msg });
     }
+  });
+
+  // ── Meal image management ────────────────────────────────────────────────────
+
+  // Infer MIME type from filename extension (used when iOS sends empty mimetype).
+  function inferMimeFromFilename(name: string): string | null {
+    const ext = (name.split(".").pop() ?? "").toLowerCase();
+    switch (ext) {
+      case "jpg":
+      case "jpeg": return "image/jpeg";
+      case "png":  return "image/png";
+      case "webp": return "image/webp";
+      case "heic": return "image/heic";
+      case "heif": return "image/heif";
+      default:     return null;
+    }
+  }
+
+  // Multer for user-uploaded meal photos (separate from barcode/recipe scan).
+  // Limit is 15 MB to accommodate uncompressed originals on the compression-
+  // fallback path (the client tries to compress first; falls back if it fails).
+  // We do NOT rely solely on file.mimetype — iOS often sends empty string.
+  const photoUpload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB — covers uncompressed originals
+    fileFilter: (_req, file, cb) => {
+      const displayable = ["image/jpeg", "image/png", "image/webp"];
+      const heic        = ["image/heic", "image/heif"];
+
+      // Resolve effective type: prefer stated mimetype, fall back to filename.
+      const effective = file.mimetype || inferMimeFromFilename(file.originalname) || "";
+
+      if (displayable.includes(effective)) {
+        cb(null, true);
+      } else if (heic.includes(effective)) {
+        // HEIC can't be displayed by most browsers; reject with a helpful message.
+        cb(new Error("HEIC_NOT_SUPPORTED"));
+      } else if (!file.mimetype && effective === "") {
+        // Completely unknown — still let it through; handler will re-validate
+        // using file magic if needed, or save as JPEG (safe default for iOS).
+        cb(null, true);
+      } else {
+        cb(new Error("INVALID_TYPE"));
+      }
+    },
+  });
+
+  // POST /api/media/upload — upload a meal display photo, return its URL.
+  // This endpoint is for display images only; it has no effect on recipe parsing.
+  // Multer is invoked manually so we can return JSON errors instead of relying
+  // on the global Express error handler (which would return plain text).
+  app.post("/api/media/upload", (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    photoUpload.single("image")(req, res, async (multerErr: any) => {
+      if (multerErr) {
+        if (multerErr.message === "HEIC_NOT_SUPPORTED") {
+          return res.status(415).json({
+            message:
+              "This photo format is not supported yet. Please choose a JPEG/PNG photo " +
+              "or take a new photo using 'Most Compatible' camera settings.",
+          });
+        }
+        if (multerErr.code === "LIMIT_FILE_SIZE") {
+          return res.status(413).json({ message: "Image is too large. Please choose a photo under 15 MB." });
+        }
+        return res.status(415).json({ message: "Invalid file type. Please upload a JPEG, PNG, or WebP image." });
+      }
+
+      if (!req.file) return res.status(400).json({ message: "No image provided." });
+
+      // Normalise the MIME type — iOS sometimes delivers valid JPEGs with empty mimetype.
+      const effectiveMime =
+        req.file.mimetype ||
+        inferMimeFromFilename(req.file.originalname) ||
+        "image/jpeg";
+
+      console.log(
+        `[media-upload] file: originalname="${req.file.originalname}" ` +
+        `mimetype="${req.file.mimetype}" effective="${effectiveMime}" ` +
+        `size=${req.file.size}B userId=${(req as any).user?.id}`
+      );
+
+      try {
+        const url = await saveMediaFile(req.file.buffer, effectiveMime, (req as any).user!.id);
+        return res.json({ url });
+      } catch (err) {
+        console.error("[media-upload] save error:", err);
+        return res.status(500).json({ message: "Failed to save image. Please try again." });
+      }
+    });
+  });
+
+  // PATCH /api/meals/:id/image — set or clear a meal's display image URL.
+  // Accepts { imageUrl: string | null }.  Deletes the previous locally-uploaded
+  // file when the URL changes, if applicable.
+  app.patch("/api/meals/:id/image", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const mealId = Number(req.params.id);
+    if (!Number.isFinite(mealId)) return res.status(400).json({ message: "Invalid meal id." });
+
+    const meal = await storage.getMeal(mealId);
+    if (!meal || meal.userId !== req.user!.id) {
+      return res.status(404).json({ message: "Meal not found." });
+    }
+
+    const { imageUrl } = req.body;
+    if (imageUrl !== null && imageUrl !== undefined && typeof imageUrl !== "string") {
+      return res.status(400).json({ message: "imageUrl must be a string or null." });
+    }
+
+    // Delete the previous locally-uploaded file if being replaced or removed.
+    await deleteMediaFile(meal.imageUrl);
+
+    const updated = await storage.updateMealImageUrl(mealId, imageUrl ?? null);
+    return res.json(updated);
   });
 
   app.patch(api.meals.reimportInstructions.path, async (req, res) => {
@@ -6972,32 +7091,38 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       next();
     });
   }, async (req, res) => {
+    const t_server = Date.now();
+    const scanId = (req.headers["x-scan-id"] as string | undefined) || Math.random().toString(36).slice(2, 10);
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No image file provided." });
       }
 
-      let rawText: string;
-      try {
-        rawText = await extractTextFromImage(req.file.buffer);
-      } catch (err) {
-        if (err instanceof OcrError) {
-          return res.status(422).json({
-            rawText: "",
-            error: "OCR_FAILED",
-            message: "We couldn't read that image clearly. Try a brighter, sharper photo.",
-          });
-        }
-        throw err;
+      // Validate mode — default to "recipe" for backward compat with existing clients.
+      const rawMode = (req.body?.mode as string | undefined) ?? "recipe";
+      const VALID_MODES: ScanMode[] = ["shopping_list", "recipe", "planner"];
+      if (!VALID_MODES.includes(rawMode as ScanMode)) {
+        return res.status(400).json({ error: "INVALID_MODE", message: `mode must be one of: ${VALID_MODES.join(", ")}` });
+      }
+      const mode = rawMode as ScanMode;
+
+      console.log(`[scan-timing] server-received scanId=${scanId} mode=${mode} fileSize=${req.file.buffer.length}bytes mimeType=${req.file.mimetype}`);
+
+      const { result: parsed, parsedBy, confidence, warnings, rawText } = await extractDestination(
+        req.file.buffer,
+        mode,
+        req.file.mimetype
+      );
+
+      if (parsedBy === "failed") {
+        console.warn(`[Scan] mode=${mode} scanId=${scanId} extraction failed — returning rawText only`);
       }
 
-      const { result: parsed, parsedBy } = await parseScannedText(rawText);
-      if (parsedBy === "heuristic") {
-        console.warn("[Scan] AI unavailable or failed — result parsed by heuristic fallback");
-      }
-      res.json({ rawText, parsed, parsedBy });
+      const totalMs = Date.now() - t_server;
+      console.log(`[scan-timing] response-sent scanId=${scanId} mode=${mode} parsedBy=${parsedBy} confidence=${confidence} totalServer=${totalMs}ms`);
+      res.json({ mode, rawText, parsed, parsedBy, confidence, warnings });
     } catch (err) {
-      console.error("[Scan] Error:", err);
+      console.error(`[recipe-scan-timing] server-error scanId=${scanId} elapsed=${Date.now() - t_server}ms`, err);
       res.status(500).json({ message: "Scan failed unexpectedly. Please try again." });
     }
   });
@@ -8052,6 +8177,62 @@ Generate a complete recipe using these as the foundation.`;
       console.error("[generate-recipe-from-suggestion]", err);
       res.status(500).json({ message: "Failed to generate recipe" });
     }
+  });
+
+  // ── Smart Meal Creation from Ingredients ─────────────────────────────────
+
+  app.post("/api/meals/smart-create-from-ingredients", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    let rawIngredients: string[];
+    let cupboardsBare: boolean;
+    try {
+      ({ ingredients: rawIngredients, cupboardsBare = false } = z.object({
+        ingredients: z.array(z.string().trim().min(1).max(200)).min(1).max(50),
+        cupboardsBare: z.boolean().optional().default(false),
+      }).parse(req.body));
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return res.status(400).json({ message: err.errors[0]?.message ?? "Invalid request" });
+      }
+      throw err;
+    }
+
+    // Deduplicate: keep first occurrence per normalised key (case-insensitive + trimmed)
+    const seen = new Set<string>();
+    const ingredients = rawIngredients
+      .map(s => s.trim())
+      .filter(s => {
+        const key = normalizeIngredientKey(s);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+    const [userMeals, systemMeals] = await Promise.all([
+      storage.getMeals(req.user!.id),
+      storage.getSystemMeals(),
+    ]);
+
+    const ranked = rankMealsByIngredients(
+      [...userMeals, ...systemMeals],
+      ingredients,
+      cupboardsBare,
+    );
+
+    const DRINK_KEYWORDS = ['drink', 'cola', 'juice', 'smoothie', 'shake', 'soda', 'water', 'tea'];
+    const drinkPattern = new RegExp(`\\b(${DRINK_KEYWORDS.join('|')})\\b`, 'i');
+    const filtered = ranked.filter(({ meal }) => !drinkPattern.test(meal.name));
+
+    res.json(
+      filtered.map(({ meal, score, primaryMatches, stapleMatches }) => ({
+        id: meal.id,
+        name: meal.name,
+        score,
+        primaryMatches,
+        stapleMatches,
+      }))
+    );
   });
 
   // ── Ingredient Classifications — Admin Review System ──────────────────────

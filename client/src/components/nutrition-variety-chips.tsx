@@ -64,7 +64,7 @@ const CATEGORIES: CategoryDef[] = [
   },
 ];
 
-// ── Tiny dot row — used inside compact planner meal entries ──────────────────
+// ── Tiny dot row - used inside compact planner meal entries ──────────────────
 
 export function NutritionVarietyDots({ score }: { score: VarietyScore }) {
   if (score.total === 0) return null;
@@ -86,7 +86,7 @@ export function NutritionVarietyDots({ score }: { score: VarietyScore }) {
   );
 }
 
-// ── Planner legend — one static row above the grid ───────────────────────────
+// ── Planner legend - one static row above the grid ───────────────────────────
 
 export function PlannerVarietyLegend() {
   return (
@@ -111,7 +111,7 @@ export function PlannerVarietyLegend() {
   );
 }
 
-// ── Meal-level variety nudge — one soft line per meal ────────────────────────
+// ── Meal-level variety nudge - one soft line per meal ────────────────────────
 
 const FALLBACKS: Record<string, string[]> = {
   vegetables: ["spinach", "cherry tomatoes", "courgette", "cucumber", "sweet potato"],
@@ -147,7 +147,7 @@ export function MealVarietyNudge({
   } else if (score.vegetables === 0) {
     const suggestion = findPantryItemForCategory(pantryItems, "vegetables");
     text = suggestion
-      ? `Adding vegetables would boost variety — ${suggestion} could work well here.`
+      ? `Adding vegetables would boost variety - ${suggestion} could work well here.`
       : "Adding vegetables would boost variety in this meal.";
   } else if (score.wholeGrains === 0 && score.herbsSpices === 0) {
     text = "Try adding herbs or whole grains to mix things up.";
@@ -172,7 +172,7 @@ export function MealVarietyNudge({
   );
 }
 
-// ── Day-level variety summary — category chips with soft secondary context ────
+// ── Day-level variety summary - category chips with soft secondary context ────
 
 export function DayVarietySummary({
   score,

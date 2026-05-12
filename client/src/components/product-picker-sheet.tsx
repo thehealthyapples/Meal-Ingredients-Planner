@@ -28,7 +28,7 @@ export interface PickerProduct {
 interface ProductPickerSheetProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  /** Pre-filled search term — the component name the user just typed */
+  /** Pre-filled search term - the component name the user just typed */
   initialQuery: string;
   /** Called when user taps "Add" on a result */
   onSelect: (product: PickerProduct) => void;

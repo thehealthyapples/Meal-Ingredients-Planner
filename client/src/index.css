@@ -59,6 +59,19 @@
   --orchard-opacity: 0.72;
   --orchard-sidebar-opacity: 0.65;
   --orchard-parallax-strength: 10px;
+
+  /* Basket realm identity — shared across Review and Shopping Assistant modes */
+  --basket-realm:         26 17% 38%;
+  --basket-realm-subtle:  26 17% 38%;
+
+  /* Shared page layout system */
+  --topbar-h: 60px; /* mobile: h-14 (56px) + py-0.5 (4px) */
+}
+
+@media (min-width: 768px) {
+  :root {
+    --topbar-h: 44px; /* desktop: h-10 buttons (40px) + py-0.5 (4px) */
+  }
 }
 
 .dark {
@@ -104,6 +117,10 @@
   --orchard-opacity: 0.18;
   --orchard-sidebar-opacity: 0.28;
   --orchard-parallax-strength: 6px;
+
+  /* Basket realm identity — slightly lighter in dark mode */
+  --basket-realm:         26 17% 52%;
+  --basket-realm-subtle:  26 17% 52%;
 }
 
 @layer base {
@@ -124,6 +141,131 @@
     outline: 2px solid hsl(var(--primary) / 0.35);
     outline-offset: 2px;
   }
+}
+
+/* ── Realm colour system ─────────────────────────────────────────────────── */
+
+/*
+  Each realm defines four variables:
+  --realm-accent  primary accent colour (icons, highlights)
+  --realm-text    primary text colour (titles)
+  --realm-bg      softly shaded header background
+  --realm-border  header bottom border
+*/
+
+/* Light mode */
+[data-realm="cookbook"] {
+  --realm-accent: hsl(38,55%,45%);
+  --realm-text:   hsl(38,65%,18%);
+  --realm-bg:     hsl(38,42%,91%);
+  --realm-border: hsl(38,36%,82%);
+}
+[data-realm="planner"] {
+  --realm-accent: hsl(172,35%,38%);
+  --realm-text:   hsl(172,38%,18%);
+  --realm-bg:     hsl(172,28%,89%);
+  --realm-border: hsl(172,22%,80%);
+}
+[data-realm="pantry"] {
+  --realm-accent: hsl(118,30%,38%);
+  --realm-text:   hsl(118,32%,18%);
+  --realm-bg:     hsl(118,22%,90%);
+  --realm-border: hsl(118,18%,81%);
+}
+[data-realm="analyser"] {
+  --realm-accent: hsl(74,30%,38%);
+  --realm-text:   hsl(74,32%,18%);
+  --realm-bg:     hsl(74,22%,91%);
+  --realm-border: hsl(74,18%,82%);
+}
+[data-realm="diary"] {
+  --realm-accent: hsl(348,45%,40%);
+  --realm-text:   hsl(348,48%,20%);
+  --realm-bg:     hsl(348,28%,92%);
+  --realm-border: hsl(348,22%,83%);
+}
+[data-realm="basket"] {
+  --realm-accent: hsl(26,22%,40%);
+  --realm-text:   hsl(26,24%,20%);
+  --realm-bg:     hsl(26,20%,91%);
+  --realm-border: hsl(26,16%,82%);
+}
+[data-realm="list"] {
+  --realm-accent: hsl(95,38%,38%);
+  --realm-text:   hsl(95,40%,18%);
+  --realm-bg:     hsl(95,28%,90%);
+  --realm-border: hsl(95,22%,81%);
+}
+[data-realm="home"] {
+  --realm-accent: hsl(132,14%,44%);
+  --realm-text:   hsl(132,16%,18%);
+  --realm-bg:     hsl(132,18%,91%);
+  --realm-border: hsl(132,14%,82%);
+}
+
+/* Dark mode */
+.dark [data-realm="cookbook"] {
+  --realm-accent: hsl(38,55%,62%);
+  --realm-text:   hsl(38,55%,82%);
+  --realm-bg:     hsl(38,20%,14%);
+  --realm-border: hsl(38,18%,21%);
+}
+.dark [data-realm="planner"] {
+  --realm-accent: hsl(172,30%,56%);
+  --realm-text:   hsl(172,30%,76%);
+  --realm-bg:     hsl(172,14%,13%);
+  --realm-border: hsl(172,12%,20%);
+}
+.dark [data-realm="pantry"] {
+  --realm-accent: hsl(118,26%,54%);
+  --realm-text:   hsl(118,26%,74%);
+  --realm-bg:     hsl(118,14%,13%);
+  --realm-border: hsl(118,12%,20%);
+}
+.dark [data-realm="analyser"] {
+  --realm-accent: hsl(74,25%,54%);
+  --realm-text:   hsl(74,25%,74%);
+  --realm-bg:     hsl(74,12%,13%);
+  --realm-border: hsl(74,10%,20%);
+}
+.dark [data-realm="diary"] {
+  --realm-accent: hsl(348,35%,60%);
+  --realm-text:   hsl(348,35%,76%);
+  --realm-bg:     hsl(348,16%,13%);
+  --realm-border: hsl(348,14%,20%);
+}
+.dark [data-realm="basket"] {
+  --realm-accent: hsl(26,17%,60%);
+  --realm-text:   hsl(26,17%,72%);
+  --realm-bg:     hsl(26,12%,13%);
+  --realm-border: hsl(26,10%,20%);
+}
+.dark [data-realm="list"] {
+  --realm-accent: hsl(95,30%,54%);
+  --realm-text:   hsl(95,30%,74%);
+  --realm-bg:     hsl(95,16%,13%);
+  --realm-border: hsl(95,12%,20%);
+}
+.dark [data-realm="home"] {
+  --realm-accent: hsl(132,14%,52%);
+  --realm-text:   hsl(132,14%,72%);
+  --realm-bg:     hsl(132,10%,13%);
+  --realm-border: hsl(132,8%,20%);
+}
+
+/* Realm title colour */
+.realm-title { color: var(--realm-text); }
+
+/* Realm header shaded zone */
+.realm-header-bg     { background-color: var(--realm-bg); }
+.realm-header-border { border-color: var(--realm-border); }
+
+/* ── Shared sticky page header ───────────────────────────────────────────── */
+
+.page-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
 }
 
 @layer utilities {
@@ -233,6 +375,26 @@
   background-color: hsl(var(--card));
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+}
+
+/* ── Global print protection ─────────────────────────────────────────────── */
+@media print {
+  /* Hide global navigation chrome */
+  [data-testid="top-nav-bar"],
+  [data-testid="desktop-sidebar"],
+  [data-testid="mobile-bottom-nav"] {
+    display: none !important;
+  }
+
+  /* Sticky page headers render as normal document flow in print */
+  .page-sticky-header {
+    position: static !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: #f9fafb !important;
+    border-bottom: 1px solid #d1d5db !important;
+  }
 }
 
 /* ── Shopping List Print View ── */

@@ -1,0 +1,365 @@
+You are now implementing the FIRST post-investigation refinement pass for The Healthy Apples planner image-import system.
+
+IMPORTANT
+This branch is STRICTLY limited to:
+
+1. token-budget improvements
+2. trust/transparency improvements
+3. omission visibility improvements
+
+DO NOT implement:
+
+* full region-aware segmentation architecture
+* household learning
+* handwriting memory
+* recipe enrichment
+* cookbook workflows
+* planner AI interpretation layers
+* schema redesigns
+
+This is a focused stabilisation pass only.
+
+RISK CLASSIFICATION
+🔴 RED — AI extraction/trust behaviour
+
+BACKGROUND
+Investigation identified that the current planner import system is fundamentally sound, but suffers from:
+
+1. 2000-token ceiling causing silent truncation
+2. lunches/shopping/notes disappearing
+3. invisible omissions
+4. rawText appearing “complete” when truncated
+5. lack of visibility into unparsed content
+
+The goal now is:
+preserve more document truth
+WITHOUT introducing major architectural complexity.
+
+PRIMARY GOAL
+Move the planner import system from:
+“AI decides what matters”
+
+toward:
+“AI preserves and transparently interprets what it found.”
+
+APPROVED IMPLEMENTATION SCOPE
+
+ONLY implement:
+A. token budget increase
+B. truncation visibility
+C. visible region summaries
+D. “also found” / residual-content review UX
+
+NO OTHER ARCHITECTURE CHANGES.
+
+---
+
+## PART 1 — TOKEN BUDGET INCREASE
+
+Increase planner vision extraction token budget.
+
+Current:
+max_tokens: 2000
+
+Increase to:
+max_tokens: 4096
+
+IMPORTANT
+This applies ONLY to planner image-import vision extraction.
+
+DO NOT globally change unrelated OpenAI calls.
+
+GOAL
+Allow:
+
+* lunches
+* shopping lists
+* notes
+* rawText
+  to coexist without silent truncation.
+
+---
+
+## PART 2 — TRUNCATION DETECTION
+
+Implement basic truncation-awareness heuristics.
+
+CURRENT PROBLEM
+rawText may silently truncate while appearing complete.
+
+Add detection heuristics such as:
+
+* suspiciously short rawText
+* missing shopping section despite dense document
+* incomplete array endings
+* region count mismatch
+* abrupt rawText termination
+
+If truncation is suspected:
+emit warning state.
+
+IMPORTANT
+Do NOT fabricate certainty about truncation.
+
+Use language like:
+“Scan may be incomplete”
+“Some document sections may not have been fully captured”
+
+NOT:
+“The AI failed”
+
+---
+
+## PART 3 — REGION VISIBILITY
+
+Without implementing full region-aware extraction architecture:
+
+Add lightweight visible region summaries.
+
+Goal:
+show users what the AI believes it detected on the page.
+
+Examples:
+
+* Planner meals detected
+* Lunch ideas detected
+* Shopping list detected
+* Notes/checklist detected
+
+IMPORTANT
+This is NOT segmentation architecture.
+
+This is:
+lightweight transparency.
+
+Users should gain confidence that:
+the AI at least SAW the region.
+
+---
+
+## PART 4 — “ALSO FOUND” / RESIDUAL CONTENT
+
+Implement compact residual-content visibility.
+
+CURRENT PROBLEM
+Content silently disappears if:
+
+* not structured
+* low confidence
+* unsupported by schema
+* outside planner assumptions
+
+Instead:
+surface residual content in:
+“Also found”
+or
+“Additional notes detected”
+
+Examples:
+
+* batch-cook checklist
+* annotations
+* unclassified handwriting
+* leftover OCR fragments
+* unsupported note structures
+
+IMPORTANT
+This panel should:
+
+* remain compact
+* feel assistive
+* NOT feel like OCR cleanup software
+
+DO NOT overwhelm users with garbage OCR.
+
+Only show:
+meaningful residual content.
+
+---
+
+## PART 5 — TRUST RULES
+
+Preserve:
+
+* editable review
+* raw scan text
+* confidence visibility
+* compact grouped review
+* planner/lunch/shopping separation
+
+DO NOT:
+
+* silently drop major visible regions
+* over-expand shorthand aggressively
+* imply completeness falsely
+
+IMPORTANT
+If completeness is uncertain:
+make uncertainty visible.
+
+---
+
+## PART 6 — UX REQUIREMENTS
+
+1. Compactness
+   The new transparency additions must:
+
+* avoid modal bloat
+* avoid giant debug panels
+* avoid developer terminology
+
+2. Human wording
+   DO NOT expose:
+
+* token limits
+* model truncation
+* backend failures
+
+Use:
+
+* “Some sections may need review”
+* “Additional notes detected”
+* “Scan may be incomplete”
+
+3. Prioritisation
+   Primary review remains:
+
+* meals
+* lunches
+* shopping
+
+Residual content remains secondary.
+
+---
+
+## PART 7 — EXISTING COMPATIBILITY
+
+Must preserve:
+
+* compact review grid
+* inline editing
+* session persistence
+* lunch grouping
+* shopping separation
+* planner saving
+* OCR fallback flow
+* warning compaction
+* existing planner workflows
+
+---
+
+## PART 8 — REAL TEST CASE
+
+Retest the original Week 6 planner image.
+
+Expected improvements:
+
+* lunches more likely preserved
+* shopping more likely preserved
+* residual notes visible
+* no silent disappearance of major regions
+* stronger rawText completeness
+
+IMPORTANT
+Even if extraction is imperfect:
+visible preservation is more important than perfect AI interpretation.
+
+---
+
+## DEFINITION OF DONE
+
+* Planner token budget increased
+* Silent truncation reduced
+* Truncation suspicion visible
+* Region summaries visible
+* Residual content surfaced
+* No major visible document regions disappear silently
+* Existing planner-review UX preserved
+
+---
+
+## DATA IMPACT DECLARATION
+
+* Reads existing data: yes
+* Writes new data: no
+* Changes meaning of existing data: yes — planner import becomes more transparency-oriented
+* Requires backfill: no
+
+---
+
+## TRUST CHECK
+
+Could larger token budgets increase hallucination risk?
+
+* potentially yes
+
+Mitigation:
+
+* preserve confidence visibility
+* preserve editability
+* preserve raw scan text
+
+Could residual-content panels overwhelm users?
+
+* potentially yes
+
+Mitigation:
+
+* compact UI
+* only meaningful residual content
+* collapsible presentation
+
+---
+
+## ROLLBACK PLAN
+
+If release fails:
+
+* restore previous token limit
+* remove residual-content panel
+* remove region summaries
+* restore previous warning handling
+
+No data cleanup required.
+
+---
+
+## MANDATORY CHECKS
+
+Run:
+
+* git status
+* npm run build
+* npx tsc --noEmit
+
+Manual tests:
+
+1. Week 6 planner retested
+2. Lunches preserved more reliably
+3. Shopping content preserved more reliably
+4. Residual notes visible
+5. Existing review flow still works
+6. Session persistence still works
+7. Compact review still usable
+8. No excessive UI clutter
+9. OCR fallback still works
+
+---
+
+## FINAL RESPONSE REQUIRED
+
+At the top write exactly:
+
+TOKEN + TRUST REFINEMENT IMPLEMENTED: YES
+
+Then report:
+
+* token-budget changes
+* truncation heuristics
+* region-summary handling
+* residual-content handling
+* Week 6 benchmark result
+* build result
+* manual test result
+* rollback notes
+* remaining limitations

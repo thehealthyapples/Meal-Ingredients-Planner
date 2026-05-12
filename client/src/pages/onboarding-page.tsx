@@ -33,7 +33,7 @@ const STEP_LABELS = [
 const TOTAL_STEPS = STEP_LABELS.length; // 12
 
 // Determined by step 10 (5 StartAreaCards). All cards share this height so
-// transitions are stable — no layout jump between steps.
+// transitions are stable - no layout jump between steps.
 const CARD_CONTENT_MIN_HEIGHT = 370;
 
 // ── Start area definitions ───────────────────────────────────────────────────
@@ -45,7 +45,7 @@ const START_AREAS = [
     icon: BookOpen,
     title: "Cookbook",
     label: "Save and organise your meals",
-    hint: "Save meals from anywhere — build your own collection.",
+    hint: "Save meals from anywhere - build your own collection.",
   },
   {
     key: "products",
@@ -69,7 +69,7 @@ const START_AREAS = [
     icon: ClipboardList,
     title: "Diary",
     label: "Keep a simple record of your day",
-    hint: "Keep it simple — add anything you've eaten today.",
+    hint: "Keep it simple - add anything you've eaten today.",
   },
   {
     key: "pantry",
@@ -77,7 +77,7 @@ const START_AREAS = [
     icon: ShoppingBasket,
     title: "Pantry",
     label: "Build your go-to foods",
-    hint: "Add foods you use often — we'll help you make better choices.",
+    hint: "Add foods you use often - we'll help you make better choices.",
   },
 ] as const;
 
@@ -255,18 +255,18 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
 
-  // Screen 4 — Preferences
+  // Screen 4 - Preferences
   const [allergies, setAllergies] = useState<string[]>([]);
   const [otherAllergyText, setOtherAllergyText] = useState("");
   const [dietaryPrefs, setDietaryPrefs] = useState<string[]>([]);
   const [eatingStyles, setEatingStyles] = useState<string[]>([]);
 
-  // Screen 6 — Tracking (all OFF by default per product philosophy)
+  // Screen 6 - Tracking (all OFF by default per product philosophy)
   const [trackCalories, setTrackCalories] = useState(false);
   const [trackMacros, setTrackMacros] = useState(false);
   const [trackWeight, setTrackWeight] = useState(false);
 
-  // Screen 7 — Start area
+  // Screen 7 - Start area
   const [startArea, setStartArea] = useState<StartAreaKey | null>(null);
 
   // ── Prefill from saved preferences (re-onboarding / existing user) ──────────
@@ -448,7 +448,7 @@ export default function OnboardingPage() {
                     className="w-full"
                   >
 
-                    {/* ── Screen 0 — Welcome ─────────────────────────── */}
+                    {/* ── Screen 0 - Welcome ─────────────────────────── */}
                     {step === 0 && (
                       <div className="space-y-5 text-center py-4">
                         <div className="w-16 h-16 mx-auto">
@@ -463,7 +463,7 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {/* ── Screen 1 — Reframing health ────────────────── */}
+                    {/* ── Screen 1 - Reframing health ────────────────── */}
                     {step === 1 && (
                       <div className="space-y-5 text-center py-4">
                         <div className="flex justify-center"><Leaf className="h-12 w-12 text-primary/70" /></div>
@@ -476,7 +476,7 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {/* ── Screen 2 — Remove pressure ─────────────────── */}
+                    {/* ── Screen 2 - Remove pressure ─────────────────── */}
                     {step === 2 && (
                       <div className="space-y-5 text-center py-4">
                         <div className="flex justify-center"><Sparkles className="h-12 w-12 text-primary/70" /></div>
@@ -498,7 +498,7 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {/* ── Screen 3 — Introduce UPF ───────────────────── */}
+                    {/* ── Screen 3 - Introduce UPF ───────────────────── */}
                     {step === 3 && (
                       <div className="space-y-5 text-center py-4">
                         <div className="w-16 h-16 mx-auto flex items-center justify-center">
@@ -514,29 +514,29 @@ export default function OnboardingPage() {
                             Ultra-processed foods often contain additives, flavourings, and ingredients you wouldn't find in a home kitchen.
                           </p>
                           <p className="text-sm text-muted-foreground leading-relaxed">
-                            Healthy Apples helps you spot them — simply and without stress.
+                            Healthy Apples helps you spot them - simply and without stress.
                           </p>
                         </div>
                       </div>
                     )}
 
-                    {/* ── Screen 4 — Preferences intro ──────────────── */}
+                    {/* ── Screen 4 - Preferences intro ──────────────── */}
                     {step === 4 && (
                       <div className="space-y-4 text-center py-4">
                         <div className="flex justify-center"><Leaf className="h-12 w-12 text-primary/70" /></div>
                         <div className="space-y-3">
                           <h2 className="text-2xl font-semibold tracking-tight">Anything we should know?</h2>
                           <p className="text-base text-muted-foreground leading-relaxed max-w-sm mx-auto">
-                            We'll use this to tailor suggestions — you can change it anytime.
+                            We'll use this to tailor suggestions - you can change it anytime.
                           </p>
                         </div>
                         <p className="text-xs text-muted-foreground/60 pt-2">
-                          Keep it simple — skip anything that doesn't apply.
+                          Keep it simple - skip anything that doesn't apply.
                         </p>
                       </div>
                     )}
 
-                    {/* ── Screen 5 — Allergies ───────────────────────── */}
+                    {/* ── Screen 5 - Allergies ───────────────────────── */}
                     {step === 5 && (
                       <div className="space-y-4">
                         <div>
@@ -567,7 +567,7 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {/* ── Screen 6 — Dietary preferences ────────────── */}
+                    {/* ── Screen 6 - Dietary preferences ────────────── */}
                     {step === 6 && (
                       <div className="space-y-4">
                         <div>
@@ -590,7 +590,7 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {/* ── Screen 7 — Eating style ────────────────────── */}
+                    {/* ── Screen 7 - Eating style ────────────────────── */}
                     {step === 7 && (
                       <div className="space-y-4">
                         <div>
@@ -613,7 +613,7 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {/* ── Screen 8 — Better Options ──────────────────── */}
+                    {/* ── Screen 8 - Better Options ──────────────────── */}
                     {step === 8 && (
                       <div className="space-y-5 text-center py-4">
                         <div className="w-16 h-16 mx-auto">
@@ -621,7 +621,7 @@ export default function OnboardingPage() {
                         </div>
                         <div className="space-y-2">
                           <h2 className="text-2xl font-semibold tracking-tight">
-                            We help you spot better options — instantly.
+                            We help you spot better options - instantly.
                           </h2>
                         </div>
                         <div className="text-left max-w-sm mx-auto space-y-1 pt-1">
@@ -651,7 +651,7 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {/* ── Screen 9 — Real Food System ────────────────── */}
+                    {/* ── Screen 9 - Real Food System ────────────────── */}
                     {step === 9 && (
                       <div className="space-y-5 text-center py-4">
                         <div className="w-16 h-16 mx-auto">
@@ -666,7 +666,7 @@ export default function OnboardingPage() {
                             { icon: CalendarDays, text: "Plan meals for the week" },
                             { icon: Snowflake, text: "Store meals for later" },
                             { icon: ShoppingBasket, text: "Know what's in your pantry" },
-                            { icon: ClipboardList, text: "Record what you eat — simply" },
+                            { icon: ClipboardList, text: "Record what you eat - simply" },
                           ].map(({ icon: Icon, text }) => (
                             <div key={text} className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/20 px-3 py-2.5">
                               <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -680,13 +680,13 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {/* ── Screen 10 — Optional tracking ──────────────── */}
+                    {/* ── Screen 10 - Optional tracking ──────────────── */}
                     {step === 10 && (
                       <div className="space-y-5">
                         <div className="flex items-center gap-3">
                           <Compass className="w-8 h-8 text-muted-foreground/60 flex-shrink-0" />
                           <div>
-                            <h2 className="text-xl font-semibold mb-1">Want to track more? You can — anytime.</h2>
+                            <h2 className="text-xl font-semibold mb-1">Want to track more? You can - anytime.</h2>
                             <p className="text-sm text-muted-foreground leading-relaxed">
                               All off by default. Turn on what's useful to you.
                             </p>
@@ -721,7 +721,7 @@ export default function OnboardingPage() {
                         </div>
 
                         <p className="text-xs text-muted-foreground/70 leading-relaxed border-l-2 border-primary/30 pl-3">
-                          Goals aren't targets to chase — they're guides to help you move forward.
+                          Goals aren't targets to chase - they're guides to help you move forward.
                         </p>
                         <p className="text-xs text-muted-foreground/60">
                           And more custom records are available if you want them.
@@ -729,7 +729,7 @@ export default function OnboardingPage() {
                       </div>
                     )}
 
-                    {/* ── Screen 11 — Choose where to begin ──────────── */}
+                    {/* ── Screen 11 - Choose where to begin ──────────── */}
                     {step === 11 && (
                       <div className="space-y-4">
                         <div>

@@ -23,7 +23,7 @@ const VIDEO_CONSTRAINTS: MediaStreamConstraints = {
 };
 
 // ZXing formats: EAN-13, UPC-A, UPC-E only.
-// Removing EAN-8 reduces decode work — supermarket products don't use it.
+// Removing EAN-8 reduces decode work - supermarket products don't use it.
 const ZXING_FORMATS = [
   BarcodeFormat.EAN_13,
   BarcodeFormat.UPC_A,
@@ -102,7 +102,7 @@ export default function BarcodeScanner({
       await (track as any).applyConstraints({ advanced: [{ torch: next }] });
       setTorchOn(next);
     } catch {
-      // Torch reported as available but applyConstraints failed — ignore.
+      // Torch reported as available but applyConstraints failed - ignore.
     }
   }, [torchOn]);
 
@@ -150,7 +150,7 @@ export default function BarcodeScanner({
         video.srcObject = stream;
         await video.play();
 
-        const DETECT_INTERVAL_MS = 120; // ~8 fps — sufficient for 1D barcodes
+        const DETECT_INTERVAL_MS = 120; // ~8 fps - sufficient for 1D barcodes
         let lastDetectTime = 0;
 
         const detect = async (now: number) => {
@@ -185,7 +185,7 @@ export default function BarcodeScanner({
         // TRY_HARDER improves lock-on for partially obscured or angled 1D barcodes.
         hints.set(DecodeHintType.TRY_HARDER, true);
 
-        // delayBetweenScanAttempts default is 500 ms (2 attempts/sec — too slow).
+        // delayBetweenScanAttempts default is 500 ms (2 attempts/sec - too slow).
         // 150 ms gives ~6-7 attempts/sec without excessive CPU.
         const reader = new BrowserMultiFormatReader(hints, {
           delayBetweenScanAttempts: 150,
@@ -263,7 +263,7 @@ export default function BarcodeScanner({
       </Button>
 
       <div className="w-full max-w-sm flex flex-col items-center gap-4">
-        {/* 4:3 container — wider than square, matches camera output better for
+        {/* 4:3 container - wider than square, matches camera output better for
             horizontal barcodes without going full 16:9 landscape. */}
         <div className="relative w-full overflow-hidden rounded-lg shadow-2xl" style={{ aspectRatio: "4/3" }}>
           <video

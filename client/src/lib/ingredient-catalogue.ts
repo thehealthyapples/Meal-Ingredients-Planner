@@ -120,7 +120,7 @@ export const INGREDIENT_CATALOGUE: Record<string, IngredientDef> = {
     ],
     relevantAttributes: ["organic"],
     fallbackRuleHints: [
-      "Any available variety works — chestnut is the most versatile",
+      "Any available variety works - chestnut is the most versatile",
       "Prefer specified variety if available",
     ],
   },
@@ -242,7 +242,7 @@ export const INGREDIENT_CATALOGUE: Record<string, IngredientDef> = {
     ],
     relevantAttributes: [],
     fallbackRuleHints: [
-      "Match on cream type — do not substitute between single and double",
+      "Match on cream type - do not substitute between single and double",
     ],
   },
 
@@ -263,7 +263,7 @@ export const INGREDIENT_CATALOGUE: Record<string, IngredientDef> = {
     ],
     relevantAttributes: ["organic"],
     fallbackRuleHints: [
-      "Match on cheese variety — do not substitute between hard and soft cheeses",
+      "Match on cheese variety - do not substitute between hard and soft cheeses",
     ],
   },
 
@@ -377,7 +377,7 @@ export const INGREDIENT_CATALOGUE: Record<string, IngredientDef> = {
     ],
     relevantAttributes: [],
     fallbackRuleHints: [
-      "Match on cracker type — cream crackers are the most neutral fallback",
+      "Match on cracker type - cream crackers are the most neutral fallback",
     ],
   },
 
@@ -509,7 +509,7 @@ export const INGREDIENT_CATALOGUE: Record<string, IngredientDef> = {
     ],
     relevantAttributes: [],
     fallbackRuleHints: [
-      "Match on bread type exactly — do not substitute white for brown",
+      "Match on bread type exactly - do not substitute white for brown",
       "Fall back to medium sliced white as most widely available",
     ],
   },
@@ -532,7 +532,7 @@ export const INGREDIENT_CATALOGUE: Record<string, IngredientDef> = {
     ],
     relevantAttributes: [],
     fallbackRuleHints: [
-      "Match on pasta shape — substitute within long or short pasta families if unavailable",
+      "Match on pasta shape - substitute within long or short pasta families if unavailable",
     ],
   },
 
@@ -554,7 +554,7 @@ export const INGREDIENT_CATALOGUE: Record<string, IngredientDef> = {
     ],
     relevantAttributes: ["organic", "free_range"],
     fallbackRuleHints: [
-      "Match on cut — do not substitute between cuts",
+      "Match on cut - do not substitute between cuts",
       "Prefer free-range if requested",
     ],
   },
@@ -598,7 +598,7 @@ export const INGREDIENT_CATALOGUE: Record<string, IngredientDef> = {
     ],
     relevantAttributes: [],
     fallbackRuleHints: [
-      "Match on fish species exactly — do not substitute between white and oily fish",
+      "Match on fish species exactly - do not substitute between white and oily fish",
     ],
   },
 
@@ -641,7 +641,7 @@ export const INGREDIENT_CATALOGUE: Record<string, IngredientDef> = {
     ],
     relevantAttributes: [],
     fallbackRuleHints: [
-      "Match on bean type exactly — chickpeas and lentils are distinct from beans",
+      "Match on bean type exactly - chickpeas and lentils are distinct from beans",
     ],
   },
 
@@ -673,10 +673,10 @@ export const INGREDIENT_CATALOGUE: Record<string, IngredientDef> = {
  * Used in CYC to suppress variety/type/flavour selectors for already-specific items.
  *
  * Two guards prevent false positives:
- *   Guard 1 — token coverage: every word in the item name must be a known base token
+ *   Guard 1 - token coverage: every word in the item name must be a known base token
  *     (displayName/aliases) or a known option token. Rejects noise words like "juice",
  *     "sauce", "blend" that appear in compound product names.
- *   Guard 2 — option presence: at least one option's full set of tokens must appear
+ *   Guard 2 - option presence: at least one option's full set of tokens must appear
  *     as whole tokens in the item name (no partial substring matches).
  */
 export function isResolvedVariantItem(itemName: string, def: IngredientDef): boolean {
