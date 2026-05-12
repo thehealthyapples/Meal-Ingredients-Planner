@@ -627,6 +627,7 @@ export async function extractDestination(
     if (process.env.NODE_ENV !== "production" && mode === "planner" && visionResult.parsed.mode === "planner") {
       const ideaCount = visionResult.parsed.meals.filter(m => m.proposedType === "meal_idea").length;
       console.log(`[planner-scan-debug] extractDestination-vision-SUCCESS meals=${visionResult.parsed.meals.length} meal_ideas=${ideaCount} shoppingItems=${visionResult.parsed.shoppingItems.length} confidence=${confidence}`);
+      console.log(`[planner-scan-debug] extractDestination-vision-returned { result:{mode:"planner",meals:${visionResult.parsed.meals.length},shoppingItems:${visionResult.parsed.shoppingItems.length},warnings:${visionResult.parsed.warnings.length}}, parsedBy:"vision", confidence:"${confidence}", rawTextChars:${visionResult.rawText?.length ?? 0} }`);
     }
     return {
       result: visionResult.parsed,
@@ -683,6 +684,7 @@ export async function extractDestination(
     if (process.env.NODE_ENV !== "production" && mode === "planner" && aiResult.mode === "planner") {
       const ideaCount = aiResult.meals.filter(m => m.proposedType === "meal_idea").length;
       console.log(`[planner-scan-debug] extractDestination-ocr-ai-SUCCESS meals=${aiResult.meals.length} meal_ideas=${ideaCount} shoppingItems=${aiResult.shoppingItems.length} confidence=${confidence}`);
+      console.log(`[planner-scan-debug] extractDestination-ocr-ai-returned { result:{mode:"planner",meals:${aiResult.meals.length},shoppingItems:${aiResult.shoppingItems.length},warnings:${aiResult.warnings.length}}, parsedBy:"ocr-fallback", confidence:"${confidence}", rawTextChars:${ocrText.length} }`);
     }
     return {
       result: aiResult,
@@ -704,6 +706,7 @@ export async function extractDestination(
   if (process.env.NODE_ENV !== "production" && mode === "planner" && heuristic.mode === "planner") {
     const ideaCount = heuristic.meals.filter(m => m.proposedType === "meal_idea").length;
     console.log(`[planner-scan-debug] extractDestination-heuristic-FALLBACK meals=${heuristic.meals.length} meal_ideas=${ideaCount} shoppingItems=${heuristic.shoppingItems.length} confidence=low`);
+    console.log(`[planner-scan-debug] extractDestination-heuristic-returned { result:{mode:"planner",meals:${heuristic.meals.length},shoppingItems:${heuristic.shoppingItems.length},warnings:${heuristic.warnings.length}}, parsedBy:"ocr-fallback", confidence:"low", rawTextChars:${ocrText.length} }`);
   }
   return {
     result: heuristic,

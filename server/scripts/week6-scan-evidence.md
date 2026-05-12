@@ -7,6 +7,27 @@
 
 ---
 
+## Log Coverage — Code Paths
+
+All four `extractDestination` return paths now emit `[planner-scan-debug]` logs
+(dev-only) with both count summary and returned object shape:
+
+| Path | Logs emitted |
+|---|---|
+| vision-SUCCESS | `extractDestination-vision-SUCCESS`, `extractDestination-vision-returned` |
+| vision-NULL → OCR | `extractDestination-vision-NULL` |
+| ocr-ai-SUCCESS | `extractDestination-ocr-ai-SUCCESS`, `extractDestination-ocr-ai-returned` |
+| heuristic-FALLBACK | `extractDestination-heuristic-FALLBACK`, `extractDestination-heuristic-returned` |
+
+The `route-final` log at `/api/scan` before `res.json()` is exercised via the HTTP
+endpoint (not the direct `extractDestination` test script). Its log line reads:
+```
+[planner-scan-debug] route-final scanId=<id> meals=N meal_ideas=N shoppingItems=N parsedBy=vision confidence=high
+```
+It uses properly narrowed `ScannedMealCandidate[]` — no `any` casts.
+
+---
+
 ## Raw Log Output
 
 ```
