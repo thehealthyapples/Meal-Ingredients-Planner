@@ -19,6 +19,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { usePlannerContext } from "@/contexts/PlannerContext";
 import { useSmartSuggest } from "@/hooks/use-smart-suggest";
 import { usePlannerScan } from "@/hooks/use-planner-scan";
+import { PlannerAssistantPanel } from "@/components/PlannerAssistantPanel";
 import type { FullDay, FullWeek, SmartCandidate, MealExplanation, SmartSuggestEntry, SmartSuggestResult } from "@/lib/planner-types";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { TemplatesPanel } from "@/components/templates-panel";
@@ -483,9 +484,8 @@ export default function WeeklyPlannerPage() {
   // ── Active week data (needed by domain hooks before other queries) ─────────
   const activeWeekData = fullPlanner.find((w) => w.weekNumber === Number(activeWeek));
 
-  // ── Planner context (Phase 0: architecture boundary) ──────────────────────
-  // assistantMode will drive panel routing in a future phase
-  const { assistantMode } = usePlannerContext();
+  // ── Planner context (Phase 1A: assistant panel routing) ───────────────────
+  const { assistantMode, setAssistantMode } = usePlannerContext();
 
   // ── Smart Suggest domain ──────────────────────────────────────────────────
   const {
@@ -1170,12 +1170,12 @@ export default function WeeklyPlannerPage() {
             size="sm"
             variant="outline"
             className="px-2.5 text-xs"
-            onClick={() => setPlannerCameraOpen(true)}
+            onClick={() => setAssistantMode("scan")}
             data-testid="button-planner-scan-primary"
             title="Photograph your paper planner"
           >
             <Camera className="h-3 w-3 mr-1" />
-            Plan
+            Scan
           </Button>
           <Button
             size="sm"
@@ -1238,6 +1238,8 @@ export default function WeeklyPlannerPage() {
       }
     />
     <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+      <div className="flex gap-4 items-start">
+      <div className="flex-1 min-w-0">
       <FirstVisitHint
         areaKey="planner"
         message="Plan your meals for the week ahead. Add meals to each day, use templates to get started fast, or tap Plan to get suggestions - then send the whole week to your basket."
@@ -1735,6 +1737,15 @@ export default function WeeklyPlannerPage() {
           </TabsContent>
         ))}
       </Tabs>
+      </div>{/* end flex-1 min-w-0 */}
+      <PlannerAssistantPanel
+        mode={assistantMode}
+        onClose={() => setAssistantMode(null)}
+        onOpenCamera={() => setPlannerCameraOpen(true)}
+        onUploadFile={() => plannerScanFileRef.current?.click()}
+        scanLoading={plannerScanLoading}
+      />
+      </div>{/* end flex gap-4 */}
 
       {/* ── Day View Drawer ── */}
       <DayViewDrawer

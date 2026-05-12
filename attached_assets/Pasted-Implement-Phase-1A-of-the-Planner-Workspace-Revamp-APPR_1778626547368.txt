@@ -1,0 +1,77 @@
+Implement Phase 1A of the Planner Workspace Revamp.
+
+APPROVED SCOPE:
+Create the Planner Assistant shell and migrate ONLY the planner scan workflow into it.
+
+Do NOT:
+- migrate Smart Suggest
+- migrate Templates
+- migrate Meal Picker
+- add drag/drop
+- change schema
+- change planner save behaviour
+- change API contracts
+- alter basket logic
+- implement intent layer
+
+GOAL:
+Planner grid remains visible while the user uses Scan Planner from a right-side Planner Assistant panel.
+
+USE EXISTING FOUNDATION:
+- PlannerContext
+- assistantMode
+- usePlannerScan
+- existing scan flow
+- existing PlannerScanReview behaviour
+
+REQUIREMENTS:
+1. Add Planner Assistant shell to planner page.
+2. Wire assistantMode = "scan".
+3. Add right-side assistant panel on desktop/tablet.
+4. On mobile, use existing safe modal/sheet behaviour.
+5. Move scan entry point into assistant panel.
+6. Preserve CameraModal and PlannerScanReview logic unless safely reusable.
+7. Existing Plan / Templates / Create Meal / Meal Picker flows must remain unchanged.
+8. Planner grid must remain visible during scan assistant use where screen size allows.
+
+DEFINITION OF DONE:
+- Planner grid still renders
+- Assistant panel opens
+- Scan mode opens from assistant
+- Upload/take photo works
+- Scan cancel works
+- Scan review still works
+- Save from scan still updates planner
+- All existing non-scan planner flows still work
+- Build passes
+- Typecheck passes
+
+DATA IMPACT:
+Reads existing data: yes
+Writes new data: yes - only existing scan-confirmed planner entries
+Changes meaning of existing data: no
+Requires backfill: no
+
+TRUST CHECK:
+- AI scan remains proposal-based
+- User still confirms before save
+- No auto-placement beyond existing behaviour
+- No hidden planner modifications
+
+ROLLBACK:
+Use:
+planner-phase0-complete-baseline-v1
+
+FINAL RESPONSE:
+PHASE 1A ASSISTANT SCAN WORKFLOW COMPLETE: YES / NO
+
+Then report:
+- files changed
+- assistant shell architecture
+- scan workflow changes
+- unchanged flows confirmed
+- build result
+- typecheck result
+- manual test results
+- rollback notes
+- remaining limitations
