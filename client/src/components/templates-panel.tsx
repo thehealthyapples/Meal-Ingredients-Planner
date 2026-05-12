@@ -200,9 +200,10 @@ interface TemplatePanelProps {
   open: boolean;
   onClose: () => void;
   user: User | null | undefined;
+  inline?: boolean;
 }
 
-export function TemplatesPanel({ open, onClose, user }: TemplatePanelProps) {
+export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const isAdmin = user?.role === "admin";
@@ -583,31 +584,21 @@ export function TemplatesPanel({ open, onClose, user }: TemplatePanelProps) {
     );
   };
 
-  return (
+  const tabsListJsx = (
+    <TabsList className="w-full shrink-0">
+      <TabsTrigger value="tha" className="flex-1" data-testid="tab-tha-templates">
+        <Globe className="h-3.5 w-3.5 mr-1.5" />
+        THA Templates
+      </TabsTrigger>
+      <TabsTrigger value="mine" className="flex-1" data-testid="tab-my-templates">
+        <Lock className="h-3.5 w-3.5 mr-1.5" />
+        My Templates
+      </TabsTrigger>
+    </TabsList>
+  );
+
+  const tabsBodyJsx = (
     <>
-      <Dialog open={open} onOpenChange={(v) => !v && onClose()} data-testid="sheet-templates">
-        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <LayoutGrid className="h-5 w-5 text-primary" />
-              Meal Plan Templates
-            </DialogTitle>
-            <p className="text-xs text-muted-foreground">Browse THA templates or manage your own saved plans.</p>
-          </DialogHeader>
-
-          <Tabs defaultValue="tha" className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="w-full shrink-0">
-              <TabsTrigger value="tha" className="flex-1" data-testid="tab-tha-templates">
-                <Globe className="h-3.5 w-3.5 mr-1.5" />
-                THA Templates
-              </TabsTrigger>
-              <TabsTrigger value="mine" className="flex-1" data-testid="tab-my-templates">
-                <Lock className="h-3.5 w-3.5 mr-1.5" />
-                My Templates
-              </TabsTrigger>
-            </TabsList>
-
-            <div className="flex-1 overflow-y-auto min-h-0">
               <TabsContent value="tha" className="py-4 space-y-3 mt-0">
                 {libraryLoading || adminLoading ? (
                   <div className="space-y-3">
@@ -675,10 +666,39 @@ export function TemplatesPanel({ open, onClose, user }: TemplatePanelProps) {
                   myTemplates.map(renderPrivateTemplateCard)
                 )}
               </TabsContent>
+    </>
+  );
+
+  return (
+    <>
+      {inline ? (
+        <div data-testid="panel-templates-content">
+          <Tabs defaultValue="tha" className="flex flex-col">
+            {tabsListJsx}
+            <div>
+              {tabsBodyJsx}
             </div>
           </Tabs>
-        </DialogContent>
-      </Dialog>
+        </div>
+      ) : (
+        <Dialog open={open} onOpenChange={(v) => !v && onClose()} data-testid="sheet-templates">
+          <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <LayoutGrid className="h-5 w-5 text-primary" />
+                Meal Plan Templates
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground">Browse THA templates or manage your own saved plans.</p>
+            </DialogHeader>
+            <Tabs defaultValue="tha" className="flex-1 flex flex-col overflow-hidden">
+              {tabsListJsx}
+              <div className="flex-1 overflow-y-auto min-h-0">
+                {tabsBodyJsx}
+              </div>
+            </Tabs>
+          </DialogContent>
+        </Dialog>
+      )}
 
       <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
         <DialogContent>

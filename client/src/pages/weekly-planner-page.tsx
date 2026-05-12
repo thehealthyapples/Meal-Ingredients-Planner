@@ -400,7 +400,6 @@ export default function WeeklyPlannerPage() {
   const [bulkMealFilter, setBulkMealFilter] = useState<"all" | "cookbook" | "planner" | "ready">("all");
   const [bulkStep, setBulkStep] = useState<1 | 2>(1);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [sharePlanOpen, setSharePlanOpen] = useState(false);
   const [expandedDayId, setExpandedDayId] = useState<number | null>(null);
   const [expandedDayLabel, setExpandedDayLabel] = useState("");
@@ -1191,7 +1190,7 @@ export default function WeeklyPlannerPage() {
             <Utensils className="h-3 w-3 mr-1" />
             Create Meal
           </Button>
-          <Button size="sm" className="px-2.5 text-xs" onClick={() => setTemplatesOpen(true)} data-testid="button-open-templates">
+          <Button size="sm" className="px-2.5 text-xs" onClick={() => setAssistantMode("templates")} data-testid="button-open-templates">
             <LayoutGrid className="h-3 w-3 mr-1" />
             Templates
           </Button>
@@ -1667,6 +1666,7 @@ export default function WeeklyPlannerPage() {
         smartLeftovers={smartLeftovers}
         setSmartLeftovers={setSmartLeftovers}
         onRunSmartSuggest={() => runSmartSuggest()}
+        user={user}
       />
       </div>{/* end flex gap-4 */}
 
@@ -2590,7 +2590,6 @@ export default function WeeklyPlannerPage() {
         </DialogContent>
       </Dialog>
 
-      <TemplatesPanel open={templatesOpen} onClose={() => setTemplatesOpen(false)} user={user} />
       <Dialog open={clearWeekId !== null} onOpenChange={(v) => { if (!v) setClearWeekId(null); }}>
         <DialogContent className="max-w-sm" data-testid="dialog-clear-week">
           <DialogHeader>

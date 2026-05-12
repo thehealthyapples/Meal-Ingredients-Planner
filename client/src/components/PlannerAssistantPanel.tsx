@@ -1,15 +1,18 @@
 import { useState, useEffect } from "react";
-import { Camera, Upload, X, Loader2, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad } from "lucide-react";
+import { Camera, Upload, X, Loader2, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import type { AssistantMode } from "@/contexts/PlannerContext";
+import { TemplatesPanel } from "@/components/templates-panel";
+import type { User } from "@shared/schema";
 
 interface PlannerAssistantPanelProps {
   mode: AssistantMode;
   onClose: () => void;
+  user: User | null | undefined;
   onOpenCamera: () => void;
   onUploadFile: () => void;
   scanLoading: boolean;
@@ -263,18 +266,21 @@ function SmartContent({
 
 function getPanelIcon(mode: AssistantMode) {
   if (mode === "smart") return <Sparkles className="h-4 w-4 text-primary" />;
+  if (mode === "templates") return <LayoutGrid className="h-4 w-4 text-primary" />;
   return <ScanLine className="h-4 w-4 text-primary" />;
 }
 
 function getPanelTitle(mode: AssistantMode) {
   if (mode === "smart") return "Plan My Week";
   if (mode === "scan") return "Scan Planner";
+  if (mode === "templates") return "Templates";
   return "Planner Assistant";
 }
 
 export function PlannerAssistantPanel({
   mode,
   onClose,
+  user,
   onOpenCamera,
   onUploadFile,
   scanLoading,
@@ -326,6 +332,9 @@ export function PlannerAssistantPanel({
           setSmartLeftovers={setSmartLeftovers}
           onRunSmartSuggest={onRunSmartSuggest}
         />
+      )}
+      {mode === "templates" && (
+        <TemplatesPanel inline open onClose={onClose} user={user} />
       )}
     </>
   );

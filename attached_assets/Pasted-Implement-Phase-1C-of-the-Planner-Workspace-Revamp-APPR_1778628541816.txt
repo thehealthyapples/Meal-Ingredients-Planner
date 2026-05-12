@@ -1,0 +1,91 @@
+Implement Phase 1C of the Planner Workspace Revamp.
+
+APPROVED SCOPE:
+Move ONLY Templates into the Planner Assistant panel.
+
+Do NOT:
+- migrate Meal Picker
+- add drag/drop
+- change schema
+- change API contracts
+- change template apply logic
+- change Smart Suggest algorithm
+- add AI preference parsing
+- alter basket logic
+- implement intent layer
+
+GOAL:
+Templates should open and apply from the Planner Assistant panel while the planner grid remains visible on desktop/tablet.
+
+USE EXISTING FOUNDATION:
+- PlannerContext
+- assistantMode
+- PlannerAssistantPanel
+- existing TemplatesPanel logic
+- existing template APIs
+- existing planner refresh behaviour
+
+REQUIREMENTS:
+1. Wire assistantMode = "templates".
+2. Move Templates entry point into Planner Assistant panel.
+3. Preserve existing THA Templates and My Templates functionality.
+4. Preserve existing template preview behaviour.
+5. Preserve existing template apply behaviour.
+6. Preserve existing template save/export behaviour if currently present.
+7. Preserve all existing API calls and query invalidations.
+8. Scan assistant mode must continue working.
+9. Smart assistant mode must continue working.
+10. Planner grid must remain visible during Templates assistant use where screen size allows.
+
+IMPORTANT:
+This is a UI/container migration only.
+Do not rewrite template logic.
+Do not change template data shape.
+Do not alter apply behaviour.
+
+DEFINITION OF DONE:
+- Planner grid still renders
+- Assistant panel opens
+- Scan mode still works
+- Smart mode still works
+- Templates mode opens from assistant
+- THA Templates render
+- My Templates render
+- Template preview works
+- Template apply works
+- Existing non-assistant flows still work
+- Build passes
+- Typecheck passes
+
+DATA IMPACT:
+Reads existing data: yes
+Writes new data: yes - only existing template apply/save behaviour
+Changes meaning of existing data: no
+Requires backfill: no
+
+TRUST CHECK:
+- Applying templates still requires user action
+- No hidden planner modifications
+- No automatic template application
+- No new certainty claims
+- No template data is silently changed
+
+ROLLBACK:
+Use:
+planner-phase0-complete-baseline-v1
+
+FINAL RESPONSE:
+PHASE 1C TEMPLATES ASSISTANT WORKFLOW COMPLETE: YES / NO
+
+Then report:
+- files changed
+- assistant shell changes
+- Templates migration summary
+- scan mode regression result
+- smart mode regression result
+- unchanged flows confirmed
+- build result
+- typecheck result
+- manual/e2e test results
+- rollback notes
+- remaining limitations
