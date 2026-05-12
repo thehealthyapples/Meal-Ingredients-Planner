@@ -286,9 +286,18 @@ async function extractWithVision(
       max_tokens: 2000,
     });
     const usage = response.usage;
-    console.log(`[scan-timing] vision-${mode} duration=${Date.now() - t0}ms promptTokens=${usage?.prompt_tokens ?? "?"} completionTokens=${usage?.completion_tokens ?? "?"}`);
+    const finishReason = response.choices[0]?.finish_reason;
+    const completionTokens = usage?.completion_tokens ?? 0;
+    const tokenLimit = 2000;
+    console.log(`[scan-timing] vision-${mode} duration=${Date.now() - t0}ms promptTokens=${usage?.prompt_tokens ?? "?"} completionTokens=${completionTokens}`);
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[planner-scan-debug] vision-api-response mode=${mode} finish_reason=${finishReason} completionTokens=${completionTokens}/${tokenLimit} hitLimit=${completionTokens >= tokenLimit - 50}`);
+    }
 
     const raw = response.choices[0]?.message?.content?.trim() ?? "";
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`[planner-scan-debug] vision-raw-response mode=${mode} rawChars=${raw.length}`);
+    }
     // Strip markdown code fences if model wraps response despite instruction
     const clean = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
 
@@ -296,7 +305,10 @@ async function extractWithVision(
     try {
       parsed = JSON.parse(clean);
     } catch {
-      console.error(`[recipeParser] Vision JSON parse failed, raw="${raw.slice(0, 120)}"`);
+      console.error(`[recipeParser] Vision JSON parse failed mode=${mode} finish_reason=${finishReason} completionTokens=${completionTokens} raw="${raw.slice(0, 200)}"`);
+      if (process.env.NODE_ENV !== "production") {
+        console.log(`[planner-scan-debug] vision-json-parse-FAILED mode=${mode} finish_reason=${finishReason} completionTokens=${completionTokens} — likely truncation if finish_reason=length`);
+      }
       return null;
     }
 
@@ -319,6 +331,12 @@ async function extractWithVision(
       return { parsed: result, rawText };
     }
     if (mode === "planner" && parsed.mode === "planner") {
+      if (process.env.NODE_ENV !== "production") {
+        const rawMealCount = Array.isArray(parsed.meals) ? parsed.meals.length : 0;
+        const rawIdeaCount = Array.isArray(parsed.meals) ? parsed.meals.filter((m: any) => m.proposedType === "meal_idea").length : 0;
+        const rawShopCount = Array.isArray(parsed.shoppingItems) ? parsed.shoppingItems.length : 0;
+        console.log(`[planner-scan-debug] vision-pre-validation rawMeals=${rawMealCount} rawMealIdeas=${rawIdeaCount} rawShoppingItems=${rawShopCount} finish_reason=${finishReason}`);
+      }
       const VALID_PROPOSAL_TYPES = ["scheduled", "meal_idea", "unknown"] as const;
       const meals: ScannedMealCandidate[] = Array.isArray(parsed.meals)
         ? parsed.meals.map((m: any) => ({
@@ -340,6 +358,10 @@ async function extractWithVision(
             sourceText: typeof i.sourceText === "string" ? i.sourceText : undefined,
           }))
         : [];
+      if (process.env.NODE_ENV !== "production") {
+        const ideaCount = meals.filter(m => m.proposedType === "meal_idea").length;
+        console.log(`[planner-scan-debug] vision-post-validation validatedMeals=${meals.length} validatedMealIdeas=${ideaCount} validatedShoppingItems=${shoppingItems.length}`);
+      }
       const result: DestinationParsed = {
         mode: "planner",
         meals,
@@ -602,6 +624,10 @@ export async function extractDestination(
     const warnings = (visionResult.parsed.mode === "recipe" || visionResult.parsed.mode === "planner")
       ? visionResult.parsed.warnings : [];
     console.log(`[scan-timing] vision-success mode=${mode} confidence=${confidence} elapsed=${Date.now() - t0}ms`);
+    if (process.env.NODE_ENV !== "production" && mode === "planner" && visionResult.parsed.mode === "planner") {
+      const ideaCount = visionResult.parsed.meals.filter(m => m.proposedType === "meal_idea").length;
+      console.log(`[planner-scan-debug] extractDestination-vision-SUCCESS meals=${visionResult.parsed.meals.length} meal_ideas=${ideaCount} shoppingItems=${visionResult.parsed.shoppingItems.length} confidence=${confidence}`);
+    }
     return {
       result: visionResult.parsed,
       parsedBy: "vision",
@@ -611,6 +637,9 @@ export async function extractDestination(
     };
   }
 
+  if (process.env.NODE_ENV !== "production" && mode === "planner") {
+    console.log(`[planner-scan-debug] extractDestination-vision-NULL — vision returned null, falling to OCR`);
+  }
   console.warn(`[scan-timing] vision-failed mode=${mode} elapsed=${Date.now() - t0}ms — starting OCR fallback`);
 
   // ── 2. OCR fallback path ────────────────────────────────────────────────────

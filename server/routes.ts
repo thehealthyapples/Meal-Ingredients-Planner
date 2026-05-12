@@ -7120,6 +7120,12 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
       const totalMs = Date.now() - t_server;
       console.log(`[scan-timing] response-sent scanId=${scanId} mode=${mode} parsedBy=${parsedBy} confidence=${confidence} totalServer=${totalMs}ms`);
+      if (process.env.NODE_ENV !== "production" && mode === "planner" && parsed?.mode === "planner") {
+        const mealCount = parsed.meals?.length ?? 0;
+        const ideaCount = (parsed.meals as any[])?.filter((m: any) => m.proposedType === "meal_idea").length ?? 0;
+        const shopCount = parsed.shoppingItems?.length ?? 0;
+        console.log(`[planner-scan-debug] route-final scanId=${scanId} meals=${mealCount} meal_ideas=${ideaCount} shoppingItems=${shopCount} parsedBy=${parsedBy} confidence=${confidence}`);
+      }
       res.json({ mode, rawText, parsed, parsedBy, confidence, warnings });
     } catch (err) {
       console.error(`[recipe-scan-timing] server-error scanId=${scanId} elapsed=${Date.now() - t_server}ms`, err);
