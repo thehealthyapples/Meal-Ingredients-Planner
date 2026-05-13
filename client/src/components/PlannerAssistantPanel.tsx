@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Camera, Upload, X, Loader2, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus } from "lucide-react";
+import { Camera, Upload, X, Loader2, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,6 +10,9 @@ import { TemplatesPanel } from "@/components/templates-panel";
 import type { User, Meal } from "@shared/schema";
 import { PlannerMealPickerPanel } from "@/components/PlannerMealPickerPanel";
 import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMealPickerPanel";
+import { DayViewDrawer } from "@/components/day-view-drawer";
+import { PlannerBulkAssignPanel } from "@/components/PlannerBulkAssignPanel";
+import type { FullDay, FullWeek } from "@/lib/planner-types";
 
 interface PlannerAssistantPanelProps {
   mode: AssistantMode;
@@ -43,6 +46,11 @@ interface PlannerAssistantPanelProps {
   onPickerSelect: (mealId: number) => void;
   addingEntry: boolean;
   onAddProduct: (product: PlannerProductResult) => void;
+  dayViewDay: FullDay | null;
+  dayViewLabel: string;
+  getMeal: (id: number | null) => Meal | undefined;
+  onPlannerInvalidate: () => void;
+  fullPlanner: FullWeek[];
 }
 
 function useIsMobile() {
@@ -277,14 +285,18 @@ function getPanelIcon(mode: AssistantMode) {
   if (mode === "smart") return <Sparkles className="h-4 w-4 text-primary" />;
   if (mode === "templates") return <LayoutGrid className="h-4 w-4 text-primary" />;
   if (mode === "manual") return <Plus className="h-4 w-4 text-primary" />;
+  if (mode === "bulk") return <Calendar className="h-4 w-4 text-primary" />;
+  if (mode === "day") return <CalendarDays className="h-4 w-4 text-primary" />;
   return <ScanLine className="h-4 w-4 text-primary" />;
 }
 
-function getPanelTitle(mode: AssistantMode) {
+function getPanelTitle(mode: AssistantMode, dayLabel?: string) {
   if (mode === "smart") return "Plan My Week";
   if (mode === "scan") return "Scan Planner";
   if (mode === "templates") return "Templates";
   if (mode === "manual") return "Add Meal";
+  if (mode === "bulk") return "Bulk Assign";
+  if (mode === "day") return dayLabel || "Day View";
   return "Planner Assistant";
 }
 
@@ -312,12 +324,17 @@ export function PlannerAssistantPanel({
   onPickerSelect,
   addingEntry,
   onAddProduct,
+  dayViewDay,
+  dayViewLabel,
+  getMeal,
+  onPlannerInvalidate,
+  fullPlanner,
 }: PlannerAssistantPanelProps) {
   const isMobile = useIsMobile();
 
   if (!mode) return null;
 
-  const titleLabel = getPanelTitle(mode);
+  const titleLabel = getPanelTitle(mode, dayViewLabel);
   const titleIcon = getPanelIcon(mode);
 
   const panelContent = (
@@ -364,6 +381,26 @@ export function PlannerAssistantPanel({
           onSelect={onPickerSelect}
           addingEntry={addingEntry}
           onAddProduct={onAddProduct}
+        />
+      )}
+      {mode === "day" && (
+        <DayViewDrawer
+          inline
+          open={false}
+          onClose={onClose}
+          day={dayViewDay}
+          dayLabel={dayViewLabel}
+          getMeal={getMeal}
+          allMeals={meals}
+          onPlannerInvalidate={onPlannerInvalidate}
+        />
+      )}
+      {mode === "bulk" && (
+        <PlannerBulkAssignPanel
+          fullPlanner={fullPlanner}
+          meals={meals}
+          plannerMealIdSet={plannerMealIdSet}
+          onClose={onClose}
         />
       )}
     </>

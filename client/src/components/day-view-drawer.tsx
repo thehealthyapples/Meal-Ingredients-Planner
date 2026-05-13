@@ -372,8 +372,45 @@ export function DayViewDrawer({
   getMeal,
   onPlannerInvalidate,
   allMeals = [],
-}: DayViewDrawerProps & { allMeals?: Meal[] }) {
+  inline = false,
+}: DayViewDrawerProps & { allMeals?: Meal[]; inline?: boolean }) {
   const entries = day?.entries ?? [];
+
+  const slotList = !day ? (
+    <p className="text-sm text-muted-foreground">No day selected</p>
+  ) : (
+    <>
+      {inline && dayLabel && (
+        <p className="text-xs text-muted-foreground font-medium pb-1">{dayLabel}</p>
+      )}
+      {SLOT_CONFIGS.map(slot => {
+        const slotEntries = slot.isDrink
+          ? getDrinkEntries(entries)
+          : getSlotEntries(entries, slot.mealSlot, "adult", false);
+        return (
+          <div key={slot.key} className="space-y-2">
+            <SlotSection
+              slot={slot}
+              dayId={day.id}
+              entries={slotEntries}
+              getMeal={getMeal}
+              onPlannerInvalidate={onPlannerInvalidate}
+              allMeals={allMeals}
+            />
+            <div className="border-b" />
+          </div>
+        );
+      })}
+    </>
+  );
+
+  if (inline) {
+    return (
+      <div className="space-y-4" data-testid="panel-day-view">
+        {slotList}
+      </div>
+    );
+  }
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -381,31 +418,8 @@ export function DayViewDrawer({
         <DialogHeader className="pb-4 border-b">
           <DialogTitle className="text-base" data-testid="text-day-view-label">{dayLabel}</DialogTitle>
         </DialogHeader>
-
         <div className="py-4 space-y-6">
-          {!day ? (
-            <p className="text-sm text-muted-foreground">No day selected</p>
-          ) : (
-            SLOT_CONFIGS.map(slot => {
-              const slotEntries = slot.isDrink
-                ? getDrinkEntries(entries)
-                : getSlotEntries(entries, slot.mealSlot, "adult", false);
-
-              return (
-                <div key={slot.key} className="space-y-2">
-                  <SlotSection
-                    slot={slot}
-                    dayId={day.id}
-                    entries={slotEntries}
-                    getMeal={getMeal}
-                    onPlannerInvalidate={onPlannerInvalidate}
-                    allMeals={allMeals}
-                  />
-                  <div className="border-b" />
-                </div>
-              );
-            })
-          )}
+          {slotList}
         </div>
       </DialogContent>
     </Dialog>

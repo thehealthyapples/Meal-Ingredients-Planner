@@ -1,0 +1,185 @@
+Implement Phase 2A of the Planner Workspace Revamp.
+
+APPROVED SCOPE:
+Operational workflow consolidation into the Planner Assistant workspace.
+
+This phase focuses ONLY on:
+- Day Drawer migration
+- Bulk Assign migration
+- assistant workflow consistency
+- reducing remaining operational modal interruptions
+
+Do NOT:
+- add drag/drop
+- change schema
+- change API contracts
+- implement intent layer
+- add nullable mealId
+- redesign planner grid
+- add AI preference parsing
+- alter Smart Suggest algorithm
+- change basket logic
+
+GOAL:
+All major operational planner workflows should occur beside the planner grid inside the assistant workspace where practical.
+
+USE EXISTING FOUNDATION:
+- PlannerContext
+- assistantMode
+- PlannerAssistantPanel
+- existing Bulk Assign logic
+- existing Day Drawer logic
+- existing planner mutations
+- existing query invalidation behaviour
+
+PHASE 2A REQUIREMENTS
+
+1. Migrate Day Drawer workflow into assistant workspace
+
+Requirements:
+- preserve existing day-detail behaviour
+- preserve meal visibility
+- preserve meal actions
+- preserve planner refresh behaviour
+- preserve mutations
+- planner grid remains visible on desktop/tablet
+
+IMPORTANT:
+This is container migration only.
+Do not redesign meal cards yet.
+
+2. Migrate Bulk Assign workflow into assistant workspace
+
+Requirements:
+- preserve existing bulk assignment behaviour
+- preserve existing week/day selection
+- preserve existing meal selection flow
+- preserve existing mutations + invalidation
+- preserve existing confirmation behaviour
+
+IMPORTANT:
+Do not redesign bulk assignment logic.
+
+3. Preserve all existing migrated assistant modes
+
+The following must continue working:
+- scan
+- smart
+- templates
+- manual assignment
+
+4. Reduce modal fragmentation where safe
+
+Allowed:
+- moving operational content into assistant workspace
+
+Not allowed:
+- changing business logic
+- changing persistence
+- changing planner data model
+
+5. Mobile behaviour
+
+Desktop/tablet:
+- persistent side assistant
+
+Mobile:
+- bottom Sheet fallback
+
+Maintain existing responsive safety.
+
+6. Assistant routing consistency
+
+assistantMode values should remain coherent and scalable.
+
+Expected modes after this phase:
+- scan
+- smart
+- templates
+- manual
+- bulk
+- day
+
+Do NOT over-engineer routing.
+
+7. Preserve trust boundaries
+
+Users must:
+- explicitly confirm operations
+- explicitly trigger mutations
+- remain aware of planner changes
+
+No hidden planner modifications allowed.
+
+DEFINITION OF DONE
+
+Success means:
+- planner grid still renders
+- Day workflow works in assistant
+- Bulk Assign works in assistant
+- all previous assistant modes still work
+- no planner regressions
+- build passes
+- typecheck passes
+- workspace interaction consistency improved
+
+Must NOT break:
+- planner save flow
+- basket generation
+- Smart Suggest
+- scan planner
+- templates
+- meal assignment
+- household overrides
+- existing mutations
+- query invalidation behaviour
+
+DATA IMPACT DECLARATION
+
+Reads existing data: yes
+Writes new data: yes - existing planner mutations only
+Changes meaning of existing data: no
+Requires backfill: no
+
+TRUST CHECK
+
+Verify:
+- no hidden planner mutations
+- no automatic reassignment
+- no silent overwrite behaviour
+- no AI autonomy introduced
+
+ROLLBACK REQUIREMENTS
+
+If unstable:
+STOP immediately and reference:
+planner-phase0-complete-baseline-v1
+
+FINAL RESPONSE FORMAT
+
+At the top write exactly:
+
+PHASE 2A OPERATIONAL WORKSPACE CONSOLIDATION COMPLETE: YES / NO
+
+Then report:
+1. files changed
+2. assistant workflow migrations completed
+3. remaining modal workflows
+4. unchanged flows confirmed
+5. build result
+6. typecheck result
+7. manual/e2e test results
+8. regression risks found
+9. rollback notes
+10. recommended next step
+
+IMPORTANT:
+Do NOT continue into:
+- drag/drop
+- intent layer
+- nullable mealId
+- AI planning enhancement
+- autonomous planning
+- interaction redesign
+
+Stop strictly at Phase 2A operational consolidation.
