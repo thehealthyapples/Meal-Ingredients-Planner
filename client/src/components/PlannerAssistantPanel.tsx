@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch } from "lucide-react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChefHat, CheckCircle2, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import type { AssistantMode } from "@/contexts/PlannerContext";
+import { usePlannerWorkspaceContext } from "@/contexts/PlannerWorkspaceContext";
 import { TemplatesPanel } from "@/components/templates-panel";
 import type { User, Meal } from "@shared/schema";
 import { PlannerMealPickerPanel } from "@/components/PlannerMealPickerPanel";
@@ -13,6 +14,36 @@ import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMeal
 import { DayViewDrawer } from "@/components/day-view-drawer";
 import { PlannerBulkAssignPanel } from "@/components/PlannerBulkAssignPanel";
 import type { FullDay, FullWeek } from "@/lib/planner-types";
+
+// ── Reduced prop surface (Phase 3A) ──────────────────────────────────────────
+// Smart suggest controls and settings are now consumed from PlannerWorkspaceContext
+// reducing this interface from ~34 props to ~19 props.
+
+export interface PlaceholderItem {
+  entryId: number;
+  mealId: number;
+  mealName: string;
+  dayName: string;
+  slotLabel: string;
+  dayId: number;
+  mealType: string;
+  audience: string;
+  isDrink: boolean;
+  position: number;
+}
+
+export interface ResolveTarget {
+  mealName: string;
+  dayName: string;
+  slotLabel: string;
+  // Phase 3C: entry context for inline resolution
+  entryId: number;
+  dayId: number;
+  mealType: string;
+  audience: string;
+  isDrink: boolean;
+  position: number;
+}
 
 interface PlannerAssistantPanelProps {
   mode: AssistantMode;
@@ -22,24 +53,6 @@ interface PlannerAssistantPanelProps {
   onScanFile: (file: File) => void;
   onUploadClick: () => void;
   scanLoading: boolean;
-  smartLoading: boolean;
-  smartMealsPerDay: string;
-  setSmartMealsPerDay: (v: string) => void;
-  smartCuisine: string;
-  setSmartCuisine: (v: string) => void;
-  smartBudget: string;
-  setSmartBudget: (v: string) => void;
-  smartMaxUPF: string;
-  setSmartMaxUPF: (v: string) => void;
-  smartFishPerWeek: string;
-  setSmartFishPerWeek: (v: string) => void;
-  smartRedMeatPerWeek: string;
-  setSmartRedMeatPerWeek: (v: string) => void;
-  smartVegDays: boolean;
-  setSmartVegDays: (v: boolean) => void;
-  smartLeftovers: boolean;
-  setSmartLeftovers: (v: boolean) => void;
-  onRunSmartSuggest: () => void;
   pickerTarget: EntryTarget | null;
   meals: Meal[];
   plannerMealIdSet: Set<number>;
@@ -52,6 +65,12 @@ interface PlannerAssistantPanelProps {
   getMeal: (id: number | null) => Meal | undefined;
   onPlannerInvalidate: () => void;
   fullPlanner: FullWeek[];
+  resolveTarget?: ResolveTarget;
+  onResolveAction?: (action: "build" | "scan" | "later") => void;
+  onResolveRecipe?: (mealId: number) => void;
+  isResolving?: boolean;
+  placeholderItems?: PlaceholderItem[];
+  onResolveRecipeFromReview?: (mealId: number, target: ResolveTarget) => void;
 }
 
 function useIsMobile() {
@@ -307,39 +326,21 @@ function ScanContent({ onScanFile, scanLoading, onUploadClick }: ScanContentProp
   );
 }
 
-interface SmartContentProps {
-  smartLoading: boolean;
-  smartMealsPerDay: string;
-  setSmartMealsPerDay: (v: string) => void;
-  smartCuisine: string;
-  setSmartCuisine: (v: string) => void;
-  smartBudget: string;
-  setSmartBudget: (v: string) => void;
-  smartMaxUPF: string;
-  setSmartMaxUPF: (v: string) => void;
-  smartFishPerWeek: string;
-  setSmartFishPerWeek: (v: string) => void;
-  smartRedMeatPerWeek: string;
-  setSmartRedMeatPerWeek: (v: string) => void;
-  smartVegDays: boolean;
-  setSmartVegDays: (v: boolean) => void;
-  smartLeftovers: boolean;
-  setSmartLeftovers: (v: boolean) => void;
-  onRunSmartSuggest: () => void;
-}
+// SmartContent now reads all controls from PlannerWorkspaceContext
+function SmartContent() {
+  const {
+    smartMealsPerDay, setSmartMealsPerDay,
+    smartCuisine, setSmartCuisine,
+    smartBudget, setSmartBudget,
+    smartMaxUPF, setSmartMaxUPF,
+    smartFishPerWeek, setSmartFishPerWeek,
+    smartRedMeatPerWeek, setSmartRedMeatPerWeek,
+    smartVegDays, setSmartVegDays,
+    smartLeftovers, setSmartLeftovers,
+    smartLoading,
+    onRunSmartSuggest,
+  } = usePlannerWorkspaceContext();
 
-function SmartContent({
-  smartLoading,
-  smartMealsPerDay, setSmartMealsPerDay,
-  smartCuisine, setSmartCuisine,
-  smartBudget, setSmartBudget,
-  smartMaxUPF, setSmartMaxUPF,
-  smartFishPerWeek, setSmartFishPerWeek,
-  smartRedMeatPerWeek, setSmartRedMeatPerWeek,
-  smartVegDays, setSmartVegDays,
-  smartLeftovers, setSmartLeftovers,
-  onRunSmartSuggest,
-}: SmartContentProps) {
   return (
     <div className="space-y-4" data-testid="panel-smart-content">
       <div className="flex items-start gap-2.5 bg-muted/40 rounded-lg px-3 py-3">
@@ -473,6 +474,302 @@ function SmartContent({
   );
 }
 
+// PlannerSettingsContent reads from PlannerWorkspaceContext
+function PlannerSettingsContent() {
+  const { plannerSettings, toggleSetting, settingsUpdating } = usePlannerWorkspaceContext();
+
+  return (
+    <div className="space-y-6 py-2" data-testid="panel-settings-content">
+      <div className="flex items-start gap-2.5 bg-muted/40 rounded-lg px-3 py-3">
+        <Settings className="h-5 w-5 shrink-0 text-primary/60 mt-0.5" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Customise which rows appear in your planner grid.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5">
+              <Baby className="h-3.5 w-3.5 text-pink-500" />
+              <span className="text-sm font-medium" data-testid="label-enable-baby-meals">Baby Meals</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Enable baby meal row in planner</p>
+          </div>
+          <Switch
+            checked={plannerSettings?.enableBabyMeals ?? false}
+            onCheckedChange={(v) => toggleSetting("enableBabyMeals", v)}
+            disabled={settingsUpdating}
+            data-testid="switch-enable-baby-meals"
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5">
+              <PersonStanding className="h-3.5 w-3.5 text-sky-500" />
+              <span className="text-sm font-medium" data-testid="label-enable-child-meals">Child Meals</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Enable kids meal row in planner</p>
+          </div>
+          <Switch
+            checked={plannerSettings?.enableChildMeals ?? false}
+            onCheckedChange={(v) => toggleSetting("enableChildMeals", v)}
+            disabled={settingsUpdating}
+            data-testid="switch-enable-child-meals"
+          />
+        </div>
+
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-1.5">
+              <Wine className="h-3.5 w-3.5 text-purple-400" />
+              <span className="text-sm font-medium" data-testid="label-enable-drinks">Drinks</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Enable drinks row in planner</p>
+          </div>
+          <Switch
+            checked={plannerSettings?.enableDrinks ?? false}
+            onCheckedChange={(v) => toggleSetting("enableDrinks", v)}
+            disabled={settingsUpdating}
+            data-testid="switch-enable-drinks"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface ResolveSearchContentProps {
+  mealName: string;
+  meals: Meal[];
+  onSelectRecipe: (mealId: number) => void;
+  onBack: () => void;
+  isResolving: boolean;
+}
+
+function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResolving }: ResolveSearchContentProps) {
+  const [search, setSearch] = useState(mealName);
+
+  const filteredMeals = useMemo(() => {
+    const cookbookMeals = meals.filter(m =>
+      m.mealSourceType !== "planner-placeholder" &&
+      !m.isReadyMeal &&
+      !m.isDrink
+    );
+    if (!search.trim()) return cookbookMeals.slice(0, 50);
+    const q = search.toLowerCase();
+    return cookbookMeals.filter(m => m.name.toLowerCase().includes(q)).slice(0, 50);
+  }, [meals, search]);
+
+  return (
+    <div className="flex flex-col gap-3" data-testid="panel-resolve-search">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors self-start"
+        data-testid="button-resolve-search-back"
+      >
+        <ChevronLeft className="h-3.5 w-3.5" />
+        Back
+      </button>
+
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Search your recipes…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          className="w-full pl-9 pr-3 h-8 text-sm rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
+          autoFocus
+          data-testid="input-resolve-recipe-search"
+        />
+      </div>
+
+      <div className="overflow-y-auto space-y-0.5" data-testid="list-resolve-recipes">
+        {filteredMeals.length === 0 ? (
+          <div className="text-center py-8">
+            <ChefHat className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
+            <p className="text-sm text-muted-foreground">
+              {search.trim() ? "No recipes found" : "No recipes in your cookbook yet"}
+            </p>
+            {search.trim() && (
+              <button
+                className="text-xs text-primary mt-1.5 hover:underline"
+                onClick={() => setSearch("")}
+                data-testid="button-resolve-clear-search"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
+        ) : (
+          filteredMeals.map(meal => (
+            <button
+              key={meal.id}
+              className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-accent/40 text-left transition-colors disabled:opacity-50"
+              onClick={() => onSelectRecipe(meal.id)}
+              disabled={isResolving}
+              data-testid={`button-resolve-select-${meal.id}`}
+            >
+              {meal.imageUrl ? (
+                <img src={meal.imageUrl} alt={meal.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+              ) : (
+                <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                  <ChefHat className="h-4 w-4 text-muted-foreground/40" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate text-foreground">{meal.name}</p>
+                {meal.servings > 1 && (
+                  <p className="text-xs text-muted-foreground">{meal.servings} servings</p>
+                )}
+              </div>
+              {isResolving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
+            </button>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface ResolveContentProps {
+  mealName: string;
+  dayName: string;
+  slotLabel: string;
+  onSearch: () => void;
+  onAction: (action: "build" | "scan" | "later") => void;
+}
+
+function ResolveContent({ mealName, dayName, slotLabel, onSearch, onAction }: ResolveContentProps) {
+  return (
+    <div className="space-y-4" data-testid="panel-resolve-content">
+      <div className="space-y-0.5">
+        <p className="text-xs text-muted-foreground">{dayName} · {slotLabel}</p>
+        <h3 className="text-sm font-semibold text-foreground leading-snug">{mealName}</h3>
+      </div>
+
+      <div className="flex items-start gap-2.5 bg-muted/40 rounded-lg px-3 py-3">
+        <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground mt-0.5" />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          This meal is planned, but no full recipe has been linked yet.
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <button
+          className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+          onClick={onSearch}
+          data-testid="button-resolve-search"
+        >
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          Search cookbook
+        </button>
+        <button
+          className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+          onClick={() => onAction("build")}
+          data-testid="button-resolve-build"
+        >
+          <Wand2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+          Build recipe
+        </button>
+        <button
+          className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+          onClick={() => onAction("scan")}
+          data-testid="button-resolve-scan"
+        >
+          <ScanLine className="h-4 w-4 shrink-0 text-muted-foreground" />
+          Scan recipe
+        </button>
+        <button
+          className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
+          onClick={() => onAction("later")}
+          data-testid="button-resolve-later"
+        >
+          <CalendarDays className="h-4 w-4 shrink-0" />
+          Add later / keep as planned
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface PlaceholderReviewContentProps {
+  placeholderItems: PlaceholderItem[];
+  onSearchRecipe: (item: PlaceholderItem) => void;
+  onBuildRecipe: (item: PlaceholderItem) => void;
+  onScanRecipe: (item: PlaceholderItem) => void;
+  isResolving: boolean;
+}
+
+function PlaceholderReviewContent({
+  placeholderItems,
+  onSearchRecipe,
+  onBuildRecipe,
+  onScanRecipe,
+  isResolving,
+}: PlaceholderReviewContentProps) {
+  if (placeholderItems.length === 0) {
+    return (
+      <div className="flex flex-col items-center py-10 gap-2" data-testid="panel-review-empty">
+        <CheckCircle2 className="h-8 w-8 text-green-500/70" />
+        <p className="text-sm font-medium text-foreground">All meals linked!</p>
+        <p className="text-xs text-muted-foreground text-center">Every planned meal has a recipe.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-0.5" data-testid="panel-placeholder-review">
+      <p className="text-xs text-muted-foreground pb-2">
+        {placeholderItems.length} unlinked meal{placeholderItems.length !== 1 ? "s" : ""}
+      </p>
+      {placeholderItems.map((item) => (
+        <div
+          key={item.entryId}
+          className="flex items-start gap-2 py-2 px-2 rounded-lg hover:bg-muted/40 border-b border-border/40 last:border-0 transition-colors group"
+          data-testid={`review-item-${item.entryId}`}
+        >
+          <div className="flex-1 min-w-0 pt-0.5">
+            <p className="text-sm font-medium truncate text-foreground leading-snug">{item.mealName}</p>
+            <p className="text-[11px] text-muted-foreground leading-tight">{item.dayName} · {item.slotLabel}</p>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              className="text-[10px] px-1.5 py-0.5 rounded border border-border hover:border-primary hover:text-primary transition-colors disabled:opacity-40"
+              onClick={() => onSearchRecipe(item)}
+              disabled={isResolving}
+              title="Search cookbook"
+              data-testid={`button-review-search-${item.entryId}`}
+            >
+              Search
+            </button>
+            <button
+              className="text-[10px] px-1.5 py-0.5 rounded border border-border hover:border-primary hover:text-primary transition-colors disabled:opacity-40"
+              onClick={() => onBuildRecipe(item)}
+              disabled={isResolving}
+              title="Build recipe"
+              data-testid={`button-review-build-${item.entryId}`}
+            >
+              Build
+            </button>
+            <button
+              className="p-1 text-muted-foreground/40 hover:text-muted-foreground transition-colors disabled:opacity-40"
+              onClick={() => onScanRecipe(item)}
+              disabled={isResolving}
+              title="Scan recipe"
+              data-testid={`button-review-scan-${item.entryId}`}
+            >
+              <ScanLine className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function getPanelIcon(mode: AssistantMode) {
   if (mode === "smart") return <Sparkles className="h-4 w-4 text-primary" />;
   if (mode === "smart-review") return <Sparkles className="h-4 w-4 text-primary" />;
@@ -481,6 +778,9 @@ function getPanelIcon(mode: AssistantMode) {
   if (mode === "bulk") return <Calendar className="h-4 w-4 text-primary" />;
   if (mode === "day") return <CalendarDays className="h-4 w-4 text-primary" />;
   if (mode === "scan-review") return <ScanSearch className="h-4 w-4 text-primary" />;
+  if (mode === "settings") return <Settings className="h-4 w-4 text-primary" />;
+  if (mode === "resolve") return <BookOpen className="h-4 w-4 text-primary" />;
+  if (mode === "placeholder-review") return <ClipboardList className="h-4 w-4 text-primary" />;
   return <ScanLine className="h-4 w-4 text-primary" />;
 }
 
@@ -493,6 +793,9 @@ function getPanelTitle(mode: AssistantMode, dayLabel?: string) {
   if (mode === "manual") return "Add Meal";
   if (mode === "bulk") return "Bulk Assign";
   if (mode === "day") return dayLabel || "Day View";
+  if (mode === "settings") return "Planner Options";
+  if (mode === "resolve") return "Link a Recipe";
+  if (mode === "placeholder-review") return "Unlinked Meals";
   return "Planner Assistant";
 }
 
@@ -504,16 +807,6 @@ export function PlannerAssistantPanel({
   onScanFile,
   onUploadClick,
   scanLoading,
-  smartLoading,
-  smartMealsPerDay, setSmartMealsPerDay,
-  smartCuisine, setSmartCuisine,
-  smartBudget, setSmartBudget,
-  smartMaxUPF, setSmartMaxUPF,
-  smartFishPerWeek, setSmartFishPerWeek,
-  smartRedMeatPerWeek, setSmartRedMeatPerWeek,
-  smartVegDays, setSmartVegDays,
-  smartLeftovers, setSmartLeftovers,
-  onRunSmartSuggest,
   pickerTarget,
   meals,
   plannerMealIdSet,
@@ -526,13 +819,33 @@ export function PlannerAssistantPanel({
   getMeal,
   onPlannerInvalidate,
   fullPlanner,
+  resolveTarget,
+  onResolveAction,
+  onResolveRecipe,
+  isResolving = false,
+  placeholderItems = [],
+  onResolveRecipeFromReview,
 }: PlannerAssistantPanelProps) {
   const isMobile = useIsMobile();
+  const [resolveSubview, setResolveSubview] = useState<"menu" | "search">("menu");
+  const [reviewSearchTarget, setReviewSearchTarget] = useState<ResolveTarget | null>(null);
+
+  useEffect(() => {
+    if (mode !== "resolve") setResolveSubview("menu");
+  }, [mode]);
+
+  useEffect(() => {
+    if (mode !== "placeholder-review") setReviewSearchTarget(null);
+  }, [mode]);
 
   if (!mode) return null;
 
-  const titleLabel = getPanelTitle(mode, dayViewLabel);
-  const titleIcon = getPanelIcon(mode);
+  const isSearchSubview =
+    (mode === "resolve" && resolveSubview === "search") ||
+    (mode === "placeholder-review" && reviewSearchTarget !== null);
+
+  const titleLabel = isSearchSubview ? "Search Recipes" : getPanelTitle(mode, dayViewLabel);
+  const titleIcon = isSearchSubview ? <Search className="h-4 w-4 text-primary" /> : getPanelIcon(mode);
 
   const panelContent = (
     <>
@@ -543,28 +856,8 @@ export function PlannerAssistantPanel({
           onUploadClick={onUploadClick}
         />
       )}
-      {mode === "smart" && (
-        <SmartContent
-          smartLoading={smartLoading}
-          smartMealsPerDay={smartMealsPerDay}
-          setSmartMealsPerDay={setSmartMealsPerDay}
-          smartCuisine={smartCuisine}
-          setSmartCuisine={setSmartCuisine}
-          smartBudget={smartBudget}
-          setSmartBudget={setSmartBudget}
-          smartMaxUPF={smartMaxUPF}
-          setSmartMaxUPF={setSmartMaxUPF}
-          smartFishPerWeek={smartFishPerWeek}
-          setSmartFishPerWeek={setSmartFishPerWeek}
-          smartRedMeatPerWeek={smartRedMeatPerWeek}
-          setSmartRedMeatPerWeek={setSmartRedMeatPerWeek}
-          smartVegDays={smartVegDays}
-          setSmartVegDays={setSmartVegDays}
-          smartLeftovers={smartLeftovers}
-          setSmartLeftovers={setSmartLeftovers}
-          onRunSmartSuggest={onRunSmartSuggest}
-        />
-      )}
+      {mode === "smart" && <SmartContent />}
+      {mode === "settings" && <PlannerSettingsContent />}
       {mode === "templates" && (
         <TemplatesPanel inline open onClose={onClose} user={user} />
       )}
@@ -601,6 +894,67 @@ export function PlannerAssistantPanel({
         />
       )}
       {(mode === "smart-review" || mode === "scan-review") && reviewContent}
+      {mode === "resolve" && resolveTarget && (
+        resolveSubview === "search" ? (
+          <ResolveSearchContent
+            mealName={resolveTarget.mealName}
+            meals={meals}
+            onSelectRecipe={(mealId) => {
+              if (onResolveRecipe) onResolveRecipe(mealId);
+            }}
+            onBack={() => setResolveSubview("menu")}
+            isResolving={isResolving}
+          />
+        ) : (
+          <ResolveContent
+            mealName={resolveTarget.mealName}
+            dayName={resolveTarget.dayName}
+            slotLabel={resolveTarget.slotLabel}
+            onSearch={() => setResolveSubview("search")}
+            onAction={(action) => {
+              if (onResolveAction) onResolveAction(action);
+            }}
+          />
+        )
+      )}
+      {mode === "placeholder-review" && (
+        reviewSearchTarget ? (
+          <ResolveSearchContent
+            mealName={reviewSearchTarget.mealName}
+            meals={meals}
+            onSelectRecipe={(mealId) => {
+              if (onResolveRecipeFromReview) onResolveRecipeFromReview(mealId, reviewSearchTarget);
+              setReviewSearchTarget(null);
+            }}
+            onBack={() => setReviewSearchTarget(null)}
+            isResolving={isResolving}
+          />
+        ) : (
+          <PlaceholderReviewContent
+            placeholderItems={placeholderItems}
+            onSearchRecipe={(item) => {
+              setReviewSearchTarget({
+                mealName: item.mealName,
+                dayName: item.dayName,
+                slotLabel: item.slotLabel,
+                entryId: item.entryId,
+                dayId: item.dayId,
+                mealType: item.mealType,
+                audience: item.audience,
+                isDrink: item.isDrink,
+                position: item.position,
+              });
+            }}
+            onBuildRecipe={() => {
+              if (onResolveAction) onResolveAction("build");
+            }}
+            onScanRecipe={() => {
+              if (onResolveAction) onResolveAction("scan");
+            }}
+            isResolving={isResolving}
+          />
+        )
+      )}
     </>
   );
 

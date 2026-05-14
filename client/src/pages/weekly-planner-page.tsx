@@ -10,16 +10,19 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store, Users, Wand2, Camera } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store, Users, Wand2, Camera, BookOpen } from "lucide-react";
 import { CreateMealModal } from "@/components/create-meal-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { usePlannerContext } from "@/contexts/PlannerContext";
+import { PlannerWorkspaceContext } from "@/contexts/PlannerWorkspaceContext";
 import { useSmartSuggest } from "@/hooks/use-smart-suggest";
 import { usePlannerScan } from "@/hooks/use-planner-scan";
 import { PlannerAssistantPanel } from "@/components/PlannerAssistantPanel";
+import type { ResolveTarget, PlaceholderItem } from "@/components/PlannerAssistantPanel";
+import { SmartReviewPanelContent } from "@/components/SmartReviewPanelContent";
 import type { FullDay, FullWeek, SmartCandidate, MealExplanation, SmartSuggestEntry, SmartSuggestResult } from "@/lib/planner-types";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMealPickerPanel";
@@ -121,390 +124,6 @@ function getUPFLabelFn(score?: number) {
   return "High";
 }
 
-interface SmartMealEntryCardProps {
-  entry: SmartSuggestEntry;
-  meal: Meal | undefined;
-  nutrition: Nutrition | undefined;
-  nutritionLoading: boolean;
-  locked: boolean;
-  expanded: boolean;
-  smartLoading: boolean;
-  onLock: () => void;
-  onRefresh: () => void;
-  onExpandExplain: () => void;
-  onNutritionRefresh: () => void;
-}
-
-function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, expanded, smartLoading, onLock, onRefresh, onExpandExplain, onNutritionRefresh }: SmartMealEntryCardProps) {
-  const { toast } = useToast();
-  const qc = useQueryClient();
-  const [, navigate] = useLocation();
-  const [qty, setQty] = useState(1);
-  const mealId = !entry.candidate.isExternal ? Number(entry.candidate.id) : null;
-  const key = `${entry.dayOfWeek}-${entry.slot}`;
-
-  const addToListMutation = useMutation({
-    mutationFn: async () => {
-      if (!mealId) throw new Error('No meal id');
-      const res = await apiRequest('POST', '/api/shopping-list/from-meals', { mealSelections: [{ mealId, count: qty }] });
-      return res.json();
-    },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['/api/shopping-list'] }); toast({ title: "Added to basket" }); },
-    onError: () => toast({ title: "Failed to add", variant: "destructive" }),
-  });
-
-  const analyzeMutation = useMutation({
-    mutationFn: async () => {
-      if (!mealId) throw new Error('No meal id');
-      const res = await apiRequest('POST', '/api/analyze-meal', { mealId });
-      return res.json();
-    },
-    onSuccess: (data: { healthScore: number }) => {
-      toast({ title: "Analysis complete", description: `Health score: ${data.healthScore}/100` });
-      onNutritionRefresh();
-    },
-    onError: () => toast({ title: "Analysis failed", variant: "destructive" }),
-  });
-
-  const mealImg = entry.candidate.image || meal?.imageUrl || null;
-  const dietTypes = entry.candidate.dietTypes || meal?.dietTypes || [];
-  const cuisine = entry.candidate.cuisine || null;
-  const sourceName = entry.candidate.source || (entry.candidate.isExternal ? 'Web' : 'Cookbook');
-  const sourceUrl = entry.candidate.sourceUrl || meal?.sourceUrl || null;
-  const ingredientList = (entry.candidate.ingredients?.length ? entry.candidate.ingredients : null) || meal?.ingredients || [];
-  const ingredientCount = ingredientList.length || null;
-  const varietyScore = useMemo(() => computeMealVariety(ingredientList), [ingredientList]);
-  const nutrientTags = useMemo(() => getMealNutrients(ingredientList), [ingredientList]);
-  const servings = entry.candidate.servings || meal?.servings || null;
-  const primaryProtein = entry.candidate.primaryProtein || null;
-  const upfScore = entry.candidate.estimatedUPFScore ?? null;
-  const cost = entry.candidate.estimatedCost ?? null;
-  const isFreezerEligible = meal?.isFreezerEligible ?? false;
-
-  const nutritionItems = nutrition ? [
-    { label: 'Calories', value: nutrition.calories, Icon: Flame, color: 'text-orange-500' },
-    { label: 'Protein', value: nutrition.protein, Icon: Beef, color: 'text-red-500' },
-    { label: 'Carbs', value: nutrition.carbs, Icon: Wheat, color: 'text-amber-600' },
-    { label: 'Fat', value: nutrition.fat, Icon: Droplets, color: 'text-yellow-500' },
-    { label: 'Sugar', value: nutrition.sugar, Icon: Cookie, color: 'text-pink-500' },
-    { label: 'Salt', value: nutrition.salt, Icon: Droplet, color: 'text-blue-500' },
-  ].filter(i => i.value) : [];
-
-  return (
-    <div className="flex flex-col">
-      <div className="flex items-start gap-2.5 px-3 py-2.5">
-        <div className="h-14 w-14 rounded-lg overflow-hidden bg-muted shrink-0 border flex items-center justify-center">
-          {mealImg
-            ? <img src={mealImg} alt={entry.candidate.name} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            : <UtensilsCrossed className="h-6 w-6 text-muted-foreground/40" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap mb-1">
-            <span className="text-xs font-medium text-muted-foreground capitalize">{entry.slot}</span>
-            <span className="text-muted-foreground/40">·</span>
-            <span className="text-xs text-muted-foreground">{sourceName}</span>
-            {dietTypes.includes('vegetarian') && <Badge variant="outline" className="text-[10px] h-4 px-1 border-green-500/50 text-green-600 dark:text-green-400">Vegetarian</Badge>}
-            {dietTypes.includes('vegan') && <Badge variant="outline" className="text-[10px] h-4 px-1 border-green-500/50 text-green-600 dark:text-green-400">Vegan</Badge>}
-            {dietTypes.includes('gluten-free') && <Badge variant="outline" className="text-[10px] h-4 px-1 border-amber-500/50 text-amber-600 dark:text-amber-400">GF</Badge>}
-          </div>
-          <p className="text-sm font-semibold leading-snug mb-1">{entry.candidate.name}</p>
-          <NutritionVarietyDots score={varietyScore} />
-          <MealNutrientTags nutrients={nutrientTags} />
-          <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
-            {cuisine && <span className="capitalize">{cuisine}</span>}
-            {primaryProtein && <span className="capitalize">{primaryProtein}</span>}
-            {ingredientCount ? <span>{ingredientCount} ingredients</span> : null}
-            {servings ? <span>{servings} servings</span> : null}
-          </div>
-        </div>
-        <div className="flex flex-col gap-1 shrink-0">
-          <button onClick={onRefresh} disabled={smartLoading} className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors disabled:opacity-40" title="Get a different meal for this slot" data-testid={`button-refresh-${key}`}>
-            <RefreshCw className="h-3.5 w-3.5" />
-          </button>
-          <button onClick={onLock} className={`p-1.5 rounded-md transition-colors ${locked ? "text-primary bg-primary/10" : "text-muted-foreground hover:text-foreground hover:bg-accent/40"}`} title={locked ? "Locked - kept on regenerate" : "Click to lock"} data-testid={`button-lock-${key}`}>
-            <Lock className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {mealId && (
-        <div className="px-3 pb-2">
-          <p className="text-xs font-medium text-muted-foreground mb-1">Nutrition (per serving)</p>
-          {nutritionLoading && !nutritionItems.length ? (
-            <div className="grid grid-cols-3 gap-1">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="h-5 rounded-md bg-muted animate-pulse" />
-              ))}
-            </div>
-          ) : nutritionItems.length > 0 ? (
-            <div className="grid grid-cols-3 gap-1">
-              {nutritionItems.map(({ label, value, Icon, color }) => (
-                <div key={label} className="flex items-center gap-1 rounded-md bg-muted/50 px-1.5 py-0.5">
-                  <Icon className={`h-3 w-3 shrink-0 ${color}`} />
-                  <span className="text-xs font-medium truncate">{value}</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <button
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-0.5"
-              onClick={() => analyzeMutation.mutate()}
-              disabled={analyzeMutation.isPending}
-              data-testid={`button-fetch-nutrition-${key}`}
-            >
-              {analyzeMutation.isPending
-                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                : <Microscope className="h-3.5 w-3.5" />}
-              {analyzeMutation.isPending ? 'Analysing…' : 'Tap to fetch nutrition data'}
-            </button>
-          )}
-        </div>
-      )}
-
-      <div className="px-3 pb-2.5 border-t">
-        <div className="flex items-center gap-1 pt-1.5 flex-wrap">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button size="sm" variant="outline" className="text-xs font-semibold shrink-0 h-7 min-w-8 px-2" data-testid={`button-qty-${key}`}>{qty}</Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-12 p-1" align="start" side="top">
-              <div className="flex flex-col gap-0.5">
-                {[1,2,3,4,5,6,7,8,9,10].map(n => (
-                  <Button key={n} size="sm" variant={n === qty ? "default" : "ghost"} className="text-xs h-6" onClick={() => setQty(n)}>{n}</Button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {servings != null && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground px-1"><UtensilsCrossed className="h-3.5 w-3.5" /><span>{servings}</span></span>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">{servings} serving{servings !== 1 ? 's' : ''}</p></TooltipContent>
-            </Tooltip>
-          )}
-
-          {sourceUrl && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <a href={sourceUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} data-testid={`link-recipe-${key}`}>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" asChild><span><Globe className="h-4 w-4" /></span></Button>
-                </a>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">View original recipe</p></TooltipContent>
-            </Tooltip>
-          )}
-
-          {mealId && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => navigate(`/meals/${mealId}`)} data-testid={`button-edit-${key}`}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">View & edit recipe</p></TooltipContent>
-            </Tooltip>
-          )}
-
-          {mealId && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => addToListMutation.mutate()} disabled={addToListMutation.isPending} data-testid={`button-basket-${key}`}>
-                  {addToListMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBasket className="h-4 w-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">Add to basket</p></TooltipContent>
-            </Tooltip>
-          )}
-
-          {mealId && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => analyzeMutation.mutate()} disabled={analyzeMutation.isPending} data-testid={`button-analyse-${key}`}>
-                  {analyzeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Microscope className="h-4 w-4" />}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">Analyse nutrition</p></TooltipContent>
-            </Tooltip>
-          )}
-
-          {isFreezerEligible && mealId && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button size="icon" variant="ghost" className="h-7 w-7 text-blue-400" data-testid={`button-freeze-${key}`}>
-                  <Snowflake className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">Add to freezer</p></TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-        {(cost != null || upfScore != null || entry.explanation) && (
-          <div className="flex items-center gap-2 pt-1 pb-0.5 flex-wrap">
-            {cost != null && <span className="flex items-center gap-0.5 text-xs text-muted-foreground"><DollarSign className="h-3 w-3" />£{cost.toFixed(2)}</span>}
-            {upfScore != null && <span className={`text-xs ${getUPFColorFn(upfScore)}`}>UPF: {getUPFLabelFn(upfScore)}</span>}
-            {entry.explanation && (
-              <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={onExpandExplain} data-testid={`button-explain-${key}`}>
-                <HelpCircle className="h-3 w-3" />{expanded ? "Hide" : "Why?"}
-              </button>
-            )}
-          </div>
-        )}
-      </div>
-
-      {expanded && entry.explanation && (
-        <div className="px-3 pb-3 text-xs text-muted-foreground space-y-0.5 bg-muted/20 border-t pt-2">
-          {entry.explanation.reasons.map((r, i) => <p key={i}>• {r}</p>)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Smart review panel content (Phase 2B) ────────────────────────────────────
-
-interface SmartReviewPanelContentProps {
-  smartResult: SmartSuggestResult | null;
-  smartNutritionMap: Map<number, Nutrition>;
-  nutritionLoading: boolean;
-  lockedEntries: Set<string>;
-  expandedExplanation: string | null;
-  setExpandedExplanation: (v: string | null) => void;
-  applyingSmartPlan: boolean;
-  smartLoading: boolean;
-  mealById: Map<number, Meal>;
-  activeWeek: string;
-  toggleLockEntry: (key: string) => void;
-  regenerateSingleEntry: (entry: SmartSuggestEntry) => void;
-  applySmartSuggestion: () => void;
-  runSmartSuggest: (preserveLocks?: boolean) => void;
-  setNutritionFetchTick: React.Dispatch<React.SetStateAction<number>>;
-  onCancel: () => void;
-}
-
-function SmartReviewPanelContent({
-  smartResult,
-  smartNutritionMap,
-  nutritionLoading,
-  lockedEntries,
-  expandedExplanation,
-  setExpandedExplanation,
-  applyingSmartPlan,
-  smartLoading,
-  mealById,
-  activeWeek,
-  toggleLockEntry,
-  regenerateSingleEntry,
-  applySmartSuggestion,
-  runSmartSuggest,
-  setNutritionFetchTick,
-  onCancel,
-}: SmartReviewPanelContentProps) {
-  if (!smartResult) return null;
-
-  const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-  const grouped: Record<number, SmartSuggestEntry[]> = {};
-  for (const e of smartResult.entries) {
-    if (!grouped[e.dayOfWeek]) grouped[e.dayOfWeek] = [];
-    grouped[e.dayOfWeek].push(e);
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg border bg-muted/30 px-2 py-1.5 text-center">
-          <p className="text-xs text-muted-foreground">Total meals</p>
-          <p className="text-base font-semibold">{smartResult.stats.totalMeals}</p>
-        </div>
-        <div className="rounded-lg border bg-muted/30 px-2 py-1.5 text-center">
-          <p className="text-xs text-muted-foreground">Est. cost</p>
-          <p className="text-base font-semibold">£{(smartResult.stats.estimatedWeeklyCost ?? 0).toFixed(0)}</p>
-        </div>
-        <div className="rounded-lg border bg-muted/30 px-2 py-1.5 text-center">
-          <p className="text-xs text-muted-foreground">Avg UPF</p>
-          <p className={`text-base font-semibold ${getUPFColorFn(smartResult.stats.averageUPFScore)}`}>{getUPFLabelFn(smartResult.stats.averageUPFScore)}</p>
-        </div>
-        <div className="rounded-lg border bg-muted/30 px-2 py-1.5 text-center">
-          <p className="text-xs text-muted-foreground">Ingredient reuse</p>
-          <p className="text-base font-semibold">{smartResult.stats.ingredientReuse ?? 0}</p>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        {Object.entries(grouped).sort(([a],[b]) => Number(a)-Number(b)).map(([dow, entries]) => (
-          <div key={dow} className="rounded-lg border">
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 rounded-t-lg border-b">
-              <span className="text-xs font-medium">{dayNames[Number(dow)]}</span>
-            </div>
-            <div className="divide-y">
-              {entries.map((entry) => {
-                const key = `${entry.dayOfWeek}-${entry.slot}`;
-                const exKey = `${key}-expl`;
-                const internalMealId = !entry.candidate.isExternal ? Number(entry.candidate.id) : null;
-                return (
-                  <SmartMealEntryCard
-                    key={key}
-                    entry={entry}
-                    meal={internalMealId ? mealById.get(internalMealId) : undefined}
-                    nutrition={internalMealId ? smartNutritionMap.get(internalMealId) : undefined}
-                    nutritionLoading={nutritionLoading}
-                    locked={lockedEntries.has(key)}
-                    expanded={expandedExplanation === exKey}
-                    smartLoading={smartLoading}
-                    onLock={() => toggleLockEntry(key)}
-                    onRefresh={() => regenerateSingleEntry(entry)}
-                    onExpandExplain={() => setExpandedExplanation(expandedExplanation === exKey ? null : exKey)}
-                    onNutritionRefresh={() => setNutritionFetchTick(t => t + 1)}
-                  />
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {lockedEntries.size > 0 && (
-        <p className="text-xs text-muted-foreground flex items-center gap-1">
-          <Lock className="h-3 w-3 text-primary" />{lockedEntries.size} meal{lockedEntries.size !== 1 ? "s" : ""} locked — kept on regenerate.
-        </p>
-      )}
-
-      <div className="flex flex-col gap-2 pt-1">
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full"
-          onClick={() => runSmartSuggest(true)}
-          disabled={smartLoading}
-          data-testid="button-smart-regenerate"
-        >
-          {smartLoading ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
-          Regenerate
-        </Button>
-        <Button
-          size="sm"
-          className="w-full"
-          onClick={applySmartSuggestion}
-          disabled={applyingSmartPlan}
-          data-testid="button-smart-apply"
-        >
-          {applyingSmartPlan ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
-          Apply to Week {activeWeek}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-muted-foreground"
-          onClick={onCancel}
-          data-testid="button-smart-cancel"
-        >
-          Cancel
-        </Button>
-      </div>
-    </div>
-  );
-}
 
 export default function WeeklyPlannerPage() {
   const { toast } = useToast();
@@ -520,6 +139,7 @@ export default function WeeklyPlannerPage() {
   const [expandedDayId, setExpandedDayId] = useState<number | null>(null);
   const [expandedDayLabel, setExpandedDayLabel] = useState("");
   const [mealDetail, setMealDetail] = useState<MealDetailState | null>(null);
+  const [resolveTarget, setResolveTarget] = useState<ResolveTarget | null>(null);
   const [selectedDayId, setSelectedDayId] = useState<number | null>(null);
   const [mobileDayIndex, setMobileDayIndex] = useState(0);
   const { user } = useUser();
@@ -612,6 +232,7 @@ export default function WeeklyPlannerPage() {
     smartLeftovers, setSmartLeftovers,
     lockedEntries, expandedExplanation, setExpandedExplanation,
     applyingSmartPlan,
+    restoredFromSession, dismissRestoreBanner,
     runSmartSuggest, toggleLockEntry, applySmartSuggestion, regenerateSingleEntry,
     clearSmartResult,
   } = useSmartSuggest({
@@ -927,6 +548,67 @@ export default function WeeklyPlannerPage() {
     setAssistantMode("manual");
   };
 
+  const handleResolveAction = (action: "build" | "scan" | "later") => {
+    if (action === "build") {
+      setResolveTarget(null);
+      setAssistantMode(null);
+      setCreateMealOpen(true);
+    } else if (action === "scan") {
+      setAssistantMode("scan");
+    } else {
+      setResolveTarget(null);
+      setAssistantMode(null);
+    }
+  };
+
+  const handleResolveRecipe = (mealId: number) => {
+    if (!resolveTarget) return;
+    const target = resolveTarget;
+    deleteEntryMutation.mutate(target.entryId, {
+      onSuccess: () => {
+        addEntryMutation.mutate({
+          dayId: target.dayId,
+          mealType: target.mealType,
+          audience: target.audience,
+          mealId,
+          position: target.position,
+          isDrink: target.isDrink,
+        }, {
+          onSuccess: () => {
+            setResolveTarget(null);
+            setAssistantMode(null);
+            toast({ title: "Recipe linked", description: `${target.mealName} has been resolved.` });
+          },
+        });
+      },
+      onError: () => {
+        toast({ title: "Failed to link recipe", variant: "destructive" });
+      },
+    });
+  };
+
+  const handleResolveRecipeFromReview = (mealId: number, target: ResolveTarget) => {
+    deleteEntryMutation.mutate(target.entryId, {
+      onSuccess: () => {
+        addEntryMutation.mutate({
+          dayId: target.dayId,
+          mealType: target.mealType,
+          audience: target.audience,
+          mealId,
+          position: target.position,
+          isDrink: target.isDrink,
+        }, {
+          onSuccess: () => {
+            toast({ title: "Recipe linked", description: `${target.mealName} resolved.` });
+          },
+        });
+      },
+      onError: () => {
+        toast({ title: "Failed to link recipe", variant: "destructive" });
+      },
+    });
+  };
+
   const selectMeal = (mealId: number) => {
     if (!pickerTarget) return;
     const day = fullPlanner.flatMap(w => w.days).find(d => d.id === pickerTarget.dayId);
@@ -1075,6 +757,54 @@ export default function WeeklyPlannerPage() {
     return sortedDays[0] ?? null;
   }, [selectedDayId, sortedDays]);
 
+  const placeholderItems = useMemo((): PlaceholderItem[] => {
+    const items: PlaceholderItem[] = [];
+    for (const day of sortedDays) {
+      for (const row of visibleRows) {
+        const cellEntries = getCellEntries(day.entries, row);
+        for (const entry of cellEntries) {
+          const meal = meals.find(m => m.id === entry.mealId);
+          if (meal?.mealSourceType === "planner-placeholder") {
+            items.push({
+              entryId: entry.id,
+              mealId: entry.mealId,
+              mealName: meal.name,
+              dayName: DAY_NAMES[day.dayOfWeek],
+              slotLabel: row.label,
+              dayId: day.id,
+              mealType: row.mealType ?? row.addMealType,
+              audience: row.audience,
+              isDrink: row.isDrink,
+              position: entry.position,
+            });
+          }
+        }
+      }
+    }
+    return items;
+  }, [sortedDays, visibleRows, meals]);
+
+
+  const workspaceValue = useMemo(() => ({
+    smartMealsPerDay, setSmartMealsPerDay,
+    smartCuisine, setSmartCuisine,
+    smartBudget, setSmartBudget,
+    smartMaxUPF, setSmartMaxUPF,
+    smartFishPerWeek, setSmartFishPerWeek,
+    smartRedMeatPerWeek, setSmartRedMeatPerWeek,
+    smartVegDays, setSmartVegDays,
+    smartLeftovers, setSmartLeftovers,
+    smartLoading,
+    onRunSmartSuggest: () => runSmartSuggest(),
+    plannerSettings,
+    toggleSetting,
+    settingsUpdating: updateSettingsMutation.isPending,
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [
+    smartMealsPerDay, smartCuisine, smartBudget, smartMaxUPF,
+    smartFishPerWeek, smartRedMeatPerWeek, smartVegDays, smartLeftovers,
+    smartLoading, plannerSettings, updateSettingsMutation.isPending,
+  ]);
 
   if (isLoading) {
     return (
@@ -1085,6 +815,7 @@ export default function WeeklyPlannerPage() {
   }
 
   return (
+    <PlannerWorkspaceContext.Provider value={workspaceValue}>
     <>
     <PageHeader
       title="Planner"
@@ -1176,6 +907,17 @@ export default function WeeklyPlannerPage() {
             <ShoppingBasket className="h-3 w-3 mr-1" />
             {addToBasketMutation.isPending ? "…" : "+Week"}
           </Button>
+          {placeholderItems.length > 0 && (
+            <button
+              onClick={() => setAssistantMode("placeholder-review")}
+              className="flex items-center gap-1 h-8 px-2 text-xs rounded-md border border-amber-400/40 text-amber-600 dark:text-amber-400/80 hover:bg-amber-50/60 dark:hover:bg-amber-950/20 transition-colors shrink-0"
+              data-testid="button-placeholder-review"
+              title="Review unlinked meals"
+            >
+              <BookOpen className="h-3 w-3" />
+              <span className="font-medium">{placeholderItems.length}</span>
+            </button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
@@ -1187,7 +929,7 @@ export default function WeeklyPlannerPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={() => setSettingsOpen(true)} data-testid="button-planner-settings">
+              <DropdownMenuItem onClick={() => setAssistantMode("settings")} data-testid="button-planner-settings">
                 <Settings className="h-4 w-4 mr-2" />
                 Options
               </DropdownMenuItem>
@@ -1195,6 +937,21 @@ export default function WeeklyPlannerPage() {
                 <Copy className="h-4 w-4 mr-2" />
                 Bulk Assign
               </DropdownMenuItem>
+              {placeholderItems.length > 0 && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => setAssistantMode("placeholder-review")}
+                    data-testid="button-review-unlinked"
+                  >
+                    <BookOpen className="h-4 w-4 mr-2 text-amber-500" />
+                    <span>Review unlinked</span>
+                    <span className="ml-auto text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/30 px-1.5 py-0.5 rounded-full">
+                      {placeholderItems.length}
+                    </span>
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setSharePlanOpen(true)} data-testid="button-share-plan">
                 <Share2 className="h-4 w-4 mr-2" />
@@ -1353,26 +1110,47 @@ export default function WeeklyPlannerPage() {
                           {cellEntries.map((entry) => {
                             const meal = getMeal(entry.mealId);
                             if (!meal) return null;
+                            const isPlaceholder = meal.mealSourceType === "planner-placeholder";
                             const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
                             return (
                               <button
                                 key={entry.id}
-                                className="w-full text-left text-sm text-foreground hover:text-primary transition-colors flex items-start gap-1.5"
-                                onClick={() => setMealDetail({
-                                  entry,
-                                  meal,
-                                  dayId: mobileDay.id,
-                                  mealType: row.mealType ?? row.addMealType,
-                                  audience: row.audience,
-                                  isDrink: row.isDrink,
-                                  dayName: DAY_NAMES[mobileDay.dayOfWeek],
-                                  slotLabel: row.label,
-                                })}
+                                className={`w-full text-left text-sm transition-colors flex items-start gap-1.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
+                                onClick={() => {
+                                  if (isPlaceholder) {
+                                    setResolveTarget({
+                                      mealName: meal.name,
+                                      dayName: DAY_NAMES[mobileDay.dayOfWeek],
+                                      slotLabel: row.label,
+                                      entryId: entry.id,
+                                      dayId: mobileDay.id,
+                                      mealType: row.mealType ?? row.addMealType,
+                                      audience: row.audience,
+                                      isDrink: row.isDrink,
+                                      position: entry.position,
+                                    });
+                                    setAssistantMode("resolve");
+                                  } else {
+                                    setMealDetail({
+                                      entry,
+                                      meal,
+                                      dayId: mobileDay.id,
+                                      mealType: row.mealType ?? row.addMealType,
+                                      audience: row.audience,
+                                      isDrink: row.isDrink,
+                                      dayName: DAY_NAMES[mobileDay.dayOfWeek],
+                                      slotLabel: row.label,
+                                    });
+                                  }
+                                }}
                                 data-testid={`button-mobile-meal-${row.id}-${entry.id}`}
                               >
-                                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1.5 py-0.5" : ""}`}>
                                   <span className="leading-snug">{meal.name}</span>
-                                  <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
+                                  {isPlaceholder
+                                    ? <span className="text-[10px] text-muted-foreground/60 italic" data-testid={`label-placeholder-mobile-${entry.id}`}>Needs recipe</span>
+                                    : <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
+                                  }
                                 </div>
                                 {isFrozen && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
                                 {basketMealIdSet.has(meal.id) && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
@@ -1493,26 +1271,47 @@ export default function WeeklyPlannerPage() {
                                 {cellEntries.slice(0, 2).map((entry) => {
                                   const meal = getMeal(entry.mealId);
                                   if (!meal) return null;
+                                  const isPlaceholder = meal.mealSourceType === "planner-placeholder";
                                   const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
                                   return (
                                     <button
                                       key={entry.id}
-                                      className="w-full text-left text-xs leading-snug text-foreground hover:text-primary transition-colors group flex items-start gap-0.5"
-                                      onClick={() => setMealDetail({
-                                        entry,
-                                        meal,
-                                        dayId: day.id,
-                                        mealType: row.mealType ?? row.addMealType,
-                                        audience: row.audience,
-                                        isDrink: row.isDrink,
-                                        dayName: DAY_NAMES[day.dayOfWeek],
-                                        slotLabel: row.label,
-                                      })}
+                                      className={`w-full text-left text-xs leading-snug transition-colors group flex items-start gap-0.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
+                                      onClick={() => {
+                                        if (isPlaceholder) {
+                                          setResolveTarget({
+                                            mealName: meal.name,
+                                            dayName: DAY_NAMES[day.dayOfWeek],
+                                            slotLabel: row.label,
+                                            entryId: entry.id,
+                                            dayId: day.id,
+                                            mealType: row.mealType ?? row.addMealType,
+                                            audience: row.audience,
+                                            isDrink: row.isDrink,
+                                            position: entry.position,
+                                          });
+                                          setAssistantMode("resolve");
+                                        } else {
+                                          setMealDetail({
+                                            entry,
+                                            meal,
+                                            dayId: day.id,
+                                            mealType: row.mealType ?? row.addMealType,
+                                            audience: row.audience,
+                                            isDrink: row.isDrink,
+                                            dayName: DAY_NAMES[day.dayOfWeek],
+                                            slotLabel: row.label,
+                                          });
+                                        }
+                                      }}
                                       data-testid={`button-meal-${row.id}-${day.dayOfWeek}-${entry.id}`}
                                     >
-                                      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                      <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1 py-0.5" : ""}`}>
                                         <span className="break-words leading-tight">{meal.name}</span>
-                                        <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
+                                        {isPlaceholder && (
+                                          <span className="text-[9px] text-muted-foreground/60 italic" data-testid={`label-placeholder-${entry.id}`}>Needs recipe</span>
+                                        )}
+                                        {!isPlaceholder && <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />}
                                       </div>
                                       {isFrozen && <Snowflake className="h-2.5 w-2.5 text-blue-400 flex-shrink-0 mt-0.5" />}
                                       {basketMealIdSet.has(meal.id) && (
@@ -1624,6 +1423,7 @@ export default function WeeklyPlannerPage() {
         mode={assistantMode}
         onClose={() => {
           if (plannerScanOpen) handlePlannerScanOpenChange(false);
+          setResolveTarget(null);
           setAssistantMode(null);
         }}
         reviewContent={
@@ -1645,6 +1445,8 @@ export default function WeeklyPlannerPage() {
               runSmartSuggest={runSmartSuggest}
               setNutritionFetchTick={setNutritionFetchTick}
               onCancel={() => { clearSmartResult(); setAssistantMode(null); }}
+              restoredFromSession={restoredFromSession}
+              onDismissRestoreBanner={dismissRestoreBanner}
             />
           ) : assistantMode === "scan-review" ? (
             <PlannerScanReview
@@ -1664,24 +1466,6 @@ export default function WeeklyPlannerPage() {
         onScanFile={handlePlannerScanFile}
         onUploadClick={() => pageUploadRef.current?.click()}
         scanLoading={plannerScanLoading}
-        smartLoading={smartLoading}
-        smartMealsPerDay={smartMealsPerDay}
-        setSmartMealsPerDay={setSmartMealsPerDay}
-        smartCuisine={smartCuisine}
-        setSmartCuisine={setSmartCuisine}
-        smartBudget={smartBudget}
-        setSmartBudget={setSmartBudget}
-        smartMaxUPF={smartMaxUPF}
-        setSmartMaxUPF={setSmartMaxUPF}
-        smartFishPerWeek={smartFishPerWeek}
-        setSmartFishPerWeek={setSmartFishPerWeek}
-        smartRedMeatPerWeek={smartRedMeatPerWeek}
-        setSmartRedMeatPerWeek={setSmartRedMeatPerWeek}
-        smartVegDays={smartVegDays}
-        setSmartVegDays={setSmartVegDays}
-        smartLeftovers={smartLeftovers}
-        setSmartLeftovers={setSmartLeftovers}
-        onRunSmartSuggest={() => runSmartSuggest()}
         user={user}
         pickerTarget={pickerTarget}
         meals={meals}
@@ -1695,6 +1479,12 @@ export default function WeeklyPlannerPage() {
         getMeal={getMeal}
         onPlannerInvalidate={() => qc.invalidateQueries({ queryKey: ["/api/planner/full"] })}
         fullPlanner={fullPlanner}
+        resolveTarget={resolveTarget ?? undefined}
+        onResolveAction={handleResolveAction}
+        onResolveRecipe={handleResolveRecipe}
+        isResolving={deleteEntryMutation.isPending || addEntryMutation.isPending}
+        placeholderItems={placeholderItems}
+        onResolveRecipeFromReview={handleResolveRecipeFromReview}
       />
       </div>{/* end flex gap-4 */}
 
@@ -2271,5 +2061,6 @@ export default function WeeklyPlannerPage() {
       />
     </div>
     </>
+    </PlannerWorkspaceContext.Provider>
   );
 }

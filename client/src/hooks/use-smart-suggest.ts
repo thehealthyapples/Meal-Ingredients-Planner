@@ -1,9 +1,35 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import type { Meal, Nutrition } from "@shared/schema";
 import type { FullWeek, SmartSuggestEntry, SmartSuggestResult } from "@/lib/planner-types";
+
+// ── Session persistence (mirrors scan-review pattern) ────────────────────────
+const SMART_SESSION_KEY = "planner-smart-review-session";
+
+interface SmartSessionData {
+  smartResult: SmartSuggestResult;
+  lockedEntries: string[];
+}
+
+function saveSmartSession(data: SmartSessionData): void {
+  try { sessionStorage.setItem(SMART_SESSION_KEY, JSON.stringify(data)); } catch {}
+}
+
+function loadSmartSession(): SmartSessionData | null {
+  try {
+    const raw = sessionStorage.getItem(SMART_SESSION_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw) as SmartSessionData;
+    if (!data?.smartResult?.entries) return null;
+    return data;
+  } catch { return null; }
+}
+
+function clearSmartSession(): void {
+  try { sessionStorage.removeItem(SMART_SESSION_KEY); } catch {}
+}
 
 interface UseSmartSuggestOptions {
   meals: Meal[];
@@ -42,6 +68,8 @@ export function useSmartSuggest({
   const [lockedEntries, setLockedEntries] = useState<Set<string>>(new Set());
   const [expandedExplanation, setExpandedExplanation] = useState<string | null>(null);
   const [applyingSmartPlan, setApplyingSmartPlan] = useState(false);
+  const [restoredFromSession, setRestoredFromSession] = useState(false);
+  const sessionRestoreAttempted = useRef(false);
 
   useEffect(() => {
     if (!smartResult) return;
@@ -87,6 +115,27 @@ export function useSmartSuggest({
     runWithRetry();
     return () => { cancelled = true; };
   }, [smartResult, nutritionFetchTick]);
+
+  // Restore saved session on first mount (before any live result arrives)
+  useEffect(() => {
+    if (sessionRestoreAttempted.current) return;
+    sessionRestoreAttempted.current = true;
+    if (smartResult) return; // live result already present
+    const session = loadSmartSession();
+    if (!session) return;
+    setSmartResult(session.smartResult);
+    setLockedEntries(new Set(session.lockedEntries));
+    setRestoredFromSession(true);
+    onReviewReady?.();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist smart result + locks to session whenever they change
+  useEffect(() => {
+    if (smartResult) {
+      saveSmartSession({ smartResult, lockedEntries: Array.from(lockedEntries) });
+    }
+  }, [smartResult, lockedEntries]);
 
   const runSmartSuggest = async (preserveLocks = false) => {
     setSmartLoading(true);
@@ -185,6 +234,7 @@ export function useSmartSuggest({
       }
       qc.invalidateQueries({ queryKey: ['/api/planner/full'] });
       setSmartResult(null);
+      clearSmartSession();
       onApplied?.();
       const desc = failedCount === 0
         ? `${smartResult.entries.length - failedCount} meals added to Week ${activeWeek}.${importedCount > 0 ? ` ${importedCount} recipes auto-imported.` : ''}`
@@ -237,7 +287,11 @@ export function useSmartSuggest({
   const clearSmartResult = () => {
     setSmartResult(null);
     setLockedEntries(new Set());
+    clearSmartSession();
+    setRestoredFromSession(false);
   };
+
+  const dismissRestoreBanner = () => setRestoredFromSession(false);
 
   return {
     smartLoading,
@@ -268,6 +322,8 @@ export function useSmartSuggest({
     expandedExplanation,
     setExpandedExplanation,
     applyingSmartPlan,
+    restoredFromSession,
+    dismissRestoreBanner,
     runSmartSuggest,
     toggleLockEntry,
     applySmartSuggestion,
