@@ -110,6 +110,7 @@ interface Props {
   scanError?: string;
   plannerDays: PlannerDayEntry[];
   onSaved?: () => void;
+  inline?: boolean;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -221,7 +222,7 @@ function clearSession(): void {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PlannerScanReview({ open, onOpenChange, scanData, scanning = false, scanError, plannerDays, onSaved }: Props) {
+export function PlannerScanReview({ open, onOpenChange, scanData, scanning = false, scanError, plannerDays, onSaved, inline = false }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
@@ -541,44 +542,34 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(newOpen) => {
-        if (!newOpen && scanning) return;
-        if (!newOpen && step === "review" && acceptedProposals.length > 0 && !saving) {
-          setCloseConfirmVisible(true);
-          return;
-        }
-        if (!newOpen) {
-          clearSession();
-          setRestoredScanData(null);
-          setShowRestoreBanner(false);
-          setCloseConfirmVisible(false);
-        }
-        onOpenChange(newOpen);
-      }}
-    >
-      <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Camera className="h-5 w-5 text-primary" />
-            {scanning
-              ? "Scanning meal plan…"
-              : step === "recipe-followup"
-              ? "Meals added to planner"
-              : "Review THA's suggestions"}
-            <Badge variant="secondary" className="text-xs ml-1">Planner</Badge>
-          </DialogTitle>
-          <DialogDescription>
-            {scanning
-              ? "AI meal plan scans can take 5–15 seconds depending on image quality."
-              : step === "recipe-followup"
-              ? "Do you have a recipe for any of these meals?"
-              : "THA has interpreted your scan — accept, edit, or remove each suggestion."}
-          </DialogDescription>
-        </DialogHeader>
+  const dialogTitle = scanning
+    ? "Scanning meal plan…"
+    : step === "recipe-followup"
+    ? "Meals added to planner"
+    : "Review THA's suggestions";
 
+  const dialogDescription = scanning
+    ? "AI meal plan scans can take 5–15 seconds depending on image quality."
+    : step === "recipe-followup"
+    ? "Do you have a recipe for any of these meals?"
+    : "THA has interpreted your scan — accept, edit, or remove each suggestion.";
+
+  const handleDialogClose = (newOpen: boolean) => {
+    if (!newOpen && scanning) return;
+    if (!newOpen && step === "review" && acceptedProposals.length > 0 && !saving) {
+      setCloseConfirmVisible(true);
+      return;
+    }
+    if (!newOpen) {
+      clearSession();
+      setRestoredScanData(null);
+      setShowRestoreBanner(false);
+      setCloseConfirmVisible(false);
+    }
+    onOpenChange(newOpen);
+  };
+
+  const bodyContent = (
         <div className="space-y-4">
 
           {/* ── Loading state ── */}
@@ -877,6 +868,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                               <p className="text-sm break-words leading-snug">
                                 {p.currentName || <span className="text-muted-foreground italic">Unnamed meal</span>}
                               </p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{placement}</p>
                               {p.rawText && p.rawText !== p.currentName && (
                                 <p className="text-xs text-muted-foreground break-words">↳ <em>{p.rawText}</em></p>
                               )}
@@ -889,7 +881,6 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                                 <p className="text-xs text-amber-600 dark:text-amber-400">Review needed</p>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground shrink-0 hidden sm:block whitespace-nowrap self-center">{placement}</p>
                             <div className="self-center shrink-0"><ConfidenceDots level={p.confidence} /></div>
                             <div className="flex items-center gap-0.5 shrink-0 self-start">
                               <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => startEdit(p)} title="Edit">
@@ -1168,6 +1159,36 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
             </div>
           </>)}
         </div>
+  );
+
+  if (inline) {
+    return (
+      <div className="space-y-3">
+        <div>
+          <p className="text-sm font-medium flex items-center gap-1.5">
+            <Camera className="h-4 w-4 text-primary" />
+            {dialogTitle}
+            <Badge variant="secondary" className="text-xs ml-1">Planner</Badge>
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">{dialogDescription}</p>
+        </div>
+        {bodyContent}
+      </div>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleDialogClose}>
+      <DialogContent className="sm:max-w-[760px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Camera className="h-5 w-5 text-primary" />
+            {dialogTitle}
+            <Badge variant="secondary" className="text-xs ml-1">Planner</Badge>
+          </DialogTitle>
+          <DialogDescription>{dialogDescription}</DialogDescription>
+        </DialogHeader>
+        {bodyContent}
       </DialogContent>
     </Dialog>
   );

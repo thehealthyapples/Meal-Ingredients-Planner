@@ -6,9 +6,10 @@ const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frid
 
 interface UsePlannerScanOptions {
   activeWeekData: FullWeek | undefined;
+  onScanReady?: () => void;
 }
 
-export function usePlannerScan({ activeWeekData }: UsePlannerScanOptions) {
+export function usePlannerScan({ activeWeekData, onScanReady }: UsePlannerScanOptions) {
   const [plannerCameraOpen, setPlannerCameraOpen] = useState(false);
   const [plannerScanOpen, setPlannerScanOpen] = useState(false);
   const [plannerScanData, setPlannerScanData] = useState<PlannerScanData | null>(null);
@@ -31,6 +32,7 @@ export function usePlannerScan({ activeWeekData }: UsePlannerScanOptions) {
     setPlannerScanError(null);
     setPlannerScanLoading(true);
     setPlannerScanOpen(true);
+    onScanReady?.();
 
     const scanId = Math.random().toString(36).slice(2, 10);
     const formData = new FormData();

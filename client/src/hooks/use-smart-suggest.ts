@@ -10,6 +10,8 @@ interface UseSmartSuggestOptions {
   fullPlanner: FullWeek[];
   activeWeek: string;
   activeWeekData: FullWeek | undefined;
+  onReviewReady?: () => void;
+  onApplied?: () => void;
 }
 
 export function useSmartSuggest({
@@ -17,13 +19,14 @@ export function useSmartSuggest({
   fullPlanner,
   activeWeek,
   activeWeekData,
+  onReviewReady,
+  onApplied,
 }: UseSmartSuggestOptions) {
   const { toast } = useToast();
   const qc = useQueryClient();
 
   const [smartLoading, setSmartLoading] = useState(false);
   const [smartResult, setSmartResult] = useState<SmartSuggestResult | null>(null);
-  const [smartDialogOpen, setSmartDialogOpen] = useState(false);
   const [smartNutritionMap, setSmartNutritionMap] = useState<Map<number, Nutrition>>(new Map());
   const [nutritionLoading, setNutritionLoading] = useState(false);
   const [nutritionFetchTick, setNutritionFetchTick] = useState(0);
@@ -41,7 +44,7 @@ export function useSmartSuggest({
   const [applyingSmartPlan, setApplyingSmartPlan] = useState(false);
 
   useEffect(() => {
-    if (!smartResult || !smartDialogOpen) return;
+    if (!smartResult) return;
     const internalIds = smartResult.entries
       .filter(e => !e.candidate.isExternal)
       .map(e => Number(e.candidate.id))
@@ -83,7 +86,7 @@ export function useSmartSuggest({
 
     runWithRetry();
     return () => { cancelled = true; };
-  }, [smartResult, smartDialogOpen, nutritionFetchTick]);
+  }, [smartResult, nutritionFetchTick]);
 
   const runSmartSuggest = async (preserveLocks = false) => {
     setSmartLoading(true);
@@ -132,8 +135,8 @@ export function useSmartSuggest({
       const data = await res.json() as SmartSuggestResult;
       setSmartResult(data);
       if (!preserveLocks) setLockedEntries(new Set());
-      setSmartDialogOpen(true);
       setSmartControlsOpen(false);
+      onReviewReady?.();
     } catch {
       toast({ title: "Plan generation failed", description: "Could not propose a plan. Try again.", variant: "destructive" });
     } finally {
@@ -181,8 +184,8 @@ export function useSmartSuggest({
         }
       }
       qc.invalidateQueries({ queryKey: ['/api/planner/full'] });
-      setSmartDialogOpen(false);
       setSmartResult(null);
+      onApplied?.();
       const desc = failedCount === 0
         ? `${smartResult.entries.length - failedCount} meals added to Week ${activeWeek}.${importedCount > 0 ? ` ${importedCount} recipes auto-imported.` : ''}`
         : `${smartResult.entries.length - failedCount} meals added. ${failedCount} could not be added.`;
@@ -231,11 +234,14 @@ export function useSmartSuggest({
     }
   };
 
+  const clearSmartResult = () => {
+    setSmartResult(null);
+    setLockedEntries(new Set());
+  };
+
   return {
     smartLoading,
     smartResult,
-    smartDialogOpen,
-    setSmartDialogOpen,
     smartNutritionMap,
     nutritionLoading,
     nutritionFetchTick,
@@ -266,5 +272,6 @@ export function useSmartSuggest({
     toggleLockEntry,
     applySmartSuggestion,
     regenerateSingleEntry,
+    clearSmartResult,
   };
 }

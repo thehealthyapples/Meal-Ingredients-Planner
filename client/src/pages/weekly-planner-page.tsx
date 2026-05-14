@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,6 @@ import type { FullDay, FullWeek, SmartCandidate, MealExplanation, SmartSuggestEn
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMealPickerPanel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
-import { CameraModal } from "@/components/camera-modal";
 import { PlannerScanReview, type PlannerScanData, type PlannerDayEntry } from "@/components/PlannerScanReview";
 import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@/lib/nutrition-variety";
 import { getMealNutrients } from "@/lib/nutrition-insights";
@@ -193,8 +192,8 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-start gap-3 px-3 pt-3 pb-2">
-        <div className="h-20 w-20 rounded-lg overflow-hidden bg-muted shrink-0 border flex items-center justify-center">
+      <div className="flex items-start gap-2.5 px-3 py-2.5">
+        <div className="h-14 w-14 rounded-lg overflow-hidden bg-muted shrink-0 border flex items-center justify-center">
           {mealImg
             ? <img src={mealImg} alt={entry.candidate.name} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
             : <UtensilsCrossed className="h-6 w-6 text-muted-foreground/40" />}
@@ -262,93 +261,96 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
         </div>
       )}
 
-      <div className="px-3 pb-2.5 pt-1.5 flex items-center gap-1 border-t flex-wrap">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button size="sm" variant="outline" className="text-xs font-semibold shrink-0 h-7 min-w-8 px-2" data-testid={`button-qty-${key}`}>{qty}</Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-12 p-1" align="start" side="top">
-            <div className="flex flex-col gap-0.5">
-              {[1,2,3,4,5,6,7,8,9,10].map(n => (
-                <Button key={n} size="sm" variant={n === qty ? "default" : "ghost"} className="text-xs h-6" onClick={() => setQty(n)}>{n}</Button>
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
+      <div className="px-3 pb-2.5 border-t">
+        <div className="flex items-center gap-1 pt-1.5 flex-wrap">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button size="sm" variant="outline" className="text-xs font-semibold shrink-0 h-7 min-w-8 px-2" data-testid={`button-qty-${key}`}>{qty}</Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-12 p-1" align="start" side="top">
+              <div className="flex flex-col gap-0.5">
+                {[1,2,3,4,5,6,7,8,9,10].map(n => (
+                  <Button key={n} size="sm" variant={n === qty ? "default" : "ghost"} className="text-xs h-6" onClick={() => setQty(n)}>{n}</Button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
 
-        {servings != null && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground px-1"><UtensilsCrossed className="h-3.5 w-3.5" /><span>{servings}</span></span>
-            </TooltipTrigger>
-            <TooltipContent><p className="text-xs">{servings} serving{servings !== 1 ? 's' : ''}</p></TooltipContent>
-          </Tooltip>
-        )}
+          {servings != null && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground px-1"><UtensilsCrossed className="h-3.5 w-3.5" /><span>{servings}</span></span>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">{servings} serving{servings !== 1 ? 's' : ''}</p></TooltipContent>
+            </Tooltip>
+          )}
 
-        {sourceUrl && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <a href={sourceUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} data-testid={`link-recipe-${key}`}>
-                <Button size="icon" variant="ghost" className="h-7 w-7" asChild><span><Globe className="h-4 w-4" /></span></Button>
-              </a>
-            </TooltipTrigger>
-            <TooltipContent><p className="text-xs">View original recipe</p></TooltipContent>
-          </Tooltip>
-        )}
+          {sourceUrl && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <a href={sourceUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} data-testid={`link-recipe-${key}`}>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" asChild><span><Globe className="h-4 w-4" /></span></Button>
+                </a>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">View original recipe</p></TooltipContent>
+            </Tooltip>
+          )}
 
-        {mealId && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => navigate(`/meals/${mealId}`)} data-testid={`button-edit-${key}`}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p className="text-xs">View & edit recipe</p></TooltipContent>
-          </Tooltip>
-        )}
+          {mealId && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => navigate(`/meals/${mealId}`)} data-testid={`button-edit-${key}`}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">View & edit recipe</p></TooltipContent>
+            </Tooltip>
+          )}
 
-        {mealId && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => addToListMutation.mutate()} disabled={addToListMutation.isPending} data-testid={`button-basket-${key}`}>
-                {addToListMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBasket className="h-4 w-4" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p className="text-xs">Add to basket</p></TooltipContent>
-          </Tooltip>
-        )}
+          {mealId && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => addToListMutation.mutate()} disabled={addToListMutation.isPending} data-testid={`button-basket-${key}`}>
+                  {addToListMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBasket className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">Add to basket</p></TooltipContent>
+            </Tooltip>
+          )}
 
-        {mealId && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => analyzeMutation.mutate()} disabled={analyzeMutation.isPending} data-testid={`button-analyse-${key}`}>
-                {analyzeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Microscope className="h-4 w-4" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p className="text-xs">Analyse nutrition</p></TooltipContent>
-          </Tooltip>
-        )}
+          {mealId && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => analyzeMutation.mutate()} disabled={analyzeMutation.isPending} data-testid={`button-analyse-${key}`}>
+                  {analyzeMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Microscope className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">Analyse nutrition</p></TooltipContent>
+            </Tooltip>
+          )}
 
-        {isFreezerEligible && mealId && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button size="icon" variant="ghost" className="h-7 w-7 text-blue-400" data-testid={`button-freeze-${key}`}>
-                <Snowflake className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p className="text-xs">Add to freezer</p></TooltipContent>
-          </Tooltip>
-        )}
-
-        <div className="ml-auto flex items-center gap-2 flex-wrap">
-          {cost != null && <span className="flex items-center gap-0.5 text-xs text-muted-foreground"><DollarSign className="h-3 w-3" />£{cost.toFixed(2)}</span>}
-          {upfScore != null && <span className={`text-xs ${getUPFColorFn(upfScore)}`}>UPF: {getUPFLabelFn(upfScore)}</span>}
-          {entry.explanation && (
-            <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={onExpandExplain} data-testid={`button-explain-${key}`}>
-              <HelpCircle className="h-3 w-3" />{expanded ? "Hide" : "Why this?"}
-            </button>
+          {isFreezerEligible && mealId && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-blue-400" data-testid={`button-freeze-${key}`}>
+                  <Snowflake className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">Add to freezer</p></TooltipContent>
+            </Tooltip>
           )}
         </div>
+        {(cost != null || upfScore != null || entry.explanation) && (
+          <div className="flex items-center gap-2 pt-1 pb-0.5 flex-wrap">
+            {cost != null && <span className="flex items-center gap-0.5 text-xs text-muted-foreground"><DollarSign className="h-3 w-3" />£{cost.toFixed(2)}</span>}
+            {upfScore != null && <span className={`text-xs ${getUPFColorFn(upfScore)}`}>UPF: {getUPFLabelFn(upfScore)}</span>}
+            {entry.explanation && (
+              <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={onExpandExplain} data-testid={`button-explain-${key}`}>
+                <HelpCircle className="h-3 w-3" />{expanded ? "Hide" : "Why?"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {expanded && entry.explanation && (
@@ -356,6 +358,150 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
           {entry.explanation.reasons.map((r, i) => <p key={i}>• {r}</p>)}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Smart review panel content (Phase 2B) ────────────────────────────────────
+
+interface SmartReviewPanelContentProps {
+  smartResult: SmartSuggestResult | null;
+  smartNutritionMap: Map<number, Nutrition>;
+  nutritionLoading: boolean;
+  lockedEntries: Set<string>;
+  expandedExplanation: string | null;
+  setExpandedExplanation: (v: string | null) => void;
+  applyingSmartPlan: boolean;
+  smartLoading: boolean;
+  mealById: Map<number, Meal>;
+  activeWeek: string;
+  toggleLockEntry: (key: string) => void;
+  regenerateSingleEntry: (entry: SmartSuggestEntry) => void;
+  applySmartSuggestion: () => void;
+  runSmartSuggest: (preserveLocks?: boolean) => void;
+  setNutritionFetchTick: React.Dispatch<React.SetStateAction<number>>;
+  onCancel: () => void;
+}
+
+function SmartReviewPanelContent({
+  smartResult,
+  smartNutritionMap,
+  nutritionLoading,
+  lockedEntries,
+  expandedExplanation,
+  setExpandedExplanation,
+  applyingSmartPlan,
+  smartLoading,
+  mealById,
+  activeWeek,
+  toggleLockEntry,
+  regenerateSingleEntry,
+  applySmartSuggestion,
+  runSmartSuggest,
+  setNutritionFetchTick,
+  onCancel,
+}: SmartReviewPanelContentProps) {
+  if (!smartResult) return null;
+
+  const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const grouped: Record<number, SmartSuggestEntry[]> = {};
+  for (const e of smartResult.entries) {
+    if (!grouped[e.dayOfWeek]) grouped[e.dayOfWeek] = [];
+    grouped[e.dayOfWeek].push(e);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg border bg-muted/30 px-2 py-1.5 text-center">
+          <p className="text-xs text-muted-foreground">Total meals</p>
+          <p className="text-base font-semibold">{smartResult.stats.totalMeals}</p>
+        </div>
+        <div className="rounded-lg border bg-muted/30 px-2 py-1.5 text-center">
+          <p className="text-xs text-muted-foreground">Est. cost</p>
+          <p className="text-base font-semibold">£{(smartResult.stats.estimatedWeeklyCost ?? 0).toFixed(0)}</p>
+        </div>
+        <div className="rounded-lg border bg-muted/30 px-2 py-1.5 text-center">
+          <p className="text-xs text-muted-foreground">Avg UPF</p>
+          <p className={`text-base font-semibold ${getUPFColorFn(smartResult.stats.averageUPFScore)}`}>{getUPFLabelFn(smartResult.stats.averageUPFScore)}</p>
+        </div>
+        <div className="rounded-lg border bg-muted/30 px-2 py-1.5 text-center">
+          <p className="text-xs text-muted-foreground">Ingredient reuse</p>
+          <p className="text-base font-semibold">{smartResult.stats.ingredientReuse ?? 0}</p>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {Object.entries(grouped).sort(([a],[b]) => Number(a)-Number(b)).map(([dow, entries]) => (
+          <div key={dow} className="rounded-lg border">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/30 rounded-t-lg border-b">
+              <span className="text-xs font-medium">{dayNames[Number(dow)]}</span>
+            </div>
+            <div className="divide-y">
+              {entries.map((entry) => {
+                const key = `${entry.dayOfWeek}-${entry.slot}`;
+                const exKey = `${key}-expl`;
+                const internalMealId = !entry.candidate.isExternal ? Number(entry.candidate.id) : null;
+                return (
+                  <SmartMealEntryCard
+                    key={key}
+                    entry={entry}
+                    meal={internalMealId ? mealById.get(internalMealId) : undefined}
+                    nutrition={internalMealId ? smartNutritionMap.get(internalMealId) : undefined}
+                    nutritionLoading={nutritionLoading}
+                    locked={lockedEntries.has(key)}
+                    expanded={expandedExplanation === exKey}
+                    smartLoading={smartLoading}
+                    onLock={() => toggleLockEntry(key)}
+                    onRefresh={() => regenerateSingleEntry(entry)}
+                    onExpandExplain={() => setExpandedExplanation(expandedExplanation === exKey ? null : exKey)}
+                    onNutritionRefresh={() => setNutritionFetchTick(t => t + 1)}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {lockedEntries.size > 0 && (
+        <p className="text-xs text-muted-foreground flex items-center gap-1">
+          <Lock className="h-3 w-3 text-primary" />{lockedEntries.size} meal{lockedEntries.size !== 1 ? "s" : ""} locked — kept on regenerate.
+        </p>
+      )}
+
+      <div className="flex flex-col gap-2 pt-1">
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          onClick={() => runSmartSuggest(true)}
+          disabled={smartLoading}
+          data-testid="button-smart-regenerate"
+        >
+          {smartLoading ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
+          Regenerate
+        </Button>
+        <Button
+          size="sm"
+          className="w-full"
+          onClick={applySmartSuggestion}
+          disabled={applyingSmartPlan}
+          data-testid="button-smart-apply"
+        >
+          {applyingSmartPlan ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
+          Apply to Week {activeWeek}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full text-muted-foreground"
+          onClick={onCancel}
+          data-testid="button-smart-cancel"
+        >
+          Cancel
+        </Button>
+      </div>
     </div>
   );
 }
@@ -453,7 +599,6 @@ export default function WeeklyPlannerPage() {
   // ── Smart Suggest domain ──────────────────────────────────────────────────
   const {
     smartLoading, smartResult,
-    smartDialogOpen, setSmartDialogOpen,
     smartNutritionMap, nutritionLoading,
     nutritionFetchTick, setNutritionFetchTick,
     smartControlsOpen, setSmartControlsOpen,
@@ -468,16 +613,23 @@ export default function WeeklyPlannerPage() {
     lockedEntries, expandedExplanation, setExpandedExplanation,
     applyingSmartPlan,
     runSmartSuggest, toggleLockEntry, applySmartSuggestion, regenerateSingleEntry,
-  } = useSmartSuggest({ meals, fullPlanner, activeWeek, activeWeekData });
+    clearSmartResult,
+  } = useSmartSuggest({
+    meals, fullPlanner, activeWeek, activeWeekData,
+    onReviewReady: () => setAssistantMode("smart-review"),
+    onApplied: () => setAssistantMode(null),
+  });
 
   // ── Planner scan domain ───────────────────────────────────────────────────
   const {
-    plannerCameraOpen, setPlannerCameraOpen,
     plannerScanOpen,
     plannerScanData, plannerScanLoading, plannerScanError,
-    plannerScanFileRef, plannerDays,
+    plannerDays,
     handlePlannerScanFile, handlePlannerScanOpenChange,
-  } = usePlannerScan({ activeWeekData });
+  } = usePlannerScan({
+    activeWeekData,
+    onScanReady: () => setAssistantMode("scan-review"),
+  });
 
   const { data: categories = [] } = useQuery<MealCategory[]>({
     queryKey: ['/api/categories'],
@@ -1468,9 +1620,46 @@ export default function WeeklyPlannerPage() {
       </div>{/* end flex-1 min-w-0 */}
       <PlannerAssistantPanel
         mode={assistantMode}
-        onClose={() => setAssistantMode(null)}
-        onOpenCamera={() => setPlannerCameraOpen(true)}
-        onUploadFile={() => plannerScanFileRef.current?.click()}
+        onClose={() => {
+          if (plannerScanOpen) handlePlannerScanOpenChange(false);
+          setAssistantMode(null);
+        }}
+        reviewContent={
+          assistantMode === "smart-review" ? (
+            <SmartReviewPanelContent
+              smartResult={smartResult}
+              smartNutritionMap={smartNutritionMap}
+              nutritionLoading={nutritionLoading}
+              lockedEntries={lockedEntries}
+              expandedExplanation={expandedExplanation}
+              setExpandedExplanation={setExpandedExplanation}
+              applyingSmartPlan={applyingSmartPlan}
+              smartLoading={smartLoading}
+              mealById={mealById}
+              activeWeek={activeWeek}
+              toggleLockEntry={toggleLockEntry}
+              regenerateSingleEntry={regenerateSingleEntry}
+              applySmartSuggestion={applySmartSuggestion}
+              runSmartSuggest={runSmartSuggest}
+              setNutritionFetchTick={setNutritionFetchTick}
+              onCancel={() => { clearSmartResult(); setAssistantMode(null); }}
+            />
+          ) : assistantMode === "scan-review" ? (
+            <PlannerScanReview
+              inline
+              open={true}
+              onOpenChange={(v) => {
+                if (!v) { handlePlannerScanOpenChange(false); setAssistantMode(null); }
+              }}
+              scanData={plannerScanData}
+              scanning={plannerScanLoading}
+              scanError={plannerScanError ?? undefined}
+              plannerDays={plannerDays}
+              onSaved={() => qc.invalidateQueries({ queryKey: ["/api/planner/full"] })}
+            />
+          ) : undefined
+        }
+        onScanFile={handlePlannerScanFile}
         scanLoading={plannerScanLoading}
         smartLoading={smartLoading}
         smartMealsPerDay={smartMealsPerDay}
@@ -2053,23 +2242,9 @@ export default function WeeklyPlannerPage() {
 
       <SharePlanDialog open={sharePlanOpen} onOpenChange={setSharePlanOpen} />
 
-      {/* ── Planner Image Scan ── */}
-      <input
-        ref={plannerScanFileRef}
-        type="file"
-        accept="image/jpeg,image/png,image/webp"
-        className="hidden"
-        onChange={e => { const f = e.target.files?.[0]; if (f) handlePlannerScanFile(f); }}
-        data-testid="input-planner-scan-file"
-      />
-      <CameraModal
-        open={plannerCameraOpen}
-        onOpenChange={setPlannerCameraOpen}
-        onCapture={handlePlannerScanFile}
-        onUploadInstead={() => plannerScanFileRef.current?.click()}
-      />
+      {/* Scan review dialog: only shown when not routed to the panel */}
       <PlannerScanReview
-        open={plannerScanOpen}
+        open={plannerScanOpen && assistantMode === null}
         onOpenChange={handlePlannerScanOpenChange}
         scanData={plannerScanData}
         scanning={plannerScanLoading}
@@ -2077,102 +2252,6 @@ export default function WeeklyPlannerPage() {
         plannerDays={plannerDays}
         onSaved={() => qc.invalidateQueries({ queryKey: ["/api/planner/full"] })}
       />
-
-      <Dialog open={smartDialogOpen} onOpenChange={(v) => { if (!v) setSmartDialogOpen(false); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-smart-suggest">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              Your Proposed Week Plan
-            </DialogTitle>
-            <DialogDescription>
-              Review the proposed plan. Lock meals you like, then regenerate or apply.
-            </DialogDescription>
-          </DialogHeader>
-
-          {smartResult && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-center">
-                  <p className="text-xs text-muted-foreground">Total meals</p>
-                  <p className="text-lg font-semibold">{smartResult.stats.totalMeals}</p>
-                </div>
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-center">
-                  <p className="text-xs text-muted-foreground">Est. cost</p>
-                  <p className="text-lg font-semibold">£{(smartResult.stats.estimatedWeeklyCost ?? 0).toFixed(0)}</p>
-                </div>
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-center">
-                  <p className="text-xs text-muted-foreground">Avg UPF</p>
-                  <p className={`text-lg font-semibold ${getUPFColor(smartResult.stats.averageUPFScore)}`}>{getUPFLabel(smartResult.stats.averageUPFScore)}</p>
-                </div>
-                <div className="rounded-lg border bg-muted/30 px-3 py-2 text-center">
-                  <p className="text-xs text-muted-foreground">Ingredient reuse</p>
-                  <p className="text-lg font-semibold">{smartResult.stats.ingredientReuse ?? 0}</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                {(() => {
-                  const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-                  const grouped: Record<number, SmartSuggestEntry[]> = {};
-                  for (const e of smartResult.entries) {
-                    if (!grouped[e.dayOfWeek]) grouped[e.dayOfWeek] = [];
-                    grouped[e.dayOfWeek].push(e);
-                  }
-                  return Object.entries(grouped).sort(([a],[b]) => Number(a)-Number(b)).map(([dow, entries]) => (
-                    <div key={dow} className="rounded-lg border">
-                      <div className="flex items-center gap-2 px-3 py-2 bg-muted/30 rounded-t-lg border-b">
-                        <span className="text-sm font-medium">{dayNames[Number(dow)]}</span>
-                      </div>
-                      <div className="divide-y">
-                        {entries.map((entry) => {
-                          const key = `${entry.dayOfWeek}-${entry.slot}`;
-                          const exKey = `${key}-expl`;
-                          const internalMealId = !entry.candidate.isExternal ? Number(entry.candidate.id) : null;
-                          return (
-                            <SmartMealEntryCard
-                              key={key}
-                              entry={entry}
-                              meal={internalMealId ? mealById.get(internalMealId) : undefined}
-                              nutrition={internalMealId ? smartNutritionMap.get(internalMealId) : undefined}
-                              nutritionLoading={nutritionLoading}
-                              locked={lockedEntries.has(key)}
-                              expanded={expandedExplanation === exKey}
-                              smartLoading={smartLoading}
-                              onLock={() => toggleLockEntry(key)}
-                              onRefresh={() => regenerateSingleEntry(entry)}
-                              onExpandExplain={() => setExpandedExplanation(expandedExplanation === exKey ? null : exKey)}
-                              onNutritionRefresh={() => setNutritionFetchTick(t => t + 1)}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ));
-                })()}
-              </div>
-
-              {lockedEntries.size > 0 && (
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Lock className="h-3 w-3 text-primary" />{lockedEntries.size} meal{lockedEntries.size !== 1 ? "s" : ""} locked - they'll be kept when you regenerate.
-                </p>
-              )}
-            </div>
-          )}
-
-          <DialogFooter className="mt-4 flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={() => setSmartDialogOpen(false)} data-testid="button-smart-cancel">Cancel</Button>
-            <Button variant="outline" size="sm" onClick={() => runSmartSuggest(true)} disabled={smartLoading} data-testid="button-smart-regenerate">
-              {smartLoading ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 mr-1" />}
-              Regenerate
-            </Button>
-            <Button size="sm" onClick={applySmartSuggestion} disabled={applyingSmartPlan} data-testid="button-smart-apply">
-              {applyingSmartPlan ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
-              Apply to Week {activeWeek}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
     </>
   );

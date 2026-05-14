@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
-export type AssistantMode = "scan" | "smart" | "templates" | "manual" | "bulk" | "day" | null;
+export type AssistantMode = "scan" | "smart" | "templates" | "manual" | "bulk" | "day" | "smart-review" | "scan-review" | null;
 
 interface PlannerContextValue {
   assistantMode: AssistantMode;
