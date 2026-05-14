@@ -5514,6 +5514,137 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // Phase 5A: duplicate a single planner entry (same slot or different day, same slot)
+  app.post("/api/planner/entries/:entryId/duplicate", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const entryId = Number(req.params.entryId);
+      const bodySchema = z.object({ targetDayId: z.number().int().optional() });
+      const { targetDayId } = bodySchema.parse(req.body ?? {});
+
+      const entry = await storage.getPlannerEntryById(entryId);
+      if (!entry) return res.status(404).json({ message: "Entry not found" });
+      const day = await storage.getPlannerDay(entry.dayId);
+      if (!day) return res.status(404).json({ message: "Entry not found" });
+      const week = await storage.getPlannerWeek(day.weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(403).json({ message: "Forbidden" });
+
+      const destDayId = targetDayId ?? entry.dayId;
+      if (destDayId !== entry.dayId) {
+        const destDay = await storage.getPlannerDay(destDayId);
+        if (!destDay) return res.status(404).json({ message: "Target day not found" });
+        const destWeek = await storage.getPlannerWeek(destDay.weekId);
+        if (!destWeek || destWeek.householdId !== householdId) return res.status(403).json({ message: "Forbidden" });
+      }
+
+      const targetEntries = await storage.getPlannerEntriesForDay(destDayId);
+      const slotEntries = targetEntries.filter(
+        (e) => e.mealType === entry.mealType && e.audience === entry.audience && e.isDrink === entry.isDrink,
+      );
+      const nextPosition = slotEntries.length > 0 ? Math.max(...slotEntries.map((e) => e.position)) + 1 : 0;
+
+      const newEntry = await storage.addPlannerEntry(
+        destDayId, entry.mealType, entry.audience, entry.mealId,
+        nextPosition, entry.calories ?? 0, entry.isDrink, entry.drinkType,
+      );
+      res.status(201).json(newEntry);
+    } catch (err: any) {
+      if (err?.name === "ZodError") return res.status(400).json({ message: "Invalid input" });
+      console.error("Error duplicating planner entry:", err);
+      res.status(500).json({ message: "Failed to duplicate entry" });
+    }
+  });
+
+  // Phase 5A: copy all entries from one planner day to another
+  app.post("/api/planner/days/:dayId/copy", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const sourceDayId = Number(req.params.dayId);
+      const bodySchema = z.object({ targetDayId: z.number().int() });
+      const { targetDayId } = bodySchema.parse(req.body);
+      if (sourceDayId === targetDayId) return res.status(400).json({ message: "Source and target day must differ" });
+
+      const sourceDay = await storage.getPlannerDay(sourceDayId);
+      if (!sourceDay) return res.status(404).json({ message: "Source day not found" });
+      const sourceWeek = await storage.getPlannerWeek(sourceDay.weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!sourceWeek || sourceWeek.householdId !== householdId) return res.status(403).json({ message: "Forbidden" });
+
+      const targetDay = await storage.getPlannerDay(targetDayId);
+      if (!targetDay) return res.status(404).json({ message: "Target day not found" });
+      const targetWeek = await storage.getPlannerWeek(targetDay.weekId);
+      if (!targetWeek || targetWeek.householdId !== householdId) return res.status(403).json({ message: "Forbidden" });
+
+      const sourceEntries = await storage.getPlannerEntriesForDay(sourceDayId);
+      const targetEntries = await storage.getPlannerEntriesForDay(targetDayId);
+
+      const slotMaxPositions = new Map<string, number>();
+      for (const e of targetEntries) {
+        const key = `${e.mealType}-${e.audience}-${e.isDrink}`;
+        const cur = slotMaxPositions.get(key) ?? -1;
+        if (e.position > cur) slotMaxPositions.set(key, e.position);
+      }
+
+      const sorted = [...sourceEntries].sort((a, b) => a.position - b.position);
+      let created = 0;
+      for (const entry of sorted) {
+        const key = `${entry.mealType}-${entry.audience}-${entry.isDrink}`;
+        const maxPos = slotMaxPositions.get(key) ?? -1;
+        const newPos = maxPos + 1;
+        slotMaxPositions.set(key, newPos);
+        await storage.addPlannerEntry(
+          targetDayId, entry.mealType, entry.audience, entry.mealId,
+          newPos, entry.calories ?? 0, entry.isDrink, entry.drinkType,
+        );
+        created++;
+      }
+
+      res.status(201).json({ created });
+    } catch (err: any) {
+      if (err?.name === "ZodError") return res.status(400).json({ message: "Invalid input" });
+      console.error("Error copying planner day:", err);
+      res.status(500).json({ message: "Failed to copy day" });
+    }
+  });
+
+  // Phase 5A: clear all entries in a specific day+slot
+  app.delete("/api/planner/days/:dayId/slot", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const dayId = Number(req.params.dayId);
+      const bodySchema = z.object({
+        mealType: z.enum(["breakfast", "lunch", "dinner", "snacks"]).optional(),
+        audience: z.string().default("adult"),
+        isDrink: z.boolean().default(false),
+      });
+      const { mealType, audience, isDrink } = bodySchema.parse(req.body);
+
+      const day = await storage.getPlannerDay(dayId);
+      if (!day) return res.status(404).json({ message: "Day not found" });
+      const week = await storage.getPlannerWeek(day.weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(403).json({ message: "Forbidden" });
+
+      const entries = await storage.getPlannerEntriesForDay(dayId);
+      const slotEntries = entries.filter((e) => {
+        if (e.isDrink !== isDrink) return false;
+        if (mealType !== undefined && e.mealType !== mealType) return false;
+        if (e.audience !== audience) return false;
+        return true;
+      });
+
+      for (const entry of slotEntries) {
+        await storage.deletePlannerEntry(entry.id);
+      }
+      res.json({ deleted: slotEntries.length });
+    } catch (err: any) {
+      if (err?.name === "ZodError") return res.status(400).json({ message: "Invalid input" });
+      console.error("Error clearing planner slot:", err);
+      res.status(500).json({ message: "Failed to clear slot" });
+    }
+  });
+
   app.get("/api/planner/full", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {

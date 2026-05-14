@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChefHat, CheckCircle2, ClipboardList } from "lucide-react";
+import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, ExternalLink } from "lucide-react";
+import { DraggableProposalCard } from "@/components/PlannerDragDrop";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -66,7 +67,7 @@ interface PlannerAssistantPanelProps {
   onPlannerInvalidate: () => void;
   fullPlanner: FullWeek[];
   resolveTarget?: ResolveTarget;
-  onResolveAction?: (action: "build" | "scan" | "later") => void;
+  onResolveAction?: (action: "build" | "scan" | "later" | "import") => void;
   onResolveRecipe?: (mealId: number) => void;
   isResolving?: boolean;
   placeholderItems?: PlaceholderItem[];
@@ -74,6 +75,16 @@ interface PlannerAssistantPanelProps {
   /** Phase 3F: carry item context from review into build/scan workflows */
   onBuildFromReview?: (target: ResolveTarget) => void;
   onScanFromReview?: (target: ResolveTarget) => void;
+  /** Phase 5E: navigate to /meals with full planner context */
+  onImportFromReview?: (target: ResolveTarget) => void;
+  /** Phase 5B: idle state controls */
+  onSetMode?: (mode: AssistantMode) => void;
+  onCreateIntent?: (name: string, mealType: string) => Promise<void>;
+  selectedDayLabel?: string | null;
+  /** Phase 5F: unified intake hub callbacks */
+  onBrowseRecipes?: () => void;
+  onBuildRecipe?: () => void;
+  onScanRecipe?: () => void;
 }
 
 function useIsMobile() {
@@ -642,7 +653,7 @@ interface ResolveContentProps {
   dayName: string;
   slotLabel: string;
   onSearch: () => void;
-  onAction: (action: "build" | "scan" | "later") => void;
+  onAction: (action: "build" | "scan" | "later" | "import") => void;
 }
 
 function ResolveContent({ mealName, dayName, slotLabel, onSearch, onAction }: ResolveContentProps) {
@@ -686,6 +697,14 @@ function ResolveContent({ mealName, dayName, slotLabel, onSearch, onAction }: Re
           Scan recipe
         </button>
         <button
+          className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+          onClick={() => onAction("import")}
+          data-testid="button-resolve-import"
+        >
+          <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
+          Browse / import recipes
+        </button>
+        <button
           className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
           onClick={() => onAction("later")}
           data-testid="button-resolve-later"
@@ -703,6 +722,7 @@ interface PlaceholderReviewContentProps {
   onSearchRecipe: (item: PlaceholderItem) => void;
   onBuildRecipe: (item: PlaceholderItem) => void;
   onScanRecipe: (item: PlaceholderItem) => void;
+  onImportRecipe?: (item: PlaceholderItem) => void;
   isResolving: boolean;
 }
 
@@ -711,6 +731,7 @@ function PlaceholderReviewContent({
   onSearchRecipe,
   onBuildRecipe,
   onScanRecipe,
+  onImportRecipe,
   isResolving,
 }: PlaceholderReviewContentProps) {
   if (placeholderItems.length === 0) {
@@ -766,9 +787,345 @@ function PlaceholderReviewContent({
             >
               <ScanLine className="h-3 w-3" />
             </button>
+            {onImportRecipe && (
+              <button
+                className="p-1 text-muted-foreground/40 hover:text-muted-foreground transition-colors disabled:opacity-40"
+                onClick={() => onImportRecipe(item)}
+                disabled={isResolving}
+                title="Browse recipes"
+                data-testid={`button-review-import-${item.entryId}`}
+              >
+                <ExternalLink className="h-3 w-3" />
+              </button>
+            )}
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+const INTENT_MEAL_TYPES = [
+  { key: "breakfast", label: "Breakfast", icon: Coffee },
+  { key: "lunch",     label: "Lunch",     icon: Sun },
+  { key: "dinner",    label: "Dinner",    icon: Moon },
+  { key: "snacks",    label: "Snack",     icon: Cookie },
+] as const;
+
+interface IdlePanelContentProps {
+  onSetMode: (mode: AssistantMode) => void;
+  onCreateIntent?: (name: string, mealType: string) => Promise<void>;
+  selectedDayLabel?: string | null;
+  /** Phase 5F: unresolved placeholder count for Continue Planning section */
+  placeholderCount?: number;
+  /** Phase 5F: navigate to /meals to browse or import recipes */
+  onBrowseRecipes?: () => void;
+  /** Phase 5F: open create-recipe modal from idle state */
+  onBuildRecipe?: () => void;
+  /** Phase 5F: navigate to /meals with scan mode open */
+  onScanRecipe?: () => void;
+}
+
+interface ProposalItem {
+  id: string;
+  name: string;
+  mealType: string;
+}
+
+let _proposalSeq = 0;
+function nextProposalId() { return `prop-${++_proposalSeq}`; }
+
+function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeholderCount = 0, onBrowseRecipes, onBuildRecipe, onScanRecipe }: IdlePanelContentProps) {
+  // Phase 5B: direct-to-planner intent form
+  const [intentOpen, setIntentOpen] = useState(false);
+  const [intentName, setIntentName] = useState("");
+  const [intentMealType, setIntentMealType] = useState<string>("dinner");
+  const [intentSaving, setIntentSaving] = useState(false);
+
+  // Phase 5D: proposal staging tray (drag-to-grid)
+  const [proposals, setProposals] = useState<ProposalItem[]>([]);
+  const [proposalName, setProposalName] = useState("");
+  const [proposalMealType, setProposalMealType] = useState<string>("dinner");
+
+  const handleSubmitIntent = async () => {
+    if (!intentName.trim() || !onCreateIntent) return;
+    setIntentSaving(true);
+    try {
+      await onCreateIntent(intentName.trim(), intentMealType);
+      setIntentName("");
+      setIntentOpen(false);
+    } finally {
+      setIntentSaving(false);
+    }
+  };
+
+  const addProposal = () => {
+    const trimmed = proposalName.trim();
+    if (!trimmed) return;
+    setProposals(prev => [...prev, { id: nextProposalId(), name: trimmed, mealType: proposalMealType }]);
+    setProposalName("");
+  };
+
+  const removeProposal = (id: string) => {
+    setProposals(prev => prev.filter(p => p.id !== id));
+  };
+
+  return (
+    <div className="space-y-4" data-testid="panel-assistant-idle">
+
+      {/* ── Section A: Plan Your Week ── */}
+      <div className="space-y-2" data-testid="section-plan-week">
+        <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" data-testid="section-plan-week-label">
+          Plan Your Week
+        </p>
+        <div className="space-y-1">
+          <button
+            className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+            onClick={() => onSetMode("smart")}
+            data-testid="button-idle-smart"
+          >
+            <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
+            Smart planner
+          </button>
+          <button
+            className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+            onClick={() => onSetMode("templates")}
+            data-testid="button-idle-templates"
+          >
+            <LayoutGrid className="h-4 w-4 shrink-0 text-muted-foreground" />
+            Templates
+          </button>
+          <button
+            className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+            onClick={() => onSetMode("scan")}
+            data-testid="button-idle-scan"
+          >
+            <ScanLine className="h-4 w-4 shrink-0 text-muted-foreground" />
+            Scan planner
+          </button>
+        </div>
+      </div>
+
+      <div className="w-full h-px bg-border/60" />
+
+      {/* ── Section B: Add Meals ── */}
+      <div className="space-y-2" data-testid="section-add-meals">
+        <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" data-testid="section-add-meals-label">
+          Add Meals
+        </p>
+        <p className="text-[11px] text-muted-foreground/70 leading-snug">
+          Start with ideas, refine recipes later.
+        </p>
+        <div className="space-y-1">
+          {onCreateIntent && (
+            <button
+              className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+              onClick={() => setIntentOpen(v => !v)}
+              data-testid="button-idle-add-intent"
+            >
+              <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+              Quick meal idea
+            </button>
+          )}
+          {onBrowseRecipes && (
+            <button
+              className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+              onClick={onBrowseRecipes}
+              data-testid="button-idle-browse-recipes"
+            >
+              <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
+              Browse / import recipes
+            </button>
+          )}
+          {onBuildRecipe && (
+            <button
+              className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+              onClick={onBuildRecipe}
+              data-testid="button-idle-build-recipe"
+            >
+              <Wand2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+              Build recipe
+            </button>
+          )}
+          {onScanRecipe && (
+            <button
+              className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+              onClick={onScanRecipe}
+              data-testid="button-idle-scan-recipe"
+            >
+              <Camera className="h-4 w-4 shrink-0 text-muted-foreground" />
+              Scan recipe
+            </button>
+          )}
+        </div>
+
+        {intentOpen && onCreateIntent && (
+          <div className="space-y-2.5 rounded-lg border border-border bg-muted/20 px-3 py-3" data-testid="panel-intent-form">
+            {selectedDayLabel ? (
+              <p className="text-xs text-muted-foreground">Adding to <span className="font-medium text-foreground">{selectedDayLabel}</span></p>
+            ) : (
+              <p className="text-xs text-amber-600 dark:text-amber-400">Select a day first by clicking a day header in the grid.</p>
+            )}
+            <input
+              type="text"
+              placeholder="e.g. Pasta carbonara"
+              value={intentName}
+              onChange={e => setIntentName(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") handleSubmitIntent(); }}
+              className="w-full h-8 px-3 text-sm rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              autoFocus
+              data-testid="input-intent-name"
+            />
+            <div className="flex gap-1 flex-wrap">
+              {INTENT_MEAL_TYPES.map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setIntentMealType(key)}
+                  className={`flex items-center gap-1 text-xs px-2 py-1 rounded-full border transition-colors ${
+                    intentMealType === key
+                      ? "bg-primary/10 text-primary border-primary/40"
+                      : "border-border text-muted-foreground hover:border-foreground/40"
+                  }`}
+                  data-testid={`button-intent-type-${key}`}
+                >
+                  <Icon className="h-3 w-3" />{label}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSubmitIntent}
+                disabled={intentSaving || !intentName.trim() || !selectedDayLabel}
+                className="flex-1 h-8 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 disabled:opacity-40 transition-colors flex items-center justify-center gap-1.5"
+                data-testid="button-intent-submit"
+              >
+                {intentSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                {intentSaving ? "Adding…" : "Add"}
+              </button>
+              <button
+                onClick={() => { setIntentOpen(false); setIntentName(""); }}
+                className="h-8 px-3 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="button-intent-cancel"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Phase 5D: Proposal staging tray */}
+        <div className="space-y-2 pt-1" data-testid="panel-proposal-tray">
+          <p className="text-[11px] text-muted-foreground/70 leading-snug">
+            Stage ideas here, then drag them onto the planner.
+          </p>
+          <div className="flex gap-1.5">
+            <input
+              type="text"
+              placeholder="e.g. Fish cakes"
+              value={proposalName}
+              onChange={e => setProposalName(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") addProposal(); }}
+              className="flex-1 h-7 px-2.5 text-xs rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              data-testid="input-proposal-name"
+            />
+            <select
+              value={proposalMealType}
+              onChange={e => setProposalMealType(e.target.value)}
+              className="h-7 px-1.5 text-xs rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              data-testid="select-proposal-mealtype"
+            >
+              {INTENT_MEAL_TYPES.map(({ key, label }) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+            <button
+              onClick={addProposal}
+              disabled={!proposalName.trim()}
+              className="h-7 px-2 rounded-md bg-muted hover:bg-muted/80 disabled:opacity-40 text-xs font-medium transition-colors flex items-center gap-1"
+              data-testid="button-proposal-stage"
+            >
+              <Plus className="h-3 w-3" />Stage
+            </button>
+          </div>
+
+          {proposals.length > 0 && (
+            <div className="space-y-1" data-testid="list-proposal-cards">
+              {proposals.map(p => (
+                <DraggableProposalCard
+                  key={p.id}
+                  id={p.id}
+                  name={p.name}
+                  proposedMealType={p.mealType}
+                >
+                  <div
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-dashed border-muted-foreground/30 bg-background hover:border-primary/40 hover:bg-primary/5 cursor-grab active:cursor-grabbing transition-colors group"
+                    data-testid={`card-proposal-${p.id}`}
+                  >
+                    <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
+                    <span className="flex-1 text-xs truncate text-foreground">{p.name}</span>
+                    <span className="text-[10px] text-muted-foreground/60 shrink-0 capitalize">{p.mealType}</span>
+                    <button
+                      onPointerDown={e => e.stopPropagation()}
+                      onClick={e => { e.stopPropagation(); removeProposal(p.id); }}
+                      className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-accent/60 text-muted-foreground hover:text-foreground transition-opacity shrink-0"
+                      title="Remove"
+                      data-testid={`button-proposal-remove-${p.id}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                </DraggableProposalCard>
+              ))}
+            </div>
+          )}
+
+          {proposals.length === 0 && (
+            <p className="text-[11px] text-muted-foreground/50 italic text-center py-1" data-testid="text-proposal-tray-empty">
+              No staged ideas yet
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ── Section C: Continue Planning (shown only when there's pending work) ── */}
+      {(proposals.length > 0 || placeholderCount > 0) && (
+        <>
+          <div className="w-full h-px bg-border/60" />
+          <div className="space-y-2" data-testid="section-continue-planning">
+            <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" data-testid="section-continue-label">
+              Continue Planning
+            </p>
+            {proposals.length > 0 && (
+              <div
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 text-xs text-muted-foreground"
+                data-testid="text-staged-count"
+              >
+                <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
+                {proposals.length} staged meal idea{proposals.length !== 1 ? "s" : ""} — drag onto the planner
+              </div>
+            )}
+            {placeholderCount > 0 && (
+              <button
+                className="w-full flex items-center gap-2.5 rounded-lg border border-amber-400/40 bg-amber-50/30 dark:bg-amber-950/10 hover:bg-amber-50/60 dark:hover:bg-amber-950/20 px-3 py-2.5 text-sm transition-colors text-left"
+                onClick={() => onSetMode("placeholder-review")}
+                data-testid="button-idle-placeholder-review"
+              >
+                <BookOpen className="h-4 w-4 shrink-0 text-amber-500/70" />
+                <span className="text-amber-700 dark:text-amber-400/80 flex-1">
+                  {placeholderCount} unresolved meal{placeholderCount !== 1 ? "s" : ""}
+                </span>
+                <span className="text-[11px] text-muted-foreground/60 shrink-0">Resolve →</span>
+              </button>
+            )}
+            {placeholderCount > 0 && (
+              <p className="text-[11px] text-muted-foreground/60 leading-snug px-0.5">
+                Resolve meal ideas when ready.
+              </p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -830,6 +1187,13 @@ export function PlannerAssistantPanel({
   onResolveRecipeFromReview,
   onBuildFromReview,
   onScanFromReview,
+  onImportFromReview,
+  onSetMode,
+  onCreateIntent,
+  selectedDayLabel,
+  onBrowseRecipes,
+  onBuildRecipe,
+  onScanRecipe,
 }: PlannerAssistantPanelProps) {
   const isMobile = useIsMobile();
   const [resolveSubview, setResolveSubview] = useState<"menu" | "search">("menu");
@@ -843,7 +1207,41 @@ export function PlannerAssistantPanel({
     if (mode !== "placeholder-review") setReviewSearchTarget(null);
   }, [mode]);
 
-  if (!mode) return null;
+  // On mobile, hide the panel when idle (sheet only opens when a mode is active)
+  if (!mode && isMobile) return null;
+
+  // On desktop, show persistent idle state when no mode is active
+  if (!mode) {
+    return (
+      <aside
+        className="shrink-0 w-80 sticky top-20 self-start border border-border rounded-xl bg-card flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+        data-testid="panel-planner-assistant-idle"
+      >
+        <div className="flex items-center px-4 pt-4 pb-3 shrink-0">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Lightbulb className="h-4 w-4 text-primary" />
+            Planner Assistant
+          </h3>
+        </div>
+        <div className="w-full h-px bg-border shrink-0" />
+        <div className="flex-1 overflow-y-auto min-h-0 px-4 pb-4 pt-3">
+          {onSetMode ? (
+            <IdlePanelContent
+              onSetMode={onSetMode}
+              onCreateIntent={onCreateIntent}
+              selectedDayLabel={selectedDayLabel}
+              placeholderCount={placeholderItems.length}
+              onBrowseRecipes={onBrowseRecipes}
+              onBuildRecipe={onBuildRecipe}
+              onScanRecipe={onScanRecipe}
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground">Select a mode to get started.</p>
+          )}
+        </div>
+      </aside>
+    );
+  }
 
   const isSearchSubview =
     (mode === "resolve" && resolveSubview === "search") ||
@@ -984,6 +1382,17 @@ export function PlannerAssistantPanel({
                 onResolveAction("scan");
               }
             }}
+            onImportRecipe={onImportFromReview ? (item) => onImportFromReview({
+              mealName: item.mealName,
+              dayName: item.dayName,
+              slotLabel: item.slotLabel,
+              entryId: item.entryId,
+              dayId: item.dayId,
+              mealType: item.mealType,
+              audience: item.audience,
+              isDrink: item.isDrink,
+              position: item.position,
+            }) : undefined}
             isResolving={isResolving}
           />
         )

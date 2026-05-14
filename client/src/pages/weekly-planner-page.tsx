@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store, Users, Wand2, Camera, BookOpen } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store, Users, Wand2, Camera, BookOpen, MoreHorizontal } from "lucide-react";
 import { CreateMealModal } from "@/components/create-meal-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -154,12 +154,26 @@ export default function WeeklyPlannerPage() {
   const [expandedDayLabel, setExpandedDayLabel] = useState("");
   const [mealDetail, setMealDetail] = useState<MealDetailState | null>(null);
   const [resolveTarget, setResolveTarget] = useState<ResolveTarget | null>(null);
+  // Phase 5E: deferred recipe-link confirmation
+  type PendingRecipeLink = { entryId: number; mealId: number; targetName: string; recipeName: string; returnToReview: boolean };
+  const [pendingRecipeLink, setPendingRecipeLink] = useState<PendingRecipeLink | null>(null);
   // Phase 3F: persists placeholder context across build/scan workflow transitions
   type ResolutionContext = ResolveTarget & { returnMode: "placeholder-review" | null };
   const [resolutionContext, setResolutionContext] = useState<ResolutionContext | null>(null);
-  const [selectedDayId, setSelectedDayId] = useState<number | null>(null);
   const [mobileDayIndex, setMobileDayIndex] = useState(0);
   const [activeDrag, setActiveDrag] = useState<DragItemData | null>(null);
+  // Phase 5A: planner operations state
+  const [clearSlotConfirm, setClearSlotConfirm] = useState<{
+    dayId: number;
+    mealType: string | undefined;
+    audience: string;
+    isDrink: boolean;
+    dayName: string;
+    slotLabel: string;
+  } | null>(null);
+  const [copyDayOpen, setCopyDayOpen] = useState(false);
+  const [copyDaySourceId, setCopyDaySourceId] = useState<number | null>(null);
+  const [copyDayTargetId, setCopyDayTargetId] = useState<string>("");
   const { user } = useUser();
   const [, navigate] = useLocation();
 
@@ -236,8 +250,8 @@ export default function WeeklyPlannerPage() {
   // ── Active week data (needed by domain hooks before other queries) ─────────
   const activeWeekData = fullPlanner.find((w) => w.weekNumber === Number(activeWeek));
 
-  // ── Planner context (Phase 1A: assistant panel routing) ───────────────────
-  const { assistantMode, setAssistantMode } = usePlannerContext();
+  // ── Planner context (Phase 1A + 5B: assistant panel routing + selected day) ─
+  const { assistantMode, setAssistantMode, selectedDayId, setSelectedDayId } = usePlannerContext();
 
   // ── Smart Suggest domain ──────────────────────────────────────────────────
   const {
@@ -621,6 +635,116 @@ export default function WeeklyPlannerPage() {
     },
   });
 
+  // Phase 5A: duplicate a planner entry (same slot, or to a different day)
+  const duplicateEntryMutation = useMutation({
+    mutationFn: async (params: { entryId: number; targetDayId?: number }) => {
+      const body: Record<string, number> = {};
+      if (params.targetDayId !== undefined) body.targetDayId = params.targetDayId;
+      const res = await apiRequest("POST", `/api/planner/entries/${params.entryId}/duplicate`, body);
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.message ?? "Failed to duplicate");
+      }
+      return res.json();
+    },
+    onSuccess: (_data, params) => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      toast({ title: params.targetDayId ? "Copied to tomorrow" : "Duplicated" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to duplicate", description: err.message, variant: "destructive" });
+    },
+  });
+
+  // Phase 5A: copy all entries from one day to another
+  const copyDayMutation = useMutation({
+    mutationFn: async (params: { sourceDayId: number; targetDayId: number }) => {
+      const res = await apiRequest("POST", `/api/planner/days/${params.sourceDayId}/copy`, {
+        targetDayId: params.targetDayId,
+      });
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.message ?? "Failed to copy day");
+      }
+      return res.json() as Promise<{ created: number }>;
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      setCopyDayOpen(false);
+      setCopyDaySourceId(null);
+      setCopyDayTargetId("");
+      toast({ title: `Day copied`, description: `${data.created} meal${data.created !== 1 ? "s" : ""} added` });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to copy day", description: err.message, variant: "destructive" });
+    },
+  });
+
+  // Phase 5A: clear all entries in a specific day+slot
+  const clearSlotMutation = useMutation({
+    mutationFn: async (params: { dayId: number; mealType: string | undefined; audience: string; isDrink: boolean }) => {
+      const body: Record<string, unknown> = { audience: params.audience, isDrink: params.isDrink };
+      if (params.mealType !== undefined) body.mealType = params.mealType;
+      const res = await apiRequest("DELETE", `/api/planner/days/${params.dayId}/slot`, body);
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.message ?? "Failed to clear slot");
+      }
+      return res.json() as Promise<{ deleted: number }>;
+    },
+    onMutate: async (params) => {
+      await qc.cancelQueries({ queryKey: ["/api/planner/full"] });
+      const previousData = qc.getQueryData<FullWeek[]>(["/api/planner/full"]);
+      qc.setQueryData<FullWeek[]>(["/api/planner/full"], (old) => {
+        if (!old) return old;
+        return old.map((week) => ({
+          ...week,
+          days: week.days.map((day) => {
+            if (day.id !== params.dayId) return day;
+            return {
+              ...day,
+              entries: day.entries.filter((e) => {
+                if (e.isDrink !== params.isDrink) return true;
+                if (params.mealType !== undefined && e.mealType !== params.mealType) return true;
+                if (e.audience !== params.audience) return true;
+                return false;
+              }),
+            };
+          }),
+        }));
+      });
+      return { previousData };
+    },
+    onError: (_err, _params, context) => {
+      if (context?.previousData) qc.setQueryData(["/api/planner/full"], context.previousData);
+      toast({ title: "Failed to clear slot", description: "Planner restored", variant: "destructive" });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      setClearSlotConfirm(null);
+    },
+  });
+
+  // Phase 5A: add a planner meal to the freezer (only if meal is freezer-eligible)
+  const addToFreezerMutation = useMutation({
+    mutationFn: async (mealId: number) => {
+      const today = new Date().toISOString().split("T")[0];
+      const res = await apiRequest("POST", "/api/freezer", { mealId, totalPortions: 1, remainingPortions: 1, frozenDate: today });
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.message ?? "Failed to add to freezer");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/freezer"] });
+      toast({ title: "Added to freezer" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Could not add to freezer", description: err.message, variant: "destructive" });
+    },
+  });
+
   const addToBasketMutation = useMutation({
     mutationFn: async (mealSelections: { mealId: number; count: number }[]) => {
       const res = await apiRequest("POST", api.shoppingList.generateFromMeals.path, { mealSelections });
@@ -647,7 +771,7 @@ export default function WeeklyPlannerPage() {
   // Phase 4A: drag/drop handlers
   function handleDragStart(event: DragStartEvent) {
     const data = event.active.data.current as DragItemData | undefined;
-    if (data?.type === "planner-entry") setActiveDrag(data);
+    if (data?.type === "planner-entry" || data?.type === "proposal-card") setActiveDrag(data);
   }
 
   function handleDragEnd(event: DragEndEvent) {
@@ -655,13 +779,33 @@ export default function WeeklyPlannerPage() {
     const { active, over } = event;
     if (!over) return;
     const dragData = active.data.current as DragItemData | undefined;
-    if (!dragData || dragData.type !== "planner-entry") return;
+    if (!dragData) return;
     const overData = over.data.current as (DragItemData | DropZoneData) | undefined;
     if (!overData) return;
 
+    // Phase 5D: proposal-card from assistant panel dropped onto the planner grid
+    if (dragData.type === "proposal-card") {
+      let targetDayId: number;
+      let targetMealType: string;
+      if (overData.type === "planner-slot") {
+        targetDayId = overData.dayId;
+        targetMealType = overData.mealType;
+      } else if (overData.type === "planner-entry") {
+        targetDayId = overData.dayId;
+        targetMealType = overData.mealType;
+      } else {
+        return;
+      }
+      createPlannerIntent(dragData.name, targetMealType, targetDayId);
+      return;
+    }
+
+    if (dragData.type !== "planner-entry") return;
+
     if (overData.type === "planner-entry") {
       // Dropped over another sortable entry
-      const overEntry = overData as DragItemData;
+      const overEntry = overData;
+      if (overEntry.type !== "planner-entry") return;
       if (dragData.entryId === overEntry.entryId) return;
 
       const sameSlot =
@@ -697,7 +841,7 @@ export default function WeeklyPlannerPage() {
       }
     } else if (overData.type === "planner-slot") {
       // Dropped on empty cell area (Phase 4A: DroppablePlannerCell)
-      const dropSlot = overData as DropZoneData;
+      const dropSlot = overData;
       const sameSlot =
         dragData.dayId === dropSlot.dayId &&
         dragData.mealType === dropSlot.mealType &&
@@ -760,7 +904,7 @@ export default function WeeklyPlannerPage() {
     setAssistantMode("manual");
   };
 
-  const handleResolveAction = (action: "build" | "scan" | "later") => {
+  const handleResolveAction = (action: "build" | "scan" | "later" | "import") => {
     if (action === "build") {
       // Phase 3F: capture context before clearing resolveTarget
       if (resolveTarget) setResolutionContext({ ...resolveTarget, returnMode: null });
@@ -786,6 +930,22 @@ export default function WeeklyPlannerPage() {
       } else {
         setAssistantMode("scan");
       }
+    } else if (action === "import") {
+      // Phase 5E: navigate to /meals with full planner context
+      if (resolveTarget) {
+        const params = new URLSearchParams({
+          plannerImport: "1",
+          mealName: resolveTarget.mealName,
+          day: resolveTarget.dayName,
+          slot: resolveTarget.mealType,
+          plannerResolve: "1",
+        });
+        params.set("dayId", String(resolveTarget.dayId));
+        params.set("entryId", String(resolveTarget.entryId));
+        setResolveTarget(null);
+        setAssistantMode(null);
+        navigate(`/meals?${params.toString()}`);
+      }
     } else {
       setResolutionContext(null);
       setResolveTarget(null);
@@ -793,34 +953,17 @@ export default function WeeklyPlannerPage() {
     }
   };
 
-  // Phase 3E: single atomic swap replaces delete-then-add
+  // Phase 5E: show confirmation before linking (was immediate in Phase 3E)
   const handleResolveRecipe = (mealId: number) => {
     if (!resolveTarget) return;
-    const target = resolveTarget;
-    replacePlaceholderMealMutation.mutate({ entryId: target.entryId, mealId }, {
-      onSuccess: () => {
-        setResolveTarget(null);
-        setAssistantMode(null);
-        setResolutionContext(null); // Phase 3F: clear context after resolution
-        toast({ title: "Recipe linked", description: `${target.mealName} has been resolved.` });
-      },
-      onError: () => {
-        toast({ title: "Failed to link recipe", variant: "destructive" });
-      },
-    });
+    const recipeName = getMeal(mealId)?.name ?? "this recipe";
+    setPendingRecipeLink({ entryId: resolveTarget.entryId, mealId, targetName: resolveTarget.mealName, recipeName, returnToReview: false });
   };
 
-  // Phase 3E: single atomic swap replaces delete-then-add
+  // Phase 5E: show confirmation before linking (was immediate in Phase 3E)
   const handleResolveRecipeFromReview = (mealId: number, target: ResolveTarget) => {
-    replacePlaceholderMealMutation.mutate({ entryId: target.entryId, mealId }, {
-      onSuccess: () => {
-        setResolutionContext(null); // Phase 3F: clear context after resolution
-        toast({ title: "Recipe linked", description: `${target.mealName} resolved.` });
-      },
-      onError: () => {
-        toast({ title: "Failed to link recipe", variant: "destructive" });
-      },
-    });
+    const recipeName = getMeal(mealId)?.name ?? "this recipe";
+    setPendingRecipeLink({ entryId: target.entryId, mealId, targetName: target.mealName, recipeName, returnToReview: true });
   };
 
   // Phase 3F: build from placeholder-review carries item context
@@ -828,6 +971,41 @@ export default function WeeklyPlannerPage() {
     setResolutionContext({ ...target, returnMode: "placeholder-review" });
     setAssistantMode(null);
     setCreateMealOpen(true);
+  };
+
+  // Phase 5E: confirm and execute the deferred recipe-link
+  const confirmRecipeLink = () => {
+    if (!pendingRecipeLink) return;
+    const { entryId, mealId, targetName, returnToReview } = pendingRecipeLink;
+    replacePlaceholderMealMutation.mutate({ entryId, mealId }, {
+      onSuccess: () => {
+        setPendingRecipeLink(null);
+        setResolveTarget(null);
+        setResolutionContext(null);
+        if (!returnToReview) setAssistantMode(null);
+        toast({ title: "Recipe linked", description: `${targetName} has been resolved.` });
+      },
+      onError: () => {
+        setPendingRecipeLink(null);
+        toast({ title: "Failed to link recipe", variant: "destructive" });
+      },
+    });
+  };
+
+  // Phase 5E: navigate to /meals with full planner context from placeholder-review
+  const handleImportFromReview = (target: ResolveTarget) => {
+    const params = new URLSearchParams({
+      plannerImport: "1",
+      mealName: target.mealName,
+      day: target.dayName,
+      slot: target.mealType,
+      plannerResolve: "1",
+      returnMode: "placeholder-review",
+    });
+    params.set("dayId", String(target.dayId));
+    params.set("entryId", String(target.entryId));
+    setAssistantMode(null);
+    navigate(`/meals?${params.toString()}`);
   };
 
   // Phase 3G: scan from placeholder-review navigates directly to recipe scan with full context
@@ -886,6 +1064,55 @@ export default function WeeklyPlannerPage() {
       selectMeal(meal.id);
     } catch {
       toast({ title: "Could not add product to planner", variant: "destructive" });
+    }
+  };
+
+  // Phase 5B + 5D: inline planner intent creation (dayIdOverride used by drag-drop in Phase 5D)
+  const createPlannerIntent = async (name: string, mealType: string, dayIdOverride?: number): Promise<void> => {
+    const targetDayId = dayIdOverride ?? selectedDayId;
+    if (!targetDayId) {
+      toast({ title: "Select a day first", description: "Click a day header in the planner grid to select it.", variant: "destructive" });
+      return;
+    }
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      toast({ title: "Enter a meal name", variant: "destructive" });
+      return;
+    }
+    try {
+      const mealRes = await apiRequest("POST", "/api/meals", {
+        name: trimmedName,
+        ingredients: [],
+        instructions: [],
+        servings: 1,
+        audience: "adult",
+        isDrink: false,
+        mealSourceType: "planner-placeholder",
+      });
+      if (!mealRes.ok) throw new Error("Failed to create meal");
+      const meal = await mealRes.json();
+
+      const day = fullPlanner.flatMap(w => w.days).find(d => d.id === targetDayId);
+      const position = day ? getSlotEntries(day.entries, mealType, "adult", false).length : 0;
+
+      const entryRes = await apiRequest("POST", `/api/planner/days/${targetDayId}/items`, {
+        mealSlot: mealType,
+        mealId: meal.id,
+        position,
+        audience: "adult",
+        isDrink: false,
+        drinkType: null,
+      });
+      if (!entryRes.ok) {
+        await apiRequest("DELETE", `/api/meals/${meal.id}`).catch(() => {});
+        throw new Error("Failed to add to planner");
+      }
+
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      toast({ title: `"${trimmedName}" added`, description: "Appears as unresolved — link a recipe when ready." });
+    } catch (err: any) {
+      toast({ title: "Failed to add meal idea", description: err?.message ?? "Please try again.", variant: "destructive" });
     }
   };
 
@@ -956,6 +1183,22 @@ export default function WeeklyPlannerPage() {
     const bIdx = MONDAY_FIRST_ORDER.indexOf(b.dayOfWeek);
     return aIdx - bIdx;
   }) || [];
+
+  // Phase 5A: find the next day in sorted week order
+  const getNextDay = (currentDayId: number): FullDay | undefined => {
+    const idx = sortedDays.findIndex((d) => d.id === currentDayId);
+    if (idx < 0 || idx >= sortedDays.length - 1) return undefined;
+    return sortedDays[idx + 1];
+  };
+
+  const handleRepeatTomorrow = (entry: PlannerEntry, currentDayId: number) => {
+    const nextDay = getNextDay(currentDayId);
+    if (!nextDay) {
+      toast({ title: "No next day in this week" });
+      return;
+    }
+    duplicateEntryMutation.mutate({ entryId: entry.id, targetDayId: nextDay.id });
+  };
 
   const expandedDay = expandedDayId != null
     ? fullPlanner.flatMap(w => w.days).find(d => d.id === expandedDayId) ?? null
@@ -1210,6 +1453,13 @@ export default function WeeklyPlannerPage() {
       }
     />
     <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+      <DndContext
+        sensors={dndSensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
+      >
       <div className="flex gap-4 items-start">
       <div className="flex-1 min-w-0">
       <FirstVisitHint
@@ -1316,9 +1566,29 @@ export default function WeeklyPlannerPage() {
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
-                <span className="text-base font-semibold" data-testid="text-mobile-day-name">
-                  {sortedDays[mobileDayIndex] ? DAY_NAMES[sortedDays[mobileDayIndex].dayOfWeek] : "-"}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base font-semibold" data-testid="text-mobile-day-name">
+                    {sortedDays[mobileDayIndex] ? DAY_NAMES[sortedDays[mobileDayIndex].dayOfWeek] : "-"}
+                  </span>
+                  {sortedDays[mobileDayIndex] && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="p-1 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent/40" title="Day actions" data-testid="button-mobile-day-actions">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="center">
+                        <DropdownMenuItem
+                          onClick={() => { setCopyDaySourceId(sortedDays[mobileDayIndex].id); setCopyDayTargetId(""); setCopyDayOpen(true); }}
+                          data-testid="button-mobile-copy-day"
+                        >
+                          <Copy className="h-3.5 w-3.5 mr-2" />
+                          Copy this day
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
                 <button
                   className="p-1.5 rounded-md hover:bg-accent/40 disabled:opacity-30 transition-colors"
                   onClick={() => setMobileDayIndex(i => Math.min(sortedDays.length - 1, i + 1))}
@@ -1351,48 +1621,105 @@ export default function WeeklyPlannerPage() {
                             const isPlaceholder = meal.mealSourceType === "planner-placeholder";
                             const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
                             return (
-                              <button
-                                key={entry.id}
-                                className={`w-full text-left text-sm transition-colors flex items-start gap-1.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
-                                onClick={() => {
-                                  if (isPlaceholder) {
-                                    setResolveTarget({
-                                      mealName: meal.name,
-                                      dayName: DAY_NAMES[mobileDay.dayOfWeek],
-                                      slotLabel: row.label,
-                                      entryId: entry.id,
-                                      dayId: mobileDay.id,
-                                      mealType: row.mealType ?? row.addMealType,
-                                      audience: row.audience,
-                                      isDrink: row.isDrink,
-                                      position: entry.position,
-                                    });
-                                    setAssistantMode("resolve");
-                                  } else {
-                                    setMealDetail({
-                                      entry,
-                                      meal,
-                                      dayId: mobileDay.id,
-                                      mealType: row.mealType ?? row.addMealType,
-                                      audience: row.audience,
-                                      isDrink: row.isDrink,
-                                      dayName: DAY_NAMES[mobileDay.dayOfWeek],
-                                      slotLabel: row.label,
-                                    });
-                                  }
-                                }}
-                                data-testid={`button-mobile-meal-${row.id}-${entry.id}`}
-                              >
-                                <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1.5 py-0.5" : ""}`}>
-                                  <span className="leading-snug">{meal.name}</span>
-                                  {isPlaceholder
-                                    ? <span className="text-[10px] text-muted-foreground/60 italic" data-testid={`label-placeholder-mobile-${entry.id}`}>Needs recipe</span>
-                                    : <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
-                                  }
-                                </div>
-                                {isFrozen && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
-                                {basketMealIdSet.has(meal.id) && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
-                              </button>
+                              <div key={entry.id} className="flex items-start gap-1">
+                                <button
+                                  className={`flex-1 min-w-0 text-left text-sm transition-colors flex items-start gap-1.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
+                                  onClick={() => {
+                                    if (isPlaceholder) {
+                                      setResolveTarget({
+                                        mealName: meal.name,
+                                        dayName: DAY_NAMES[mobileDay.dayOfWeek],
+                                        slotLabel: row.label,
+                                        entryId: entry.id,
+                                        dayId: mobileDay.id,
+                                        mealType: row.mealType ?? row.addMealType,
+                                        audience: row.audience,
+                                        isDrink: row.isDrink,
+                                        position: entry.position,
+                                      });
+                                      setAssistantMode("resolve");
+                                    } else {
+                                      setMealDetail({
+                                        entry,
+                                        meal,
+                                        dayId: mobileDay.id,
+                                        mealType: row.mealType ?? row.addMealType,
+                                        audience: row.audience,
+                                        isDrink: row.isDrink,
+                                        dayName: DAY_NAMES[mobileDay.dayOfWeek],
+                                        slotLabel: row.label,
+                                      });
+                                    }
+                                  }}
+                                  data-testid={`button-mobile-meal-${row.id}-${entry.id}`}
+                                >
+                                  <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1.5 py-0.5" : ""}`}>
+                                    <span className="leading-snug">{meal.name}</span>
+                                    {isPlaceholder
+                                      ? <span className="text-[10px] text-muted-foreground/60 italic" data-testid={`label-placeholder-mobile-${entry.id}`}>Needs recipe</span>
+                                      : <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
+                                    }
+                                  </div>
+                                  {isFrozen && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
+                                  {basketMealIdSet.has(meal.id) && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
+                                </button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button
+                                      className="p-0.5 text-muted-foreground/30 hover:text-muted-foreground rounded flex-shrink-0 mt-0.5"
+                                      onClick={(e) => e.stopPropagation()}
+                                      data-testid={`button-mobile-entry-ops-${entry.id}`}
+                                      title="Entry actions"
+                                    >
+                                      <MoreHorizontal className="h-3.5 w-3.5" />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="w-48">
+                                    {!isPlaceholder && (
+                                      <DropdownMenuItem onClick={() => duplicateEntryMutation.mutate({ entryId: entry.id })} data-testid={`mi-duplicate-${entry.id}`}>
+                                        <Copy className="h-3.5 w-3.5 mr-2" />
+                                        Duplicate here
+                                      </DropdownMenuItem>
+                                    )}
+                                    {!isPlaceholder && getNextDay(mobileDay.id) && (
+                                      <DropdownMenuItem onClick={() => handleRepeatTomorrow(entry, mobileDay.id)} data-testid={`mi-repeat-tomorrow-${entry.id}`}>
+                                        <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                                        Repeat tomorrow
+                                      </DropdownMenuItem>
+                                    )}
+                                    {isPlaceholder && (
+                                      <DropdownMenuItem onClick={() => duplicateEntryMutation.mutate({ entryId: entry.id })}>
+                                        <Copy className="h-3.5 w-3.5 mr-2" />
+                                        Duplicate placeholder
+                                      </DropdownMenuItem>
+                                    )}
+                                    {meal.isFreezerEligible && !isPlaceholder && (
+                                      <DropdownMenuItem onClick={() => addToFreezerMutation.mutate(meal.id)} data-testid={`mi-freeze-${entry.id}`}>
+                                        <Snowflake className="h-3.5 w-3.5 mr-2" />
+                                        Add to freezer
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-muted-foreground focus:text-foreground"
+                                      onClick={() => setClearSlotConfirm({ dayId: mobileDay.id, mealType: row.mealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[mobileDay.dayOfWeek], slotLabel: row.label })}
+                                      data-testid={`mi-clear-slot-${row.id}`}
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5 mr-2" />
+                                      Clear this slot
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      onClick={() => deleteEntryMutation.mutate(entry.id)}
+                                      data-testid={`mi-remove-${entry.id}`}
+                                    >
+                                      <X className="h-3.5 w-3.5 mr-2" />
+                                      Remove
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
                             );
                           })}
                           <button
@@ -1431,13 +1758,6 @@ export default function WeeklyPlannerPage() {
             </div>
 
             {/* ── Desktop Matrix Grid (hidden on mobile) ── */}
-            <DndContext
-              sensors={dndSensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-              onDragCancel={handleDragCancel}
-            >
             <div className="hidden sm:block overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-6">
               <div style={{ minWidth: "960px" }}>
                 <Card className="overflow-hidden">
@@ -1452,18 +1772,30 @@ export default function WeeklyPlannerPage() {
                     {sortedDays.map((day) => {
                       const isSelected = selectedDay?.id === day.id;
                       return (
-                        <button
+                        <div
                           key={day.id}
-                          className={`bg-muted/40 border-b-2 border-l border-border px-2 py-2.5 text-center transition-colors ${
+                          className={`relative bg-muted/40 border-b-2 border-l border-border px-2 py-2.5 text-center transition-colors group/day-hdr ${
                             isSelected ? "bg-primary/10" : "hover:bg-accent/30"
                           }`}
-                          onClick={() => setSelectedDayId(day.id)}
-                          data-testid={`button-day-header-${day.dayOfWeek}`}
                         >
-                          <div className={`text-xs font-semibold ${isSelected ? "text-primary" : "text-foreground"}`}>
-                            {DAY_NAMES[day.dayOfWeek]}
-                          </div>
-                        </button>
+                          <button
+                            className="w-full"
+                            onClick={() => setSelectedDayId(day.id)}
+                            data-testid={`button-day-header-${day.dayOfWeek}`}
+                          >
+                            <div className={`text-xs font-semibold ${isSelected ? "text-primary" : "text-foreground"}`}>
+                              {DAY_NAMES[day.dayOfWeek]}
+                            </div>
+                          </button>
+                          <button
+                            className="absolute top-1 right-1 opacity-0 group-hover/day-hdr:opacity-50 hover:!opacity-100 rounded p-0.5 hover:bg-accent/60 transition-opacity"
+                            onClick={(e) => { e.stopPropagation(); setCopyDaySourceId(day.id); setCopyDayTargetId(""); setCopyDayOpen(true); }}
+                            title="Copy this day"
+                            data-testid={`button-copy-day-${day.dayOfWeek}`}
+                          >
+                            <Copy className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
                       );
                     })}
 
@@ -1535,49 +1867,108 @@ export default function WeeklyPlannerPage() {
                                       audience={row.audience}
                                       isDrink={row.isDrink}
                                     >
-                                      <button
-                                        className={`w-full text-left text-xs leading-snug transition-colors group flex items-start gap-0.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
-                                        onClick={() => {
-                                          if (isPlaceholder) {
-                                            setResolveTarget({
-                                              mealName: meal.name,
-                                              dayName: DAY_NAMES[day.dayOfWeek],
-                                              slotLabel: row.label,
-                                              entryId: entry.id,
-                                              dayId: day.id,
-                                              mealType: row.mealType ?? row.addMealType,
-                                              audience: row.audience,
-                                              isDrink: row.isDrink,
-                                              position: entry.position,
-                                            });
-                                            setAssistantMode("resolve");
-                                          } else {
-                                            setMealDetail({
-                                              entry,
-                                              meal,
-                                              dayId: day.id,
-                                              mealType: row.mealType ?? row.addMealType,
-                                              audience: row.audience,
-                                              isDrink: row.isDrink,
-                                              dayName: DAY_NAMES[day.dayOfWeek],
-                                              slotLabel: row.label,
-                                            });
-                                          }
-                                        }}
-                                        data-testid={`button-meal-${row.id}-${day.dayOfWeek}-${entry.id}`}
-                                      >
-                                        <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1 py-0.5" : ""}`}>
-                                          <span className="break-words leading-tight">{meal.name}</span>
-                                          {isPlaceholder && (
-                                            <span className="text-[9px] text-muted-foreground/60 italic" data-testid={`label-placeholder-${entry.id}`}>Needs recipe</span>
+                                      <div className="relative group/entry w-full">
+                                        <button
+                                          className={`w-full text-left text-xs leading-snug transition-colors flex items-start gap-0.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
+                                          onClick={() => {
+                                            if (isPlaceholder) {
+                                              setResolveTarget({
+                                                mealName: meal.name,
+                                                dayName: DAY_NAMES[day.dayOfWeek],
+                                                slotLabel: row.label,
+                                                entryId: entry.id,
+                                                dayId: day.id,
+                                                mealType: row.mealType ?? row.addMealType,
+                                                audience: row.audience,
+                                                isDrink: row.isDrink,
+                                                position: entry.position,
+                                              });
+                                              setAssistantMode("resolve");
+                                            } else {
+                                              setMealDetail({
+                                                entry,
+                                                meal,
+                                                dayId: day.id,
+                                                mealType: row.mealType ?? row.addMealType,
+                                                audience: row.audience,
+                                                isDrink: row.isDrink,
+                                                dayName: DAY_NAMES[day.dayOfWeek],
+                                                slotLabel: row.label,
+                                              });
+                                            }
+                                          }}
+                                          data-testid={`button-meal-${row.id}-${day.dayOfWeek}-${entry.id}`}
+                                        >
+                                          <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1 py-0.5" : ""}`}>
+                                            <span className="break-words leading-tight pr-3">{meal.name}</span>
+                                            {isPlaceholder && (
+                                              <span className="text-[9px] text-muted-foreground/60 italic" data-testid={`label-placeholder-${entry.id}`}>Needs recipe</span>
+                                            )}
+                                            {!isPlaceholder && <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />}
+                                          </div>
+                                          {isFrozen && <Snowflake className="h-2.5 w-2.5 text-blue-400 flex-shrink-0 mt-0.5" />}
+                                          {basketMealIdSet.has(meal.id) && (
+                                            <ShoppingCart className="h-2.5 w-2.5 text-emerald-500/70 flex-shrink-0 mt-0.5" data-testid={`icon-in-basket-${meal.id}`} />
                                           )}
-                                          {!isPlaceholder && <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />}
-                                        </div>
-                                        {isFrozen && <Snowflake className="h-2.5 w-2.5 text-blue-400 flex-shrink-0 mt-0.5" />}
-                                        {basketMealIdSet.has(meal.id) && (
-                                          <ShoppingCart className="h-2.5 w-2.5 text-emerald-500/70 flex-shrink-0 mt-0.5" data-testid={`icon-in-basket-${meal.id}`} />
-                                        )}
-                                      </button>
+                                        </button>
+                                        {/* Phase 5A: entry operations menu */}
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <button
+                                              className="absolute top-0 right-0 h-4 w-4 flex items-center justify-center rounded opacity-0 group-hover/entry:opacity-60 hover:!opacity-100 hover:bg-accent/60 transition-opacity"
+                                              onClick={(e) => e.stopPropagation()}
+                                              data-testid={`button-entry-ops-${entry.id}`}
+                                              title="Entry actions"
+                                            >
+                                              <MoreHorizontal className="h-2.5 w-2.5" />
+                                            </button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end" className="w-48">
+                                            {!isPlaceholder && (
+                                              <DropdownMenuItem onClick={() => duplicateEntryMutation.mutate({ entryId: entry.id })} data-testid={`mi-dup-${entry.id}`}>
+                                                <Copy className="h-3.5 w-3.5 mr-2" />
+                                                Duplicate here
+                                              </DropdownMenuItem>
+                                            )}
+                                            {!isPlaceholder && getNextDay(day.id) && (
+                                              <DropdownMenuItem onClick={() => handleRepeatTomorrow(entry, day.id)} data-testid={`mi-repeat-${entry.id}`}>
+                                                <RefreshCw className="h-3.5 w-3.5 mr-2" />
+                                                Repeat tomorrow
+                                              </DropdownMenuItem>
+                                            )}
+                                            {isPlaceholder && (
+                                              <DropdownMenuItem onClick={() => duplicateEntryMutation.mutate({ entryId: entry.id })}>
+                                                <Copy className="h-3.5 w-3.5 mr-2" />
+                                                Duplicate placeholder
+                                              </DropdownMenuItem>
+                                            )}
+                                            {meal.isFreezerEligible && !isPlaceholder && (
+                                              <DropdownMenuItem onClick={() => addToFreezerMutation.mutate(meal.id)} data-testid={`mi-freeze-${entry.id}`}>
+                                                <Snowflake className="h-3.5 w-3.5 mr-2" />
+                                                Add to freezer
+                                              </DropdownMenuItem>
+                                            )}
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                              className="text-muted-foreground focus:text-foreground"
+                                              onClick={() => setClearSlotConfirm({ dayId: day.id, mealType: row.mealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[day.dayOfWeek], slotLabel: row.label })}
+                                              data-testid={`mi-clear-slot-${row.id}-${day.dayOfWeek}`}
+                                            >
+                                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                                              Clear this slot
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                              className="text-destructive focus:text-destructive"
+                                              onClick={() => deleteEntryMutation.mutate(entry.id)}
+                                              data-testid={`mi-remove-${entry.id}`}
+                                            >
+                                              <X className="h-3.5 w-3.5 mr-2" />
+                                              Remove
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
                                     </SortablePlannerEntry>
                                   );
                                 })}
@@ -1674,15 +2065,6 @@ export default function WeeklyPlannerPage() {
                 </Card>
               </div>
             </div>
-              <DragOverlay dropAnimation={null}>
-                {activeDrag ? (
-                  <div className="bg-background border border-primary rounded px-2 py-1 text-xs shadow-lg opacity-95 max-w-[140px] truncate cursor-grabbing pointer-events-none">
-                    {getMeal(activeDrag.entry.mealId)?.name ?? "Meal"}
-                  </div>
-                ) : null}
-              </DragOverlay>
-            </DndContext>
-
             <PlannerVarietyLegend />
 
           </TabsContent>
@@ -1758,8 +2140,50 @@ export default function WeeklyPlannerPage() {
         onResolveRecipeFromReview={handleResolveRecipeFromReview}
         onBuildFromReview={handleBuildFromReview}
         onScanFromReview={handleScanFromReview}
+        onImportFromReview={handleImportFromReview}
+        onSetMode={setAssistantMode}
+        onCreateIntent={createPlannerIntent}
+        selectedDayLabel={selectedDay ? DAY_NAMES[selectedDay.dayOfWeek] : null}
+        onBrowseRecipes={() => navigate("/meals")}
+        onBuildRecipe={() => setCreateMealOpen(true)}
+        onScanRecipe={() => navigate("/meals?openScan=1")}
       />
       </div>{/* end flex gap-4 */}
+      <DragOverlay dropAnimation={null}>
+        {activeDrag ? (
+          <div className="bg-background border border-primary rounded px-2 py-1 text-xs shadow-lg opacity-95 max-w-[140px] truncate cursor-grabbing pointer-events-none">
+            {activeDrag.type === "proposal-card"
+              ? activeDrag.name
+              : getMeal(activeDrag.entry.mealId)?.name ?? "Meal"}
+          </div>
+        ) : null}
+      </DragOverlay>
+      </DndContext>
+
+      {/* ── Phase 5E: Recipe-link confirmation dialog ── */}
+      <Dialog open={!!pendingRecipeLink} onOpenChange={(v) => { if (!v) setPendingRecipeLink(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Link recipe to planned meal?</DialogTitle>
+            <DialogDescription>
+              Use <span className="font-medium text-foreground">{pendingRecipeLink?.recipeName}</span> for{" "}
+              <span className="font-medium text-foreground">{pendingRecipeLink?.targetName}</span>?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setPendingRecipeLink(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmRecipeLink}
+              disabled={replacePlaceholderMealMutation.isPending}
+            >
+              {replacePlaceholderMealMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              Link recipe
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Create Meal Modal (Epic 1) ── */}
       <CreateMealModal
@@ -2341,6 +2765,85 @@ export default function WeeklyPlannerPage() {
       </Dialog>
 
       <SharePlanDialog open={sharePlanOpen} onOpenChange={setSharePlanOpen} />
+
+      {/* ── Phase 5A: Copy Day Dialog ── */}
+      <Dialog open={copyDayOpen} onOpenChange={(v) => { if (!v) { setCopyDayOpen(false); setCopyDaySourceId(null); setCopyDayTargetId(""); } }}>
+        <DialogContent className="max-w-sm" data-testid="dialog-copy-day">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Copy className="h-4 w-4" />
+              Copy Day
+            </DialogTitle>
+            <DialogDescription>
+              Copy all meals from {copyDaySourceId ? DAY_NAMES[sortedDays.find((d) => d.id === copyDaySourceId)?.dayOfWeek ?? 0] : "this day"} to another day.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Select value={copyDayTargetId} onValueChange={setCopyDayTargetId}>
+              <SelectTrigger data-testid="select-copy-day-target">
+                <SelectValue placeholder="Select target day" />
+              </SelectTrigger>
+              <SelectContent>
+                {sortedDays
+                  .filter((d) => d.id !== copyDaySourceId)
+                  .map((d) => (
+                    <SelectItem key={d.id} value={String(d.id)}>
+                      {DAY_NAMES[d.dayOfWeek]}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => { setCopyDayOpen(false); setCopyDaySourceId(null); setCopyDayTargetId(""); }}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={!copyDayTargetId || copyDayMutation.isPending}
+              onClick={() => {
+                if (copyDaySourceId && copyDayTargetId) {
+                  copyDayMutation.mutate({ sourceDayId: copyDaySourceId, targetDayId: Number(copyDayTargetId) });
+                }
+              }}
+              data-testid="button-copy-day-confirm"
+            >
+              {copyDayMutation.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
+              Copy Day
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Phase 5A: Clear Slot Confirmation Dialog ── */}
+      <Dialog open={clearSlotConfirm !== null} onOpenChange={(v) => { if (!v) setClearSlotConfirm(null); }}>
+        <DialogContent className="max-w-sm" data-testid="dialog-clear-slot">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Trash2 className="h-4 w-4 text-destructive" />
+              Clear Slot
+            </DialogTitle>
+            <DialogDescription>
+              Remove all meals from {clearSlotConfirm?.dayName} {clearSlotConfirm?.slotLabel}? This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-2">
+            <Button variant="outline" size="sm" onClick={() => setClearSlotConfirm(null)} data-testid="button-clear-slot-cancel">
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={clearSlotMutation.isPending}
+              onClick={() => { if (clearSlotConfirm) clearSlotMutation.mutate(clearSlotConfirm); }}
+              data-testid="button-clear-slot-confirm"
+            >
+              {clearSlotMutation.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : null}
+              Clear Slot
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Scan review dialog: only shown when not routed to the panel */}
       <PlannerScanReview
