@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { usePlannerContext } from "@/contexts/PlannerContext";
 import { PlannerWorkspaceContext } from "@/contexts/PlannerWorkspaceContext";
 import { useSmartSuggest } from "@/hooks/use-smart-suggest";
@@ -24,7 +25,6 @@ import { PlannerAssistantPanel } from "@/components/PlannerAssistantPanel";
 import type { ResolveTarget, PlaceholderItem } from "@/components/PlannerAssistantPanel";
 import { SmartReviewPanelContent } from "@/components/SmartReviewPanelContent";
 import type { FullDay, FullWeek, SmartCandidate, MealExplanation, SmartSuggestEntry, SmartSuggestResult } from "@/lib/planner-types";
-import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMealPickerPanel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
 import { PlannerScanReview, type PlannerScanData, type PlannerDayEntry } from "@/components/PlannerScanReview";
@@ -174,6 +174,19 @@ export default function WeeklyPlannerPage() {
   const [copyDayOpen, setCopyDayOpen] = useState(false);
   const [copyDaySourceId, setCopyDaySourceId] = useState<number | null>(null);
   const [copyDayTargetId, setCopyDayTargetId] = useState<string>("");
+  // Long-press contextual action sheet (mobile)
+  const [contextEntry, setContextEntry] = useState<{
+    entry: PlannerEntry;
+    meal: Meal;
+    dayId: number;
+    dayName: string;
+    slotLabel: string;
+    mealType: string;
+    audience: string;
+    isDrink: boolean;
+  } | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressMovedRef = useRef(false);
   const { user } = useUser();
   const [, navigate] = useLocation();
 
@@ -181,6 +194,11 @@ export default function WeeklyPlannerPage() {
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
+
+  // Cleanup long-press timer on unmount
+  useEffect(() => {
+    return () => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); };
+  }, []);
 
   const { data: plannerSettings } = useQuery<{
     showCalories: boolean;
@@ -1380,11 +1398,11 @@ export default function WeeklyPlannerPage() {
             <Utensils className="h-3 w-3 mr-1" />
             Create Meal
           </Button>
-          <Button size="sm" className="px-2.5 text-xs" onClick={() => setAssistantMode("templates")} data-testid="button-open-templates">
+          <Button size="sm" variant="outline" className="px-2.5 text-xs" onClick={() => setAssistantMode("templates")} data-testid="button-open-templates">
             <LayoutGrid className="h-3 w-3 mr-1" />
             Templates
           </Button>
-          <Button size="sm" className="px-2.5 text-xs" onClick={addAllToBasket} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
+          <Button size="sm" variant="outline" className="px-2.5 text-xs" onClick={addAllToBasket} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
             <ShoppingBasket className="h-3 w-3 mr-1" />
             {addToBasketMutation.isPending ? "…" : "+Week"}
           </Button>
@@ -1402,11 +1420,11 @@ export default function WeeklyPlannerPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="flex items-center justify-center h-11 w-11 rounded-lg transition-colors text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                className="inline-flex items-center justify-center min-h-8 px-2 rounded-md border border-border/60 text-muted-foreground hover:bg-accent/40 hover:text-foreground transition-colors"
                 title="More options"
                 data-testid="button-planner-overflow-menu"
               >
-                <img src={thaAppleSrc} alt="Menu" className="h-[60px] w-[60px] object-contain" />
+                <MoreHorizontal className="h-3.5 w-3.5" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
@@ -1460,7 +1478,7 @@ export default function WeeklyPlannerPage() {
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-      <div className="flex gap-4 items-start">
+      <div className="flex gap-3 items-start">
       <div className="flex-1 min-w-0">
       <FirstVisitHint
         areaKey="planner"
@@ -1555,6 +1573,11 @@ export default function WeeklyPlannerPage() {
 
             {/* ── Mobile: single-day view (hidden on sm+) ── */}
             <div className="sm:hidden mb-6">
+              <FirstVisitHint
+                areaKey="planner-long-press"
+                message="Tip: Long press a meal for quick actions — duplicate, repeat, freeze or remove."
+                className="mb-3"
+              />
               {/* Day navigation */}
               <div className="flex items-center justify-between mb-3">
                 <button
@@ -1621,105 +1644,63 @@ export default function WeeklyPlannerPage() {
                             const isPlaceholder = meal.mealSourceType === "planner-placeholder";
                             const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
                             return (
-                              <div key={entry.id} className="flex items-start gap-1">
-                                <button
-                                  className={`flex-1 min-w-0 text-left text-sm transition-colors flex items-start gap-1.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
-                                  onClick={() => {
-                                    if (isPlaceholder) {
-                                      setResolveTarget({
-                                        mealName: meal.name,
-                                        dayName: DAY_NAMES[mobileDay.dayOfWeek],
-                                        slotLabel: row.label,
-                                        entryId: entry.id,
-                                        dayId: mobileDay.id,
-                                        mealType: row.mealType ?? row.addMealType,
-                                        audience: row.audience,
-                                        isDrink: row.isDrink,
-                                        position: entry.position,
-                                      });
-                                      setAssistantMode("resolve");
-                                    } else {
-                                      setMealDetail({
-                                        entry,
-                                        meal,
-                                        dayId: mobileDay.id,
-                                        mealType: row.mealType ?? row.addMealType,
-                                        audience: row.audience,
-                                        isDrink: row.isDrink,
-                                        dayName: DAY_NAMES[mobileDay.dayOfWeek],
-                                        slotLabel: row.label,
-                                      });
+                              <button
+                                key={entry.id}
+                                className={`w-full text-left text-sm transition-colors flex items-start gap-1.5 select-none ${isPlaceholder ? "text-muted-foreground/70" : "text-foreground hover:text-primary"}`}
+                                onClick={() => {
+                                  if (isPlaceholder) {
+                                    setResolveTarget({
+                                      mealName: meal.name,
+                                      dayName: DAY_NAMES[mobileDay.dayOfWeek],
+                                      slotLabel: row.label,
+                                      entryId: entry.id,
+                                      dayId: mobileDay.id,
+                                      mealType: row.mealType ?? row.addMealType,
+                                      audience: row.audience,
+                                      isDrink: row.isDrink,
+                                      position: entry.position,
+                                    });
+                                    setAssistantMode("resolve");
+                                  } else {
+                                    setMealDetail({
+                                      entry,
+                                      meal,
+                                      dayId: mobileDay.id,
+                                      mealType: row.mealType ?? row.addMealType,
+                                      audience: row.audience,
+                                      isDrink: row.isDrink,
+                                      dayName: DAY_NAMES[mobileDay.dayOfWeek],
+                                      slotLabel: row.label,
+                                    });
+                                  }
+                                }}
+                                onTouchStart={() => {
+                                  longPressMovedRef.current = false;
+                                  longPressTimerRef.current = setTimeout(() => {
+                                    if (!longPressMovedRef.current) {
+                                      setContextEntry({ entry, meal, dayId: mobileDay.id, dayName: DAY_NAMES[mobileDay.dayOfWeek], slotLabel: row.label, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink });
                                     }
-                                  }}
-                                  data-testid={`button-mobile-meal-${row.id}-${entry.id}`}
-                                >
-                                  <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1.5 py-0.5" : ""}`}>
-                                    <span className="leading-snug">{meal.name}</span>
-                                    {isPlaceholder
-                                      ? <span className="text-[10px] text-muted-foreground/60 italic" data-testid={`label-placeholder-mobile-${entry.id}`}>Needs recipe</span>
-                                      : <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
-                                    }
-                                  </div>
-                                  {isFrozen && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
-                                  {basketMealIdSet.has(meal.id) && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
-                                </button>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button
-                                      className="p-0.5 text-muted-foreground/30 hover:text-muted-foreground rounded flex-shrink-0 mt-0.5"
-                                      onClick={(e) => e.stopPropagation()}
-                                      data-testid={`button-mobile-entry-ops-${entry.id}`}
-                                      title="Entry actions"
-                                    >
-                                      <MoreHorizontal className="h-3.5 w-3.5" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="w-48">
-                                    {!isPlaceholder && (
-                                      <DropdownMenuItem onClick={() => duplicateEntryMutation.mutate({ entryId: entry.id })} data-testid={`mi-duplicate-${entry.id}`}>
-                                        <Copy className="h-3.5 w-3.5 mr-2" />
-                                        Duplicate here
-                                      </DropdownMenuItem>
-                                    )}
-                                    {!isPlaceholder && getNextDay(mobileDay.id) && (
-                                      <DropdownMenuItem onClick={() => handleRepeatTomorrow(entry, mobileDay.id)} data-testid={`mi-repeat-tomorrow-${entry.id}`}>
-                                        <RefreshCw className="h-3.5 w-3.5 mr-2" />
-                                        Repeat tomorrow
-                                      </DropdownMenuItem>
-                                    )}
-                                    {isPlaceholder && (
-                                      <DropdownMenuItem onClick={() => duplicateEntryMutation.mutate({ entryId: entry.id })}>
-                                        <Copy className="h-3.5 w-3.5 mr-2" />
-                                        Duplicate placeholder
-                                      </DropdownMenuItem>
-                                    )}
-                                    {meal.isFreezerEligible && !isPlaceholder && (
-                                      <DropdownMenuItem onClick={() => addToFreezerMutation.mutate(meal.id)} data-testid={`mi-freeze-${entry.id}`}>
-                                        <Snowflake className="h-3.5 w-3.5 mr-2" />
-                                        Add to freezer
-                                      </DropdownMenuItem>
-                                    )}
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      className="text-muted-foreground focus:text-foreground"
-                                      onClick={() => setClearSlotConfirm({ dayId: mobileDay.id, mealType: row.mealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[mobileDay.dayOfWeek], slotLabel: row.label })}
-                                      data-testid={`mi-clear-slot-${row.id}`}
-                                    >
-                                      <Trash2 className="h-3.5 w-3.5 mr-2" />
-                                      Clear this slot
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      className="text-destructive focus:text-destructive"
-                                      onClick={() => deleteEntryMutation.mutate(entry.id)}
-                                      data-testid={`mi-remove-${entry.id}`}
-                                    >
-                                      <X className="h-3.5 w-3.5 mr-2" />
-                                      Remove
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
+                                  }, 500);
+                                }}
+                                onTouchMove={() => {
+                                  longPressMovedRef.current = true;
+                                  if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+                                }}
+                                onTouchEnd={() => {
+                                  if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+                                }}
+                                data-testid={`button-mobile-meal-${row.id}-${entry.id}`}
+                              >
+                                <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1.5 py-0.5" : ""}`}>
+                                  <span className="leading-snug">{meal.name}</span>
+                                  {isPlaceholder
+                                    ? <span className="text-[10px] text-muted-foreground/60 italic" data-testid={`label-placeholder-mobile-${entry.id}`}>Needs recipe</span>
+                                    : <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
+                                  }
+                                </div>
+                                {isFrozen && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
+                                {basketMealIdSet.has(meal.id) && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
+                              </button>
                             );
                           })}
                           <button
@@ -1759,7 +1740,7 @@ export default function WeeklyPlannerPage() {
 
             {/* ── Desktop Matrix Grid (hidden on mobile) ── */}
             <div className="hidden sm:block overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-6">
-              <div style={{ minWidth: "960px" }}>
+              <div style={{ minWidth: "900px" }}>
                 <Card className="overflow-hidden">
                   <div
                     style={{
@@ -1845,7 +1826,7 @@ export default function WeeklyPlannerPage() {
                                 mealType={row.mealType ?? row.addMealType}
                                 audience={row.audience}
                                 isDrink={row.isDrink}
-                                className={`relative p-1.5 min-h-[56px] flex flex-col gap-0.5 border-l border-border ${!isLastRow ? "border-b border-border" : ""}`}
+                                className={`relative group/cell p-1.5 min-h-[56px] flex flex-col gap-0.5 border-l border-border ${!isLastRow ? "border-b border-border" : ""}`}
                                 data-testid={`cell-${row.id}-${day.dayOfWeek}`}
                               >
                                 {/* Meal name pills — each slot is its own sortable context for within-slot reorder */}
@@ -1996,7 +1977,7 @@ export default function WeeklyPlannerPage() {
                                 {/* Expand day button (top-right, subtle) */}
                                 {row.id === "breakfast" && (
                                   <button
-                                    className="absolute top-1 right-1 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+                                    className="absolute top-1 right-1 opacity-0 group-hover/cell:opacity-40 hover:!opacity-100 text-muted-foreground transition-opacity"
                                     onClick={() => { setExpandedDayId(day.id); setExpandedDayLabel(DAY_NAMES[day.dayOfWeek]); setAssistantMode("day"); }}
                                     title="Expand day"
                                     data-testid={`button-expand-day-${day.dayOfWeek}`}
@@ -2148,7 +2129,7 @@ export default function WeeklyPlannerPage() {
         onBuildRecipe={() => setCreateMealOpen(true)}
         onScanRecipe={() => navigate("/meals?openScan=1")}
       />
-      </div>{/* end flex gap-4 */}
+      </div>{/* end flex gap-3 */}
       <DragOverlay dropAnimation={null}>
         {activeDrag ? (
           <div className="bg-background border border-primary rounded px-2 py-1 text-xs shadow-lg opacity-95 max-w-[140px] truncate cursor-grabbing pointer-events-none">
@@ -2159,6 +2140,62 @@ export default function WeeklyPlannerPage() {
         ) : null}
       </DragOverlay>
       </DndContext>
+
+      {/* ── Mobile long-press contextual action sheet ── */}
+      <Sheet open={!!contextEntry} onOpenChange={(v) => { if (!v) setContextEntry(null); }}>
+        <SheetContent side="bottom" className="rounded-t-2xl px-0 pb-8 pt-0" data-testid="sheet-mobile-entry-actions">
+          {contextEntry && (() => {
+            const isPlaceholder = contextEntry.meal.mealSourceType === "planner-placeholder";
+            return (
+              <>
+                <div className="px-4 pt-5 pb-3 border-b border-border">
+                  <p className="text-xs text-muted-foreground mb-0.5">{contextEntry.dayName} · {contextEntry.slotLabel}</p>
+                  <p className="text-sm font-semibold text-foreground leading-snug">{contextEntry.meal.name}</p>
+                </div>
+                <div className="flex flex-col py-1" role="menu">
+                  {!isPlaceholder && (
+                    <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-duplicate"
+                      onClick={() => { duplicateEntryMutation.mutate({ entryId: contextEntry.entry.id }); setContextEntry(null); }}>
+                      <Copy className="h-4 w-4 text-muted-foreground shrink-0" />Duplicate here
+                    </button>
+                  )}
+                  {isPlaceholder && (
+                    <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-duplicate-placeholder"
+                      onClick={() => { duplicateEntryMutation.mutate({ entryId: contextEntry.entry.id }); setContextEntry(null); }}>
+                      <Copy className="h-4 w-4 text-muted-foreground shrink-0" />Duplicate placeholder
+                    </button>
+                  )}
+                  {!isPlaceholder && getNextDay(contextEntry.dayId) && (
+                    <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-repeat"
+                      onClick={() => { handleRepeatTomorrow(contextEntry.entry, contextEntry.dayId); setContextEntry(null); }}>
+                      <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />Repeat tomorrow
+                    </button>
+                  )}
+                  {contextEntry.meal.isFreezerEligible && !isPlaceholder && (
+                    <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-freeze"
+                      onClick={() => { addToFreezerMutation.mutate(contextEntry.meal.id); setContextEntry(null); }}>
+                      <Snowflake className="h-4 w-4 text-muted-foreground shrink-0" />Add to freezer
+                    </button>
+                  )}
+                  <div className="h-px bg-border/60 mx-4 my-1" aria-hidden="true" />
+                  <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-muted-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-clear-slot"
+                    onClick={() => {
+                      const e = contextEntry;
+                      setContextEntry(null);
+                      setClearSlotConfirm({ dayId: e.dayId, mealType: e.mealType, audience: e.audience, isDrink: e.isDrink, dayName: e.dayName, slotLabel: e.slotLabel });
+                    }}>
+                    <Trash2 className="h-4 w-4 shrink-0" />Clear this slot
+                  </button>
+                  <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-destructive active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-remove"
+                    onClick={() => { deleteEntryMutation.mutate(contextEntry.entry.id); setContextEntry(null); }}>
+                    <X className="h-4 w-4 shrink-0" />Remove meal
+                  </button>
+                </div>
+              </>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
 
       {/* ── Phase 5E: Recipe-link confirmation dialog ── */}
       <Dialog open={!!pendingRecipeLink} onOpenChange={(v) => { if (!v) setPendingRecipeLink(null); }}>
