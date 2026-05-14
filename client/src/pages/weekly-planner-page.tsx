@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -630,6 +630,8 @@ export default function WeeklyPlannerPage() {
     activeWeekData,
     onScanReady: () => setAssistantMode("scan-review"),
   });
+
+  const pageUploadRef = useRef<HTMLInputElement>(null);
 
   const { data: categories = [] } = useQuery<MealCategory[]>({
     queryKey: ['/api/categories'],
@@ -1660,6 +1662,7 @@ export default function WeeklyPlannerPage() {
           ) : undefined
         }
         onScanFile={handlePlannerScanFile}
+        onUploadClick={() => pageUploadRef.current?.click()}
         scanLoading={plannerScanLoading}
         smartLoading={smartLoading}
         smartMealsPerDay={smartMealsPerDay}
@@ -2251,6 +2254,20 @@ export default function WeeklyPlannerPage() {
         scanError={plannerScanError ?? undefined}
         plannerDays={plannerDays}
         onSaved={() => qc.invalidateQueries({ queryKey: ["/api/planner/full"] })}
+      />
+
+      {/* Page-level file input for scan upload — must live outside all panels/portals */}
+      <input
+        ref={pageUploadRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={e => {
+          const f = e.target.files?.[0];
+          if (f) handlePlannerScanFile(f);
+          e.target.value = "";
+        }}
+        data-testid="input-planner-scan-file"
       />
     </div>
     </>

@@ -20,6 +20,7 @@ interface PlannerAssistantPanelProps {
   reviewContent?: React.ReactNode;
   user: User | null | undefined;
   onScanFile: (file: File) => void;
+  onUploadClick: () => void;
   scanLoading: boolean;
   smartLoading: boolean;
   smartMealsPerDay: string;
@@ -68,13 +69,14 @@ function useIsMobile() {
 
 type CameraStatus = "loading" | "live" | "captured" | "error";
 
+
 interface ScanContentProps {
   onScanFile: (file: File) => void;
   scanLoading: boolean;
+  onUploadClick: () => void;
 }
 
-function ScanContent({ onScanFile, scanLoading }: ScanContentProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+function ScanContent({ onScanFile, scanLoading, onUploadClick }: ScanContentProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -83,6 +85,7 @@ function ScanContent({ onScanFile, scanLoading }: ScanContentProps) {
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
   const [cameraError, setCameraError] = useState("");
+  const [idleCameraMsg, setIdleCameraMsg] = useState("");
   const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
 
   const stopStream = useCallback(() => {
@@ -90,7 +93,6 @@ function ScanContent({ onScanFile, scanLoading }: ScanContentProps) {
     streamRef.current = null;
   }, []);
 
-  // Stop camera stream on unmount
   useEffect(() => {
     return () => { stopStream(); };
   }, [stopStream]);
@@ -102,6 +104,11 @@ function ScanContent({ onScanFile, scanLoading }: ScanContentProps) {
     setCapturedUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
     setCapturedFile(null);
     try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        const e = new Error("getUserMedia not available");
+        (e as any).name = "NotSupportedError";
+        throw e;
+      }
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing } });
       streamRef.current = stream;
       if (videoRef.current) {
@@ -112,16 +119,21 @@ function ScanContent({ onScanFile, scanLoading }: ScanContentProps) {
       stopStream();
       setCameraError(
         err.name === "NotAllowedError" || err.name === "PermissionDeniedError"
-          ? "Camera access denied — upload an image instead."
+          ? "Camera access denied — use Upload Image instead."
           : err.name === "NotFoundError" || err.name === "DevicesNotFoundError"
-          ? "No camera found on this device — upload an image instead."
-          : "Could not start camera — upload an image instead."
+          ? "No camera found — use Upload Image instead."
+          : "Camera unavailable here — use Upload Image instead."
       );
       setCameraStatus("error");
     }
   }, [stopStream]);
 
   const openCamera = () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setIdleCameraMsg("Camera unavailable here — use Upload Image instead.");
+      return;
+    }
+    setIdleCameraMsg("");
     setCameraOpen(true);
     startCamera(facingMode);
   };
@@ -169,26 +181,23 @@ function ScanContent({ onScanFile, scanLoading }: ScanContentProps) {
     const file = capturedFile;
     setCapturedUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
     onScanFile(file);
-    // assistantMode transitions to "scan-review" synchronously via onScanReady,
-    // causing this component to unmount — camera stream cleanup runs via useEffect.
   };
 
-  // Always-present hidden file input (valid ref in both idle and camera views)
-  const fileInput = (
-    <input
-      ref={fileInputRef}
-      type="file"
-      accept="image/jpeg,image/png,image/webp"
-      className="hidden"
-      onChange={e => { const f = e.target.files?.[0]; if (f) onScanFile(f); e.target.value = ""; }}
-      data-testid="input-panel-scan-file"
-    />
+  const uploadButton = (
+    <Button
+      variant="outline"
+      className="w-full"
+      disabled={scanLoading}
+      onClick={onUploadClick}
+      data-testid="button-assistant-upload"
+    >
+      <Upload className="h-4 w-4 mr-2" />Upload Image
+    </Button>
   );
 
   if (cameraOpen) {
     return (
       <div className="space-y-3" data-testid="panel-scan-camera">
-        {fileInput}
         <div className="relative bg-black rounded-lg overflow-hidden aspect-[4/3]">
           {cameraStatus !== "captured" && (
             <video
@@ -253,9 +262,7 @@ function ScanContent({ onScanFile, scanLoading }: ScanContentProps) {
 
         {(cameraStatus === "error" || cameraStatus === "loading") && (
           <div className="space-y-2">
-            <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()} data-testid="button-panel-camera-upload-instead">
-              <Upload className="h-4 w-4 mr-2" />Upload instead
-            </Button>
+            {uploadButton}
             <Button variant="ghost" className="w-full text-muted-foreground" onClick={closeCamera} data-testid="button-panel-camera-cancel-error">
               Cancel
             </Button>
@@ -267,7 +274,6 @@ function ScanContent({ onScanFile, scanLoading }: ScanContentProps) {
 
   return (
     <div className="space-y-4" data-testid="panel-scan-idle">
-      {fileInput}
       <div className="flex items-start gap-2.5 bg-muted/40 rounded-lg px-3 py-3">
         <ScanLine className="h-7 w-7 shrink-0 text-primary/60 mt-0.5" />
         <p className="text-xs text-muted-foreground leading-relaxed">
@@ -284,16 +290,13 @@ function ScanContent({ onScanFile, scanLoading }: ScanContentProps) {
           {scanLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Camera className="h-4 w-4 mr-2" />}
           Take Photo
         </Button>
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={scanLoading}
-          data-testid="button-assistant-upload"
-        >
-          <Upload className="h-4 w-4 mr-2" />
-          Upload Image
-        </Button>
+        {idleCameraMsg && (
+          <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20 px-3 py-2.5" data-testid="panel-scan-camera-unavailable">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-yellow-600 dark:text-yellow-400" />
+            <p className="text-xs text-yellow-800 dark:text-yellow-200">{idleCameraMsg}</p>
+          </div>
+        )}
+        {uploadButton}
       </div>
       {scanLoading && (
         <p className="text-xs text-center text-muted-foreground animate-pulse pt-1">
@@ -499,6 +502,7 @@ export function PlannerAssistantPanel({
   reviewContent,
   user,
   onScanFile,
+  onUploadClick,
   scanLoading,
   smartLoading,
   smartMealsPerDay, setSmartMealsPerDay,
@@ -536,6 +540,7 @@ export function PlannerAssistantPanel({
         <ScanContent
           onScanFile={onScanFile}
           scanLoading={scanLoading}
+          onUploadClick={onUploadClick}
         />
       )}
       {mode === "smart" && (
