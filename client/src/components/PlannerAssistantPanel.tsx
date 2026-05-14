@@ -71,6 +71,9 @@ interface PlannerAssistantPanelProps {
   isResolving?: boolean;
   placeholderItems?: PlaceholderItem[];
   onResolveRecipeFromReview?: (mealId: number, target: ResolveTarget) => void;
+  /** Phase 3F: carry item context from review into build/scan workflows */
+  onBuildFromReview?: (target: ResolveTarget) => void;
+  onScanFromReview?: (target: ResolveTarget) => void;
 }
 
 function useIsMobile() {
@@ -825,6 +828,8 @@ export function PlannerAssistantPanel({
   isResolving = false,
   placeholderItems = [],
   onResolveRecipeFromReview,
+  onBuildFromReview,
+  onScanFromReview,
 }: PlannerAssistantPanelProps) {
   const isMobile = useIsMobile();
   const [resolveSubview, setResolveSubview] = useState<"menu" | "search">("menu");
@@ -945,11 +950,39 @@ export function PlannerAssistantPanel({
                 position: item.position,
               });
             }}
-            onBuildRecipe={() => {
-              if (onResolveAction) onResolveAction("build");
+            onBuildRecipe={(item) => {
+              if (onBuildFromReview) {
+                onBuildFromReview({
+                  mealName: item.mealName,
+                  dayName: item.dayName,
+                  slotLabel: item.slotLabel,
+                  entryId: item.entryId,
+                  dayId: item.dayId,
+                  mealType: item.mealType,
+                  audience: item.audience,
+                  isDrink: item.isDrink,
+                  position: item.position,
+                });
+              } else if (onResolveAction) {
+                onResolveAction("build");
+              }
             }}
-            onScanRecipe={() => {
-              if (onResolveAction) onResolveAction("scan");
+            onScanRecipe={(item) => {
+              if (onScanFromReview) {
+                onScanFromReview({
+                  mealName: item.mealName,
+                  dayName: item.dayName,
+                  slotLabel: item.slotLabel,
+                  entryId: item.entryId,
+                  dayId: item.dayId,
+                  mealType: item.mealType,
+                  audience: item.audience,
+                  isDrink: item.isDrink,
+                  position: item.position,
+                });
+              } else if (onResolveAction) {
+                onResolveAction("scan");
+              }
             }}
             isResolving={isResolving}
           />

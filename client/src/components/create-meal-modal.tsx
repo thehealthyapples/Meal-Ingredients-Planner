@@ -45,9 +45,11 @@ interface Props {
   onCreated?: (mealId: number) => void;
   /** Prefill from recipe import - optional, best-effort */
   prefill?: ImportedRecipeDraft;
+  /** Phase 3F: prefill meal name from placeholder resolution context */
+  initialTitle?: string;
 }
 
-export function CreateMealModal({ open, onOpenChange, onCreated, prefill }: Props) {
+export function CreateMealModal({ open, onOpenChange, onCreated, prefill, initialTitle }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
 
@@ -60,14 +62,17 @@ export function CreateMealModal({ open, onOpenChange, onCreated, prefill }: Prop
   const [recipeSearch, setRecipeSearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
 
-  // Seed state from prefill when modal opens
+  // Seed state from prefill or initialTitle when modal opens
   useEffect(() => {
-    if (open && prefill) {
+    if (!open) return;
+    if (prefill) {
       setMealName(prefill.title || "");
       setItems(prefill.ingredients.map(ing => ({ type: "manual" as const, name: ing })));
       setInstructions(prefill.instructions.join("\n"));
+    } else if (initialTitle) {
+      setMealName(initialTitle);
     }
-  }, [open, prefill]);
+  }, [open, prefill, initialTitle]);
 
   const { data: meals = [] } = useQuery<Meal[]>({
     queryKey: ["/api/meals"],

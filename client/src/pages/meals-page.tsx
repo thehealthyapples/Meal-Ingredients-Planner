@@ -1999,6 +1999,10 @@ export default function MealsPage() {
     plannerDayId: number | null;
     plannerEntryId: number | null;
     openScan: boolean;
+    /** Phase 3G: true when arriving from a placeholder resolve scan flow */
+    plannerResolve: boolean;
+    /** Phase 3G: where to return after linking ("placeholder-review" or null) */
+    returnMode: string | null;
   }
   const [plannerImportCtx, setPlannerImportCtx] = useState<PlannerImportCtx | null>(null);
   const [plannerImportDialogOpen, setPlannerImportDialogOpen] = useState(false);
@@ -2071,6 +2075,8 @@ export default function MealsPage() {
       plannerDayId: params.get("dayId") ? parseInt(params.get("dayId")!, 10) : null,
       plannerEntryId: params.get("entryId") ? parseInt(params.get("entryId")!, 10) : null,
       openScan: params.get("openScan") === "1",
+      plannerResolve: params.get("plannerResolve") === "1",   // Phase 3G
+      returnMode: params.get("returnMode") || null,            // Phase 3G
     };
     setPlannerImportCtx(ctx);
     if (ctx.openScan) {
@@ -2106,30 +2112,50 @@ export default function MealsPage() {
   }, [plannerImportCtx]);
 
   const handlePlannerLink = async () => {
-    if (!plannerImportCtx?.plannerDayId || !plannerLinkData) return;
+    if (!plannerLinkData || !plannerImportCtx) return;
+    if (!plannerImportCtx.plannerEntryId && !plannerImportCtx.plannerDayId) return;
     try {
-      const slot = plannerImportCtx.slot && plannerImportCtx.slot !== "unspecified"
-        ? plannerImportCtx.slot : "dinner";
-      await apiRequest("POST", `/api/planner/days/${plannerImportCtx.plannerDayId}/items`, {
-        mealSlot: slot,
-        mealId: plannerLinkData.mealId,
-        position: 0,
-        audience: "adult",
-        isDrink: false,
-        drinkType: null,
-      });
       if (plannerImportCtx.plannerEntryId) {
-        await apiRequest("DELETE", `/api/planner/entries/${plannerImportCtx.plannerEntryId}`);
+        // Phase 3H: atomic swap — preserves entry identity (day, slot, position, audience)
+        // If this fails the original placeholder remains intact, no orphaned state
+        const res = await apiRequest(
+          "PATCH",
+          `/api/planner/entries/${plannerImportCtx.plannerEntryId}/meal`,
+          { mealId: plannerLinkData.mealId },
+        );
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.message || "Failed to link recipe");
+        }
+        queryClient.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      } else {
+        // Normal add flow — no placeholder to replace
+        const slot = plannerImportCtx.slot && plannerImportCtx.slot !== "unspecified"
+          ? plannerImportCtx.slot : "dinner";
+        await apiRequest("POST", `/api/planner/days/${plannerImportCtx.plannerDayId}/items`, {
+          mealSlot: slot,
+          mealId: plannerLinkData.mealId,
+          position: 0,
+          audience: "adult",
+          isDrink: false,
+          drinkType: null,
+        });
+        queryClient.invalidateQueries({ queryKey: ["/api/planner/full"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/meals"] });
       }
-      queryClient.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/meals"] });
       toast({
         title: "Linked to planner",
         description: `${plannerLinkData.mealName} added to ${plannerImportCtx.day}`,
       });
       setPlannerLinkOpen(false);
+      const returnMode = plannerImportCtx.returnMode;
       setPlannerImportCtx(null);
-      navigate("/planner");
+      // Phase 3G: return to placeholder-review mode when that's where the flow originated
+      if (returnMode === "placeholder-review") {
+        navigate("/planner?returnMode=placeholder-review");
+      } else {
+        navigate("/planner");
+      }
     } catch (err: any) {
       toast({ variant: "destructive", title: "Could not link to planner", description: err?.message || "Please try again." });
     }
@@ -4652,12 +4678,15 @@ export default function MealsPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CalendarDays className="h-5 w-5 text-primary" />
-                Link recipe to planner?
+                {plannerImportCtx.plannerResolve
+                  ? "Use scanned recipe for planned meal?"
+                  : "Link recipe to planner?"}
               </DialogTitle>
               <DialogDescription>
-                Add this recipe to your planner
-                {plannerImportCtx.day !== "Unassigned" ? ` for ${plannerImportCtx.day}` : ""}.
-                {plannerImportCtx.plannerEntryId ? " The placeholder entry will be replaced." : ""}
+                {plannerImportCtx.plannerResolve
+                  ? `This will resolve "${plannerImportCtx.mealName}"${plannerImportCtx.day !== "Unassigned" ? ` on ${plannerImportCtx.day}` : ""} with the scanned recipe.`
+                  : `Add this recipe to your planner${plannerImportCtx.day !== "Unassigned" ? ` for ${plannerImportCtx.day}` : ""}.${plannerImportCtx.plannerEntryId ? " The placeholder entry will be replaced." : ""}`
+                }
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-1">
@@ -4681,7 +4710,7 @@ export default function MealsPage() {
                 </Button>
                 <Button onClick={handlePlannerLink}>
                   <CalendarDays className="h-4 w-4 mr-1.5" />
-                  Add to planner
+                  {plannerImportCtx.plannerResolve ? "Use this recipe" : "Add to planner"}
                 </Button>
               </div>
             </div>

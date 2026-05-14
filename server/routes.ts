@@ -5369,6 +5369,46 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  app.patch("/api/planner/entries/:entryId/meal", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const entryId = Number(req.params.entryId);
+      const bodySchema = z.object({ mealId: z.number().int() });
+      const { mealId } = bodySchema.parse(req.body);
+
+      const entry = await storage.getPlannerEntryById(entryId);
+      if (!entry) return res.status(404).json({ message: "Entry not found" });
+
+      const day = await storage.getPlannerDay(entry.dayId);
+      if (!day) return res.status(404).json({ message: "Entry not found" });
+      const week = await storage.getPlannerWeek(day.weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(403).json({ message: "Forbidden" });
+
+      const meal = await storage.getMeal(mealId);
+      if (!meal || (!meal.isSystemMeal && meal.userId !== req.user!.id)) {
+        return res.status(400).json({ message: "Invalid meal ID" });
+      }
+
+      const updated = await storage.replacePlannerEntryMeal(entryId, mealId);
+      if (!updated) return res.status(404).json({ message: "Entry not found" });
+
+      res.json(updated);
+
+      logProductEvent({
+        eventType: EventTypes.PLANNER_MEAL_ADDED,
+        userId: req.user!.id,
+        householdId,
+        mealId,
+        plannerEntryId: entryId,
+      }).catch(() => {});
+    } catch (err: any) {
+      if (err?.name === "ZodError") return res.status(400).json({ message: "Invalid input", errors: err.errors });
+      console.error("Error replacing planner entry meal:", err);
+      res.status(500).json({ message: "Failed to replace planner entry meal" });
+    }
+  });
+
   app.delete("/api/planner/entries/:entryId", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
@@ -5410,6 +5450,29 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // Phase 4B: batch reorder — must be registered before /:entryId to avoid param collision
+  app.patch("/api/planner/entries/reorder", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { orderedIds } = z.object({ orderedIds: z.array(z.number().int()).min(2) }).parse(req.body);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      // Validate all entries belong to this household
+      const entries = await Promise.all(orderedIds.map((id) => storage.getPlannerEntryById(id)));
+      for (const entry of entries) {
+        if (!entry) return res.status(404).json({ message: "Entry not found" });
+        const day = await storage.getPlannerDay(entry.dayId);
+        const week = day ? await storage.getPlannerWeek(day.weekId) : null;
+        if (!week || week.householdId !== householdId) return res.status(403).json({ message: "Forbidden" });
+      }
+      await storage.reorderPlannerEntries(orderedIds);
+      res.json({ ok: true });
+    } catch (err: any) {
+      if (err?.name === "ZodError") return res.status(400).json({ message: "Invalid input" });
+      console.error("Error reordering planner entries:", err);
+      res.status(500).json({ message: "Failed to reorder entries" });
+    }
+  });
+
   app.patch("/api/planner/entries/:entryId", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
@@ -5421,7 +5484,27 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const week = await storage.getPlannerWeek(day.weekId);
       const householdId = await getHouseholdForUser(req.user!.id);
       if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Entry not found" });
-      const { position } = z.object({ position: z.number().int() }).parse(req.body);
+
+      const locationSchema = z.object({
+        dayId: z.number().int(),
+        mealType: z.enum(["breakfast", "lunch", "dinner", "snacks"]),
+        position: z.number().int(),
+      });
+      const positionOnlySchema = z.object({ position: z.number().int() });
+
+      const locationParse = locationSchema.safeParse(req.body);
+      if (locationParse.success) {
+        const { dayId: targetDayId, mealType: targetMealType, position } = locationParse.data;
+        // Verify target day belongs to same household
+        const targetDay = await storage.getPlannerDay(targetDayId);
+        if (!targetDay) return res.status(404).json({ message: "Target day not found" });
+        const targetWeek = await storage.getPlannerWeek(targetDay.weekId);
+        if (!targetWeek || targetWeek.householdId !== householdId) return res.status(403).json({ message: "Forbidden" });
+        const updated = await storage.updatePlannerEntryLocation(entryId, targetDayId, targetMealType, position);
+        return res.json(updated);
+      }
+
+      const { position } = positionOnlySchema.parse(req.body);
       const updated = await storage.updatePlannerEntryPosition(entryId, position);
       res.json(updated);
     } catch (err: any) {

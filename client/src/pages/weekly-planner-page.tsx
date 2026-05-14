@@ -37,12 +37,26 @@ import { useUser } from "@/hooks/use-user";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { api } from "@shared/routes";
 import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutrition, MealCategory, WeekEaterOverride } from "@shared/schema";
 import type { HouseholdEater, GuestEater } from "@shared/household-eater";
 import type { AdaptationResult } from "@shared/meal-adaptation";
 import { ONBOARDING_DIET_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
 import { PageHeader } from "@/components/PageHeader";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
+import { DroppablePlannerCell, SortablePlannerEntry, type DragItemData, type DropZoneData } from "@/components/PlannerDragDrop";
 
 interface MatrixRow {
   id: string;
@@ -140,10 +154,19 @@ export default function WeeklyPlannerPage() {
   const [expandedDayLabel, setExpandedDayLabel] = useState("");
   const [mealDetail, setMealDetail] = useState<MealDetailState | null>(null);
   const [resolveTarget, setResolveTarget] = useState<ResolveTarget | null>(null);
+  // Phase 3F: persists placeholder context across build/scan workflow transitions
+  type ResolutionContext = ResolveTarget & { returnMode: "placeholder-review" | null };
+  const [resolutionContext, setResolutionContext] = useState<ResolutionContext | null>(null);
   const [selectedDayId, setSelectedDayId] = useState<number | null>(null);
   const [mobileDayIndex, setMobileDayIndex] = useState(0);
+  const [activeDrag, setActiveDrag] = useState<DragItemData | null>(null);
   const { user } = useUser();
   const [, navigate] = useLocation();
+
+  const dndSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const { data: plannerSettings } = useQuery<{
     showCalories: boolean;
@@ -498,6 +521,106 @@ export default function WeeklyPlannerPage() {
     },
   });
 
+  // Phase 3E: atomic placeholder swap — replaces delete-then-add with a single PATCH
+  const replacePlaceholderMealMutation = useMutation({
+    mutationFn: async (params: { entryId: number; mealId: number }) => {
+      const res = await apiRequest("PATCH", `/api/planner/entries/${params.entryId}/meal`, { mealId: params.mealId });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to link recipe", variant: "destructive" });
+    },
+  });
+
+  // Phase 4A: drag/drop reassignment — moves an entry to a new day+slot atomically
+  const movePlannerEntryMutation = useMutation({
+    mutationFn: async (params: { entryId: number; dayId: number; mealType: string; position: number }) => {
+      const res = await apiRequest("PATCH", `/api/planner/entries/${params.entryId}`, {
+        dayId: params.dayId,
+        mealType: params.mealType,
+        position: params.position,
+      });
+      return res.json();
+    },
+    onMutate: async (params) => {
+      await qc.cancelQueries({ queryKey: ["/api/planner/full"] });
+      const previousData = qc.getQueryData<FullWeek[]>(["/api/planner/full"]);
+      qc.setQueryData<FullWeek[]>(["/api/planner/full"], (old) => {
+        if (!old) return old;
+        return old.map((week) => ({
+          ...week,
+          days: week.days.map((day) => {
+            // Remove entry from its current day
+            if (day.entries.some((e) => e.id === params.entryId) && day.id !== params.dayId) {
+              return { ...day, entries: day.entries.filter((e) => e.id !== params.entryId) };
+            }
+            // Move entry within same day (update mealType + position) or add to target day
+            if (day.id === params.dayId) {
+              const filtered = day.entries.filter((e) => e.id !== params.entryId);
+              const moved = day.entries.find((e) => e.id === params.entryId)
+                ?? old.flatMap((w) => w.days).flatMap((d) => d.entries).find((e) => e.id === params.entryId);
+              if (!moved) return day;
+              return {
+                ...day,
+                entries: [...filtered, { ...moved, dayId: params.dayId, mealType: params.mealType, position: params.position }],
+              };
+            }
+            return day;
+          }),
+        }));
+      });
+      return { previousData };
+    },
+    onError: (_err, _params, context) => {
+      if (context?.previousData) {
+        qc.setQueryData(["/api/planner/full"], context.previousData);
+      }
+      toast({ title: "Failed to move meal", description: "Planner restored to previous state", variant: "destructive" });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    },
+  });
+
+  // Phase 4B: batch reorder of entries within the same slot
+  const reorderEntriesMutation = useMutation({
+    mutationFn: async (orderedIds: number[]) => {
+      const res = await apiRequest("PATCH", "/api/planner/entries/reorder", { orderedIds });
+      return res.json();
+    },
+    onMutate: async (orderedIds) => {
+      await qc.cancelQueries({ queryKey: ["/api/planner/full"] });
+      const previousData = qc.getQueryData<FullWeek[]>(["/api/planner/full"]);
+      qc.setQueryData<FullWeek[]>(["/api/planner/full"], (old) => {
+        if (!old) return old;
+        const positionMap = new Map(orderedIds.map((id, i) => [id, i]));
+        return old.map((week) => ({
+          ...week,
+          days: week.days.map((day) => ({
+            ...day,
+            entries: day.entries.map((entry) => {
+              const newPos = positionMap.get(entry.id);
+              return newPos !== undefined ? { ...entry, position: newPos } : entry;
+            }),
+          })),
+        }));
+      });
+      return { previousData };
+    },
+    onError: (_err, _ids, context) => {
+      if (context?.previousData) {
+        qc.setQueryData(["/api/planner/full"], context.previousData);
+      }
+      toast({ title: "Failed to reorder meals", description: "Planner restored to previous state", variant: "destructive" });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    },
+  });
+
   const addToBasketMutation = useMutation({
     mutationFn: async (mealSelections: { mealId: number; count: number }[]) => {
       const res = await apiRequest("POST", api.shoppingList.generateFromMeals.path, { mealSelections });
@@ -521,6 +644,86 @@ export default function WeeklyPlannerPage() {
     return meals.find((m) => m.id === id);
   };
 
+  // Phase 4A: drag/drop handlers
+  function handleDragStart(event: DragStartEvent) {
+    const data = event.active.data.current as DragItemData | undefined;
+    if (data?.type === "planner-entry") setActiveDrag(data);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveDrag(null);
+    const { active, over } = event;
+    if (!over) return;
+    const dragData = active.data.current as DragItemData | undefined;
+    if (!dragData || dragData.type !== "planner-entry") return;
+    const overData = over.data.current as (DragItemData | DropZoneData) | undefined;
+    if (!overData) return;
+
+    if (overData.type === "planner-entry") {
+      // Dropped over another sortable entry
+      const overEntry = overData as DragItemData;
+      if (dragData.entryId === overEntry.entryId) return;
+
+      const sameSlot =
+        dragData.dayId === overEntry.dayId &&
+        dragData.mealType === overEntry.mealType &&
+        dragData.audience === overEntry.audience &&
+        dragData.isDrink === overEntry.isDrink;
+
+      if (sameSlot) {
+        // Phase 4B: within-slot reorder
+        const day = fullPlanner.flatMap((w) => w.days).find((d) => d.id === dragData.dayId);
+        if (!day) return;
+        const slotEntries = getSlotEntries(day.entries, dragData.mealType, dragData.audience, dragData.isDrink);
+        const oldIdx = slotEntries.findIndex((e) => e.id === dragData.entryId);
+        const newIdx = slotEntries.findIndex((e) => e.id === overEntry.entryId);
+        if (oldIdx === -1 || newIdx === -1 || oldIdx === newIdx) return;
+        const reordered = arrayMove(slotEntries, oldIdx, newIdx);
+        reorderEntriesMutation.mutate(reordered.map((e) => e.id));
+      } else {
+        // Phase 4A: cross-slot move, insert after existing entries in target slot
+        const allEntries = fullPlanner.flatMap((w) => w.days).flatMap((d) => d.entries);
+        const targetEntries = allEntries.filter(
+          (e) => e.dayId === overEntry.dayId && e.mealType === overEntry.mealType &&
+                 !e.isDrink === !overEntry.isDrink && e.id !== dragData.entryId,
+        );
+        const newPosition = targetEntries.length > 0 ? Math.max(...targetEntries.map((e) => e.position)) + 1 : 0;
+        movePlannerEntryMutation.mutate({
+          entryId: dragData.entryId,
+          dayId: overEntry.dayId,
+          mealType: overEntry.mealType,
+          position: newPosition,
+        });
+      }
+    } else if (overData.type === "planner-slot") {
+      // Dropped on empty cell area (Phase 4A: DroppablePlannerCell)
+      const dropSlot = overData as DropZoneData;
+      const sameSlot =
+        dragData.dayId === dropSlot.dayId &&
+        dragData.mealType === dropSlot.mealType &&
+        dragData.audience === dropSlot.audience &&
+        dragData.isDrink === dropSlot.isDrink;
+      if (sameSlot) return;
+
+      const allEntries = fullPlanner.flatMap((w) => w.days).flatMap((d) => d.entries);
+      const targetEntries = allEntries.filter(
+        (e) => e.dayId === dropSlot.dayId && e.mealType === dropSlot.mealType &&
+               !e.isDrink === !dropSlot.isDrink && e.id !== dragData.entryId,
+      );
+      const newPosition = targetEntries.length > 0 ? Math.max(...targetEntries.map((e) => e.position)) + 1 : 0;
+      movePlannerEntryMutation.mutate({
+        entryId: dragData.entryId,
+        dayId: dropSlot.dayId,
+        mealType: dropSlot.mealType,
+        position: newPosition,
+      });
+    }
+  }
+
+  function handleDragCancel() {
+    setActiveDrag(null);
+  }
+
   // Meal IDs already placed in the active week (for "From Planner" filter)
   const plannerMealIdSet = useMemo(() => {
     const ids = new Set<number>();
@@ -543,6 +746,15 @@ export default function WeeklyPlannerPage() {
 
 
 
+  // Phase 3G: restore placeholder-review mode after returning from scan/import flow
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("returnMode") === "placeholder-review") {
+      setAssistantMode("placeholder-review");
+      navigate("/planner", { replace: true } as any);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const openPicker = (target: EntryTarget) => {
     setPickerTarget(target);
     setAssistantMode("manual");
@@ -550,36 +762,47 @@ export default function WeeklyPlannerPage() {
 
   const handleResolveAction = (action: "build" | "scan" | "later") => {
     if (action === "build") {
+      // Phase 3F: capture context before clearing resolveTarget
+      if (resolveTarget) setResolutionContext({ ...resolveTarget, returnMode: null });
       setResolveTarget(null);
       setAssistantMode(null);
       setCreateMealOpen(true);
     } else if (action === "scan") {
-      setAssistantMode("scan");
+      if (resolveTarget) {
+        // Phase 3G: navigate directly to recipe scan with resolution context
+        const params = new URLSearchParams({
+          plannerImport: "1",
+          mealName: resolveTarget.mealName,
+          day: resolveTarget.dayName,
+          slot: resolveTarget.mealType,
+          plannerResolve: "1",
+          openScan: "1",
+        });
+        params.set("dayId", String(resolveTarget.dayId));
+        params.set("entryId", String(resolveTarget.entryId));
+        setResolveTarget(null);
+        setAssistantMode(null);
+        navigate(`/meals?${params.toString()}`);
+      } else {
+        setAssistantMode("scan");
+      }
     } else {
+      setResolutionContext(null);
       setResolveTarget(null);
       setAssistantMode(null);
     }
   };
 
+  // Phase 3E: single atomic swap replaces delete-then-add
   const handleResolveRecipe = (mealId: number) => {
     if (!resolveTarget) return;
     const target = resolveTarget;
-    deleteEntryMutation.mutate(target.entryId, {
+    replacePlaceholderMealMutation.mutate({ entryId: target.entryId, mealId }, {
       onSuccess: () => {
-        addEntryMutation.mutate({
-          dayId: target.dayId,
-          mealType: target.mealType,
-          audience: target.audience,
-          mealId,
-          position: target.position,
-          isDrink: target.isDrink,
-        }, {
-          onSuccess: () => {
-            setResolveTarget(null);
-            setAssistantMode(null);
-            toast({ title: "Recipe linked", description: `${target.mealName} has been resolved.` });
-          },
-        });
+        setResolveTarget(null);
+        setAssistantMode(null);
+        setResolutionContext(null); // Phase 3F: clear context after resolution
+        toast({ title: "Recipe linked", description: `${target.mealName} has been resolved.` });
       },
       onError: () => {
         toast({ title: "Failed to link recipe", variant: "destructive" });
@@ -587,26 +810,41 @@ export default function WeeklyPlannerPage() {
     });
   };
 
+  // Phase 3E: single atomic swap replaces delete-then-add
   const handleResolveRecipeFromReview = (mealId: number, target: ResolveTarget) => {
-    deleteEntryMutation.mutate(target.entryId, {
+    replacePlaceholderMealMutation.mutate({ entryId: target.entryId, mealId }, {
       onSuccess: () => {
-        addEntryMutation.mutate({
-          dayId: target.dayId,
-          mealType: target.mealType,
-          audience: target.audience,
-          mealId,
-          position: target.position,
-          isDrink: target.isDrink,
-        }, {
-          onSuccess: () => {
-            toast({ title: "Recipe linked", description: `${target.mealName} resolved.` });
-          },
-        });
+        setResolutionContext(null); // Phase 3F: clear context after resolution
+        toast({ title: "Recipe linked", description: `${target.mealName} resolved.` });
       },
       onError: () => {
         toast({ title: "Failed to link recipe", variant: "destructive" });
       },
     });
+  };
+
+  // Phase 3F: build from placeholder-review carries item context
+  const handleBuildFromReview = (target: ResolveTarget) => {
+    setResolutionContext({ ...target, returnMode: "placeholder-review" });
+    setAssistantMode(null);
+    setCreateMealOpen(true);
+  };
+
+  // Phase 3G: scan from placeholder-review navigates directly to recipe scan with full context
+  const handleScanFromReview = (target: ResolveTarget) => {
+    const params = new URLSearchParams({
+      plannerImport: "1",
+      mealName: target.mealName,
+      day: target.dayName,
+      slot: target.mealType,
+      plannerResolve: "1",
+      returnMode: "placeholder-review",
+      openScan: "1",
+    });
+    params.set("dayId", String(target.dayId));
+    params.set("entryId", String(target.entryId));
+    setAssistantMode(null);
+    navigate(`/meals?${params.toString()}`);
   };
 
   const selectMeal = (mealId: number) => {
@@ -1193,6 +1431,13 @@ export default function WeeklyPlannerPage() {
             </div>
 
             {/* ── Desktop Matrix Grid (hidden on mobile) ── */}
+            <DndContext
+              sensors={dndSensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+            >
             <div className="hidden sm:block overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 mb-6">
               <div style={{ minWidth: "960px" }}>
                 <Card className="overflow-hidden">
@@ -1262,64 +1507,81 @@ export default function WeeklyPlannerPage() {
                             const isUpdating = upsertEntryMutation.isPending || addEntryMutation.isPending;
 
                             return (
-                              <div
+                              <DroppablePlannerCell
                                 key={day.id + row.id}
-                                className={`relative p-1.5 min-h-[56px] flex flex-col gap-0.5 border-l border-border ${!isLastRow ? "border-b border-border" : ""} ${!isLastCol ? "" : ""}`}
+                                dayId={day.id}
+                                mealType={row.mealType ?? row.addMealType}
+                                audience={row.audience}
+                                isDrink={row.isDrink}
+                                className={`relative p-1.5 min-h-[56px] flex flex-col gap-0.5 border-l border-border ${!isLastRow ? "border-b border-border" : ""}`}
                                 data-testid={`cell-${row.id}-${day.dayOfWeek}`}
                               >
-                                {/* Meal name pills */}
+                                {/* Meal name pills — each slot is its own sortable context for within-slot reorder */}
+                                <SortableContext
+                                  items={cellEntries.slice(0, 2).map((e) => `entry-${e.id}`)}
+                                  strategy={verticalListSortingStrategy}
+                                >
                                 {cellEntries.slice(0, 2).map((entry) => {
                                   const meal = getMeal(entry.mealId);
                                   if (!meal) return null;
                                   const isPlaceholder = meal.mealSourceType === "planner-placeholder";
                                   const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
                                   return (
-                                    <button
+                                    <SortablePlannerEntry
                                       key={entry.id}
-                                      className={`w-full text-left text-xs leading-snug transition-colors group flex items-start gap-0.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
-                                      onClick={() => {
-                                        if (isPlaceholder) {
-                                          setResolveTarget({
-                                            mealName: meal.name,
-                                            dayName: DAY_NAMES[day.dayOfWeek],
-                                            slotLabel: row.label,
-                                            entryId: entry.id,
-                                            dayId: day.id,
-                                            mealType: row.mealType ?? row.addMealType,
-                                            audience: row.audience,
-                                            isDrink: row.isDrink,
-                                            position: entry.position,
-                                          });
-                                          setAssistantMode("resolve");
-                                        } else {
-                                          setMealDetail({
-                                            entry,
-                                            meal,
-                                            dayId: day.id,
-                                            mealType: row.mealType ?? row.addMealType,
-                                            audience: row.audience,
-                                            isDrink: row.isDrink,
-                                            dayName: DAY_NAMES[day.dayOfWeek],
-                                            slotLabel: row.label,
-                                          });
-                                        }
-                                      }}
-                                      data-testid={`button-meal-${row.id}-${day.dayOfWeek}-${entry.id}`}
+                                      entry={entry}
+                                      dayId={day.id}
+                                      mealType={row.mealType ?? row.addMealType}
+                                      audience={row.audience}
+                                      isDrink={row.isDrink}
                                     >
-                                      <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1 py-0.5" : ""}`}>
-                                        <span className="break-words leading-tight">{meal.name}</span>
-                                        {isPlaceholder && (
-                                          <span className="text-[9px] text-muted-foreground/60 italic" data-testid={`label-placeholder-${entry.id}`}>Needs recipe</span>
+                                      <button
+                                        className={`w-full text-left text-xs leading-snug transition-colors group flex items-start gap-0.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
+                                        onClick={() => {
+                                          if (isPlaceholder) {
+                                            setResolveTarget({
+                                              mealName: meal.name,
+                                              dayName: DAY_NAMES[day.dayOfWeek],
+                                              slotLabel: row.label,
+                                              entryId: entry.id,
+                                              dayId: day.id,
+                                              mealType: row.mealType ?? row.addMealType,
+                                              audience: row.audience,
+                                              isDrink: row.isDrink,
+                                              position: entry.position,
+                                            });
+                                            setAssistantMode("resolve");
+                                          } else {
+                                            setMealDetail({
+                                              entry,
+                                              meal,
+                                              dayId: day.id,
+                                              mealType: row.mealType ?? row.addMealType,
+                                              audience: row.audience,
+                                              isDrink: row.isDrink,
+                                              dayName: DAY_NAMES[day.dayOfWeek],
+                                              slotLabel: row.label,
+                                            });
+                                          }
+                                        }}
+                                        data-testid={`button-meal-${row.id}-${day.dayOfWeek}-${entry.id}`}
+                                      >
+                                        <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1 py-0.5" : ""}`}>
+                                          <span className="break-words leading-tight">{meal.name}</span>
+                                          {isPlaceholder && (
+                                            <span className="text-[9px] text-muted-foreground/60 italic" data-testid={`label-placeholder-${entry.id}`}>Needs recipe</span>
+                                          )}
+                                          {!isPlaceholder && <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />}
+                                        </div>
+                                        {isFrozen && <Snowflake className="h-2.5 w-2.5 text-blue-400 flex-shrink-0 mt-0.5" />}
+                                        {basketMealIdSet.has(meal.id) && (
+                                          <ShoppingCart className="h-2.5 w-2.5 text-emerald-500/70 flex-shrink-0 mt-0.5" data-testid={`icon-in-basket-${meal.id}`} />
                                         )}
-                                        {!isPlaceholder && <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />}
-                                      </div>
-                                      {isFrozen && <Snowflake className="h-2.5 w-2.5 text-blue-400 flex-shrink-0 mt-0.5" />}
-                                      {basketMealIdSet.has(meal.id) && (
-                                        <ShoppingCart className="h-2.5 w-2.5 text-emerald-500/70 flex-shrink-0 mt-0.5" data-testid={`icon-in-basket-${meal.id}`} />
-                                      )}
-                                    </button>
+                                      </button>
+                                    </SortablePlannerEntry>
                                   );
                                 })}
+                                </SortableContext>
                                 {/* Overflow indicator */}
                                 {cellEntries.length > 2 && (
                                   <span className="text-[10px] text-muted-foreground">+{cellEntries.length - 2} more</span>
@@ -1351,7 +1613,7 @@ export default function WeeklyPlannerPage() {
                                     <LayoutList className="h-3 w-3" />
                                   </button>
                                 )}
-                              </div>
+                              </DroppablePlannerCell>
                             );
                           })}
                         </>
@@ -1412,6 +1674,14 @@ export default function WeeklyPlannerPage() {
                 </Card>
               </div>
             </div>
+              <DragOverlay dropAnimation={null}>
+                {activeDrag ? (
+                  <div className="bg-background border border-primary rounded px-2 py-1 text-xs shadow-lg opacity-95 max-w-[140px] truncate cursor-grabbing pointer-events-none">
+                    {getMeal(activeDrag.entry.mealId)?.name ?? "Meal"}
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
 
             <PlannerVarietyLegend />
 
@@ -1460,6 +1730,7 @@ export default function WeeklyPlannerPage() {
               scanError={plannerScanError ?? undefined}
               plannerDays={plannerDays}
               onSaved={() => qc.invalidateQueries({ queryKey: ["/api/planner/full"] })}
+              resolutionContext={resolutionContext}
             />
           ) : undefined
         }
@@ -1482,17 +1753,53 @@ export default function WeeklyPlannerPage() {
         resolveTarget={resolveTarget ?? undefined}
         onResolveAction={handleResolveAction}
         onResolveRecipe={handleResolveRecipe}
-        isResolving={deleteEntryMutation.isPending || addEntryMutation.isPending}
+        isResolving={replacePlaceholderMealMutation.isPending}
         placeholderItems={placeholderItems}
         onResolveRecipeFromReview={handleResolveRecipeFromReview}
+        onBuildFromReview={handleBuildFromReview}
+        onScanFromReview={handleScanFromReview}
       />
       </div>{/* end flex gap-4 */}
 
       {/* ── Create Meal Modal (Epic 1) ── */}
       <CreateMealModal
         open={createMealOpen}
-        onOpenChange={setCreateMealOpen}
-        onCreated={() => qc.invalidateQueries({ queryKey: ["/api/meals"] })}
+        onOpenChange={(v) => {
+          setCreateMealOpen(v);
+          // Phase 3F: clear context if modal dismissed without creating
+          if (!v) setResolutionContext(null);
+        }}
+        initialTitle={resolutionContext?.mealName}
+        onCreated={(mealId) => {
+          qc.invalidateQueries({ queryKey: ["/api/meals"] });
+          // Phase 3F: offer to link newly created recipe to originating placeholder
+          if (resolutionContext) {
+            const ctx = resolutionContext;
+            setResolutionContext(null);
+            toast({
+              title: "Recipe created",
+              description: `Link "${ctx.mealName}" to your planner?`,
+              action: (
+                <ToastAction
+                  altText="Link to planner"
+                  onClick={() => {
+                    replacePlaceholderMealMutation.mutate({ entryId: ctx.entryId, mealId }, {
+                      onSuccess: () => {
+                        if (ctx.returnMode) setAssistantMode(ctx.returnMode);
+                        toast({ title: "Linked to planner", description: `${ctx.mealName} resolved.` });
+                      },
+                      onError: () => {
+                        toast({ title: "Failed to link recipe", variant: "destructive" });
+                      },
+                    });
+                  }}
+                >
+                  Link
+                </ToastAction>
+              ),
+            });
+          }
+        }}
       />
 
       {/* ── Meal Detail Modal ── */}

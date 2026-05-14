@@ -102,6 +102,13 @@ interface SavedMealForFollowUp {
   action: "pending" | "skipped";
 }
 
+// Phase 3G: planner resolution context passed in from the host page
+export interface ScanResolutionContext {
+  entryId: number;
+  mealName: string;
+  returnMode: "placeholder-review" | null;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -111,6 +118,8 @@ interface Props {
   plannerDays: PlannerDayEntry[];
   onSaved?: () => void;
   inline?: boolean;
+  /** Phase 3G: when set, scan recipe follow-up URLs carry resolution context */
+  resolutionContext?: ScanResolutionContext | null;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -222,7 +231,7 @@ function clearSession(): void {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function PlannerScanReview({ open, onOpenChange, scanData, scanning = false, scanError, plannerDays, onSaved, inline = false }: Props) {
+export function PlannerScanReview({ open, onOpenChange, scanData, scanning = false, scanError, plannerDays, onSaved, inline = false, resolutionContext = null }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, navigate] = useLocation();
@@ -533,6 +542,11 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
     if (meal.plannerDayId) params.set("dayId", String(meal.plannerDayId));
     if (meal.entryId) params.set("entryId", String(meal.entryId));
     if (mode === "scan") params.set("openScan", "1");
+    // Phase 3G: preserve planner resolution context through the import flow
+    if (resolutionContext) {
+      params.set("plannerResolve", "1");
+      if (resolutionContext.returnMode) params.set("returnMode", resolutionContext.returnMode);
+    }
     return `/meals?${params.toString()}`;
   };
 

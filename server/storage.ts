@@ -136,7 +136,10 @@ export interface IStorage {
   deletePlannerEntry(id: number): Promise<void>;
   addPlannerEntry(dayId: number, mealType: string, audience: string, mealId: number, position?: number, calories?: number, isDrink?: boolean, drinkType?: string | null): Promise<PlannerEntry>;
   updatePlannerEntryPosition(id: number, position: number): Promise<PlannerEntry | undefined>;
+  updatePlannerEntryLocation(id: number, dayId: number, mealType: string, position: number): Promise<PlannerEntry | undefined>;
+  reorderPlannerEntries(orderedIds: number[]): Promise<void>;
   getPlannerEntryById(id: number): Promise<PlannerEntry | undefined>;
+  replacePlannerEntryMeal(entryId: number, mealId: number): Promise<PlannerEntry | undefined>;
   getPlannerEntriesForWeek(weekId: number): Promise<PlannerEntry[]>;
   getSystemMeals(): Promise<Meal[]>;
   getSystemMealByName(name: string): Promise<Meal | undefined>;
@@ -1141,8 +1144,34 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
+  async updatePlannerEntryLocation(id: number, dayId: number, mealType: string, position: number): Promise<PlannerEntry | undefined> {
+    const [result] = await db.update(plannerEntries)
+      .set({ dayId, mealType, position })
+      .where(eq(plannerEntries.id, id))
+      .returning();
+    return result;
+  }
+
+  async reorderPlannerEntries(orderedIds: number[]): Promise<void> {
+    await db.transaction(async (tx) => {
+      for (let i = 0; i < orderedIds.length; i++) {
+        await tx.update(plannerEntries)
+          .set({ position: i })
+          .where(eq(plannerEntries.id, orderedIds[i]));
+      }
+    });
+  }
+
   async getPlannerEntryById(id: number): Promise<PlannerEntry | undefined> {
     const [result] = await db.select().from(plannerEntries).where(eq(plannerEntries.id, id));
+    return result;
+  }
+
+  async replacePlannerEntryMeal(entryId: number, mealId: number): Promise<PlannerEntry | undefined> {
+    const [result] = await db.update(plannerEntries)
+      .set({ mealId })
+      .where(eq(plannerEntries.id, entryId))
+      .returning();
     return result;
   }
 
