@@ -131,8 +131,29 @@ function extractMealDbIngredients(meal: any): string[] {
   return ingredients;
 }
 
+// P1/P0: drink/cocktail/beverage/alcohol category terms that must never map to a meal slot.
+const DRINK_CATEGORY_TERMS = ["cocktail", "drink", "beverage", "alcohol", "mocktail", "spirits", "liqueur"];
+
+// P1: alcohol name keywords used for category inference — prevents external cocktail/drink recipes
+// from defaulting to "dinner" when no better category is detectable.
+const ALCOHOL_NAME_TERMS = [
+  "cocktail", "mojito", "margarita", "wine", "beer", "vodka", "whiskey",
+  "gin", "rum", "tequila", "champagne", "prosecco", "cider",
+  "lager", "ale", "stout", "bourbon", "brandy", "liqueur",
+];
+
 function inferCategoryFromCuisineAndName(name: string, category: string | null): string | null {
   const lower = name.toLowerCase();
+
+  // P1: exclude drink/cocktail categories — return null so they are excluded from the candidate pool.
+  // Previously these fell through to "dinner" which allowed cocktails to appear as dinner suggestions.
+  if (DRINK_CATEGORY_TERMS.some(t => lower.includes(t))) return null;
+  if (ALCOHOL_NAME_TERMS.some(t => lower.includes(t))) return null;
+  if (category) {
+    const lc = category.toLowerCase();
+    if (DRINK_CATEGORY_TERMS.some(t => lc.includes(t))) return null;
+  }
+
   if (lower.includes("breakfast") || lower.includes("pancake") || lower.includes("omelette") || lower.includes("porridge") || lower.includes("granola") || lower.includes("smoothie")) {
     return "breakfast";
   }

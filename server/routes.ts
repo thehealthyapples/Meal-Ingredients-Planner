@@ -47,6 +47,13 @@ import { isLikelyNonEnglishIngredients, hasEnglishIngredients } from "./lib/ingr
 import { logProductEvent, extractDomain } from "./lib/product-event-logger";
 import { EventTypes, CLIENT_TRACKABLE_EVENTS } from "@shared/product-events";
 import { getUserRouting } from "./lib/routing";
+import { buildRuleIndex, batchMatchUplift } from "./lib/uplift-engine.js";
+import UPLIFT_RULES from "./lib/uplift-rules.js";
+import type { BatchUpliftInput } from "./lib/uplift-types.js";
+import { mergeUpliftIngredients, removeUpliftIngredient, buildForkName, type AcceptedSuggestion } from "./lib/uplift-persistence.js";
+
+// Singleton index built once at startup — all rules are stateless
+const UPLIFT_INDEX = buildRuleIndex(UPLIFT_RULES);
 
 // ---------------------------------------------------------------------------
 
@@ -4664,6 +4671,64 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
       const prefs = await storage.getUserPreferences(req.user!.id);
 
+      // P0: respect plannerEnableDrinks preference for user meals.
+      // Alcoholic drinks are always excluded; non-alcoholic drinks only allowed when enabled.
+      const plannerEnableDrinks = prefs?.plannerEnableDrinks ?? false;
+      userMeals = userMeals.filter(meal => {
+        if (meal.drinkType === "alcohol") return false; // always excluded
+        if (!plannerEnableDrinks && meal.isDrink) return false;
+        if (!plannerEnableDrinks && meal.kind === "drink") return false;
+        return true;
+      });
+
+      settings.plannerEnableDrinks = plannerEnableDrinks;
+
+      // Load household eaters and merge their hard restrictions into the candidate pool filter.
+      // Hard restrictions (severe allergies / intolerances) are always applied regardless of diet.
+      // Eater diet types influence scoring via the merged prefs object.
+      const hardRestrictedSet = new Set<string>(
+        (prefs?.excludedIngredients ?? []).map(e => e.toLowerCase())
+      );
+      let mergedExcludedIngredients: string[] = prefs?.excludedIngredients ?? [];
+      let mergedDietTypes: string[] = prefs?.dietTypes ?? [];
+
+      try {
+        const householdId = await getHouseholdForUser(req.user!.id);
+        const eaters = await storage.getHouseholdEaters(householdId);
+
+        if (eaters.length > 0) {
+          for (const eater of eaters) {
+            for (const restriction of eater.hardRestrictions ?? []) {
+              hardRestrictedSet.add(restriction.toLowerCase());
+            }
+            // Union eater diet types into the merged set for scoring influence
+            for (const diet of eater.defaultDietTypes ?? []) {
+              if (!mergedDietTypes.includes(diet)) mergedDietTypes = [...mergedDietTypes, diet];
+            }
+          }
+          mergedExcludedIngredients = Array.from(hardRestrictedSet);
+
+          if (process.env.NODE_ENV === 'development') {
+            console.debug(`[SmartSuggest] Household eaters: ${eaters.length}`, eaters.map(e => ({
+              name: e.displayName, diets: e.defaultDietTypes, restrictions: e.hardRestrictions,
+            })));
+            console.debug(`[SmartSuggest] Merged diet types: [${mergedDietTypes.join(', ')}]`);
+            console.debug(`[SmartSuggest] Hard restrictions: [${mergedExcludedIngredients.join(', ')}]`);
+          }
+        }
+      } catch {
+        // Non-fatal: if household lookup fails, use user prefs only
+      }
+
+      // Build merged prefs: user prefs enriched with household eater constraints.
+      const mergedPrefs = prefs ? {
+        ...prefs,
+        excludedIngredients: mergedExcludedIngredients,
+        dietTypes: mergedDietTypes,
+      } : null;
+
+      settings.hardExcludedIngredients = mergedExcludedIngredients;
+
       const mealNutrition = new Map<number, { calories?: string | null }>();
       for (const meal of userMeals) {
         const n = await storage.getNutrition(meal.id);
@@ -4675,7 +4740,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
       const result = await generateSmartSuggestion(
         userMeals,
-        prefs || null,
+        mergedPrefs,
         settings,
         mealNutrition,
         categoryMap,
@@ -8586,6 +8651,207 @@ Generate a complete recipe using these as the foundation.`;
     } catch (err) {
       console.error('[Admin/AmbiguousBackfill] error:', err);
       res.status(500).json({ message: 'Backfill failed', error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // ── Nutrition Uplift Engine ──────────────────────────────────────────────────
+
+  // POST /api/uplift/batch
+  // Deterministic, zero-AI nutrition uplift for a batch of meals.
+  // Safe to cache client-side — same payload always returns the same output.
+
+  app.post('/api/uplift/batch', async (req, res) => {
+    try {
+      const body = req.body as BatchUpliftInput;
+
+      if (!body || !Array.isArray(body.meals)) {
+        return res.status(400).json({ message: 'meals array required' });
+      }
+
+      if (body.meals.length === 0) {
+        return res.json({ results: [], matchTimeMs: 0, totalMeals: 0, totalMatches: 0 });
+      }
+
+      if (body.meals.length > 200) {
+        return res.status(400).json({ message: 'meals array exceeds limit of 200' });
+      }
+
+      const output = batchMatchUplift(body, UPLIFT_INDEX);
+      return res.json(output);
+    } catch (err) {
+      console.error('[Uplift] Batch error:', err);
+      return res.status(500).json({ message: 'Uplift matching failed' });
+    }
+  });
+
+  // POST /api/uplift/accept
+  // Accepts one or more uplift suggestions for a meal.
+  // System meals are forked to a user-private copy before mutation.
+  // All accepted suggestions are recorded with provenance metadata.
+
+  app.post('/api/uplift/accept', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const { mealId, plannerEntryId, suggestions } = req.body as {
+        mealId: number;
+        plannerEntryId?: number;
+        suggestions: AcceptedSuggestion[];
+      };
+
+      if (!mealId || !Number.isInteger(mealId)) {
+        return res.status(400).json({ message: 'mealId required' });
+      }
+      if (!Array.isArray(suggestions) || suggestions.length === 0) {
+        return res.status(400).json({ message: 'suggestions array required' });
+      }
+
+      const userId = req.user!.id;
+      let meal = await storage.getMeal(mealId);
+
+      if (!meal) return res.status(404).json({ message: 'Meal not found' });
+      if (meal.userId !== userId && !meal.isSystemMeal) {
+        return res.status(403).json({ message: 'Not authorised to modify this meal' });
+      }
+
+      let forkedFromMealId: number | null = null;
+
+      // Fork system meals to a user-private copy before any mutation
+      if (meal.isSystemMeal) {
+        const forked = await storage.createMeal(userId, {
+          name: buildForkName(meal.name),
+          ingredients: [...meal.ingredients],
+          instructions: meal.instructions ?? [],
+          servings: meal.servings,
+          categoryId: meal.categoryId ?? undefined,
+          sourceUrl: meal.sourceUrl ?? undefined,
+          mealSourceType: meal.mealSourceType,
+          isReadyMeal: meal.isReadyMeal,
+          isSystemMeal: false,
+          mealFormat: meal.mealFormat,
+          dietTypes: meal.dietTypes,
+          isFreezerEligible: meal.isFreezerEligible,
+          audience: meal.audience,
+          isDrink: meal.isDrink,
+          drinkType: meal.drinkType ?? undefined,
+          barcode: meal.barcode ?? undefined,
+          brand: meal.brand ?? undefined,
+          originalMealId: meal.id,
+          kind: meal.kind,
+        });
+        forkedFromMealId = meal.id;
+        meal = forked;
+
+        // Redirect the planner entry to the fork if one was specified
+        if (plannerEntryId) {
+          await storage.updatePlannerEntryMealId(plannerEntryId, meal.id);
+        }
+      }
+
+      // Merge uplift ingredients (duplicate-safe)
+      const ingredientsToAdd = suggestions.map(s => s.ingredient);
+      const { merged, added, skipped } = mergeUpliftIngredients(meal.ingredients, ingredientsToAdd);
+
+      // Persist the updated ingredient list
+      if (added.length > 0) {
+        await storage.updateMeal(meal.id, { ingredients: merged });
+      }
+
+      // Record provenance for every accepted suggestion (including skipped dupes)
+      const applications = [];
+      for (const suggestion of suggestions) {
+        const wasAdded = added.includes(suggestion.ingredient);
+        const application = await storage.createUpliftApplication({
+          mealId: meal.id,
+          userId,
+          ruleId: suggestion.ruleId,
+          ruleName: suggestion.ruleName,
+          ingredient: suggestion.ingredient,
+          action: suggestion.action,
+          quantity: suggestion.quantity ?? null,
+          explanation: suggestion.explanation,
+          addedBy: 'tha_uplift',
+          plannerEntryId: plannerEntryId ?? null,
+          forkedFromMealId,
+          status: wasAdded ? 'accepted' : 'duplicate_skipped',
+        });
+        applications.push(application);
+      }
+
+      return res.status(201).json({
+        mealId: meal.id,
+        forkedFromMealId,
+        added,
+        skipped,
+        applications,
+      });
+    } catch (err) {
+      console.error('[Uplift] Accept error:', err);
+      return res.status(500).json({ message: 'Failed to accept uplift' });
+    }
+  });
+
+  // DELETE /api/uplift/applications/:id
+  // Removes a specific accepted uplift application.
+  // Strips the ingredient from the meal and marks the application as removed.
+
+  app.delete('/api/uplift/applications/:id', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const applicationId = Number(req.params.id);
+      if (isNaN(applicationId)) return res.status(400).json({ message: 'Invalid id' });
+
+      const application = await storage.getUpliftApplication(applicationId);
+      if (!application) return res.status(404).json({ message: 'Application not found' });
+      if (application.status === 'removed') {
+        return res.status(400).json({ message: 'Application already removed' });
+      }
+
+      const userId = req.user!.id;
+      const meal = await storage.getMeal(application.mealId);
+      if (!meal) return res.status(404).json({ message: 'Meal not found' });
+      if (meal.userId !== userId) return res.status(403).json({ message: 'Not authorised' });
+
+      // Remove ingredient from meal
+      const { ingredients, removed } = removeUpliftIngredient(meal.ingredients, application.ingredient);
+      if (removed) {
+        await storage.updateMeal(meal.id, { ingredients });
+      }
+
+      // Mark application as removed
+      const updated = await storage.removeUpliftApplication(applicationId);
+
+      return res.json({
+        applicationId,
+        ingredientRemoved: removed,
+        application: updated,
+      });
+    } catch (err) {
+      console.error('[Uplift] Remove error:', err);
+      return res.status(500).json({ message: 'Failed to remove uplift' });
+    }
+  });
+
+  // GET /api/meals/:mealId/uplift-applications
+  // Returns accepted uplift provenance for a meal.
+
+  app.get('/api/meals/:mealId/uplift-applications', async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    try {
+      const mealId = Number(req.params.mealId);
+      if (isNaN(mealId)) return res.status(400).json({ message: 'Invalid mealId' });
+
+      const meal = await storage.getMeal(mealId);
+      if (!meal) return res.status(404).json({ message: 'Meal not found' });
+      if (meal.userId !== req.user!.id) return res.status(403).json({ message: 'Not authorised' });
+
+      const applications = await storage.getMealUpliftApplications(mealId);
+      return res.json({ mealId, applications });
+    } catch (err) {
+      console.error('[Uplift] Provenance error:', err);
+      return res.status(500).json({ message: 'Failed to fetch uplift applications' });
     }
   });
 

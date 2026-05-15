@@ -1326,3 +1326,40 @@ export const activitySummary = pgTable("activity_summary", {
 
 export type ActivitySummary = typeof activitySummary.$inferSelect;
 export type InsertPantryIngredientKnowledge = typeof pantryIngredientKnowledge.$inferInsert;
+
+// ─── Meal Uplift Applications ─────────────────────────────────────────────────
+// Tracks every accepted uplift suggestion with full provenance.
+// One row per ingredient added. Supports reversal and audit.
+
+export const mealUpliftApplications = pgTable("meal_uplift_applications", {
+  id: serial("id").primaryKey(),
+  mealId: integer("meal_id").notNull().references(() => meals.id, { onDelete: "cascade" }),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Uplift rule provenance
+  ruleId: text("rule_id").notNull(),
+  ruleName: text("rule_name").notNull(),
+  // What was added
+  ingredient: text("ingredient").notNull(),
+  action: text("action").notNull(), // 'add' | 'swap' | 'boost'
+  quantity: text("quantity"),
+  explanation: text("explanation").notNull(),
+  // Origin marker — always 'tha_uplift' for engine-generated suggestions
+  addedBy: text("added_by").notNull().default("tha_uplift"),
+  // Optional context
+  plannerEntryId: integer("planner_entry_id"),
+  // If the meal was forked from a system meal to protect the original
+  forkedFromMealId: integer("forked_from_meal_id"),
+  // Lifecycle state: 'accepted' | 'removed'
+  status: text("status").notNull().default("accepted"),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }).notNull().defaultNow(),
+  removedAt: timestamp("removed_at", { withTimezone: true }),
+});
+
+export const insertMealUpliftApplicationSchema = createInsertSchema(mealUpliftApplications).omit({
+  id: true,
+  acceptedAt: true,
+  removedAt: true,
+});
+
+export type MealUpliftApplication = typeof mealUpliftApplications.$inferSelect;
+export type InsertMealUpliftApplication = z.infer<typeof insertMealUpliftApplicationSchema>;

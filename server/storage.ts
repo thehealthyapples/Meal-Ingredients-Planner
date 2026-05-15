@@ -1,4 +1,4 @@
-import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent, pantryIngredientKnowledge, PantryIngredientKnowledge } from "@shared/schema";
+import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent, pantryIngredientKnowledge, PantryIngredientKnowledge, mealUpliftApplications, MealUpliftApplication, InsertMealUpliftApplication } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
 import { eq, and, ilike, or, sql, inArray, isNull, isNotNull } from "drizzle-orm";
@@ -315,6 +315,13 @@ export interface IStorage {
       tags: string[];
     }>,
   ): Promise<void>;
+
+  // ── Uplift Applications ───────────────────────────────────────────────────
+  createUpliftApplication(data: InsertMealUpliftApplication): Promise<MealUpliftApplication>;
+  getMealUpliftApplications(mealId: number): Promise<MealUpliftApplication[]>;
+  getUpliftApplication(id: number): Promise<MealUpliftApplication | undefined>;
+  removeUpliftApplication(id: number): Promise<MealUpliftApplication | undefined>;
+  updatePlannerEntryMealId(entryId: number, mealId: number): Promise<PlannerEntry | undefined>;
 
   sessionStore: session.Store;
 }
@@ -3413,6 +3420,51 @@ export class DatabaseStorage implements IStorage {
       thisMonthTotal,
       thisWeekCountsByType,
     };
+  }
+
+  // ── Uplift Applications ────────────────────────────────────────────────────
+
+  async createUpliftApplication(data: InsertMealUpliftApplication): Promise<MealUpliftApplication> {
+    const [row] = await db.insert(mealUpliftApplications).values(data).returning();
+    return row;
+  }
+
+  async getMealUpliftApplications(mealId: number): Promise<MealUpliftApplication[]> {
+    return db
+      .select()
+      .from(mealUpliftApplications)
+      .where(
+        and(
+          eq(mealUpliftApplications.mealId, mealId),
+          eq(mealUpliftApplications.status, 'accepted'),
+        )
+      );
+  }
+
+  async getUpliftApplication(id: number): Promise<MealUpliftApplication | undefined> {
+    const [row] = await db
+      .select()
+      .from(mealUpliftApplications)
+      .where(eq(mealUpliftApplications.id, id));
+    return row;
+  }
+
+  async removeUpliftApplication(id: number): Promise<MealUpliftApplication | undefined> {
+    const [row] = await db
+      .update(mealUpliftApplications)
+      .set({ status: 'removed', removedAt: new Date() })
+      .where(eq(mealUpliftApplications.id, id))
+      .returning();
+    return row;
+  }
+
+  async updatePlannerEntryMealId(entryId: number, mealId: number): Promise<PlannerEntry | undefined> {
+    const [row] = await db
+      .update(plannerEntries)
+      .set({ mealId })
+      .where(eq(plannerEntries.id, entryId))
+      .returning();
+    return row;
   }
 }
 

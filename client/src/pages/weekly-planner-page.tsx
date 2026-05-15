@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store, Users, Wand2, Camera, BookOpen, MoreHorizontal } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store, Users, Wand2, Camera, BookOpen, MoreHorizontal, Check } from "lucide-react";
 import { CreateMealModal } from "@/components/create-meal-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -36,6 +36,8 @@ import { DayViewDrawer } from "@/components/day-view-drawer";
 import { useUser } from "@/hooks/use-user";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";
+import { MealUpliftPanel, UpliftCardIndicator } from "@/components/MealUpliftPanel";
+import type { UpliftMatchResult } from "@/components/MealUpliftPanel";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { api } from "@shared/routes";
@@ -189,6 +191,13 @@ export default function WeeklyPlannerPage() {
   const longPressMovedRef = useRef(false);
   const { user } = useUser();
   const [, navigate] = useLocation();
+
+  // Track mealIds that received accepted uplift in this session (for immediate card feedback).
+  const [boostedMealIds, setBoostedMealIds] = useState<Set<number>>(new Set());
+  const handleUpliftAccepted = (mealId: number) =>
+    setBoostedMealIds(prev => new Set(Array.from(prev).concat(mealId)));
+  const handleUpliftRemoved = (mealId: number) =>
+    setBoostedMealIds(prev => { const next = new Set(Array.from(prev)); next.delete(mealId); return next; });
 
   const dndSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -347,6 +356,50 @@ export default function WeeklyPlannerPage() {
     });
     return map;
   }, [nutritionData]);
+
+  // ── Nutrition Uplift — async, non-blocking batch fetch ────────────────────────
+  // Built from planned meals after planner renders. Never delays planner hydration.
+  const upliftBatchMeals = useMemo(() => {
+    if (!fullPlanner.length || !meals.length) return [];
+    const mealMap = new Map(meals.map(m => [m.id, m]));
+    const seen = new Set<number>();
+    const batch: { id: number; name: string; ingredients: string[]; mealSlot?: string }[] = [];
+    for (const week of fullPlanner) {
+      for (const day of week.days) {
+        for (const entry of day.entries) {
+          if (seen.has(entry.mealId)) continue;
+          seen.add(entry.mealId);
+          const meal = mealMap.get(entry.mealId);
+          if (!meal || meal.mealSourceType === "planner-placeholder") continue;
+          batch.push({
+            id: meal.id,
+            name: meal.name,
+            ingredients: meal.ingredients ?? [],
+            mealSlot: entry.mealType ?? undefined,
+          });
+        }
+      }
+    }
+    return batch;
+  }, [fullPlanner, meals]);
+
+  const { data: upliftBatchData } = useQuery<{ results: { mealId?: number; matches: UpliftMatchResult[] }[] }>({
+    queryKey: ["/api/uplift/batch", upliftBatchMeals.map(m => m.id).sort((a, b) => a - b)],
+    queryFn: async () => {
+      const res = await apiRequest("POST", "/api/uplift/batch", { meals: upliftBatchMeals });
+      return res.json();
+    },
+    enabled: upliftBatchMeals.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const upliftByMealId = useMemo(() => {
+    const map = new Map<number, UpliftMatchResult[]>();
+    upliftBatchData?.results.forEach(r => {
+      if (r.mealId != null) map.set(Number(r.mealId), r.matches);
+    });
+    return map;
+  }, [upliftBatchData]);
 
   // ── Household eaters (Phase 2) ────────────────────────────────────────────────
   const { data: householdEaters = [] } = useQuery<HouseholdEater[]>({
@@ -1826,7 +1879,7 @@ export default function WeeklyPlannerPage() {
                                 mealType={row.mealType ?? row.addMealType}
                                 audience={row.audience}
                                 isDrink={row.isDrink}
-                                className={`relative group/cell p-1.5 min-h-[56px] flex flex-col gap-0.5 border-l border-border ${!isLastRow ? "border-b border-border" : ""}`}
+                                className={`relative p-1.5 min-h-[56px] flex flex-col gap-0.5 border-l border-border ${!isLastRow ? "border-b border-border" : ""}`}
                                 data-testid={`cell-${row.id}-${day.dayOfWeek}`}
                               >
                                 {/* Meal name pills — each slot is its own sortable context for within-slot reorder */}
@@ -1892,6 +1945,41 @@ export default function WeeklyPlannerPage() {
                                             <ShoppingCart className="h-2.5 w-2.5 text-emerald-500/70 flex-shrink-0 mt-0.5" data-testid={`icon-in-basket-${meal.id}`} />
                                           )}
                                         </button>
+                                        {/* Nutrition Boost indicator — subtle, async, non-blocking */}
+                                        {!isPlaceholder && (() => {
+                                          const isBoosted = boostedMealIds.has(meal.id);
+                                          const matches = upliftByMealId.get(meal.id) ?? [];
+                                          const suggestionCount = matches.flatMap(m => m.suggestions).length;
+                                          if (isBoosted) {
+                                            return (
+                                              <button
+                                                className="flex items-center gap-0.5 text-[10px] text-emerald-600/70 leading-none mt-0.5"
+                                                onClick={(e) => { e.stopPropagation(); setMealDetail({ entry, meal, dayId: day.id, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[day.dayOfWeek], slotLabel: row.label }); }}
+                                                title="Nutrition boost applied"
+                                                data-testid={`uplift-boosted-${meal.id}`}
+                                              >
+                                                <Check className="h-2.5 w-2.5 shrink-0" />
+                                                <span>Boosted</span>
+                                              </button>
+                                            );
+                                          }
+                                          if (suggestionCount === 0) return null;
+                                          return (
+                                            <UpliftCardIndicator
+                                              suggestionCount={Math.min(suggestionCount, 2)}
+                                              onClick={() => setMealDetail({
+                                                entry,
+                                                meal,
+                                                dayId: day.id,
+                                                mealType: row.mealType ?? row.addMealType,
+                                                audience: row.audience,
+                                                isDrink: row.isDrink,
+                                                dayName: DAY_NAMES[day.dayOfWeek],
+                                                slotLabel: row.label,
+                                              })}
+                                            />
+                                          );
+                                        })()}
                                         {/* Phase 5A: entry operations menu */}
                                         <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
@@ -1929,6 +2017,15 @@ export default function WeeklyPlannerPage() {
                                                 Add to freezer
                                               </DropdownMenuItem>
                                             )}
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem
+                                              className="text-muted-foreground focus:text-foreground"
+                                              onClick={() => { setExpandedDayId(day.id); setExpandedDayLabel(DAY_NAMES[day.dayOfWeek]); setAssistantMode("day"); }}
+                                              data-testid={`mi-open-day-${day.dayOfWeek}`}
+                                            >
+                                              <LayoutList className="h-3.5 w-3.5 mr-2" />
+                                              View day
+                                            </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem
                                               className="text-muted-foreground focus:text-foreground"
@@ -1974,17 +2071,6 @@ export default function WeeklyPlannerPage() {
                                   <Plus className="h-3 w-3" />
                                 </button>
 
-                                {/* Expand day button (top-right, subtle) */}
-                                {row.id === "breakfast" && (
-                                  <button
-                                    className="absolute top-1 right-1 opacity-0 group-hover/cell:opacity-40 hover:!opacity-100 text-muted-foreground transition-opacity"
-                                    onClick={() => { setExpandedDayId(day.id); setExpandedDayLabel(DAY_NAMES[day.dayOfWeek]); setAssistantMode("day"); }}
-                                    title="Expand day"
-                                    data-testid={`button-expand-day-${day.dayOfWeek}`}
-                                  >
-                                    <LayoutList className="h-3 w-3" />
-                                  </button>
-                                )}
                               </DroppablePlannerCell>
                             );
                           })}
@@ -2601,6 +2687,27 @@ export default function WeeklyPlannerPage() {
                     score={computeMealVariety(meal.ingredients ?? [])}
                     pantryItems={pantryNames}
                   />
+
+                  {/* Nutrition Boost — async uplift panel, shown only when matches exist */}
+                  {(() => {
+                    const matches = upliftByMealId.get(meal.id) ?? [];
+                    if (matches.length === 0) return null;
+                    return (
+                      <MealUpliftPanel
+                        mealId={meal.id}
+                        plannerEntryId={entry.id}
+                        mealSlot={mealType}
+                        upliftMatches={matches}
+                        onMealForked={(newMealId) => {
+                          // After a system meal fork, refresh planner so entry points to fork
+                          qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+                          qc.invalidateQueries({ queryKey: ["/api/meals"] });
+                        }}
+                        onUpliftAccepted={handleUpliftAccepted}
+                        onUpliftRemoved={handleUpliftRemoved}
+                      />
+                    );
+                  })()}
 
                   {/* Two-column layout: Ingredients + Instructions */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

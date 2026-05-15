@@ -23,6 +23,12 @@ export interface SmartSuggestSettings {
   calorieTarget?: number;
   peopleCount?: number;
   lockedEntries?: LockedEntry[];
+  // P0: respect the user's planner drinks preference — controls whether non-alcoholic drinks
+  // can enter the candidate pool. Alcoholic drinks are always excluded regardless of this flag.
+  plannerEnableDrinks?: boolean;
+  // Household hard restrictions — ingredients that must never appear in any planned meal.
+  // These are hard exclusions (unlike dietTypes which influence scoring).
+  hardExcludedIngredients?: string[];
 }
 
 export interface SmartSuggestEntry {
@@ -51,13 +57,80 @@ export interface SmartSuggestResult {
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
+const DEBUG = process.env.NODE_ENV === 'development';
+
+// Returns true if a candidate contains any hard-excluded ingredient.
+// Hard exclusions bypass scoring — the meal is always removed from the pool.
+function isHardExcluded(candidate: ScoredCandidate, hardExcluded: string[]): boolean {
+  if (hardExcluded.length === 0) return false;
+  const allText = [candidate.name, ...candidate.ingredients].join(' ').toLowerCase();
+  return hardExcluded.some(exc => allText.includes(exc.toLowerCase()));
+}
+
+// P0: "drink" removed from breakfast — generic drinks must not appear as breakfast meals.
+// Breakfast slot only accepts explicit breakfast and smoothie categories.
 const SLOT_CATEGORY_MAPPING: Record<string, string[]> = {
-  breakfast: ["breakfast", "smoothie", "drink"],
+  breakfast: ["breakfast", "smoothie"],
   lunch: ["lunch", "snack", "salad"],
   dinner: ["dinner", "main"],
   snack: ["snack", "dessert", "smoothie", "drink"],
 };
 
+// P1: deterministic alcohol keyword list — anything matching is excluded from planner pools.
+const ALCOHOL_KEYWORDS = [
+  "cocktail", "mojito", "margarita", "wine", "beer", "vodka", "whiskey",
+  "gin", "rum", "tequila", "champagne", "prosecco", "cider",
+  "lager", "ale", "stout", "bourbon", "brandy", "liqueur",
+];
+
+// P1/P0: returns true if a candidate should be treated as an alcoholic drink by name or category.
+function isAlcoholicCandidate(candidate: ScoredCandidate): boolean {
+  const nameLower = candidate.name.toLowerCase();
+  const catLower = (candidate.category || "").toLowerCase();
+  return (
+    ALCOHOL_KEYWORDS.some(kw => nameLower.includes(kw)) ||
+    catLower === "cocktail" ||
+    catLower === "alcohol"
+  );
+}
+
+// P0: returns true if a candidate is any kind of drink (alcoholic or non-alcoholic).
+function isDrinkCandidate(candidate: ScoredCandidate): boolean {
+  const catLower = (candidate.category || "").toLowerCase();
+  return (
+    catLower === "drink" ||
+    catLower === "beverage" ||
+    catLower === "cocktail" ||
+    catLower === "alcohol" ||
+    isAlcoholicCandidate(candidate)
+  );
+}
+
+// P0: safe fallback candidates per slot — never promotes dinner meals to breakfast.
+function getSafeFallbackCandidates(
+  allCandidates: ScoredCandidate[],
+  slot: string,
+  usedIds: Set<string | number>,
+): ScoredCandidate[] {
+  if (slot === "breakfast") {
+    // Breakfast is strict: only explicit breakfast/smoothie in fallback — no cross-slot promotion.
+    return allCandidates.filter(c => {
+      if (usedIds.has(c.id)) return false;
+      const cat = (c.category || "").toLowerCase();
+      return cat === "breakfast" || cat === "smoothie";
+    });
+  }
+  // For other slots: null-category (uncategorised) meals and general meal categories are safe.
+  // Explicitly exclude breakfast-categorised items from non-breakfast fallback.
+  return allCandidates.filter(c => {
+    if (usedIds.has(c.id)) return false;
+    const cat = (c.category || "").toLowerCase();
+    if (cat === "breakfast" || cat === "smoothie") return false;
+    return true;
+  });
+}
+
+// P0: removed universal `|| slot === "dinner"` bypass — dinner now filters via SLOT_CATEGORY_MAPPING.
 function getCandidateSlotFit(candidate: ScoredCandidate, slot: string): boolean {
   if (!candidate.category) return slot === "dinner";
   const allowed = SLOT_CATEGORY_MAPPING[slot] || [slot];
@@ -85,18 +158,71 @@ export async function generateSmartSuggestion(
     query: settings.preferredCuisine || undefined,
   });
 
+  const plannerEnableDrinks = settings.plannerEnableDrinks ?? false;
+  const hardExcluded = settings.hardExcludedIngredients ?? [];
   const allCandidates: ScoredCandidate[] = [];
 
   for (const meal of userMeals) {
+    // P0: enforce drink/alcohol rules directly on the Meal record before conversion.
+    // This catches isDrink/kind="drink" meals that carry no category and no alcohol name keyword.
+    if (meal.drinkType === "alcohol") {
+      console.debug(`[SmartSuggest] Excluded alcoholic user meal (drinkType=alcohol): "${meal.name}"`);
+      continue;
+    }
+    if (!plannerEnableDrinks && (meal.isDrink || meal.kind === "drink")) {
+      console.debug(`[SmartSuggest] Excluded drink user meal (plannerEnableDrinks=false): "${meal.name}"`);
+      continue;
+    }
+
     const base = convertMealToCandidate(meal, mealNutrition.get(meal.id));
     const catName = meal.categoryId ? mealCategories.get(meal.categoryId) || null : null;
     base.category = catName;
-    allCandidates.push({ ...base, score: 0, scoreBreakdown: { dietMatch: 0, goalAlignment: 0, budgetAlignment: 0, upfScore: 0, varietyScore: 0, overlapScore: 0, cuisineBonus: 0, simplicityBonus: 0 } });
+    const candidate: ScoredCandidate = { ...base, score: 0, scoreBreakdown: { dietMatch: 0, goalAlignment: 0, budgetAlignment: 0, upfScore: 0, varietyScore: 0, overlapScore: 0, cuisineBonus: 0, simplicityBonus: 0 } };
+
+    // P0/P1: secondary name/category-based alcohol check (catches named cocktails without drink flags).
+    if (isAlcoholicCandidate(candidate)) {
+      console.debug(`[SmartSuggest] Excluded alcoholic user meal (name keyword): "${candidate.name}"`);
+      continue;
+    }
+    // P0: secondary category-based drink check for any drink-category meals that slipped through.
+    if (!plannerEnableDrinks && isDrinkCandidate(candidate)) {
+      console.debug(`[SmartSuggest] Excluded drink user meal (category check): "${candidate.name}"`);
+      continue;
+    }
+    // Household hard restriction filter — always applied, bypasses scoring.
+    if (isHardExcluded(candidate, hardExcluded)) {
+      if (DEBUG) console.debug(`[SmartSuggest] Hard-excluded user meal (household restriction): "${candidate.name}"`);
+      continue;
+    }
+    allCandidates.push(candidate);
   }
 
   for (const ext of externalCandidates) {
     const base = convertExternalToCandidate(ext);
-    allCandidates.push({ ...base, score: 0, scoreBreakdown: { dietMatch: 0, goalAlignment: 0, budgetAlignment: 0, upfScore: 0, varietyScore: 0, overlapScore: 0, cuisineBonus: 0, simplicityBonus: 0 } });
+    const candidate: ScoredCandidate = { ...base, score: 0, scoreBreakdown: { dietMatch: 0, goalAlignment: 0, budgetAlignment: 0, upfScore: 0, varietyScore: 0, overlapScore: 0, cuisineBonus: 0, simplicityBonus: 0 } };
+
+    // P0: exclude alcoholic external candidates unconditionally.
+    // Note: inferCategoryFromCuisineAndName now returns null for drink/cocktail/beverage/alcohol
+    // category terms — those null-category candidates are caught below by name-based detection.
+    if (isAlcoholicCandidate(candidate)) {
+      console.debug(`[SmartSuggest] Excluded alcoholic external meal: "${candidate.name}"`);
+      continue;
+    }
+    // P0: exclude drink-category external candidates unless plannerEnableDrinks is active.
+    if (!plannerEnableDrinks && isDrinkCandidate(candidate)) {
+      console.debug(`[SmartSuggest] Excluded external drink (plannerEnableDrinks=false): "${candidate.name}"`);
+      continue;
+    }
+    // Household hard restriction filter — always applied.
+    if (isHardExcluded(candidate, hardExcluded)) {
+      if (DEBUG) console.debug(`[SmartSuggest] Hard-excluded external meal (household restriction): "${candidate.name}"`);
+      continue;
+    }
+    allCandidates.push(candidate);
+  }
+
+  if (DEBUG && hardExcluded.length > 0) {
+    console.debug(`[SmartSuggest] Hard exclusions active: [${hardExcluded.join(', ')}] — pool size after hard filter: ${allCandidates.length}`);
   }
 
   const usedProteins = new Map<string, number>();
@@ -154,16 +280,21 @@ export async function generateSmartSuggestion(
         }
       }
 
+      // P0: slot-appropriate candidates only — no universal dinner bypass.
       let slotCandidates = allCandidates.filter(c => {
         if (usedIds.has(c.id)) return false;
-        return getCandidateSlotFit(c, slot) || slot === "dinner";
+        return getCandidateSlotFit(c, slot);
       });
 
+      // P0: safe fallback — category-adjacent meals only, never promotes dinner to breakfast.
       if (slotCandidates.length === 0) {
-        slotCandidates = allCandidates.filter(c => !usedIds.has(c.id));
-      }
-      if (slotCandidates.length === 0) {
-        slotCandidates = allCandidates;
+        slotCandidates = getSafeFallbackCandidates(allCandidates, slot, usedIds);
+        if (slotCandidates.length > 0) {
+          console.debug(`[SmartSuggest] Using safe fallback candidates for slot "${slot}" (${slotCandidates.length} options)`);
+        } else {
+          // No safe fallback available — skip this slot rather than suggest an inappropriate meal.
+          console.debug(`[SmartSuggest] No suitable candidates for slot "${slot}" — skipping (thin library)`);
+        }
       }
 
       if (isVegDay) {
@@ -180,13 +311,21 @@ export async function generateSmartSuggestion(
         slotCandidates = slotCandidates.filter(c =>
           c.primaryProtein !== "fish" && c.primaryProtein !== "seafood"
         );
-        if (slotCandidates.length === 0) slotCandidates = allCandidates.filter(c => !usedIds.has(c.id));
+        // Fallback: safe slot-appropriate candidates only — preserves slot and hard exclusion rules.
+        if (slotCandidates.length === 0) slotCandidates = getSafeFallbackCandidates(allCandidates, slot, usedIds);
+        if (slotCandidates.length === 0) {
+          if (DEBUG) console.debug(`[SmartSuggest] No candidates after fish cap fallback for slot "${slot}"`);
+        }
       }
       if (redMeatCount >= maxRedMeat) {
         slotCandidates = slotCandidates.filter(c =>
           c.primaryProtein !== "beef" && c.primaryProtein !== "lamb" && c.primaryProtein !== "pork"
         );
-        if (slotCandidates.length === 0) slotCandidates = allCandidates.filter(c => !usedIds.has(c.id));
+        // Fallback: safe slot-appropriate candidates only — preserves slot and hard exclusion rules.
+        if (slotCandidates.length === 0) slotCandidates = getSafeFallbackCandidates(allCandidates, slot, usedIds);
+        if (slotCandidates.length === 0) {
+          if (DEBUG) console.debug(`[SmartSuggest] No candidates after red meat cap fallback for slot "${slot}"`);
+        }
       }
 
       if (maxWeeklyUPF < Infinity) {
@@ -227,6 +366,9 @@ export async function generateSmartSuggestion(
             preferredCuisine: settings.preferredCuisine,
           }
         );
+        if (DEBUG && score < 10) {
+          console.debug(`[SmartSuggest] Low score ${score} for "${c.name}" — breakdown:`, breakdown);
+        }
         return { ...c, score, scoreBreakdown: breakdown };
       });
 
