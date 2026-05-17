@@ -58,6 +58,7 @@ import {
   closestCenter,
   pointerWithin,
   type CollisionDetection,
+  type Modifier,
   type DragEndEvent,
   type DragStartEvent,
   type DragOverEvent,
@@ -158,6 +159,25 @@ const mobileFriendlyCollision: CollisionDetection = (args) => {
   return closestCenter(args);
 };
 
+// DragOverlay modifier: snap the overlay's vertical center to the initial touch/pointer Y so
+// the lifted card appears under the user's finger regardless of content height differences.
+const snapOverlayToCursor: Modifier = ({ activatorEvent, activeNodeRect, overlayNodeRect, transform }) => {
+  if (!activatorEvent || !activeNodeRect) return transform;
+  let initY: number;
+  if ("changedTouches" in activatorEvent) {
+    const touch = (activatorEvent as TouchEvent).changedTouches[0];
+    if (!touch) return transform;
+    initY = touch.clientY;
+  } else {
+    initY = (activatorEvent as MouseEvent).clientY;
+  }
+  const h = overlayNodeRect?.height ?? activeNodeRect.height;
+  return {
+    ...transform,
+    y: transform.y + (initY - activeNodeRect.top - h / 2),
+  };
+};
+
 export default function WeeklyPlannerPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -212,6 +232,9 @@ export default function WeeklyPlannerPage() {
   // Mobile cross-day drag: timer to switch day when hovering a day header during drag
   const mobileDragDayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mobileDragDayTargetRef = useRef<number>(-1);
+  // Preserve drag data across day-switch unmounts + track intended cross-day destination
+  const activeDragDataRef = useRef<DragItemData | null>(null);
+  const dragTargetDayIdRef = useRef<number | null>(null);
   const { user } = useUser();
   const [, navigate] = useLocation();
 
@@ -872,7 +895,11 @@ export default function WeeklyPlannerPage() {
   // Phase 4A: drag/drop handlers
   function handleDragStart(event: DragStartEvent) {
     const data = event.active.data.current as DragItemData | undefined;
-    if (data?.type === "planner-entry" || data?.type === "proposal-card") setActiveDrag(data);
+    if (data?.type === "planner-entry" || data?.type === "proposal-card") {
+      setActiveDrag(data);
+      activeDragDataRef.current = data;
+    }
+    dragTargetDayIdRef.current = null;
   }
 
   // Mobile: switch day when drag hovers over a day-nav button (300ms dwell to avoid accidental switches)
@@ -880,6 +907,9 @@ export default function WeeklyPlannerPage() {
     const overData = event.over?.data.current as (DragItemData | DropZoneData) | undefined;
     if (overData?.type === "mobile-day-nav") {
       const targetIdx = overData.dayIndex;
+      // Track the intended destination day so handleDragEnd can use it even after
+      // setMobileDayIndex unmounts the source day's draggable component.
+      dragTargetDayIdRef.current = overData.dayId;
       if (mobileDragDayTimerRef.current !== null && mobileDragDayTargetRef.current === targetIdx) return;
       if (mobileDragDayTimerRef.current !== null) clearTimeout(mobileDragDayTimerRef.current);
       mobileDragDayTargetRef.current = targetIdx;
@@ -894,6 +924,11 @@ export default function WeeklyPlannerPage() {
         mobileDragDayTimerRef.current = null;
       }
       mobileDragDayTargetRef.current = -1;
+      // Only clear the target day if we're now over a concrete droppable (slot/entry on a
+      // different day) — if over nothing, keep the last known target so drop still works.
+      if (overData?.type === "planner-slot" || overData?.type === "planner-entry") {
+        dragTargetDayIdRef.current = null;
+      }
     }
   }
 
@@ -904,9 +939,45 @@ export default function WeeklyPlannerPage() {
     }
     mobileDragDayTargetRef.current = -1;
     setActiveDrag(null);
+
     const { active, over } = event;
-    if (!over) return;
-    const dragData = active.data.current as DragItemData | undefined;
+
+    // When the user drags a mobile meal to a different day, setMobileDayIndex fires mid-drag
+    // and unmounts the source day's MobileSortableMealEntry. dnd-kit then returns an empty
+    // default object for active.data.current. Use activeDragDataRef as the authoritative
+    // source of drag data so cross-day drops still resolve correctly.
+    const dragData =
+      (active.data.current as DragItemData | undefined)?.type
+        ? (active.data.current as DragItemData)
+        : activeDragDataRef.current ?? undefined;
+    activeDragDataRef.current = null;
+
+    // If the pointer landed over nothing but we tracked an intended day, treat it as a
+    // day-nav drop so the meal still moves.
+    const trackedTargetDayId = dragTargetDayIdRef.current;
+    dragTargetDayIdRef.current = null;
+
+    if (!over) {
+      // No droppable under finger — use trackedTargetDayId as fallback cross-day destination.
+      if (trackedTargetDayId !== null && dragData?.type === "planner-entry" && dragData.dayId !== trackedTargetDayId) {
+        const allEntries = fullPlanner.flatMap((w) => w.days).flatMap((d) => d.entries);
+        const targetEntries = allEntries.filter(
+          (e) => e.dayId === trackedTargetDayId && e.mealType === dragData.mealType &&
+                 !e.isDrink === !dragData.isDrink && e.id !== dragData.entryId,
+        );
+        const newPosition = targetEntries.length > 0 ? Math.max(...targetEntries.map((e) => e.position)) + 1 : 0;
+        movePlannerEntryMutation.mutate({
+          entryId: dragData.entryId,
+          dayId: trackedTargetDayId,
+          mealType: dragData.mealType,
+          position: newPosition,
+        });
+        const targetIdx = sortedDays.findIndex((d) => d.id === trackedTargetDayId);
+        if (targetIdx !== -1) setMobileDayIndex(targetIdx);
+      }
+      return;
+    }
+
     if (!dragData) return;
     const overData = over.data.current as (DragItemData | DropZoneData) | undefined;
     if (!overData) return;
@@ -1017,6 +1088,8 @@ export default function WeeklyPlannerPage() {
       mobileDragDayTimerRef.current = null;
     }
     mobileDragDayTargetRef.current = -1;
+    activeDragDataRef.current = null;
+    dragTargetDayIdRef.current = null;
     setActiveDrag(null);
   }
 
@@ -2385,9 +2458,9 @@ export default function WeeklyPlannerPage() {
         }}
       />
       </div>{/* end flex gap-3 */}
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={null} modifiers={[snapOverlayToCursor]}>
         {activeDrag ? (
-          <div className="flex items-center gap-2 w-full bg-background border border-primary/70 rounded-lg px-3 py-2 text-sm font-medium shadow-lg opacity-90 cursor-grabbing pointer-events-none">
+          <div className="flex items-center gap-2 w-full h-full bg-background border border-primary/70 rounded-lg px-3 py-2 text-sm font-medium shadow-lg opacity-90 cursor-grabbing pointer-events-none">
             <span className="flex-1 truncate">
               {activeDrag.type === "proposal-card"
                 ? activeDrag.name
