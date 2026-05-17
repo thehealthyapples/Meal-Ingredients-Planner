@@ -257,11 +257,11 @@ export function MobileDayDropTarget({
   });
 
   return (
-    <div ref={setNodeRef} className="flex-shrink-0">
+    <div ref={setNodeRef} className="flex-1 min-w-0">
       <button
         type="button"
         onClick={onClick}
-        className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors min-h-[36px] min-w-[44px] text-center ${
+        className={`w-full px-1 py-2 rounded-lg text-xs font-semibold transition-colors min-h-[36px] text-center ${
           isSelected
             ? "bg-primary text-primary-foreground"
             : isOver

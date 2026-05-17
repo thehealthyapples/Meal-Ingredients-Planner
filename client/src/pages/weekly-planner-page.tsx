@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store, Users, Wand2, Camera, BookOpen, MoreHorizontal, Check } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Settings, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store, Users, Wand2, Camera, BookOpen, MoreHorizontal, Check, GripVertical } from "lucide-react";
 import { CreateMealModal } from "@/components/create-meal-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -56,6 +56,8 @@ import {
   useSensor,
   useSensors,
   closestCenter,
+  pointerWithin,
+  type CollisionDetection,
   type DragEndEvent,
   type DragStartEvent,
   type DragOverEvent,
@@ -143,6 +145,18 @@ function getUPFLabelFn(score?: number) {
   return "High";
 }
 
+// Use pointer coordinates to detect day-nav drops (so finger-over-day triggers reliably),
+// then fall back to closestCenter for slot/entry targets.
+const mobileFriendlyCollision: CollisionDetection = (args) => {
+  const dayNavContainers = args.droppableContainers.filter(
+    (c) => String(c.id).startsWith("mobile-day-nav-"),
+  );
+  if (dayNavContainers.length > 0 && args.pointerCoordinates) {
+    const hits = pointerWithin({ ...args, droppableContainers: dayNavContainers });
+    if (hits.length > 0) return hits;
+  }
+  return closestCenter(args);
+};
 
 export default function WeeklyPlannerPage() {
   const { toast } = useToast();
@@ -1598,7 +1612,7 @@ export default function WeeklyPlannerPage() {
     <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
       <DndContext
         sensors={dndSensors}
-        collisionDetection={closestCenter}
+        collisionDetection={mobileFriendlyCollision}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
@@ -1706,7 +1720,7 @@ export default function WeeklyPlannerPage() {
               />
               {/* Horizontal day row — also droppable for cross-day drag */}
               <div className="mb-3">
-                <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-hide">
+                <div className="flex items-center gap-1">
                   {sortedDays.map((day, idx) => (
                     <MobileDayDropTarget
                       key={day.id}
@@ -1718,7 +1732,7 @@ export default function WeeklyPlannerPage() {
                     />
                   ))}
                   {sortedDays[mobileDayIndex] && (
-                    <div className="ml-auto flex-shrink-0 pl-1">
+                    <div className="flex-shrink-0 pl-1">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button className="p-1.5 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent/40" title="Day actions" data-testid="button-mobile-day-actions">
@@ -2373,10 +2387,13 @@ export default function WeeklyPlannerPage() {
       </div>{/* end flex gap-3 */}
       <DragOverlay dropAnimation={null}>
         {activeDrag ? (
-          <div className="bg-background border border-primary rounded px-2 py-1 text-xs shadow-lg opacity-95 max-w-[140px] truncate cursor-grabbing pointer-events-none">
-            {activeDrag.type === "proposal-card"
-              ? activeDrag.name
-              : getMeal(activeDrag.entry.mealId)?.name ?? "Meal"}
+          <div className="flex items-center gap-2 w-full bg-background border border-primary/70 rounded-lg px-3 py-2 text-sm font-medium shadow-lg opacity-90 cursor-grabbing pointer-events-none">
+            <span className="flex-1 truncate">
+              {activeDrag.type === "proposal-card"
+                ? activeDrag.name
+                : getMeal(activeDrag.entry.mealId)?.name ?? "Meal"}
+            </span>
+            <GripVertical className="h-4 w-4 text-muted-foreground/30 shrink-0" />
           </div>
         ) : null}
       </DragOverlay>
