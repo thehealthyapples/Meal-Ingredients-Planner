@@ -1378,7 +1378,7 @@ export default function WeeklyPlannerPage() {
       titleTestId="text-weekly-planner-title"
       context={<span data-testid="text-week-progress">{weekStats.filled} meals planned out of {weekStats.total} this week</span>}
       actions={
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex flex-wrap items-center gap-0.5 sm:gap-1">
           {renameWeekId === activeWeekData?.id ? (
             <input
               value={renameValue}
@@ -1402,7 +1402,7 @@ export default function WeeklyPlannerPage() {
             />
           ) : (
             <Select value={activeWeek} onValueChange={setActiveWeek}>
-              <SelectTrigger className="w-28 sm:w-32 h-8 text-sm" data-testid="tabs-weeks">
+              <SelectTrigger className="w-24 sm:w-28 h-8 text-sm" data-testid="tabs-weeks">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1471,12 +1471,11 @@ export default function WeeklyPlannerPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="inline-flex items-center justify-center h-8 w-8 md:w-auto md:min-h-8 md:px-2 rounded-md md:border md:border-border/60 md:text-muted-foreground transition-colors hover:bg-accent/60 md:hover:bg-accent/40 md:hover:text-foreground shrink-0"
+                className="inline-flex items-center justify-center h-8 w-8 md:w-auto md:min-h-8 md:px-2 rounded-md md:border md:border-border/60 transition-colors hover:bg-accent/60 md:hover:bg-accent/40 shrink-0"
                 title="More options"
                 data-testid="button-planner-overflow-menu"
               >
-                <img src={thaAppleSrc} alt="" className="h-[32px] w-[32px] object-contain md:hidden" aria-hidden="true" />
-                <MoreHorizontal className="h-3.5 w-3.5 hidden md:block" />
+                <img src={thaAppleSrc} alt="" className="h-7 w-7 object-contain" aria-hidden="true" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
