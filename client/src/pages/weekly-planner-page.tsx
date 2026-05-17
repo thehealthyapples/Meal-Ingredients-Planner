@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -1401,7 +1402,7 @@ export default function WeeklyPlannerPage() {
             />
           ) : (
             <Select value={activeWeek} onValueChange={setActiveWeek}>
-              <SelectTrigger className="w-32 h-8 text-sm" data-testid="tabs-weeks">
+              <SelectTrigger className="w-28 sm:w-32 h-8 text-sm" data-testid="tabs-weeks">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1427,16 +1428,20 @@ export default function WeeklyPlannerPage() {
             </button>
           )}
           <div className="h-4 w-px bg-border" />
+          {/* Mobile: THA apple hub trigger */}
+          <button
+            className="flex items-center justify-center h-8 w-8 rounded-lg transition-colors hover:bg-accent/60 shrink-0 md:hidden"
+            onClick={() => setMobileAssistantOpen(true)}
+            aria-label="Planner assistant"
+            data-testid="button-mobile-assistant-hub"
+          >
+            <img src={thaAppleSrc} alt="" className="h-[32px] w-[32px] object-contain" aria-hidden="true" />
+          </button>
+          {/* Desktop: Smart planner trigger */}
           <Button
             size="sm"
-            className="px-2.5 text-xs"
-            onClick={() => {
-              if (window.innerWidth < 768) {
-                setMobileAssistantOpen(true);
-              } else {
-                setAssistantMode("smart");
-              }
-            }}
+            className="hidden md:inline-flex px-2.5 text-xs"
+            onClick={() => setAssistantMode("smart")}
             disabled={smartLoading}
             data-testid="button-plan-my-week"
           >

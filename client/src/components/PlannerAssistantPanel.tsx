@@ -1468,7 +1468,10 @@ export function PlannerAssistantPanel({
             </button>
           </div>
           <div className="w-full h-px bg-border shrink-0" />
-          <div className="flex-1 overflow-y-auto min-h-0 px-4 pb-6 pt-3">
+          <div
+            className="flex-1 overflow-y-auto min-h-0 px-4 pt-3"
+            style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}
+          >
             {mode ? panelContent : hubContent}
           </div>
         </DrawerContent>
