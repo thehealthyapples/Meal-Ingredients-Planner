@@ -693,7 +693,7 @@ function ResolveContent({ mealName, dayName, slotLabel, onSearch, onAction }: Re
           onClick={() => onAction("scan")}
           data-testid="button-resolve-scan"
         >
-          <ScanLine className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <Camera className="h-4 w-4 shrink-0 text-muted-foreground" />
           Scan recipe
         </button>
         <button
@@ -785,7 +785,7 @@ function PlaceholderReviewContent({
               title="Scan recipe"
               data-testid={`button-review-scan-${item.entryId}`}
             >
-              <ScanLine className="h-3 w-3" />
+              <Camera className="h-3 w-3" />
             </button>
             {onImportRecipe && (
               <button
@@ -891,30 +891,30 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
           <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${planWeekOpen ? "" : "-rotate-90"}`} />
         </button>
         {planWeekOpen && (
-          <div className="space-y-0.5 pb-2" data-testid="section-plan-week-body">
+          <div className="flex gap-1.5 pb-2" data-testid="section-plan-week-body">
             <button
-              className="w-full flex items-center gap-2 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2 text-sm text-foreground transition-colors text-left"
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card/80 hover:bg-accent/50 px-2 py-2.5 text-foreground transition-colors"
               onClick={() => onSetMode("smart")}
               data-testid="button-idle-smart"
             >
-              <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" />
-              Smart planner
+              <Sparkles className="h-4 w-4 text-primary/70" />
+              <span className="text-[11px] font-medium">Smart</span>
             </button>
             <button
-              className="w-full flex items-center gap-2 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2 text-sm text-foreground transition-colors text-left"
-              onClick={() => onSetMode("templates")}
-              data-testid="button-idle-templates"
-            >
-              <LayoutGrid className="h-4 w-4 shrink-0 text-muted-foreground" />
-              Templates
-            </button>
-            <button
-              className="w-full flex items-center gap-2 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2 text-sm text-foreground transition-colors text-left"
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card/80 hover:bg-accent/50 px-2 py-2.5 text-foreground transition-colors"
               onClick={() => onSetMode("scan")}
               data-testid="button-idle-scan"
             >
-              <ScanLine className="h-4 w-4 shrink-0 text-muted-foreground" />
-              Scan planner
+              <Camera className="h-4 w-4 text-primary/70" />
+              <span className="text-[11px] font-medium">Scan</span>
+            </button>
+            <button
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card/80 hover:bg-accent/50 px-2 py-2.5 text-foreground transition-colors"
+              onClick={() => onSetMode("templates")}
+              data-testid="button-idle-templates"
+            >
+              <LayoutGrid className="h-4 w-4 text-primary/70" />
+              <span className="text-[11px] font-medium">Templates</span>
             </button>
           </div>
         )}
@@ -1248,7 +1248,7 @@ export function PlannerAssistantPanel({
   if (!mode) {
     return (
       <aside
-        className="shrink-0 w-72 sticky top-20 self-start border border-border rounded-xl bg-card flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+        className="shrink-0 w-72 sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
         data-testid="panel-planner-assistant-idle"
       >
         <div className="flex items-center px-4 pt-4 pb-3 shrink-0">
@@ -1464,7 +1464,7 @@ export function PlannerAssistantPanel({
 
   return (
     <aside
-      className="shrink-0 w-72 sticky top-20 self-start border border-border rounded-xl bg-card flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+      className="shrink-0 w-72 sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
       data-testid="panel-planner-assistant"
     >
       <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">

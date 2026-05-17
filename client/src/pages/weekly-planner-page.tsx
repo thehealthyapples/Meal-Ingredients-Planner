@@ -1428,17 +1428,6 @@ export default function WeeklyPlannerPage() {
           <div className="h-4 w-px bg-border" />
           <Button
             size="sm"
-            variant="outline"
-            className="px-2.5 text-xs"
-            onClick={() => setAssistantMode("scan")}
-            data-testid="button-planner-scan-primary"
-            title="Photograph your paper planner"
-          >
-            <Camera className="h-3 w-3 mr-1" />
-            Scan
-          </Button>
-          <Button
-            size="sm"
             className="px-2.5 text-xs"
             onClick={() => setAssistantMode("smart")}
             disabled={smartLoading}
@@ -1450,10 +1439,6 @@ export default function WeeklyPlannerPage() {
           <Button size="sm" variant="outline" className="px-2.5 text-xs" onClick={() => setCreateMealOpen(true)} data-testid="button-create-meal">
             <Utensils className="h-3 w-3 mr-1" />
             Create Meal
-          </Button>
-          <Button size="sm" variant="outline" className="px-2.5 text-xs" onClick={() => setAssistantMode("templates")} data-testid="button-open-templates">
-            <LayoutGrid className="h-3 w-3 mr-1" />
-            Templates
           </Button>
           <Button size="sm" variant="outline" className="px-2.5 text-xs" onClick={addAllToBasket} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
             <ShoppingBasket className="h-3 w-3 mr-1" />
@@ -1481,6 +1466,15 @@ export default function WeeklyPlannerPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={() => setAssistantMode("scan")} data-testid="button-planner-scan-overflow">
+                <Camera className="h-4 w-4 mr-2" />
+                Scan planner
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setAssistantMode("templates")} data-testid="button-open-templates">
+                <LayoutGrid className="h-4 w-4 mr-2" />
+                Templates
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setAssistantMode("settings")} data-testid="button-planner-settings">
                 <Settings className="h-4 w-4 mr-2" />
                 Options
