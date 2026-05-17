@@ -1073,24 +1073,26 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                   </p>
                   <div className="space-y-2">
                     {shoppingItems.map(item => (
-                      <div key={item.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 transition-opacity ${!item.include ? "opacity-60" : ""}`}>
-                        <Checkbox
-                          checked={item.include}
-                          onCheckedChange={v => updateShoppingItem(item.id, "include", !!v)}
-                          aria-label={`Include ${item.label}`}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <Input
-                            value={item.label}
-                            onChange={e => updateShoppingItem(item.id, "label", e.target.value)}
-                            placeholder="Item name"
-                            disabled={!item.include}
-                            className="h-7 text-xs"
+                      <div key={item.id} className={`rounded-lg border px-3 py-2 transition-opacity ${!item.include ? "opacity-60" : ""}`}>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={item.include}
+                            onCheckedChange={v => updateShoppingItem(item.id, "include", !!v)}
+                            aria-label={`Include ${item.label}`}
                           />
+                          <div className="flex-1 min-w-0">
+                            <Input
+                              value={item.label}
+                              onChange={e => updateShoppingItem(item.id, "label", e.target.value)}
+                              placeholder="Item name"
+                              disabled={!item.include}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                          {item.confidence === "low" && (
+                            <Badge variant="outline" className="text-xs border-yellow-400 text-yellow-700 dark:text-yellow-400 shrink-0">Check</Badge>
+                          )}
                         </div>
-                        {item.confidence === "low" && (
-                          <Badge variant="outline" className="text-xs border-yellow-400 text-yellow-700 dark:text-yellow-400 shrink-0">Check</Badge>
-                        )}
                       </div>
                     ))}
                   </div>
