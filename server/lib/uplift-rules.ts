@@ -713,6 +713,473 @@ export const UPLIFT_RULES: UpliftRule[] = [
     reviewedAt: '2026-05-01',
   },
 
+  // ── FISH DISHES ────────────────────────────────────────────────────────────────
+
+  {
+    id: 'salmon-seeds-greens',
+    name: 'Salmon — seeds and leafy greens',
+    trigger: {
+      mealNamePattern: ['salmon'],
+      ingredientPattern: ['salmon fillet', 'salmon steak', 'smoked salmon'],
+    },
+    suggestions: [
+      {
+        ingredient: 'mixed seeds',
+        action: 'add',
+        quantity: '1 tbsp',
+        why: 'Adds healthy fats, plant protein, and texture. Sprinkle over before serving.',
+        evidenceTopic: 'seeds-omega-fatty-acids',
+        learnMoreSlug: 'seeds-in-cooking',
+      },
+      {
+        ingredient: 'steamed broccoli or spinach',
+        action: 'add',
+        quantity: 'a portion',
+        why: 'Adds folate, fibre, and plant variety alongside the omega-3s in salmon.',
+        evidenceTopic: 'cruciferous-micronutrients',
+        learnMoreSlug: 'greens-benefits',
+      },
+    ],
+    nutritionTags: ['healthy-fat', 'micronutrient', 'fibre'],
+    confidence: 'high',
+    priority: 10,
+    reviewedAt: '2026-05-17',
+  },
+
+  {
+    id: 'fish-cakes-salad-side',
+    name: 'Fish cakes — green salad and yoghurt dip',
+    trigger: {
+      mealNamePattern: ['fish cake', 'fishcake', 'fish cakes'],
+    },
+    suggestions: [
+      {
+        ingredient: 'dressed green salad',
+        action: 'add',
+        why: 'A simple side that adds fibre, micronutrients, and plant variety to the meal.',
+        evidenceTopic: 'leafy-green-micronutrients',
+        learnMoreSlug: 'greens-benefits',
+      },
+      {
+        ingredient: 'natural yoghurt dip',
+        action: 'add',
+        quantity: '2 tbsp',
+        why: 'A lighter alternative to tartare sauce that adds gut-friendly fermented dairy.',
+        evidenceTopic: 'fermented-dairy-gut',
+        learnMoreSlug: 'fermented-foods',
+      },
+    ],
+    nutritionTags: ['fibre', 'micronutrient', 'fermented'],
+    excludedDietTypes: ['vegan', 'dairy-free'],
+    confidence: 'high',
+    priority: 10,
+    reviewedAt: '2026-05-17',
+  },
+
+  {
+    id: 'fish-pie-veg',
+    name: 'Fish pie — peas and sweet potato topping',
+    trigger: {
+      mealNamePattern: ['fish pie'],
+    },
+    suggestions: [
+      {
+        ingredient: 'frozen peas',
+        action: 'add',
+        quantity: 'a handful into filling',
+        why: 'Adds fibre and plant protein. Stirs easily into the filling before baking.',
+        evidenceTopic: 'legume-fibre',
+        learnMoreSlug: 'fibre-and-gut-diversity',
+      },
+      {
+        ingredient: 'sweet potato mash topping',
+        action: 'swap',
+        why: 'Swapping half the mash for sweet potato adds beta-carotene and a natural sweetness.',
+        evidenceTopic: 'beta-carotene-micronutrients',
+        learnMoreSlug: 'sweet-potato-benefits',
+      },
+    ],
+    nutritionTags: ['fibre', 'micronutrient'],
+    confidence: 'high',
+    priority: 10,
+    reviewedAt: '2026-05-17',
+  },
+
+  {
+    id: 'tuna-pasta-wholemeal-peas',
+    name: 'Tuna pasta — wholemeal swap and peas',
+    trigger: {
+      mealNamePattern: ['tuna pasta', 'tuna bake', 'tuna melt'],
+    },
+    suggestions: [
+      {
+        ingredient: 'wholemeal pasta',
+        action: 'swap',
+        why: 'Adds fibre and can help maintain more sustained energy levels.',
+        evidenceTopic: 'wholegrain-fibre',
+        learnMoreSlug: 'wholegrain-swaps',
+      },
+      {
+        ingredient: 'frozen peas',
+        action: 'add',
+        quantity: 'a handful',
+        why: 'Adds fibre and plant protein. Stirs easily into tuna pasta.',
+        evidenceTopic: 'legume-fibre',
+        learnMoreSlug: 'fibre-and-gut-diversity',
+      },
+    ],
+    nutritionTags: ['fibre', 'protein', 'wholefood-swap'],
+    confidence: 'high',
+    priority: 10,
+    reviewedAt: '2026-05-17',
+  },
+
+  {
+    id: 'white-fish-veg-boost',
+    name: 'White fish — vegetables and lemon boost',
+    trigger: {
+      mealNamePattern: ['cod', 'haddock', 'pollock', 'fish finger', 'fish bake', 'battered fish', 'breaded fish', 'fish and chips'],
+      ingredientPattern: ['cod fillet', 'haddock fillet', 'pollock fillet'],
+    },
+    suggestions: [
+      {
+        ingredient: 'frozen peas or mushy peas',
+        action: 'add',
+        quantity: 'a portion',
+        why: 'Adds fibre and plant variety. A natural pairing with white fish dishes.',
+        evidenceTopic: 'legume-fibre',
+        learnMoreSlug: 'fibre-and-gut-diversity',
+      },
+      {
+        ingredient: 'lemon juice',
+        action: 'add',
+        quantity: 'a squeeze',
+        why: 'Adds vitamin C and brightens the flavour. Vitamin C can support iron absorption from any greens served alongside.',
+        evidenceTopic: 'vitamin-c-iron-absorption',
+        learnMoreSlug: 'vitamin-c-benefits',
+      },
+    ],
+    nutritionTags: ['fibre', 'micronutrient'],
+    confidence: 'high',
+    priority: 20,
+    reviewedAt: '2026-05-17',
+  },
+
+  // ── CASSEROLES / STEWS ─────────────────────────────────────────────────────────
+
+  {
+    id: 'casserole-lentil-boost',
+    name: 'Casserole — red lentils and beans',
+    trigger: {
+      mealNamePattern: ['casserole', 'hotpot', 'hot pot', 'stew'],
+    },
+    suggestions: [
+      {
+        ingredient: 'red lentils',
+        action: 'add',
+        quantity: '3 tbsp',
+        why: 'Blend naturally into casseroles and stews, adding fibre and plant protein without changing the flavour.',
+        evidenceTopic: 'legume-protein-fibre',
+        learnMoreSlug: 'hidden-lentils',
+      },
+      {
+        ingredient: 'cannellini beans',
+        action: 'add',
+        quantity: 'half a tin',
+        why: 'Adds fibre, protein, and bulk. Works well in most meat and vegetable casseroles.',
+        evidenceTopic: 'legume-fibre',
+        learnMoreSlug: 'beans-in-stews',
+      },
+    ],
+    nutritionTags: ['fibre', 'protein', 'gut-diversity'],
+    confidence: 'high',
+    priority: 10,
+    reviewedAt: '2026-05-17',
+  },
+
+  // ── PIE-STYLE MEALS ────────────────────────────────────────────────────────────
+
+  {
+    id: 'cottage-pie-hidden-veg',
+    name: "Cottage / shepherd's pie — hidden veg and lentils",
+    trigger: {
+      mealNamePattern: ['cottage pie', "shepherd's pie", 'shepherds pie', 'shepherd pie'],
+    },
+    suggestions: [
+      {
+        ingredient: 'red lentils',
+        action: 'add',
+        quantity: '3 tbsp into mince',
+        why: 'Blend invisibly into the mince filling, adding fibre and plant protein.',
+        evidenceTopic: 'legume-protein-fibre',
+        learnMoreSlug: 'hidden-lentils',
+      },
+      {
+        ingredient: 'grated courgette or carrot',
+        action: 'add',
+        quantity: '1 medium, grated',
+        why: 'Adds hidden vegetable variety and plant fibre. Moisture is absorbed during cooking.',
+        evidenceTopic: 'vegetable-fibre-variety',
+        learnMoreSlug: 'hidden-veg',
+      },
+    ],
+    nutritionTags: ['fibre', 'protein', 'gut-diversity'],
+    confidence: 'high',
+    priority: 10,
+    reviewedAt: '2026-05-17',
+  },
+
+  // ── ROAST DINNERS ─────────────────────────────────────────────────────────────
+
+  {
+    id: 'roast-dinner-extras',
+    name: 'Roast dinner — fermented side and root veg variety',
+    trigger: {
+      mealNamePattern: ['roast beef', 'roast pork', 'roast lamb', 'roast chicken', 'roast turkey', 'sunday roast', 'roast dinner'],
+    },
+    suggestions: [
+      {
+        ingredient: 'sauerkraut or kimchi',
+        action: 'add',
+        quantity: '1 tbsp as a side',
+        why: 'A small fermented side adds gut-friendly bacteria variety alongside a roast meal.',
+        evidenceTopic: 'fermented-vegetables-gut',
+        learnMoreSlug: 'fermented-foods',
+      },
+      {
+        ingredient: 'extra root veg',
+        action: 'add',
+        quantity: 'add one more variety',
+        why: 'Adding parsnips, swede, or celeriac alongside usual roast veg increases plant variety.',
+        evidenceTopic: 'vegetable-diversity',
+        learnMoreSlug: 'plant-diversity',
+      },
+    ],
+    nutritionTags: ['fermented', 'gut-diversity', 'fibre'],
+    confidence: 'high',
+    priority: 15,
+    reviewedAt: '2026-05-17',
+  },
+
+  // ── BEAN / VEGETARIAN FAMILY MEALS ────────────────────────────────────────────
+
+  {
+    id: 'chilli-extra-beans',
+    name: 'Chilli — extra beans and dark chocolate',
+    trigger: {
+      mealNamePattern: ['chilli', 'chili', 'chilli con carne', 'bean chilli'],
+    },
+    suggestions: [
+      {
+        ingredient: 'extra beans',
+        action: 'add',
+        quantity: 'half a tin of black or borlotti beans',
+        why: 'Adds fibre, plant protein, and gut-feeding variety. More beans means more plant diversity.',
+        evidenceTopic: 'legume-protein-fibre',
+        learnMoreSlug: 'beans-benefits',
+      },
+      {
+        ingredient: 'dark chocolate',
+        action: 'add',
+        quantity: '1 square, stirred in',
+        why: 'A small amount deepens the flavour and adds antioxidant compounds.',
+        evidenceTopic: 'dark-chocolate-flavonoids',
+        learnMoreSlug: 'dark-chocolate-in-cooking',
+      },
+    ],
+    nutritionTags: ['fibre', 'protein', 'antioxidant', 'gut-diversity'],
+    confidence: 'high',
+    priority: 5,
+    reviewedAt: '2026-05-17',
+  },
+
+  {
+    id: 'buddha-bowl-seeds-tahini',
+    name: 'Buddha bowl — seeds and tahini dressing',
+    trigger: {
+      mealNamePattern: ['buddha bowl', 'grain bowl', 'nourish bowl', 'poke bowl', 'power bowl', 'rice bowl'],
+    },
+    suggestions: [
+      {
+        ingredient: 'mixed seeds',
+        action: 'add',
+        quantity: '1 tbsp',
+        why: 'Adds healthy fats, minerals, and plant variety. Works with virtually any bowl combination.',
+        evidenceTopic: 'seeds-omega-fatty-acids',
+        learnMoreSlug: 'seeds-in-salads',
+      },
+      {
+        ingredient: 'tahini dressing',
+        action: 'add',
+        quantity: '1 tbsp tahini with lemon juice',
+        why: 'Adds calcium, healthy fats, and a nutty flavour. A simple protein-rich dressing.',
+        evidenceTopic: 'tahini-calcium-fat',
+        learnMoreSlug: 'tahini-benefits',
+      },
+    ],
+    nutritionTags: ['healthy-fat', 'micronutrient', 'protein'],
+    confidence: 'high',
+    priority: 10,
+    reviewedAt: '2026-05-17',
+  },
+
+  {
+    id: 'lentil-dish-fermented',
+    name: 'Lentil dishes — yoghurt and cumin',
+    trigger: {
+      mealNamePattern: ['lentil', 'red lentil', 'green lentil', 'puy lentil'],
+    },
+    suggestions: [
+      {
+        ingredient: 'natural yoghurt',
+        action: 'add',
+        quantity: '2 tbsp',
+        why: 'A cooling fermented side that adds gut-friendly bacteria and balances earthy lentil flavours.',
+        evidenceTopic: 'fermented-dairy-gut',
+        learnMoreSlug: 'fermented-foods',
+      },
+      {
+        ingredient: 'cumin seeds',
+        action: 'add',
+        quantity: '½ tsp, toasted',
+        why: 'Toasted cumin adds warmth and is traditionally paired with lentils across many cuisines.',
+        evidenceTopic: 'spice-digestive-support',
+        learnMoreSlug: 'spices-and-digestion',
+      },
+    ],
+    nutritionTags: ['fermented', 'gut-diversity', 'micronutrient'],
+    excludedDietTypes: ['vegan', 'dairy-free'],
+    confidence: 'medium',
+    priority: 20,
+    reviewedAt: '2026-05-17',
+  },
+
+  // ── MINCE / HOMEMADE DINNERS ──────────────────────────────────────────────────
+
+  {
+    id: 'mince-hidden-veg',
+    name: 'Mince dishes — hidden veg and lentils',
+    trigger: {
+      mealNamePattern: ['meatball', 'meat ball', 'meat balls'],
+      ingredientPattern: ['beef mince', 'pork mince', 'lamb mince', 'turkey mince', 'chicken mince', 'minced beef', 'minced pork', 'minced lamb'],
+    },
+    suggestions: [
+      {
+        ingredient: 'grated carrot or courgette',
+        action: 'add',
+        quantity: '1 medium, grated',
+        why: 'Blends into mince during cooking, adding hidden vegetable variety and fibre.',
+        evidenceTopic: 'vegetable-fibre-variety',
+        learnMoreSlug: 'hidden-veg',
+      },
+      {
+        ingredient: 'red lentils',
+        action: 'add',
+        quantity: '3 tbsp',
+        why: 'Blend invisibly into mince, extending the meal while adding fibre and plant protein.',
+        evidenceTopic: 'legume-protein-fibre',
+        learnMoreSlug: 'hidden-lentils',
+      },
+    ],
+    nutritionTags: ['fibre', 'protein', 'gut-diversity'],
+    confidence: 'high',
+    priority: 15,
+    reviewedAt: '2026-05-17',
+  },
+
+  {
+    id: 'homemade-burger-greens',
+    name: 'Burger — wholemeal bun and salad',
+    trigger: {
+      mealNamePattern: ['burger', 'beefburger', 'chicken burger', 'veggie burger'],
+    },
+    suggestions: [
+      {
+        ingredient: 'wholemeal bun',
+        action: 'swap',
+        why: 'Adds fibre and can help make the meal more filling.',
+        evidenceTopic: 'wholegrain-fibre',
+        learnMoreSlug: 'wholegrain-swaps',
+      },
+      {
+        ingredient: 'extra salad leaves',
+        action: 'add',
+        quantity: 'a handful in the bun',
+        why: 'Adds folate, plant variety, and crunch with minimal effort.',
+        evidenceTopic: 'leafy-green-micronutrients',
+        learnMoreSlug: 'greens-benefits',
+      },
+    ],
+    nutritionTags: ['fibre', 'micronutrient', 'wholefood-swap'],
+    confidence: 'high',
+    priority: 10,
+    reviewedAt: '2026-05-17',
+  },
+
+  // ── NOODLES ────────────────────────────────────────────────────────────────────
+
+  {
+    id: 'noodles-greens-egg',
+    name: 'Noodles — pak choi and soft-boiled egg',
+    trigger: {
+      mealNamePattern: ['noodle', 'ramen', 'udon', 'soba', 'pad thai', 'chow mein', 'chicken noodle'],
+    },
+    suggestions: [
+      {
+        ingredient: 'pak choi or bok choy',
+        action: 'add',
+        quantity: '1–2 leaves, sliced',
+        why: 'A quick-cooking cruciferous green that adds fibre, vitamin C, and plant variety.',
+        evidenceTopic: 'cruciferous-micronutrients',
+        learnMoreSlug: 'cruciferous-vegetables',
+      },
+      {
+        ingredient: 'soft-boiled egg',
+        action: 'add',
+        quantity: '1 egg',
+        why: 'Adds protein and micronutrients. A simple addition that works with most noodle dishes.',
+        evidenceTopic: 'egg-protein-nutrients',
+        learnMoreSlug: 'eggs-in-cooking',
+      },
+    ],
+    nutritionTags: ['micronutrient', 'protein', 'fibre'],
+    confidence: 'high',
+    priority: 5,
+    reviewedAt: '2026-05-17',
+  },
+
+  // ── OMELETTE ──────────────────────────────────────────────────────────────────
+
+  {
+    id: 'omelette-veg-seeds',
+    name: 'Omelette — wilted greens and seeds',
+    trigger: {
+      mealNamePattern: ['omelette', 'omelet', 'frittata'],
+    },
+    suggestions: [
+      {
+        ingredient: 'spinach or rocket',
+        action: 'add',
+        quantity: 'a handful, wilted in',
+        why: 'Adds iron, folate, and plant variety. Wilts easily into a hot omelette.',
+        evidenceTopic: 'leafy-green-micronutrients',
+        learnMoreSlug: 'greens-in-eggs',
+      },
+      {
+        ingredient: 'mixed seeds',
+        action: 'add',
+        quantity: '1 tsp, sprinkled over',
+        why: 'Adds healthy fats and plant variety as a simple finishing touch.',
+        evidenceTopic: 'seeds-omega-fatty-acids',
+        learnMoreSlug: 'seeds-in-cooking',
+      },
+    ],
+    nutritionTags: ['micronutrient', 'healthy-fat', 'fibre'],
+    confidence: 'high',
+    priority: 10,
+    reviewedAt: '2026-05-17',
+  },
+
   // ── UNREVIEWED EXAMPLE ────────────────────────────────────────────────────────
   // This rule has no reviewedAt and must be silently excluded from production matching.
 
