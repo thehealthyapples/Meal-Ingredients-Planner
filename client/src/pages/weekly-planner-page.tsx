@@ -149,6 +149,7 @@ export default function WeeklyPlannerPage() {
   const [renameValue, setRenameValue] = useState("");
   const [clearWeekId, setClearWeekId] = useState<number | null>(null);
   const [createMealOpen, setCreateMealOpen] = useState(false);
+  const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<EntryTarget | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [sharePlanOpen, setSharePlanOpen] = useState(false);
@@ -1429,14 +1430,20 @@ export default function WeeklyPlannerPage() {
           <Button
             size="sm"
             className="px-2.5 text-xs"
-            onClick={() => setAssistantMode("smart")}
+            onClick={() => {
+              if (window.innerWidth < 768) {
+                setMobileAssistantOpen(true);
+              } else {
+                setAssistantMode("smart");
+              }
+            }}
             disabled={smartLoading}
             data-testid="button-plan-my-week"
           >
             {smartLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
             {smartLoading ? "Planning…" : "Plan"}
           </Button>
-          <Button size="sm" variant="outline" className="px-2.5 text-xs" onClick={() => setCreateMealOpen(true)} data-testid="button-create-meal">
+          <Button size="sm" variant="outline" className="hidden md:inline-flex px-2.5 text-xs" onClick={() => setCreateMealOpen(true)} data-testid="button-create-meal">
             <Utensils className="h-3 w-3 mr-1" />
             Create Meal
           </Button>
@@ -2138,6 +2145,7 @@ export default function WeeklyPlannerPage() {
           if (plannerScanOpen) handlePlannerScanOpenChange(false);
           setResolveTarget(null);
           setAssistantMode(null);
+          setMobileAssistantOpen(false);
         }}
         reviewContent={
           assistantMode === "smart-review" ? (
@@ -2208,6 +2216,12 @@ export default function WeeklyPlannerPage() {
         onBrowseRecipes={() => navigate("/meals")}
         onBuildRecipe={() => setCreateMealOpen(true)}
         onScanRecipe={() => navigate("/meals?openScan=1")}
+        mobileOpen={mobileAssistantOpen}
+        onBackToHub={() => {
+          if (plannerScanOpen) handlePlannerScanOpenChange(false);
+          setResolveTarget(null);
+          setAssistantMode(null);
+        }}
       />
       </div>{/* end flex gap-3 */}
       <DragOverlay dropAnimation={null}>

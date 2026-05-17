@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, ExternalLink } from "lucide-react";
 import { DraggableProposalCard } from "@/components/PlannerDragDrop";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -85,6 +85,10 @@ interface PlannerAssistantPanelProps {
   onBrowseRecipes?: () => void;
   onBuildRecipe?: () => void;
   onScanRecipe?: () => void;
+  /** Mobile drawer: open the assistant hub (idle state) on mobile */
+  mobileOpen?: boolean;
+  /** Mobile drawer: go back to the hub without closing the drawer */
+  onBackToHub?: () => void;
 }
 
 function useIsMobile() {
@@ -1228,6 +1232,8 @@ export function PlannerAssistantPanel({
   onBrowseRecipes,
   onBuildRecipe,
   onScanRecipe,
+  mobileOpen = false,
+  onBackToHub,
 }: PlannerAssistantPanelProps) {
   const isMobile = useIsMobile();
   const [resolveSubview, setResolveSubview] = useState<"menu" | "search">("menu");
@@ -1241,49 +1247,17 @@ export function PlannerAssistantPanel({
     if (mode !== "placeholder-review") setReviewSearchTarget(null);
   }, [mode]);
 
-  // On mobile, hide the panel when idle (sheet only opens when a mode is active)
-  if (!mode && isMobile) return null;
-
-  // On desktop, show persistent idle state when no mode is active
-  if (!mode) {
-    return (
-      <aside
-        className="shrink-0 w-64 sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
-        data-testid="panel-planner-assistant-idle"
-      >
-        <div className="flex items-center px-3 pt-3 pb-2.5 shrink-0">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            <Lightbulb className="h-4 w-4 text-primary" />
-            Planner Assistant
-          </h3>
-        </div>
-        <div className="w-full h-px bg-border shrink-0" />
-        <div className="flex-1 overflow-y-auto min-h-0 px-2.5 pb-3 pt-2.5">
-          {onSetMode ? (
-            <IdlePanelContent
-              onSetMode={onSetMode}
-              onCreateIntent={onCreateIntent}
-              selectedDayLabel={selectedDayLabel}
-              placeholderCount={placeholderItems.length}
-              onBrowseRecipes={onBrowseRecipes}
-              onBuildRecipe={onBuildRecipe}
-              onScanRecipe={onScanRecipe}
-            />
-          ) : (
-            <p className="text-xs text-muted-foreground">Select a mode to get started.</p>
-          )}
-        </div>
-      </aside>
-    );
-  }
-
+  // Compute title/icon for the active-mode states (used by both mobile Drawer and desktop aside)
   const isSearchSubview =
     (mode === "resolve" && resolveSubview === "search") ||
     (mode === "placeholder-review" && reviewSearchTarget !== null);
 
-  const titleLabel = isSearchSubview ? "Search Recipes" : getPanelTitle(mode, dayViewLabel);
-  const titleIcon = isSearchSubview ? <Search className="h-4 w-4 text-primary" /> : getPanelIcon(mode);
+  const activeTitleLabel = isSearchSubview ? "Search Recipes" : getPanelTitle(mode, dayViewLabel);
+  const activeTitleIcon = isSearchSubview
+    ? <Search className="h-4 w-4 text-primary" />
+    : getPanelIcon(mode);
 
+  // Panel content (mode-specific; safe to compute when mode is null — all checks are mode === X)
   const panelContent = (
     <>
       {mode === "scan" && (
@@ -1434,19 +1408,56 @@ export function PlannerAssistantPanel({
     </>
   );
 
+  // ── Mobile: vaul Drawer replaces Radix Sheet ─────────────────────────────
   if (isMobile) {
+    const drawerOpen = !!(mobileOpen || mode);
+    const drawerTitle = mode ? activeTitleLabel : "Planner Assistant";
+    const drawerIcon = mode
+      ? activeTitleIcon
+      : <Lightbulb className="h-4 w-4 text-primary" />;
+
+    const hubContent = onSetMode ? (
+      <IdlePanelContent
+        onSetMode={onSetMode}
+        onCreateIntent={onCreateIntent}
+        selectedDayLabel={selectedDayLabel}
+        placeholderCount={placeholderItems.length}
+        onBrowseRecipes={onBrowseRecipes}
+        onBuildRecipe={onBuildRecipe}
+        onScanRecipe={onScanRecipe}
+      />
+    ) : (
+      <p className="text-xs text-muted-foreground">Select a mode to get started.</p>
+    );
+
     return (
-      <Sheet open={true} onOpenChange={(v) => { if (!v) onClose(); }}>
-        <SheetContent
-          side="bottom"
-          className="rounded-t-2xl px-4 pb-6 pt-5 h-auto max-h-[85vh] overflow-y-auto"
-          data-testid="sheet-planner-assistant"
+      <Drawer
+        open={drawerOpen}
+        onOpenChange={(v) => { if (!v) onClose(); }}
+        shouldScaleBackground={false}
+      >
+        <DrawerContent
+          className="flex flex-col max-h-[75vh]"
+          data-testid="drawer-planner-assistant"
         >
-          <SheetHeader className="flex-row items-center justify-between mb-4 space-y-0">
-            <SheetTitle className="text-base flex items-center gap-2">
-              {titleIcon}
-              {titleLabel}
-            </SheetTitle>
+          {/* Header — drag handle is rendered inside DrawerContent automatically above this */}
+          <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0">
+            <div className="flex items-center gap-1.5">
+              {mode && onBackToHub && (
+                <button
+                  onClick={onBackToHub}
+                  className="rounded-md p-1 -ml-1 hover:bg-accent/40 text-muted-foreground transition-colors"
+                  aria-label="Back to hub"
+                  data-testid="button-assistant-back"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              )}
+              <DrawerTitle className="text-sm font-semibold flex items-center gap-2">
+                {drawerIcon}
+                {drawerTitle}
+              </DrawerTitle>
+            </div>
             <button
               onClick={onClose}
               className="rounded-md p-1 hover:bg-accent/40 text-muted-foreground transition-colors"
@@ -1455,13 +1466,50 @@ export function PlannerAssistantPanel({
             >
               <X className="h-4 w-4" />
             </button>
-          </SheetHeader>
-          {panelContent}
-        </SheetContent>
-      </Sheet>
+          </div>
+          <div className="w-full h-px bg-border shrink-0" />
+          <div className="flex-1 overflow-y-auto min-h-0 px-4 pb-6 pt-3">
+            {mode ? panelContent : hubContent}
+          </div>
+        </DrawerContent>
+      </Drawer>
     );
   }
 
+  // ── Desktop: idle sidebar ─────────────────────────────────────────────────
+  if (!mode) {
+    return (
+      <aside
+        className="shrink-0 w-64 sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+        data-testid="panel-planner-assistant-idle"
+      >
+        <div className="flex items-center px-3 pt-3 pb-2.5 shrink-0">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Lightbulb className="h-4 w-4 text-primary" />
+            Planner Assistant
+          </h3>
+        </div>
+        <div className="w-full h-px bg-border shrink-0" />
+        <div className="flex-1 overflow-y-auto min-h-0 px-2.5 pb-3 pt-2.5">
+          {onSetMode ? (
+            <IdlePanelContent
+              onSetMode={onSetMode}
+              onCreateIntent={onCreateIntent}
+              selectedDayLabel={selectedDayLabel}
+              placeholderCount={placeholderItems.length}
+              onBrowseRecipes={onBrowseRecipes}
+              onBuildRecipe={onBuildRecipe}
+              onScanRecipe={onScanRecipe}
+            />
+          ) : (
+            <p className="text-xs text-muted-foreground">Select a mode to get started.</p>
+          )}
+        </div>
+      </aside>
+    );
+  }
+
+  // ── Desktop: active assistant sidebar ────────────────────────────────────
   return (
     <aside
       className="shrink-0 w-64 sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
@@ -1469,8 +1517,8 @@ export function PlannerAssistantPanel({
     >
       <div className="flex items-center justify-between px-3 pt-3 pb-2.5 shrink-0">
         <h3 className="text-sm font-semibold flex items-center gap-2">
-          {titleIcon}
-          {titleLabel}
+          {activeTitleIcon}
+          {activeTitleLabel}
         </h3>
         <button
           onClick={onClose}
