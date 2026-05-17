@@ -1428,15 +1428,16 @@ export default function WeeklyPlannerPage() {
             </button>
           )}
           <div className="h-4 w-px bg-border" />
-          {/* Mobile: THA apple hub trigger */}
-          <button
-            className="flex items-center justify-center h-8 w-8 rounded-lg transition-colors hover:bg-accent/60 shrink-0 md:hidden"
+          {/* Mobile: Plan hub trigger — standard button styling */}
+          <Button
+            size="sm"
+            className="px-2.5 text-xs md:hidden"
             onClick={() => setMobileAssistantOpen(true)}
-            aria-label="Planner assistant"
             data-testid="button-mobile-assistant-hub"
           >
-            <img src={thaAppleSrc} alt="" className="h-[32px] w-[32px] object-contain" aria-hidden="true" />
-          </button>
+            <Sparkles className="mr-1 h-3 w-3" />
+            Plan
+          </Button>
           {/* Desktop: Smart planner trigger */}
           <Button
             size="sm"
@@ -1470,11 +1471,12 @@ export default function WeeklyPlannerPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
-                className="inline-flex items-center justify-center min-h-8 px-2 rounded-md border border-border/60 text-muted-foreground hover:bg-accent/40 hover:text-foreground transition-colors"
+                className="inline-flex items-center justify-center h-8 w-8 md:w-auto md:min-h-8 md:px-2 rounded-md md:border md:border-border/60 md:text-muted-foreground transition-colors hover:bg-accent/60 md:hover:bg-accent/40 md:hover:text-foreground shrink-0"
                 title="More options"
                 data-testid="button-planner-overflow-menu"
               >
-                <MoreHorizontal className="h-3.5 w-3.5" />
+                <img src={thaAppleSrc} alt="" className="h-[32px] w-[32px] object-contain md:hidden" aria-hidden="true" />
+                <MoreHorizontal className="h-3.5 w-3.5 hidden md:block" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
