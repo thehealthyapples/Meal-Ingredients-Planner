@@ -2,6 +2,7 @@ import React from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
 import type { PlannerEntry } from "@shared/schema";
 
 // Phase 4A/4B: existing planner-entry drag data
@@ -28,13 +29,9 @@ export interface ProposalCardDragData {
 
 export type DragItemData = PlannerEntryDragData | ProposalCardDragData;
 
-export interface DropZoneData {
-  type: "planner-slot";
-  dayId: number;
-  mealType: string;
-  audience: string;
-  isDrink: boolean;
-}
+export type DropZoneData =
+  | { type: "planner-slot"; dayId: number; mealType: string; audience: string; isDrink: boolean }
+  | { type: "mobile-day-nav"; dayId: number; dayIndex: number };
 
 interface EntryProps {
   entry: PlannerEntry;
@@ -107,6 +104,7 @@ interface DroppablePlannerCellProps {
   children: React.ReactNode;
   className?: string;
   style?: React.CSSProperties;
+  idPrefix?: string;
   "data-testid"?: string;
 }
 
@@ -118,10 +116,11 @@ export function DroppablePlannerCell({
   children,
   className,
   style,
+  idPrefix = "slot",
   "data-testid": testId,
 }: DroppablePlannerCellProps) {
   const { isOver, setNodeRef } = useDroppable({
-    id: `slot-${dayId}-${mealType}-${audience}-${isDrink ? "drink" : "food"}`,
+    id: `${idPrefix}-${dayId}-${mealType}-${audience}-${isDrink ? "drink" : "food"}`,
     data: { type: "planner-slot", dayId, mealType, audience, isDrink } as DropZoneData,
   });
 
@@ -168,6 +167,110 @@ export function DraggableProposalCard({ id, name, proposedMealType, children }: 
       {...attributes}
     >
       {children}
+    </div>
+  );
+}
+
+// Mobile: sortable meal entry with a dedicated drag handle (drag activates only from handle)
+interface MobileSortableEntryProps {
+  entry: PlannerEntry;
+  dayId: number;
+  mealType: string;
+  audience: string;
+  isDrink: boolean;
+  children: React.ReactNode;
+}
+
+export function MobileSortableMealEntry({
+  entry,
+  dayId,
+  mealType,
+  audience,
+  isDrink,
+  children,
+}: MobileSortableEntryProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: `mobile-entry-${entry.id}`,
+    data: {
+      type: "planner-entry",
+      entryId: entry.id,
+      entry,
+      dayId,
+      mealType,
+      audience,
+      isDrink,
+    } as PlannerEntryDragData,
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className={`flex items-center w-full ${isDragging ? "opacity-30" : ""}`}
+    >
+      <div className="flex-1 min-w-0">{children}</div>
+      <div
+        ref={setActivatorNodeRef}
+        {...listeners}
+        className="touch-none flex-shrink-0 px-1.5 py-2 -my-1 -mr-0.5 text-muted-foreground/20 hover:text-muted-foreground/50 cursor-grab active:cursor-grabbing select-none"
+        aria-label="Drag to move meal"
+      >
+        <GripVertical className="h-4 w-4" />
+      </div>
+    </div>
+  );
+}
+
+// Mobile: droppable day-nav item used in the horizontal day row during cross-day drag
+interface MobileDayDropTargetProps {
+  dayId: number;
+  dayIndex: number;
+  isSelected: boolean;
+  label: string;
+  onClick: () => void;
+}
+
+export function MobileDayDropTarget({
+  dayId,
+  dayIndex,
+  isSelected,
+  label,
+  onClick,
+}: MobileDayDropTargetProps) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `mobile-day-nav-${dayId}`,
+    data: { type: "mobile-day-nav", dayId, dayIndex } as DropZoneData,
+  });
+
+  return (
+    <div ref={setNodeRef} className="flex-shrink-0">
+      <button
+        type="button"
+        onClick={onClick}
+        className={`px-3 py-2 rounded-lg text-xs font-semibold transition-colors min-h-[36px] min-w-[44px] text-center ${
+          isSelected
+            ? "bg-primary text-primary-foreground"
+            : isOver
+            ? "bg-primary/15 text-primary ring-1 ring-primary/30"
+            : "bg-muted/60 text-muted-foreground hover:bg-muted"
+        }`}
+      >
+        {label}
+      </button>
     </div>
   );
 }

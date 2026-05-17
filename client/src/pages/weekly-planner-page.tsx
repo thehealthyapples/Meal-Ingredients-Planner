@@ -51,15 +51,17 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
   closestCenter,
   type DragEndEvent,
   type DragStartEvent,
+  type DragOverEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { DroppablePlannerCell, SortablePlannerEntry, type DragItemData, type DropZoneData } from "@/components/PlannerDragDrop";
+import { DroppablePlannerCell, SortablePlannerEntry, MobileSortableMealEntry, MobileDayDropTarget, type DragItemData, type DropZoneData } from "@/components/PlannerDragDrop";
 
 interface MatrixRow {
   id: string;
@@ -193,6 +195,9 @@ export default function WeeklyPlannerPage() {
   } | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressMovedRef = useRef(false);
+  // Mobile cross-day drag: timer to switch day when hovering a day header during drag
+  const mobileDragDayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mobileDragDayTargetRef = useRef<number>(-1);
   const { user } = useUser();
   const [, navigate] = useLocation();
 
@@ -204,6 +209,7 @@ export default function WeeklyPlannerPage() {
     setBoostedMealIds(prev => { const next = new Set(Array.from(prev)); next.delete(mealId); return next; });
 
   const dndSensors = useSensors(
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } }),
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
@@ -855,7 +861,34 @@ export default function WeeklyPlannerPage() {
     if (data?.type === "planner-entry" || data?.type === "proposal-card") setActiveDrag(data);
   }
 
+  // Mobile: switch day when drag hovers over a day-nav button (300ms dwell to avoid accidental switches)
+  function handleDragOver(event: DragOverEvent) {
+    const overData = event.over?.data.current as (DragItemData | DropZoneData) | undefined;
+    if (overData?.type === "mobile-day-nav") {
+      const targetIdx = overData.dayIndex;
+      if (mobileDragDayTimerRef.current !== null && mobileDragDayTargetRef.current === targetIdx) return;
+      if (mobileDragDayTimerRef.current !== null) clearTimeout(mobileDragDayTimerRef.current);
+      mobileDragDayTargetRef.current = targetIdx;
+      mobileDragDayTimerRef.current = setTimeout(() => {
+        mobileDragDayTimerRef.current = null;
+        mobileDragDayTargetRef.current = -1;
+        setMobileDayIndex(targetIdx);
+      }, 300);
+    } else {
+      if (mobileDragDayTimerRef.current !== null) {
+        clearTimeout(mobileDragDayTimerRef.current);
+        mobileDragDayTimerRef.current = null;
+      }
+      mobileDragDayTargetRef.current = -1;
+    }
+  }
+
   function handleDragEnd(event: DragEndEvent) {
+    if (mobileDragDayTimerRef.current !== null) {
+      clearTimeout(mobileDragDayTimerRef.current);
+      mobileDragDayTimerRef.current = null;
+    }
+    mobileDragDayTargetRef.current = -1;
     setActiveDrag(null);
     const { active, over } = event;
     if (!over) return;
@@ -942,10 +975,34 @@ export default function WeeklyPlannerPage() {
         mealType: dropSlot.mealType,
         position: newPosition,
       });
+    } else if (overData.type === "mobile-day-nav") {
+      // Mobile: dropped directly on a day header — move to same slot on that day
+      if (dragData.type !== "planner-entry") return;
+      const targetDayId = overData.dayId;
+      if (dragData.dayId === targetDayId) return;
+      const allEntries = fullPlanner.flatMap((w) => w.days).flatMap((d) => d.entries);
+      const targetEntries = allEntries.filter(
+        (e) => e.dayId === targetDayId && e.mealType === dragData.mealType &&
+               !e.isDrink === !dragData.isDrink && e.id !== dragData.entryId,
+      );
+      const newPosition = targetEntries.length > 0 ? Math.max(...targetEntries.map((e) => e.position)) + 1 : 0;
+      movePlannerEntryMutation.mutate({
+        entryId: dragData.entryId,
+        dayId: targetDayId,
+        mealType: dragData.mealType,
+        position: newPosition,
+      });
+      const targetIdx = sortedDays.findIndex((d) => d.id === targetDayId);
+      if (targetIdx !== -1) setMobileDayIndex(targetIdx);
     }
   }
 
   function handleDragCancel() {
+    if (mobileDragDayTimerRef.current !== null) {
+      clearTimeout(mobileDragDayTimerRef.current);
+      mobileDragDayTimerRef.current = null;
+    }
+    mobileDragDayTargetRef.current = -1;
     setActiveDrag(null);
   }
 
@@ -1543,6 +1600,7 @@ export default function WeeklyPlannerPage() {
         sensors={dndSensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
@@ -1646,49 +1704,40 @@ export default function WeeklyPlannerPage() {
                 message="Tip: Long press a meal for quick actions — duplicate, repeat, freeze or remove."
                 className="mb-3"
               />
-              {/* Day navigation */}
-              <div className="flex items-center justify-between mb-3">
-                <button
-                  className="p-1.5 rounded-md hover:bg-accent/40 disabled:opacity-30 transition-colors"
-                  onClick={() => setMobileDayIndex(i => Math.max(0, i - 1))}
-                  disabled={mobileDayIndex === 0}
-                  data-testid="button-mobile-prev-day"
-                  aria-label="Previous day"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-base font-semibold" data-testid="text-mobile-day-name">
-                    {sortedDays[mobileDayIndex] ? DAY_NAMES[sortedDays[mobileDayIndex].dayOfWeek] : "-"}
-                  </span>
+              {/* Horizontal day row — also droppable for cross-day drag */}
+              <div className="mb-3">
+                <div className="flex items-center gap-1 overflow-x-auto pb-0.5 scrollbar-hide">
+                  {sortedDays.map((day, idx) => (
+                    <MobileDayDropTarget
+                      key={day.id}
+                      dayId={day.id}
+                      dayIndex={idx}
+                      isSelected={idx === mobileDayIndex}
+                      label={DAY_NAMES[day.dayOfWeek].slice(0, 3)}
+                      onClick={() => setMobileDayIndex(idx)}
+                    />
+                  ))}
                   {sortedDays[mobileDayIndex] && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <button className="p-1 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent/40" title="Day actions" data-testid="button-mobile-day-actions">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="center">
-                        <DropdownMenuItem
-                          onClick={() => { setCopyDaySourceId(sortedDays[mobileDayIndex].id); setCopyDayTargetId(""); setCopyDayOpen(true); }}
-                          data-testid="button-mobile-copy-day"
-                        >
-                          <Copy className="h-3.5 w-3.5 mr-2" />
-                          Copy this day
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div className="ml-auto flex-shrink-0 pl-1">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="p-1.5 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent/40" title="Day actions" data-testid="button-mobile-day-actions">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => { setCopyDaySourceId(sortedDays[mobileDayIndex].id); setCopyDayTargetId(""); setCopyDayOpen(true); }}
+                            data-testid="button-mobile-copy-day"
+                          >
+                            <Copy className="h-3.5 w-3.5 mr-2" />
+                            Copy this day
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   )}
                 </div>
-                <button
-                  className="p-1.5 rounded-md hover:bg-accent/40 disabled:opacity-30 transition-colors"
-                  onClick={() => setMobileDayIndex(i => Math.min(sortedDays.length - 1, i + 1))}
-                  disabled={mobileDayIndex >= sortedDays.length - 1}
-                  data-testid="button-mobile-next-day"
-                  aria-label="Next day"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
               </div>
 
               {/* Meal rows for current mobile day */}
@@ -1701,76 +1750,97 @@ export default function WeeklyPlannerPage() {
                       const RowIcon = row.icon;
                       const cellEntries = getCellEntries(mobileDay.entries, row);
                       return (
-                        <div key={row.id} className="p-3 flex flex-col gap-1.5">
+                        <DroppablePlannerCell
+                          key={row.id}
+                          dayId={mobileDay.id}
+                          mealType={row.mealType ?? row.addMealType}
+                          audience={row.audience}
+                          isDrink={row.isDrink}
+                          idPrefix="mobile-slot"
+                          className="p-3 flex flex-col gap-1.5"
+                        >
                           <div className="flex items-center gap-1.5 mb-1">
                             <RowIcon className={`h-3.5 w-3.5 flex-shrink-0 ${row.iconColor}`} />
                             <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{row.label}</span>
                           </div>
-                          {cellEntries.map((entry) => {
-                            const meal = getMeal(entry.mealId);
-                            if (!meal) return null;
-                            const isPlaceholder = meal.mealSourceType === "planner-placeholder";
-                            const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
-                            return (
-                              <button
-                                key={entry.id}
-                                className={`w-full text-left text-sm transition-colors flex items-start gap-1.5 select-none ${isPlaceholder ? "text-muted-foreground/70" : "text-foreground hover:text-primary"}`}
-                                onClick={() => {
-                                  if (isPlaceholder) {
-                                    setResolveTarget({
-                                      mealName: meal.name,
-                                      dayName: DAY_NAMES[mobileDay.dayOfWeek],
-                                      slotLabel: row.label,
-                                      entryId: entry.id,
-                                      dayId: mobileDay.id,
-                                      mealType: row.mealType ?? row.addMealType,
-                                      audience: row.audience,
-                                      isDrink: row.isDrink,
-                                      position: entry.position,
-                                    });
-                                    setAssistantMode("resolve");
-                                  } else {
-                                    setMealDetail({
-                                      entry,
-                                      meal,
-                                      dayId: mobileDay.id,
-                                      mealType: row.mealType ?? row.addMealType,
-                                      audience: row.audience,
-                                      isDrink: row.isDrink,
-                                      dayName: DAY_NAMES[mobileDay.dayOfWeek],
-                                      slotLabel: row.label,
-                                    });
-                                  }
-                                }}
-                                onTouchStart={() => {
-                                  longPressMovedRef.current = false;
-                                  longPressTimerRef.current = setTimeout(() => {
-                                    if (!longPressMovedRef.current) {
-                                      setContextEntry({ entry, meal, dayId: mobileDay.id, dayName: DAY_NAMES[mobileDay.dayOfWeek], slotLabel: row.label, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink });
-                                    }
-                                  }, 500);
-                                }}
-                                onTouchMove={() => {
-                                  longPressMovedRef.current = true;
-                                  if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
-                                }}
-                                onTouchEnd={() => {
-                                  if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
-                                }}
-                                data-testid={`button-mobile-meal-${row.id}-${entry.id}`}
-                              >
-                                <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1.5 py-0.5" : ""}`}>
-                                  <span className="leading-snug">{meal.name}</span>
-                                  {isPlaceholder
-                                    ? <span className="text-[10px] text-muted-foreground/60 italic" data-testid={`label-placeholder-mobile-${entry.id}`}>Needs recipe</span>
-                                    : <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
-                                  }
-                                </div>
-                                {isFrozen && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
-                                {basketMealIdSet.has(meal.id) && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
-                              </button>
-                            );
-                          })}
+                          <SortableContext
+                            items={cellEntries.map(e => `mobile-entry-${e.id}`)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {cellEntries.map((entry) => {
+                              const meal = getMeal(entry.mealId);
+                              if (!meal) return null;
+                              const isPlaceholder = meal.mealSourceType === "planner-placeholder";
+                              const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
+                              return (
+                                <MobileSortableMealEntry
+                                  key={entry.id}
+                                  entry={entry}
+                                  dayId={mobileDay.id}
+                                  mealType={row.mealType ?? row.addMealType}
+                                  audience={row.audience}
+                                  isDrink={row.isDrink}
+                                >
+                                  <button
+                                    className={`w-full text-left text-sm transition-colors flex items-start gap-1.5 select-none ${isPlaceholder ? "text-muted-foreground/70" : "text-foreground hover:text-primary"}`}
+                                    onClick={() => {
+                                      if (isPlaceholder) {
+                                        setResolveTarget({
+                                          mealName: meal.name,
+                                          dayName: DAY_NAMES[mobileDay.dayOfWeek],
+                                          slotLabel: row.label,
+                                          entryId: entry.id,
+                                          dayId: mobileDay.id,
+                                          mealType: row.mealType ?? row.addMealType,
+                                          audience: row.audience,
+                                          isDrink: row.isDrink,
+                                          position: entry.position,
+                                        });
+                                        setAssistantMode("resolve");
+                                      } else {
+                                        setMealDetail({
+                                          entry,
+                                          meal,
+                                          dayId: mobileDay.id,
+                                          mealType: row.mealType ?? row.addMealType,
+                                          audience: row.audience,
+                                          isDrink: row.isDrink,
+                                          dayName: DAY_NAMES[mobileDay.dayOfWeek],
+                                          slotLabel: row.label,
+                                        });
+                                      }
+                                    }}
+                                    onTouchStart={() => {
+                                      longPressMovedRef.current = false;
+                                      longPressTimerRef.current = setTimeout(() => {
+                                        if (!longPressMovedRef.current) {
+                                          setContextEntry({ entry, meal, dayId: mobileDay.id, dayName: DAY_NAMES[mobileDay.dayOfWeek], slotLabel: row.label, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink });
+                                        }
+                                      }, 500);
+                                    }}
+                                    onTouchMove={() => {
+                                      longPressMovedRef.current = true;
+                                      if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+                                    }}
+                                    onTouchEnd={() => {
+                                      if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+                                    }}
+                                    data-testid={`button-mobile-meal-${row.id}-${entry.id}`}
+                                  >
+                                    <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1.5 py-0.5" : ""}`}>
+                                      <span className="leading-snug">{meal.name}</span>
+                                      {isPlaceholder
+                                        ? <span className="text-[10px] text-muted-foreground/60 italic" data-testid={`label-placeholder-mobile-${entry.id}`}>Needs recipe</span>
+                                        : <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
+                                      }
+                                    </div>
+                                    {isFrozen && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
+                                    {basketMealIdSet.has(meal.id) && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
+                                  </button>
+                                </MobileSortableMealEntry>
+                              );
+                            })}
+                          </SortableContext>
                           <div className="flex flex-col gap-1 mt-0.5">
                             <div className="flex items-center gap-2">
                               <button
@@ -1847,7 +1917,7 @@ export default function WeeklyPlannerPage() {
                               </form>
                             )}
                           </div>
-                        </div>
+                        </DroppablePlannerCell>
                       );
                     })}
                     {/* Add day to basket */}
