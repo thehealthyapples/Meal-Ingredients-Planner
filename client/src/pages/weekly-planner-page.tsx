@@ -165,6 +165,8 @@ export default function WeeklyPlannerPage() {
   type ResolutionContext = ResolveTarget & { returnMode: "placeholder-review" | null };
   const [resolutionContext, setResolutionContext] = useState<ResolutionContext | null>(null);
   const [mobileDayIndex, setMobileDayIndex] = useState(0);
+  const [mobileQuickAdd, setMobileQuickAdd] = useState<{ dayId: number; mealType: string } | null>(null);
+  const [mobileQuickAddName, setMobileQuickAddName] = useState("");
   const [activeDrag, setActiveDrag] = useState<DragItemData | null>(null);
   // Phase 5A: planner operations state
   const [clearSlotConfirm, setClearSlotConfirm] = useState<{
@@ -210,6 +212,12 @@ export default function WeeklyPlannerPage() {
   useEffect(() => {
     return () => { if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current); };
   }, []);
+
+  // Dismiss mobile quick-add when navigating to a different day
+  useEffect(() => {
+    setMobileQuickAdd(null);
+    setMobileQuickAddName("");
+  }, [mobileDayIndex]);
 
   const { data: plannerSettings } = useQuery<{
     showCalories: boolean;
@@ -1763,19 +1771,82 @@ export default function WeeklyPlannerPage() {
                               </button>
                             );
                           })}
-                          <button
-                            className="text-xs text-muted-foreground/50 hover:text-primary transition-colors flex items-center gap-1 mt-0.5"
-                            onClick={() => openPicker({
-                              dayId: mobileDay.id,
-                              mealType: row.addMealType,
-                              audience: row.audience,
-                              isDrink: row.isDrink,
-                            })}
-                            disabled={isUpdating}
-                            data-testid={`button-mobile-add-${row.id}`}
-                          >
-                            <Plus className="h-3 w-3" /> Add {row.label}
-                          </button>
+                          <div className="flex flex-col gap-1 mt-0.5">
+                            <div className="flex items-center gap-2">
+                              <button
+                                className="text-xs text-muted-foreground/50 hover:text-primary transition-colors flex items-center gap-1"
+                                onClick={() => openPicker({
+                                  dayId: mobileDay.id,
+                                  mealType: row.addMealType,
+                                  audience: row.audience,
+                                  isDrink: row.isDrink,
+                                })}
+                                disabled={isUpdating}
+                                data-testid={`button-mobile-add-${row.id}`}
+                              >
+                                <Plus className="h-3 w-3" /> Add {row.label}
+                              </button>
+                              {!row.isDrink && (
+                                <>
+                                  <span className="text-muted-foreground/25 text-xs select-none">·</span>
+                                  <button
+                                    className="text-xs text-muted-foreground/40 hover:text-primary transition-colors"
+                                    onClick={() => {
+                                      const isOpen = mobileQuickAdd?.dayId === mobileDay.id && mobileQuickAdd?.mealType === row.addMealType;
+                                      if (isOpen) {
+                                        setMobileQuickAdd(null);
+                                        setMobileQuickAddName("");
+                                      } else {
+                                        setMobileQuickAdd({ dayId: mobileDay.id, mealType: row.addMealType });
+                                        setMobileQuickAddName("");
+                                      }
+                                    }}
+                                    data-testid={`button-mobile-name-meal-${row.id}`}
+                                  >
+                                    Name meal, recipe later
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                            {mobileQuickAdd?.dayId === mobileDay.id && mobileQuickAdd?.mealType === row.addMealType && (
+                              <form
+                                className="flex items-center gap-1.5"
+                                onSubmit={async (e) => {
+                                  e.preventDefault();
+                                  const name = mobileQuickAddName.trim();
+                                  if (!name) return;
+                                  await createPlannerIntent(name, row.addMealType, mobileDay.id);
+                                  setMobileQuickAdd(null);
+                                  setMobileQuickAddName("");
+                                }}
+                              >
+                                <Input
+                                  autoFocus
+                                  value={mobileQuickAddName}
+                                  onChange={(e) => setMobileQuickAddName(e.target.value)}
+                                  placeholder="e.g. Fish cakes"
+                                  className="h-7 text-xs flex-1 min-w-0"
+                                  data-testid={`input-mobile-name-meal-${row.id}`}
+                                />
+                                <button
+                                  type="submit"
+                                  disabled={!mobileQuickAddName.trim()}
+                                  className="h-7 w-7 flex items-center justify-center bg-primary text-primary-foreground rounded-md disabled:opacity-40 flex-shrink-0"
+                                  data-testid={`button-mobile-name-meal-submit-${row.id}`}
+                                >
+                                  <Check className="h-3 w-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => { setMobileQuickAdd(null); setMobileQuickAddName(""); }}
+                                  className="h-7 w-7 flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md flex-shrink-0"
+                                  data-testid={`button-mobile-name-meal-cancel-${row.id}`}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </form>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
