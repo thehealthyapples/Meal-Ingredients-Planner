@@ -159,21 +159,35 @@ const mobileFriendlyCollision: CollisionDetection = (args) => {
   return closestCenter(args);
 };
 
-// DragOverlay modifier: snap the overlay's vertical center to the initial touch/pointer Y so
-// the lifted card appears under the user's finger regardless of content height differences.
+// DragOverlay modifier: snap the overlay center to the initial touch/pointer position so
+// the lifted card appears under the user's finger regardless of where on the card they grabbed.
+// X is viewport-clamped so the overlay never slides off-screen when dragging to edge day tabs.
 const snapOverlayToCursor: Modifier = ({ activatorEvent, activeNodeRect, overlayNodeRect, transform }) => {
   if (!activatorEvent || !activeNodeRect) return transform;
-  let initY: number;
+  let initX: number, initY: number;
   if ("changedTouches" in activatorEvent) {
     const touch = (activatorEvent as TouchEvent).changedTouches[0];
     if (!touch) return transform;
+    initX = touch.clientX;
     initY = touch.clientY;
   } else {
+    initX = (activatorEvent as MouseEvent).clientX;
     initY = (activatorEvent as MouseEvent).clientY;
   }
+  const w = overlayNodeRect?.width ?? activeNodeRect.width;
   const h = overlayNodeRect?.height ?? activeNodeRect.height;
+  // Center on finger; clamp X so overlay stays fully inside the viewport
+  const rawX = transform.x + (initX - activeNodeRect.left - w / 2);
+  const clampedX =
+    typeof window !== "undefined"
+      ? Math.max(
+          -activeNodeRect.left,
+          Math.min(window.innerWidth - w - activeNodeRect.left, rawX),
+        )
+      : rawX;
   return {
     ...transform,
+    x: clampedX,
     y: transform.y + (initY - activeNodeRect.top - h / 2),
   };
 };
@@ -2460,7 +2474,7 @@ export default function WeeklyPlannerPage() {
       </div>{/* end flex gap-3 */}
       <DragOverlay dropAnimation={null} modifiers={[snapOverlayToCursor]}>
         {activeDrag ? (
-          <div className="flex items-center gap-2 w-full h-full bg-background border border-primary/70 rounded-lg px-3 py-2 text-sm font-medium shadow-lg opacity-90 cursor-grabbing pointer-events-none">
+          <div className="flex items-center gap-2 w-[200px] bg-background border border-primary/70 rounded-lg px-3 py-2 text-sm font-medium shadow-lg opacity-90 cursor-grabbing pointer-events-none">
             <span className="flex-1 truncate">
               {activeDrag.type === "proposal-card"
                 ? activeDrag.name
