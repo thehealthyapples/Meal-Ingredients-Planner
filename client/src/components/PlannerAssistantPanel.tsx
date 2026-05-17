@@ -891,7 +891,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
           <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${planWeekOpen ? "" : "-rotate-90"}`} />
         </button>
         {planWeekOpen && (
-          <div className="flex gap-1.5 pb-2" data-testid="section-plan-week-body">
+          <div className="flex gap-1.5 pb-1.5" data-testid="section-plan-week-body">
             <button
               className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card/80 hover:bg-accent/50 px-2 py-2.5 text-foreground transition-colors"
               onClick={() => onSetMode("smart")}
@@ -936,48 +936,48 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
           <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${addMealsOpen ? "" : "-rotate-90"}`} />
         </button>
         {addMealsOpen && (
-          <div className="pb-2" data-testid="section-add-meals-body">
-            <p className="text-[11px] text-muted-foreground/70 leading-snug mb-1.5">
+          <div className="pb-1.5" data-testid="section-add-meals-body">
+            <p className="text-[11px] text-muted-foreground/70 leading-snug mb-1">
               Start with ideas, refine recipes later.
             </p>
             <div className="space-y-0.5 mb-2">
               {onCreateIntent && (
                 <button
-                  className="w-full flex items-center gap-2 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2 text-sm text-foreground transition-colors text-left"
+                  className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
                   onClick={() => setIntentOpen(v => !v)}
                   data-testid="button-idle-add-intent"
                 >
-                  <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <Plus className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   Quick meal idea
                 </button>
               )}
               {onBrowseRecipes && (
                 <button
-                  className="w-full flex items-center gap-2 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2 text-sm text-foreground transition-colors text-left"
+                  className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
                   onClick={onBrowseRecipes}
                   data-testid="button-idle-browse-recipes"
                 >
-                  <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   Browse / import recipes
                 </button>
               )}
               {onBuildRecipe && (
                 <button
-                  className="w-full flex items-center gap-2 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2 text-sm text-foreground transition-colors text-left"
+                  className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
                   onClick={onBuildRecipe}
                   data-testid="button-idle-build-recipe"
                 >
-                  <Wand2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <Wand2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   Build from scratch
                 </button>
               )}
               {onScanRecipe && (
                 <button
-                  className="w-full flex items-center gap-2 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2 text-sm text-foreground transition-colors text-left"
+                  className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
                   onClick={onScanRecipe}
                   data-testid="button-idle-scan-recipe"
                 >
-                  <Camera className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <Camera className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   Scan recipe
                 </button>
               )}
@@ -1248,17 +1248,17 @@ export function PlannerAssistantPanel({
   if (!mode) {
     return (
       <aside
-        className="shrink-0 w-72 sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+        className="shrink-0 w-64 sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
         data-testid="panel-planner-assistant-idle"
       >
-        <div className="flex items-center px-4 pt-4 pb-3 shrink-0">
+        <div className="flex items-center px-3 pt-3 pb-2.5 shrink-0">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <Lightbulb className="h-4 w-4 text-primary" />
             Planner Assistant
           </h3>
         </div>
         <div className="w-full h-px bg-border shrink-0" />
-        <div className="flex-1 overflow-y-auto min-h-0 px-3 pb-4 pt-3">
+        <div className="flex-1 overflow-y-auto min-h-0 px-2.5 pb-3 pt-2.5">
           {onSetMode ? (
             <IdlePanelContent
               onSetMode={onSetMode}
@@ -1464,10 +1464,10 @@ export function PlannerAssistantPanel({
 
   return (
     <aside
-      className="shrink-0 w-72 sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+      className="shrink-0 w-64 sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
       data-testid="panel-planner-assistant"
     >
-      <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
+      <div className="flex items-center justify-between px-3 pt-3 pb-2.5 shrink-0">
         <h3 className="text-sm font-semibold flex items-center gap-2">
           {titleIcon}
           {titleLabel}
@@ -1482,7 +1482,7 @@ export function PlannerAssistantPanel({
         </button>
       </div>
       <div className="w-full h-px bg-border shrink-0" />
-      <div className="flex-1 overflow-y-auto min-h-0 px-3 pb-4 pt-3">
+      <div className="flex-1 overflow-y-auto min-h-0 px-2.5 pb-3 pt-2.5">
         {panelContent}
       </div>
     </aside>
