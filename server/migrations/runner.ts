@@ -1022,6 +1022,16 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-05-18_household_safe_variants",
+    statements: [
+      "ALTER TABLE meals ADD COLUMN IF NOT EXISTS is_household_safe_variant BOOLEAN NOT NULL DEFAULT FALSE",
+      "ALTER TABLE meals ADD COLUMN IF NOT EXISTS household_safe_for JSONB",
+      "ALTER TABLE planner_entries ADD COLUMN IF NOT EXISTS original_meal_id_before_variant INTEGER REFERENCES meals(id) ON DELETE SET NULL",
+      "CREATE INDEX IF NOT EXISTS meals_household_safe_variant_idx ON meals (user_id, is_household_safe_variant) WHERE is_household_safe_variant = TRUE",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

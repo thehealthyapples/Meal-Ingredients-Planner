@@ -1,5 +1,5 @@
 import { pgTable, text, serial, integer, real, boolean, unique, timestamp, varchar, index, jsonb } from "drizzle-orm/pg-core";
-import type { AdaptationResult } from "./meal-adaptation";
+import type { AdaptationResult, HouseholdSafeForSnapshot } from "./meal-adaptation";
 import type { GuestEater } from "./household-eater";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -110,6 +110,10 @@ export const meals = pgTable("meals", {
   originalMealId: integer("original_meal_id"),
   kind: text("kind").notNull().default("meal"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  /** True for AI-generated household-safe variant meals. Never true on original recipes. */
+  isHouseholdSafeVariant: boolean("is_household_safe_variant").notNull().default(false),
+  /** Restriction snapshot recorded at variant creation time. Null on all non-variant meals. */
+  householdSafeFor: jsonb("household_safe_for").$type<HouseholdSafeForSnapshot>(),
 });
 
 export const nutrition = pgTable("nutrition", {
@@ -248,6 +252,10 @@ export const insertMealSchema = createInsertSchema(meals).pick({
   brand: true,
   originalMealId: true,
   kind: true,
+  isHouseholdSafeVariant: true,
+  householdSafeFor: true,
+}).extend({
+  householdSafeFor: z.custom<HouseholdSafeForSnapshot>().nullish(),
 });
 
 export const updateMealSchema = createInsertSchema(meals).pick({
@@ -414,6 +422,8 @@ export const plannerEntries = pgTable("planner_entries", {
   adaptationResult: jsonb("adaptation_result").$type<AdaptationResult>(),
   /** One-off guest eaters for this entry only. Phase 5. */
   guestEaters: jsonb("guest_eaters").$type<GuestEater[]>(),
+  /** Original meal ID before the entry was repointed to a household-safe variant. Null if no variant accepted. */
+  originalMealIdBeforeVariant: integer("original_meal_id_before_variant"),
 });
 
 export const diets = pgTable("diets", {

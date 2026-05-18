@@ -322,6 +322,8 @@ export interface IStorage {
   getUpliftApplication(id: number): Promise<MealUpliftApplication | undefined>;
   removeUpliftApplication(id: number): Promise<MealUpliftApplication | undefined>;
   updatePlannerEntryMealId(entryId: number, mealId: number): Promise<PlannerEntry | undefined>;
+  /** Repoint a planner entry to a household-safe variant, storing the original meal ID for later revert. */
+  acceptHouseholdSafeVariant(entryId: number, variantMealId: number, originalMealId: number): Promise<void>;
 
   sessionStore: session.Store;
 }
@@ -989,6 +991,8 @@ export class DatabaseStorage implements IStorage {
       originalMealId: meals.originalMealId,
       kind: meals.kind,
       createdAt: meals.createdAt,
+      isHouseholdSafeVariant: meals.isHouseholdSafeVariant,
+      householdSafeFor: meals.householdSafeFor,
       ingredientCount: sql<number>`coalesce(array_length(${meals.ingredients}, 1), 0)`.mapWith(Number),
     };
   }
@@ -3465,6 +3469,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(plannerEntries.id, entryId))
       .returning();
     return row;
+  }
+
+  async acceptHouseholdSafeVariant(entryId: number, variantMealId: number, originalMealId: number): Promise<void> {
+    await db
+      .update(plannerEntries)
+      .set({ mealId: variantMealId, originalMealIdBeforeVariant: originalMealId })
+      .where(eq(plannerEntries.id, entryId));
   }
 }
 

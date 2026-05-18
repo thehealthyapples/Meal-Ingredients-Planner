@@ -8002,7 +8002,7 @@ Keep notes short and concrete. Never duplicate ingredients across eaters and hou
       // AI client and meal context. Failure is non-fatal — the per-eater result is still
       // returned.
       const conflictingAdaptations = adaptationResult.adaptations.filter(
-        a => a.changeType !== "none" && !a.hasNoDietaryData
+        a => a.changeType !== "none"
       );
       if (conflictingAdaptations.length > 0) {
         console.log("[ADAPT_DIAG] 12a. generating household-safe preview for", conflictingAdaptations.length, "conflicts");
@@ -8015,18 +8015,24 @@ Keep notes short and concrete. Never duplicate ingredients across eaters and hou
 
 RULES:
 - Produce ingredient-level substitutions only (no full rewrites)
-- Prioritise removing or substituting allergens/intolerances first
-- Then consider dietary patterns (vegetarian, gluten-free, etc.)
+- ALWAYS prefer substituting with a widely available alternative over removing entirely
+  - Dairy: use dairy-free cheese, oat cream, coconut cream, dairy-free butter, oat milk etc.
+  - Gluten: use gluten-free pasta, gluten-free flour, gluten-free breadcrumbs etc.
+  - Meat: use lentils, chickpeas, tofu, tempeh, jackfruit etc.
+  - Shellfish/fish: use butter beans, smoked chickpeas, or omit only if no substitute fits
+  - Eggs: use flax egg, aquafaba etc. where relevant
+- Only set replacement to null (remove entirely) if there is genuinely no suitable substitute
+- Prioritise allergens/intolerances first, then dietary patterns
 - Keep the recipe recognisable
 - Be honest about trade-offs
 
 Return a JSON object with exactly these keys:
 - accommodates: array of { eaterName: string, restriction: string } — one entry per eater whose restriction drove a change
-- ingredientChanges: array of { original: string, replacement: string|null, reason: string } — replacement is null if ingredient is removed entirely
+- ingredientChanges: array of { original: string, replacement: string|null, reason: string } — replacement is null only if ingredient must be removed with no suitable substitute
 - methodChanges: string array — practical cook-step changes (e.g. "Reduce chilli quantity by half before adding")
 - tradeoffs: string array — honest notes about what changes (e.g. "Recipe becomes vegetarian", "Milder spice profile")
 
-Keep each string short and concrete. Return {} for any array that has no entries.`;
+Keep each string short and concrete. Return [] for any array that has no entries.`;
 
           const hspUserMessage =
             `Meal: ${meal.name}\n\nIngredients:\n${ingredientList}\n\nConflicts to resolve:\n${conflictSummary}`;
@@ -8084,6 +8090,140 @@ Keep each string short and concrete. Return {} for any array that has no entries
     } catch (err: any) {
       console.error("[ADAPT_DIAG] caught error — message =", err?.message, "| status =", err?.status, "| stack =", err?.stack);
       res.status(500).json({ message: "Failed to generate adaptation — please try again" });
+    }
+  });
+
+  // ── Household-safe variant acceptance ────────────────────────────────────────
+  // Phase 1: creates a persistent, reusable meal variant from the AI preview.
+  // The original meal is never modified. The planner entry is repointed to the variant.
+
+  function applyHouseholdSafeIngredients(
+    originalIngredients: string[],
+    changes: import("@shared/meal-adaptation").HouseholdSafeIngredientChange[]
+  ): string[] {
+    const result: string[] = [];
+    const matchedIdx = new Set<number>();
+    for (const ing of originalIngredients) {
+      const ci = changes.findIndex((c, i) =>
+        !matchedIdx.has(i) && ing.toLowerCase().includes(c.original.toLowerCase())
+      );
+      if (ci !== -1) {
+        matchedIdx.add(ci);
+        const c = changes[ci];
+        if (c.replacement !== null) result.push(c.replacement); // null = remove
+      } else {
+        result.push(ing);
+      }
+    }
+    // Append any unmatched replacements (new ingredients not in original list)
+    changes.forEach((c, i) => {
+      if (!matchedIdx.has(i) && c.replacement !== null) result.push(c.replacement);
+    });
+    return result;
+  }
+
+  app.post("/api/planner/entries/:entryId/accept-household-safe-variant", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const entryId = Number(req.params.entryId);
+      if (isNaN(entryId)) return res.status(400).json({ message: "Invalid entry ID" });
+
+      // Ownership check
+      const entry = await storage.getPlannerEntryById(entryId);
+      if (!entry) return res.status(404).json({ message: "Entry not found" });
+      const day = await storage.getPlannerDay(entry.dayId);
+      if (!day) return res.status(404).json({ message: "Entry not found" });
+      const week = await storage.getPlannerWeek(day.weekId);
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Entry not found" });
+
+      // Get original meal
+      const originalMeal = await storage.getMeal(entry.mealId);
+      if (!originalMeal) return res.status(404).json({ message: "Meal not found" });
+
+      // Guard: entry already points to a household-safe variant
+      if (originalMeal.isHouseholdSafeVariant) {
+        return res.status(400).json({ message: "This entry already uses a household-safe variant." });
+      }
+
+      // Require adaptation result with a household-safe preview
+      const adaptationResult = entry.adaptationResult as import("@shared/meal-adaptation").AdaptationResult | null;
+      if (!adaptationResult?.householdSafePreview) {
+        return res.status(400).json({ message: "No household-safe preview found. Run tailoring first." });
+      }
+      const preview = adaptationResult.householdSafePreview;
+
+      // Apply ingredient changes (fuzzy match — same logic as client-side visual diff)
+      const variantIngredients = applyHouseholdSafeIngredients(
+        originalMeal.ingredients,
+        preview.ingredientChanges
+      );
+
+      // Append method changes to existing instructions
+      const variantInstructions = preview.methodChanges.length > 0
+        ? [...(originalMeal.instructions ?? []), ...preview.methodChanges]
+        : (originalMeal.instructions ?? []);
+
+      // Build historical restriction snapshot with stable eater IDs
+      const eaterRows = await storage.getHouseholdEaters(householdId);
+      const guestEaters = (entry.guestEaters as import("@shared/household-eater").GuestEater[] | null) ?? [];
+
+      const householdSafeFor: import("@shared/meal-adaptation").HouseholdSafeForSnapshot = {
+        eaters: [
+          ...eaterRows.map(e => ({
+            id: e.id,
+            displayName: e.displayName,
+            hardRestrictions: e.hardRestrictions ?? [],
+            dietTypes: e.defaultDietTypes ?? [],
+            isGuest: false as const,
+          })),
+          ...guestEaters.map(g => ({
+            id: g.id,
+            displayName: g.displayName,
+            hardRestrictions: g.hardRestrictions,
+            dietTypes: g.dietTypes,
+            isGuest: true as const,
+          })),
+        ],
+        generatedAt: new Date().toISOString(),
+        originalMealName: originalMeal.name,
+      };
+
+      // Create variant meal row — original is never touched
+      const variantMeal = await storage.createMeal(req.user!.id, {
+        name: `${originalMeal.name} (household-safe)`,
+        ingredients: variantIngredients,
+        instructions: variantInstructions,
+        imageUrl: originalMeal.imageUrl ?? undefined,
+        servings: originalMeal.servings,
+        categoryId: originalMeal.categoryId ?? undefined,
+        mealSourceType: "household-safe-variant",
+        isReadyMeal: false,
+        isSystemMeal: false,
+        mealFormat: originalMeal.mealFormat,
+        dietTypes: originalMeal.dietTypes,
+        isFreezerEligible: false,
+        audience: originalMeal.audience,
+        isDrink: originalMeal.isDrink,
+        drinkType: originalMeal.drinkType ?? undefined,
+        originalMealId: originalMeal.id,
+        kind: originalMeal.kind,
+        isHouseholdSafeVariant: true,
+        householdSafeFor,
+      });
+
+      // Repoint planner entry; store original meal ID for future revert
+      await storage.acceptHouseholdSafeVariant(entryId, variantMeal.id, originalMeal.id);
+
+      // Invalidate adaptation result — entry now points at the variant directly
+      await storage.savePlannerEntryAdaptation(entryId, { ...adaptationResult, householdSafePreview: null });
+
+      console.log(`[VARIANT] created variant meal ${variantMeal.id} from original ${originalMeal.id} for entry ${entryId}`);
+      res.status(201).json({ variantMeal, originalMealId: originalMeal.id });
+
+    } catch (err: any) {
+      console.error("[VARIANT] accept error:", err?.message, err?.stack);
+      res.status(500).json({ message: "Failed to create household-safe variant — please try again" });
     }
   });
 

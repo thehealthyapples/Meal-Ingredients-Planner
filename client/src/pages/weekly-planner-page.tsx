@@ -531,6 +531,26 @@ export default function WeeklyPlannerPage() {
   const [adaptationOpen, setAdaptationOpen] = useState(false);
   // "one" = user chose one household-safe version; "separate" = user chose separate adaptations; null = not yet chosen
   const [householdSafeChoice, setHouseholdSafeChoice] = useState<"one" | "separate" | null>(null);
+  const [variantAccepted, setVariantAccepted] = useState(false);
+
+  const acceptVariantMutation = useMutation({
+    mutationFn: async (entryId: number) => {
+      const res = await apiRequest("POST", `/api/planner/entries/${entryId}/accept-household-safe-variant`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message ?? "Failed to create variant");
+      }
+      return res.json() as Promise<{ variantMeal: import("@shared/schema").Meal; originalMealId: number }>;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      setVariantAccepted(true);
+    },
+    onError: (err: Error) => {
+      toast({ title: "Could not save variant", description: err.message, variant: "destructive" });
+    },
+  });
 
   const adaptMutation = useMutation({
     mutationFn: async (entryId: number): Promise<AdaptationResult> => {
@@ -545,6 +565,8 @@ export default function WeeklyPlannerPage() {
       // Refresh the planner so the stored result is reflected
       qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
       setAdaptationOpen(true);
+      setHouseholdSafeChoice(null);
+      setVariantAccepted(false);
     },
     onError: (err: Error) => {
       toast({ title: "Adaptation failed", description: err.message, variant: "destructive" });
@@ -2611,7 +2633,7 @@ export default function WeeklyPlannerPage() {
       />
 
       {/* ── Meal Detail Modal ── */}
-      <Dialog open={!!mealDetail} onOpenChange={(v) => { if (!v) { setMealDetail(null); setAdaptationOpen(false); setHouseholdSafeChoice(null); adaptMutation.reset(); setAddGuestOpen(false); setGuestName(""); setGuestDietTypes([]); setGuestRestrictions([]); } }}>
+      <Dialog open={!!mealDetail} onOpenChange={(v) => { if (!v) { setMealDetail(null); setAdaptationOpen(false); setHouseholdSafeChoice(null); setVariantAccepted(false); adaptMutation.reset(); acceptVariantMutation.reset(); setAddGuestOpen(false); setGuestName(""); setGuestDietTypes([]); setGuestRestrictions([]); } }}>
         <DialogContent
           className="max-w-[640px] max-h-[82vh] overflow-y-auto bg-[hsl(var(--background))] border-border p-0"
           style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
@@ -2622,6 +2644,12 @@ export default function WeeklyPlannerPage() {
             const calories = nutritionMap.get(meal.id);
             const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
             const instructions = meal.instructions || [];
+            // Household-safe preview — only active when user has chosen "one shared version"
+            const activeAdaptation = adaptMutation.data ?? (entry.adaptationResult as AdaptationResult | null);
+            const householdSafePreview: HouseholdSafePreview | null =
+              householdSafeChoice === "one"
+                ? (activeAdaptation?.householdSafePreview ?? null)
+                : null;
 
             return (
               <div className="flex flex-col">
@@ -2854,7 +2882,11 @@ export default function WeeklyPlannerPage() {
                         <div className="flex items-center gap-2">
                           <Users className="h-3.5 w-3.5 text-muted-foreground" />
                           <span className="text-sm font-medium text-foreground">Tailor for household</span>
-                          <span className="text-[10px] text-muted-foreground/60 italic">Evaluating full household</span>
+                          {meal.isHouseholdSafeVariant ? (
+                            <span className="text-[10px] font-medium text-teal-700 dark:text-teal-400 bg-teal-100 dark:bg-teal-900/30 px-1.5 py-0.5 rounded">household-safe variant active</span>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground/60 italic">Evaluating full household</span>
+                          )}
                           {(() => {
                             const result: AdaptationResult | null | undefined =
                               adaptMutation.data ?? (entry.adaptationResult as AdaptationResult | null);
@@ -3018,7 +3050,7 @@ export default function WeeklyPlannerPage() {
                                     <div>
                                       <p className="text-xs font-medium text-foreground/80 mb-2">Ingredient changes:</p>
                                       {/* Column headers — hidden on smallest screens, shown sm+ */}
-                                      <div className="hidden sm:grid sm:grid-cols-[1fr_1fr_auto] gap-x-3 px-2 pb-1 border-b border-border/40 mb-1">
+                                      <div className="hidden sm:grid sm:grid-cols-3 gap-x-3 px-2 pb-1 border-b border-border/40 mb-1">
                                         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">Original</span>
                                         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">Household-safe</span>
                                         <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">Why</span>
@@ -3026,13 +3058,13 @@ export default function WeeklyPlannerPage() {
                                       <ul className="space-y-px">
                                         {preview.ingredientChanges.map((c, i) => (
                                           <li key={i} className={`rounded-sm ${i % 2 === 0 ? "bg-muted/20" : ""}`}>
-                                            {/* Desktop/tablet: three-column row */}
-                                            <div className="hidden sm:grid sm:grid-cols-[1fr_1fr_auto] gap-x-3 px-2 py-1.5 items-center">
-                                              <span className="text-xs text-muted-foreground truncate" title={c.original}>{c.original}</span>
-                                              <span className={`text-xs font-medium truncate ${c.replacement ? "text-foreground" : "text-rose-600 dark:text-rose-400"}`} title={c.replacement ?? "Removed"}>
+                                            {/* Desktop/tablet: three-column row with wrapping */}
+                                            <div className="hidden sm:grid sm:grid-cols-3 gap-x-3 px-2 py-1.5 items-start">
+                                              <span className="text-xs text-muted-foreground break-words">{c.original}</span>
+                                              <span className={`text-xs font-medium break-words ${c.replacement ? "text-foreground" : "text-rose-600 dark:text-rose-400"}`}>
                                                 {c.replacement ?? "Removed"}
                                               </span>
-                                              <span className="text-[11px] text-muted-foreground/70 whitespace-nowrap">{c.reason}</span>
+                                              <span className="text-[11px] text-muted-foreground/70 break-words">{c.reason}</span>
                                             </div>
                                             {/* Mobile: stacked card */}
                                             <div className="sm:hidden px-2 py-2 space-y-0.5">
@@ -3096,34 +3128,49 @@ export default function WeeklyPlannerPage() {
 
                                   {/* Choice buttons */}
                                   <div className="space-y-2 pt-0.5">
-                                    <p className="text-xs font-medium text-foreground/80">How would you like to cook this?</p>
-                                    <div className="flex flex-wrap gap-2">
-                                      <Button
-                                        variant={householdSafeChoice === "one" ? "default" : "outline"}
-                                        size="sm"
-                                        className="h-8 text-xs"
-                                        onClick={() => setHouseholdSafeChoice(c => c === "one" ? null : "one")}
-                                      >
-                                        {householdSafeChoice === "one" && <Check className="h-3 w-3 mr-1.5" />}
-                                        Use one household-safe version
-                                      </Button>
-                                      <Button
-                                        variant={householdSafeChoice === "separate" ? "default" : "outline"}
-                                        size="sm"
-                                        className="h-8 text-xs"
-                                        onClick={() => setHouseholdSafeChoice(c => c === "separate" ? null : "separate")}
-                                      >
-                                        {householdSafeChoice === "separate" && <Check className="h-3 w-3 mr-1.5" />}
-                                        Cook separate adaptations
-                                      </Button>
-                                    </div>
-                                    {householdSafeChoice && (
-                                      <p className="text-[11px] text-muted-foreground/80 bg-muted/40 rounded px-2 py-1.5">
-                                        {householdSafeChoice === "one"
-                                          ? "You've selected one shared adapted version. The original recipe in your cookbook is unchanged."
-                                          : "You've selected separate adaptations. Plate each person's version individually at serving time."
-                                        }
-                                      </p>
+                                    {variantAccepted ? (
+                                      <div className="flex items-start gap-2 bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-800/40 rounded px-2.5 py-2">
+                                        <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0 mt-0.5" />
+                                        <div>
+                                          <p className="text-xs font-medium text-green-700 dark:text-green-400">Household-safe version saved</p>
+                                          <p className="text-[11px] text-green-700/70 dark:text-green-400/70 mt-0.5">
+                                            This planner slot now uses the adapted recipe. Shopping will use the substituted ingredients. The original recipe is unchanged.
+                                          </p>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <p className="text-xs font-medium text-foreground/80">How would you like to cook this?</p>
+                                        <div className="flex flex-wrap gap-2">
+                                          <Button
+                                            variant="default"
+                                            size="sm"
+                                            className="h-8 text-xs"
+                                            disabled={acceptVariantMutation.isPending}
+                                            onClick={() => acceptVariantMutation.mutate(entry.id)}
+                                          >
+                                            {acceptVariantMutation.isPending
+                                              ? <><Loader2 className="h-3 w-3 mr-1.5 animate-spin" />Saving…</>
+                                              : <><Check className="h-3 w-3 mr-1.5" />Use one household-safe version</>
+                                            }
+                                          </Button>
+                                          <Button
+                                            variant={householdSafeChoice === "separate" ? "default" : "outline"}
+                                            size="sm"
+                                            className="h-8 text-xs"
+                                            disabled={acceptVariantMutation.isPending}
+                                            onClick={() => setHouseholdSafeChoice(c => c === "separate" ? null : "separate")}
+                                          >
+                                            {householdSafeChoice === "separate" && <Check className="h-3 w-3 mr-1.5" />}
+                                            Cook separate adaptations
+                                          </Button>
+                                        </div>
+                                        {householdSafeChoice === "separate" && (
+                                          <p className="text-[11px] text-muted-foreground/80 bg-muted/40 rounded px-2 py-1.5">
+                                            Plate each person's adaptation individually at serving time. Original recipe unchanged.
+                                          </p>
+                                        )}
+                                      </>
                                     )}
                                   </div>
                                 </div>
@@ -3167,14 +3214,64 @@ export default function WeeklyPlannerPage() {
                     {/* Ingredients */}
                     {meal.ingredients && meal.ingredients.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-semibold mb-2 text-foreground">Ingredients</h3>
+                        <h3 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
+                          Ingredients
+                          {householdSafePreview && (
+                            <span className="text-[10px] font-normal text-primary bg-primary/10 px-1.5 py-0.5 rounded">household-safe</span>
+                          )}
+                        </h3>
                         <ul className="space-y-1.5">
-                          {meal.ingredients.map((ing, idx) => (
-                            <li key={idx} className="text-sm flex items-start gap-2 text-foreground/80">
-                              <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
-                              {ing}
-                            </li>
-                          ))}
+                          {(() => {
+                            const changes = householdSafePreview?.ingredientChanges ?? [];
+                            const matchedIdx = new Set<number>();
+                            const rows = meal.ingredients!.map((ing, idx) => {
+                              const ci = changes.findIndex((c, i) =>
+                                !matchedIdx.has(i) && ing.toLowerCase().includes(c.original.toLowerCase())
+                              );
+                              if (ci !== -1) {
+                                matchedIdx.add(ci);
+                                const c = changes[ci];
+                                if (c.replacement === null) {
+                                  return (
+                                    <li key={idx} className="text-sm flex items-start gap-2 text-muted-foreground/40 line-through italic">
+                                      <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-rose-300" />
+                                      {ing}
+                                    </li>
+                                  );
+                                }
+                                return (
+                                  <li key={idx} className="text-sm space-y-1">
+                                    <div className="flex items-start gap-2 text-muted-foreground/40 line-through">
+                                      <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-amber-300" />
+                                      {ing}
+                                    </div>
+                                    <div className="flex items-start gap-2 text-foreground/80">
+                                      <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
+                                      {c.replacement}
+                                    </div>
+                                  </li>
+                                );
+                              }
+                              return (
+                                <li key={idx} className="text-sm flex items-start gap-2 text-foreground/80">
+                                  <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
+                                  {ing}
+                                </li>
+                              );
+                            });
+                            // Append any unmatched replacements (new additions not in original list)
+                            changes.forEach((c, i) => {
+                              if (!matchedIdx.has(i) && c.replacement !== null) {
+                                rows.push(
+                                  <li key={`add-${i}`} className="text-sm flex items-start gap-2 text-foreground/80">
+                                    <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
+                                    {c.replacement}
+                                  </li>
+                                );
+                              }
+                            });
+                            return rows;
+                          })()}
                         </ul>
                       </div>
                     )}
@@ -3182,7 +3279,12 @@ export default function WeeklyPlannerPage() {
                     {/* Instructions */}
                     {instructions.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-semibold mb-2 text-foreground">Instructions</h3>
+                        <h3 className="text-sm font-semibold mb-2 text-foreground flex items-center gap-2">
+                          Instructions
+                          {householdSafePreview && householdSafePreview.methodChanges.length > 0 && (
+                            <span className="text-[10px] font-normal text-primary bg-primary/10 px-1.5 py-0.5 rounded">household-safe</span>
+                          )}
+                        </h3>
                         <ol className="space-y-2">
                           {instructions.map((step, idx) => (
                             <li key={idx} className="text-sm flex items-start gap-2 text-foreground/80">
@@ -3193,6 +3295,17 @@ export default function WeeklyPlannerPage() {
                             </li>
                           ))}
                         </ol>
+                        {householdSafePreview && householdSafePreview.methodChanges.length > 0 && (
+                          <div className="mt-3 pt-2 border-t border-border/40 space-y-1.5">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-primary">Household-safe notes:</p>
+                            {householdSafePreview.methodChanges.map((m, i) => (
+                              <p key={i} className="text-sm text-foreground/80 flex items-start gap-1.5">
+                                <span className="mt-1 shrink-0 text-primary">·</span>
+                                {m}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
 

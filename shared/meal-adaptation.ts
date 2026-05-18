@@ -59,3 +59,30 @@ export interface HouseholdSafePreview {
   /** Trade-offs and notes (e.g. "Recipe becomes vegetarian", "Milder spice profile") */
   tradeoffs: string[];
 }
+
+// ─── Reusable variant snapshot ────────────────────────────────────────────────
+
+/** Snapshot of one eater's identity and restrictions at the moment a variant was created. Historical — never auto-updated. */
+export interface HouseholdSafeEaterSnapshot {
+  /** Stable integer ID for household members; client-generated UUID string for guests */
+  id: number | string;
+  displayName: string;
+  /** hardRestrictions in force at generation time */
+  hardRestrictions: string[];
+  /** dietTypes in force at generation time */
+  dietTypes: string[];
+  isGuest: boolean;
+}
+
+/**
+ * Restriction snapshot stored on a household-safe variant meal.
+ * Records who and what was accommodated at the time of creation.
+ * Historically fixed — never regenerated or mutated after creation.
+ */
+export interface HouseholdSafeForSnapshot {
+  eaters: HouseholdSafeEaterSnapshot[];
+  /** ISO8601 timestamp of when this variant was generated */
+  generatedAt: string;
+  /** Name of the original meal at generation time */
+  originalMealName: string;
+}

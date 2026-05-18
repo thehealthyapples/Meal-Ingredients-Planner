@@ -274,9 +274,11 @@ export function PlannerMealPickerPanel({
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{meal.name}</p>
                   <div className="flex items-center gap-1 flex-wrap">
-                    {!meal.isReadyMeal && !(meal as any).isSystemMeal && (
+                    {(meal as any).isHouseholdSafeVariant ? (
+                      <Badge variant="outline" className="text-[10px] px-1 border-teal-400/60 text-teal-600 dark:text-teal-400">Household-safe</Badge>
+                    ) : !meal.isReadyMeal && !(meal as any).isSystemMeal ? (
                       <Badge variant="outline" className="text-[10px] px-1 border-blue-400/60 text-blue-500">Cookbook</Badge>
-                    )}
+                    ) : null}
                     {meal.isReadyMeal && (
                       <Badge variant="outline" className="text-[10px] px-1">Ready Meal</Badge>
                     )}
