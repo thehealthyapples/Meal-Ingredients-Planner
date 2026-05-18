@@ -8150,29 +8150,35 @@ Keep each string short and concrete. Return [] for any array that has no entries
       const householdId = await getHouseholdForUser(req.user!.id);
       if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Entry not found" });
 
-      // Get original meal
-      const originalMeal = await storage.getMeal(entry.mealId);
-      if (!originalMeal) return res.status(404).json({ message: "Meal not found" });
-
-      // Guard: entry already points to a household-safe variant
-      if (originalMeal.isHouseholdSafeVariant) {
-        return res.status(400).json({ message: "This entry already uses a household-safe variant." });
-      }
-
-      // Require adaptation result with a household-safe preview
+      // Require adaptation result with a household-safe preview before doing anything
       const adaptationResult = entry.adaptationResult as import("@shared/meal-adaptation").AdaptationResult | null;
       if (!adaptationResult?.householdSafePreview) {
         return res.status(400).json({ message: "No household-safe preview found. Run tailoring first." });
       }
       const preview = adaptationResult.householdSafePreview;
 
-      // Apply ingredient changes (fuzzy match — same logic as client-side visual diff)
+      // Get the meal currently on this entry
+      const currentMeal = await storage.getMeal(entry.mealId);
+      if (!currentMeal) return res.status(404).json({ message: "Meal not found" });
+
+      // Resolve: original meal to base ingredient changes on, and whether a variant already exists
+      const isUpdate = !!currentMeal.isHouseholdSafeVariant;
+      const originalMealId = isUpdate
+        ? (entry.originalMealIdBeforeVariant ?? currentMeal.originalMealId ?? currentMeal.id)
+        : currentMeal.id;
+
+      const originalMeal = isUpdate
+        ? await storage.getMeal(originalMealId)
+        : currentMeal;
+      if (!originalMeal) return res.status(404).json({ message: "Original meal not found" });
+
+      // Apply ingredient changes against the original meal's ingredients (always start fresh)
       const variantIngredients = applyHouseholdSafeIngredients(
         originalMeal.ingredients,
         preview.ingredientChanges
       );
 
-      // Append method changes to existing instructions
+      // Rebuild instructions from original + new method changes
       const variantInstructions = preview.methodChanges.length > 0
         ? [...(originalMeal.instructions ?? []), ...preview.methodChanges]
         : (originalMeal.instructions ?? []);
@@ -8202,36 +8208,48 @@ Keep each string short and concrete. Return [] for any array that has no entries
         originalMealName: originalMeal.name,
       };
 
-      // Create variant meal row — original is never touched
-      const variantMeal = await storage.createMeal(req.user!.id, {
-        name: `${originalMeal.name} (household-safe)`,
-        ingredients: variantIngredients,
-        instructions: variantInstructions,
-        imageUrl: originalMeal.imageUrl ?? undefined,
-        servings: originalMeal.servings,
-        categoryId: originalMeal.categoryId ?? undefined,
-        mealSourceType: "household-safe-variant",
-        isReadyMeal: false,
-        isSystemMeal: false,
-        mealFormat: originalMeal.mealFormat,
-        dietTypes: originalMeal.dietTypes,
-        isFreezerEligible: false,
-        audience: originalMeal.audience,
-        isDrink: originalMeal.isDrink,
-        drinkType: originalMeal.drinkType ?? undefined,
-        originalMealId: originalMeal.id,
-        kind: originalMeal.kind,
-        isHouseholdSafeVariant: true,
-        householdSafeFor,
-      });
+      let variantMeal: import("@shared/schema").Meal;
 
-      // Repoint planner entry; store original meal ID for future revert
-      await storage.acceptHouseholdSafeVariant(entryId, variantMeal.id, originalMeal.id);
+      if (isUpdate) {
+        // Variant already exists — update it in place (dietary choices may have changed)
+        await storage.updateHouseholdSafeVariantContent(currentMeal.id, {
+          ingredients: variantIngredients,
+          instructions: variantInstructions,
+          householdSafeFor,
+        });
+        variantMeal = { ...currentMeal, ingredients: variantIngredients, instructions: variantInstructions, householdSafeFor };
+        console.log(`[VARIANT] updated existing variant meal ${currentMeal.id} for entry ${entryId}`);
+      } else {
+        // First time — create a new variant meal row; original is never touched
+        variantMeal = await storage.createMeal(req.user!.id, {
+          name: `${originalMeal.name} (household-safe)`,
+          ingredients: variantIngredients,
+          instructions: variantInstructions,
+          imageUrl: originalMeal.imageUrl ?? undefined,
+          servings: originalMeal.servings,
+          categoryId: originalMeal.categoryId ?? undefined,
+          mealSourceType: "household-safe-variant",
+          isReadyMeal: false,
+          isSystemMeal: false,
+          mealFormat: originalMeal.mealFormat,
+          dietTypes: originalMeal.dietTypes,
+          isFreezerEligible: false,
+          audience: originalMeal.audience,
+          isDrink: originalMeal.isDrink,
+          drinkType: originalMeal.drinkType ?? undefined,
+          originalMealId: originalMeal.id,
+          kind: originalMeal.kind,
+          isHouseholdSafeVariant: true,
+          householdSafeFor,
+        });
+        // Repoint planner entry; store original meal ID for future revert
+        await storage.acceptHouseholdSafeVariant(entryId, variantMeal.id, originalMeal.id);
+        console.log(`[VARIANT] created variant meal ${variantMeal.id} from original ${originalMeal.id} for entry ${entryId}`);
+      }
 
-      // Invalidate adaptation result — entry now points at the variant directly
+      // Clear the preview from the stored adaptation result
       await storage.savePlannerEntryAdaptation(entryId, { ...adaptationResult, householdSafePreview: null });
 
-      console.log(`[VARIANT] created variant meal ${variantMeal.id} from original ${originalMeal.id} for entry ${entryId}`);
       res.status(201).json({ variantMeal, originalMealId: originalMeal.id });
 
     } catch (err: any) {

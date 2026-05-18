@@ -324,6 +324,8 @@ export interface IStorage {
   updatePlannerEntryMealId(entryId: number, mealId: number): Promise<PlannerEntry | undefined>;
   /** Repoint a planner entry to a household-safe variant, storing the original meal ID for later revert. */
   acceptHouseholdSafeVariant(entryId: number, variantMealId: number, originalMealId: number): Promise<void>;
+  /** Update an existing household-safe variant meal's generated content (ingredients, instructions, snapshot). */
+  updateHouseholdSafeVariantContent(variantMealId: number, data: { ingredients: string[]; instructions: string[]; householdSafeFor: import("@shared/meal-adaptation").HouseholdSafeForSnapshot }): Promise<void>;
 
   sessionStore: session.Store;
 }
@@ -3476,6 +3478,16 @@ export class DatabaseStorage implements IStorage {
       .update(plannerEntries)
       .set({ mealId: variantMealId, originalMealIdBeforeVariant: originalMealId })
       .where(eq(plannerEntries.id, entryId));
+  }
+
+  async updateHouseholdSafeVariantContent(
+    variantMealId: number,
+    data: { ingredients: string[]; instructions: string[]; householdSafeFor: import("@shared/meal-adaptation").HouseholdSafeForSnapshot },
+  ): Promise<void> {
+    await db
+      .update(meals)
+      .set({ ingredients: data.ingredients, instructions: data.instructions, householdSafeFor: data.householdSafeFor as any })
+      .where(eq(meals.id, variantMealId));
   }
 }
 
