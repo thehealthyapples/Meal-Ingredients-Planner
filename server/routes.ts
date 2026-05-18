@@ -7612,7 +7612,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
   });
 
   // Get eaters for a planner entry.
-  // Default: if none are explicitly set, return all adult (userId != null) household eaters.
+  // Default: if none are explicitly set, return all household eaters (adults + children).
   app.get("/api/planner/entries/:entryId/eaters", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
@@ -7869,21 +7869,20 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       if (!meal) return res.status(404).json({ message: "Meal not found" });
       console.log("[ADAPT_DIAG] 5. resolved planner entry — mealId =", entry.mealId, "meal =", meal.name);
 
-      // Gather eaters — fall back to ALL household members (adults + children) if none explicitly set
+      // Tailoring always evaluates the FULL household (adults + children) plus any guest eaters.
+      // plannerEntryEaters is intentionally ignored here — it is operational context (shopping,
+      // attendance) not a filter for household compatibility evaluation.
       const { dbEaterToHouseholdEater, getEffectiveDietProfile, guestEaterToProfile } = await import("@shared/household-eater.js");
-      let eaterRows = await storage.getPlannerEntryEaters(entryId);
-      if (eaterRows.length === 0) {
-        eaterRows = await storage.getHouseholdEaters(householdId);
-      }
+      const eaterRows = await storage.getHouseholdEaters(householdId);
 
-      // Phase 5: also gather guest eaters for this entry
+      // Guest eaters are entry-specific and still evaluated alongside household eaters.
       const guestEaters = await storage.getEntryGuests(entryId);
 
       if (eaterRows.length === 0 && guestEaters.length === 0) {
         console.log("[ADAPT_DIAG] 6. no eaters found — returning 400");
         return res.status(400).json({ message: "No eaters found for this entry" });
       }
-      console.log("[ADAPT_DIAG] 6. resolved eater ids =", eaterRows.map(e => e.id), "names =", eaterRows.map(e => e.displayName), "guests =", guestEaters.map(g => g.displayName));
+      console.log("[ADAPT_DIAG] 6. household eater ids =", eaterRows.map(e => e.id), "names =", eaterRows.map(e => e.displayName), "guests =", guestEaters.map(g => g.displayName));
 
       const eaters = eaterRows.map(dbEaterToHouseholdEater);
 
