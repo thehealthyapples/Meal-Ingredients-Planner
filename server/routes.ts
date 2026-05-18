@@ -8019,7 +8019,7 @@ Keep notes short and concrete. Never duplicate ingredients across eaters and hou
             .map(p => {
               const parts: string[] = [];
               if (p.dietTypes.length > 0) parts.push(`diet: ${p.dietTypes.join(", ")}`);
-              if (p.hardRestrictions.length > 0) parts.push(`avoids: ${p.hardRestrictions.join(", ")}`);
+              if (p.hardRestrictions.length > 0) parts.push(`restriction: ${p.hardRestrictions.join(", ")}`);
               return `  - ${p.displayName}: ${parts.length > 0 ? parts.join("; ") : "no specific restrictions recorded"}`;
             })
             .join("\n");
@@ -8172,16 +8172,21 @@ Keep each string short and concrete. Return [] for any array that has no entries
         : currentMeal;
       if (!originalMeal) return res.status(404).json({ message: "Original meal not found" });
 
-      // Apply ingredient changes against the original meal's ingredients (always start fresh)
+      // When updating an existing variant, apply changes against the variant's current ingredients —
+      // the AI was shown the variant, so its `original` strings match the variant, not the true original.
+      // Applying to the original would throw away all prior dairy/allergen substitutions.
+      // On first create, apply to the original (currentMeal IS the original).
+      const baseIngredients = isUpdate ? currentMeal.ingredients : originalMeal.ingredients;
+      const baseInstructions = isUpdate ? (currentMeal.instructions ?? []) : (originalMeal.instructions ?? []);
+
       const variantIngredients = applyHouseholdSafeIngredients(
-        originalMeal.ingredients,
+        baseIngredients,
         preview.ingredientChanges
       );
 
-      // Rebuild instructions from original + new method changes
       const variantInstructions = preview.methodChanges.length > 0
-        ? [...(originalMeal.instructions ?? []), ...preview.methodChanges]
-        : (originalMeal.instructions ?? []);
+        ? [...baseInstructions, ...preview.methodChanges]
+        : baseInstructions;
 
       // Build historical restriction snapshot with stable eater IDs
       const eaterRows = await storage.getHouseholdEaters(householdId);
