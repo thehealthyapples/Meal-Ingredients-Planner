@@ -8011,15 +8011,28 @@ Keep notes short and concrete. Never duplicate ingredients across eaters and hou
             .map(a => `  - ${a.eaterName}: ${a.note}`)
             .join("\n");
 
+          // Build explicit restriction list for conflicting eaters so the AI can scan
+          // every ingredient — not just the ones the per-eater note happened to mention.
+          const conflictingEaterNames = new Set(conflictingAdaptations.map(a => a.eaterName));
+          const restrictionSummary = profiles
+            .filter(p => conflictingEaterNames.has(p.displayName))
+            .map(p => {
+              const parts: string[] = [];
+              if (p.dietTypes.length > 0) parts.push(`diet: ${p.dietTypes.join(", ")}`);
+              if (p.hardRestrictions.length > 0) parts.push(`avoids: ${p.hardRestrictions.join(", ")}`);
+              return `  - ${p.displayName}: ${parts.length > 0 ? parts.join("; ") : "no specific restrictions recorded"}`;
+            })
+            .join("\n");
+
           const HSP_SYSTEM_PROMPT = `You are a household meal adaptation assistant. Your task is to suggest ONE unified version of a recipe that satisfies the most restrictive household requirements, with minimal change to the recipe's identity.
 
 RULES:
 - Produce ingredient-level substitutions only (no full rewrites)
+- CRITICAL: Scan EVERY ingredient in the list against the household restrictions below. Do not rely solely on the conflict notes — they may not list every problematic ingredient.
 - ALWAYS prefer substituting with a widely available alternative over removing entirely
+  - Meat/fish: use lentils, chickpeas, tofu, tempeh, jackfruit, smoked chickpeas etc.
   - Dairy: use dairy-free cheese, oat cream, coconut cream, dairy-free butter, oat milk etc.
   - Gluten: use gluten-free pasta, gluten-free flour, gluten-free breadcrumbs etc.
-  - Meat: use lentils, chickpeas, tofu, tempeh, jackfruit etc.
-  - Shellfish/fish: use butter beans, smoked chickpeas, or omit only if no substitute fits
   - Eggs: use flax egg, aquafaba etc. where relevant
 - Only set replacement to null (remove entirely) if there is genuinely no suitable substitute
 - Prioritise allergens/intolerances first, then dietary patterns
@@ -8035,7 +8048,7 @@ Return a JSON object with exactly these keys:
 Keep each string short and concrete. Return [] for any array that has no entries.`;
 
           const hspUserMessage =
-            `Meal: ${meal.name}\n\nIngredients:\n${ingredientList}\n\nConflicts to resolve:\n${conflictSummary}`;
+            `Meal: ${meal.name}\n\nIngredients:\n${ingredientList}\n\nHousehold restrictions (scan ALL ingredients against these):\n${restrictionSummary}\n\nPer-eater conflict notes (context, may be incomplete):\n${conflictSummary}`;
 
           const hspCompletion = await openai.chat.completions.create({
             model: "gpt-4o-mini",
