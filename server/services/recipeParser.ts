@@ -200,8 +200,9 @@ Other fields:
 - mealSlot: ONLY if clearly labelled: "breakfast","lunch","dinner","snacks". Otherwise null.
 - proposedType: classify based on position in the image:
   - "scheduled": under a weekday header or in a day-column grid
-  - "meal_idea": in a standalone list with no day assignment. CRITICAL: If you see section headings like "Lunches", "Lunch ideas", "Packed lunches", "Easy meals", "Flexible meals", "Snacks", "Meal ideas" — ALL items under that heading must be "meal_idea", regardless of nearby text. Handwritten lists separate from the main grid also qualify.
+  - "meal_idea": in a standalone list with no day assignment. CRITICAL: If you see section headings like "Lunches", "Lunch ideas", "Packed lunches", "Easy meals", "Flexible meals", "Snacks", "Meal ideas" — ALL items under that heading MUST be "meal_idea", regardless of nearby text. Handwritten lists separate from the main grid also qualify. If a "Lunches" or similar section appears anywhere in the image, extract EVERY item in that section as a separate meal entry with proposedType:"meal_idea" and day:null.
   - "unknown": cannot determine
+- EXAMPLE of standalone section: if the image has a "Lunches:" heading followed by "Ham sandwich, Jacket potato, Pasta salad" — these must each be a separate meal entry with proposedType:"meal_idea" and day:null. Do NOT omit them.
 - sourceText: the exact line(s) from the image where this meal appears
 - shoppingItems: ONLY if the image contains a clearly separate shopping list section: {"label":"item as written","quantity":null,"confidence":"high","sourceText":"exact line"}. Use [] if no shopping section.
 - NEVER add prices, store names, or product codes

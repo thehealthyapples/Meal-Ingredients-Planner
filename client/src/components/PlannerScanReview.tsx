@@ -141,10 +141,16 @@ const SCAN_LOADING_MESSAGES = [
 function toProposal(m: PlannerMealScanItem, id: number): PlannerScanProposal {
   const rawText = m.sourceText || m.label;
   const interpretedName = m.interpretedName?.trim() || m.label;
+  // "scheduled" with no day means the AI used the template default for a standalone section
+  // (e.g. a "Lunches" list). Reclassify as meal_idea so it appears in the right group.
   const proposedType: ProposalType =
-    m.proposedType === "scheduled" || m.proposedType === "meal_idea"
-      ? m.proposedType
-      : m.day ? "scheduled" : "unknown";
+    m.proposedType === "meal_idea"
+      ? "meal_idea"
+      : m.proposedType === "scheduled" && !m.day
+      ? "meal_idea"
+      : m.day
+      ? "scheduled"
+      : "unknown";
   const proposedDay = m.day && (WEEKDAYS as readonly string[]).includes(m.day) ? m.day : null;
   const proposedSlot = m.mealSlot && (MEAL_SLOTS as readonly string[]).includes(m.mealSlot) ? m.mealSlot : null;
 
@@ -1179,7 +1185,15 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
 
   if (inline) {
     return (
-      <div className="space-y-3">
+      <div
+        className="space-y-3"
+        style={{
+          backgroundImage: "url('/orchard-bg.png')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundAttachment: "fixed",
+        }}
+      >
         <div>
           <p className="text-sm font-medium flex items-center gap-1.5">
             <Camera className="h-4 w-4 text-primary" />
