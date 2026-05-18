@@ -44,7 +44,7 @@ import { ToastAction } from "@/components/ui/toast";
 import { api } from "@shared/routes";
 import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutrition, MealCategory, WeekEaterOverride } from "@shared/schema";
 import type { HouseholdEater, GuestEater } from "@shared/household-eater";
-import type { AdaptationResult } from "@shared/meal-adaptation";
+import type { AdaptationResult, HouseholdSafePreview } from "@shared/meal-adaptation";
 import { ONBOARDING_DIET_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
 import { PageHeader } from "@/components/PageHeader";
 import {
@@ -529,6 +529,8 @@ export default function WeeklyPlannerPage() {
 
   // ── Meal adaptation (Phase 3) ────────────────────────────────────────────────
   const [adaptationOpen, setAdaptationOpen] = useState(false);
+  // "one" = user chose one household-safe version; "separate" = user chose separate adaptations; null = not yet chosen
+  const [householdSafeChoice, setHouseholdSafeChoice] = useState<"one" | "separate" | null>(null);
 
   const adaptMutation = useMutation({
     mutationFn: async (entryId: number): Promise<AdaptationResult> => {
@@ -2609,7 +2611,7 @@ export default function WeeklyPlannerPage() {
       />
 
       {/* ── Meal Detail Modal ── */}
-      <Dialog open={!!mealDetail} onOpenChange={(v) => { if (!v) { setMealDetail(null); setAdaptationOpen(false); adaptMutation.reset(); setAddGuestOpen(false); setGuestName(""); setGuestDietTypes([]); setGuestRestrictions([]); } }}>
+      <Dialog open={!!mealDetail} onOpenChange={(v) => { if (!v) { setMealDetail(null); setAdaptationOpen(false); setHouseholdSafeChoice(null); adaptMutation.reset(); setAddGuestOpen(false); setGuestName(""); setGuestDietTypes([]); setGuestRestrictions([]); } }}>
         <DialogContent
           className="max-w-[640px] max-h-[82vh] overflow-y-auto bg-[hsl(var(--background))] border-border p-0"
           style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
@@ -2852,6 +2854,7 @@ export default function WeeklyPlannerPage() {
                         <div className="flex items-center gap-2">
                           <Users className="h-3.5 w-3.5 text-muted-foreground" />
                           <span className="text-sm font-medium text-foreground">Tailor for household</span>
+                          <span className="text-[10px] text-muted-foreground/60 italic">Evaluating full household</span>
                           {(() => {
                             const result: AdaptationResult | null | undefined =
                               adaptMutation.data ?? (entry.adaptationResult as AdaptationResult | null);
@@ -2981,6 +2984,125 @@ export default function WeeklyPlannerPage() {
                                 {result.cookingNote}
                               </p>
                             )}
+
+                            {/* ── Household-safe unified preview ── */}
+                            {(() => {
+                              const preview = result.householdSafePreview;
+                              if (!preview) return null;
+                              return (
+                                <div className="mt-1 border-t border-border/40 pt-3 space-y-3">
+                                  {/* Header */}
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <Wand2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                                    <span className="text-sm font-semibold text-foreground">One household-safe version</span>
+                                    <span className="text-[10px] text-muted-foreground/70 bg-muted px-1.5 py-0.5 rounded italic shrink-0">AI preview</span>
+                                  </div>
+
+                                  {/* Accommodates */}
+                                  {preview.accommodates.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-medium text-foreground/80 mb-1">Adjusted to accommodate:</p>
+                                      <ul className="space-y-0.5">
+                                        {preview.accommodates.map((a, i) => (
+                                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                                            <span className="mt-1.5 shrink-0 w-1 h-1 rounded-full bg-amber-400" />
+                                            <span><span className="font-medium text-foreground/75">{a.eaterName}</span>: {a.restriction}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+
+                                  {/* Ingredient changes */}
+                                  {preview.ingredientChanges.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-medium text-foreground/80 mb-1">Ingredient changes:</p>
+                                      <ul className="space-y-1">
+                                        {preview.ingredientChanges.map((c, i) => (
+                                          <li key={i} className="text-xs flex items-start gap-1.5">
+                                            <span className="mt-1.5 shrink-0 w-1 h-1 rounded-full bg-primary/50" />
+                                            <span className="text-foreground/80">
+                                              {c.replacement
+                                                ? <>Replace <span className="line-through text-muted-foreground/60">{c.original}</span> with <span className="font-medium">{c.replacement}</span>{c.reason ? <span className="text-muted-foreground/70"> — {c.reason}</span> : null}</>
+                                                : <>Remove <span className="line-through text-muted-foreground/60">{c.original}</span>{c.reason ? <span className="text-muted-foreground/70"> — {c.reason}</span> : null}</>
+                                              }
+                                            </span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+
+                                  {/* Method changes */}
+                                  {preview.methodChanges.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-medium text-foreground/80 mb-1">Method changes:</p>
+                                      <ul className="space-y-0.5">
+                                        {preview.methodChanges.map((m, i) => (
+                                          <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                                            <span className="mt-1.5 shrink-0 w-1 h-1 rounded-full bg-primary/40" />
+                                            {m}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+
+                                  {/* Trade-offs */}
+                                  {preview.tradeoffs.length > 0 && (
+                                    <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/40 rounded px-2.5 py-2">
+                                      <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-1">Trade-offs to be aware of:</p>
+                                      <ul className="space-y-0.5">
+                                        {preview.tradeoffs.map((t, i) => (
+                                          <li key={i} className="text-xs text-amber-800 dark:text-amber-300 flex items-start gap-1.5">
+                                            <span className="mt-1 shrink-0">·</span>
+                                            {t}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+
+                                  {/* Trust disclaimer */}
+                                  <p className="text-[10px] text-muted-foreground/55 italic">
+                                    AI-generated adaptation preview. Review substitutions before cooking. Not a medically guaranteed safe recipe.
+                                  </p>
+
+                                  {/* Choice buttons */}
+                                  <div className="space-y-2 pt-0.5">
+                                    <p className="text-xs font-medium text-foreground/80">How would you like to cook this?</p>
+                                    <div className="flex flex-wrap gap-2">
+                                      <Button
+                                        variant={householdSafeChoice === "one" ? "default" : "outline"}
+                                        size="sm"
+                                        className="h-8 text-xs"
+                                        onClick={() => setHouseholdSafeChoice(c => c === "one" ? null : "one")}
+                                      >
+                                        {householdSafeChoice === "one" && <Check className="h-3 w-3 mr-1.5" />}
+                                        Use one household-safe version
+                                      </Button>
+                                      <Button
+                                        variant={householdSafeChoice === "separate" ? "default" : "outline"}
+                                        size="sm"
+                                        className="h-8 text-xs"
+                                        onClick={() => setHouseholdSafeChoice(c => c === "separate" ? null : "separate")}
+                                      >
+                                        {householdSafeChoice === "separate" && <Check className="h-3 w-3 mr-1.5" />}
+                                        Cook separate adaptations
+                                      </Button>
+                                    </div>
+                                    {householdSafeChoice && (
+                                      <p className="text-[11px] text-muted-foreground/80 bg-muted/40 rounded px-2 py-1.5">
+                                        {householdSafeChoice === "one"
+                                          ? "You've selected one shared adapted version. The original recipe in your cookbook is unchanged."
+                                          : "You've selected separate adaptations. Plate each person's version individually at serving time."
+                                        }
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })()}
                           </div>
                         );
                       })()}

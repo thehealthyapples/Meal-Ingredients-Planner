@@ -7997,12 +7997,84 @@ Keep notes short and concrete. Never duplicate ingredients across eaters and hou
         return res.status(502).json({ message: "AI returned unexpected shape — please try again" });
       }
 
+      // ── Household-safe unified preview ──────────────────────────────────────────
+      // Generate only when at least one eater has an actual conflict. Reuses the same
+      // AI client and meal context. Failure is non-fatal — the per-eater result is still
+      // returned.
+      const conflictingAdaptations = adaptationResult.adaptations.filter(
+        a => a.changeType !== "none" && !a.hasNoDietaryData
+      );
+      if (conflictingAdaptations.length > 0) {
+        console.log("[ADAPT_DIAG] 12a. generating household-safe preview for", conflictingAdaptations.length, "conflicts");
+        try {
+          const conflictSummary = conflictingAdaptations
+            .map(a => `  - ${a.eaterName}: ${a.note}`)
+            .join("\n");
+
+          const HSP_SYSTEM_PROMPT = `You are a household meal adaptation assistant. Your task is to suggest ONE unified version of a recipe that satisfies the most restrictive household requirements, with minimal change to the recipe's identity.
+
+RULES:
+- Produce ingredient-level substitutions only (no full rewrites)
+- Prioritise removing or substituting allergens/intolerances first
+- Then consider dietary patterns (vegetarian, gluten-free, etc.)
+- Keep the recipe recognisable
+- Be honest about trade-offs
+
+Return a JSON object with exactly these keys:
+- accommodates: array of { eaterName: string, restriction: string } — one entry per eater whose restriction drove a change
+- ingredientChanges: array of { original: string, replacement: string|null, reason: string } — replacement is null if ingredient is removed entirely
+- methodChanges: string array — practical cook-step changes (e.g. "Reduce chilli quantity by half before adding")
+- tradeoffs: string array — honest notes about what changes (e.g. "Recipe becomes vegetarian", "Milder spice profile")
+
+Keep each string short and concrete. Return {} for any array that has no entries.`;
+
+          const hspUserMessage =
+            `Meal: ${meal.name}\n\nIngredients:\n${ingredientList}\n\nConflicts to resolve:\n${conflictSummary}`;
+
+          const hspCompletion = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages: [
+              { role: "system", content: HSP_SYSTEM_PROMPT },
+              { role: "user", content: hspUserMessage },
+            ],
+            temperature: 0,
+            max_tokens: 800,
+            response_format: { type: "json_object" },
+          });
+          const hspRaw = hspCompletion.choices[0]?.message?.content?.trim() ?? "";
+          console.log("[ADAPT_DIAG] 12b. household-safe preview raw (first 400) =", hspRaw.slice(0, 400));
+          const hspParsed = JSON.parse(hspRaw);
+          if (
+            Array.isArray(hspParsed.accommodates) &&
+            Array.isArray(hspParsed.ingredientChanges) &&
+            Array.isArray(hspParsed.methodChanges) &&
+            Array.isArray(hspParsed.tradeoffs)
+          ) {
+            adaptationResult.householdSafePreview = {
+              accommodates: hspParsed.accommodates,
+              ingredientChanges: hspParsed.ingredientChanges,
+              methodChanges: hspParsed.methodChanges,
+              tradeoffs: hspParsed.tradeoffs,
+            };
+            console.log("[ADAPT_DIAG] 12c. household-safe preview attached");
+          } else {
+            console.warn("[ADAPT_DIAG] 12c. household-safe preview had unexpected shape — skipped");
+          }
+        } catch (hspErr: any) {
+          // Non-fatal — log and continue without the preview
+          console.error("[ADAPT_DIAG] 12b. household-safe preview FAILED —", hspErr?.message);
+        }
+      } else {
+        console.log("[ADAPT_DIAG] 12a. no conflicts — skipping household-safe preview");
+        adaptationResult.householdSafePreview = null;
+      }
+
       // Persist and return
       try {
         await storage.savePlannerEntryAdaptation(entryId, adaptationResult);
-        console.log("[ADAPT_DIAG] 12. DB save passed");
+        console.log("[ADAPT_DIAG] 12d. DB save passed");
       } catch (dbErr: any) {
-        console.error("[ADAPT_DIAG] 12. DB save FAILED —", dbErr?.message, dbErr);
+        console.error("[ADAPT_DIAG] 12d. DB save FAILED —", dbErr?.message, dbErr);
         throw dbErr;
       }
 

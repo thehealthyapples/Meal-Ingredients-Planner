@@ -26,4 +26,36 @@ export interface AdaptationResult {
   householdExtraIngredients: string[];
   /** Practical tip for managing all the adaptations in one cook */
   cookingNote: string;
+  /**
+   * AI-generated preview of one unified version satisfying all household restrictions.
+   * Present only when at least one eater has a conflict. Preview only — never persisted
+   * as a recipe, never overwrites the original.
+   */
+  householdSafePreview?: HouseholdSafePreview | null;
+}
+
+/** One ingredient change in the household-safe unified preview */
+export interface HouseholdSafeIngredientChange {
+  /** The original ingredient being changed */
+  original: string;
+  /** Replacement ingredient, or null if the ingredient is removed entirely */
+  replacement: string | null;
+  /** Short reason for this change (e.g. "dairy-free for Lilly") */
+  reason: string;
+}
+
+/**
+ * AI-generated preview of one unified recipe version satisfying the most restrictive
+ * household requirements. This is a transparent preview only — not a replacement for
+ * the original recipe, not medically guaranteed, and not persisted to the cookbook.
+ */
+export interface HouseholdSafePreview {
+  /** Which eaters' restrictions drove the adaptations */
+  accommodates: Array<{ eaterName: string; restriction: string }>;
+  /** Ingredient-level changes needed to make the recipe household-safe */
+  ingredientChanges: HouseholdSafeIngredientChange[];
+  /** Method-level changes (free text, e.g. "Reduce chilli by 50% before adding") */
+  methodChanges: string[];
+  /** Trade-offs and notes (e.g. "Recipe becomes vegetarian", "Milder spice profile") */
+  tradeoffs: string[];
 }
