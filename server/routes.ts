@@ -8028,10 +8028,10 @@ Keep notes short and concrete. Never duplicate ingredients across eaters and hou
 
 RULES:
 - Produce ingredient-level substitutions only (no full rewrites)
-- CRITICAL: Scan EVERY ingredient in the list against the household restrictions below. Do not rely solely on the conflict notes — they may not list every problematic ingredient.
+- CRITICAL: You MUST scan EVERY single ingredient against ALL household restrictions. Go through the ingredient list line by line — do not stop after finding the first problem.
 - ALWAYS prefer substituting with a widely available alternative over removing entirely
-  - Meat/fish: use lentils, chickpeas, tofu, tempeh, jackfruit, smoked chickpeas etc.
-  - Dairy: use dairy-free cheese, oat cream, coconut cream, dairy-free butter, oat milk etc.
+  - Meat/fish: use lentils, chickpeas, tofu, tempeh, jackfruit, mushrooms, smoked chickpeas etc.
+  - Dairy: use dairy-free cheese, oat cream, coconut cream, dairy-free butter, oat milk, nutritional yeast etc.
   - Gluten: use gluten-free pasta, gluten-free flour, gluten-free breadcrumbs etc.
   - Eggs: use flax egg, aquafaba etc. where relevant
 - Only set replacement to null (remove entirely) if there is genuinely no suitable substitute
@@ -8039,9 +8039,16 @@ RULES:
 - Keep the recipe recognisable
 - Be honest about trade-offs
 
+RESTRICTION REFERENCE — apply these when scanning each ingredient:
+- Vegetarian: ALL meat and fish must be substituted — this includes beef, pork, chicken, lamb, turkey, bacon, ham, sausage, mince, lardons, anchovies, fish fillets, shellfish, and any stock/broth made from meat or fish.
+- Vegan: same as Vegetarian PLUS all dairy and eggs must be substituted.
+- Dairy-Free: ALL dairy must be substituted — this includes milk, cream, creme fraiche, double cream, single cream, butter, cheese (cheddar, mozzarella, parmesan, brie, feta, halloumi, etc.), yoghurt, sour cream, and any ingredient containing milk or lactose.
+- Gluten-Free: ALL gluten-containing ingredients must be substituted — this includes wheat flour, plain flour, self-raising flour, pasta, lasagne sheets, noodles, bread, breadcrumbs, soy sauce (unless tamari), and barley or rye ingredients.
+- Nut-Free: remove or substitute any tree nuts (almonds, cashews, walnuts, pistachios, pecans, etc.) and peanuts.
+
 Return a JSON object with exactly these keys:
 - accommodates: array of { eaterName: string, restriction: string } — one entry per eater whose restriction drove a change
-- ingredientChanges: array of { original: string, replacement: string|null, reason: string } — replacement is null only if ingredient must be removed with no suitable substitute
+- ingredientChanges: array of { original: string, replacement: string|null, reason: string } — replacement is null only if ingredient must be removed with no suitable substitute; copy the original ingredient string EXACTLY as it appears in the list
 - methodChanges: string array — practical cook-step changes (e.g. "Reduce chilli quantity by half before adding")
 - tradeoffs: string array — honest notes about what changes (e.g. "Recipe becomes vegetarian", "Milder spice profile")
 
@@ -8057,7 +8064,7 @@ Keep each string short and concrete. Return [] for any array that has no entries
               { role: "user", content: hspUserMessage },
             ],
             temperature: 0,
-            max_tokens: 800,
+            max_tokens: 1200,
             response_format: { type: "json_object" },
           });
           const hspRaw = hspCompletion.choices[0]?.message?.content?.trim() ?? "";
