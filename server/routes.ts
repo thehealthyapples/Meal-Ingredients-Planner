@@ -8117,6 +8117,36 @@ Keep each string short and concrete. Return [] for any array that has no entries
   // Phase 1: creates a persistent, reusable meal variant from the AI preview.
   // The original meal is never modified. The planner entry is repointed to the variant.
 
+  // Strip leading quantity/unit from an ingredient string to get the ingredient name.
+  // e.g. "500g Minced Beef" → "Minced Beef", "2 Bacon" → "Bacon", "400ml Creme Fraiche" → "Creme Fraiche"
+  function extractIngredientName(s: string): string {
+    return s
+      .replace(/^\d+(\.\d+)?\s*(g|kg|ml|l|tblsp?|tbsp?|tsp|oz|lb|lbs|rashers?|cloves?|sticks?|medium|large|small|x)\.?\s+/i, "")
+      .replace(/^[½¼¾]\s+/, "")
+      .trim();
+  }
+
+  // Update instruction steps to reference new ingredient names.
+  // For each change, finds the original ingredient name (or common short form) and replaces it
+  // with the replacement name in all instruction steps.
+  function applyHouseholdSafeInstructions(
+    originalInstructions: string[],
+    changes: import("@shared/meal-adaptation").HouseholdSafeIngredientChange[]
+  ): string[] {
+    let steps = [...originalInstructions];
+    for (const change of changes) {
+      if (!change.replacement) continue;
+      const origName = extractIngredientName(change.original);
+      const replName = extractIngredientName(change.replacement);
+      if (!origName || !replName || origName.toLowerCase() === replName.toLowerCase()) continue;
+      // Also try just the last meaningful word (e.g. "Minced Beef" → try "beef" and "mince")
+      const escapedOrig = origName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const pattern = new RegExp(`\\b${escapedOrig}s?\\b`, "gi");
+      steps = steps.map(step => step.replace(pattern, replName));
+    }
+    return steps;
+  }
+
   function applyHouseholdSafeIngredients(
     originalIngredients: string[],
     changes: import("@shared/meal-adaptation").HouseholdSafeIngredientChange[]
@@ -8191,9 +8221,11 @@ Keep each string short and concrete. Return [] for any array that has no entries
         preview.ingredientChanges
       );
 
-      const variantInstructions = preview.methodChanges.length > 0
-        ? [...baseInstructions, ...preview.methodChanges]
-        : baseInstructions;
+      // Apply ingredient-name substitutions in the instructions, then append any extra method steps.
+      const variantInstructions = (() => {
+        const updated = applyHouseholdSafeInstructions(baseInstructions, preview.ingredientChanges);
+        return preview.methodChanges.length > 0 ? [...updated, ...preview.methodChanges] : updated;
+      })();
 
       // Build historical restriction snapshot with stable eater IDs
       const eaterRows = await storage.getHouseholdEaters(householdId);

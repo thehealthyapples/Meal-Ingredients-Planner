@@ -542,10 +542,12 @@ export default function WeeklyPlannerPage() {
       }
       return res.json() as Promise<{ variantMeal: import("@shared/schema").Meal; originalMealId: number }>;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
       qc.invalidateQueries({ queryKey: ["/api/meals"] });
       setVariantAccepted(true);
+      // Update the open dialog immediately so the user sees the variant's ingredients/instructions
+      setMealDetail(prev => prev ? { ...prev, meal: data.variantMeal } : null);
     },
     onError: (err: Error) => {
       toast({ title: "Could not save variant", description: err.message, variant: "destructive" });
