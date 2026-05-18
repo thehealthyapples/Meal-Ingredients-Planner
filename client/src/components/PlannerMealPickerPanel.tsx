@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Meal } from "@shared/schema";
+import { scoreMealSearch } from "@shared/food-synonyms";
 
 export interface EntryTarget {
   dayId: number;
@@ -88,8 +89,12 @@ export function PlannerMealPickerPanel({
       result = result.filter(m => m.isReadyMeal);
     }
     if (mealSearch.trim()) {
-      const q = mealSearch.toLowerCase();
-      result = result.filter(m => m.name.toLowerCase().includes(q));
+      const q = mealSearch.trim();
+      const scored = result
+        .map(m => ({ m, score: scoreMealSearch({ name: m.name, ingredients: m.ingredients }, q) }))
+        .filter(({ score }) => score > 0);
+      scored.sort((a, b) => b.score - a.score);
+      result = scored.map(({ m }) => m);
     }
     if (!mealSearch.trim() && target && !target.isDrink) {
       const slotCatId = categoryIdForSlot[target.mealType];
@@ -154,7 +159,7 @@ export function PlannerMealPickerPanel({
             variant={mealFilter === f ? "default" : "outline"}
             size="sm"
             className={`text-xs h-7 px-2 ${f === "product" ? "gap-1" : ""}`}
-            onClick={() => setMealFilter(f)}
+            onClick={() => { setMealFilter(f); setMealSearch(""); }}
             data-testid={`button-filter-${f}`}
           >
             {f === "product" && <Package className="h-3 w-3" />}
@@ -235,7 +240,17 @@ export function PlannerMealPickerPanel({
       {mealFilter !== "product" && (
         <div className="overflow-y-auto space-y-0.5" data-testid="list-meal-picker">
           {filteredMeals.length === 0 ? (
-            <p className="text-center text-muted-foreground text-sm py-6">No meals found</p>
+            mealFilter === "cookbook" && !mealSearch.trim() ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <ChefHat className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                <p className="text-sm font-medium">Search your cookbook</p>
+                <p className="text-xs mt-1 opacity-70">Type a meal name or ingredient above</p>
+              </div>
+            ) : mealSearch.trim() ? (
+              <p className="text-center text-muted-foreground text-sm py-6">No meals found for &ldquo;{mealSearch}&rdquo;</p>
+            ) : (
+              <p className="text-center text-muted-foreground text-sm py-6">No meals found</p>
+            )
           ) : (
             filteredMeals.map(meal => (
               <button
