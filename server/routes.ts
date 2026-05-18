@@ -8034,7 +8034,8 @@ RULES:
   - Dairy: use dairy-free cheese, oat cream, coconut cream, dairy-free butter, oat milk, nutritional yeast etc.
   - Gluten: use gluten-free pasta, gluten-free flour, gluten-free breadcrumbs etc.
   - Eggs: use flax egg, aquafaba etc. where relevant
-- Only set replacement to null (remove entirely) if there is genuinely no suitable substitute
+- ONLY include an ingredient in ingredientChanges if it actually violates one of the household restrictions — do NOT touch ingredients that are already compliant (e.g. oils, vegetables, herbs, spices, water, vinegar, stock that contains no restricted ingredients are all fine as-is)
+- Only set replacement to null (remove entirely) if there is genuinely no suitable substitute AND the ingredient violates a restriction
 - Prioritise allergens/intolerances first, then dietary patterns
 - Keep the recipe recognisable
 - Be honest about trade-offs
