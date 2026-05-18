@@ -2852,6 +2852,18 @@ export default function WeeklyPlannerPage() {
                         <div className="flex items-center gap-2">
                           <Users className="h-3.5 w-3.5 text-muted-foreground" />
                           <span className="text-sm font-medium text-foreground">Tailor for household</span>
+                          {(() => {
+                            const result: AdaptationResult | null | undefined =
+                              adaptMutation.data ?? (entry.adaptationResult as AdaptationResult | null);
+                            if (result && !adaptMutation.isPending) {
+                              return (
+                                <span className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                  {result.adaptations.length} checked
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
                         <div className="flex items-center gap-2">
                           {/* Re-run / run button */}
@@ -2887,44 +2899,78 @@ export default function WeeklyPlannerPage() {
                         </div>
                       </div>
 
-                      {/* Result body - collapsed by default */}
+                      {/* Pre-tailor info — shown when no result yet */}
+                      {(() => {
+                        const result: AdaptationResult | null | undefined =
+                          adaptMutation.data ?? (entry.adaptationResult as AdaptationResult | null);
+                        if (result || adaptMutation.isPending) return null;
+                        const totalEaters = householdEaters.length + entryGuests.length;
+                        return (
+                          <div className="px-3 py-2 border-t border-border/50 bg-background/60">
+                            <p className="text-[11px] text-muted-foreground">
+                              Will evaluate {householdEaters.length} household member{householdEaters.length !== 1 ? "s" : ""}
+                              {entryGuests.length > 0 && ` + ${entryGuests.length} guest${entryGuests.length !== 1 ? "s" : ""}`}
+                              {" "}({totalEaters} total)
+                            </p>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Result body */}
                       {(() => {
                         const result: AdaptationResult | null | undefined =
                           adaptMutation.data ?? (entry.adaptationResult as AdaptationResult | null);
                         if (!result || !adaptationOpen || adaptMutation.isPending) return null;
                         return (
                           <div className="px-3 py-3 space-y-3 border-t border-border bg-background">
-                            {/* Base meal note */}
-                            {result.baseMealNote && (
-                              <p className="text-xs text-muted-foreground italic">{result.baseMealNote}</p>
-                            )}
-                            {/* Per-eater adaptations */}
-                            <ul className="space-y-1.5">
-                              {result.adaptations.map((a, i) => (
-                                <li key={i} className="text-sm flex items-start gap-2">
-                                  <span className="shrink-0 font-medium text-foreground min-w-[80px]">
-                                    {a.eaterName}
-                                  </span>
-                                  <span className="text-foreground/80">
-                                    {a.changeType === "none" ? (
-                                      <span className="text-muted-foreground">as normal</span>
-                                    ) : (
-                                      <>
-                                        {a.note}
-                                        {a.extraIngredients.length > 0 && (
-                                          <span className="text-muted-foreground">
-                                            {" "}(needs: {a.extraIngredients.join(", ")})
-                                          </span>
+                            {/* Per-eater compatibility rows */}
+                            <ul className="space-y-0 divide-y divide-border/40">
+                              {result.adaptations.map((a, i) => {
+                                const isChild = householdEaters.find(e => e.displayName === a.eaterName)?.kind === "child";
+                                const needsChange = a.changeType !== "none";
+                                const noData = !!a.hasNoDietaryData;
+                                return (
+                                  <li key={i} className="flex items-start gap-2.5 py-2 first:pt-0 last:pb-0">
+                                    {/* Status icon */}
+                                    <div className="shrink-0 mt-0.5 w-4 flex justify-center">
+                                      {needsChange ? (
+                                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                                      ) : noData ? (
+                                        <HelpCircle className="h-3.5 w-3.5 text-muted-foreground/50" />
+                                      ) : (
+                                        <Check className="h-3.5 w-3.5 text-green-500" />
+                                      )}
+                                    </div>
+                                    {/* Eater details */}
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span className="text-sm font-medium text-foreground">{a.eaterName}</span>
+                                        {isChild && (
+                                          <span className="text-[10px] text-muted-foreground/70 bg-muted px-1 py-0.5 rounded">child</span>
                                         )}
-                                      </>
-                                    )}
-                                  </span>
-                                </li>
-                              ))}
+                                      </div>
+                                      <p className="text-xs mt-0.5">
+                                        {needsChange ? (
+                                          <span className="text-foreground/80">
+                                            {a.note}
+                                            {a.extraIngredients.length > 0 && (
+                                              <span className="text-muted-foreground"> · needs: {a.extraIngredients.join(", ")}</span>
+                                            )}
+                                          </span>
+                                        ) : noData ? (
+                                          <span className="text-muted-foreground/70 italic">{a.note}</span>
+                                        ) : (
+                                          <span className="text-muted-foreground">as normal</span>
+                                        )}
+                                      </p>
+                                    </div>
+                                  </li>
+                                );
+                              })}
                             </ul>
                             {/* Extra ingredients summary */}
                             {result.householdExtraIngredients.length > 0 && (
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-muted-foreground pt-1 border-t border-border/40">
                                 <span className="font-medium">Extra to buy:</span>{" "}
                                 {result.householdExtraIngredients.join(", ")}
                               </p>

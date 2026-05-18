@@ -13,6 +13,8 @@ export interface EaterAdaptation {
   note: string;
   /** Any extra ingredients needed just for this eater's plate */
   extraIngredients: string[];
+  /** True when this eater has no dietary preferences or restrictions on file — compatibility cannot be fully verified */
+  hasNoDietaryData?: boolean;
 }
 
 export interface AdaptationResult {

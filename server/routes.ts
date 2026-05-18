@@ -7869,12 +7869,11 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       if (!meal) return res.status(404).json({ message: "Meal not found" });
       console.log("[ADAPT_DIAG] 5. resolved planner entry — mealId =", entry.mealId, "meal =", meal.name);
 
-      // Gather eaters (Phase 2 logic — fall back to adults if none explicitly set)
+      // Gather eaters — fall back to ALL household members (adults + children) if none explicitly set
       const { dbEaterToHouseholdEater, getEffectiveDietProfile, guestEaterToProfile } = await import("@shared/household-eater.js");
       let eaterRows = await storage.getPlannerEntryEaters(entryId);
       if (eaterRows.length === 0) {
-        const allEaters = await storage.getHouseholdEaters(householdId);
-        eaterRows = allEaters.filter(e => e.userId != null);
+        eaterRows = await storage.getHouseholdEaters(householdId);
       }
 
       // Phase 5: also gather guest eaters for this entry
@@ -7912,9 +7911,12 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         : "  (no ingredients listed)";
 
       const eatersSection = profiles.map(p => {
-        const diets = p.dietTypes.length > 0 ? p.dietTypes.join(", ") : "none";
-        const restrictions = p.hardRestrictions.length > 0 ? p.hardRestrictions.join(", ") : "none";
-        return `  - ${p.displayName}: diet pattern=${diets}, allergies & intolerances=${restrictions}`;
+        const hasDiets = p.dietTypes.length > 0;
+        const hasRestrictions = p.hardRestrictions.length > 0;
+        const diets = hasDiets ? p.dietTypes.join(", ") : "none";
+        const restrictions = hasRestrictions ? p.hardRestrictions.join(", ") : "none";
+        const noInfo = !hasDiets && !hasRestrictions ? " [NO DIETARY INFO ON FILE]" : "";
+        return `  - ${p.displayName}: diet pattern=${diets}, allergies & intolerances=${restrictions}${noInfo}`;
       }).join("\n");
 
       const userMessage =
@@ -7925,9 +7927,10 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const { default: OpenAI } = await import("openai");
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-      const SYSTEM_PROMPT = `You are a household meal adaptation assistant. Suggest small, practical plate-level adjustments to a shared meal so it works for every eater listed.
+      const SYSTEM_PROMPT = `You are a household meal adaptation assistant. Evaluate this meal against every eater listed and suggest small, practical plate-level adjustments so it works for everyone.
 
 CORE RULES:
+- Every single eater listed MUST appear in the adaptations array — never skip anyone
 - One shared meal — never generate separate meals or rewrite the recipe
 - Adaptations must happen at plating, serving, or the final cooking stage only
 - Minimise extra prep and cooking effort
@@ -7940,9 +7943,15 @@ ADAPTATION TYPES:
 - add_on: add something extra on this eater's plate only (e.g. extra grilled chicken on the side)
 - omission: leave out an ingredient for this eater's plate
 
+NO DIETARY INFO HANDLING:
+- If an eater is marked [NO DIETARY INFO ON FILE], still include them with changeType "none"
+- Set hasNoDietaryData: true for those eaters
+- Use note: "No dietary preferences on file — meal assumed suitable"
+- Do NOT claim the meal has been verified safe for them
+
 Return a JSON object with exactly these keys:
 - baseMealNote: string
-- adaptations: array of { eaterName, changeType ("none"|"swap"|"add_on"|"omission"), note, extraIngredients (string array) }
+- adaptations: array of { eaterName, changeType ("none"|"swap"|"add_on"|"omission"), note, extraIngredients (string array), hasNoDietaryData (boolean, omit if false) }
 - householdExtraIngredients: string array (deduplicated extras shared across eaters)
 - cookingNote: string
 
