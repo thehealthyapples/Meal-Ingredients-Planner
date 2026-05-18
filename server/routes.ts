@@ -8049,13 +8049,17 @@ RESTRICTION REFERENCE — apply these when scanning each ingredient:
 Return a JSON object with exactly these keys:
 - accommodates: array of { eaterName: string, restriction: string } — one entry per eater whose restriction drove a change
 - ingredientChanges: array of { original: string, replacement: string|null, reason: string } — replacement is null only if ingredient must be removed with no suitable substitute; copy the original ingredient string EXACTLY as it appears in the list
-- methodChanges: string array — practical cook-step changes (e.g. "Reduce chilli quantity by half before adding")
+- updatedInstructions: string array — the COMPLETE set of method steps rewritten to reference the new ingredients. Every step from the original must appear. Update any reference to a substituted ingredient (e.g. "mince" → "lentils", "crème fraîche" → "dairy-free cream", "Parmesan" → "nutritional yeast"). Return [] only if no instructions were provided.
 - tradeoffs: string array — honest notes about what changes (e.g. "Recipe becomes vegetarian", "Milder spice profile")
 
-Keep each string short and concrete. Return [] for any array that has no entries.`;
+Keep each string short and concrete. Return [] for any array with no entries.`;
+
+          const instructionList = (meal.instructions ?? []).length > 0
+            ? (meal.instructions ?? []).map((s, i) => `  ${i + 1}. ${s}`).join("\n")
+            : "  (no instructions provided)";
 
           const hspUserMessage =
-            `Meal: ${meal.name}\n\nIngredients:\n${ingredientList}\n\nHousehold restrictions (scan ALL ingredients against these):\n${restrictionSummary}\n\nPer-eater conflict notes (context, may be incomplete):\n${conflictSummary}`;
+            `Meal: ${meal.name}\n\nIngredients:\n${ingredientList}\n\nMethod:\n${instructionList}\n\nHousehold restrictions (scan ALL ingredients against these):\n${restrictionSummary}\n\nPer-eater conflict notes (context, may be incomplete):\n${conflictSummary}`;
 
           const hspCompletion = await openai.chat.completions.create({
             model: "gpt-4o-mini",
@@ -8064,7 +8068,7 @@ Keep each string short and concrete. Return [] for any array that has no entries
               { role: "user", content: hspUserMessage },
             ],
             temperature: 0,
-            max_tokens: 1200,
+            max_tokens: 2000,
             response_format: { type: "json_object" },
           });
           const hspRaw = hspCompletion.choices[0]?.message?.content?.trim() ?? "";
@@ -8073,16 +8077,16 @@ Keep each string short and concrete. Return [] for any array that has no entries
           if (
             Array.isArray(hspParsed.accommodates) &&
             Array.isArray(hspParsed.ingredientChanges) &&
-            Array.isArray(hspParsed.methodChanges) &&
             Array.isArray(hspParsed.tradeoffs)
           ) {
             adaptationResult.householdSafePreview = {
               accommodates: hspParsed.accommodates,
               ingredientChanges: hspParsed.ingredientChanges,
-              methodChanges: hspParsed.methodChanges,
+              // Store updated instructions on methodChanges for transport to the accept endpoint
+              methodChanges: Array.isArray(hspParsed.updatedInstructions) ? hspParsed.updatedInstructions : [],
               tradeoffs: hspParsed.tradeoffs,
             };
-            console.log("[ADAPT_DIAG] 12c. household-safe preview attached");
+            console.log("[ADAPT_DIAG] 12c. household-safe preview attached, updatedInstructions =", hspParsed.updatedInstructions?.length ?? 0, "steps");
           } else {
             console.warn("[ADAPT_DIAG] 12c. household-safe preview had unexpected shape — skipped");
           }
@@ -8221,11 +8225,10 @@ Keep each string short and concrete. Return [] for any array that has no entries
         preview.ingredientChanges
       );
 
-      // Apply ingredient-name substitutions in the instructions, then append any extra method steps.
-      const variantInstructions = (() => {
-        const updated = applyHouseholdSafeInstructions(baseInstructions, preview.ingredientChanges);
-        return preview.methodChanges.length > 0 ? [...updated, ...preview.methodChanges] : updated;
-      })();
+      // Use AI-rewritten instructions if provided (stored in methodChanges), otherwise keep base.
+      const variantInstructions = preview.methodChanges.length > 0
+        ? preview.methodChanges
+        : baseInstructions;
 
       // Build historical restriction snapshot with stable eater IDs
       const eaterRows = await storage.getHouseholdEaters(householdId);
