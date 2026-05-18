@@ -3013,20 +3013,46 @@ export default function WeeklyPlannerPage() {
                                     </div>
                                   )}
 
-                                  {/* Ingredient changes */}
+                                  {/* Ingredient changes — side-by-side comparison */}
                                   {preview.ingredientChanges.length > 0 && (
                                     <div>
-                                      <p className="text-xs font-medium text-foreground/80 mb-1">Ingredient changes:</p>
-                                      <ul className="space-y-1">
+                                      <p className="text-xs font-medium text-foreground/80 mb-2">Ingredient changes:</p>
+                                      {/* Column headers — hidden on smallest screens, shown sm+ */}
+                                      <div className="hidden sm:grid sm:grid-cols-[1fr_1fr_auto] gap-x-3 px-2 pb-1 border-b border-border/40 mb-1">
+                                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">Original</span>
+                                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">Household-safe</span>
+                                        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/60">Why</span>
+                                      </div>
+                                      <ul className="space-y-px">
                                         {preview.ingredientChanges.map((c, i) => (
-                                          <li key={i} className="text-xs flex items-start gap-1.5">
-                                            <span className="mt-1.5 shrink-0 w-1 h-1 rounded-full bg-primary/50" />
-                                            <span className="text-foreground/80">
-                                              {c.replacement
-                                                ? <>Replace <span className="line-through text-muted-foreground/60">{c.original}</span> with <span className="font-medium">{c.replacement}</span>{c.reason ? <span className="text-muted-foreground/70"> — {c.reason}</span> : null}</>
-                                                : <>Remove <span className="line-through text-muted-foreground/60">{c.original}</span>{c.reason ? <span className="text-muted-foreground/70"> — {c.reason}</span> : null}</>
-                                              }
-                                            </span>
+                                          <li key={i} className={`rounded-sm ${i % 2 === 0 ? "bg-muted/20" : ""}`}>
+                                            {/* Desktop/tablet: three-column row */}
+                                            <div className="hidden sm:grid sm:grid-cols-[1fr_1fr_auto] gap-x-3 px-2 py-1.5 items-center">
+                                              <span className="text-xs text-muted-foreground truncate" title={c.original}>{c.original}</span>
+                                              <span className={`text-xs font-medium truncate ${c.replacement ? "text-foreground" : "text-rose-600 dark:text-rose-400"}`} title={c.replacement ?? "Removed"}>
+                                                {c.replacement ?? "Removed"}
+                                              </span>
+                                              <span className="text-[11px] text-muted-foreground/70 whitespace-nowrap">{c.reason}</span>
+                                            </div>
+                                            {/* Mobile: stacked card */}
+                                            <div className="sm:hidden px-2 py-2 space-y-0.5">
+                                              <div className="flex items-center justify-between gap-2">
+                                                <span className="text-[10px] uppercase tracking-wide text-muted-foreground/55 shrink-0">Original</span>
+                                                <span className="text-xs text-muted-foreground text-right">{c.original}</span>
+                                              </div>
+                                              <div className="flex items-center justify-between gap-2">
+                                                <span className="text-[10px] uppercase tracking-wide text-muted-foreground/55 shrink-0">Household-safe</span>
+                                                <span className={`text-xs font-medium text-right ${c.replacement ? "text-foreground" : "text-rose-600 dark:text-rose-400"}`}>
+                                                  {c.replacement ?? "Removed"}
+                                                </span>
+                                              </div>
+                                              {c.reason && (
+                                                <div className="flex items-center justify-between gap-2">
+                                                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground/55 shrink-0">Why</span>
+                                                  <span className="text-[11px] text-muted-foreground/70 text-right">{c.reason}</span>
+                                                </div>
+                                              )}
+                                            </div>
                                           </li>
                                         ))}
                                       </ul>
