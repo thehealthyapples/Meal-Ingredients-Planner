@@ -8049,7 +8049,12 @@ RESTRICTION REFERENCE — apply these when scanning each ingredient:
 Return a JSON object with exactly these keys:
 - accommodates: array of { eaterName: string, restriction: string } — one entry per eater whose restriction drove a change
 - ingredientChanges: array of { original: string, replacement: string|null, reason: string } — replacement is null only if ingredient must be removed with no suitable substitute; copy the original ingredient string EXACTLY as it appears in the list
-- updatedInstructions: string array — the COMPLETE set of method steps rewritten to reference the new ingredients. Every step from the original must appear. Update any reference to a substituted ingredient (e.g. "mince" → "lentils", "crème fraîche" → "dairy-free cream", "Parmesan" → "nutritional yeast"). Return [] only if no instructions were provided.
+- updatedInstructions: string array — the COMPLETE set of method steps intelligently rewritten for the substituted ingredients. Return one string per original step. Rules:
+  * Update references to substituted ingredients using the natural cooking term for the replacement (e.g. "mince" → "lentils", "crème fraîche" → "dairy-free cream", "Parmesan" → "nutritional yeast")
+  * ADAPT THE TECHNIQUE to suit the replacement ingredient — do not blindly copy the original method. Examples: if bacon is replaced by smoked chickpeas, remove "snip with scissors" and "cook until golden"; if mince is replaced by lentils, remove "break it up with a wooden spoon" and "browned all over"; if creme fraiche is replaced by oat cream, adjust consistency notes accordingly
+  * Remove or rewrite any step or phrase that only makes sense for the original ingredient
+  * Keep all steps that are unchanged (vegetables, seasoning, assembly, baking times etc.) exactly as written
+  * Return [] only if no instructions were provided
 - tradeoffs: string array — honest notes about what changes (e.g. "Recipe becomes vegetarian", "Milder spice profile")
 
 Keep each string short and concrete. Return [] for any array with no entries.`;
