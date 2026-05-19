@@ -1,14 +1,30 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Search, Loader2, ChefHat, UtensilsCrossed,
-  Baby, PersonStanding, Wine, Package, Store, Microscope,
+  Baby, PersonStanding, Wine, Package, Store, Microscope, Globe,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { Meal } from "@shared/schema";
 import { scoreMealSearch } from "@shared/food-synonyms";
+
+// Matches the structure returned by GET /api/search-recipes
+interface WebSearchRecipe {
+  id: string;
+  name: string;
+  image: string;
+  url: string | null;
+  category: string | null;
+  cuisine: string | null;
+  ingredients: string[];
+  instructions?: string[];
+  source?: string;
+}
+
+const PREMIUM_MARKER = "This is a premium piece of content available to subscribed users.";
 
 export interface EntryTarget {
   dayId: number;
@@ -58,12 +74,90 @@ export function PlannerMealPickerPanel({
   onAddProduct,
 }: PlannerMealPickerPanelProps) {
   const { toast } = useToast();
+  const qc = useQueryClient();
   const [mealSearch, setMealSearch] = useState("");
   const [mealFilter, setMealFilter] = useState<"all" | "cookbook" | "planner" | "ready" | "product">("all");
   const [productQuery, setProductQuery] = useState("");
   const [productResults, setProductResults] = useState<PlannerProductResult[]>([]);
   const [productSearching, setProductSearching] = useState(false);
   const [productRetailer, setProductRetailer] = useState("");
+
+  // Phase 2: optional web search (default OFF — cookbook-first, explicit user opt-in)
+  const [includeWeb, setIncludeWeb] = useState(false);
+  const [webResults, setWebResults] = useState<WebSearchRecipe[]>([]);
+  const [webLoading, setWebLoading] = useState(false);
+  const [importingWebId, setImportingWebId] = useState<string | null>(null);
+  const webAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (webAbortRef.current) webAbortRef.current.abort();
+    if (!includeWeb) { setWebResults([]); setWebLoading(false); return; }
+    const q = mealSearch.trim();
+    if (q.length < 2) { setWebResults([]); setWebLoading(false); return; }
+
+    const ctrl = new AbortController();
+    webAbortRef.current = ctrl;
+    let active = true;
+
+    const timer = setTimeout(async () => {
+      setWebLoading(true);
+      try {
+        const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(q)}&page=1`, {
+          signal: ctrl.signal,
+          credentials: "include",
+        });
+        if (!res.ok || !active) return;
+        const data: { recipes: WebSearchRecipe[] } = await res.json();
+        const filtered = (data.recipes ?? []).filter(r => {
+          const allText = [r.name, ...(r.ingredients ?? []), ...(r.instructions ?? [])].join("\0");
+          return !allText.includes(PREMIUM_MARKER);
+        });
+        if (active) setWebResults(filtered.slice(0, 15));
+      } catch (err: unknown) {
+        if ((err as any)?.name === "AbortError" || !active) return;
+      } finally {
+        if (active) setWebLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+      ctrl.abort();
+    };
+  }, [mealSearch, includeWeb]);
+
+  const handleAddWebRecipe = async (recipe: WebSearchRecipe) => {
+    if (importingWebId) return;
+    setImportingWebId(recipe.id);
+    try {
+      const res = await fetch("/api/meals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: recipe.name,
+          ingredients: recipe.ingredients ?? [],
+          instructions: recipe.instructions ?? [],
+          imageUrl: recipe.image || null,
+          sourceUrl: recipe.url || null,
+          servings: 1,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save recipe");
+      const meal = await res.json();
+      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      if (!target) {
+        toast({ title: "Recipe saved to cookbook", description: "Select a meal slot in the planner to add it." });
+        return;
+      }
+      onSelect(meal.id);
+    } catch {
+      toast({ title: "Could not add web recipe", variant: "destructive" });
+    } finally {
+      setImportingWebId(null);
+    }
+  };
 
   const filteredMeals = useMemo(() => {
     let result = meals.filter(m => (m as any).mealSourceType !== "planner-placeholder");
@@ -139,17 +233,24 @@ export function PlannerMealPickerPanel({
     }
   };
 
-  const pickerTitle = target?.isDrink
+  const pickerTitle = !target
+    ? "Search & add recipes"
+    : target.isDrink
     ? "Choose a Drink"
-    : target?.audience === "baby"
+    : target.audience === "baby"
     ? "Choose a Baby Meal"
-    : target?.audience === "child"
+    : target.audience === "child"
     ? "Choose a Child Meal"
-    : `Choose a ${MEAL_SLOT_LABELS[target?.mealType ?? ""] || "Meal"}`;
+    : `Choose a ${MEAL_SLOT_LABELS[target.mealType] || "Meal"}`;
 
   return (
     <div className="flex flex-col gap-3" data-testid="panel-manual-content">
       <p className="text-xs font-medium text-muted-foreground">{pickerTitle}</p>
+      {!target && (
+        <p className="text-[11px] text-muted-foreground/60 -mt-1">
+          Click a day slot in the planner to add a recipe there.
+        </p>
+      )}
 
       {/* Filter tabs */}
       <div className="flex gap-1 flex-wrap">
@@ -176,17 +277,31 @@ export function PlannerMealPickerPanel({
         ))}
       </div>
 
-      {/* Meal search (non-product tabs) */}
+      {/* Meal search (non-product tabs) + Include web pill */}
       {mealFilter !== "product" && (
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search meals..."
-            value={mealSearch}
-            onChange={e => setMealSearch(e.target.value)}
-            className="pl-9 h-8 text-sm"
-            data-testid="input-meal-search"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search meals..."
+              value={mealSearch}
+              onChange={e => setMealSearch(e.target.value)}
+              className="pl-9 h-8 text-sm"
+              data-testid="input-meal-search"
+            />
+          </div>
+          <button
+            onClick={() => setIncludeWeb(v => !v)}
+            className={`text-xs px-2.5 py-1 rounded-full border transition-colors shrink-0 whitespace-nowrap ${
+              includeWeb
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+            }`}
+            data-testid="button-include-web"
+            title={includeWeb ? "Web results active — click to disable" : "Include web recipes in search"}
+          >
+            {includeWeb ? "Web on" : "Include web"}
+          </button>
         </div>
       )}
 
@@ -236,10 +351,10 @@ export function PlannerMealPickerPanel({
         </div>
       )}
 
-      {/* Meals list */}
+      {/* Meals list — local/cookbook results always appear first */}
       {mealFilter !== "product" && (
         <div className="overflow-y-auto space-y-0.5" data-testid="list-meal-picker">
-          {filteredMeals.length === 0 ? (
+          {filteredMeals.length === 0 && !includeWeb ? (
             mealFilter === "cookbook" && !mealSearch.trim() ? (
               <div className="text-center py-8 text-muted-foreground">
                 <ChefHat className="h-8 w-8 mx-auto mb-2 opacity-20" />
@@ -256,7 +371,13 @@ export function PlannerMealPickerPanel({
               <button
                 key={meal.id}
                 className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
-                onClick={() => onSelect(meal.id)}
+                onClick={() => {
+                  if (!target) {
+                    toast({ title: "Select a meal slot", description: "Click a slot in the planner to add this recipe." });
+                    return;
+                  }
+                  onSelect(meal.id);
+                }}
                 disabled={addingEntry}
                 data-testid={`button-select-meal-${meal.id}`}
               >
@@ -301,6 +422,69 @@ export function PlannerMealPickerPanel({
                 </div>
               </button>
             ))
+          )}
+
+          {/* Phase 2: Web results — hydrate below cookbook results, never replace them */}
+          {includeWeb && mealSearch.trim().length >= 2 && (webLoading || webResults.length > 0) && (
+            <div className="mt-1" data-testid="section-web-results">
+              <div className="flex items-center gap-2 py-1.5">
+                <div className="h-px flex-1 bg-border/50" />
+                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wide flex items-center gap-1">
+                  <Globe className="h-3 w-3" />
+                  From the web
+                </span>
+                {webLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />}
+                <div className="h-px flex-1 bg-border/50" />
+              </div>
+              {webResults.map(recipe => (
+                <button
+                  key={recipe.id}
+                  className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 text-left disabled:opacity-50"
+                  onClick={() => handleAddWebRecipe(recipe)}
+                  disabled={!!importingWebId || addingEntry}
+                  data-testid={`button-select-web-${recipe.id}`}
+                >
+                  {recipe.image ? (
+                    <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                      <Globe className="h-4 w-4 text-muted-foreground/40" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{recipe.name}</p>
+                    <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                      <Badge variant="outline" className="text-[10px] px-1 border-orange-300/60 text-orange-600 dark:border-orange-600/40 dark:text-orange-400">
+                        Web recipe
+                      </Badge>
+                      {recipe.source && (
+                        <span className="text-[10px] text-muted-foreground/60">{recipe.source}</span>
+                      )}
+                    </div>
+                  </div>
+                  {importingWebId === recipe.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
+                  ) : null}
+                </button>
+              ))}
+              {!webLoading && webResults.length === 0 && mealSearch.trim().length >= 2 && (
+                <p className="text-center text-[11px] text-muted-foreground/60 py-3">No web recipes found</p>
+              )}
+            </div>
+          )}
+          {/* Nudge: show web toggle hint when local results are empty and web is OFF */}
+          {!includeWeb && filteredMeals.length === 0 && mealSearch.trim().length >= 2 && (
+            <p className="text-center text-[11px] text-muted-foreground/50 pt-2">
+              Try{" "}
+              <button
+                onClick={() => setIncludeWeb(true)}
+                className="underline hover:text-foreground/60 transition-colors"
+                data-testid="button-include-web-nudge"
+              >
+                Include web
+              </button>{" "}
+              to discover recipes online
+            </p>
           )}
         </div>
       )}

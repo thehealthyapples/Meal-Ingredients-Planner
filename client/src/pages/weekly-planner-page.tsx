@@ -1003,7 +1003,7 @@ export default function WeeklyPlannerPage() {
     setAssistantMode("manual");
   };
 
-  const handleResolveAction = (action: "build" | "scan" | "later" | "import") => {
+  const handleResolveAction = (action: "build" | "scan" | "later") => {
     if (action === "build") {
       // Phase 3F: capture context before clearing resolveTarget
       if (resolveTarget) setResolutionContext({ ...resolveTarget, returnMode: null });
@@ -1028,22 +1028,6 @@ export default function WeeklyPlannerPage() {
         navigate(`/meals?${params.toString()}`);
       } else {
         setAssistantMode("scan");
-      }
-    } else if (action === "import") {
-      // Phase 5E: navigate to /meals with full planner context
-      if (resolveTarget) {
-        const params = new URLSearchParams({
-          plannerImport: "1",
-          mealName: resolveTarget.mealName,
-          day: resolveTarget.dayName,
-          slot: resolveTarget.mealType,
-          plannerResolve: "1",
-        });
-        params.set("dayId", String(resolveTarget.dayId));
-        params.set("entryId", String(resolveTarget.entryId));
-        setResolveTarget(null);
-        setAssistantMode(null);
-        navigate(`/meals?${params.toString()}`);
       }
     } else {
       setResolutionContext(null);
@@ -2321,11 +2305,10 @@ export default function WeeklyPlannerPage() {
         onResolveRecipeFromReview={handleResolveRecipeFromReview}
         onBuildFromReview={handleBuildFromReview}
         onScanFromReview={handleScanFromReview}
-        onImportFromReview={handleImportFromReview}
         onSetMode={setAssistantMode}
         onCreateIntent={createPlannerIntent}
         selectedDayLabel={selectedDay ? DAY_NAMES[selectedDay.dayOfWeek] : null}
-        onBrowseRecipes={() => navigate("/meals")}
+        onBrowseRecipes={() => setAssistantMode("manual")}
         onBuildRecipe={() => setCreateMealOpen(true)}
         onScanRecipe={() => navigate("/meals?openScan=1")}
         mobileOpen={mobileAssistantOpen}

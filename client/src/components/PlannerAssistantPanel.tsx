@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { subscribeStagingBus } from "@/lib/planner-staging-bus";
-import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, ExternalLink } from "lucide-react";
+import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, Globe } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { DraggableProposalCard } from "@/components/PlannerDragDrop";
 import { Button } from "@/components/ui/button";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
@@ -68,7 +70,7 @@ interface PlannerAssistantPanelProps {
   onPlannerInvalidate: () => void;
   fullPlanner: FullWeek[];
   resolveTarget?: ResolveTarget;
-  onResolveAction?: (action: "build" | "scan" | "later" | "import") => void;
+  onResolveAction?: (action: "build" | "scan" | "later") => void;
   onResolveRecipe?: (mealId: number) => void;
   isResolving?: boolean;
   placeholderItems?: PlaceholderItem[];
@@ -76,13 +78,13 @@ interface PlannerAssistantPanelProps {
   /** Phase 3F: carry item context from review into build/scan workflows */
   onBuildFromReview?: (target: ResolveTarget) => void;
   onScanFromReview?: (target: ResolveTarget) => void;
-  /** Phase 5E: navigate to /meals with full planner context */
+  /** Retained for signature compatibility — no longer used internally */
   onImportFromReview?: (target: ResolveTarget) => void;
   /** Phase 5B: idle state controls */
   onSetMode?: (mode: AssistantMode) => void;
   onCreateIntent?: (name: string, mealType: string) => Promise<void>;
   selectedDayLabel?: string | null;
-  /** Phase 5F: unified intake hub callbacks */
+  /** Open planner-native recipe search (switches to manual mode) */
   onBrowseRecipes?: () => void;
   onBuildRecipe?: () => void;
   onScanRecipe?: () => void;
@@ -561,6 +563,18 @@ function PlannerSettingsContent() {
   );
 }
 
+interface WebRecipeResult {
+  id: string;
+  name: string;
+  image: string;
+  url: string | null;
+  ingredients: string[];
+  instructions?: string[];
+  source?: string;
+}
+
+const WEB_PREMIUM_MARKER = "This is a premium piece of content available to subscribed users.";
+
 interface ResolveSearchContentProps {
   mealName: string;
   meals: Meal[];
@@ -570,7 +584,73 @@ interface ResolveSearchContentProps {
 }
 
 function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResolving }: ResolveSearchContentProps) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
   const [search, setSearch] = useState(mealName);
+  const [includeWeb, setIncludeWeb] = useState(false);
+  const [webResults, setWebResults] = useState<WebRecipeResult[]>([]);
+  const [webLoading, setWebLoading] = useState(false);
+  const [importingWebId, setImportingWebId] = useState<string | null>(null);
+  const webAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    if (webAbortRef.current) webAbortRef.current.abort();
+    if (!includeWeb) { setWebResults([]); setWebLoading(false); return; }
+    const q = search.trim();
+    if (q.length < 2) { setWebResults([]); setWebLoading(false); return; }
+    const ctrl = new AbortController();
+    webAbortRef.current = ctrl;
+    let active = true;
+    const timer = setTimeout(async () => {
+      setWebLoading(true);
+      try {
+        const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(q)}&page=1`, {
+          signal: ctrl.signal,
+          credentials: "include",
+        });
+        if (!res.ok || !active) return;
+        const data: { recipes: WebRecipeResult[] } = await res.json();
+        const filtered = (data.recipes ?? []).filter(r => {
+          const allText = [r.name, ...(r.ingredients ?? []), ...(r.instructions ?? [])].join("\0");
+          return !allText.includes(WEB_PREMIUM_MARKER);
+        });
+        if (active) setWebResults(filtered.slice(0, 15));
+      } catch (err: unknown) {
+        if ((err as any)?.name === "AbortError" || !active) return;
+      } finally {
+        if (active) setWebLoading(false);
+      }
+    }, 400);
+    return () => { active = false; clearTimeout(timer); ctrl.abort(); };
+  }, [search, includeWeb]);
+
+  const handleImportWebRecipe = async (recipe: WebRecipeResult) => {
+    if (importingWebId) return;
+    setImportingWebId(recipe.id);
+    try {
+      const res = await fetch("/api/meals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: recipe.name,
+          ingredients: recipe.ingredients ?? [],
+          instructions: recipe.instructions ?? [],
+          imageUrl: recipe.image || null,
+          sourceUrl: recipe.url || null,
+          servings: 1,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save recipe");
+      const meal = await res.json();
+      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      onSelectRecipe(meal.id);
+    } catch {
+      toast({ title: "Could not import web recipe", variant: "destructive" });
+    } finally {
+      setImportingWebId(null);
+    }
+  };
 
   const filteredMeals = useMemo(() => {
     const cookbookMeals = meals.filter(m =>
@@ -594,21 +674,35 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
         Back
       </button>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-        <input
-          type="text"
-          placeholder="Search your recipes…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full pl-9 pr-3 h-8 text-sm rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
-          autoFocus
-          data-testid="input-resolve-recipe-search"
-        />
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search your recipes…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-3 h-8 text-sm rounded-md border border-input bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0"
+            autoFocus
+            data-testid="input-resolve-recipe-search"
+          />
+        </div>
+        <button
+          onClick={() => setIncludeWeb(v => !v)}
+          className={`text-xs px-2.5 py-1 rounded-full border transition-colors shrink-0 whitespace-nowrap ${
+            includeWeb
+              ? "bg-primary text-primary-foreground border-primary"
+              : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+          }`}
+          data-testid="button-resolve-include-web"
+          title={includeWeb ? "Web results active — click to disable" : "Include web recipes in search"}
+        >
+          {includeWeb ? "Web on" : "Include web"}
+        </button>
       </div>
 
       <div className="overflow-y-auto space-y-0.5" data-testid="list-resolve-recipes">
-        {filteredMeals.length === 0 ? (
+        {filteredMeals.length === 0 && !includeWeb ? (
           <div className="text-center py-8">
             <ChefHat className="h-8 w-8 mx-auto mb-2 text-muted-foreground/30" />
             <p className="text-sm text-muted-foreground">
@@ -630,7 +724,7 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
               key={meal.id}
               className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-accent/40 text-left transition-colors disabled:opacity-50"
               onClick={() => onSelectRecipe(meal.id)}
-              disabled={isResolving}
+              disabled={isResolving || !!importingWebId}
               data-testid={`button-resolve-select-${meal.id}`}
             >
               {meal.imageUrl ? (
@@ -650,6 +744,66 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
             </button>
           ))
         )}
+
+        {/* Web results — appear below cookbook results, never replace them */}
+        {includeWeb && search.trim().length >= 2 && (webLoading || webResults.length > 0) && (
+          <div className="mt-1" data-testid="section-resolve-web-results">
+            <div className="flex items-center gap-2 py-1.5">
+              <div className="h-px flex-1 bg-border/50" />
+              <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wide flex items-center gap-1">
+                <Globe className="h-3 w-3" />
+                From the web
+              </span>
+              {webLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />}
+              <div className="h-px flex-1 bg-border/50" />
+            </div>
+            {webResults.map(recipe => (
+              <button
+                key={recipe.id}
+                className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 text-left disabled:opacity-50"
+                onClick={() => handleImportWebRecipe(recipe)}
+                disabled={isResolving || !!importingWebId}
+                data-testid={`button-resolve-web-${recipe.id}`}
+              >
+                {recipe.image ? (
+                  <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                ) : (
+                  <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                    <Globe className="h-4 w-4 text-muted-foreground/40" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{recipe.name}</p>
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <span className="text-[10px] text-orange-600 dark:text-orange-400 border border-orange-300/60 dark:border-orange-600/40 px-1 rounded">Web</span>
+                    {recipe.source && (
+                      <span className="text-[10px] text-muted-foreground/60">{recipe.source}</span>
+                    )}
+                  </div>
+                </div>
+                {importingWebId === recipe.id
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
+                  : null}
+              </button>
+            ))}
+            {!webLoading && webResults.length === 0 && search.trim().length >= 2 && (
+              <p className="text-center text-[11px] text-muted-foreground/60 py-3">No web recipes found</p>
+            )}
+          </div>
+        )}
+        {!includeWeb && filteredMeals.length === 0 && search.trim().length >= 2 && (
+          <p className="text-center text-[11px] text-muted-foreground/50 pt-2">
+            Try{" "}
+            <button
+              onClick={() => setIncludeWeb(true)}
+              className="underline hover:text-foreground/60 transition-colors"
+              data-testid="button-resolve-include-web-nudge"
+            >
+              Include web
+            </button>{" "}
+            to discover recipes online
+          </p>
+        )}
       </div>
     </div>
   );
@@ -660,7 +814,7 @@ interface ResolveContentProps {
   dayName: string;
   slotLabel: string;
   onSearch: () => void;
-  onAction: (action: "build" | "scan" | "later" | "import") => void;
+  onAction: (action: "build" | "scan" | "later") => void;
 }
 
 function ResolveContent({ mealName, dayName, slotLabel, onSearch, onAction }: ResolveContentProps) {
@@ -702,14 +856,6 @@ function ResolveContent({ mealName, dayName, slotLabel, onSearch, onAction }: Re
         >
           <Camera className="h-4 w-4 shrink-0 text-muted-foreground" />
           Scan recipe
-        </button>
-        <button
-          className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
-          onClick={() => onAction("import")}
-          data-testid="button-resolve-import"
-        >
-          <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground" />
-          Browse / import recipes
         </button>
         <button
           className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors text-left"
@@ -794,17 +940,6 @@ function PlaceholderReviewContent({
             >
               <Camera className="h-3 w-3" />
             </button>
-            {onImportRecipe && (
-              <button
-                className="p-1 text-muted-foreground/40 hover:text-muted-foreground transition-colors disabled:opacity-40"
-                onClick={() => onImportRecipe(item)}
-                disabled={isResolving}
-                title="Browse recipes"
-                data-testid={`button-review-import-${item.entryId}`}
-              >
-                <ExternalLink className="h-3 w-3" />
-              </button>
-            )}
           </div>
         </div>
       ))}
@@ -825,7 +960,7 @@ interface IdlePanelContentProps {
   selectedDayLabel?: string | null;
   /** Phase 5F: unresolved placeholder count for Continue Planning section */
   placeholderCount?: number;
-  /** Phase 5F: navigate to /meals to browse or import recipes */
+  /** Open planner-native recipe search (manual mode with web toggle) */
   onBrowseRecipes?: () => void;
   /** Phase 5F: open create-recipe modal from idle state */
   onBuildRecipe?: () => void;
@@ -1053,8 +1188,8 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
                   onClick={onBrowseRecipes}
                   data-testid="button-idle-browse-recipes"
                 >
-                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  Browse / import recipes
+                  <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  Search recipes
                 </button>
               )}
               {onBuildRecipe && (
@@ -1509,17 +1644,7 @@ export function PlannerAssistantPanel({
                 onResolveAction("scan");
               }
             }}
-            onImportRecipe={onImportFromReview ? (item) => onImportFromReview({
-              mealName: item.mealName,
-              dayName: item.dayName,
-              slotLabel: item.slotLabel,
-              entryId: item.entryId,
-              dayId: item.dayId,
-              mealType: item.mealType,
-              audience: item.audience,
-              isDrink: item.isDrink,
-              position: item.position,
-            }) : undefined}
+            onImportRecipe={undefined}
             isResolving={isResolving}
           />
         )
