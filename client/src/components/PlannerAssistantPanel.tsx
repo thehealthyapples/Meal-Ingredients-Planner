@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { subscribeStagingBus } from "@/lib/planner-staging-bus";
 import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, ExternalLink } from "lucide-react";
 import { DraggableProposalCard } from "@/components/PlannerDragDrop";
 import { Button } from "@/components/ui/button";
@@ -934,6 +935,18 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
     setProposals(prev => prev.filter(p => p.id !== consumedProposalId));
   }, [consumedProposalId]);
 
+  // Receive approved intents from scan-review (emitted via staging bus on individual accept).
+  useEffect(() => {
+    return subscribeStagingBus((name, mealType) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      setProposals(prev => {
+        if (prev.some(p => p.name.toLowerCase() === trimmed.toLowerCase() && p.mealType === mealType)) return prev;
+        return [...prev, { id: nextProposalId(), name: trimmed, mealType }];
+      });
+    });
+  }, []);
+
   const handleSubmitIntent = async () => {
     if (!intentName.trim() || !onCreateIntent) return;
     setIntentSaving(true);
@@ -1182,7 +1195,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
                     </div>
                   )}
                   <p className="text-[11px] text-muted-foreground/60 leading-snug mb-1">
-                    Drag staged meals onto the planner.
+                    Approved intents — drag onto the planner to schedule.
                   </p>
                   <div className="space-y-0.5">
                     {proposals.map(p => (

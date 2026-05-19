@@ -12,11 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import {
   AlertTriangle, BookOpen, CalendarDays, Camera, ChefHat,
-  CheckCircle2, ChevronDown, Lightbulb, Loader2, Pencil,
+  CheckCircle2, ChevronDown, GripVertical, Lightbulb, Loader2, Pencil,
   Plus, ShoppingCart, Sparkles, X, Check,
 } from "lucide-react";
+import { emitStageProposal } from "@/lib/planner-staging-bus";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { api } from "@shared/routes";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -324,7 +324,9 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
   }, [open, step, proposals, shoppingItems, scanData, restoredScanData]);
 
   const handleClose = () => {
-    if (step === "review" && acceptedProposals.length > 0 && !saving) {
+    // Accepted proposals are already staged — no warning needed for them.
+    // Only guard against accidentally closing with selected-but-unsaved shopping items.
+    if (step === "review" && selectedShoppingItems.length > 0 && !saving) {
       setCloseConfirmVisible(true);
       return;
     }
@@ -337,8 +339,15 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
 
   // ── Proposal handlers ──────────────────────────────────────────────────────
 
-  const acceptProposal = (id: number) =>
+  const acceptProposal = (id: number) => {
+    const proposal = proposals.find(p => p.id === id);
     setProposals(prev => prev.map(p => p.id === id ? { ...p, userAction: "accepted" } : p));
+    // Stage immediately — only emit if not already accepted (prevents double-stage on rapid clicks)
+    if (proposal && proposal.userAction !== "accepted" && proposal.currentName.trim()) {
+      const slot = proposal.currentSlot !== "unspecified" ? proposal.currentSlot : "dinner";
+      emitStageProposal(proposal.currentName, slot);
+    }
+  };
 
   const removeProposal = (id: number) =>
     setProposals(prev => prev.map(p => p.id === id ? { ...p, userAction: "removed" } : p));
@@ -356,15 +365,21 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
 
   const saveEdit = () => {
     if (editingId === null) return;
+    const targetProposal = proposals.find(p => p.id === editingId);
+    const resolvedName = editName.trim() || targetProposal?.interpretedName || "";
+    const resolvedSlot =
+      editType === "meal_idea" ? "dinner" : (editSlot !== "unspecified" ? editSlot : "dinner");
     setProposals(prev => prev.map(p => p.id === editingId ? {
       ...p,
       userAction: "accepted",
-      currentName: editName.trim() || p.interpretedName,
+      currentName: resolvedName,
       currentType: editType,
       currentDay: editType === "meal_idea" ? "Unassigned" : editDay,
       currentSlot: editType === "meal_idea" ? "unspecified" : editSlot,
     } : p));
     setEditingId(null);
+    // Stage the accepted proposal (handles both first-time accept via edit and re-edit)
+    if (resolvedName) emitStageProposal(resolvedName, resolvedSlot);
   };
 
   const cancelEdit = () => setEditingId(null);
@@ -406,8 +421,9 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
   const totalCount = proposals.length;
   const progressPct = totalCount > 0 ? Math.round((actionedCount / totalCount) * 100) : 0;
   const hasPendingLow = proposals.some(p => p.confidence === "low" && p.userAction === "pending");
-  const canConfirm = acceptedProposals.length > 0 && acceptedProposals.every(p => p.currentName.trim().length > 0);
   const selectedShoppingItems = shoppingItems.filter(i => i.include);
+  // Confirm is now shopping-only — enabled when items are selected for the list
+  const canConfirm = selectedShoppingItems.length > 0;
 
   const allWarnings = [
     ...(effectiveScanData?.warnings ?? []),
@@ -442,80 +458,31 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
   const plannedProposals = visibleProposals.filter(p => p.currentType !== "meal_idea");
   const ideaProposals   = visibleProposals.filter(p => p.currentType === "meal_idea");
 
-  const acceptAllHighConfidenceInGroup = (ids: number[]) =>
+  const acceptAllHighConfidenceInGroup = (ids: number[]) => {
+    const toAccept = proposals.filter(
+      p => ids.includes(p.id) && p.confidence !== "low" && p.userAction === "pending",
+    );
     setProposals(prev =>
       prev.map(p =>
         ids.includes(p.id) && p.confidence !== "low" && p.userAction === "pending"
           ? { ...p, userAction: "accepted" } : p
       )
     );
+    for (const p of toAccept) {
+      if (p.currentName.trim()) {
+        const slot = p.currentSlot !== "unspecified" ? p.currentSlot : "dinner";
+        emitStageProposal(p.currentName, slot);
+      }
+    }
+  };
 
-  // ── Save ───────────────────────────────────────────────────────────────────
+  // ── Save (shopping items only — meals are staged via the bus on individual accept) ──
 
   const handleConfirm = async () => {
     setSaving(true);
-    let mealsAssigned = 0;
     let itemsAdded = 0;
-    const followUpMeals: SavedMealForFollowUp[] = [];
 
     try {
-      for (const p of acceptedProposals) {
-        const name = p.currentName.trim() || "Scanned Meal";
-        const effectiveDay = p.currentType === "meal_idea" ? "Unassigned" : p.currentDay;
-
-        if (effectiveDay && effectiveDay !== "Unassigned") {
-          const mealRes = await apiRequest("POST", "/api/meals", {
-            name,
-            ingredients: [],
-            instructions: [],
-            servings: 1,
-            audience: "adult",
-            isDrink: false,
-            mealSourceType: "planner-placeholder",
-          });
-          const mealData = await mealRes.json();
-          const mealId: number = mealData.id;
-
-          const plannerDay = plannerDays.find(d => d.dayName === effectiveDay);
-          if (plannerDay) {
-            const slot = p.currentSlot !== "unspecified" ? p.currentSlot : "dinner";
-            const entryRes = await apiRequest("POST", `/api/planner/days/${plannerDay.id}/items`, {
-              mealSlot: slot,
-              mealId,
-              position: 0,
-              audience: "adult",
-              isDrink: false,
-              drinkType: null,
-            });
-            const entryData = await entryRes.json();
-            mealsAssigned++;
-            followUpMeals.push({
-              name, mealId, entryId: entryData.id ?? null,
-              plannerDayId: plannerDay.id,
-              day: effectiveDay,
-              mealSlot: slot,
-              confidence: p.confidence,
-              action: "pending",
-            });
-          } else {
-            followUpMeals.push({
-              name, mealId, entryId: null, plannerDayId: null,
-              day: effectiveDay, mealSlot: p.currentSlot,
-              confidence: p.confidence,
-              action: "pending",
-            });
-          }
-        } else {
-          followUpMeals.push({
-            name, mealId: null, entryId: null, plannerDayId: null,
-            day: "Unassigned",
-            mealSlot: p.currentSlot !== "unspecified" ? p.currentSlot : "unspecified",
-            confidence: p.confidence,
-            action: "pending",
-          });
-        }
-      }
-
       for (const item of selectedShoppingItems) {
         const label = item.label.trim();
         if (!label) continue;
@@ -531,15 +498,16 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
         itemsAdded++;
       }
 
-      queryClient.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/meals"] });
-      if (itemsAdded > 0) queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
-      if (itemsAdded > 0) toast({ title: `${itemsAdded} shopping item${itemsAdded !== 1 ? "s" : ""} added` });
+      if (itemsAdded > 0) {
+        queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+        toast({ title: `${itemsAdded} shopping item${itemsAdded !== 1 ? "s" : ""} added to your list` });
+      }
 
       onSaved?.();
       clearSession();
-      setSavedMealsFollowUp(followUpMeals);
-      setStep("recipe-followup");
+      setRestoredScanData(null);
+      setShowRestoreBanner(false);
+      onOpenChange(false);
     } catch (err: any) {
       toast({ variant: "destructive", title: "Could not save", description: err?.message || "Please try again." });
     } finally {
@@ -577,18 +545,19 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
   const dialogTitle = scanning
     ? "Scanning meal plan…"
     : step === "recipe-followup"
-    ? "Meals added to planner"
+    ? "Scan review complete"
     : "Review THA's suggestions";
 
   const dialogDescription = scanning
     ? "AI meal plan scans can take 5–15 seconds depending on image quality."
     : step === "recipe-followup"
-    ? "Do you have a recipe for any of these meals?"
-    : "THA has interpreted your scan — accept, edit, or remove each suggestion.";
+    ? "Your approved meal intents are ready in the staging tray."
+    : "Accept suggestions to stage them for scheduling, or edit before accepting.";
 
   const handleDialogClose = (newOpen: boolean) => {
     if (!newOpen && scanning) return;
-    if (!newOpen && step === "review" && acceptedProposals.length > 0 && !saving) {
+    // Accepted proposals are already staged — only guard unsaved shopping items.
+    if (!newOpen && step === "review" && selectedShoppingItems.length > 0 && !saving) {
       setCloseConfirmVisible(true);
       return;
     }
@@ -773,7 +742,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                     <span>
                       {actionedCount} of {totalCount} reviewed
                       {acceptedProposals.length > 0 && (
-                        <span className="text-emerald-600 dark:text-emerald-400 ml-1.5">· {acceptedProposals.length} accepted</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 ml-1.5">· {acceptedProposals.length} staged</span>
                       )}
                     </span>
                     {hasPendingLow && (
@@ -892,7 +861,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                                   : "border-muted-foreground/30 hover:border-emerald-500"
                               }`}
                               onClick={() => p.userAction === "accepted" ? undoProposal(p.id) : acceptProposal(p.id)}
-                              title={p.userAction === "accepted" ? "Accepted — click to undo" : "Accept"}
+                              title={p.userAction === "accepted" ? "Staged — click to undo" : "Accept and stage"}
                             >
                               {p.userAction === "accepted" && <Check className="h-2.5 w-2.5" />}
                             </button>
@@ -901,6 +870,12 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                                 {p.currentName || <span className="text-muted-foreground italic">Unnamed meal</span>}
                               </p>
                               <p className="text-xs text-muted-foreground mt-0.5">{placement}</p>
+                              {p.userAction === "accepted" && (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                  <GripVertical className="h-2.5 w-2.5" />
+                                  Staged for scheduling
+                                </span>
+                              )}
                               {p.rawText && p.rawText !== p.currentName && (
                                 <p className="text-xs text-muted-foreground break-words">↳ <em>{p.rawText}</em></p>
                               )}
@@ -1030,7 +1005,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                                   : "border-muted-foreground/30 hover:border-emerald-500"
                               }`}
                               onClick={() => p.userAction === "accepted" ? undoProposal(p.id) : acceptProposal(p.id)}
-                              title={p.userAction === "accepted" ? "Accepted — click to undo" : "Accept"}
+                              title={p.userAction === "accepted" ? "Staged — click to undo" : "Accept and stage"}
                             >
                               {p.userAction === "accepted" && <Check className="h-2.5 w-2.5" />}
                             </button>
@@ -1038,6 +1013,12 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                               <p className="text-sm break-words leading-snug">
                                 {p.currentName || <span className="text-muted-foreground italic">Unnamed</span>}
                               </p>
+                              {p.userAction === "accepted" && (
+                                <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                  <GripVertical className="h-2.5 w-2.5" />
+                                  Staged for scheduling
+                                </span>
+                              )}
                               {p.rawText && p.rawText !== p.currentName && (
                                 <p className="text-xs text-muted-foreground break-words">↳ <em>{p.rawText}</em></p>
                               )}
@@ -1135,12 +1116,12 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
               )}
             </>)}
 
-            {/* ── Close confirmation ── */}
+            {/* ── Close confirmation — only fires when shopping items are selected but unsaved ── */}
             {closeConfirmVisible && (
               <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5 space-y-2">
-                <p className="text-sm font-medium">Discard review progress?</p>
+                <p className="text-sm font-medium">Unsaved shopping items</p>
                 <p className="text-xs text-muted-foreground">
-                  You have {acceptedProposals.length} accepted suggestion{acceptedProposals.length !== 1 ? "s" : ""} — closing will discard them.
+                  You have {selectedShoppingItems.length} shopping item{selectedShoppingItems.length !== 1 ? "s" : ""} selected — close without saving them?
                 </p>
                 <div className="flex gap-2">
                   <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={() => {
@@ -1149,7 +1130,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                     setShowRestoreBanner(false);
                     setCloseConfirmVisible(false);
                     onOpenChange(false);
-                  }}>Discard & close</Button>
+                  }}>Close without saving</Button>
                   <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setCloseConfirmVisible(false)}>Keep reviewing</Button>
                 </div>
               </div>
@@ -1157,37 +1138,22 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
 
             <Separator />
 
-            {/* Low-confidence pending warning */}
-            {hasPendingLow && canConfirm && (
-              <p className="text-xs text-amber-600 dark:text-amber-400 flex items-start gap-1.5">
-                <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                Some low-confidence suggestions haven't been reviewed yet — accept, edit, or remove them before confirming to ensure accuracy.
+            {/* Staging hint — shown when proposals have been staged */}
+            {!isFailedParse && acceptedProposals.length > 0 && (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                <GripVertical className="h-3.5 w-3.5 shrink-0" />
+                {acceptedProposals.length} meal intent{acceptedProposals.length !== 1 ? "s" : ""} staged — drag from the staging tray to schedule.
               </p>
             )}
 
-            {/* Gate hint */}
-            {!isFailedParse && !canConfirm && visibleProposals.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                {acceptedProposals.length === 0
-                  ? "Accept at least one suggestion to save it to your planner."
-                  : "All accepted meals need a name before saving."}
-              </p>
-            )}
-
-            {/* Confirm button area */}
+            {/* Action button area */}
             <div className="flex gap-2 justify-end flex-wrap">
-              <Button variant="outline" onClick={handleClose} disabled={saving}>Cancel</Button>
-              {!isFailedParse && (
-                <Button
-                  onClick={handleConfirm}
-                  disabled={saving || !canConfirm}
-                  title={!canConfirm ? "Accept at least one suggestion with a name" : undefined}
-                >
+              <Button variant="outline" onClick={handleClose} disabled={saving}>Done</Button>
+              {!isFailedParse && selectedShoppingItems.length > 0 && (
+                <Button onClick={handleConfirm} disabled={saving}>
                   {saving
                     ? <><Loader2 className="h-4 w-4 animate-spin mr-1.5" />Saving…</>
-                    : acceptedProposals.filter(p => p.currentType !== "meal_idea" && p.currentDay !== "Unassigned").length > 0
-                    ? `Add ${acceptedProposals.filter(p => p.currentType !== "meal_idea" && p.currentDay !== "Unassigned").length} meal${acceptedProposals.filter(p => p.currentType !== "meal_idea" && p.currentDay !== "Unassigned").length !== 1 ? "s" : ""} to Planner`
-                    : `Confirm ${acceptedProposals.length} meal${acceptedProposals.length !== 1 ? "s" : ""}`}
+                    : `Save ${selectedShoppingItems.length} shopping item${selectedShoppingItems.length !== 1 ? "s" : ""}`}
                 </Button>
               )}
             </div>
