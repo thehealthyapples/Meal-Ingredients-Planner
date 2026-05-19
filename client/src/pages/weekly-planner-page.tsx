@@ -3221,17 +3221,6 @@ export default function WeeklyPlannerPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Scan review dialog: only shown when not routed to the panel */}
-      <PlannerScanReview
-        open={plannerScanOpen && assistantMode === null}
-        onOpenChange={handlePlannerScanOpenChange}
-        scanData={plannerScanData}
-        scanning={plannerScanLoading}
-        scanError={plannerScanError ?? undefined}
-        plannerDays={plannerDays}
-        onSaved={() => qc.invalidateQueries({ queryKey: ["/api/planner/full"] })}
-      />
-
       {/* Page-level file input for scan upload — must live outside all panels/portals */}
       <input
         ref={pageUploadRef}
