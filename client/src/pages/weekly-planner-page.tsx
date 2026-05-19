@@ -16,7 +16,7 @@ import { CreateMealModal } from "@/components/create-meal-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { usePlannerContext } from "@/contexts/PlannerContext";
 import { PlannerWorkspaceContext } from "@/contexts/PlannerWorkspaceContext";
@@ -236,6 +236,25 @@ function saveToSession(key: string, value: unknown): void {
   } catch {}
 }
 
+// Phase 1 execution lifecycle: cooked-state helpers (localStorage, no schema migration needed)
+const COOKED_ENTRIES_KEY = "planner:cooked-entries";
+
+function loadCookedEntries(): Set<number> {
+  try {
+    const raw = localStorage.getItem(COOKED_ENTRIES_KEY);
+    if (!raw) return new Set();
+    const arr: unknown = JSON.parse(raw);
+    if (Array.isArray(arr)) return new Set(arr.filter((x): x is number => typeof x === "number"));
+    return new Set();
+  } catch { return new Set(); }
+}
+
+function saveCookedEntries(ids: Set<number>): void {
+  try {
+    localStorage.setItem(COOKED_ENTRIES_KEY, JSON.stringify(Array.from(ids)));
+  } catch {}
+}
+
 export default function WeeklyPlannerPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -301,6 +320,16 @@ export default function WeeklyPlannerPage() {
   const resolveTargetValidatedRef = useRef(false);
   const { user } = useUser();
   const [, navigate] = useLocation();
+
+  // Phase 1: cooked state (localStorage-backed, reversible, no schema change)
+  const [cookedEntryIds, setCookedEntryIds] = useState<Set<number>>(() => loadCookedEntries());
+  // Phase 1: mobile move-to-day sheet target
+  const [moveEntryTarget, setMoveEntryTarget] = useState<{
+    entry: PlannerEntry;
+    mealType: string;
+    audience: string;
+    isDrink: boolean;
+  } | null>(null);
 
   // Track mealIds that received accepted uplift in this session (for immediate card feedback).
   const [boostedMealIds, setBoostedMealIds] = useState<Set<number>>(new Set());
@@ -1162,6 +1191,60 @@ export default function WeeklyPlannerPage() {
     return sortedDays[idx + 1];
   };
 
+  // Phase 1: all planner days sorted for the move-to-day picker
+  const allPlannerDays = useMemo(() => {
+    return fullPlanner
+      .slice()
+      .sort((a, b) => a.weekNumber - b.weekNumber)
+      .flatMap(week =>
+        (week.days ?? [])
+          .slice()
+          .sort((a, b) => MONDAY_FIRST_ORDER.indexOf(a.dayOfWeek) - MONDAY_FIRST_ORDER.indexOf(b.dayOfWeek))
+          .map(day => ({ week, day }))
+      );
+  }, [fullPlanner]);
+
+  // Phase 1: toggle cooked state for an entry
+  const toggleCooked = (entryId: number) => {
+    setCookedEntryIds(prev => {
+      const next = new Set(prev);
+      if (next.has(entryId)) next.delete(entryId); else next.add(entryId);
+      saveCookedEntries(next);
+      return next;
+    });
+  };
+
+  // Phase 1: duplicate this meal into the same day-of-week slot next week
+  const handleDuplicateNextWeek = (entry: PlannerEntry) => {
+    const currentDay = fullPlanner.flatMap(w => w.days).find(d => d.id === entry.dayId);
+    if (!currentDay) return;
+    const currentWeek = fullPlanner.find(w => w.days.some(d => d.id === entry.dayId));
+    if (!currentWeek) return;
+    const nextWeek = fullPlanner.find(w => w.weekNumber === currentWeek.weekNumber + 1);
+    if (!nextWeek) {
+      toast({ title: "No next week", description: "Add another week to the planner first." });
+      return;
+    }
+    const targetDay = nextWeek.days.find(d => d.dayOfWeek === currentDay.dayOfWeek);
+    if (!targetDay) {
+      toast({ title: "Day not set up in next week" });
+      return;
+    }
+    duplicateEntryMutation.mutate({ entryId: entry.id, targetDayId: targetDay.id });
+    toast({ title: "Copied to next week", description: `${DAY_NAMES[currentDay.dayOfWeek]} · ${nextWeek.weekName}` });
+  };
+
+  // Phase 1: move entry to a chosen day (reuses movePlannerEntryMutation)
+  const handleMoveToDay = (entry: PlannerEntry, targetDayId: number, mealType: string) => {
+    const targetDay = fullPlanner.flatMap(w => w.days).find(d => d.id === targetDayId);
+    const slotEntries = (targetDay?.entries ?? []).filter(
+      e => e.mealType === mealType && e.audience === entry.audience &&
+           e.isDrink === entry.isDrink && e.id !== entry.id
+    );
+    const newPosition = slotEntries.length > 0 ? Math.max(...slotEntries.map(e => e.position)) + 1 : 0;
+    movePlannerEntryMutation.mutate({ entryId: entry.id, dayId: targetDayId, mealType, position: newPosition });
+  };
+
   const expandedDay = expandedDayId != null
     ? fullPlanner.flatMap(w => w.days).find(d => d.id === expandedDayId) ?? null
     : null;
@@ -1596,6 +1679,7 @@ export default function WeeklyPlannerPage() {
                               if (!meal) return null;
                               const isPlaceholder = meal.mealSourceType === "planner-placeholder";
                               const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
+                              const isCooked = cookedEntryIds.has(entry.id);
                               return (
                                 <MobileSortableMealEntry
                                   key={entry.id}
@@ -1606,7 +1690,7 @@ export default function WeeklyPlannerPage() {
                                   isDrink={row.isDrink}
                                 >
                                   <button
-                                    className={`w-full text-left text-sm transition-colors flex items-start gap-1.5 select-none ${isPlaceholder ? "text-muted-foreground/70" : "text-foreground hover:text-primary"}`}
+                                    className={`w-full text-left text-sm transition-colors flex items-start gap-1.5 select-none ${isCooked ? "opacity-50" : ""} ${isPlaceholder ? "text-muted-foreground/70" : "text-foreground hover:text-primary"}`}
                                     onClick={() => {
                                       if (isPlaceholder) {
                                         setResolveTarget({
@@ -1652,14 +1736,17 @@ export default function WeeklyPlannerPage() {
                                     data-testid={`button-mobile-meal-${row.id}-${entry.id}`}
                                   >
                                     <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1.5 py-0.5" : ""}`}>
-                                      <span className="leading-snug">{meal.name}</span>
+                                      <span className={`leading-snug ${isCooked ? "line-through" : ""}`}>{meal.name}</span>
                                       {isPlaceholder
                                         ? <span className="text-[10px] text-muted-foreground/60 italic" data-testid={`label-placeholder-mobile-${entry.id}`}>Needs recipe</span>
-                                        : <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
+                                        : isCooked
+                                          ? <span className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70">Cooked</span>
+                                          : <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
                                       }
                                     </div>
-                                    {isFrozen && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
-                                    {basketMealIdSet.has(meal.id) && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
+                                    {isFrozen && !isCooked && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
+                                    {basketMealIdSet.has(meal.id) && !isCooked && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
+                                    {isCooked && <Check className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
                                   </button>
                                 </MobileSortableMealEntry>
                               );
@@ -1864,6 +1951,7 @@ export default function WeeklyPlannerPage() {
                                   if (!meal) return null;
                                   const isPlaceholder = meal.mealSourceType === "planner-placeholder";
                                   const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
+                                  const isCooked = cookedEntryIds.has(entry.id);
                                   return (
                                     <SortablePlannerEntry
                                       key={entry.id}
@@ -1873,7 +1961,7 @@ export default function WeeklyPlannerPage() {
                                       audience={row.audience}
                                       isDrink={row.isDrink}
                                     >
-                                      <div className="relative group/entry w-full">
+                                      <div className={`relative group/entry w-full transition-opacity ${isCooked ? "opacity-50" : ""}`}>
                                         <button
                                           className={`w-full text-left text-xs leading-snug transition-colors flex items-start gap-0.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
                                           onClick={() => {
@@ -1906,16 +1994,18 @@ export default function WeeklyPlannerPage() {
                                           data-testid={`button-meal-${row.id}-${day.dayOfWeek}-${entry.id}`}
                                         >
                                           <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1 py-0.5" : ""}`}>
-                                            <span className="break-words leading-tight pr-3">{meal.name}</span>
+                                            <span className={`break-words leading-tight pr-3 ${isCooked ? "line-through" : ""}`}>{meal.name}</span>
                                             {isPlaceholder && (
                                               <span className="text-[9px] text-muted-foreground/60 italic" data-testid={`label-placeholder-${entry.id}`}>Needs recipe</span>
                                             )}
-                                            {!isPlaceholder && <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />}
+                                            {!isPlaceholder && !isCooked && <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />}
+                                            {isCooked && <span className="text-[9px] text-emerald-600/70 dark:text-emerald-400/70">Cooked</span>}
                                           </div>
-                                          {isFrozen && <Snowflake className="h-2.5 w-2.5 text-blue-400 flex-shrink-0 mt-0.5" />}
-                                          {basketMealIdSet.has(meal.id) && (
+                                          {isFrozen && !isCooked && <Snowflake className="h-2.5 w-2.5 text-blue-400 flex-shrink-0 mt-0.5" />}
+                                          {basketMealIdSet.has(meal.id) && !isCooked && (
                                             <ShoppingCart className="h-2.5 w-2.5 text-emerald-500/70 flex-shrink-0 mt-0.5" data-testid={`icon-in-basket-${meal.id}`} />
                                           )}
+                                          {isCooked && <Check className="h-2.5 w-2.5 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
                                         </button>
                                         {/* Nutrition Boost indicator — subtle, async, non-blocking */}
                                         {!isPlaceholder && (() => {
@@ -1952,7 +2042,7 @@ export default function WeeklyPlannerPage() {
                                             />
                                           );
                                         })()}
-                                        {/* Phase 5A: entry operations menu */}
+                                        {/* Phase 5A + Phase 1 execution: entry operations menu */}
                                         <DropdownMenu>
                                           <DropdownMenuTrigger asChild>
                                             <button
@@ -1964,7 +2054,18 @@ export default function WeeklyPlannerPage() {
                                               <MoreHorizontal className="h-2.5 w-2.5" />
                                             </button>
                                           </DropdownMenuTrigger>
-                                          <DropdownMenuContent align="end" className="w-48">
+                                          <DropdownMenuContent align="end" className="w-52">
+                                            {/* Phase 1A: Mark cooked */}
+                                            {!isPlaceholder && (
+                                              <DropdownMenuItem
+                                                onClick={() => toggleCooked(entry.id)}
+                                                data-testid={`mi-cooked-${entry.id}`}
+                                              >
+                                                <Check className={`h-3.5 w-3.5 mr-2 ${isCooked ? "text-emerald-500" : "text-muted-foreground"}`} />
+                                                {isCooked ? "Unmark cooked" : "Mark as cooked"}
+                                              </DropdownMenuItem>
+                                            )}
+                                            {!isPlaceholder && <DropdownMenuSeparator />}
                                             {!isPlaceholder && (
                                               <DropdownMenuItem onClick={() => duplicateEntryMutation.mutate({ entryId: entry.id })} data-testid={`mi-dup-${entry.id}`}>
                                                 <Copy className="h-3.5 w-3.5 mr-2" />
@@ -1977,10 +2078,50 @@ export default function WeeklyPlannerPage() {
                                                 Repeat tomorrow
                                               </DropdownMenuItem>
                                             )}
+                                            {/* Phase 1C: Duplicate next week */}
+                                            {!isPlaceholder && (
+                                              <DropdownMenuItem onClick={() => handleDuplicateNextWeek(entry)} data-testid={`mi-next-week-${entry.id}`}>
+                                                <CalendarDays className="h-3.5 w-3.5 mr-2" />
+                                                Duplicate next week
+                                              </DropdownMenuItem>
+                                            )}
                                             {isPlaceholder && (
                                               <DropdownMenuItem onClick={() => duplicateEntryMutation.mutate({ entryId: entry.id })}>
                                                 <Copy className="h-3.5 w-3.5 mr-2" />
                                                 Duplicate placeholder
+                                              </DropdownMenuItem>
+                                            )}
+                                            {/* Phase 1B: Move to another day */}
+                                            <DropdownMenuSub>
+                                              <DropdownMenuSubTrigger data-testid={`mi-move-day-${entry.id}`}>
+                                                <Calendar className="h-3.5 w-3.5 mr-2" />
+                                                Move to day
+                                              </DropdownMenuSubTrigger>
+                                              <DropdownMenuSubContent className="w-48 max-h-64 overflow-y-auto">
+                                                {allPlannerDays
+                                                  .filter(({ day: d }) => d.id !== day.id)
+                                                  .map(({ week, day: d }) => (
+                                                    <DropdownMenuItem
+                                                      key={d.id}
+                                                      onClick={() => handleMoveToDay(entry, d.id, row.mealType ?? row.addMealType)}
+                                                      data-testid={`mi-move-to-${entry.id}-${d.id}`}
+                                                    >
+                                                      <span className="text-[10px] text-muted-foreground mr-1.5 shrink-0">{week.weekName}</span>
+                                                      {DAY_NAMES[d.dayOfWeek]}
+                                                    </DropdownMenuItem>
+                                                  ))
+                                                }
+                                              </DropdownMenuSubContent>
+                                            </DropdownMenuSub>
+                                            <DropdownMenuSeparator />
+                                            {/* Phase 1D: Send to shopping */}
+                                            {!isPlaceholder && (
+                                              <DropdownMenuItem
+                                                onClick={() => addToBasketMutation.mutate([{ mealId: meal.id, count: 1 }])}
+                                                data-testid={`mi-shopping-${entry.id}`}
+                                              >
+                                                <ShoppingCart className="h-3.5 w-3.5 mr-2" />
+                                                Send to shopping
                                               </DropdownMenuItem>
                                             )}
                                             {meal.isFreezerEligible && !isPlaceholder && (
@@ -2215,13 +2356,23 @@ export default function WeeklyPlannerPage() {
         <SheetContent side="bottom" className="rounded-t-2xl px-0 pb-8 pt-0" data-testid="sheet-mobile-entry-actions">
           {contextEntry && (() => {
             const isPlaceholder = contextEntry.meal.mealSourceType === "planner-placeholder";
+            const isCooked = cookedEntryIds.has(contextEntry.entry.id);
             return (
               <>
                 <div className="px-4 pt-5 pb-3 border-b border-border">
                   <p className="text-xs text-muted-foreground mb-0.5">{contextEntry.dayName} · {contextEntry.slotLabel}</p>
                   <p className="text-sm font-semibold text-foreground leading-snug">{contextEntry.meal.name}</p>
+                  {isCooked && <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">Cooked</p>}
                 </div>
                 <div className="flex flex-col py-1" role="menu">
+                  {/* Phase 1A: Mark cooked */}
+                  {!isPlaceholder && (
+                    <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-cooked"
+                      onClick={() => { toggleCooked(contextEntry.entry.id); setContextEntry(null); }}>
+                      <Check className={`h-4 w-4 shrink-0 ${isCooked ? "text-emerald-500" : "text-muted-foreground"}`} />
+                      {isCooked ? "Unmark cooked" : "Mark as cooked"}
+                    </button>
+                  )}
                   {!isPlaceholder && (
                     <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-duplicate"
                       onClick={() => { duplicateEntryMutation.mutate({ entryId: contextEntry.entry.id }); setContextEntry(null); }}>
@@ -2240,12 +2391,37 @@ export default function WeeklyPlannerPage() {
                       <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />Repeat tomorrow
                     </button>
                   )}
+                  {/* Phase 1C: Duplicate next week */}
+                  {!isPlaceholder && (
+                    <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-next-week"
+                      onClick={() => { handleDuplicateNextWeek(contextEntry.entry); setContextEntry(null); }}>
+                      <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />Duplicate next week
+                    </button>
+                  )}
+                  <div className="h-px bg-border/60 mx-4 my-1" aria-hidden="true" />
+                  {/* Phase 1D: Send to shopping */}
+                  {!isPlaceholder && (
+                    <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-shopping"
+                      onClick={() => { addToBasketMutation.mutate([{ mealId: contextEntry.meal.id, count: 1 }]); setContextEntry(null); }}>
+                      <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />Send to shopping
+                    </button>
+                  )}
                   {contextEntry.meal.isFreezerEligible && !isPlaceholder && (
                     <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-freeze"
                       onClick={() => { addToFreezerMutation.mutate(contextEntry.meal.id); setContextEntry(null); }}>
                       <Snowflake className="h-4 w-4 text-muted-foreground shrink-0" />Add to freezer
                     </button>
                   )}
+                  <div className="h-px bg-border/60 mx-4 my-1" aria-hidden="true" />
+                  {/* Phase 1B: Move to another day */}
+                  <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-move-day"
+                    onClick={() => {
+                      const e = contextEntry;
+                      setContextEntry(null);
+                      setMoveEntryTarget({ entry: e.entry, mealType: e.mealType, audience: e.audience, isDrink: e.isDrink });
+                    }}>
+                    <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />Move to another day
+                  </button>
                   <div className="h-px bg-border/60 mx-4 my-1" aria-hidden="true" />
                   <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-muted-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-clear-slot"
                     onClick={() => {
@@ -2263,6 +2439,38 @@ export default function WeeklyPlannerPage() {
               </>
             );
           })()}
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Phase 1B: Mobile move-to-day picker sheet ── */}
+      <Sheet open={!!moveEntryTarget} onOpenChange={(v) => { if (!v) setMoveEntryTarget(null); }}>
+        <SheetContent side="bottom" className="rounded-t-2xl px-0 pb-8 pt-0" data-testid="sheet-mobile-move-day">
+          <div className="px-4 pt-5 pb-3 border-b border-border">
+            <p className="text-sm font-semibold text-foreground">Move to another day</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Same slot on the chosen day</p>
+          </div>
+          <div className="flex flex-col py-1 overflow-y-auto max-h-72" role="menu">
+            {allPlannerDays
+              .filter(({ day }) => moveEntryTarget && day.id !== moveEntryTarget.entry.dayId)
+              .map(({ week, day }) => (
+                <button
+                  key={day.id}
+                  className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full"
+                  role="menuitem"
+                  data-testid={`button-mobile-move-to-${day.id}`}
+                  onClick={() => {
+                    if (moveEntryTarget) {
+                      handleMoveToDay(moveEntryTarget.entry, day.id, moveEntryTarget.mealType);
+                      setMoveEntryTarget(null);
+                    }
+                  }}
+                >
+                  <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span>{week.weekName} · {DAY_NAMES[day.dayOfWeek]}</span>
+                </button>
+              ))
+            }
+          </div>
         </SheetContent>
       </Sheet>
 

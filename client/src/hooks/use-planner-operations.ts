@@ -186,7 +186,7 @@ export function usePlannerOperations({
     },
     onSuccess: (_data, params) => {
       qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      toast({ title: params.targetDayId ? "Copied to tomorrow" : "Duplicated" });
+      toast({ title: params.targetDayId ? "Meal copied" : "Duplicated" });
     },
     onError: (err: Error) => {
       toast({ title: "Failed to duplicate", description: err.message, variant: "destructive" });
