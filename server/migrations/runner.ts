@@ -1032,6 +1032,20 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-05-18_variant_kind_cookbook_visibility",
+    statements: [
+      // Disambiguates edit-copy forks from household-safe AI variants.
+      // Values: null = original, 'edit_copy' = cookbook fork, 'household_safe' = AI variant.
+      "ALTER TABLE meals ADD COLUMN IF NOT EXISTS variant_kind TEXT",
+      // Phase 1 default: false everywhere. Phase 2 will expose the toggle.
+      "ALTER TABLE meals ADD COLUMN IF NOT EXISTS show_in_cookbook BOOLEAN NOT NULL DEFAULT FALSE",
+      // Backfill existing household-safe variant rows (created by today's earlier migration).
+      "UPDATE meals SET variant_kind = 'household_safe' WHERE is_household_safe_variant = TRUE AND variant_kind IS NULL",
+      "CREATE INDEX IF NOT EXISTS meals_variant_kind_idx ON meals (user_id, variant_kind) WHERE variant_kind IS NOT NULL",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

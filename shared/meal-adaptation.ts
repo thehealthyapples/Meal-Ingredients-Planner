@@ -58,6 +58,14 @@ export interface HouseholdSafePreview {
   methodChanges: string[];
   /** Trade-offs and notes (e.g. "Recipe becomes vegetarian", "Milder spice profile") */
   tradeoffs: string[];
+  /**
+   * Set to true when the post-generation validation detected impossible action+ingredient
+   * pairings (e.g. de-veining chickpeas, fish stock in a vegetarian version). The preview
+   * should be shown with a warning and the accept button disabled.
+   */
+  validationFailed?: boolean;
+  /** Human-readable descriptions of the specific issues found during validation (for dev logging). */
+  validationIssues?: string[];
 }
 
 // ─── Reusable variant snapshot ────────────────────────────────────────────────

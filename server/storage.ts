@@ -324,8 +324,12 @@ export interface IStorage {
   updatePlannerEntryMealId(entryId: number, mealId: number): Promise<PlannerEntry | undefined>;
   /** Repoint a planner entry to a household-safe variant, storing the original meal ID for later revert. */
   acceptHouseholdSafeVariant(entryId: number, variantMealId: number, originalMealId: number): Promise<void>;
-  /** Update an existing household-safe variant meal's generated content (ingredients, instructions, snapshot). */
-  updateHouseholdSafeVariantContent(variantMealId: number, data: { ingredients: string[]; instructions: string[]; householdSafeFor: import("@shared/meal-adaptation").HouseholdSafeForSnapshot }): Promise<void>;
+  /** Update an existing household-safe variant meal's generated content (ingredients, instructions, snapshot, derived diet types). */
+  updateHouseholdSafeVariantContent(variantMealId: number, data: { ingredients: string[]; instructions: string[]; householdSafeFor: import("@shared/meal-adaptation").HouseholdSafeForSnapshot; dietTypes?: string[] }): Promise<void>;
+  /** Toggle showInCookbook on a household-safe variant. Only updates if the meal belongs to userId. */
+  setMealShowInCookbook(mealId: number, userId: number, show: boolean): Promise<Meal | undefined>;
+  /** Rename a meal. Only updates if the meal belongs to userId. */
+  updateMealName(mealId: number, userId: number, name: string): Promise<Meal | undefined>;
 
   sessionStore: session.Store;
 }
@@ -995,6 +999,8 @@ export class DatabaseStorage implements IStorage {
       createdAt: meals.createdAt,
       isHouseholdSafeVariant: meals.isHouseholdSafeVariant,
       householdSafeFor: meals.householdSafeFor,
+      variantKind: meals.variantKind,
+      showInCookbook: meals.showInCookbook,
       ingredientCount: sql<number>`coalesce(array_length(${meals.ingredients}, 1), 0)`.mapWith(Number),
     };
   }
@@ -3482,12 +3488,35 @@ export class DatabaseStorage implements IStorage {
 
   async updateHouseholdSafeVariantContent(
     variantMealId: number,
-    data: { ingredients: string[]; instructions: string[]; householdSafeFor: import("@shared/meal-adaptation").HouseholdSafeForSnapshot },
+    data: { ingredients: string[]; instructions: string[]; householdSafeFor: import("@shared/meal-adaptation").HouseholdSafeForSnapshot; dietTypes?: string[] },
   ): Promise<void> {
-    await db
+    const setFields: Record<string, unknown> = {
+      ingredients: data.ingredients,
+      instructions: data.instructions,
+      householdSafeFor: data.householdSafeFor as any,
+    };
+    if (data.dietTypes !== undefined) {
+      setFields.dietTypes = data.dietTypes;
+    }
+    await db.update(meals).set(setFields as any).where(eq(meals.id, variantMealId));
+  }
+
+  async setMealShowInCookbook(mealId: number, userId: number, show: boolean): Promise<Meal | undefined> {
+    const [result] = await db
       .update(meals)
-      .set({ ingredients: data.ingredients, instructions: data.instructions, householdSafeFor: data.householdSafeFor as any })
-      .where(eq(meals.id, variantMealId));
+      .set({ showInCookbook: show })
+      .where(and(eq(meals.id, mealId), eq(meals.userId, userId)))
+      .returning();
+    return result;
+  }
+
+  async updateMealName(mealId: number, userId: number, name: string): Promise<Meal | undefined> {
+    const [result] = await db
+      .update(meals)
+      .set({ name })
+      .where(and(eq(meals.id, mealId), eq(meals.userId, userId)))
+      .returning();
+    return result;
   }
 }
 

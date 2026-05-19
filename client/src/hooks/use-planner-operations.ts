@@ -1,0 +1,419 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { api } from "@shared/routes";
+import type { FullWeek, FullDay } from "@/lib/planner-types";
+import type { PlannerEntry } from "@shared/schema";
+import type { EntryTarget } from "@/components/PlannerMealPickerPanel";
+
+// Minimal duplicates of page-level slot helpers — kept local to avoid a shared-utils file
+function getSlotEntries(entries: PlannerEntry[], mealType: string, audience: string, isDrink = false): PlannerEntry[] {
+  return entries
+    .filter(e => e.mealType === mealType && e.audience === audience && e.isDrink === isDrink)
+    .sort((a, b) => a.position !== b.position ? a.position - b.position : a.id - b.id);
+}
+
+interface UsePlannerOperationsOptions {
+  fullPlanner: FullWeek[];
+  selectedDayId: number | null;
+  onSlotCleared?: () => void;
+  onWeekCleared?: () => void;
+}
+
+export function usePlannerOperations({
+  fullPlanner,
+  selectedDayId,
+  onSlotCleared,
+  onWeekCleared,
+}: UsePlannerOperationsOptions) {
+  const { toast } = useToast();
+  const qc = useQueryClient();
+
+  const upsertEntryMutation = useMutation({
+    mutationFn: async (params: { dayId: number; mealType: string; audience: string; mealId: number | null; isDrink?: boolean; drinkType?: string | null }) => {
+      const res = await apiRequest("PUT", `/api/planner/days/${params.dayId}/entries`, {
+        mealType: params.mealType,
+        audience: params.audience,
+        mealId: params.mealId,
+        isDrink: params.isDrink ?? false,
+        drinkType: params.drinkType ?? null,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update meal", variant: "destructive" });
+    },
+  });
+
+  const addEntryMutation = useMutation({
+    mutationFn: async (params: { dayId: number; mealType: string; audience: string; mealId: number; position: number; isDrink: boolean; drinkType?: string | null }) => {
+      const res = await apiRequest("POST", `/api/planner/days/${params.dayId}/items`, {
+        mealSlot: params.mealType,
+        mealId: params.mealId,
+        position: params.position,
+        audience: params.audience,
+        isDrink: params.isDrink,
+        drinkType: params.drinkType ?? null,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to add meal", variant: "destructive" });
+    },
+  });
+
+  const deleteEntryMutation = useMutation({
+    mutationFn: async (entryId: number) => {
+      const res = await apiRequest("DELETE", `/api/planner/entries/${entryId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to remove meal", variant: "destructive" });
+    },
+  });
+
+  const replacePlaceholderMealMutation = useMutation({
+    mutationFn: async (params: { entryId: number; mealId: number }) => {
+      const res = await apiRequest("PATCH", `/api/planner/entries/${params.entryId}/meal`, { mealId: params.mealId });
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to link recipe", variant: "destructive" });
+    },
+  });
+
+  const movePlannerEntryMutation = useMutation({
+    mutationFn: async (params: { entryId: number; dayId: number; mealType: string; position: number }) => {
+      const res = await apiRequest("PATCH", `/api/planner/entries/${params.entryId}`, {
+        dayId: params.dayId,
+        mealType: params.mealType,
+        position: params.position,
+      });
+      return res.json();
+    },
+    onMutate: async (params) => {
+      await qc.cancelQueries({ queryKey: ["/api/planner/full"] });
+      const previousData = qc.getQueryData<FullWeek[]>(["/api/planner/full"]);
+      qc.setQueryData<FullWeek[]>(["/api/planner/full"], (old) => {
+        if (!old) return old;
+        return old.map((week) => ({
+          ...week,
+          days: week.days.map((day) => {
+            if (day.entries.some((e) => e.id === params.entryId) && day.id !== params.dayId) {
+              return { ...day, entries: day.entries.filter((e) => e.id !== params.entryId) };
+            }
+            if (day.id === params.dayId) {
+              const filtered = day.entries.filter((e) => e.id !== params.entryId);
+              const moved =
+                day.entries.find((e) => e.id === params.entryId) ??
+                old.flatMap((w) => w.days).flatMap((d) => d.entries).find((e) => e.id === params.entryId);
+              if (!moved) return day;
+              return {
+                ...day,
+                entries: [...filtered, { ...moved, dayId: params.dayId, mealType: params.mealType, position: params.position }],
+              };
+            }
+            return day;
+          }),
+        }));
+      });
+      return { previousData };
+    },
+    onError: (_err, _params, context) => {
+      if (context?.previousData) qc.setQueryData(["/api/planner/full"], context.previousData);
+      toast({ title: "Failed to move meal", description: "Planner restored to previous state", variant: "destructive" });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    },
+  });
+
+  const reorderEntriesMutation = useMutation({
+    mutationFn: async (orderedIds: number[]) => {
+      const res = await apiRequest("PATCH", "/api/planner/entries/reorder", { orderedIds });
+      return res.json();
+    },
+    onMutate: async (orderedIds) => {
+      await qc.cancelQueries({ queryKey: ["/api/planner/full"] });
+      const previousData = qc.getQueryData<FullWeek[]>(["/api/planner/full"]);
+      qc.setQueryData<FullWeek[]>(["/api/planner/full"], (old) => {
+        if (!old) return old;
+        const positionMap = new Map(orderedIds.map((id, i) => [id, i]));
+        return old.map((week) => ({
+          ...week,
+          days: week.days.map((day) => ({
+            ...day,
+            entries: day.entries.map((entry) => {
+              const newPos = positionMap.get(entry.id);
+              return newPos !== undefined ? { ...entry, position: newPos } : entry;
+            }),
+          })),
+        }));
+      });
+      return { previousData };
+    },
+    onError: (_err, _ids, context) => {
+      if (context?.previousData) qc.setQueryData(["/api/planner/full"], context.previousData);
+      toast({ title: "Failed to reorder meals", description: "Planner restored to previous state", variant: "destructive" });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    },
+  });
+
+  const duplicateEntryMutation = useMutation({
+    mutationFn: async (params: { entryId: number; targetDayId?: number }) => {
+      const body: Record<string, number> = {};
+      if (params.targetDayId !== undefined) body.targetDayId = params.targetDayId;
+      const res = await apiRequest("POST", `/api/planner/entries/${params.entryId}/duplicate`, body);
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.message ?? "Failed to duplicate");
+      }
+      return res.json();
+    },
+    onSuccess: (_data, params) => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      toast({ title: params.targetDayId ? "Copied to tomorrow" : "Duplicated" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Failed to duplicate", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const clearWeekMutation = useMutation({
+    mutationFn: async (weekId: number) => {
+      const res = await apiRequest("DELETE", `/api/planner/weeks/${weekId}/entries`);
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      onWeekCleared?.();
+      toast({ title: "Week cleared" });
+    },
+    onError: () => {
+      toast({ title: "Failed to clear week", variant: "destructive" });
+    },
+  });
+
+  const clearSlotMutation = useMutation({
+    mutationFn: async (params: { dayId: number; mealType: string | undefined; audience: string; isDrink: boolean }) => {
+      const body: Record<string, unknown> = { audience: params.audience, isDrink: params.isDrink };
+      if (params.mealType !== undefined) body.mealType = params.mealType;
+      const res = await apiRequest("DELETE", `/api/planner/days/${params.dayId}/slot`, body);
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.message ?? "Failed to clear slot");
+      }
+      return res.json() as Promise<{ deleted: number }>;
+    },
+    onMutate: async (params) => {
+      await qc.cancelQueries({ queryKey: ["/api/planner/full"] });
+      const previousData = qc.getQueryData<FullWeek[]>(["/api/planner/full"]);
+      qc.setQueryData<FullWeek[]>(["/api/planner/full"], (old) => {
+        if (!old) return old;
+        return old.map((week) => ({
+          ...week,
+          days: week.days.map((day) => {
+            if (day.id !== params.dayId) return day;
+            return {
+              ...day,
+              entries: day.entries.filter((e) => {
+                if (e.isDrink !== params.isDrink) return true;
+                if (params.mealType !== undefined && e.mealType !== params.mealType) return true;
+                if (e.audience !== params.audience) return true;
+                return false;
+              }),
+            };
+          }),
+        }));
+      });
+      return { previousData };
+    },
+    onError: (_err, _params, context) => {
+      if (context?.previousData) qc.setQueryData(["/api/planner/full"], context.previousData);
+      toast({ title: "Failed to clear slot", description: "Planner restored", variant: "destructive" });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      onSlotCleared?.();
+    },
+  });
+
+  const addToBasketMutation = useMutation({
+    mutationFn: async (mealSelections: { mealId: number; count: number }[]) => {
+      const res = await apiRequest("POST", api.shoppingList.generateFromMeals.path, { mealSelections });
+      return res.json();
+    },
+    onSuccess: (_data, mealSelections) => {
+      qc.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      qc.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
+      qc.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
+      qc.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
+      const totalServings = mealSelections.reduce((sum, s) => sum + s.count, 0);
+      toast({ title: "Added to basket", description: `${totalServings} meal serving${totalServings !== 1 ? "s" : ""}` });
+    },
+    onError: () => {
+      toast({ title: "Failed to add to basket", variant: "destructive" });
+    },
+  });
+
+  const addToFreezerMutation = useMutation({
+    mutationFn: async (mealId: number) => {
+      const today = new Date().toISOString().split("T")[0];
+      const res = await apiRequest("POST", "/api/freezer", { mealId, totalPortions: 1, remainingPortions: 1, frozenDate: today });
+      if (!res.ok) {
+        const b = await res.json().catch(() => ({}));
+        throw new Error(b.message ?? "Failed to add to freezer");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/freezer"] });
+      toast({ title: "Added to freezer" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Could not add to freezer", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const createPlannerIntent = async (name: string, mealType: string, dayIdOverride?: number): Promise<void> => {
+    const targetDayId = dayIdOverride ?? selectedDayId;
+    if (!targetDayId) {
+      toast({ title: "Select a day first", description: "Click a day header in the planner grid to select it.", variant: "destructive" });
+      return;
+    }
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      toast({ title: "Enter a meal name", variant: "destructive" });
+      return;
+    }
+    try {
+      const mealRes = await apiRequest("POST", "/api/meals", {
+        name: trimmedName,
+        ingredients: [],
+        instructions: [],
+        servings: 1,
+        audience: "adult",
+        isDrink: false,
+        mealSourceType: "planner-placeholder",
+      });
+      if (!mealRes.ok) throw new Error("Failed to create meal");
+      const meal = await mealRes.json();
+
+      const day = fullPlanner.flatMap(w => w.days).find(d => d.id === targetDayId);
+      const position = day ? getSlotEntries(day.entries, mealType, "adult", false).length : 0;
+
+      const entryRes = await apiRequest("POST", `/api/planner/days/${targetDayId}/items`, {
+        mealSlot: mealType,
+        mealId: meal.id,
+        position,
+        audience: "adult",
+        isDrink: false,
+        drinkType: null,
+      });
+      if (!entryRes.ok) {
+        await apiRequest("DELETE", `/api/meals/${meal.id}`).catch(() => {});
+        throw new Error("Failed to add to planner");
+      }
+
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      toast({ title: `"${trimmedName}" added`, description: "Appears as unresolved — link a recipe when ready." });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : undefined;
+      toast({ title: "Failed to add meal idea", description: msg ?? "Please try again.", variant: "destructive" });
+    }
+  };
+
+  const clearEntry = (target: EntryTarget) => {
+    upsertEntryMutation.mutate({
+      dayId: target.dayId,
+      mealType: target.mealType,
+      audience: target.audience,
+      mealId: null,
+      isDrink: target.isDrink,
+      drinkType: target.drinkType,
+    });
+  };
+
+  const handleRepeatTomorrow = (entry: PlannerEntry, currentDayId: number, sortedDays: FullDay[]) => {
+    const idx = sortedDays.findIndex((d) => d.id === currentDayId);
+    if (idx < 0 || idx >= sortedDays.length - 1) {
+      toast({ title: "No next day in this week" });
+      return;
+    }
+    duplicateEntryMutation.mutate({ entryId: entry.id, targetDayId: sortedDays[idx + 1].id });
+  };
+
+  const collectMealSelections = (days: FullDay[], mealTypeFilter?: string): { mealId: number; count: number }[] => {
+    const counts = new Map<number, number>();
+    for (const day of days) {
+      for (const entry of day.entries) {
+        if (mealTypeFilter && entry.mealType !== mealTypeFilter) continue;
+        counts.set(entry.mealId, (counts.get(entry.mealId) ?? 0) + 1);
+      }
+    }
+    return Array.from(counts.entries()).map(([mealId, count]) => ({ mealId, count }));
+  };
+
+  const addDayToBasket = (day: FullDay) => {
+    const selections = collectMealSelections([day]);
+    if (selections.length === 0) {
+      toast({ title: "No meals to add for this day" });
+      return;
+    }
+    addToBasketMutation.mutate(selections);
+  };
+
+  const addSlotToBasket = (mealType: string, sortedDays: FullDay[]) => {
+    const selections = collectMealSelections(sortedDays, mealType);
+    if (selections.length === 0) {
+      toast({ title: "No meals in this slot" });
+      return;
+    }
+    addToBasketMutation.mutate(selections);
+  };
+
+  const addAllToBasket = (sortedDays: FullDay[]) => {
+    const selections = collectMealSelections(sortedDays);
+    if (selections.length === 0) {
+      toast({ title: "No meals planned this week" });
+      return;
+    }
+    addToBasketMutation.mutate(selections);
+  };
+
+  return {
+    upsertEntryMutation,
+    addEntryMutation,
+    deleteEntryMutation,
+    replacePlaceholderMealMutation,
+    movePlannerEntryMutation,
+    reorderEntriesMutation,
+    duplicateEntryMutation,
+    clearWeekMutation,
+    clearSlotMutation,
+    addToBasketMutation,
+    addToFreezerMutation,
+    createPlannerIntent,
+    clearEntry,
+    handleRepeatTomorrow,
+    collectMealSelections,
+    addDayToBasket,
+    addSlotToBasket,
+    addAllToBasket,
+  };
+}

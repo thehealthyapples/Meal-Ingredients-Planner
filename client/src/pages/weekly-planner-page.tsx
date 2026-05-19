@@ -22,6 +22,7 @@ import { usePlannerContext } from "@/contexts/PlannerContext";
 import { PlannerWorkspaceContext } from "@/contexts/PlannerWorkspaceContext";
 import { useSmartSuggest } from "@/hooks/use-smart-suggest";
 import { usePlannerScan } from "@/hooks/use-planner-scan";
+import { usePlannerOperations } from "@/hooks/use-planner-operations";
 import { PlannerAssistantPanel } from "@/components/PlannerAssistantPanel";
 import type { ResolveTarget, PlaceholderItem } from "@/components/PlannerAssistantPanel";
 import { SmartReviewPanelContent } from "@/components/SmartReviewPanelContent";
@@ -615,192 +616,28 @@ export default function WeeklyPlannerPage() {
     },
   });
 
-  const clearWeekMutation = useMutation({
-    mutationFn: async (weekId: number) => {
-      const res = await apiRequest("DELETE", `/api/planner/weeks/${weekId}/entries`);
-      return res.json();
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      setClearWeekId(null);
-      toast({ title: "Week cleared" });
-    },
-    onError: () => {
-      toast({ title: "Failed to clear week", variant: "destructive" });
-    },
-  });
-
-  const upsertEntryMutation = useMutation({
-    mutationFn: async (params: { dayId: number; mealType: string; audience: string; mealId: number | null; isDrink?: boolean; drinkType?: string | null }) => {
-      const res = await apiRequest("PUT", `/api/planner/days/${params.dayId}/entries`, {
-        mealType: params.mealType,
-        audience: params.audience,
-        mealId: params.mealId,
-        isDrink: params.isDrink ?? false,
-        drinkType: params.drinkType ?? null,
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-    },
-    onError: () => {
-      toast({ title: "Failed to update meal", variant: "destructive" });
-    },
-  });
-
-  const addEntryMutation = useMutation({
-    mutationFn: async (params: { dayId: number; mealType: string; audience: string; mealId: number; position: number; isDrink: boolean; drinkType?: string | null }) => {
-      const res = await apiRequest("POST", `/api/planner/days/${params.dayId}/items`, {
-        mealSlot: params.mealType,
-        mealId: params.mealId,
-        position: params.position,
-        audience: params.audience,
-        isDrink: params.isDrink,
-        drinkType: params.drinkType ?? null,
-      });
-      return res.json();
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-    },
-    onError: () => {
-      toast({ title: "Failed to add meal", variant: "destructive" });
-    },
-  });
-
-  const deleteEntryMutation = useMutation({
-    mutationFn: async (entryId: number) => {
-      const res = await apiRequest("DELETE", `/api/planner/entries/${entryId}`);
-      return res.json();
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-    },
-    onError: () => {
-      toast({ title: "Failed to remove meal", variant: "destructive" });
-    },
-  });
-
-  // Phase 3E: atomic placeholder swap — replaces delete-then-add with a single PATCH
-  const replacePlaceholderMealMutation = useMutation({
-    mutationFn: async (params: { entryId: number; mealId: number }) => {
-      const res = await apiRequest("PATCH", `/api/planner/entries/${params.entryId}/meal`, { mealId: params.mealId });
-      return res.json();
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-    },
-    onError: () => {
-      toast({ title: "Failed to link recipe", variant: "destructive" });
-    },
-  });
-
-  // Phase 4A: drag/drop reassignment — moves an entry to a new day+slot atomically
-  const movePlannerEntryMutation = useMutation({
-    mutationFn: async (params: { entryId: number; dayId: number; mealType: string; position: number }) => {
-      const res = await apiRequest("PATCH", `/api/planner/entries/${params.entryId}`, {
-        dayId: params.dayId,
-        mealType: params.mealType,
-        position: params.position,
-      });
-      return res.json();
-    },
-    onMutate: async (params) => {
-      await qc.cancelQueries({ queryKey: ["/api/planner/full"] });
-      const previousData = qc.getQueryData<FullWeek[]>(["/api/planner/full"]);
-      qc.setQueryData<FullWeek[]>(["/api/planner/full"], (old) => {
-        if (!old) return old;
-        return old.map((week) => ({
-          ...week,
-          days: week.days.map((day) => {
-            // Remove entry from its current day
-            if (day.entries.some((e) => e.id === params.entryId) && day.id !== params.dayId) {
-              return { ...day, entries: day.entries.filter((e) => e.id !== params.entryId) };
-            }
-            // Move entry within same day (update mealType + position) or add to target day
-            if (day.id === params.dayId) {
-              const filtered = day.entries.filter((e) => e.id !== params.entryId);
-              const moved = day.entries.find((e) => e.id === params.entryId)
-                ?? old.flatMap((w) => w.days).flatMap((d) => d.entries).find((e) => e.id === params.entryId);
-              if (!moved) return day;
-              return {
-                ...day,
-                entries: [...filtered, { ...moved, dayId: params.dayId, mealType: params.mealType, position: params.position }],
-              };
-            }
-            return day;
-          }),
-        }));
-      });
-      return { previousData };
-    },
-    onError: (_err, _params, context) => {
-      if (context?.previousData) {
-        qc.setQueryData(["/api/planner/full"], context.previousData);
-      }
-      toast({ title: "Failed to move meal", description: "Planner restored to previous state", variant: "destructive" });
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-    },
-  });
-
-  // Phase 4B: batch reorder of entries within the same slot
-  const reorderEntriesMutation = useMutation({
-    mutationFn: async (orderedIds: number[]) => {
-      const res = await apiRequest("PATCH", "/api/planner/entries/reorder", { orderedIds });
-      return res.json();
-    },
-    onMutate: async (orderedIds) => {
-      await qc.cancelQueries({ queryKey: ["/api/planner/full"] });
-      const previousData = qc.getQueryData<FullWeek[]>(["/api/planner/full"]);
-      qc.setQueryData<FullWeek[]>(["/api/planner/full"], (old) => {
-        if (!old) return old;
-        const positionMap = new Map(orderedIds.map((id, i) => [id, i]));
-        return old.map((week) => ({
-          ...week,
-          days: week.days.map((day) => ({
-            ...day,
-            entries: day.entries.map((entry) => {
-              const newPos = positionMap.get(entry.id);
-              return newPos !== undefined ? { ...entry, position: newPos } : entry;
-            }),
-          })),
-        }));
-      });
-      return { previousData };
-    },
-    onError: (_err, _ids, context) => {
-      if (context?.previousData) {
-        qc.setQueryData(["/api/planner/full"], context.previousData);
-      }
-      toast({ title: "Failed to reorder meals", description: "Planner restored to previous state", variant: "destructive" });
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-    },
-  });
-
-  // Phase 5A: duplicate a planner entry (same slot, or to a different day)
-  const duplicateEntryMutation = useMutation({
-    mutationFn: async (params: { entryId: number; targetDayId?: number }) => {
-      const body: Record<string, number> = {};
-      if (params.targetDayId !== undefined) body.targetDayId = params.targetDayId;
-      const res = await apiRequest("POST", `/api/planner/entries/${params.entryId}/duplicate`, body);
-      if (!res.ok) {
-        const b = await res.json().catch(() => ({}));
-        throw new Error(b.message ?? "Failed to duplicate");
-      }
-      return res.json();
-    },
-    onSuccess: (_data, params) => {
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      toast({ title: params.targetDayId ? "Copied to tomorrow" : "Duplicated" });
-    },
-    onError: (err: Error) => {
-      toast({ title: "Failed to duplicate", description: err.message, variant: "destructive" });
-    },
+  const {
+    upsertEntryMutation,
+    addEntryMutation,
+    deleteEntryMutation,
+    replacePlaceholderMealMutation,
+    movePlannerEntryMutation,
+    reorderEntriesMutation,
+    duplicateEntryMutation,
+    clearWeekMutation,
+    clearSlotMutation,
+    addToBasketMutation,
+    addToFreezerMutation,
+    createPlannerIntent,
+    handleRepeatTomorrow,
+    addDayToBasket,
+    addSlotToBasket,
+    addAllToBasket,
+  } = usePlannerOperations({
+    fullPlanner,
+    selectedDayId,
+    onSlotCleared: () => setClearSlotConfirm(null),
+    onWeekCleared: () => setClearWeekId(null),
   });
 
   // Phase 5A: copy all entries from one day to another
@@ -824,89 +661,6 @@ export default function WeeklyPlannerPage() {
     },
     onError: (err: Error) => {
       toast({ title: "Failed to copy day", description: err.message, variant: "destructive" });
-    },
-  });
-
-  // Phase 5A: clear all entries in a specific day+slot
-  const clearSlotMutation = useMutation({
-    mutationFn: async (params: { dayId: number; mealType: string | undefined; audience: string; isDrink: boolean }) => {
-      const body: Record<string, unknown> = { audience: params.audience, isDrink: params.isDrink };
-      if (params.mealType !== undefined) body.mealType = params.mealType;
-      const res = await apiRequest("DELETE", `/api/planner/days/${params.dayId}/slot`, body);
-      if (!res.ok) {
-        const b = await res.json().catch(() => ({}));
-        throw new Error(b.message ?? "Failed to clear slot");
-      }
-      return res.json() as Promise<{ deleted: number }>;
-    },
-    onMutate: async (params) => {
-      await qc.cancelQueries({ queryKey: ["/api/planner/full"] });
-      const previousData = qc.getQueryData<FullWeek[]>(["/api/planner/full"]);
-      qc.setQueryData<FullWeek[]>(["/api/planner/full"], (old) => {
-        if (!old) return old;
-        return old.map((week) => ({
-          ...week,
-          days: week.days.map((day) => {
-            if (day.id !== params.dayId) return day;
-            return {
-              ...day,
-              entries: day.entries.filter((e) => {
-                if (e.isDrink !== params.isDrink) return true;
-                if (params.mealType !== undefined && e.mealType !== params.mealType) return true;
-                if (e.audience !== params.audience) return true;
-                return false;
-              }),
-            };
-          }),
-        }));
-      });
-      return { previousData };
-    },
-    onError: (_err, _params, context) => {
-      if (context?.previousData) qc.setQueryData(["/api/planner/full"], context.previousData);
-      toast({ title: "Failed to clear slot", description: "Planner restored", variant: "destructive" });
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      setClearSlotConfirm(null);
-    },
-  });
-
-  // Phase 5A: add a planner meal to the freezer (only if meal is freezer-eligible)
-  const addToFreezerMutation = useMutation({
-    mutationFn: async (mealId: number) => {
-      const today = new Date().toISOString().split("T")[0];
-      const res = await apiRequest("POST", "/api/freezer", { mealId, totalPortions: 1, remainingPortions: 1, frozenDate: today });
-      if (!res.ok) {
-        const b = await res.json().catch(() => ({}));
-        throw new Error(b.message ?? "Failed to add to freezer");
-      }
-      return res.json();
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/freezer"] });
-      toast({ title: "Added to freezer" });
-    },
-    onError: (err: Error) => {
-      toast({ title: "Could not add to freezer", description: err.message, variant: "destructive" });
-    },
-  });
-
-  const addToBasketMutation = useMutation({
-    mutationFn: async (mealSelections: { mealId: number; count: number }[]) => {
-      const res = await apiRequest("POST", api.shoppingList.generateFromMeals.path, { mealSelections });
-      return res.json();
-    },
-    onSuccess: (_data, mealSelections) => {
-      qc.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
-      qc.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
-      qc.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
-      qc.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
-      const totalServings = mealSelections.reduce((sum, s) => sum + s.count, 0);
-      toast({ title: "Added to basket", description: `${totalServings} meal serving${totalServings !== 1 ? 's' : ''}` });
-    },
-    onError: (err) => {
-      toast({ title: "Failed to add to basket", variant: "destructive" });
     },
   });
 
@@ -1317,86 +1071,6 @@ export default function WeeklyPlannerPage() {
     }
   };
 
-  // Phase 5B + 5D: inline planner intent creation (dayIdOverride used by drag-drop in Phase 5D)
-  const createPlannerIntent = async (name: string, mealType: string, dayIdOverride?: number): Promise<void> => {
-    const targetDayId = dayIdOverride ?? selectedDayId;
-    if (!targetDayId) {
-      toast({ title: "Select a day first", description: "Click a day header in the planner grid to select it.", variant: "destructive" });
-      return;
-    }
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      toast({ title: "Enter a meal name", variant: "destructive" });
-      return;
-    }
-    try {
-      const mealRes = await apiRequest("POST", "/api/meals", {
-        name: trimmedName,
-        ingredients: [],
-        instructions: [],
-        servings: 1,
-        audience: "adult",
-        isDrink: false,
-        mealSourceType: "planner-placeholder",
-      });
-      if (!mealRes.ok) throw new Error("Failed to create meal");
-      const meal = await mealRes.json();
-
-      const day = fullPlanner.flatMap(w => w.days).find(d => d.id === targetDayId);
-      const position = day ? getSlotEntries(day.entries, mealType, "adult", false).length : 0;
-
-      const entryRes = await apiRequest("POST", `/api/planner/days/${targetDayId}/items`, {
-        mealSlot: mealType,
-        mealId: meal.id,
-        position,
-        audience: "adult",
-        isDrink: false,
-        drinkType: null,
-      });
-      if (!entryRes.ok) {
-        await apiRequest("DELETE", `/api/meals/${meal.id}`).catch(() => {});
-        throw new Error("Failed to add to planner");
-      }
-
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      qc.invalidateQueries({ queryKey: ["/api/meals"] });
-      toast({ title: `"${trimmedName}" added`, description: "Appears as unresolved — link a recipe when ready." });
-    } catch (err: any) {
-      toast({ title: "Failed to add meal idea", description: err?.message ?? "Please try again.", variant: "destructive" });
-    }
-  };
-
-  const clearEntry = (target: EntryTarget) => {
-    upsertEntryMutation.mutate({
-      dayId: target.dayId,
-      mealType: target.mealType,
-      audience: target.audience,
-      mealId: null,
-      isDrink: target.isDrink,
-      drinkType: target.drinkType,
-    });
-  };
-
-  const collectMealSelections = (days: FullDay[], mealTypeFilter?: string): { mealId: number; count: number }[] => {
-    const counts = new Map<number, number>();
-    for (const day of days) {
-      for (const entry of day.entries) {
-        if (mealTypeFilter && entry.mealType !== mealTypeFilter) continue;
-        counts.set(entry.mealId, (counts.get(entry.mealId) || 0) + 1);
-      }
-    }
-    return Array.from(counts.entries()).map(([mealId, count]) => ({ mealId, count }));
-  };
-
-  const addDayToBasket = (day: FullDay) => {
-    const selections = collectMealSelections([day]);
-    if (selections.length === 0) {
-      toast({ title: "No meals to add for this day" });
-      return;
-    }
-    addToBasketMutation.mutate(selections);
-  };
-
   const getUPFColor = (score?: number) => {
     if (!score) return "text-muted-foreground";
     if (score <= 20) return "text-green-600 dark:text-green-400";
@@ -1410,44 +1084,16 @@ export default function WeeklyPlannerPage() {
     return "High";
   };
 
-  const addSlotToBasket = (mealType: string) => {
-    const selections = collectMealSelections(sortedDays, mealType);
-    if (selections.length === 0) {
-      toast({ title: "No meals in this slot" });
-      return;
-    }
-    addToBasketMutation.mutate(selections);
-  };
-
-  const addAllToBasket = () => {
-    const selections = collectMealSelections(sortedDays);
-    if (selections.length === 0) {
-      toast({ title: "No meals planned this week" });
-      return;
-    }
-    addToBasketMutation.mutate(selections);
-  };
-
   const sortedDays = activeWeekData?.days?.slice().sort((a, b) => {
     const aIdx = MONDAY_FIRST_ORDER.indexOf(a.dayOfWeek);
     const bIdx = MONDAY_FIRST_ORDER.indexOf(b.dayOfWeek);
     return aIdx - bIdx;
   }) || [];
 
-  // Phase 5A: find the next day in sorted week order
   const getNextDay = (currentDayId: number): FullDay | undefined => {
     const idx = sortedDays.findIndex((d) => d.id === currentDayId);
     if (idx < 0 || idx >= sortedDays.length - 1) return undefined;
     return sortedDays[idx + 1];
-  };
-
-  const handleRepeatTomorrow = (entry: PlannerEntry, currentDayId: number) => {
-    const nextDay = getNextDay(currentDayId);
-    if (!nextDay) {
-      toast({ title: "No next day in this week" });
-      return;
-    }
-    duplicateEntryMutation.mutate({ entryId: entry.id, targetDayId: nextDay.id });
   };
 
   const expandedDay = expandedDayId != null
@@ -1630,7 +1276,7 @@ export default function WeeklyPlannerPage() {
             <Utensils className="h-3 w-3 mr-1" />
             Create Meal
           </Button>
-          <Button size="sm" variant="outline" className="px-2.5 text-xs" onClick={addAllToBasket} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
+          <Button size="sm" variant="outline" className="px-2.5 text-xs" onClick={() => addAllToBasket(sortedDays)} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
             <ShoppingBasket className="h-3 w-3 mr-1" />
             {addToBasketMutation.isPending ? "…" : "+Week"}
           </Button>
@@ -2114,7 +1760,7 @@ export default function WeeklyPlannerPage() {
                                 <TooltipTrigger asChild>
                                   <button
                                     className="mt-1 rounded transition-colors text-muted-foreground hover:text-foreground self-center"
-                                    onClick={() => addSlotToBasket(row.mealType!)}
+                                    onClick={() => addSlotToBasket(row.mealType!, sortedDays)}
                                     disabled={addToBasketMutation.isPending}
                                     data-testid={`button-add-slot-${row.mealType}-basket`}
                                   >
@@ -2260,7 +1906,7 @@ export default function WeeklyPlannerPage() {
                                               </DropdownMenuItem>
                                             )}
                                             {!isPlaceholder && getNextDay(day.id) && (
-                                              <DropdownMenuItem onClick={() => handleRepeatTomorrow(entry, day.id)} data-testid={`mi-repeat-${entry.id}`}>
+                                              <DropdownMenuItem onClick={() => handleRepeatTomorrow(entry, day.id, sortedDays)} data-testid={`mi-repeat-${entry.id}`}>
                                                 <RefreshCw className="h-3.5 w-3.5 mr-2" />
                                                 Repeat tomorrow
                                               </DropdownMenuItem>
@@ -2524,7 +2170,7 @@ export default function WeeklyPlannerPage() {
                   )}
                   {!isPlaceholder && getNextDay(contextEntry.dayId) && (
                     <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-repeat"
-                      onClick={() => { handleRepeatTomorrow(contextEntry.entry, contextEntry.dayId); setContextEntry(null); }}>
+                      onClick={() => { handleRepeatTomorrow(contextEntry.entry, contextEntry.dayId, sortedDays); setContextEntry(null); }}>
                       <RefreshCw className="h-4 w-4 text-muted-foreground shrink-0" />Repeat tomorrow
                     </button>
                   )}

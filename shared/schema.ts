@@ -114,6 +114,10 @@ export const meals = pgTable("meals", {
   isHouseholdSafeVariant: boolean("is_household_safe_variant").notNull().default(false),
   /** Restriction snapshot recorded at variant creation time. Null on all non-variant meals. */
   householdSafeFor: jsonb("household_safe_for").$type<HouseholdSafeForSnapshot>(),
+  /** Disambiguates fork type: null = original, 'edit_copy' = cookbook edit fork, 'household_safe' = AI household variant. */
+  variantKind: text("variant_kind"),
+  /** Controls whether this variant appears in the cookbook tab. False for all originals; toggled by user in Phase 2. */
+  showInCookbook: boolean("show_in_cookbook").notNull().default(false),
 });
 
 export const nutrition = pgTable("nutrition", {
@@ -254,6 +258,8 @@ export const insertMealSchema = createInsertSchema(meals).pick({
   kind: true,
   isHouseholdSafeVariant: true,
   householdSafeFor: true,
+  variantKind: true,
+  showInCookbook: true,
 }).extend({
   householdSafeFor: z.custom<HouseholdSafeForSnapshot>().nullish(),
 });

@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown, Users, UserPlus } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown, Users, UserPlus, Shield, Eye, EyeOff } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateMealModal, type ImportedRecipeDraft } from "@/components/create-meal-modal";
@@ -2013,6 +2013,21 @@ export default function MealsPage() {
     queryKey: ['/api/categories'],
   });
   const queryClient = useQueryClient();
+
+  const cookbookVisibilityMutation = useMutation({
+    mutationFn: async ({ mealId, show }: { mealId: number; show: boolean }) => {
+      const res = await apiRequest("PATCH", `/api/meals/${mealId}/cookbook-visibility`, { show });
+      if (!res.ok) throw new Error("Failed to update visibility");
+      return res.json() as Promise<Meal>;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+    },
+    onError: () => {
+      toast({ title: "Could not update cookbook visibility", variant: "destructive" });
+    },
+  });
+
   const { data: freezerMeals = [], refetch: refetchFreezer } = useQuery<FreezerMeal[]>({
     queryKey: ['/api/freezer'],
   });
@@ -2618,6 +2633,17 @@ export default function MealsPage() {
   };
 
 
+  // ── Household Variants section ────────────────────────────────────────────────
+  const householdVariants = useMemo(
+    () => (meals ?? []).filter(m => m.variantKind === "household_safe" && m.showInCookbook),
+    [meals],
+  );
+  // All household-safe variants (for "hidden" count indicator)
+  const allHouseholdVariants = useMemo(
+    () => (meals ?? []).filter(m => m.variantKind === "household_safe"),
+    [meals],
+  );
+
   const filteredMeals = useMemo(() => {
     const activeSearch = searchTerm.trim().length >= 2;
     const q = searchTerm.trim();
@@ -2625,6 +2651,8 @@ export default function MealsPage() {
     const filtered = meals?.filter(meal => {
       // Hide planner-import placeholders from cookbook view
       if (meal.mealSourceType === "planner-placeholder") return false;
+      // Household-safe variants are shown only in the dedicated Household Variants section
+      if (meal.variantKind === "household_safe") return false;
       // Demo mode: never show drinks
       if (user?.isDemo && (meal.isDrink || meal.mealFormat === "drink")) return false;
       // "Recipes" source: hide user-created meals so only web/system meals show
@@ -3875,6 +3903,124 @@ export default function MealsPage() {
             </div>
           )}
         </AnimatePresence>
+      )}
+
+      {/* ── Household Variants section ─────────────────────────────────────────── */}
+      {allHouseholdVariants.length > 0 && (
+        <div className="space-y-4 mt-6" data-testid="section-household-variants">
+          <div className="flex items-center gap-2 pb-1 border-b border-border/50">
+            <Shield className="h-4 w-4 text-teal-500" />
+            <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Household Variants</span>
+            {householdVariants.length > 0 && (
+              <span className="text-xs text-muted-foreground/35">· {householdVariants.length}</span>
+            )}
+            <span className="ml-auto text-[10px] text-muted-foreground/50">Saved household-safe recipes</span>
+          </div>
+
+          {householdVariants.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border/50 p-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                You have {allHouseholdVariants.length} household-safe {allHouseholdVariants.length === 1 ? "variant" : "variants"} saved.
+                Toggle &ldquo;Show in Cookbook&rdquo; on a variant to display it here.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              {householdVariants.map(variant => {
+                const originalName = variant.householdSafeFor?.originalMealName ?? null;
+                return (
+                  <Card key={variant.id} className="flex flex-col overflow-hidden" data-testid={`card-variant-${variant.id}`}>
+                    {/* Image / placeholder */}
+                    <div className="relative w-full h-28 bg-teal-50 dark:bg-teal-950/30 flex flex-col items-center justify-center gap-1">
+                      {variant.imageUrl ? (
+                        <img src={variant.imageUrl} alt={variant.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <>
+                          <Shield className="h-8 w-8 text-teal-400/60" />
+                          <span className="text-xs font-medium text-center px-2 leading-tight text-foreground">{variant.name}</span>
+                        </>
+                      )}
+                      <div className="absolute top-1.5 left-1.5">
+                        <Badge variant="outline" className="text-[10px] border-teal-400/60 text-teal-700 dark:text-teal-300 bg-white/80 dark:bg-teal-950/80">
+                          <Shield className="h-2.5 w-2.5 mr-0.5" />
+                          Household-Safe
+                        </Badge>
+                      </div>
+                    </div>
+
+                    <CardContent className="p-3 flex-1 space-y-1.5">
+                      <p className="text-sm font-medium leading-snug">{variant.name}</p>
+                      {originalName && (
+                        <p className="text-[11px] text-muted-foreground/70">Variant of: {originalName}</p>
+                      )}
+                      {/* Diet badges */}
+                      {variant.dietTypes && variant.dietTypes.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {variant.dietTypes.slice(0, 3).map(d => (
+                            <Badge key={d} variant="outline" className="text-[10px] border-primary/30 text-primary px-1.5">
+                              {d}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+
+                    <CardFooter className="p-3 pt-0 gap-1.5 flex-wrap">
+                      {/* Add to Planner */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs flex-1"
+                        onClick={() => setPlannerLinkData({ mealId: variant.id, mealName: variant.name })}
+                        data-testid={`button-variant-add-planner-${variant.id}`}
+                      >
+                        <CalendarDays className="h-3 w-3 mr-1" />
+                        Add to Plan
+                      </Button>
+                      {/* Toggle cookbook visibility */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                        disabled={cookbookVisibilityMutation.isPending}
+                        onClick={() => cookbookVisibilityMutation.mutate({ mealId: variant.id, show: false })}
+                        data-testid={`button-variant-hide-${variant.id}`}
+                      >
+                        <EyeOff className="h-3 w-3 mr-1" />
+                        Hide
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Hidden variants indicator with reveal controls */}
+          {allHouseholdVariants.filter(v => !v.showInCookbook).length > 0 && (
+            <div className="rounded-lg bg-muted/30 border border-border/40 p-3 space-y-2">
+              <p className="text-xs text-muted-foreground/70">
+                {allHouseholdVariants.filter(v => !v.showInCookbook).length} household-safe {allHouseholdVariants.filter(v => !v.showInCookbook).length === 1 ? "variant is" : "variants are"} hidden from the cookbook.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {allHouseholdVariants.filter(v => !v.showInCookbook).map(v => (
+                  <Button
+                    key={v.id}
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    disabled={cookbookVisibilityMutation.isPending}
+                    onClick={() => cookbookVisibilityMutation.mutate({ mealId: v.id, show: true })}
+                    data-testid={`button-variant-show-${v.id}`}
+                  >
+                    <Eye className="h-3 w-3 mr-1" />
+                    Show &ldquo;{v.name}&rdquo;
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* My Freezer section - appears after My Cookbook + Recipes, before Packaged & Processed */}

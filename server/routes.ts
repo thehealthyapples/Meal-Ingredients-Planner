@@ -32,6 +32,7 @@ import { sanitizeUser } from "./lib/sanitizeUser";
 import { classifyAndEnrich, lookupClassification, updateClassification, applyClassificationToItems } from "./lib/classification-store";
 import { runBackfill } from "./lib/backfill-classifier";
 import { runCategoryNormalisation } from "./lib/normalise-categories";
+import { matchSubstitutionRules, collectProhibitedPhrases } from "@shared/substitution-rules";
 import { runAmbiguousCategoryBackfill } from "./lib/backfill-ambiguous-categories";
 import { isAdmin, hasPremiumAccess, assertAdmin } from "./lib/access";
 import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/retailIntelligence";
@@ -1197,6 +1198,7 @@ export async function registerRoutes(
       categoryId: meal.categoryId,
       sourceUrl: meal.sourceUrl,
       originalMealId: meal.id,
+      variantKind: "edit_copy",
     });
 
     const mealDiets = await storage.getMealDiets(meal.id);
@@ -8014,8 +8016,8 @@ Keep notes short and concrete. Never duplicate ingredients across eaters and hou
           // Build explicit restriction list for conflicting eaters so the AI can scan
           // every ingredient — not just the ones the per-eater note happened to mention.
           const conflictingEaterNames = new Set(conflictingAdaptations.map(a => a.eaterName));
-          const restrictionSummary = profiles
-            .filter(p => conflictingEaterNames.has(p.displayName))
+          const conflictingProfiles = profiles.filter(p => conflictingEaterNames.has(p.displayName));
+          const restrictionSummary = conflictingProfiles
             .map(p => {
               const parts: string[] = [];
               if (p.dietTypes.length > 0) parts.push(`diet: ${p.dietTypes.join(", ")}`);
@@ -8023,40 +8025,59 @@ Keep notes short and concrete. Never duplicate ingredients across eaters and hou
               return `  - ${p.displayName}: ${parts.length > 0 ? parts.join("; ") : "no specific restrictions recorded"}`;
             })
             .join("\n");
+          // Flat list of all restriction/diet keywords across conflicting eaters — used for validation
+          const allRestrictionKeywords = conflictingProfiles.flatMap(p => [
+            ...(p.dietTypes ?? []),
+            ...(p.hardRestrictions ?? []),
+          ]);
 
-          const HSP_SYSTEM_PROMPT = `You are a household meal adaptation assistant. Your task is to suggest ONE unified version of a recipe that satisfies the most restrictive household requirements, with minimal change to the recipe's identity.
+          // ── Rule engine: run deterministic substitutions before AI call ─────
+          const ruleAdjustments = matchSubstitutionRules(meal.ingredients ?? [], allRestrictionKeywords);
+          console.log("[ADAPT_DIAG] 12a-rule. rule engine produced", ruleAdjustments.length, "adjustments:", ruleAdjustments.map(a => `${a.matchedIngredient} → ${a.replacement}`));
 
-RULES:
-- Produce ingredient-level substitutions only (no full rewrites)
-- CRITICAL: You MUST scan EVERY single ingredient against ALL household restrictions. Go through the ingredient list line by line — do not stop after finding the first problem.
-- ALWAYS prefer substituting with a widely available alternative over removing entirely
-  - Meat/fish: use lentils, chickpeas, tofu, tempeh, jackfruit, mushrooms, smoked chickpeas etc.
-  - Dairy: use dairy-free cheese, oat cream, coconut cream, dairy-free butter, oat milk, nutritional yeast etc.
-  - Gluten: use gluten-free pasta, gluten-free flour, gluten-free breadcrumbs etc.
-  - Eggs: use flax egg, aquafaba etc. where relevant
-- ONLY include an ingredient in ingredientChanges if it actually violates one of the household restrictions — do NOT touch ingredients that are already compliant (e.g. oils, vegetables, herbs, spices, water, vinegar, stock that contains no restricted ingredients are all fine as-is)
-- Only set replacement to null (remove entirely) if there is genuinely no suitable substitute AND the ingredient violates a restriction
-- Prioritise allergens/intolerances first, then dietary patterns
-- Keep the recipe recognisable
-- Be honest about trade-offs
+          // Build the constraint block that the AI must honour verbatim
+          const constraintBlock = ruleAdjustments.length > 0
+            ? `\n\nPRE-DETERMINED SUBSTITUTIONS (you MUST use these exactly — do NOT override them):\n${ruleAdjustments.map((a, i) => {
+                const notes = a.cookingNotes.map(n => `    - ${n}`).join("\n");
+                const timing = (a.timingAdjustments ?? []).map(t => `    - TIMING: ${t}`).join("\n");
+                const prohibited = a.prohibitedPhrases.map(p => `    - NEVER write: "${p}"`).join("\n");
+                return `${i + 1}. ${a.matchedIngredient} → ${a.replacement} (${a.reason})\n   Cooking notes you MUST apply:\n${notes}${timing ? "\n" + timing : ""}\n   Prohibited phrases for this substitution:\n${prohibited}`;
+              }).join("\n\n")}`
+            : "";
 
-RESTRICTION REFERENCE — apply these when scanning each ingredient:
-- Vegetarian: ALL meat and fish must be substituted — this includes beef, pork, chicken, lamb, turkey, bacon, ham, sausage, mince, lardons, anchovies, fish fillets, shellfish, and any stock/broth made from meat or fish.
+          const HSP_SYSTEM_PROMPT = `You are a household meal adaptation assistant. Your task is to rewrite a recipe to satisfy household dietary restrictions, with minimal change to the recipe's identity.
+
+YOUR ROLE IS WORDING ENRICHMENT ONLY for any pre-determined substitutions listed below. You MUST NOT override the specified replacements, cooking notes, timing adjustments, or prohibited phrases. These come from a deterministic culinary rule engine and are authoritative.
+
+For ingredients NOT covered by a pre-determined substitution, you must still:
+- Scan every ingredient against the household restrictions
+- Substitute any remaining non-compliant ingredients using best culinary judgement
+- ALWAYS prefer substituting over removing
+- Only set replacement to null if there is genuinely no suitable substitute AND the ingredient violates a restriction${constraintBlock}
+
+HOUSEHOLD RESTRICTION REFERENCE (for ingredients not already handled above):
+- Vegetarian: ALL meat and fish must be substituted — beef, pork, chicken, lamb, turkey, bacon, ham, sausage, mince, lardons, anchovies, fish fillets, shellfish, and any meat/fish stock.
 - Vegan: same as Vegetarian PLUS all dairy and eggs must be substituted.
-- Dairy-Free: ALL dairy must be substituted — this includes milk, cream, creme fraiche, double cream, single cream, butter, cheese (cheddar, mozzarella, parmesan, brie, feta, halloumi, etc.), yoghurt, sour cream, and any ingredient containing milk or lactose.
-- Gluten-Free: ALL gluten-containing ingredients must be substituted — this includes wheat flour, plain flour, self-raising flour, pasta, lasagne sheets, noodles, bread, breadcrumbs, soy sauce (unless tamari), and barley or rye ingredients.
-- Nut-Free: remove or substitute any tree nuts (almonds, cashews, walnuts, pistachios, pecans, etc.) and peanuts.
+- Dairy-Free: ALL dairy must be substituted — milk, cream, creme fraiche, double cream, single cream, butter, all cheeses, yoghurt, sour cream.
+- Gluten-Free: ALL gluten-containing ingredients must be substituted — wheat flour, pasta, lasagne sheets, noodles, bread, breadcrumbs, soy sauce (unless tamari), barley, rye.
+- Nut-Free: remove or substitute all tree nuts and peanuts.
+
+CRITICAL — METHOD REWRITE:
+Think about what each SUBSTITUTE ingredient physically IS — never just rename the original inside its steps.
+
+FOR EACH STEP in updatedInstructions:
+1. Does this step reference a substituted ingredient?
+2. Is the action physically possible for the substitute? (De-veining, peeling shells, reserving heads — only apply to specific animal ingredients.)
+3. If impossible for the substitute: REMOVE the step or rewrite it for the substitute.
+4. If the action makes sense for the substitute (add to pan, stir, season, set aside): keep it using the substitute's name.
+
+STOCK: If original builds stock from a substituted animal ingredient, remove those stock-making steps. Replace with vegetable stock, enhanced with smoked paprika, miso, saffron, seaweed/kelp, or tomato paste as appropriate.
 
 Return a JSON object with exactly these keys:
 - accommodates: array of { eaterName: string, restriction: string } — one entry per eater whose restriction drove a change
-- ingredientChanges: array of { original: string, replacement: string|null, reason: string } — replacement is null only if ingredient must be removed with no suitable substitute; copy the original ingredient string EXACTLY as it appears in the list
-- updatedInstructions: string array — the COMPLETE set of method steps intelligently rewritten for the substituted ingredients. Return one string per original step. Rules:
-  * Update references to substituted ingredients using the natural cooking term for the replacement (e.g. "mince" → "lentils", "crème fraîche" → "dairy-free cream", "Parmesan" → "nutritional yeast")
-  * ADAPT THE TECHNIQUE to suit the replacement ingredient — do not blindly copy the original method. Examples: if bacon is replaced by smoked chickpeas, remove "snip with scissors" and "cook until golden"; if mince is replaced by lentils, remove "break it up with a wooden spoon" and "browned all over"; if creme fraiche is replaced by oat cream, adjust consistency notes accordingly
-  * Remove or rewrite any step or phrase that only makes sense for the original ingredient
-  * Keep all steps that are unchanged (vegetables, seasoning, assembly, baking times etc.) exactly as written
-  * Return [] only if no instructions were provided
-- tradeoffs: string array — honest notes about what changes (e.g. "Recipe becomes vegetarian", "Milder spice profile")
+- ingredientChanges: array of { original: string, replacement: string|null, reason: string } — copy original ingredient string EXACTLY as it appears in the list; include ALL substitutions (both pre-determined and AI-decided)
+- updatedInstructions: string array — COMPLETE method rewritten for the substitute ingredients; never include actions impossible for substitutes; return [] only if no instructions were provided
+- tradeoffs: string array — honest notes about what changes
 
 Keep each string short and concrete. Return [] for any array with no entries.`;
 
@@ -8085,14 +8106,42 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
             Array.isArray(hspParsed.ingredientChanges) &&
             Array.isArray(hspParsed.tradeoffs)
           ) {
+            const updatedInstructions: string[] = Array.isArray(hspParsed.updatedInstructions)
+              ? hspParsed.updatedInstructions
+              : [];
+
+            // Validate that the rewritten method doesn't contain impossible pairings or prohibited phrases
+            const ruleProhibitedPhrases = collectProhibitedPhrases(ruleAdjustments);
+            const validationIssues = detectImpossibleMethodPairings(
+              updatedInstructions,
+              hspParsed.ingredientChanges,
+              allRestrictionKeywords,
+              ruleProhibitedPhrases
+            );
+            const validationFailed = validationIssues.length > 0;
+            if (validationFailed) {
+              console.error(
+                "[ADAPT_DIAG] 12c. VALIDATION FAILED — impossible pairings detected:",
+                validationIssues,
+                "| raw updatedInstructions =",
+                JSON.stringify(updatedInstructions)
+              );
+            }
+
             adaptationResult.householdSafePreview = {
               accommodates: hspParsed.accommodates,
               ingredientChanges: hspParsed.ingredientChanges,
               // Store updated instructions on methodChanges for transport to the accept endpoint
-              methodChanges: Array.isArray(hspParsed.updatedInstructions) ? hspParsed.updatedInstructions : [],
+              methodChanges: updatedInstructions,
               tradeoffs: hspParsed.tradeoffs,
+              ...(validationFailed && { validationFailed: true, validationIssues }),
             };
-            console.log("[ADAPT_DIAG] 12c. household-safe preview attached, updatedInstructions =", hspParsed.updatedInstructions?.length ?? 0, "steps");
+            console.log(
+              "[ADAPT_DIAG] 12c. household-safe preview attached, updatedInstructions =",
+              updatedInstructions.length,
+              "steps, validationFailed =",
+              validationFailed
+            );
           } else {
             console.warn("[ADAPT_DIAG] 12c. household-safe preview had unexpected shape — skipped");
           }
@@ -8127,6 +8176,126 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
   // Phase 1: creates a persistent, reusable meal variant from the AI preview.
   // The original meal is never modified. The planner entry is repointed to the variant.
 
+  // ── Variant diet-type derivation ─────────────────────────────────────────────
+
+  /**
+   * Derives the correct dietTypes array for a household-safe variant.
+   * Starts with the original meal's dietTypes (things the recipe already satisfies),
+   * then adds badges for each restriction accommodated in the AI preview.
+   * Only well-known diet-type labels are added; allergens (Nuts, Eggs, etc.) are ignored.
+   */
+  function deriveVariantDietTypes(
+    originalDietTypes: string[],
+    accommodates: Array<{ eaterName: string; restriction: string }>,
+  ): string[] {
+    // Deduplicate by lowercase key → preserve canonical casing
+    const seen = new Map<string, string>();
+    for (const d of originalDietTypes) {
+      seen.set(d.toLowerCase(), d);
+    }
+    for (const { restriction } of accommodates) {
+      const r = restriction.toLowerCase().trim().replace(/\s+/g, "-");
+      if (r === "vegan") {
+        seen.set("vegan", "Vegan");
+        seen.set("vegetarian", "Vegetarian"); // vegan implies vegetarian
+      } else if (r === "vegetarian") {
+        seen.set("vegetarian", "Vegetarian");
+      } else if (r === "gluten-free" || r === "gluten") {
+        seen.set("gluten-free", "Gluten-Free");
+      } else if (r === "dairy-free" || r === "dairy") {
+        seen.set("dairy-free", "Dairy-Free");
+      }
+      // Allergens (Nuts, Eggs, Shellfish, Soy, Pescatarian, etc.) are not diet-type badges
+    }
+    return Array.from(seen.values());
+  }
+
+  /**
+   * Syncs the meal_diets join table for a variant meal.
+   * Matches derived diet type names case-insensitively against the diets table.
+   * Unmatched names are logged and skipped — never throws.
+   */
+  async function syncVariantMealDiets(mealId: number, dietTypeNames: string[]): Promise<void> {
+    try {
+      if (dietTypeNames.length === 0) {
+        await storage.setMealDiets(mealId, []);
+        return;
+      }
+      const allDiets = await storage.getAllDiets();
+      const lowerNames = new Set(dietTypeNames.map(d => d.toLowerCase()));
+      const matchedIds = allDiets
+        .filter(d => lowerNames.has(d.name.toLowerCase()))
+        .map(d => d.id);
+      await storage.setMealDiets(mealId, matchedIds);
+      const unmatched = dietTypeNames.filter(
+        n => !allDiets.some(d => d.name.toLowerCase() === n.toLowerCase())
+      );
+      if (unmatched.length > 0) {
+        console.log(`[VARIANT] meal_diets sync: skipped ${unmatched.length} type(s) not in diets table: ${unmatched.join(", ")}`);
+      }
+    } catch (err: any) {
+      console.error("[VARIANT] meal_diets sync failed (non-fatal):", err?.message);
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Rule-based variant name generator. Produces a name like:
+   *   "Beef Lasagne" → "Vegetarian Lentil Lasagne"
+   *   "Creamy Chicken Pasta" → "Dairy-Free Chicken Pasta"
+   * Falls back to "<original> (Household-Safe)" when no rule matches.
+   */
+  function generateHouseholdVariantName(
+    originalName: string,
+    preview: import("@shared/meal-adaptation").HouseholdSafePreview,
+  ): string {
+    const accommodates = preview.accommodates ?? [];
+    const changes = preview.ingredientChanges;
+
+    const isVegan = accommodates.some(a => /\bvegan\b/i.test(a.restriction));
+    const isVegetarian = isVegan || accommodates.some(a => /\bvegetarian\b/i.test(a.restriction));
+    const isDairyFree = !isVegetarian && accommodates.some(a => /\bdairy[\s-]?free\b|\bdairy\b/i.test(a.restriction));
+    const isGlutenFree = !isVegetarian && !isDairyFree && accommodates.some(a => /\bgluten[\s-]?free\b|\bgluten\b/i.test(a.restriction));
+
+    let prefix = '';
+    if (isVegan) prefix = 'Vegan';
+    else if (isVegetarian) prefix = 'Vegetarian';
+    else if (isDairyFree) prefix = 'Dairy-Free';
+    else if (isGlutenFree) prefix = 'Gluten-Free';
+
+    if (!prefix) return `${originalName} (Household-Safe)`;
+
+    // Try to replace a protein ingredient name inside the recipe title
+    let name = originalName;
+    if (isVegetarian || isVegan) {
+      const proteinSwap = changes.find(c =>
+        c.replacement !== null &&
+        /\b(beef|pork|chicken|lamb|fish|prawn|shrimp|mince|minced|meat|turkey|salmon|cod|haddock|tuna|bacon|sausage)\b/i.test(c.original)
+      );
+      if (proteinSwap?.replacement) {
+        const origIngName = extractIngredientName(proteinSwap.original);
+        const replIngName = extractIngredientName(proteinSwap.replacement);
+        if (origIngName && replIngName && origIngName.toLowerCase() !== replIngName.toLowerCase()) {
+          // Match any prominent word of the original ingredient in the recipe title
+          const origWords = origIngName.split(/\s+/).filter(w => w.length > 3);
+          for (const word of origWords) {
+            const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const wordRe = new RegExp(`\\b${escaped}s?\\b`, 'gi');
+            if (wordRe.test(name)) {
+              name = name.replace(wordRe, replIngName);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Avoid double-prefix (e.g. if the original was already "Vegetarian X")
+    if (name.toLowerCase().startsWith(prefix.toLowerCase())) return name;
+    return `${prefix} ${name}`;
+  }
+
   // Strip leading quantity/unit from an ingredient string to get the ingredient name.
   // e.g. "500g Minced Beef" → "Minced Beef", "2 Bacon" → "Bacon", "400ml Creme Fraiche" → "Creme Fraiche"
   function extractIngredientName(s: string): string {
@@ -8134,6 +8303,99 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
       .replace(/^\d+(\.\d+)?\s*(g|kg|ml|l|tblsp?|tbsp?|tsp|oz|lb|lbs|rashers?|cloves?|sticks?|medium|large|small|x)\.?\s+/i, "")
       .replace(/^[½¼¾]\s+/, "")
       .trim();
+  }
+
+  // Detect impossible action+ingredient pairings in adapted method steps.
+  // Returns a list of human-readable issue descriptions; empty array means clean.
+  function detectImpossibleMethodPairings(
+    steps: string[],
+    ingredientChanges: import("@shared/meal-adaptation").HouseholdSafeIngredientChange[],
+    restrictions: string[],
+    ruleProhibitedPhrases: string[] = []
+  ): string[] {
+    const issues: string[] = [];
+    if (steps.length === 0) return issues;
+
+    const methodText = steps.join("\n");
+    const methodLower = methodText.toLowerCase();
+    const isVegRestrictive = restrictions.some(r => /\b(vegetarian|vegan)\b/i.test(r));
+
+    // 1. De-veining — only valid for prawns/shrimp; flag if those are substituted or diet is vegetarian
+    if (/\bde.?vein/i.test(methodLower)) {
+      const prawnSubstituted = ingredientChanges.some(c =>
+        /\b(prawn|shrimp)\b/i.test(c.original) && c.replacement !== null
+      );
+      if (prawnSubstituted || isVegRestrictive) {
+        issues.push("de-veining step present after seafood substitution");
+      }
+    }
+
+    // 2. Reserving shells/heads — only valid when shellfish are still in the recipe
+    if (/\breserve\b.*\b(shells?|heads?)\b/i.test(methodText)) {
+      const shellfishSubstituted = ingredientChanges.some(c =>
+        /\b(prawn|shrimp|mussel|clam|lobster|crab)\b/i.test(c.original)
+      );
+      if (shellfishSubstituted || isVegRestrictive) {
+        issues.push("step reserves shells/heads after shellfish substitution");
+      }
+    }
+
+    // 3. Animal stock in vegetarian/vegan version
+    if (isVegRestrictive) {
+      const animalStockMatch = methodText.match(
+        /\b(fish|shellfish|prawn|shrimp|crab|lobster|mussel|chicken|beef|lamb|pork|meat)\s+stock\b/i
+      );
+      if (animalStockMatch) {
+        issues.push(`animal stock ("${animalStockMatch[0]}") used in vegetarian/vegan method`);
+      }
+    }
+
+    // 4. Impossible actions applied to known plant substitute ingredients
+    const plantKeywords = ["chickpea", "chickpeas", "tofu", "lentil", "lentils", "bean", "beans", "tempeh", "jackfruit"];
+    const substitutePlants = ingredientChanges
+      .filter(c => c.replacement)
+      .map(c => c.replacement!.toLowerCase())
+      .flatMap(r => plantKeywords.filter(p => r.includes(p)));
+    const uniquePlants = Array.from(new Set(substitutePlants));
+
+    for (const plant of uniquePlants) {
+      const plantRe = new RegExp(`\\b${plant}s?\\b`, "i");
+      for (const step of steps) {
+        if (!plantRe.test(step)) continue;
+        if (/\bde.?vein\b/i.test(step)) {
+          issues.push(`de-veining applied to "${plant}"`);
+        }
+        if (/\b(shells?|heads?)\b/i.test(step) && /reserve|stock|make/i.test(step)) {
+          issues.push(`shell/head action applied to "${plant}"`);
+        }
+      }
+    }
+
+    // 5. Substituted animal ingredient name still appearing in the adapted method
+    for (const change of ingredientChanges) {
+      if (change.replacement === null) continue; // ingredient was removed — less risky
+      const animalMatch = change.original.match(
+        /\b(prawns?|shrimps?|mussels?|clams?|lobsters?|crab|monkfish|salmon|tuna|haddock|cod|sea\s*bass|chicken|beef|pork|lamb|turkey|bacon|ham|sausages?)\b/i
+      );
+      if (!animalMatch) continue;
+      const animalSingular = animalMatch[0].replace(/s$/, "");
+      const stillInMethod = new RegExp(`\\b${animalSingular}s?\\b`, "i");
+      const offendingStep = steps.find(s => stillInMethod.test(s));
+      if (offendingStep) {
+        issues.push(`substituted ingredient "${animalSingular}" still referenced in adapted method`);
+      }
+    }
+
+    // 6. Rule-engine prohibited phrases — catch any phrase the AI was explicitly told to avoid
+    const methodText2 = steps.join(" ");
+    for (const phrase of ruleProhibitedPhrases) {
+      const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      if (new RegExp(escaped, "i").test(methodText2)) {
+        issues.push(`prohibited phrase "${phrase}" found in adapted method`);
+      }
+    }
+
+    return issues;
   }
 
   // Update instruction steps to reference new ingredient names.
@@ -8197,12 +8459,25 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
       const householdId = await getHouseholdForUser(req.user!.id);
       if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Entry not found" });
 
+      // Parse optional user overrides from body
+      const bodyParsed = z.object({
+        variantName: z.string().min(1).max(200).optional(),
+        editedInstructions: z.array(z.string()).optional(),
+      }).safeParse(req.body);
+      const userVariantName = bodyParsed.success ? bodyParsed.data.variantName?.trim() : undefined;
+      const userEditedInstructions = bodyParsed.success ? bodyParsed.data.editedInstructions : undefined;
+
       // Require adaptation result with a household-safe preview before doing anything
       const adaptationResult = entry.adaptationResult as import("@shared/meal-adaptation").AdaptationResult | null;
       if (!adaptationResult?.householdSafePreview) {
         return res.status(400).json({ message: "No household-safe preview found. Run tailoring first." });
       }
       const preview = adaptationResult.householdSafePreview;
+
+      // Block acceptance of adaptations that failed validation — method may be incoherent
+      if (preview.validationFailed) {
+        return res.status(400).json({ message: "This adaptation needs review before it can be accepted. Re-run tailoring to generate a new version." });
+      }
 
       // Get the meal currently on this entry
       const currentMeal = await storage.getMeal(entry.mealId);
@@ -8231,9 +8506,10 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
         preview.ingredientChanges
       );
 
-      // Use AI-rewritten instructions if provided (stored in methodChanges), otherwise keep base.
-      const variantInstructions = preview.methodChanges.length > 0
-        ? preview.methodChanges
+      // Use user-edited instructions if provided, else AI-rewritten, else original base
+      const variantInstructions =
+        (userEditedInstructions && userEditedInstructions.length > 0) ? userEditedInstructions
+        : preview.methodChanges.length > 0 ? preview.methodChanges
         : baseInstructions;
 
       // Build historical restriction snapshot with stable eater IDs
@@ -8261,21 +8537,37 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
         originalMealName: originalMeal.name,
       };
 
+      // Derive diet types from accommodations rather than blindly copying the original's
+      const variantDietTypes = deriveVariantDietTypes(
+        originalMeal.dietTypes,
+        preview.accommodates ?? [],
+      );
+
       let variantMeal: import("@shared/schema").Meal;
 
+      // Resolve the variant name: user-supplied > rule-based > fallback
+      const resolvedVariantName = userVariantName
+        || generateHouseholdVariantName(originalMeal.name, preview);
+
       if (isUpdate) {
-        // Variant already exists — update it in place (dietary choices may have changed)
+        // Variant already exists — update content and rename if user supplied a new name
         await storage.updateHouseholdSafeVariantContent(currentMeal.id, {
           ingredients: variantIngredients,
           instructions: variantInstructions,
           householdSafeFor,
+          dietTypes: variantDietTypes,
         });
-        variantMeal = { ...currentMeal, ingredients: variantIngredients, instructions: variantInstructions, householdSafeFor };
-        console.log(`[VARIANT] updated existing variant meal ${currentMeal.id} for entry ${entryId}`);
+        if (userVariantName && userVariantName !== currentMeal.name) {
+          await storage.updateMealName(currentMeal.id, req.user!.id, userVariantName);
+        }
+        variantMeal = { ...currentMeal, name: userVariantName ?? currentMeal.name, ingredients: variantIngredients, instructions: variantInstructions, householdSafeFor, dietTypes: variantDietTypes };
+        // Sync meal_diets join table atomically with the variant's derived diet types
+        await syncVariantMealDiets(currentMeal.id, variantDietTypes);
+        console.log(`[VARIANT] updated existing variant meal ${currentMeal.id} for entry ${entryId} — dietTypes: [${variantDietTypes.join(", ")}]`);
       } else {
         // First time — create a new variant meal row; original is never touched
         variantMeal = await storage.createMeal(req.user!.id, {
-          name: `${originalMeal.name} (household-safe)`,
+          name: resolvedVariantName,
           ingredients: variantIngredients,
           instructions: variantInstructions,
           imageUrl: originalMeal.imageUrl ?? undefined,
@@ -8285,7 +8577,7 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
           isReadyMeal: false,
           isSystemMeal: false,
           mealFormat: originalMeal.mealFormat,
-          dietTypes: originalMeal.dietTypes,
+          dietTypes: variantDietTypes,
           isFreezerEligible: false,
           audience: originalMeal.audience,
           isDrink: originalMeal.isDrink,
@@ -8294,10 +8586,14 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
           kind: originalMeal.kind,
           isHouseholdSafeVariant: true,
           householdSafeFor,
+          variantKind: "household_safe",
+          showInCookbook: false,
         });
+        // Sync meal_diets join table atomically with the variant's derived diet types
+        await syncVariantMealDiets(variantMeal.id, variantDietTypes);
         // Repoint planner entry; store original meal ID for future revert
         await storage.acceptHouseholdSafeVariant(entryId, variantMeal.id, originalMeal.id);
-        console.log(`[VARIANT] created variant meal ${variantMeal.id} from original ${originalMeal.id} for entry ${entryId}`);
+        console.log(`[VARIANT] created variant meal ${variantMeal.id} from original ${originalMeal.id} for entry ${entryId} — dietTypes: [${variantDietTypes.join(", ")}]`);
       }
 
       // Clear the preview from the stored adaptation result
@@ -8309,6 +8605,25 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
       console.error("[VARIANT] accept error:", err?.message, err?.stack);
       res.status(500).json({ message: "Failed to create household-safe variant — please try again" });
     }
+  });
+
+  // ── Household-safe variant cookbook visibility ────────────────────────────────
+
+  app.patch("/api/meals/:id/cookbook-visibility", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const mealId = Number(req.params.id);
+    if (isNaN(mealId)) return res.status(400).json({ message: "Invalid meal ID" });
+    const body = z.object({ show: z.boolean() }).safeParse(req.body);
+    if (!body.success) return res.status(400).json({ message: "show (boolean) required" });
+
+    const meal = await storage.getMeal(mealId);
+    if (!meal || meal.userId !== req.user!.id) return res.status(404).json({ message: "Not found" });
+    if (meal.variantKind !== "household_safe") {
+      return res.status(400).json({ message: "Only household-safe variants can be shown in cookbook" });
+    }
+
+    const updated = await storage.setMealShowInCookbook(mealId, req.user!.id, body.data.show);
+    res.json(updated);
   });
 
   // ── My Diary ─────────────────────────────────────────────────────────────────
