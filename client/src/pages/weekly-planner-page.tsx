@@ -194,6 +194,48 @@ const snapOverlayToCursor: Modifier = ({ activatorEvent, activeNodeRect, overlay
   };
 };
 
+// ── Phase B: Resolve workflow session persistence ──────────────────────────────
+const RESOLVE_TARGET_KEY = "planner:resolve-target";
+const RESOLUTION_CTX_KEY = "planner:resolution-context";
+
+type ResolutionContext = ResolveTarget & { returnMode: "placeholder-review" | null };
+
+function isValidResolveTarget(v: unknown): v is ResolveTarget {
+  if (!v || typeof v !== "object") return false;
+  const t = v as Record<string, unknown>;
+  return (
+    typeof t.mealName === "string" && typeof t.dayName === "string" &&
+    typeof t.slotLabel === "string" && typeof t.entryId === "number" &&
+    typeof t.dayId === "number" && typeof t.mealType === "string" &&
+    typeof t.audience === "string" && typeof t.isDrink === "boolean" &&
+    typeof t.position === "number"
+  );
+}
+
+function isValidResolutionContext(v: unknown): v is ResolutionContext {
+  if (!isValidResolveTarget(v)) return false;
+  const obj = v as { returnMode?: unknown };
+  return obj.returnMode === "placeholder-review" || obj.returnMode === null;
+}
+
+function loadFromSession<T>(key: string, validate: (v: unknown) => v is T): T | null {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (validate(parsed)) return parsed;
+    sessionStorage.removeItem(key);
+    return null;
+  } catch { sessionStorage.removeItem(key); return null; }
+}
+
+function saveToSession(key: string, value: unknown): void {
+  try {
+    if (value === null || value === undefined) sessionStorage.removeItem(key);
+    else sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
 export default function WeeklyPlannerPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -204,18 +246,20 @@ export default function WeeklyPlannerPage() {
   const [createMealOpen, setCreateMealOpen] = useState(false);
   const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<EntryTarget | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [sharePlanOpen, setSharePlanOpen] = useState(false);
   const [expandedDayId, setExpandedDayId] = useState<number | null>(null);
   const [expandedDayLabel, setExpandedDayLabel] = useState("");
   const [mealDetail, setMealDetail] = useState<MealDetailState | null>(null);
-  const [resolveTarget, setResolveTarget] = useState<ResolveTarget | null>(null);
+  const [resolveTarget, setResolveTarget] = useState<ResolveTarget | null>(
+    () => loadFromSession(RESOLVE_TARGET_KEY, isValidResolveTarget)
+  );
   // Phase 5E: deferred recipe-link confirmation
   type PendingRecipeLink = { entryId: number; mealId: number; targetName: string; recipeName: string; returnToReview: boolean };
   const [pendingRecipeLink, setPendingRecipeLink] = useState<PendingRecipeLink | null>(null);
-  // Phase 3F: persists placeholder context across build/scan workflow transitions
-  type ResolutionContext = ResolveTarget & { returnMode: "placeholder-review" | null };
-  const [resolutionContext, setResolutionContext] = useState<ResolutionContext | null>(null);
+  // Phase B: resolutionContext persists placeholder context across build/scan workflow transitions
+  const [resolutionContext, setResolutionContext] = useState<ResolutionContext | null>(
+    () => loadFromSession(RESOLUTION_CTX_KEY, isValidResolutionContext)
+  );
   const [mobileDayIndex, setMobileDayIndex] = useState(0);
   const [mobileQuickAdd, setMobileQuickAdd] = useState<{ dayId: number; mealType: string } | null>(null);
   const [mobileQuickAddName, setMobileQuickAddName] = useState("");
@@ -253,6 +297,8 @@ export default function WeeklyPlannerPage() {
   // Preserve drag data across day-switch unmounts + track intended cross-day destination
   const activeDragDataRef = useRef<DragItemData | null>(null);
   const dragTargetDayIdRef = useRef<number | null>(null);
+  // Phase B: guard so stale-target validation only runs once after planner data first loads
+  const resolveTargetValidatedRef = useRef(false);
   const { user } = useUser();
   const [, navigate] = useLocation();
 
@@ -279,6 +325,10 @@ export default function WeeklyPlannerPage() {
     setMobileQuickAdd(null);
     setMobileQuickAddName("");
   }, [mobileDayIndex]);
+
+  // Phase B: Persist resolve workflow state to sessionStorage
+  useEffect(() => { saveToSession(RESOLVE_TARGET_KEY, resolveTarget); }, [resolveTarget]);
+  useEffect(() => { saveToSession(RESOLUTION_CTX_KEY, resolutionContext); }, [resolutionContext]);
 
   const { data: plannerSettings } = useQuery<{
     showCalories: boolean;
@@ -350,6 +400,22 @@ export default function WeeklyPlannerPage() {
 
   // ── Planner context (Phase 1A + 5B: assistant panel routing + selected day) ─
   const { assistantMode, setAssistantMode, selectedDayId, setSelectedDayId } = usePlannerContext();
+
+  // Phase B: Once planner data first loads, validate any restored resolveTarget. If the
+  // entry no longer exists (deleted/stale), clear both the target and the resolve mode.
+  useEffect(() => {
+    if (resolveTargetValidatedRef.current || !fullPlanner.length) return;
+    resolveTargetValidatedRef.current = true;
+    if (!resolveTarget) return;
+    const liveEntryIds = new Set(
+      fullPlanner.flatMap(w => w.days.flatMap(d => d.entries.map(e => e.id)))
+    );
+    if (!liveEntryIds.has(resolveTarget.entryId)) {
+      saveToSession(RESOLVE_TARGET_KEY, null);
+      setResolveTarget(null);
+      if (assistantMode === "resolve") setAssistantMode(null);
+    }
+  }, [fullPlanner, resolveTarget, assistantMode, setAssistantMode]);
 
   // ── Smart Suggest domain ──────────────────────────────────────────────────
   const {
@@ -3046,53 +3112,6 @@ export default function WeeklyPlannerPage() {
               </div>
             );
           })()}
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Planner Settings Dialog ── */}
-      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="sm:max-w-md" data-testid="dialog-planner-settings">
-          <DialogHeader>
-            <DialogTitle>Planner Options</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 py-4">
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <span className="text-sm font-medium" data-testid="label-enable-baby-meals">Baby Meals</span>
-                <p className="text-xs text-muted-foreground">Enable baby meal row in planner</p>
-              </div>
-              <Switch
-                checked={plannerSettings?.enableBabyMeals ?? false}
-                onCheckedChange={(v) => toggleSetting("enableBabyMeals", v)}
-                disabled={updateSettingsMutation.isPending}
-                data-testid="switch-enable-baby-meals"
-              />
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <span className="text-sm font-medium" data-testid="label-enable-child-meals">Child Meals</span>
-                <p className="text-xs text-muted-foreground">Enable kids meal row in planner</p>
-              </div>
-              <Switch
-                checked={plannerSettings?.enableChildMeals ?? false}
-                onCheckedChange={(v) => toggleSetting("enableChildMeals", v)}
-                disabled={updateSettingsMutation.isPending}
-                data-testid="switch-enable-child-meals"
-              />
-            </div>
-            <div className="flex items-center justify-between gap-4">
-              <div className="space-y-0.5">
-                <span className="text-sm font-medium" data-testid="label-enable-drinks">Drinks</span>
-                <p className="text-xs text-muted-foreground">Enable drinks row in planner</p>
-              </div>
-              <Switch
-                checked={plannerSettings?.enableDrinks ?? false}
-                onCheckedChange={(v) => toggleSetting("enableDrinks", v)}
-                disabled={updateSettingsMutation.isPending}
-                data-testid="switch-enable-drinks"
-              />
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
 

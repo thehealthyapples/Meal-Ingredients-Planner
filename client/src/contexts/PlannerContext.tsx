@@ -9,8 +9,9 @@ const WORKSPACE_DAY_KEY = "planner-selected-day";
 
 // Only self-contained modes with no external payload requirement are restorable.
 // Excluded: smart-review (needs smartResult), scan-review (needs scan data),
-//           resolve (needs resolveTarget), manual (needs pickerTarget), day (needs day context).
-const RESTORABLE_MODES = new Set<string>(["smart", "templates", "settings", "placeholder-review", "bulk"]);
+//           manual (needs pickerTarget), day (needs day context).
+// resolve is restorable since Phase B persists resolveTarget to sessionStorage.
+const RESTORABLE_MODES = new Set<string>(["smart", "templates", "settings", "placeholder-review", "bulk", "resolve"]);
 
 function saveWorkspaceMode(mode: AssistantMode): void {
   try {
