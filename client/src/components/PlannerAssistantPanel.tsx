@@ -1174,7 +1174,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
                       data-testid="banner-tray-restored"
                     >
                       <p className="text-[11px] text-blue-800 dark:text-blue-400 leading-snug">
-                        {proposals.length} staged idea{proposals.length !== 1 ? "s" : ""} restored
+                        {proposals.length} approved intent{proposals.length !== 1 ? "s" : ""} restored
                       </p>
                       <div className="flex items-center gap-2 shrink-0">
                         <button
@@ -1261,7 +1261,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
                     data-testid="text-staged-count"
                   >
                     <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
-                    {proposals.length} staged idea{proposals.length !== 1 ? "s" : ""} — drag onto planner
+                    {proposals.length} approved intent{proposals.length !== 1 ? "s" : ""} — drag onto planner
                   </div>
                 )}
                 {placeholderCount > 0 && (

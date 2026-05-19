@@ -31,6 +31,35 @@ export function subscribeStagingBus(fn: Listener): () => void {
   };
 }
 
+/**
+ * Remove a single staged entry by exact name + mealType match.
+ * Used when an already-approved proposal is re-edited with a new name,
+ * so the old tray entry is replaced rather than duplicated.
+ */
+export function removeStageProposal(name: string, mealType: string): void {
+  const trimmed = name.trim();
+  if (!trimmed) return;
+  try {
+    const raw = sessionStorage.getItem(PROPOSAL_TRAY_KEY);
+    if (!raw) return;
+    const existing: StoredEntry[] = (JSON.parse(raw) as unknown[]).filter(
+      (s): s is StoredEntry =>
+        typeof s === "object" && s !== null &&
+        typeof (s as StoredEntry).name === "string" &&
+        typeof (s as StoredEntry).mealType === "string",
+    );
+    const filtered = existing.filter(
+      p => !(p.name.toLowerCase() === trimmed.toLowerCase() && p.mealType === mealType),
+    );
+    if (filtered.length === existing.length) return; // Nothing removed
+    if (filtered.length === 0) {
+      sessionStorage.removeItem(PROPOSAL_TRAY_KEY);
+    } else {
+      sessionStorage.setItem(PROPOSAL_TRAY_KEY, JSON.stringify(filtered));
+    }
+  } catch {}
+}
+
 export function emitStageProposal(name: string, mealType: string): void {
   const trimmed = name.trim();
   if (!trimmed) return;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
   CheckCircle2, ChevronDown, GripVertical, Lightbulb, Loader2, Pencil,
   Plus, ShoppingCart, Sparkles, X, Check,
 } from "lucide-react";
-import { emitStageProposal } from "@/lib/planner-staging-bus";
+import { emitStageProposal, removeStageProposal } from "@/lib/planner-staging-bus";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@shared/routes";
 
@@ -266,8 +266,6 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
   const [editDay, setEditDay] = useState("Unassigned");
   const [editSlot, setEditSlot] = useState("unspecified");
 
-  const [restoredScanData, setRestoredScanData] = useState<PlannerScanData | null>(null);
-  const [showRestoreBanner, setShowRestoreBanner] = useState(false);
   const [closeConfirmVisible, setCloseConfirmVisible] = useState(false);
 
   useEffect(() => {
@@ -283,8 +281,26 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
   const initShoppingItems = (): EditableShoppingItem[] =>
     (scanData?.parsed?.shoppingItems ?? []).map((i, idx) => toEditableShoppingItem(i, idx));
 
-  const [proposals, setProposals] = useState<PlannerScanProposal[]>(initProposals);
-  const [shoppingItems, setShoppingItems] = useState<EditableShoppingItem[]>(initShoppingItems);
+  // Eager session load: reads sessionStorage once at mount so restored state is
+  // available on the very first render — before the useEffect restore path fires.
+  // This prevents the one-frame "failed parse" flash that appeared when
+  // restoredScanData was null during the initial render of a restored session.
+  const [_initSession] = useState<ScanSessionData | null>(() => (!scanData ? loadSession() : null));
+  // If we eagerly loaded session data, the first restore useEffect should be a
+  // no-op — track that with a ref to avoid a redundant setState re-render.
+  const _skipFirstRestoreRef = useRef(!!_initSession);
+
+  const [restoredScanData, setRestoredScanData] = useState<PlannerScanData | null>(
+    _initSession?.scanData ?? null
+  );
+  const [showRestoreBanner, setShowRestoreBanner] = useState(!!_initSession);
+
+  const [proposals, setProposals] = useState<PlannerScanProposal[]>(
+    _initSession?.proposals ?? initProposals()
+  );
+  const [shoppingItems, setShoppingItems] = useState<EditableShoppingItem[]>(
+    _initSession?.shoppingItems ?? initShoppingItems()
+  );
 
   const [lastScanData, setLastScanData] = useState<PlannerScanData | null>(null);
   if (scanData !== lastScanData) {
@@ -304,9 +320,12 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
 
   const effectiveScanData = scanData ?? restoredScanData;
 
-  // Restore previous session when dialog opens with no live scan data
+  // Restore previous session when the panel opens with no live scan data.
+  // The _initSession eager init handles the initial mount — this useEffect covers
+  // re-open after close within the same page session.
   useEffect(() => {
     if (!open || scanData) return;
+    if (_skipFirstRestoreRef.current) { _skipFirstRestoreRef.current = false; return; }
     const session = loadSession();
     if (!session) return;
     setRestoredScanData(session.scanData);
@@ -378,8 +397,19 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
       currentSlot: editType === "meal_idea" ? "unspecified" : editSlot,
     } : p));
     setEditingId(null);
-    // Stage the accepted proposal (handles both first-time accept via edit and re-edit)
-    if (resolvedName) emitStageProposal(resolvedName, resolvedSlot);
+    if (!resolvedName) return;
+    // If the proposal was already approved under a different name, remove the old
+    // tray entry so editing doesn't leave a duplicate behind.
+    const prevSlot = targetProposal?.currentSlot !== "unspecified"
+      ? targetProposal?.currentSlot ?? "dinner"
+      : "dinner";
+    if (
+      targetProposal?.userAction === "accepted" &&
+      targetProposal.currentName.trim().toLowerCase() !== resolvedName.toLowerCase()
+    ) {
+      removeStageProposal(targetProposal.currentName, prevSlot);
+    }
+    emitStageProposal(resolvedName, resolvedSlot);
   };
 
   const cancelEdit = () => setEditingId(null);
@@ -722,12 +752,18 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
               </div>
             )}
 
-            {isFailedParse ? (
+            {!effectiveScanData ? (
+              // No scan data and no restored session — stale mode or mid-session loss
+              <div className="text-center py-8 space-y-3">
+                <p className="text-sm text-muted-foreground">No active scan — start a new scan from the planner.</p>
+                <Button variant="outline" size="sm" onClick={handleClose}>Close</Button>
+              </div>
+            ) : isFailedParse ? (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">
                   We couldn't extract a meal plan from this image. Check the raw text below or try a clearer photo.
                 </p>
-                {effectiveScanData?.rawText && (
+                {effectiveScanData.rawText && (
                   <pre className="rounded-md bg-muted px-3 py-2 text-xs whitespace-pre-wrap text-muted-foreground max-h-48 overflow-y-auto">
                     {effectiveScanData.rawText}
                   </pre>
@@ -742,7 +778,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                     <span>
                       {actionedCount} of {totalCount} reviewed
                       {acceptedProposals.length > 0 && (
-                        <span className="text-emerald-600 dark:text-emerald-400 ml-1.5">· {acceptedProposals.length} staged</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 ml-1.5">· {acceptedProposals.length} approved</span>
                       )}
                     </span>
                     {hasPendingLow && (
@@ -861,7 +897,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                                   : "border-muted-foreground/30 hover:border-emerald-500"
                               }`}
                               onClick={() => p.userAction === "accepted" ? undoProposal(p.id) : acceptProposal(p.id)}
-                              title={p.userAction === "accepted" ? "Staged — click to undo" : "Accept and stage"}
+                              title={p.userAction === "accepted" ? "Approved — click to undo" : "Approve and stage"}
                             >
                               {p.userAction === "accepted" && <Check className="h-2.5 w-2.5" />}
                             </button>
@@ -873,7 +909,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                               {p.userAction === "accepted" && (
                                 <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">
                                   <GripVertical className="h-2.5 w-2.5" />
-                                  Staged for scheduling
+                                  Approved — in staging tray
                                 </span>
                               )}
                               {p.rawText && p.rawText !== p.currentName && (
@@ -908,13 +944,13 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                   )}
                 </div>
 
-                {/* ── Lunch ideas section (shown when ideas exist) ── */}
+                {/* ── Meal ideas section (shown when ideas exist) ── */}
                 {ideaProposals.length > 0 && (
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-medium flex items-center gap-1.5">
                         <Lightbulb className="h-4 w-4 text-muted-foreground" />
-                        Lunch ideas
+                        Meal ideas
                         <Badge variant="secondary" className="text-xs">{ideaProposals.length}</Badge>
                       </label>
                       <div className="flex items-center gap-1">
@@ -930,7 +966,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                         <Button
                           type="button" variant="ghost" size="sm" className="h-6 w-6 p-0"
                           onClick={() => addManualProposalOfType("meal_idea")}
-                          title="Add lunch idea"
+                          title="Add meal idea"
                         >
                           <Plus className="h-3.5 w-3.5" />
                         </Button>
@@ -1005,7 +1041,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                                   : "border-muted-foreground/30 hover:border-emerald-500"
                               }`}
                               onClick={() => p.userAction === "accepted" ? undoProposal(p.id) : acceptProposal(p.id)}
-                              title={p.userAction === "accepted" ? "Staged — click to undo" : "Accept and stage"}
+                              title={p.userAction === "accepted" ? "Approved — click to undo" : "Approve and stage"}
                             >
                               {p.userAction === "accepted" && <Check className="h-2.5 w-2.5" />}
                             </button>
@@ -1016,7 +1052,7 @@ export function PlannerScanReview({ open, onOpenChange, scanData, scanning = fal
                               {p.userAction === "accepted" && (
                                 <span className="inline-flex items-center gap-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">
                                   <GripVertical className="h-2.5 w-2.5" />
-                                  Staged for scheduling
+                                  Approved — in staging tray
                                 </span>
                               )}
                               {p.rawText && p.rawText !== p.currentName && (
