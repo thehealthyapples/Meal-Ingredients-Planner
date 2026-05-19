@@ -229,6 +229,24 @@ function clearSession(): void {
   try { sessionStorage.removeItem(SCAN_SESSION_KEY); } catch {}
 }
 
+/**
+ * Returns true when sessionStorage holds a non-empty, structurally valid
+ * scan-review session that can be safely restored.  Exported so PlannerContext
+ * can gate scan-review mode restoration without coupling to internal types.
+ */
+export function hasPendingScanSession(): boolean {
+  try {
+    const raw = sessionStorage.getItem(SCAN_SESSION_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw) as { proposals?: unknown; scanData?: unknown };
+    return (
+      Array.isArray(data?.proposals) &&
+      (data.proposals as unknown[]).length > 0 &&
+      !!data?.scanData
+    );
+  } catch { return false; }
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function PlannerScanReview({ open, onOpenChange, scanData, scanning = false, scanError, plannerDays, onSaved, inline = false, resolutionContext = null }: Props) {
