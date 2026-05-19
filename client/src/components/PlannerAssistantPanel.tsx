@@ -89,6 +89,8 @@ interface PlannerAssistantPanelProps {
   mobileOpen?: boolean;
   /** Mobile drawer: go back to the hub without closing the drawer */
   onBackToHub?: () => void;
+  /** Phase A: proposal ID consumed by drag-to-planner; forwarded to IdlePanelContent for removal */
+  consumedProposalId?: string | null;
 }
 
 function useIsMobile() {
@@ -828,6 +830,8 @@ interface IdlePanelContentProps {
   onBuildRecipe?: () => void;
   /** Phase 5F: navigate to /meals with scan mode open */
   onScanRecipe?: () => void;
+  /** Phase A: proposal ID consumed by drag-to-planner; triggers removal from tray */
+  consumedProposalId?: string | null;
 }
 
 interface ProposalItem {
@@ -839,7 +843,58 @@ interface ProposalItem {
 let _proposalSeq = 0;
 function nextProposalId() { return `prop-${++_proposalSeq}`; }
 
-function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeholderCount = 0, onBrowseRecipes, onBuildRecipe, onScanRecipe }: IdlePanelContentProps) {
+// ── Phase A: Proposal tray session persistence ────────────────────────────────
+
+const PROPOSAL_TRAY_KEY = "planner-proposal-tray";
+
+interface StoredProposal {
+  name: string;
+  mealType: string;
+}
+
+function saveTraySession(proposals: ProposalItem[]): void {
+  try {
+    if (proposals.length === 0) {
+      sessionStorage.removeItem(PROPOSAL_TRAY_KEY);
+    } else {
+      const stored: StoredProposal[] = proposals.map(p => ({ name: p.name, mealType: p.mealType }));
+      sessionStorage.setItem(PROPOSAL_TRAY_KEY, JSON.stringify(stored));
+    }
+  } catch {}
+}
+
+function loadTraySession(): ProposalItem[] | null {
+  try {
+    const raw = sessionStorage.getItem(PROPOSAL_TRAY_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) {
+      sessionStorage.removeItem(PROPOSAL_TRAY_KEY);
+      return null;
+    }
+    const valid = (parsed as unknown[]).filter(
+      (s): s is StoredProposal =>
+        typeof s === "object" && s !== null &&
+        typeof (s as StoredProposal).name === "string" &&
+        (s as StoredProposal).name.trim().length > 0 &&
+        typeof (s as StoredProposal).mealType === "string"
+    );
+    if (valid.length === 0) {
+      sessionStorage.removeItem(PROPOSAL_TRAY_KEY);
+      return null;
+    }
+    return valid.map(s => ({ id: nextProposalId(), name: s.name.trim(), mealType: s.mealType }));
+  } catch {
+    try { sessionStorage.removeItem(PROPOSAL_TRAY_KEY); } catch {}
+    return null;
+  }
+}
+
+// Tracks whether the restore banner has fired this page load. Prevents the
+// banner re-appearing on every mode switch (which unmounts/remounts IdlePanelContent).
+let _traySessionRestored = false;
+
+function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeholderCount = 0, onBrowseRecipes, onBuildRecipe, onScanRecipe, consumedProposalId }: IdlePanelContentProps) {
   const [intentOpen, setIntentOpen] = useState(false);
   const [intentName, setIntentName] = useState("");
   const [intentMealType, setIntentMealType] = useState<string>("dinner");
@@ -848,12 +903,36 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
   const [proposals, setProposals] = useState<ProposalItem[]>([]);
   const [proposalName, setProposalName] = useState("");
   const [proposalMealType, setProposalMealType] = useState<string>("dinner");
+  const [trayRestored, setTrayRestored] = useState(false);
 
   // Phase 5G: collapsible section state
   const [planWeekOpen, setPlanWeekOpen] = useState(true);
   const [addMealsOpen, setAddMealsOpen] = useState(true);
   const hasContinueItems = proposals.length > 0 || placeholderCount > 0;
   const [continuePlanningOpen, setContinuePlanningOpen] = useState(true);
+
+  // Phase A: restore from session on mount. Banner only fires on first mount per
+  // page load (_traySessionRestored flag) — silent on subsequent mode-switch remounts.
+  useEffect(() => {
+    const restored = loadTraySession();
+    if (restored) {
+      setProposals(restored);
+      if (!_traySessionRestored) setTrayRestored(true);
+    }
+    _traySessionRestored = true;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Phase A: persist to session whenever proposals change.
+  useEffect(() => {
+    saveTraySession(proposals);
+  }, [proposals]);
+
+  // Phase A: remove a proposal that was dragged onto the planner grid.
+  useEffect(() => {
+    if (!consumedProposalId) return;
+    setProposals(prev => prev.filter(p => p.id !== consumedProposalId));
+  }, [consumedProposalId]);
 
   const handleSubmitIntent = async () => {
     if (!intentName.trim() || !onCreateIntent) return;
@@ -1076,6 +1155,32 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
 
               {proposals.length > 0 && (
                 <div className="mt-1.5" data-testid="list-proposal-cards">
+                  {trayRestored && (
+                    <div
+                      className="flex items-center justify-between gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/10 px-2.5 py-1.5 mb-1.5"
+                      data-testid="banner-tray-restored"
+                    >
+                      <p className="text-[11px] text-blue-800 dark:text-blue-400 leading-snug">
+                        {proposals.length} staged idea{proposals.length !== 1 ? "s" : ""} restored
+                      </p>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => setTrayRestored(false)}
+                          className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                          data-testid="button-tray-banner-dismiss"
+                        >
+                          OK
+                        </button>
+                        <button
+                          onClick={() => { setProposals([]); setTrayRestored(false); }}
+                          className="text-[10px] text-destructive/70 hover:text-destructive transition-colors"
+                          data-testid="button-tray-banner-clear"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <p className="text-[11px] text-muted-foreground/60 leading-snug mb-1">
                     Drag staged meals onto the planner.
                   </p>
@@ -1234,6 +1339,7 @@ export function PlannerAssistantPanel({
   onScanRecipe,
   mobileOpen = false,
   onBackToHub,
+  consumedProposalId,
 }: PlannerAssistantPanelProps) {
   const isMobile = useIsMobile();
   const [resolveSubview, setResolveSubview] = useState<"menu" | "search">("menu");
@@ -1425,6 +1531,7 @@ export function PlannerAssistantPanel({
         onBrowseRecipes={onBrowseRecipes}
         onBuildRecipe={onBuildRecipe}
         onScanRecipe={onScanRecipe}
+        consumedProposalId={consumedProposalId}
       />
     ) : (
       <p className="text-xs text-muted-foreground">Select a mode to get started.</p>
@@ -1503,6 +1610,7 @@ export function PlannerAssistantPanel({
               onBrowseRecipes={onBrowseRecipes}
               onBuildRecipe={onBuildRecipe}
               onScanRecipe={onScanRecipe}
+              consumedProposalId={consumedProposalId}
             />
           ) : (
             <p className="text-xs text-muted-foreground">Select a mode to get started.</p>

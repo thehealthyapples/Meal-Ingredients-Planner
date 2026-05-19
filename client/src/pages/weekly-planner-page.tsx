@@ -47,6 +47,7 @@ import type { HouseholdEater, GuestEater } from "@shared/household-eater";
 import type { AdaptationResult, HouseholdSafePreview } from "@shared/meal-adaptation";
 import { ONBOARDING_DIET_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
 import { PageHeader } from "@/components/PageHeader";
+import { AdaptationReviewSheet } from "@/components/AdaptationReviewSheet";
 import {
   DndContext,
   DragOverlay,
@@ -218,6 +219,8 @@ export default function WeeklyPlannerPage() {
   const [mobileQuickAdd, setMobileQuickAdd] = useState<{ dayId: number; mealType: string } | null>(null);
   const [mobileQuickAddName, setMobileQuickAddName] = useState("");
   const [activeDrag, setActiveDrag] = useState<DragItemData | null>(null);
+  // Phase A: proposal ID most recently dropped from the assistant tray onto the grid
+  const [consumedProposalId, setConsumedProposalId] = useState<string | null>(null);
   // Phase 5A: planner operations state
   const [clearSlotConfirm, setClearSlotConfirm] = useState<{
     dayId: number;
@@ -532,27 +535,7 @@ export default function WeeklyPlannerPage() {
   // "one" = user chose one household-safe version; "separate" = user chose separate adaptations; null = not yet chosen
   const [householdSafeChoice, setHouseholdSafeChoice] = useState<"one" | "separate" | null>(null);
   const [variantAccepted, setVariantAccepted] = useState(false);
-
-  const acceptVariantMutation = useMutation({
-    mutationFn: async (entryId: number) => {
-      const res = await apiRequest("POST", `/api/planner/entries/${entryId}/accept-household-safe-variant`);
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body.message ?? "Failed to create variant");
-      }
-      return res.json() as Promise<{ variantMeal: import("@shared/schema").Meal; originalMealId: number }>;
-    },
-    onSuccess: (data) => {
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
-      qc.invalidateQueries({ queryKey: ["/api/meals"] });
-      setVariantAccepted(true);
-      // Update the open dialog immediately so the user sees the variant's ingredients/instructions
-      setMealDetail(prev => prev ? { ...prev, meal: data.variantMeal } : null);
-    },
-    onError: (err: Error) => {
-      toast({ title: "Could not save variant", description: err.message, variant: "destructive" });
-    },
-  });
+  const [reviewSheetOpen, setReviewSheetOpen] = useState(false);
 
   const adaptMutation = useMutation({
     mutationFn: async (entryId: number): Promise<AdaptationResult> => {
@@ -1036,6 +1019,8 @@ export default function WeeklyPlannerPage() {
         return;
       }
       createPlannerIntent(dragData.name, targetMealType, targetDayId);
+      // Phase A: remove this proposal from the persistent tray
+      setConsumedProposalId(dragData.proposalId);
       return;
     }
 
@@ -2496,6 +2481,7 @@ export default function WeeklyPlannerPage() {
           setResolveTarget(null);
           setAssistantMode(null);
         }}
+        consumedProposalId={consumedProposalId}
       />
       </div>{/* end flex gap-3 */}
       <DragOverlay dropAnimation={null} modifiers={[snapOverlayToCursor]}>
@@ -2635,7 +2621,7 @@ export default function WeeklyPlannerPage() {
       />
 
       {/* ── Meal Detail Modal ── */}
-      <Dialog open={!!mealDetail} onOpenChange={(v) => { if (!v) { setMealDetail(null); setAdaptationOpen(false); setHouseholdSafeChoice(null); setVariantAccepted(false); adaptMutation.reset(); acceptVariantMutation.reset(); setAddGuestOpen(false); setGuestName(""); setGuestDietTypes([]); setGuestRestrictions([]); } }}>
+      <Dialog open={!!mealDetail} onOpenChange={(v) => { if (!v) { setMealDetail(null); setAdaptationOpen(false); setHouseholdSafeChoice(null); setVariantAccepted(false); setReviewSheetOpen(false); adaptMutation.reset(); setAddGuestOpen(false); setGuestName(""); setGuestDietTypes([]); setGuestRestrictions([]); } }}>
         <DialogContent
           className="max-w-[640px] max-h-[82vh] overflow-y-auto bg-[hsl(var(--background))] border-border p-0"
           style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
@@ -2646,12 +2632,16 @@ export default function WeeklyPlannerPage() {
             const calories = nutritionMap.get(meal.id);
             const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
             const instructions = meal.instructions || [];
-            // Household-safe preview — only active when user has chosen "one shared version"
             const activeAdaptation = adaptMutation.data ?? (entry.adaptationResult as AdaptationResult | null);
+            // Available whenever the adaptation result has a preview (for review sheet)
+            const activePreview: HouseholdSafePreview | null = activeAdaptation?.householdSafePreview ?? null;
+            // Legacy: only shown inline in the dialog when user explicitly chose "one version"
             const householdSafePreview: HouseholdSafePreview | null =
-              householdSafeChoice === "one"
-                ? (activeAdaptation?.householdSafePreview ?? null)
-                : null;
+              householdSafeChoice === "one" ? activePreview : null;
+            // Original meal name for "Variant of" display
+            const originalMealNameForReview = meal.isHouseholdSafeVariant
+              ? (meal.householdSafeFor?.originalMealName ?? meal.name)
+              : meal.name;
 
             return (
               <div className="flex flex-col">
@@ -3123,12 +3113,25 @@ export default function WeeklyPlannerPage() {
                                     </div>
                                   )}
 
+                                  {/* Validation failure warning */}
+                                  {preview.validationFailed && (
+                                    <div className="flex items-start gap-2 bg-rose-50 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-800/40 rounded px-2.5 py-2">
+                                      <span className="text-rose-500 dark:text-rose-400 shrink-0 mt-0.5 text-sm font-bold">!</span>
+                                      <div>
+                                        <p className="text-xs font-semibold text-rose-700 dark:text-rose-400">This adaptation needs review</p>
+                                        <p className="text-[11px] text-rose-700/70 dark:text-rose-400/70 mt-0.5">
+                                          The adapted method may contain instructions that don't make sense for the substituted ingredients. Re-run tailoring to generate a corrected version.
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )}
+
                                   {/* Trust disclaimer */}
                                   <p className="text-[10px] text-muted-foreground/55 italic">
                                     AI-generated adaptation preview. Review substitutions before cooking. Not a medically guaranteed safe recipe.
                                   </p>
 
-                                  {/* Choice buttons */}
+                                  {/* Approval actions */}
                                   <div className="space-y-2 pt-0.5">
                                     {variantAccepted ? (
                                       <div className="flex items-start gap-2 bg-green-50 dark:bg-green-950/20 border border-green-200/60 dark:border-green-800/40 rounded px-2.5 py-2">
@@ -3142,25 +3145,21 @@ export default function WeeklyPlannerPage() {
                                       </div>
                                     ) : (
                                       <>
-                                        <p className="text-xs font-medium text-foreground/80">How would you like to cook this?</p>
                                         <div className="flex flex-wrap gap-2">
                                           <Button
                                             variant="default"
                                             size="sm"
                                             className="h-8 text-xs"
-                                            disabled={acceptVariantMutation.isPending}
-                                            onClick={() => acceptVariantMutation.mutate(entry.id)}
+                                            disabled={!!preview.validationFailed}
+                                            onClick={() => setReviewSheetOpen(true)}
                                           >
-                                            {acceptVariantMutation.isPending
-                                              ? <><Loader2 className="h-3 w-3 mr-1.5 animate-spin" />Saving…</>
-                                              : <><Check className="h-3 w-3 mr-1.5" />Use one household-safe version</>
-                                            }
+                                            <Check className="h-3 w-3 mr-1.5" />
+                                            Review &amp; approve adaptation
                                           </Button>
                                           <Button
                                             variant={householdSafeChoice === "separate" ? "default" : "outline"}
                                             size="sm"
                                             className="h-8 text-xs"
-                                            disabled={acceptVariantMutation.isPending}
                                             onClick={() => setHouseholdSafeChoice(c => c === "separate" ? null : "separate")}
                                           >
                                             {householdSafeChoice === "separate" && <Check className="h-3 w-3 mr-1.5" />}
@@ -3581,6 +3580,31 @@ export default function WeeklyPlannerPage() {
         }}
         data-testid="input-planner-scan-file"
       />
+
+      {/* ── Adaptation Review Sheet — mounted at page level to avoid Dialog z-index conflicts ── */}
+      {mealDetail && (() => {
+        const { meal, entry } = mealDetail;
+        const activeAdaptation = adaptMutation.data ?? (entry.adaptationResult as AdaptationResult | null);
+        const reviewPreview = activeAdaptation?.householdSafePreview;
+        if (!reviewPreview) return null;
+        const origName = meal.isHouseholdSafeVariant
+          ? (meal.householdSafeFor?.originalMealName ?? meal.name)
+          : meal.name;
+        return (
+          <AdaptationReviewSheet
+            open={reviewSheetOpen}
+            onOpenChange={open => { setReviewSheetOpen(open); }}
+            entryId={entry.id}
+            preview={reviewPreview}
+            baseMeal={{ name: meal.name, instructions: meal.instructions }}
+            originalMealName={origName}
+            onAccepted={(variantMeal) => {
+              setVariantAccepted(true);
+              setMealDetail(prev => prev ? { ...prev, meal: variantMeal } : null);
+            }}
+          />
+        );
+      })()}
     </div>
     </>
     </PlannerWorkspaceContext.Provider>
