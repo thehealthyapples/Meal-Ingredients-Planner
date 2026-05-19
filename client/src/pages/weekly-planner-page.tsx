@@ -197,6 +197,7 @@ const snapOverlayToCursor: Modifier = ({ activatorEvent, activeNodeRect, overlay
 // ── Phase B: Resolve workflow session persistence ──────────────────────────────
 const RESOLVE_TARGET_KEY = "planner:resolve-target";
 const RESOLUTION_CTX_KEY = "planner:resolution-context";
+const ACTIVE_WEEK_KEY = "planner:active-week";
 
 type ResolutionContext = ResolveTarget & { returnMode: "placeholder-review" | null };
 
@@ -258,7 +259,12 @@ function saveCookedEntries(ids: Set<number>): void {
 export default function WeeklyPlannerPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [activeWeek, setActiveWeek] = useState("1");
+  const [activeWeek, setActiveWeek] = useState<string>(() => {
+    const stored = loadFromSession(ACTIVE_WEEK_KEY, (v): v is string =>
+      typeof v === "string" && /^[1-9]\d*$/.test(v)
+    );
+    return stored ?? "1";
+  });
   const [renameWeekId, setRenameWeekId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [clearWeekId, setClearWeekId] = useState<number | null>(null);
@@ -318,6 +324,8 @@ export default function WeeklyPlannerPage() {
   const dragTargetDayIdRef = useRef<number | null>(null);
   // Phase B: guard so stale-target validation only runs once after planner data first loads
   const resolveTargetValidatedRef = useRef(false);
+  // Active-week restore: guard so invalid-week correction only runs once after first load
+  const activeWeekValidatedRef = useRef(false);
   const { user } = useUser();
   const [, navigate] = useLocation();
 
@@ -358,6 +366,9 @@ export default function WeeklyPlannerPage() {
   // Phase B: Persist resolve workflow state to sessionStorage
   useEffect(() => { saveToSession(RESOLVE_TARGET_KEY, resolveTarget); }, [resolveTarget]);
   useEffect(() => { saveToSession(RESOLUTION_CTX_KEY, resolutionContext); }, [resolutionContext]);
+
+  // Persist active week whenever it changes
+  useEffect(() => { saveToSession(ACTIVE_WEEK_KEY, activeWeek); }, [activeWeek]);
 
   const { data: plannerSettings } = useQuery<{
     showCalories: boolean;
@@ -445,6 +456,18 @@ export default function WeeklyPlannerPage() {
       if (assistantMode === "resolve") setAssistantMode(null);
     }
   }, [fullPlanner, resolveTarget, assistantMode, setAssistantMode]);
+
+  // Once planner data first loads, validate the restored activeWeek. If the stored week
+  // no longer exists (deleted or never created), clear stored state and fall back to "1".
+  useEffect(() => {
+    if (activeWeekValidatedRef.current || !fullPlanner.length) return;
+    activeWeekValidatedRef.current = true;
+    const valid = fullPlanner.find(w => w.weekNumber === Number(activeWeek));
+    if (!valid) {
+      saveToSession(ACTIVE_WEEK_KEY, null);
+      setActiveWeek("1");
+    }
+  }, [fullPlanner, activeWeek]);
 
   // ── Smart Suggest domain ──────────────────────────────────────────────────
   const {
