@@ -1227,48 +1227,46 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
         </button>
         {addMealsOpen && (
           <div className="pb-1.5" data-testid="section-add-meals-body">
-            <p className="text-[11px] text-muted-foreground/70 leading-snug mb-1">
-              Start with ideas, refine recipes later.
-            </p>
-            <div className="space-y-0.5 mb-2">
+            {/* Compact 4-across grid — mirrors the Plan section above */}
+            <div className="flex gap-1.5 mb-2" data-testid="section-add-meals-grid">
               {onCreateIntent && (
                 <button
-                  className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
                   onClick={() => setIntentOpen(v => !v)}
                   data-testid="button-idle-add-intent"
                 >
-                  <Plus className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  Quick meal idea
+                  <Plus className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[10px] font-medium leading-none">Idea</span>
                 </button>
               )}
               {onBrowseRecipes && (
                 <button
-                  className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
                   onClick={onBrowseRecipes}
                   data-testid="button-idle-browse-recipes"
                 >
-                  <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  Search recipes
+                  <Search className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[10px] font-medium leading-none">Search</span>
                 </button>
               )}
               {onBuildRecipe && (
                 <button
-                  className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
                   onClick={onBuildRecipe}
                   data-testid="button-idle-build-recipe"
                 >
-                  <Wand2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  Build from scratch
+                  <Wand2 className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[10px] font-medium leading-none">Build</span>
                 </button>
               )}
               {onScanRecipe && (
                 <button
-                  className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
                   onClick={onScanRecipe}
                   data-testid="button-idle-scan-recipe"
                 >
-                  <Camera className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  Scan recipe
+                  <Camera className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[10px] font-medium leading-none">Scan</span>
                 </button>
               )}
             </div>
@@ -1380,33 +1378,36 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
           <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${manageOpen ? "" : "-rotate-90"}`} />
         </button>
         {manageOpen && (
-          <div className="space-y-0.5 pb-1.5" data-testid="section-manage-body">
-            <button
-              className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
-              onClick={() => onSetMode("settings")}
-              data-testid="button-idle-settings"
-            >
-              <Settings className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              Planner options
-            </button>
-            <button
-              className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
-              onClick={() => onSetMode("bulk")}
-              data-testid="button-idle-bulk-assign"
-            >
-              <Copy className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              Bulk assign
-            </button>
-            {onSharePlan && (
+          <div className="pb-1.5" data-testid="section-manage-body">
+            {/* Compact 3-across grid */}
+            <div className="flex gap-1.5">
               <button
-                className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
-                onClick={onSharePlan}
-                data-testid="button-idle-share-plan"
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
+                onClick={() => onSetMode("settings")}
+                data-testid="button-idle-settings"
               >
-                <Share2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                Share plan
+                <Settings className="h-3.5 w-3.5 text-primary/70" />
+                <span className="text-[10px] font-medium leading-none">Options</span>
               </button>
-            )}
+              <button
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
+                onClick={() => onSetMode("bulk")}
+                data-testid="button-idle-bulk-assign"
+              >
+                <Copy className="h-3.5 w-3.5 text-primary/70" />
+                <span className="text-[10px] font-medium leading-none">Multi</span>
+              </button>
+              {onSharePlan && (
+                <button
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
+                  onClick={onSharePlan}
+                  data-testid="button-idle-share-plan"
+                >
+                  <Share2 className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[10px] font-medium leading-none">Share</span>
+                </button>
+              )}
+            </div>
           </div>
         )}
       </div>

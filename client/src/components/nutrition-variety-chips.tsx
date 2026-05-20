@@ -88,7 +88,24 @@ export function NutritionVarietyDots({ score }: { score: VarietyScore }) {
 
 // ── Planner legend - one static row above the grid ───────────────────────────
 
-export function PlannerVarietyLegend() {
+export function PlannerVarietyLegend({ compact = false }: { compact?: boolean }) {
+  if (compact) {
+    return (
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+        <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/40 font-medium shrink-0">
+          Variety
+        </span>
+        {CATEGORIES.map((cat) => (
+          <span key={cat.key} className="flex items-center gap-1">
+            <span className={`w-1.5 h-1.5 rounded-full ${cat.dotColor} opacity-70 flex-shrink-0`} />
+            <span className="text-[10px] text-muted-foreground/50 font-normal leading-none">
+              {cat.chipLabel}
+            </span>
+          </span>
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="px-1 py-2.5 mb-3 space-y-1.5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">

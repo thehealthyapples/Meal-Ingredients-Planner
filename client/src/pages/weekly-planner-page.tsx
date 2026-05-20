@@ -1612,11 +1612,12 @@ export default function WeeklyPlannerPage() {
       <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full">
 
 
-        {/* ── Phase 4: This week's household diet overrides ── */}
-        {householdEaters.length > 0 && activeWeekId && (
-          <div className="mb-4" data-testid="section-week-diets">
+        {/* ── Combined row: household diet toggle (left) + variety at a glance (right) ── */}
+        {/* Variety stays visible even when the diets dropdown expands below this row. */}
+        <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-1 mb-2" data-testid="section-week-diets">
+          {householdEaters.length > 0 && activeWeekId ? (
             <button
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
               onClick={() => setWeekDietsOpen(o => !o)}
               data-testid="button-toggle-week-diets"
             >
@@ -1625,70 +1626,72 @@ export default function WeeklyPlannerPage() {
               {weekOverrides.length > 0 && (
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0 ml-1">{weekOverrides.length} override{weekOverrides.length !== 1 ? "s" : ""}</Badge>
               )}
-              {weekDietsOpen ? <ChevronUp className="h-3 w-3 ml-auto" /> : <ChevronDown className="h-3 w-3 ml-auto" />}
+              {weekDietsOpen ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
             </button>
+          ) : <span />}
+          <PlannerVarietyLegend compact />
+        </div>
 
-            {weekDietsOpen && (
-              <Card className="p-4 space-y-3" data-testid="card-week-diets">
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Override a member's default diet for this week only. Hard restrictions are always kept.
-                </p>
-                {householdEaters.map(eater => {
-                  const eaterId = Number(eater.id);
-                  const override = weekOverrides.find(o => o.eaterId === eaterId);
-                  const activeDiets: string[] = override ? override.dietTypes : eater.defaultDietTypes;
-                  const isOverridden = !!override;
+        {/* Diets dropdown — expands below the combined row; variety stays above */}
+        {householdEaters.length > 0 && activeWeekId && weekDietsOpen && (
+          <Card className="p-4 space-y-3 mb-4" data-testid="card-week-diets">
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              Override a member's default diet for this week only. Hard restrictions are always kept.
+            </p>
+            {householdEaters.map(eater => {
+              const eaterId = Number(eater.id);
+              const override = weekOverrides.find(o => o.eaterId === eaterId);
+              const activeDiets: string[] = override ? override.dietTypes : eater.defaultDietTypes;
+              const isOverridden = !!override;
 
-                  const toggle = (diet: string) => {
-                    const next = activeDiets.includes(diet)
-                      ? activeDiets.filter(d => d !== diet)
-                      : [...activeDiets, diet];
-                    setOverrideMutation.mutate({ eaterId, dietTypes: next });
-                  };
+              const toggle = (diet: string) => {
+                const next = activeDiets.includes(diet)
+                  ? activeDiets.filter(d => d !== diet)
+                  : [...activeDiets, diet];
+                setOverrideMutation.mutate({ eaterId, dietTypes: next });
+              };
 
-                  return (
-                    <div key={eater.id} className="space-y-1.5" data-testid={`row-week-diet-${eater.id}`}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium">{eater.displayName}</span>
-                        {isOverridden && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-600 border-amber-400">this week</Badge>
-                        )}
-                        {isOverridden && (
-                          <button
-                            className="text-[10px] text-muted-foreground hover:text-destructive ml-auto transition-colors"
-                            onClick={() => deleteOverrideMutation.mutate(eaterId)}
-                            disabled={deleteOverrideMutation.isPending}
-                            data-testid={`button-reset-override-${eater.id}`}
-                          >
-                            Reset to default
-                          </button>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {ONBOARDING_DIET_OPTIONS.slice(0, 8).map(opt => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => toggle(opt.value)}
-                            className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
-                              activeDiets.includes(opt.value)
-                                ? isOverridden
-                                  ? "bg-amber-100 text-amber-800 border-amber-400 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-600"
-                                  : "bg-primary/10 text-primary border-primary/40"
-                                : "border-border text-muted-foreground hover:border-foreground/40"
-                            }`}
-                            data-testid={`chip-diet-${eater.id}-${opt.value}`}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </Card>
-            )}
-          </div>
+              return (
+                <div key={eater.id} className="space-y-1.5" data-testid={`row-week-diet-${eater.id}`}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium">{eater.displayName}</span>
+                    {isOverridden && (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-600 border-amber-400">this week</Badge>
+                    )}
+                    {isOverridden && (
+                      <button
+                        className="text-[10px] text-muted-foreground hover:text-destructive ml-auto transition-colors"
+                        onClick={() => deleteOverrideMutation.mutate(eaterId)}
+                        disabled={deleteOverrideMutation.isPending}
+                        data-testid={`button-reset-override-${eater.id}`}
+                      >
+                        Reset to default
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {ONBOARDING_DIET_OPTIONS.slice(0, 8).map(opt => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => toggle(opt.value)}
+                        className={`text-[11px] px-2 py-0.5 rounded-full border transition-colors ${
+                          activeDiets.includes(opt.value)
+                            ? isOverridden
+                              ? "bg-amber-100 text-amber-800 border-amber-400 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-600"
+                              : "bg-primary/10 text-primary border-primary/40"
+                            : "border-border text-muted-foreground hover:border-foreground/40"
+                        }`}
+                        data-testid={`chip-diet-${eater.id}-${opt.value}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </Card>
         )}
 
         {fullPlanner.map((week) => (
@@ -2339,7 +2342,59 @@ export default function WeeklyPlannerPage() {
                 </Card>
               </div>
             </div>
-            <PlannerVarietyLegend />
+            {/* ── Weekly Provisioning — moved here from below DndContext for better visibility ── */}
+            {week.weekNumber === Number(activeWeek) && activeWeekId && (
+              <div className="mt-4 mb-2" data-testid="section-weekly-provisioning">
+                <button
+                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors text-left"
+                  onClick={() => setProvisioningOpen(v => !v)}
+                  data-testid="button-toggle-provisioning"
+                >
+                  <ShoppingCart className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span className="text-sm font-medium text-foreground flex-1">Weekly Provisioning</span>
+                  {provisioningItems.length > 0 && (
+                    <span className="text-xs text-muted-foreground/70 mr-1">{provisioningItems.length} item{provisioningItems.length !== 1 ? "s" : ""}</span>
+                  )}
+                  {provisioningOpen
+                    ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+                    : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />}
+                </button>
+
+                {provisioningOpen && (
+                  <div className="mt-1 px-3 py-2.5 rounded-lg border border-border bg-card/50 space-y-2" data-testid="section-provisioning-items">
+                    <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                      Household items needed this week — not tied to a specific day. These inform shopping and availability.
+                    </p>
+                    {provisioningItems.length === 0 ? (
+                      <p className="text-xs text-muted-foreground/50 py-1">
+                        No provisioning items yet. Use <span className="font-medium">Add to Week</span> from the Analyser to add household items here.
+                      </p>
+                    ) : (
+                      <div className="space-y-1">
+                        {provisioningItems.map(item => (
+                          <div key={item.id} className="flex items-center gap-2 group" data-testid={`prov-item-${item.id}`}>
+                            <ShoppingCart className="h-3 w-3 text-emerald-500/60 shrink-0" />
+                            <span className="flex-1 text-sm text-foreground">{item.name}</span>
+                            {item.note && (
+                              <span className="text-xs text-muted-foreground/60 truncate max-w-[120px]">{item.note}</span>
+                            )}
+                            <button
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
+                              onClick={() => deleteProvisioningMutation.mutate(item.id)}
+                              aria-label="Remove provisioning item"
+                              data-testid={`button-remove-prov-${item.id}`}
+                              disabled={deleteProvisioningMutation.isPending}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
           </TabsContent>
         ))}
@@ -2451,60 +2506,6 @@ export default function WeeklyPlannerPage() {
         ) : null}
       </DragOverlay>
       </DndContext>
-
-      {/* ── Weekly Provisioning Tray (Phase 5) ── */}
-      {activeWeekId && (
-        <div className="mt-4 mb-2" data-testid="section-weekly-provisioning">
-          <button
-            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors text-left"
-            onClick={() => setProvisioningOpen(v => !v)}
-            data-testid="button-toggle-provisioning"
-          >
-            <ShoppingCart className="h-4 w-4 text-emerald-600 shrink-0" />
-            <span className="text-sm font-medium text-foreground flex-1">Weekly Provisioning</span>
-            {provisioningItems.length > 0 && (
-              <span className="text-xs text-muted-foreground/70 mr-1">{provisioningItems.length} item{provisioningItems.length !== 1 ? "s" : ""}</span>
-            )}
-            {provisioningOpen
-              ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
-              : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />}
-          </button>
-
-          {provisioningOpen && (
-            <div className="mt-1 px-3 py-2.5 rounded-lg border border-border bg-card/50 space-y-2" data-testid="section-provisioning-items">
-              <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
-                Household items needed this week — not tied to a specific day. These inform shopping and availability.
-              </p>
-              {provisioningItems.length === 0 ? (
-                <p className="text-xs text-muted-foreground/50 py-1">
-                  No provisioning items yet. Use <span className="font-medium">Add to Week</span> from the Analyser to add household items here.
-                </p>
-              ) : (
-                <div className="space-y-1">
-                  {provisioningItems.map(item => (
-                    <div key={item.id} className="flex items-center gap-2 group" data-testid={`prov-item-${item.id}`}>
-                      <ShoppingCart className="h-3 w-3 text-emerald-500/60 shrink-0" />
-                      <span className="flex-1 text-sm text-foreground">{item.name}</span>
-                      {item.note && (
-                        <span className="text-xs text-muted-foreground/60 truncate max-w-[120px]">{item.note}</span>
-                      )}
-                      <button
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
-                        onClick={() => deleteProvisioningMutation.mutate(item.id)}
-                        aria-label="Remove provisioning item"
-                        data-testid={`button-remove-prov-${item.id}`}
-                        disabled={deleteProvisioningMutation.isPending}
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* ── Mobile long-press contextual action sheet ── */}
       <Sheet open={!!contextEntry} onOpenChange={(v) => { if (!v) setContextEntry(null); }}>
