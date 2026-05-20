@@ -60,11 +60,41 @@ export function usePlannerOperations({
       });
       return res.json();
     },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+    onMutate: async (params) => {
+      await qc.cancelQueries({ queryKey: ["/api/planner/full"] });
+      const previousData = qc.getQueryData<FullWeek[]>(["/api/planner/full"]);
+      const tempEntry: PlannerEntry = {
+        id: -Date.now(),
+        dayId: params.dayId,
+        mealType: params.mealType,
+        audience: params.audience,
+        mealId: params.mealId,
+        calories: 0,
+        isDrink: params.isDrink,
+        drinkType: params.drinkType ?? null,
+        position: params.position,
+        adaptationResult: null,
+        guestEaters: null,
+        originalMealIdBeforeVariant: null,
+      };
+      qc.setQueryData<FullWeek[]>(["/api/planner/full"], (old) => {
+        if (!old) return old;
+        return old.map((week) => ({
+          ...week,
+          days: week.days.map((day) => {
+            if (day.id !== params.dayId) return day;
+            return { ...day, entries: [...day.entries, tempEntry] };
+          }),
+        }));
+      });
+      return { previousData };
     },
-    onError: () => {
-      toast({ title: "Failed to add meal", variant: "destructive" });
+    onError: (_err, _params, context) => {
+      if (context?.previousData) qc.setQueryData(["/api/planner/full"], context.previousData);
+      toast({ title: "Failed to add meal", description: "Planner restored to previous state", variant: "destructive" });
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
     },
   });
 
