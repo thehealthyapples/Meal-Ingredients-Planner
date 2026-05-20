@@ -61,7 +61,7 @@ import { api, buildUrl } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { estimateFallbackPrice } from "@shared/price-estimates";
-import { formatItemDisplay, cleanProductName } from "@/lib/unit-display";
+import { formatItemDisplay, cleanProductName, getLiquidDisplayMl } from "@/lib/unit-display";
 import ScoreBadge from "@/components/ui/score-badge";
 import AppleRating from "@/components/AppleRating";
 import BadAppleWarningModal from "@/components/BadAppleWarningModal";
@@ -108,7 +108,25 @@ function capitalizeWords(str: string): string {
   return str.replace(/\b\w/g, c => c.toUpperCase());
 }
 
-function formatQty(val: number | null, unit: string | null, pref: 'metric' | 'imperial', gramsVal?: number | null): { qty: string; unitLabel: string } {
+function formatQty(val: number | null, unit: string | null, pref: 'metric' | 'imperial', gramsVal?: number | null, productName?: string): { qty: string; unitLabel: string } {
+  // Humanize: known shopping liquids stored as normalized grams → display ml/L.
+  if (unit === 'g' && productName) {
+    const g = (gramsVal != null && gramsVal > 0) ? gramsVal : (val != null && val > 0 ? val : 0);
+    if (g > 0) {
+      const displayMl = getLiquidDisplayMl(g, productName);
+      if (displayMl !== null) {
+        if (pref === 'metric') {
+          if (displayMl >= 1000) return { qty: (displayMl / 1000).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'L' };
+          return { qty: Math.round(displayMl).toString(), unitLabel: 'ml' };
+        } else {
+          if (displayMl >= 240) return { qty: (displayMl / 240).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'cups' };
+          if (displayMl >= 15) return { qty: (displayMl / 15).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'tbsp' };
+          return { qty: (displayMl / 5).toFixed(1).replace(/\.?0+$/, ''), unitLabel: 'tsp' };
+        }
+      }
+    }
+  }
+
   if (gramsVal !== null && gramsVal !== undefined && gramsVal > 0 && unit !== 'unit') {
     const isLiquid = unit === 'ml' || unit === 'L' || unit === 'cups' || unit === 'tbsp' || unit === 'tsp' || unit === 'fl oz';
     if (pref === 'metric') {
@@ -2596,7 +2614,7 @@ export default function ShoppingListPage() {
       lines.push('Ingredient | Qty | Unit | Tier | Price');
       lines.push('--- | --- | --- | --- | ---');
       for (const item of savedItems) {
-        const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref);
+        const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams, item.normalizedName ?? item.productName ?? undefined);
         const tier = getItemTier(item);
         const tierLabel = TIER_LABELS[tier]?.label || 'Standard';
         const match = pricesByItem.get(item.id)?.get(exportSupermarket);
@@ -3014,7 +3032,7 @@ export default function ShoppingListPage() {
                           <tbody>
                             <AnimatePresence>
                               {displayRows.map(({ primary: item, combinedSources, combinedQtyValue, mergedCount, allIds, allBasketLabels }) => {
-                                const { qty, unitLabel } = formatQty(combinedQtyValue ?? item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
+                                const { qty, unitLabel } = formatQty(combinedQtyValue ?? item.quantityValue, item.unit, measurementPref, item.quantityInGrams, item.normalizedName ?? item.productName ?? undefined);
                                 const showStepper = !['g', 'kg', 'ml', 'L', 'oz', 'lb', 'cups', 'tbsp', 'tsp'].includes(unitLabel);
                                 const itemPrices = pricesByItem.get(item.id);
                                 const cheapest = getCheapestForItem(item.id);
@@ -3646,7 +3664,7 @@ export default function ShoppingListPage() {
                               </colgroup>
                               <tbody>
                                 {subcatSaved.map(item => {
-                                  const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
+                                  const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams, item.normalizedName ?? item.productName ?? undefined);
                                   return (
                                     <tr key={`hh-saved-${item.id}`} className={`border-b border-border/30 ${item.checked ? 'opacity-50' : ''}`} data-testid={`row-household-${item.id}`}>
                                       <td className="px-1.5 py-1.5 sticky left-0 z-10">
@@ -3736,7 +3754,7 @@ export default function ShoppingListPage() {
                       <table className="w-full text-xs">
                         <tbody>
                           {sortedItems.filter(i => isStaple(i)).map(item => {
-                            const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams);
+                            const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams, item.normalizedName ?? item.productName ?? undefined);
                             const cat = item.category || 'other';
                             const CatIcon = CATEGORY_ICONS[cat] || CircleDot;
                             const sources = sourcesByItem.get(item.id) || [];

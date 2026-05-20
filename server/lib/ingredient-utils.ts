@@ -89,6 +89,15 @@ const COUNTABLE_WORDS: Record<string, string> = {
   dash: 'dash',
 };
 
+// Descriptive amount words that indicate a small/informal quantity.
+// These are NOT in COUNTABLE_WORDS because they don't map to a clean singular
+// noun — they need special handling: strip the word, mark unit as 'descriptive'.
+// Do NOT include words already handled by STRIP_PHRASES (handful, pinch, sprig…).
+const DESCRIPTIVE_UNIT_WORDS = new Set([
+  'splash', 'drizzle', 'knob', 'glug', 'slosh', 'squeeze',
+  'dollop', 'smear', 'nub', 'lug', 'dribble',
+]);
+
 const KEEP_PLURAL_COMPOUNDS = new Set([
   'bay leaves',
   'curry leaves',
@@ -414,6 +423,18 @@ export function parseIngredient(text: string): ParsedIngredient {
   let quantity = 0;
   let unit = 'unit';
 
+  // Descriptive amount detection: "splash milk", "a drizzle of olive oil", "knob of butter".
+  // Must run before numeric/unit parsing so the descriptive word is not mis-parsed as a unit.
+  {
+    const descMatch = remaining.match(/^(?:a\s+)?(\w+)(?:\s+of\b)?\s+(.+)/i);
+    if (descMatch && DESCRIPTIVE_UNIT_WORDS.has(descMatch[1].toLowerCase())) {
+      remaining = descMatch[2].trim();
+      quantity = 1;
+      unit = 'descriptive';
+    }
+  }
+
+  if (unit !== 'descriptive') {
   const quantityMatch = remaining.match(/^(\d+\.?\d*)\s*/);
   if (quantityMatch) {
     quantity = parseFloat(quantityMatch[1]);
@@ -496,6 +517,7 @@ export function parseIngredient(text: string): ParsedIngredient {
       }
     }
   }
+  } // end: if (unit !== 'descriptive')
 
   remaining = remaining.replace(/^of\s+/i, '');
 
@@ -820,6 +842,20 @@ function convertMlToG(quantityMl: number, ingredientName: string): number | null
   return quantityMl * density;
 }
 
+// Round a precise quantity up to a practical supermarket purchase size.
+// Applied only when a descriptive co-use is present for the same ingredient.
+// Rule: ml → next 1000 ml (1L ceiling); g → 500g or next 1000g (1kg ceiling).
+function roundPracticalQuantity(quantity: number, unit: string): { quantity: number; unit: string } {
+  if (unit === 'ml') {
+    return { quantity: Math.ceil(quantity / 1000) * 1000, unit: 'ml' };
+  }
+  if (unit === 'g') {
+    if (quantity <= 500) return { quantity: 500, unit: 'g' };
+    return { quantity: Math.ceil(quantity / 1000) * 1000, unit: 'g' };
+  }
+  return { quantity, unit };
+}
+
 export function consolidateIngredients(ingredients: string[]): ConsolidatedItem[] {
   const consolidated = new Map<string, ConsolidatedItem>();
 
@@ -916,7 +952,28 @@ export function consolidateIngredients(ingredients: string[]): ConsolidatedItem[
     Array.from(consolidated.entries()).forEach(([key, item]) => {
       if (key.startsWith(`${name}|`) && !merged.has(key)) {
         const unit = key.split('|')[1];
-        if (unit !== 'g' && unit !== 'ml' && unit !== 'unit') {
+        if (unit === 'descriptive') {
+          // Check whether a precise entry (g / ml / unit) already exists for this product.
+          const hasPrecise =
+            merged.has(`${name}|g`) ||
+            merged.has(`${name}|ml`) ||
+            merged.has(`${name}|unit`);
+          if (hasPrecise) {
+            // Absorb: the descriptive co-use strengthens confidence but adds no
+            // fake quantity.  Apply practical purchase rounding to the precise entry.
+            for (const preciseKey of [`${name}|g`, `${name}|ml`]) {
+              const preciseItem = merged.get(preciseKey);
+              if (preciseItem) {
+                const rounded = roundPracticalQuantity(preciseItem.quantity, preciseItem.unit);
+                merged.set(preciseKey, { ...preciseItem, ...rounded });
+                break;
+              }
+            }
+          } else {
+            // Descriptive-only ingredient: no precise quantity known.
+            merged.set(key, { ...item, quantity: 1 });
+          }
+        } else if (unit !== 'g' && unit !== 'ml' && unit !== 'unit') {
           merged.set(key, { ...item });
         }
       }

@@ -138,6 +138,8 @@ export function RecipeScanReview({ open, onOpenChange, scanData, scanning = fals
 
   const [title, setTitle] = useState(initTitle);
   const [servings, setServings] = useState(initServings);
+  // Separate raw string state lets users clear the field and retype without coercion on every keystroke.
+  const [servingsRaw, setServingsRaw] = useState(() => String(initServings()));
   const [ingredients, setIngredients] = useState<EditableIngredient[]>(initIngredients);
   const [steps, setSteps] = useState<EditableStep[]>(initSteps);
 
@@ -146,7 +148,9 @@ export function RecipeScanReview({ open, onOpenChange, scanData, scanning = fals
   if (scanData !== lastScanData) {
     setLastScanData(scanData);
     setTitle(initTitle());
-    setServings(initServings());
+    const initS = initServings();
+    setServings(initS);
+    setServingsRaw(String(initS));
     setIngredients(initIngredients());
     setSteps(initSteps());
     setRawOpen(false);
@@ -340,11 +344,16 @@ export function RecipeScanReview({ open, onOpenChange, scanData, scanning = fals
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Servings</label>
                 <Input
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={servings}
-                  onChange={e => setServings(Math.max(1, parseInt(e.target.value) || 1))}
+                  type="text"
+                  inputMode="numeric"
+                  value={servingsRaw}
+                  onChange={e => setServingsRaw(e.target.value)}
+                  onBlur={() => {
+                    const n = parseInt(servingsRaw, 10);
+                    const safe = !isNaN(n) && n >= 1 && n <= 100 ? n : servings;
+                    setServings(safe);
+                    setServingsRaw(String(safe));
+                  }}
                   className="w-24"
                 />
               </div>

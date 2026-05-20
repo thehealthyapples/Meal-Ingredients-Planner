@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,21 +10,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import type { Meal } from "@shared/schema";
 import { scoreMealSearch } from "@shared/food-synonyms";
-
-// Matches the structure returned by GET /api/search-recipes
-interface WebSearchRecipe {
-  id: string;
-  name: string;
-  image: string;
-  url: string | null;
-  category: string | null;
-  cuisine: string | null;
-  ingredients: string[];
-  instructions?: string[];
-  source?: string;
-}
-
-const PREMIUM_MARKER = "This is a premium piece of content available to subscribed users.";
+import { usePlannerMealSearch, type WebSearchRecipe, type PlannerMealFilterMode } from "@/hooks/use-planner-meal-search";
 
 export interface EntryTarget {
   dayId: number;
@@ -82,50 +68,19 @@ export function PlannerMealPickerPanel({
   const [productSearching, setProductSearching] = useState(false);
   const [productRetailer, setProductRetailer] = useState("");
 
-  // Phase 2: optional web search (default OFF — cookbook-first, explicit user opt-in)
-  const [includeWeb, setIncludeWeb] = useState(false);
-  const [webResults, setWebResults] = useState<WebSearchRecipe[]>([]);
-  const [webLoading, setWebLoading] = useState(false);
+  // Web search + includeWeb session persistence managed by the shared hook.
+  // filteredMeals from the hook is not used here — the component keeps its own
+  // target-aware filtering pipeline below (audience, drink, category logic).
+  const { webResults, webLoading, includeWeb, setIncludeWeb } = usePlannerMealSearch({
+    meals,
+    query: mealSearch,
+    filterMode: (mealFilter === "product" ? "all" : mealFilter) as PlannerMealFilterMode,
+    plannerMealIdSet,
+    excludePlaceholders: true,
+    enableWebSearch: mealFilter !== "product",
+  });
+
   const [importingWebId, setImportingWebId] = useState<string | null>(null);
-  const webAbortRef = useRef<AbortController | null>(null);
-
-  useEffect(() => {
-    if (webAbortRef.current) webAbortRef.current.abort();
-    if (!includeWeb) { setWebResults([]); setWebLoading(false); return; }
-    const q = mealSearch.trim();
-    if (q.length < 2) { setWebResults([]); setWebLoading(false); return; }
-
-    const ctrl = new AbortController();
-    webAbortRef.current = ctrl;
-    let active = true;
-
-    const timer = setTimeout(async () => {
-      setWebLoading(true);
-      try {
-        const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(q)}&page=1`, {
-          signal: ctrl.signal,
-          credentials: "include",
-        });
-        if (!res.ok || !active) return;
-        const data: { recipes: WebSearchRecipe[] } = await res.json();
-        const filtered = (data.recipes ?? []).filter(r => {
-          const allText = [r.name, ...(r.ingredients ?? []), ...(r.instructions ?? [])].join("\0");
-          return !allText.includes(PREMIUM_MARKER);
-        });
-        if (active) setWebResults(filtered.slice(0, 15));
-      } catch (err: unknown) {
-        if ((err as any)?.name === "AbortError" || !active) return;
-      } finally {
-        if (active) setWebLoading(false);
-      }
-    }, 400);
-
-    return () => {
-      active = false;
-      clearTimeout(timer);
-      ctrl.abort();
-    };
-  }, [mealSearch, includeWeb]);
 
   const handleAddWebRecipe = async (recipe: WebSearchRecipe) => {
     if (importingWebId) return;
@@ -291,16 +246,17 @@ export function PlannerMealPickerPanel({
             />
           </div>
           <button
-            onClick={() => setIncludeWeb(v => !v)}
-            className={`text-xs px-2.5 py-1 rounded-full border transition-colors shrink-0 whitespace-nowrap ${
+            onClick={() => setIncludeWeb(!includeWeb)}
+            className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors shrink-0 whitespace-nowrap ${
               includeWeb
                 ? "bg-primary text-primary-foreground border-primary"
-                : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                : "border-border/60 bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
             }`}
             data-testid="button-include-web"
-            title={includeWeb ? "Web results active — click to disable" : "Include web recipes in search"}
+            title={includeWeb ? "Web recipes active — click to disable" : "Search trusted web recipe sources"}
           >
-            {includeWeb ? "Web on" : "Include web"}
+            <Globe className="h-3 w-3 shrink-0" />
+            {includeWeb ? "Web on" : "Web recipes"}
           </button>
         </div>
       )}
@@ -472,18 +428,18 @@ export function PlannerMealPickerPanel({
               )}
             </div>
           )}
-          {/* Nudge: show web toggle hint when local results are empty and web is OFF */}
-          {!includeWeb && filteredMeals.length === 0 && mealSearch.trim().length >= 2 && (
-            <p className="text-center text-[11px] text-muted-foreground/50 pt-2">
-              Try{" "}
+          {/* Nudge: show when local results are thin and web is OFF */}
+          {!includeWeb && filteredMeals.length < 3 && mealSearch.trim().length >= 2 && (
+            <p className="text-center text-[11px] text-muted-foreground/60 pt-2">
+              Can't find it in your cookbook?{" "}
               <button
                 onClick={() => setIncludeWeb(true)}
-                className="underline hover:text-foreground/60 transition-colors"
+                className="underline hover:text-foreground/70 transition-colors"
                 data-testid="button-include-web-nudge"
               >
-                Include web
+                Turn on web recipes
               </button>{" "}
-              to discover recipes online
+              to search trusted recipe sources.
             </p>
           )}
         </div>

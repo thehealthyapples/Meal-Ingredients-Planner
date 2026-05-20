@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { ShoppingListItem, IngredientSource, ProductMatch, IngredientProduct } from "@shared/schema";
-import { cleanProductName } from "@/lib/unit-display";
+import { cleanProductName, getLiquidDisplayMl } from "@/lib/unit-display";
 import { isWholeFood } from "@/lib/basket-item-classifier";
 import { getIngredientDef, isResolvedVariantItem } from "@/lib/ingredient-catalogue";
 import WholeFoodSelector from "@/components/whole-food-selector";
@@ -635,7 +635,27 @@ function fmtQty(
   unit: string | null | undefined,
   gramsVal: number | null | undefined,
   pref: "metric" | "imperial",
+  productName?: string,
 ): string {
+  if (unit === "descriptive") return "small amount";
+
+  // Humanize: known shopping liquids stored as normalized grams → display ml/L.
+  // Presentation-only: stored data and aggregation are unchanged.
+  if (unit === "g" && productName) {
+    const g = gramsVal != null && gramsVal > 0 ? gramsVal : (value != null && value > 0 ? value : 0);
+    if (g > 0) {
+      const displayMl = getLiquidDisplayMl(g, productName);
+      if (displayMl !== null) {
+        if (pref === "metric") {
+          return displayMl >= 1000 ? `${+(displayMl / 1000).toFixed(1).replace(/\.?0+$/, "")}L` : `${Math.round(displayMl)}ml`;
+        }
+        if (displayMl >= 240) return `${+(displayMl / 240).toFixed(1).replace(/\.?0+$/, "")} cups`;
+        if (displayMl >= 15) return `${+(displayMl / 15).toFixed(1).replace(/\.?0+$/, "")} tbsp`;
+        return `${+(displayMl / 5).toFixed(1).replace(/\.?0+$/, "")} tsp`;
+      }
+    }
+  }
+
   if (gramsVal != null && gramsVal > 0 && unit !== "unit") {
     const liq = unit === "ml" || unit === "L" || unit === "cups" || unit === "tbsp" || unit === "tsp";
     if (pref === "metric") {
@@ -1185,7 +1205,7 @@ export default function ShoppingListView({
       ...remainingListItems.map((i) => ({
         id: i.id,
         name: capWords(i.productName),
-        qty: fmtQty(i.quantityValue, i.unit, i.quantityInGrams, measurementPref),
+        qty: fmtQty(i.quantityValue, i.unit, i.quantityInGrams, measurementPref, i.normalizedName ?? i.productName ?? undefined),
       })),
       ...remainingExtras.map((e) => ({ id: e.id, name: capWords(e.name), qty: "" })),
     ];
@@ -1421,6 +1441,7 @@ export default function ShoppingListView({
       item.unit,
       qtyOverride !== undefined ? null : item.quantityInGrams,
       measurementPref,
+      item.normalizedName ?? item.productName ?? undefined,
     );
     const sources = sourcesByItem.get(item.id) ?? [];
     const firstMeal = (sources[0] as any)?.mealName as string | undefined;
@@ -2131,7 +2152,7 @@ export default function ShoppingListView({
                   const isLikelyInStock = pantryKeySet.has(
                     normalizeIngredientKey(item.normalizedName ?? item.productName ?? ""),
                   );
-                  const qty = fmtQty(item.quantityValue, item.unit, item.quantityInGrams, measurementPref);
+                  const qty = fmtQty(item.quantityValue, item.unit, item.quantityInGrams, measurementPref, item.normalizedName ?? item.productName ?? undefined);
                   const displayName = capWords(cleanProductName(item.productName, item.quantityValue));
 
                   // ── Unrecognised-item review card ──────────────────────────
@@ -2429,7 +2450,7 @@ export default function ShoppingListView({
                                   className="h-5 w-10 text-[11.5px] tabular-nums text-center rounded border border-border/60 bg-background/80 focus:outline-none focus:ring-1 focus:ring-primary/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                   data-testid={`cyc-qty-input-${item.id}`}
                                 />
-                                {item.unit && item.unit !== "unit" && (
+                                {item.unit && item.unit !== "unit" && item.unit !== "descriptive" && (
                                   <span className="text-[10px] text-muted-foreground/60">{item.unit}</span>
                                 )}
                                 <button
@@ -2857,7 +2878,7 @@ export default function ShoppingListView({
             <div data-print-items>
               {cat.savedItems.map((item) => {
                 const state = getItemState(item);
-                const qty = fmtQty(item.quantityValue, item.unit, item.quantityInGrams, measurementPref);
+                const qty = fmtQty(item.quantityValue, item.unit, item.quantityInGrams, measurementPref, item.normalizedName ?? item.productName ?? undefined);
                 return (
                   <div key={item.id} data-print-item className="flex items-center gap-1.5">
                     <div style={{ flex: 1, minWidth: 0 }}>

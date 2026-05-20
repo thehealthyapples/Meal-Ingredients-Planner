@@ -47,6 +47,7 @@ import { saveMediaFile, deleteMediaFile } from "./lib/media-storage";
 import { isLikelyNonEnglishIngredients, hasEnglishIngredients } from "./lib/ingredient-language";
 import { logProductEvent, extractDomain } from "./lib/product-event-logger";
 import { EventTypes, CLIENT_TRACKABLE_EVENTS } from "@shared/product-events";
+import { RECIPE_IMPORT_MEASUREMENT_REGEX } from "./lib/recipe-import-units";
 import { getUserRouting } from "./lib/routing";
 import { buildRuleIndex, batchMatchUplift } from "./lib/uplift-engine.js";
 import UPLIFT_RULES from "./lib/uplift-rules.js";
@@ -436,8 +437,22 @@ const UNIT_GRAMS: Record<string, number> = {
   oz: 28.35, ounce: 28.35, ounces: 28.35,
   lb: 453.59, lbs: 453.59, pound: 453.59, pounds: 453.59,
   'fl oz': 29.57,
-  pinch: 0.5, dash: 0.6, handful: 30,
+  // pinch / dash / handful intentionally excluded: quantities are indeterminate
+  // and including them fabricated false nutrition precision.
 };
+
+/**
+ * Descriptive household units whose gram equivalent cannot be reliably
+ * determined. Ingredients described with these words must be excluded from
+ * nutrition totals rather than silently receiving a heuristic estimate.
+ */
+const DESCRIPTIVE_UNITS_RE = /\b(pinch(?:es)?|dash(?:es)?|handful(?:s)?|splash(?:es)?|drizzle[ds]?|knob)\b/i;
+
+/** Returns true when an ingredient uses a vague descriptive unit that cannot
+ *  be reliably converted to grams. Such ingredients are excluded from nutrition. */
+function isDescriptiveUnitIngredient(ingredient: string): boolean {
+  return DESCRIPTIVE_UNITS_RE.test(ingredient);
+}
 
 /** Normalises vulgar fractions (½, ¼, …) and slash fractions (1/2) to decimal strings. */
 function normalizeFractions(text: string): string {
@@ -659,6 +674,10 @@ async function autoAnalyzeMeal(mealId: number) {
           }
 
           if (count > 0) {
+            // Descriptive units (pinch, dash, handful, splash, drizzle, knob)
+            // cannot be reliably converted to grams — exclude from totals.
+            if (isDescriptiveUnitIngredient(ingredient)) return;
+
             // Scale from per-100 g to the actual quantity used in the recipe.
             const quantityGrams = parseIngredientGrams(ingredient);
             if (quantityGrams === null) anyEstimated = true;
@@ -2703,8 +2722,7 @@ export async function registerRoutes(
 
       const ingredients: string[] = [];
       const macroTexts: string[] = [];
-      const measurements = ['g', 'kg', 'ml', 'l', 'cup', 'cups', 'tsp', 'tbsp', 'teaspoon', 'tablespoon', 'pound', 'lb', 'oz', 'ounce', 'pinch', 'dash', 'clove', 'cloves', 'slice', 'slices', 'piece', 'pieces'];
-      const measurementRegex = new RegExp(`\\d+\\s*(${measurements.join('|')})`, 'i');
+      const measurementRegex = RECIPE_IMPORT_MEASUREMENT_REGEX;
 
       $('li').each((_, el) => {
         const text = $(el).text().trim();
@@ -3286,8 +3304,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       }
 
       const ingredients: string[] = [];
-      const measurements = ['g', 'kg', 'ml', 'l', 'cup', 'cups', 'tsp', 'tbsp', 'teaspoon', 'tablespoon', 'pound', 'lb', 'oz', 'ounce', 'pinch', 'dash', 'clove', 'cloves', 'slice', 'slices', 'piece', 'pieces'];
-      const measurementRegex = new RegExp(`\\d+\\s*(${measurements.join('|')})`, 'i');
+      const measurementRegex = RECIPE_IMPORT_MEASUREMENT_REGEX;
 
       $('li').each((_, el) => {
         const text = $(el).text().trim();
@@ -3561,6 +3578,10 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
               }
 
               if (count > 0) {
+                // Descriptive units (pinch, dash, handful, splash, drizzle, knob)
+                // cannot be reliably converted to grams — exclude from totals.
+                if (isDescriptiveUnitIngredient(ingredient)) return;
+
                 const quantityGrams = parseIngredientGrams(ingredient);
                 if (quantityGrams === null) anyEstimated = true;
                 const grams = quantityGrams ?? fallbackIngredientGrams(ingredient);

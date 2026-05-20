@@ -15,7 +15,8 @@ import { appendPendingIngredient } from "@/lib/quick-list";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { scaleIngredient } from "@/lib/scaleIngredient";
 
 type SwapGoal = "vegetarian" | "keto" | "lower-cost" | "less-processed" | "under-time" | "household";
 
@@ -82,6 +83,9 @@ export default function MealDetailPage() {
   const [editInstructions, setEditInstructions] = useState<string[]>([]);
   const [editServings, setEditServings] = useState(1);
   const [hasChanges, setHasChanges] = useState(false);
+  // View-mode serving override: lets users preview scaled ingredient quantities without saving.
+  const [viewServings, setViewServings] = useState(1);
+  const [viewServingsRaw, setViewServingsRaw] = useState("1");
   const [methodView, setMethodView] = useState<"component" | "full" | "timing">("component");
   const [activeComponent, setActiveComponent] = useState<string | null>(null);
   const [componentDurations, setComponentDurations] = useState<Record<string, number>>({});
@@ -112,6 +116,14 @@ export default function MealDetailPage() {
       initEditState(meal);
     }
   }, [meal, isEditedCopy, initEditState]);
+
+  useEffect(() => {
+    if (meal && !isEditedCopy) {
+      const s = meal.servings || 1;
+      setViewServings(s);
+      setViewServingsRaw(String(s));
+    }
+  }, [meal?.id, isEditedCopy]);
 
   const { data: nutritionData } = useQuery<Nutrition | null>({
     queryKey: [api.nutrition.get.path, mealId],
@@ -348,6 +360,15 @@ export default function MealDetailPage() {
     setEditInstructions([...editInstructions, ""]);
     markChanged();
   };
+
+  // Derives display ingredients scaled to viewServings. Always computed from canonical meal.ingredients
+  // so changing servings multiple times never compounds.
+  const displayIngredients = useMemo(() => {
+    if (!meal) return [];
+    const base = meal.servings || 1;
+    if (viewServings === base) return meal.ingredients;
+    return meal.ingredients.map(ing => scaleIngredient(ing, base, viewServings));
+  }, [meal, viewServings]);
 
   if (mealLoading) {
     return (
@@ -607,9 +628,41 @@ export default function MealDetailPage() {
               </div>
             ) : (
               meal.servings && (
-                <Badge variant="outline" data-testid="badge-servings">
-                  {meal.servings} serving{meal.servings > 1 ? 's' : ''}
-                </Badge>
+                <div className="flex items-center gap-0.5 border rounded-full px-1.5 py-0.5 text-xs" data-testid="control-view-servings">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-5 w-5"
+                    onClick={() => { const n = Math.max(1, viewServings - 1); setViewServings(n); setViewServingsRaw(String(n)); }}
+                    data-testid="button-view-servings-minus"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={viewServingsRaw}
+                    onChange={e => setViewServingsRaw(e.target.value)}
+                    onBlur={() => {
+                      const n = parseInt(viewServingsRaw, 10);
+                      const safe = !isNaN(n) && n >= 1 && n <= 100 ? n : viewServings;
+                      setViewServings(safe);
+                      setViewServingsRaw(String(safe));
+                    }}
+                    className="w-7 text-center bg-transparent border-none outline-none text-xs font-medium"
+                    data-testid="input-view-servings"
+                  />
+                  <span className="text-muted-foreground pr-1">serving{viewServings !== 1 ? 's' : ''}</span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-5 w-5"
+                    onClick={() => { const n = Math.min(100, viewServings + 1); setViewServings(n); setViewServingsRaw(String(n)); }}
+                    data-testid="button-view-servings-plus"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
               )
             )}
             {dietNames.map((name) => (
@@ -741,7 +794,7 @@ export default function MealDetailPage() {
                 </div>
               ) : (
                 <ul className="space-y-2">
-                  {meal.ingredients.map((ing, idx) => (
+                  {displayIngredients.map((ing, idx) => (
                     <li key={idx} className="text-sm flex items-start gap-2" data-testid={`text-ingredient-${idx}`}>
                       <span className="text-primary mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
                       <span>{ing}</span>

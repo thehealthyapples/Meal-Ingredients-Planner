@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { usePlannerMealSearch, type PlannerMealFilterMode } from "@/hooks/use-planner-meal-search";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,22 +46,15 @@ export function PlannerBulkAssignPanel({
   const [bulkMealFilter, setBulkMealFilter] = useState<"all" | "cookbook" | "planner" | "ready">("all");
   const [bulkStep, setBulkStep] = useState<1 | 2>(1);
 
-  const filteredMeals = useMemo(() => {
-    let result = meals.filter(m => (m as any).mealSourceType !== "planner-placeholder");
-    if (bulkMealFilter === "cookbook") result = result.filter(m => !m.isReadyMeal && !(m as any).isSystemMeal);
-    else if (bulkMealFilter === "planner") result = result.filter(m => plannerMealIdSet.has(m.id));
-    else if (bulkMealFilter === "ready") result = result.filter(m => m.isReadyMeal);
-    if (bulkMealSearch.trim()) {
-      const q = bulkMealSearch.toLowerCase();
-      result = result.filter(m => m.name.toLowerCase().includes(q));
-    }
-    if (bulkMealFilter === "all") {
-      const nonReady = result.filter(m => !m.isReadyMeal);
-      const ready = result.filter(m => m.isReadyMeal);
-      result = [...nonReady, ...ready];
-    }
-    return result.slice(0, 100);
-  }, [meals, bulkMealFilter, bulkMealSearch, plannerMealIdSet]);
+  // Shared hook: provides scoreMealSearch-ranked filteredMeals. No web search for bulk assign.
+  const { filteredMeals } = usePlannerMealSearch({
+    meals,
+    query: bulkMealSearch,
+    filterMode: bulkMealFilter as PlannerMealFilterMode,
+    plannerMealIdSet,
+    excludePlaceholders: true,
+    enableWebSearch: false,
+  });
 
   const bulkAssignments = useMemo(() => {
     if (!bulkMeal || bulkWeeks.size === 0 || bulkDays.size === 0 || bulkSlots.size === 0) return [];

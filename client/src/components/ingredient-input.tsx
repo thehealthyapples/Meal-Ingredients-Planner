@@ -15,16 +15,23 @@ export const COMMON_UNITS = [
   { value: "oz",      label: "oz" },
   { value: "lb",      label: "lb" },
   { value: "pinch",   label: "pinch" },
+  { value: "dash",    label: "dash" },
   { value: "slice",   label: "slice" },
   { value: "piece",   label: "piece" },
   { value: "breast",  label: "breast" },
   { value: "fillet",  label: "fillet" },
   { value: "clove",   label: "clove" },
   { value: "handful", label: "handful" },
+  { value: "bunch",   label: "bunch" },
   { value: "serving", label: "serving" },
   { value: "tin",     label: "tin" },
   { value: "can",     label: "can" },
   { value: "pack",    label: "pack" },
+  { value: "jar",     label: "jar" },
+  { value: "bottle",  label: "bottle" },
+  { value: "tub",     label: "tub" },
+  { value: "sachet",  label: "sachet" },
+  { value: "carton",  label: "carton" },
 ];
 
 const UNIT_VALUES = COMMON_UNITS.map(u => u.value).filter(Boolean);
@@ -55,12 +62,16 @@ export function parseIngredientString(raw: string): { amount: string; unit: stri
   return { amount: "", unit: "", name: text };
 }
 
+// Symbol units conventionally merge with their number in recipe notation (200g, 5ml).
+// All other units (word-based containers, descriptive, count) use a separating space.
+const SYMBOL_UNITS = new Set(['g', 'kg', 'ml', 'l', 'tbsp', 'tsp', 'oz', 'lb', 'cup']);
+
 export function buildIngredientString(amount: string, unit: string, name: string): string {
   const a = amount.trim();
   const u = unit.trim();
   const n = name.trim();
   if (!n) return "";
-  if (a && u) return `${a}${u} ${n}`;
+  if (a && u) return SYMBOL_UNITS.has(u) ? `${a}${u} ${n}` : `${a} ${u} ${n}`;
   if (a) return `${a} ${n}`;
   return n;
 }

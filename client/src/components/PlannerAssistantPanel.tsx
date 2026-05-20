@@ -15,6 +15,7 @@ import { TemplatesPanel } from "@/components/templates-panel";
 import type { User, Meal } from "@shared/schema";
 import { PlannerMealPickerPanel } from "@/components/PlannerMealPickerPanel";
 import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMealPickerPanel";
+import { usePlannerMealSearch, type WebSearchRecipe } from "@/hooks/use-planner-meal-search";
 import { DayViewDrawer } from "@/components/day-view-drawer";
 import { PlannerBulkAssignPanel } from "@/components/PlannerBulkAssignPanel";
 import type { FullDay, FullWeek } from "@/lib/planner-types";
@@ -563,18 +564,6 @@ function PlannerSettingsContent() {
   );
 }
 
-interface WebRecipeResult {
-  id: string;
-  name: string;
-  image: string;
-  url: string | null;
-  ingredients: string[];
-  instructions?: string[];
-  source?: string;
-}
-
-const WEB_PREMIUM_MARKER = "This is a premium piece of content available to subscribed users.";
-
 interface ResolveSearchContentProps {
   mealName: string;
   meals: Meal[];
@@ -587,44 +576,20 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
   const { toast } = useToast();
   const qc = useQueryClient();
   const [search, setSearch] = useState(mealName);
-  const [includeWeb, setIncludeWeb] = useState(false);
-  const [webResults, setWebResults] = useState<WebRecipeResult[]>([]);
-  const [webLoading, setWebLoading] = useState(false);
   const [importingWebId, setImportingWebId] = useState<string | null>(null);
-  const webAbortRef = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    if (webAbortRef.current) webAbortRef.current.abort();
-    if (!includeWeb) { setWebResults([]); setWebLoading(false); return; }
-    const q = search.trim();
-    if (q.length < 2) { setWebResults([]); setWebLoading(false); return; }
-    const ctrl = new AbortController();
-    webAbortRef.current = ctrl;
-    let active = true;
-    const timer = setTimeout(async () => {
-      setWebLoading(true);
-      try {
-        const res = await fetch(`/api/search-recipes?q=${encodeURIComponent(q)}&page=1`, {
-          signal: ctrl.signal,
-          credentials: "include",
-        });
-        if (!res.ok || !active) return;
-        const data: { recipes: WebRecipeResult[] } = await res.json();
-        const filtered = (data.recipes ?? []).filter(r => {
-          const allText = [r.name, ...(r.ingredients ?? []), ...(r.instructions ?? [])].join("\0");
-          return !allText.includes(WEB_PREMIUM_MARKER);
-        });
-        if (active) setWebResults(filtered.slice(0, 15));
-      } catch (err: unknown) {
-        if ((err as any)?.name === "AbortError" || !active) return;
-      } finally {
-        if (active) setWebLoading(false);
-      }
-    }, 400);
-    return () => { active = false; clearTimeout(timer); ctrl.abort(); };
-  }, [search, includeWeb]);
+  // Shared hook owns: filteredMeals (now with scoreMealSearch), web fetch, includeWeb persistence
+  const { filteredMeals, webResults, webLoading, includeWeb, setIncludeWeb } = usePlannerMealSearch({
+    meals,
+    query: search,
+    excludePlaceholders: true,
+    excludeReadyMeals: true,
+    excludeDrinks: true,
+    limit: 50,
+    enableWebSearch: true,
+  });
 
-  const handleImportWebRecipe = async (recipe: WebRecipeResult) => {
+  const handleImportWebRecipe = async (recipe: WebSearchRecipe) => {
     if (importingWebId) return;
     setImportingWebId(recipe.id);
     try {
@@ -652,17 +617,6 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
     }
   };
 
-  const filteredMeals = useMemo(() => {
-    const cookbookMeals = meals.filter(m =>
-      m.mealSourceType !== "planner-placeholder" &&
-      !m.isReadyMeal &&
-      !m.isDrink
-    );
-    if (!search.trim()) return cookbookMeals.slice(0, 50);
-    const q = search.toLowerCase();
-    return cookbookMeals.filter(m => m.name.toLowerCase().includes(q)).slice(0, 50);
-  }, [meals, search]);
-
   return (
     <div className="flex flex-col gap-3" data-testid="panel-resolve-search">
       <button
@@ -688,16 +642,17 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
           />
         </div>
         <button
-          onClick={() => setIncludeWeb(v => !v)}
-          className={`text-xs px-2.5 py-1 rounded-full border transition-colors shrink-0 whitespace-nowrap ${
+          onClick={() => setIncludeWeb(!includeWeb)}
+          className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors shrink-0 whitespace-nowrap ${
             includeWeb
               ? "bg-primary text-primary-foreground border-primary"
-              : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+              : "border-border/60 bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
           }`}
           data-testid="button-resolve-include-web"
-          title={includeWeb ? "Web results active — click to disable" : "Include web recipes in search"}
+          title={includeWeb ? "Web recipes active — click to disable" : "Search trusted web recipe sources"}
         >
-          {includeWeb ? "Web on" : "Include web"}
+          <Globe className="h-3 w-3 shrink-0" />
+          {includeWeb ? "Web on" : "Web recipes"}
         </button>
       </div>
 
@@ -791,17 +746,17 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
             )}
           </div>
         )}
-        {!includeWeb && filteredMeals.length === 0 && search.trim().length >= 2 && (
-          <p className="text-center text-[11px] text-muted-foreground/50 pt-2">
-            Try{" "}
+        {!includeWeb && filteredMeals.length < 3 && search.trim().length >= 2 && (
+          <p className="text-center text-[11px] text-muted-foreground/60 pt-2">
+            Can't find it in your cookbook?{" "}
             <button
               onClick={() => setIncludeWeb(true)}
-              className="underline hover:text-foreground/60 transition-colors"
+              className="underline hover:text-foreground/70 transition-colors"
               data-testid="button-resolve-include-web-nudge"
             >
-              Include web
+              Turn on web recipes
             </button>{" "}
-            to discover recipes online
+            to search trusted recipe sources.
           </p>
         )}
       </div>

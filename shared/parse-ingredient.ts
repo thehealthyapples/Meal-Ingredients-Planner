@@ -1,4 +1,5 @@
 import { normalizeIngredientKey } from "./normalize";
+import { INGREDIENT_QUANTITY_UNIT_PATTERN } from "./ingredient-units";
 
 /**
  * Canonical ingredient string parser — shared by client and server.
@@ -17,8 +18,7 @@ export function parseIngredient(raw: string): {
 } {
   const text = raw.trim();
 
-  const UNIT_PATTERN =
-    "cups?|tbsps?|tablespoons?|tsps?|teaspoons?|oz|ounces?|lbs?|pounds?|grams?|g|kg|ml|liters?|litres?|cloves?|slices?|pieces?|pinch(?:es)?|bunch(?:es)?|sprigs?|stalks?|cans?|packets?|heads?|handfuls?|dashes?";
+  const UNIT_PATTERN = INGREDIENT_QUANTITY_UNIT_PATTERN;
 
   const PREP_NOTES =
     /,\s*(chopped|diced|minced|sliced|crushed|grated|peeled|fresh|dried|ground|finely|coarsely|roughly|thinly|to taste|optional).*$/i;

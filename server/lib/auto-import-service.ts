@@ -2,6 +2,7 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import { storage } from "../storage";
 import type { ExternalMealCandidate } from "./external-meal-service";
+import { RECIPE_IMPORT_MEASUREMENT_REGEX } from "./recipe-import-units";
 
 export interface AutoImportResult {
   mealId: number;
@@ -151,8 +152,7 @@ async function scrapeRecipeFromUrl(url: string): Promise<{ ingredients: string[]
     const ingredients: string[] = [];
     const instructions: string[] = [];
 
-    const measurements = ["g", "kg", "ml", "l", "cup", "cups", "tsp", "tbsp", "teaspoon", "tablespoon", "pound", "lb", "oz", "ounce", "pinch", "dash", "clove", "cloves", "slice", "slices"];
-    const measurementRegex = new RegExp(`\\d+\\s*(${measurements.join("|")})`, "i");
+    const measurementRegex = RECIPE_IMPORT_MEASUREMENT_REGEX;
 
     $("li").each((_, el) => {
       const text = $(el).text().trim();
