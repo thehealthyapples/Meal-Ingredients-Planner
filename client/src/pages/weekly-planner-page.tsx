@@ -812,7 +812,7 @@ export default function WeeklyPlannerPage() {
   // Phase 4A: drag/drop handlers
   function handleDragStart(event: DragStartEvent) {
     const data = event.active.data.current as DragItemData | undefined;
-    if (data?.type === "planner-entry" || data?.type === "proposal-card") {
+    if (data?.type === "planner-entry" || data?.type === "proposal-card" || data?.type === "search-result") {
       setActiveDrag(data);
       activeDragDataRef.current = data;
     }
@@ -898,6 +898,42 @@ export default function WeeklyPlannerPage() {
     if (!dragData) return;
     const overData = over.data.current as (DragItemData | DropZoneData) | undefined;
     if (!overData) return;
+
+    // Phase 3: search-result from Planner Assistant discovery (cookbook/freezer/packaged)
+    if (dragData.type === "search-result") {
+      let targetDayId: number;
+      let targetMealType: string;
+      let targetAudience: string;
+      let targetIsDrink: boolean;
+      if (overData.type === "planner-slot") {
+        targetDayId = overData.dayId;
+        targetMealType = overData.mealType;
+        targetAudience = overData.audience;
+        targetIsDrink = overData.isDrink;
+      } else if (overData.type === "planner-entry") {
+        targetDayId = overData.dayId;
+        targetMealType = overData.mealType;
+        targetAudience = overData.audience;
+        targetIsDrink = overData.isDrink;
+      } else {
+        return;
+      }
+      const dropDay = fullPlanner.flatMap((w) => w.days).find((d) => d.id === targetDayId);
+      const position = dropDay
+        ? targetIsDrink
+          ? getDrinkEntries(dropDay.entries).length
+          : getSlotEntries(dropDay.entries, targetMealType, targetAudience, false).length
+        : 0;
+      addEntryMutation.mutate({
+        dayId: targetDayId,
+        mealType: targetMealType,
+        audience: targetAudience,
+        mealId: dragData.mealId,
+        position,
+        isDrink: targetIsDrink,
+      });
+      return;
+    }
 
     // Phase 5D: proposal-card from assistant panel dropped onto the planner grid
     if (dragData.type === "proposal-card") {
@@ -2375,6 +2411,8 @@ export default function WeeklyPlannerPage() {
             <span className="flex-1 truncate">
               {activeDrag.type === "proposal-card"
                 ? activeDrag.name
+                : activeDrag.type === "search-result"
+                ? activeDrag.mealName
                 : getMeal(activeDrag.entry.mealId)?.name ?? "Meal"}
             </span>
             <GripVertical className="h-4 w-4 text-muted-foreground/30 shrink-0" />

@@ -27,7 +27,15 @@ export interface ProposalCardDragData {
   audience?: string;
 }
 
-export type DragItemData = PlannerEntryDragData | ProposalCardDragData;
+// Phase 3: search result dragged from Planner Assistant discovery rows
+export interface SearchResultDragData {
+  type: "search-result";
+  mealId: number;
+  mealName: string;
+  sourceOrigin: "cookbook" | "freezer" | "packaged";
+}
+
+export type DragItemData = PlannerEntryDragData | ProposalCardDragData | SearchResultDragData;
 
 export type DropZoneData =
   | { type: "planner-slot"; dayId: number; mealType: string; audience: string; isDrink: boolean }
@@ -228,6 +236,55 @@ export function MobileSortableMealEntry({
         {...listeners}
         className="touch-none flex-shrink-0 px-1.5 py-2 -my-1 -mr-0.5 text-muted-foreground/20 hover:text-muted-foreground/50 cursor-grab active:cursor-grabbing select-none"
         aria-label="Drag to move meal"
+      >
+        <GripVertical className="h-4 w-4" />
+      </div>
+    </div>
+  );
+}
+
+// Phase 3: draggable search result row — drag activates only from the grip handle,
+// leaving click/tap behaviour on the row button entirely intact.
+interface DraggableSearchResultRowProps {
+  mealId: number;
+  mealName: string;
+  sourceOrigin: "cookbook" | "freezer" | "packaged";
+  children: React.ReactNode;
+}
+
+export function DraggableSearchResultRow({
+  mealId,
+  mealName,
+  sourceOrigin,
+  children,
+}: DraggableSearchResultRowProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: `search-result-${mealId}`,
+    data: { type: "search-result", mealId, mealName, sourceOrigin } as SearchResultDragData,
+  });
+
+  const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className={`flex items-center w-full ${isDragging ? "opacity-30" : ""}`}
+    >
+      <div className="flex-1 min-w-0">{children}</div>
+      <div
+        ref={setActivatorNodeRef}
+        {...listeners}
+        className="touch-none flex-shrink-0 px-1.5 py-2 -my-1 text-muted-foreground/25 hover:text-muted-foreground/60 cursor-grab active:cursor-grabbing select-none"
+        aria-label="Drag to add to planner"
       >
         <GripVertical className="h-4 w-4" />
       </div>
