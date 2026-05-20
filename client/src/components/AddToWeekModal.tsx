@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -69,6 +69,21 @@ export function AddToWeekModal({ open, onClose, product }: Props) {
       days: (w as any).days ?? [],
     })),
   });
+
+  // When the provisioning pathway is chosen, pre-select whichever week is currently
+  // active in the planner (stored in localStorage). Without this, the modal always
+  // defaults to week 1, causing a mismatch when the planner is showing a different week.
+  useEffect(() => {
+    if (pathway !== "provisioning" || plannerWeeks.length === 0) return;
+    try {
+      const raw = localStorage.getItem("planner:active-week");
+      const weekNum = raw ? Number(JSON.parse(raw)) : 1;
+      const target = plannerWeeks.find(w => w.weekNumber === weekNum) ?? plannerWeeks[0];
+      if (target) setSelectedWeeks(new Set([target.id]));
+    } catch {
+      if (plannerWeeks[0]) setSelectedWeeks(new Set([plannerWeeks[0].id]));
+    }
+  }, [pathway, plannerWeeks]);
 
   function reset() {
     setPathway(null);

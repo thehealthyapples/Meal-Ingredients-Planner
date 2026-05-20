@@ -646,7 +646,7 @@ export default function WeeklyPlannerPage() {
 
   // ── Weekly provisioning (Phase 5) ─────────────────────────────────────────────
   const [provisioningOpen, setProvisioningOpen] = useState(false);
-  const { data: provisioningItems = [], refetch: refetchProvisioning } = useQuery<{
+  const { data: provisioningItems = [] } = useQuery<{
     id: number; weekId: number; name: string; mealId: number | null; note: string | null; createdAt: string;
   }[]>({
     queryKey: ["/api/planner/weeks", activeWeekId, "provisioning"],
@@ -656,6 +656,12 @@ export default function WeeklyPlannerPage() {
     },
     enabled: !!activeWeekId,
   });
+
+  // Auto-open provisioning tray when it first loads with items so users see additions
+  // from the Analyser without needing to manually scroll and expand.
+  useEffect(() => {
+    if (provisioningItems.length > 0) setProvisioningOpen(true);
+  }, [provisioningItems.length]);
 
   const deleteProvisioningMutation = useMutation({
     mutationFn: async (itemId: number) => {
