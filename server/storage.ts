@@ -1,4 +1,4 @@
-import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent, pantryIngredientKnowledge, PantryIngredientKnowledge, mealUpliftApplications, MealUpliftApplication, InsertMealUpliftApplication } from "@shared/schema";
+import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent, pantryIngredientKnowledge, PantryIngredientKnowledge, mealUpliftApplications, MealUpliftApplication, InsertMealUpliftApplication, weekProvisioningItems, WeekProvisioningItem } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
 import { eq, and, ilike, or, sql, inArray, isNull, isNotNull } from "drizzle-orm";
@@ -256,6 +256,11 @@ export interface IStorage {
   // Entry guests (Phase 5)
   getEntryGuests(entryId: number): Promise<import("@shared/household-eater").GuestEater[]>;
   setEntryGuests(entryId: number, guests: import("@shared/household-eater").GuestEater[]): Promise<void>;
+
+  // Weekly provisioning (Phase 5)
+  getWeekProvisioningItems(weekId: number): Promise<WeekProvisioningItem[]>;
+  addWeekProvisioningItem(weekId: number, name: string, mealId?: number | null, note?: string | null): Promise<WeekProvisioningItem>;
+  deleteWeekProvisioningItem(weekId: number, itemId: number): Promise<void>;
 
   // ── Basket Attribution ───────────────────────────────────────────────────────
   getShoppingListItemsWithAttribution(userId: number): Promise<ShoppingListItemWithAttribution[]>;
@@ -2738,6 +2743,23 @@ export class DatabaseStorage implements IStorage {
         eq(plannerWeekEaterOverrides.weekId, weekId),
         eq(plannerWeekEaterOverrides.eaterId, eaterId),
       ));
+  }
+
+  // ── Weekly Provisioning ───────────────────────────────────────────────────────
+
+  async getWeekProvisioningItems(weekId: number): Promise<WeekProvisioningItem[]> {
+    return db.select().from(weekProvisioningItems).where(eq(weekProvisioningItems.weekId, weekId));
+  }
+
+  async addWeekProvisioningItem(weekId: number, name: string, mealId?: number | null, note?: string | null): Promise<WeekProvisioningItem> {
+    const [item] = await db.insert(weekProvisioningItems).values({ weekId, name, mealId: mealId ?? null, note: note ?? null }).returning();
+    return item;
+  }
+
+  async deleteWeekProvisioningItem(weekId: number, itemId: number): Promise<void> {
+    await db.delete(weekProvisioningItems).where(
+      and(eq(weekProvisioningItems.id, itemId), eq(weekProvisioningItems.weekId, weekId))
+    );
   }
 
   // ── My Diary ─────────────────────────────────────────────────────────────────

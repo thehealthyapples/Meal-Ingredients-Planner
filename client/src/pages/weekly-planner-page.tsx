@@ -644,6 +644,31 @@ export default function WeeklyPlannerPage() {
 
   const activeWeekId = fullPlanner.find((w) => w.weekNumber === Number(activeWeek))?.id;
 
+  // ── Weekly provisioning (Phase 5) ─────────────────────────────────────────────
+  const [provisioningOpen, setProvisioningOpen] = useState(false);
+  const { data: provisioningItems = [], refetch: refetchProvisioning } = useQuery<{
+    id: number; weekId: number; name: string; mealId: number | null; note: string | null; createdAt: string;
+  }[]>({
+    queryKey: ["/api/planner/weeks", activeWeekId, "provisioning"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/planner/weeks/${activeWeekId}/provisioning`);
+      return res.json();
+    },
+    enabled: !!activeWeekId,
+  });
+
+  const deleteProvisioningMutation = useMutation({
+    mutationFn: async (itemId: number) => {
+      if (!activeWeekId) throw new Error("No active week");
+      const res = await apiRequest("DELETE", `/api/planner/weeks/${activeWeekId}/provisioning/${itemId}`);
+      if (!res.ok) throw new Error("Failed to delete");
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/weeks", activeWeekId, "provisioning"] });
+    },
+    onError: () => toast({ title: "Failed to remove item", variant: "destructive" }),
+  });
+
   const { data: weekOverrides = [] } = useQuery<WeekEaterOverride[]>({
     queryKey: ["/api/planner/weeks", activeWeekId, "eater-overrides"],
     queryFn: async () => {
@@ -2420,6 +2445,60 @@ export default function WeeklyPlannerPage() {
         ) : null}
       </DragOverlay>
       </DndContext>
+
+      {/* ── Weekly Provisioning Tray (Phase 5) ── */}
+      {activeWeekId && (
+        <div className="mt-4 mb-2" data-testid="section-weekly-provisioning">
+          <button
+            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors text-left"
+            onClick={() => setProvisioningOpen(v => !v)}
+            data-testid="button-toggle-provisioning"
+          >
+            <ShoppingCart className="h-4 w-4 text-emerald-600 shrink-0" />
+            <span className="text-sm font-medium text-foreground flex-1">Weekly Provisioning</span>
+            {provisioningItems.length > 0 && (
+              <span className="text-xs text-muted-foreground/70 mr-1">{provisioningItems.length} item{provisioningItems.length !== 1 ? "s" : ""}</span>
+            )}
+            {provisioningOpen
+              ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />
+              : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground/50 shrink-0" />}
+          </button>
+
+          {provisioningOpen && (
+            <div className="mt-1 px-3 py-2.5 rounded-lg border border-border bg-card/50 space-y-2" data-testid="section-provisioning-items">
+              <p className="text-[11px] text-muted-foreground/60 leading-relaxed">
+                Household items needed this week — not tied to a specific day. These inform shopping and availability.
+              </p>
+              {provisioningItems.length === 0 ? (
+                <p className="text-xs text-muted-foreground/50 py-1">
+                  No provisioning items yet. Use <span className="font-medium">Add to Week</span> from the Analyser to add household items here.
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  {provisioningItems.map(item => (
+                    <div key={item.id} className="flex items-center gap-2 group" data-testid={`prov-item-${item.id}`}>
+                      <ShoppingCart className="h-3 w-3 text-emerald-500/60 shrink-0" />
+                      <span className="flex-1 text-sm text-foreground">{item.name}</span>
+                      {item.note && (
+                        <span className="text-xs text-muted-foreground/60 truncate max-w-[120px]">{item.note}</span>
+                      )}
+                      <button
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive shrink-0"
+                        onClick={() => deleteProvisioningMutation.mutate(item.id)}
+                        aria-label="Remove provisioning item"
+                        data-testid={`button-remove-prov-${item.id}`}
+                        disabled={deleteProvisioningMutation.isPending}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Mobile long-press contextual action sheet ── */}
       <Sheet open={!!contextEntry} onOpenChange={(v) => { if (!v) setContextEntry(null); }}>

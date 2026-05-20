@@ -1122,6 +1122,20 @@ export type InsertHouseholdEater = z.infer<typeof insertHouseholdEaterSchema>;
 export type PlannerEntryEater = typeof plannerEntryEaters.$inferSelect;
 export type WeekEaterOverride = typeof plannerWeekEaterOverrides.$inferSelect;
 
+// ─── Weekly Provisioning ───────────────────────────────────────────────────────
+
+export const weekProvisioningItems = pgTable("week_provisioning_items", {
+  id: serial("id").primaryKey(),
+  weekId: integer("week_id").notNull().references(() => plannerWeeks.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  mealId: integer("meal_id"),
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type WeekProvisioningItem = typeof weekProvisioningItems.$inferSelect;
+export type InsertWeekProvisioningItem = typeof weekProvisioningItems.$inferInsert;
+
 // ─── My Diary ─────────────────────────────────────────────────────────────────
 
 export const foodDiaryDays = pgTable("food_diary_days", {

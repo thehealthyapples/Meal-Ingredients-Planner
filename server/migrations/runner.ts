@@ -1046,6 +1046,21 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-05-20_add_week_provisioning_items",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS week_provisioning_items (
+        id SERIAL PRIMARY KEY,
+        week_id INTEGER NOT NULL REFERENCES planner_weeks(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        meal_id INTEGER,
+        note TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      "CREATE INDEX IF NOT EXISTS wpi_week_id_idx ON week_provisioning_items (week_id)",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

@@ -36,6 +36,7 @@ import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import { useSoundEffects } from "@/hooks/use-sound-effects";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import AnalyserDetailV2 from "@/components/analyser/AnalyserDetailV2";
+import { AddToWeekModal } from "@/components/AddToWeekModal";
 import { PageHeader } from "@/components/PageHeader";
 
 interface ParsedIngredient {
@@ -403,6 +404,7 @@ export default function ProductsPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductResult | null>(null);
+  const [addToWeekProduct, setAddToWeekProduct] = useState<ProductResult | null>(null);
   const [compareProducts, setCompareProducts] = useState<ProductResult[]>([]);
   const [showCompare, setShowCompare] = useState(false);
   const [showDetailWFRecipe, setShowDetailWFRecipe] = useState(false);
@@ -1581,6 +1583,10 @@ export default function ProductsPage() {
                 onAddToBasket={() => addToList.mutate(snap)}
                 onAddToQuickList={() => handleAddToQuickList(snap)}
                 onLinkToTemplate={() => linkToTemplate.mutate(snap)}
+                onAddToWeek={() => {
+                  setSelectedProduct(null);
+                  setAddToWeekProduct(snap);
+                }}
                 onViewProduct={(p) => handleProductSelect(p as ProductResult)}
                 addToBasketPending={addToList.isPending}
                 linkToTemplatePending={linkToTemplate.isPending}
@@ -1592,6 +1598,14 @@ export default function ProductsPage() {
         </Dialog>
 
       </div>
+
+      {addToWeekProduct && (
+        <AddToWeekModal
+          open={addToWeekProduct !== null}
+          product={addToWeekProduct}
+          onClose={() => setAddToWeekProduct(null)}
+        />
+      )}
 
       <Dialog open={showCompare} onOpenChange={setShowCompare}>
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto" data-testid="dialog-compare">

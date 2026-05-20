@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   ShoppingBasket, ListPlus, Layers, Loader2, ChevronDown, ChevronUp,
-  Clock, ArrowRight, Info,
+  Clock, ArrowRight, Info, CalendarDays,
 } from "lucide-react";
 import AppleRatingWithTooltip from "@/components/AppleRating";
 import { buildAnalyserViewModel } from "@/lib/analyser-view-model";
@@ -23,6 +23,7 @@ interface Props {
   onAddToBasket: () => void;
   onAddToQuickList?: () => void;
   onLinkToTemplate: () => void;
+  onAddToWeek?: () => void;
   onViewProduct: (product: InputProduct) => void;
   addToBasketPending?: boolean;
   linkToTemplatePending?: boolean;
@@ -104,6 +105,7 @@ export default function AnalyserDetailV2({
   onAddToBasket,
   onAddToQuickList,
   onLinkToTemplate,
+  onAddToWeek,
   onViewProduct,
   addToBasketPending,
   linkToTemplatePending,
@@ -257,6 +259,17 @@ export default function AnalyserDetailV2({
               </Button>
             )}
             </div>
+            {onAddToWeek && (
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={onAddToWeek}
+                data-testid="button-v2-add-to-week"
+              >
+                <CalendarDays className="h-4 w-4" />
+                Add to Week
+              </Button>
+            )}
             <Button
               variant="ghost"
               className="w-full gap-2 text-muted-foreground hover:text-foreground"

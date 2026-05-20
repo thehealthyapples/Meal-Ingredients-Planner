@@ -7864,6 +7864,66 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // ── Weekly Provisioning (Phase 5) ────────────────────────────────────────────
+
+  app.get("/api/planner/weeks/:weekId/provisioning", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const weekId = Number(req.params.weekId);
+      if (isNaN(weekId)) return res.status(400).json({ message: "Invalid week ID" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const week = await storage.getPlannerWeek(weekId);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Week not found" });
+      const items = await storage.getWeekProvisioningItems(weekId);
+      res.json(items);
+    } catch (err) {
+      console.error("[Provisioning] GET error:", err);
+      res.status(500).json({ message: "Failed to fetch provisioning items" });
+    }
+  });
+
+  app.post("/api/planner/weeks/:weekId/provisioning", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const weekId = Number(req.params.weekId);
+      if (isNaN(weekId)) return res.status(400).json({ message: "Invalid week ID" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const week = await storage.getPlannerWeek(weekId);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Week not found" });
+      const { name, mealId, note } = req.body as { name?: unknown; mealId?: unknown; note?: unknown };
+      if (!name || typeof name !== "string" || name.trim().length === 0) {
+        return res.status(400).json({ message: "name is required" });
+      }
+      const item = await storage.addWeekProvisioningItem(
+        weekId,
+        name.trim(),
+        typeof mealId === "number" ? mealId : null,
+        typeof note === "string" ? note.trim() : null,
+      );
+      res.status(201).json(item);
+    } catch (err) {
+      console.error("[Provisioning] POST error:", err);
+      res.status(500).json({ message: "Failed to add provisioning item" });
+    }
+  });
+
+  app.delete("/api/planner/weeks/:weekId/provisioning/:itemId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const weekId = Number(req.params.weekId);
+      const itemId = Number(req.params.itemId);
+      if (isNaN(weekId) || isNaN(itemId)) return res.status(400).json({ message: "Invalid ID" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const week = await storage.getPlannerWeek(weekId);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Week not found" });
+      await storage.deleteWeekProvisioningItem(weekId, itemId);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("[Provisioning] DELETE error:", err);
+      res.status(500).json({ message: "Failed to delete provisioning item" });
+    }
+  });
+
   // ── Meal Adaptation (Phase 3) ─────────────────────────────────────────────────
 
   // Trigger AI adaptation for a planner entry.
