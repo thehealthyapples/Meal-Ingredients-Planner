@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { subscribeStagingBus } from "@/lib/planner-staging-bus";
-import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, Globe, Copy, Share2 } from "lucide-react";
+import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, Globe, Copy, Share2, Microscope } from "lucide-react";
+import { PlannerAnalyserContent } from "@/components/PlannerAnalyserContent";
 import { useToast } from "@/hooks/use-toast";
 import { DraggableProposalCard } from "@/components/PlannerDragDrop";
 import { Button } from "@/components/ui/button";
@@ -1206,6 +1207,14 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               <LayoutGrid className="h-4 w-4 text-primary/70" />
               <span className="text-[11px] font-medium">Templates</span>
             </button>
+            <button
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card/80 hover:bg-accent/50 px-2 py-2.5 text-foreground transition-colors"
+              onClick={() => onSetMode("analyser")}
+              data-testid="button-idle-analyser"
+            >
+              <Microscope className="h-4 w-4 text-primary/70" />
+              <span className="text-[11px] font-medium">Analyse</span>
+            </button>
           </div>
         )}
       </div>
@@ -1538,6 +1547,7 @@ function getPanelIcon(mode: AssistantMode) {
   if (mode === "settings") return <Settings className="h-4 w-4 text-primary" />;
   if (mode === "resolve") return <BookOpen className="h-4 w-4 text-primary" />;
   if (mode === "placeholder-review") return <ClipboardList className="h-4 w-4 text-primary" />;
+  if (mode === "analyser") return <Microscope className="h-4 w-4 text-primary" />;
   return <ScanLine className="h-4 w-4 text-primary" />;
 }
 
@@ -1553,6 +1563,7 @@ function getPanelTitle(mode: AssistantMode, dayLabel?: string) {
   if (mode === "settings") return "Planner Options";
   if (mode === "resolve") return "Link a Recipe";
   if (mode === "placeholder-review") return "Unlinked Meals";
+  if (mode === "analyser") return "Analyse Products";
   return "Planner Assistant";
 }
 
@@ -1648,6 +1659,7 @@ export function PlannerAssistantPanel({
         />
       )}
       {mode === "smart" && <SmartContent />}
+      {mode === "analyser" && <PlannerAnalyserContent />}
       {mode === "settings" && <PlannerSettingsContent />}
       {mode === "templates" && (
         <TemplatesPanel inline open onClose={onClose} user={user} />
