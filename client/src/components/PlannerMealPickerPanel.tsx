@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,20 @@ import { useToast } from "@/hooks/use-toast";
 import type { Meal } from "@shared/schema";
 import { scoreMealSearch } from "@shared/food-synonyms";
 import { usePlannerMealSearch, type WebSearchRecipe, type PlannerMealFilterMode } from "@/hooks/use-planner-meal-search";
+import { MealPreviewBubble, MealPreviewInline, useMealPreview } from "@/components/MealPreviewBubble";
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" ? window.innerWidth < 768 : false,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
 
 export interface EntryTarget {
   dayId: number;
@@ -61,12 +75,33 @@ export function PlannerMealPickerPanel({
 }: PlannerMealPickerPanelProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const isMobile = useIsMobile();
   const [mealSearch, setMealSearch] = useState("");
   const [mealFilter, setMealFilter] = useState<"all" | "cookbook" | "planner" | "ready" | "product" | "web">("all");
   const [productQuery, setProductQuery] = useState("");
   const [productResults, setProductResults] = useState<PlannerProductResult[]>([]);
   const [productSearching, setProductSearching] = useState(false);
   const [productRetailer, setProductRetailer] = useState("");
+
+  const {
+    previewItem,
+    previewAnchor,
+    mobilePreviewId,
+    setMobilePreviewId,
+    openPreview,
+    scheduleClose,
+    cancelClose,
+    closePreview,
+  } = useMealPreview();
+
+  useEffect(() => {
+    if (!previewItem && !mobilePreviewId) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { closePreview(); setMobilePreviewId(null); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [previewItem, mobilePreviewId, closePreview, setMobilePreviewId]);
 
   // Web search + includeWeb session persistence managed by the shared hook.
   // filteredMeals from the hook is not used here — the component keeps its own
@@ -337,130 +372,21 @@ export function PlannerMealPickerPanel({
                   </div>
                 )}
                 {webResults.map(recipe => (
-                  <button
-                    key={recipe.id}
-                    className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 text-left disabled:opacity-50"
-                    onClick={() => handleAddWebRecipe(recipe)}
-                    disabled={!!importingWebId || addingEntry}
-                    data-testid={`button-select-web-${recipe.id}`}
-                  >
-                    {recipe.image ? (
-                      <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
-                    ) : (
-                      <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-                        <Globe className="h-4 w-4 text-muted-foreground/40" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{recipe.name}</p>
-                      <div className="flex items-center gap-1 flex-wrap mt-0.5">
-                        <Badge variant="outline" className="text-[10px] px-1 border-orange-300/60 text-orange-600 dark:border-orange-600/40 dark:text-orange-400">
-                          Web recipe
-                        </Badge>
-                        {recipe.source && (
-                          <span className="text-[10px] text-muted-foreground/60">{recipe.source}</span>
-                        )}
-                      </div>
-                    </div>
-                    {importingWebId === recipe.id ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
-                    ) : null}
-                  </button>
-                ))}
-                {!webLoading && webResults.length === 0 && (
-                  <p className="text-center text-muted-foreground text-sm py-6">No web recipes found for &ldquo;{mealSearch}&rdquo;</p>
-                )}
-              </>
-            )
-          ) : (
-            <>
-              {filteredMeals.length === 0 && !includeWeb ? (
-                mealFilter === "cookbook" && !mealSearch.trim() ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <ChefHat className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                    <p className="text-sm font-medium">Search your cookbook</p>
-                    <p className="text-xs mt-1 opacity-70">Type a meal name or ingredient above</p>
-                  </div>
-                ) : mealSearch.trim() ? (
-                  <p className="text-center text-muted-foreground text-sm py-6">No meals found for &ldquo;{mealSearch}&rdquo;</p>
-                ) : (
-                  <p className="text-center text-muted-foreground text-sm py-6">No meals found</p>
-                )
-              ) : (
-                filteredMeals.map(meal => (
-                  <button
-                    key={meal.id}
-                    className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
-                    onClick={() => {
-                      if (!target) {
-                        toast({ title: "Select a meal slot", description: "Click a slot in the planner to add this recipe." });
-                        return;
-                      }
-                      onSelect(meal.id);
-                    }}
-                    disabled={addingEntry}
-                    data-testid={`button-select-meal-${meal.id}`}
-                  >
-                    {meal.isReadyMeal ? (
-                      <div className="h-9 w-9 rounded-md bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                        <UtensilsCrossed className="h-4 w-4 text-green-500/40" />
-                      </div>
-                    ) : meal.imageUrl ? (
-                      <img src={meal.imageUrl} alt={meal.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
-                    ) : (
-                      <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-                        <ChefHat className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{meal.name}</p>
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {(meal as any).isHouseholdSafeVariant ? (
-                          <Badge variant="outline" className="text-[10px] px-1 border-teal-400/60 text-teal-600 dark:text-teal-400">Household-safe</Badge>
-                        ) : !meal.isReadyMeal && !(meal as any).isSystemMeal ? (
-                          <Badge variant="outline" className="text-[10px] px-1 border-blue-400/60 text-blue-500">Cookbook</Badge>
-                        ) : null}
-                        {meal.isReadyMeal && (
-                          <Badge variant="outline" className="text-[10px] px-1">Ready Meal</Badge>
-                        )}
-                        {meal.audience === "baby" && (
-                          <Badge variant="outline" className="text-[10px] px-1 border-pink-400/60 text-pink-500">
-                            <Baby className="h-2.5 w-2.5 mr-0.5" />Baby
-                          </Badge>
-                        )}
-                        {meal.audience === "child" && (
-                          <Badge variant="outline" className="text-[10px] px-1 border-sky-400/60 text-sky-500">
-                            <PersonStanding className="h-2.5 w-2.5 mr-0.5" />Child
-                          </Badge>
-                        )}
-                        {meal.isDrink && (
-                          <Badge variant="outline" className="text-[10px] px-1 border-purple-400/60 text-purple-500">
-                            <Wine className="h-2.5 w-2.5 mr-0.5" />Drink
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                ))
-              )}
-
-              {/* Phase 2: Web results — hydrate below cookbook results, never replace them */}
-              {includeWeb && mealSearch.trim().length >= 2 && (webLoading || webResults.length > 0) && (
-                <div className="mt-1" data-testid="section-web-results">
-                  <div className="flex items-center gap-2 py-1.5">
-                    <div className="h-px flex-1 bg-border/50" />
-                    <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wide flex items-center gap-1">
-                      <Globe className="h-3 w-3" />
-                      From the web
-                    </span>
-                    {webLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />}
-                    <div className="h-px flex-1 bg-border/50" />
-                  </div>
-                  {webResults.map(recipe => (
+                  <div key={recipe.id}>
                     <button
-                      key={recipe.id}
                       className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 text-left disabled:opacity-50"
-                      onClick={() => handleAddWebRecipe(recipe)}
+                      onClick={() => {
+                        if (isMobile) {
+                          const pid = `web-${recipe.id}`;
+                          setMobilePreviewId(mobilePreviewId === pid ? null : pid);
+                          return;
+                        }
+                        handleAddWebRecipe(recipe);
+                      }}
+                      onMouseEnter={(e) => !isMobile && openPreview({ kind: "web", recipe }, e.currentTarget)}
+                      onMouseLeave={() => !isMobile && scheduleClose()}
+                      onFocus={(e) => !isMobile && openPreview({ kind: "web", recipe }, e.currentTarget)}
+                      onBlur={() => !isMobile && scheduleClose()}
                       disabled={!!importingWebId || addingEntry}
                       data-testid={`button-select-web-${recipe.id}`}
                     >
@@ -486,6 +412,190 @@ export function PlannerMealPickerPanel({
                         <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
                       ) : null}
                     </button>
+                    {isMobile && mobilePreviewId === `web-${recipe.id}` && (
+                      <MealPreviewInline
+                        item={{ kind: "web", recipe }}
+                        onAction={() => {
+                          setMobilePreviewId(null);
+                          handleAddWebRecipe(recipe);
+                        }}
+                        actionLabel="Import & add"
+                        actionDisabled={!!importingWebId || addingEntry}
+                        onDismiss={() => setMobilePreviewId(null)}
+                      />
+                    )}
+                  </div>
+                ))}
+                {!webLoading && webResults.length === 0 && (
+                  <p className="text-center text-muted-foreground text-sm py-6">No web recipes found for &ldquo;{mealSearch}&rdquo;</p>
+                )}
+              </>
+            )
+          ) : (
+            <>
+              {filteredMeals.length === 0 && !includeWeb ? (
+                mealFilter === "cookbook" && !mealSearch.trim() ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <ChefHat className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                    <p className="text-sm font-medium">Search your cookbook</p>
+                    <p className="text-xs mt-1 opacity-70">Type a meal name or ingredient above</p>
+                  </div>
+                ) : mealSearch.trim() ? (
+                  <p className="text-center text-muted-foreground text-sm py-6">No meals found for &ldquo;{mealSearch}&rdquo;</p>
+                ) : (
+                  <p className="text-center text-muted-foreground text-sm py-6">No meals found</p>
+                )
+              ) : (
+                filteredMeals.map(meal => (
+                  <div key={meal.id}>
+                    <button
+                      className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
+                      onClick={() => {
+                        if (isMobile) {
+                          const pid = `meal-${meal.id}`;
+                          setMobilePreviewId(mobilePreviewId === pid ? null : pid);
+                          return;
+                        }
+                        if (!target) {
+                          toast({ title: "Select a meal slot", description: "Click a slot in the planner to add this recipe." });
+                          return;
+                        }
+                        onSelect(meal.id);
+                      }}
+                      onMouseEnter={(e) => !isMobile && openPreview({ kind: "meal", meal }, e.currentTarget)}
+                      onMouseLeave={() => !isMobile && scheduleClose()}
+                      onFocus={(e) => !isMobile && openPreview({ kind: "meal", meal }, e.currentTarget)}
+                      onBlur={() => !isMobile && scheduleClose()}
+                      disabled={addingEntry}
+                      aria-describedby={previewItem && previewItem.kind === "meal" && previewItem.meal.id === meal.id ? `preview-meal-${meal.id}` : undefined}
+                      data-testid={`button-select-meal-${meal.id}`}
+                    >
+                      {meal.isReadyMeal ? (
+                        <div className="h-9 w-9 rounded-md bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                          <UtensilsCrossed className="h-4 w-4 text-green-500/40" />
+                        </div>
+                      ) : meal.imageUrl ? (
+                        <img src={meal.imageUrl} alt={meal.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                          <ChefHat className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{meal.name}</p>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {(meal as any).isHouseholdSafeVariant ? (
+                            <Badge variant="outline" className="text-[10px] px-1 border-teal-400/60 text-teal-600 dark:text-teal-400">Household-safe</Badge>
+                          ) : !meal.isReadyMeal && !(meal as any).isSystemMeal ? (
+                            <Badge variant="outline" className="text-[10px] px-1 border-blue-400/60 text-blue-500">Cookbook</Badge>
+                          ) : null}
+                          {meal.isReadyMeal && (
+                            <Badge variant="outline" className="text-[10px] px-1">Ready Meal</Badge>
+                          )}
+                          {meal.audience === "baby" && (
+                            <Badge variant="outline" className="text-[10px] px-1 border-pink-400/60 text-pink-500">
+                              <Baby className="h-2.5 w-2.5 mr-0.5" />Baby
+                            </Badge>
+                          )}
+                          {meal.audience === "child" && (
+                            <Badge variant="outline" className="text-[10px] px-1 border-sky-400/60 text-sky-500">
+                              <PersonStanding className="h-2.5 w-2.5 mr-0.5" />Child
+                            </Badge>
+                          )}
+                          {meal.isDrink && (
+                            <Badge variant="outline" className="text-[10px] px-1 border-purple-400/60 text-purple-500">
+                              <Wine className="h-2.5 w-2.5 mr-0.5" />Drink
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                    {isMobile && mobilePreviewId === `meal-${meal.id}` && (
+                      <MealPreviewInline
+                        item={{ kind: "meal", meal }}
+                        onAction={() => {
+                          setMobilePreviewId(null);
+                          if (!target) {
+                            toast({ title: "Select a meal slot", description: "Click a slot in the planner to add this recipe." });
+                            return;
+                          }
+                          onSelect(meal.id);
+                        }}
+                        actionLabel={target ? "Add to planner" : "Select recipe"}
+                        actionDisabled={addingEntry}
+                        onDismiss={() => setMobilePreviewId(null)}
+                      />
+                    )}
+                  </div>
+                ))
+              )}
+
+              {/* Phase 2: Web results — hydrate below cookbook results, never replace them */}
+              {includeWeb && mealSearch.trim().length >= 2 && (webLoading || webResults.length > 0) && (
+                <div className="mt-1" data-testid="section-web-results">
+                  <div className="flex items-center gap-2 py-1.5">
+                    <div className="h-px flex-1 bg-border/50" />
+                    <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wide flex items-center gap-1">
+                      <Globe className="h-3 w-3" />
+                      From the web
+                    </span>
+                    {webLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />}
+                    <div className="h-px flex-1 bg-border/50" />
+                  </div>
+                  {webResults.map(recipe => (
+                    <div key={recipe.id}>
+                      <button
+                        className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 text-left disabled:opacity-50"
+                        onClick={() => {
+                          if (isMobile) {
+                            const pid = `web-inline-${recipe.id}`;
+                            setMobilePreviewId(mobilePreviewId === pid ? null : pid);
+                            return;
+                          }
+                          handleAddWebRecipe(recipe);
+                        }}
+                        onMouseEnter={(e) => !isMobile && openPreview({ kind: "web", recipe }, e.currentTarget)}
+                        onMouseLeave={() => !isMobile && scheduleClose()}
+                        onFocus={(e) => !isMobile && openPreview({ kind: "web", recipe }, e.currentTarget)}
+                        onBlur={() => !isMobile && scheduleClose()}
+                        disabled={!!importingWebId || addingEntry}
+                        data-testid={`button-select-web-${recipe.id}`}
+                      >
+                        {recipe.image ? (
+                          <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                            <Globe className="h-4 w-4 text-muted-foreground/40" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{recipe.name}</p>
+                          <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                            <Badge variant="outline" className="text-[10px] px-1 border-orange-300/60 text-orange-600 dark:border-orange-600/40 dark:text-orange-400">
+                              Web recipe
+                            </Badge>
+                            {recipe.source && (
+                              <span className="text-[10px] text-muted-foreground/60">{recipe.source}</span>
+                            )}
+                          </div>
+                        </div>
+                        {importingWebId === recipe.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
+                        ) : null}
+                      </button>
+                      {isMobile && mobilePreviewId === `web-inline-${recipe.id}` && (
+                        <MealPreviewInline
+                          item={{ kind: "web", recipe }}
+                          onAction={() => {
+                            setMobilePreviewId(null);
+                            handleAddWebRecipe(recipe);
+                          }}
+                          actionLabel="Import & add"
+                          actionDisabled={!!importingWebId || addingEntry}
+                          onDismiss={() => setMobilePreviewId(null)}
+                        />
+                      )}
+                    </div>
                   ))}
                   {!webLoading && webResults.length === 0 && mealSearch.trim().length >= 2 && (
                     <p className="text-center text-[11px] text-muted-foreground/60 py-3">No web recipes found</p>
@@ -582,6 +692,16 @@ export function PlannerMealPickerPanel({
             );
           })}
         </div>
+      )}
+
+      {/* Desktop floating preview bubble */}
+      {!isMobile && previewItem && previewAnchor && (
+        <MealPreviewBubble
+          item={previewItem}
+          anchor={previewAnchor}
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
+        />
       )}
     </div>
   );

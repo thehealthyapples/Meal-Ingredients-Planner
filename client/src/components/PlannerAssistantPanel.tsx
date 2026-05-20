@@ -16,6 +16,7 @@ import type { User, Meal } from "@shared/schema";
 import { PlannerMealPickerPanel } from "@/components/PlannerMealPickerPanel";
 import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMealPickerPanel";
 import { usePlannerMealSearch, type WebSearchRecipe } from "@/hooks/use-planner-meal-search";
+import { MealPreviewBubble, MealPreviewInline, useMealPreview } from "@/components/MealPreviewBubble";
 import { DayViewDrawer } from "@/components/day-view-drawer";
 import { PlannerBulkAssignPanel } from "@/components/PlannerBulkAssignPanel";
 import type { FullDay, FullWeek } from "@/lib/planner-types";
@@ -577,6 +578,27 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
   const qc = useQueryClient();
   const [search, setSearch] = useState(mealName);
   const [importingWebId, setImportingWebId] = useState<string | null>(null);
+  const isMobileResolve = typeof window !== "undefined" ? window.innerWidth < 768 : false;
+
+  const {
+    previewItem: resolvePreviewItem,
+    previewAnchor: resolvePreviewAnchor,
+    mobilePreviewId: resolveMobileId,
+    setMobilePreviewId: setResolveMobileId,
+    openPreview: openResolvePreview,
+    scheduleClose: scheduleResolveClose,
+    cancelClose: cancelResolveClose,
+    closePreview: closeResolvePreview,
+  } = useMealPreview();
+
+  useEffect(() => {
+    if (!resolvePreviewItem && !resolveMobileId) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { closeResolvePreview(); setResolveMobileId(null); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [resolvePreviewItem, resolveMobileId, closeResolvePreview, setResolveMobileId]);
 
   // Shared hook owns: filteredMeals (now with scoreMealSearch), web fetch, includeWeb persistence
   const { filteredMeals, webResults, webLoading, includeWeb, setIncludeWeb } = usePlannerMealSearch({
@@ -675,28 +697,49 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
           </div>
         ) : (
           filteredMeals.map(meal => (
-            <button
-              key={meal.id}
-              className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-accent/40 text-left transition-colors disabled:opacity-50"
-              onClick={() => onSelectRecipe(meal.id)}
-              disabled={isResolving || !!importingWebId}
-              data-testid={`button-resolve-select-${meal.id}`}
-            >
-              {meal.imageUrl ? (
-                <img src={meal.imageUrl} alt={meal.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
-              ) : (
-                <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-                  <ChefHat className="h-4 w-4 text-muted-foreground/40" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate text-foreground">{meal.name}</p>
-                {meal.servings > 1 && (
-                  <p className="text-xs text-muted-foreground">{meal.servings} servings</p>
+            <div key={meal.id}>
+              <button
+                className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-accent/40 text-left transition-colors disabled:opacity-50"
+                onClick={() => {
+                  if (isMobileResolve) {
+                    const pid = `resolve-meal-${meal.id}`;
+                    setResolveMobileId(resolveMobileId === pid ? null : pid);
+                    return;
+                  }
+                  onSelectRecipe(meal.id);
+                }}
+                onMouseEnter={(e) => !isMobileResolve && openResolvePreview({ kind: "meal", meal }, e.currentTarget)}
+                onMouseLeave={() => !isMobileResolve && scheduleResolveClose()}
+                onFocus={(e) => !isMobileResolve && openResolvePreview({ kind: "meal", meal }, e.currentTarget)}
+                onBlur={() => !isMobileResolve && scheduleResolveClose()}
+                disabled={isResolving || !!importingWebId}
+                data-testid={`button-resolve-select-${meal.id}`}
+              >
+                {meal.imageUrl ? (
+                  <img src={meal.imageUrl} alt={meal.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                ) : (
+                  <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                    <ChefHat className="h-4 w-4 text-muted-foreground/40" />
+                  </div>
                 )}
-              </div>
-              {isResolving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
-            </button>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate text-foreground">{meal.name}</p>
+                  {meal.servings > 1 && (
+                    <p className="text-xs text-muted-foreground">{meal.servings} servings</p>
+                  )}
+                </div>
+                {isResolving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />}
+              </button>
+              {isMobileResolve && resolveMobileId === `resolve-meal-${meal.id}` && (
+                <MealPreviewInline
+                  item={{ kind: "meal", meal }}
+                  onAction={() => { setResolveMobileId(null); onSelectRecipe(meal.id); }}
+                  actionLabel="Use this recipe"
+                  actionDisabled={isResolving}
+                  onDismiss={() => setResolveMobileId(null)}
+                />
+              )}
+            </div>
           ))
         )}
 
@@ -713,33 +756,54 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
               <div className="h-px flex-1 bg-border/50" />
             </div>
             {webResults.map(recipe => (
-              <button
-                key={recipe.id}
-                className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 text-left disabled:opacity-50"
-                onClick={() => handleImportWebRecipe(recipe)}
-                disabled={isResolving || !!importingWebId}
-                data-testid={`button-resolve-web-${recipe.id}`}
-              >
-                {recipe.image ? (
-                  <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
-                ) : (
-                  <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-                    <Globe className="h-4 w-4 text-muted-foreground/40" />
+              <div key={recipe.id}>
+                <button
+                  className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 text-left disabled:opacity-50"
+                  onClick={() => {
+                    if (isMobileResolve) {
+                      const pid = `resolve-web-${recipe.id}`;
+                      setResolveMobileId(resolveMobileId === pid ? null : pid);
+                      return;
+                    }
+                    handleImportWebRecipe(recipe);
+                  }}
+                  onMouseEnter={(e) => !isMobileResolve && openResolvePreview({ kind: "web", recipe }, e.currentTarget)}
+                  onMouseLeave={() => !isMobileResolve && scheduleResolveClose()}
+                  onFocus={(e) => !isMobileResolve && openResolvePreview({ kind: "web", recipe }, e.currentTarget)}
+                  onBlur={() => !isMobileResolve && scheduleResolveClose()}
+                  disabled={isResolving || !!importingWebId}
+                  data-testid={`button-resolve-web-${recipe.id}`}
+                >
+                  {recipe.image ? (
+                    <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                  ) : (
+                    <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                      <Globe className="h-4 w-4 text-muted-foreground/40" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{recipe.name}</p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="text-[10px] text-orange-600 dark:text-orange-400 border border-orange-300/60 dark:border-orange-600/40 px-1 rounded">Web</span>
+                      {recipe.source && (
+                        <span className="text-[10px] text-muted-foreground/60">{recipe.source}</span>
+                      )}
+                    </div>
                   </div>
+                  {importingWebId === recipe.id
+                    ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
+                    : null}
+                </button>
+                {isMobileResolve && resolveMobileId === `resolve-web-${recipe.id}` && (
+                  <MealPreviewInline
+                    item={{ kind: "web", recipe }}
+                    onAction={() => { setResolveMobileId(null); handleImportWebRecipe(recipe); }}
+                    actionLabel="Import & use"
+                    actionDisabled={isResolving || !!importingWebId}
+                    onDismiss={() => setResolveMobileId(null)}
+                  />
                 )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{recipe.name}</p>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    <span className="text-[10px] text-orange-600 dark:text-orange-400 border border-orange-300/60 dark:border-orange-600/40 px-1 rounded">Web</span>
-                    {recipe.source && (
-                      <span className="text-[10px] text-muted-foreground/60">{recipe.source}</span>
-                    )}
-                  </div>
-                </div>
-                {importingWebId === recipe.id
-                  ? <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
-                  : null}
-              </button>
+              </div>
             ))}
             {!webLoading && webResults.length === 0 && search.trim().length >= 2 && (
               <p className="text-center text-[11px] text-muted-foreground/60 py-3">No web recipes found</p>
@@ -760,6 +824,16 @@ function ResolveSearchContent({ mealName, meals, onSelectRecipe, onBack, isResol
           </p>
         )}
       </div>
+
+      {/* Desktop floating preview bubble */}
+      {!isMobileResolve && resolvePreviewItem && resolvePreviewAnchor && (
+        <MealPreviewBubble
+          item={resolvePreviewItem}
+          anchor={resolvePreviewAnchor}
+          onMouseEnter={cancelResolveClose}
+          onMouseLeave={scheduleResolveClose}
+        />
+      )}
     </div>
   );
 }
