@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { subscribeStagingBus } from "@/lib/planner-staging-bus";
-import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, Globe } from "lucide-react";
+import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, Globe, Copy, Share2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { DraggableProposalCard } from "@/components/PlannerDragDrop";
 import { Button } from "@/components/ui/button";
@@ -97,6 +97,8 @@ interface PlannerAssistantPanelProps {
   onBackToHub?: () => void;
   /** Phase A: proposal ID consumed by drag-to-planner; forwarded to IdlePanelContent for removal */
   consumedProposalId?: string | null;
+  /** Phase 2: open share-plan dialog from hub Manage section */
+  onSharePlan?: () => void;
 }
 
 function useIsMobile() {
@@ -984,20 +986,21 @@ const INTENT_MEAL_TYPES = [
   { key: "snacks",    label: "Snack",     icon: Cookie },
 ] as const;
 
-// ── Workspace Phase A: section open/close persistence ─────────────────────────
+// ── Workspace Phase A+2: section open/close persistence ──────────────────────
 const WORKSPACE_SECTIONS_KEY = "planner-workspace-sections";
-interface WorkspaceSections { plan: boolean; addMeals: boolean; continuePlanning: boolean; }
+interface WorkspaceSections { plan: boolean; addMeals: boolean; manage: boolean; continuePlanning: boolean; }
 function loadWorkspaceSections(): WorkspaceSections {
   try {
     const raw = sessionStorage.getItem(WORKSPACE_SECTIONS_KEY);
-    if (!raw) return { plan: true, addMeals: true, continuePlanning: true };
+    if (!raw) return { plan: true, addMeals: true, manage: true, continuePlanning: true };
     const p = JSON.parse(raw) as Record<string, unknown>;
     return {
       plan: typeof p.plan === "boolean" ? p.plan : true,
       addMeals: typeof p.addMeals === "boolean" ? p.addMeals : true,
+      manage: typeof p.manage === "boolean" ? p.manage : true,
       continuePlanning: typeof p.continuePlanning === "boolean" ? p.continuePlanning : true,
     };
-  } catch { return { plan: true, addMeals: true, continuePlanning: true }; }
+  } catch { return { plan: true, addMeals: true, manage: true, continuePlanning: true }; }
 }
 function saveWorkspaceSections(s: WorkspaceSections): void {
   try { sessionStorage.setItem(WORKSPACE_SECTIONS_KEY, JSON.stringify(s)); } catch {}
@@ -1017,6 +1020,8 @@ interface IdlePanelContentProps {
   onScanRecipe?: () => void;
   /** Phase A: proposal ID consumed by drag-to-planner; triggers removal from tray */
   consumedProposalId?: string | null;
+  /** Phase 2: open share-plan dialog from hub */
+  onSharePlan?: () => void;
 }
 
 interface ProposalItem {
@@ -1079,7 +1084,7 @@ function loadTraySession(): ProposalItem[] | null {
 // banner re-appearing on every mode switch (which unmounts/remounts IdlePanelContent).
 let _traySessionRestored = false;
 
-function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeholderCount = 0, onBrowseRecipes, onBuildRecipe, onScanRecipe, consumedProposalId }: IdlePanelContentProps) {
+function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeholderCount = 0, onBrowseRecipes, onBuildRecipe, onScanRecipe, consumedProposalId, onSharePlan }: IdlePanelContentProps) {
   const [intentOpen, setIntentOpen] = useState(false);
   const [intentName, setIntentName] = useState("");
   const [intentMealType, setIntentMealType] = useState<string>("dinner");
@@ -1090,15 +1095,16 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
   const [proposalMealType, setProposalMealType] = useState<string>("dinner");
   const [trayRestored, setTrayRestored] = useState(false);
 
-  // Workspace Phase A: persist section open/close state across mode switches
+  // Phase A+2: persist section open/close state across mode switches
   const [planWeekOpen, setPlanWeekOpen] = useState(() => loadWorkspaceSections().plan);
   const [addMealsOpen, setAddMealsOpen] = useState(() => loadWorkspaceSections().addMeals);
+  const [manageOpen, setManageOpen] = useState(() => loadWorkspaceSections().manage);
   const hasContinueItems = proposals.length > 0 || placeholderCount > 0;
   const [continuePlanningOpen, setContinuePlanningOpen] = useState(() => loadWorkspaceSections().continuePlanning);
 
   useEffect(() => {
-    saveWorkspaceSections({ plan: planWeekOpen, addMeals: addMealsOpen, continuePlanning: continuePlanningOpen });
-  }, [planWeekOpen, addMealsOpen, continuePlanningOpen]);
+    saveWorkspaceSections({ plan: planWeekOpen, addMeals: addMealsOpen, manage: manageOpen, continuePlanning: continuePlanningOpen });
+  }, [planWeekOpen, addMealsOpen, manageOpen, continuePlanningOpen]);
 
   // Phase A: restore from session on mount. Banner only fires on first mount per
   // page load (_traySessionRestored flag) — silent on subsequent mode-switch remounts.
@@ -1322,7 +1328,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               </div>
             )}
 
-            {/* Phase 5D+5G: Proposal staging tray — compact */}
+            {/* Phase 2: Proposal staging input only — cards live in Review & Place */}
             <div data-testid="panel-proposal-tray">
               <div className="flex gap-1.5 flex-wrap">
                 <input
@@ -1353,74 +1359,59 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
                   <Plus className="h-3 w-3 shrink-0" />Stage
                 </button>
               </div>
-
-              {proposals.length > 0 && (
-                <div className="mt-1.5" data-testid="list-proposal-cards">
-                  {trayRestored && (
-                    <div
-                      className="flex items-center justify-between gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/10 px-2.5 py-1.5 mb-1.5"
-                      data-testid="banner-tray-restored"
-                    >
-                      <p className="text-[11px] text-blue-800 dark:text-blue-400 leading-snug">
-                        {proposals.length} approved intent{proposals.length !== 1 ? "s" : ""} restored
-                      </p>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => setTrayRestored(false)}
-                          className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-                          data-testid="button-tray-banner-dismiss"
-                        >
-                          OK
-                        </button>
-                        <button
-                          onClick={() => { setProposals([]); setTrayRestored(false); }}
-                          className="text-[10px] text-destructive/70 hover:text-destructive transition-colors"
-                          data-testid="button-tray-banner-clear"
-                        >
-                          Clear
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                  <p className="text-[11px] text-muted-foreground/60 leading-snug mb-1">
-                    Approved intents — drag onto the planner to schedule.
-                  </p>
-                  <div className="space-y-0.5">
-                    {proposals.map(p => (
-                      <DraggableProposalCard
-                        key={p.id}
-                        id={p.id}
-                        name={p.name}
-                        proposedMealType={p.mealType}
-                      >
-                        <div
-                          className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-dashed border-muted-foreground/30 bg-background hover:border-primary/40 hover:bg-primary/5 cursor-grab active:cursor-grabbing transition-colors group"
-                          data-testid={`card-proposal-${p.id}`}
-                        >
-                          <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" />
-                          <span className="flex-1 text-xs truncate text-foreground">{p.name}</span>
-                          <span className="text-[10px] text-muted-foreground/60 shrink-0 capitalize">{p.mealType}</span>
-                          <button
-                            onPointerDown={e => e.stopPropagation()}
-                            onClick={e => { e.stopPropagation(); removeProposal(p.id); }}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-accent/60 text-muted-foreground hover:text-foreground transition-opacity shrink-0"
-                            title="Remove"
-                            data-testid={`button-proposal-remove-${p.id}`}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      </DraggableProposalCard>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         )}
       </div>
 
-      {/* ── Section C: Review & Stage (shown only when there's pending work) ── */}
+      <div className="w-full h-px bg-border/50" />
+
+      {/* ── Section C: Manage — hub entry for planner utilities ── */}
+      <div data-testid="section-manage">
+        <button
+          className="w-full flex items-center justify-between py-2 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+          onClick={() => setManageOpen(v => !v)}
+          aria-expanded={manageOpen}
+          data-testid="button-section-manage-toggle"
+        >
+          <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" data-testid="section-manage-label">
+            Manage
+          </span>
+          <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${manageOpen ? "" : "-rotate-90"}`} />
+        </button>
+        {manageOpen && (
+          <div className="space-y-0.5 pb-1.5" data-testid="section-manage-body">
+            <button
+              className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
+              onClick={() => onSetMode("settings")}
+              data-testid="button-idle-settings"
+            >
+              <Settings className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              Planner options
+            </button>
+            <button
+              className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
+              onClick={() => onSetMode("bulk")}
+              data-testid="button-idle-bulk-assign"
+            >
+              <Copy className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+              Bulk assign
+            </button>
+            {onSharePlan && (
+              <button
+                className="w-full flex items-center gap-1.5 rounded-md border border-border/60 bg-card/80 hover:bg-accent/50 px-2.5 py-1.5 text-xs text-foreground transition-colors text-left"
+                onClick={onSharePlan}
+                data-testid="button-idle-share-plan"
+              >
+                <Share2 className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                Share plan
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Section D: Review & Place (shown only when there's pending work) ── */}
       {hasContinueItems && (
         <>
           <div className="w-full h-px bg-border/50" />
@@ -1433,25 +1424,86 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
             >
               <span className="flex items-center gap-1.5">
                 <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" data-testid="section-continue-label">
-                  Review & Stage
+                  Review & Place
                 </span>
-                <span className="text-[10px] font-medium bg-muted text-muted-foreground rounded-full px-1.5 leading-4">
+                <span className={`text-[10px] font-medium rounded-full px-1.5 leading-4 ${
+                  placeholderCount > 0
+                    ? "bg-amber-100/80 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400"
+                    : "bg-muted text-muted-foreground"
+                }`}>
                   {proposals.length + placeholderCount}
                 </span>
               </span>
               <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${continuePlanningOpen ? "" : "-rotate-90"}`} />
             </button>
             {continuePlanningOpen && (
-              <div className="space-y-1 pb-2" data-testid="section-continue-planning-body">
+              <div className="space-y-2 pb-2" data-testid="section-continue-planning-body">
+
+                {/* Draggable staged meal cards — moved here from Section B for visibility */}
                 {proposals.length > 0 && (
-                  <div
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/30 text-xs text-muted-foreground"
-                    data-testid="text-staged-count"
-                  >
-                    <GripVertical className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50" />
-                    {proposals.length} approved intent{proposals.length !== 1 ? "s" : ""} — drag onto planner
+                  <div data-testid="list-proposal-cards">
+                    {trayRestored && (
+                      <div
+                        className="flex items-center justify-between gap-2 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/40 dark:bg-blue-950/10 px-2.5 py-1.5 mb-1.5"
+                        data-testid="banner-tray-restored"
+                      >
+                        <p className="text-[11px] text-blue-800 dark:text-blue-400 leading-snug">
+                          {proposals.length} staged meal{proposals.length !== 1 ? "s" : ""} restored
+                        </p>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button
+                            onClick={() => setTrayRestored(false)}
+                            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                            data-testid="button-tray-banner-dismiss"
+                          >
+                            OK
+                          </button>
+                          <button
+                            onClick={() => { setProposals([]); setTrayRestored(false); }}
+                            className="text-[10px] text-destructive/70 hover:text-destructive transition-colors"
+                            data-testid="button-tray-banner-clear"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-[11px] text-muted-foreground/60 leading-snug mb-1 flex items-center gap-1">
+                      <GripVertical className="h-3 w-3" />
+                      Ready to place — drag onto the planner grid
+                    </p>
+                    <div className="space-y-0.5">
+                      {proposals.map(p => (
+                        <DraggableProposalCard
+                          key={p.id}
+                          id={p.id}
+                          name={p.name}
+                          proposedMealType={p.mealType}
+                        >
+                          <div
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-lg border border-dashed border-primary/30 bg-primary/5 hover:border-primary/50 hover:bg-primary/10 cursor-grab active:cursor-grabbing transition-colors group"
+                            data-testid={`card-proposal-${p.id}`}
+                          >
+                            <GripVertical className="h-3.5 w-3.5 text-primary/50 shrink-0" />
+                            <span className="flex-1 text-xs truncate text-foreground font-medium">{p.name}</span>
+                            <span className="text-[10px] text-muted-foreground/60 shrink-0 capitalize">{p.mealType}</span>
+                            <button
+                              onPointerDown={e => e.stopPropagation()}
+                              onClick={e => { e.stopPropagation(); removeProposal(p.id); }}
+                              className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-accent/60 text-muted-foreground hover:text-foreground transition-opacity shrink-0"
+                              title="Remove"
+                              data-testid={`button-proposal-remove-${p.id}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </DraggableProposalCard>
+                      ))}
+                    </div>
                   </div>
                 )}
+
+                {/* Unresolved meals — planned but not yet linked to a recipe */}
                 {placeholderCount > 0 && (
                   <button
                     className="w-full flex items-center gap-2 rounded-lg border border-amber-400/40 bg-amber-50/30 dark:bg-amber-950/10 hover:bg-amber-50/60 dark:hover:bg-amber-950/20 px-3 py-2 text-left transition-colors"
@@ -1460,9 +1512,9 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
                   >
                     <BookOpen className="h-4 w-4 shrink-0 text-amber-500/70" />
                     <span className="text-amber-700 dark:text-amber-400/80 flex-1 text-xs">
-                      {placeholderCount} unresolved meal{placeholderCount !== 1 ? "s" : ""}
+                      {placeholderCount} planned meal{placeholderCount !== 1 ? "s" : ""} need{placeholderCount === 1 ? "s" : ""} a recipe
                     </span>
-                    <span className="text-[11px] text-muted-foreground/60 shrink-0">Review →</span>
+                    <span className="text-[11px] text-muted-foreground/60 shrink-0">Link →</span>
                   </button>
                 )}
               </div>
@@ -1542,6 +1594,7 @@ export function PlannerAssistantPanel({
   onBackToHub,
   consumedProposalId,
   freezerMeals = [],
+  onSharePlan,
 }: PlannerAssistantPanelProps) {
   const isMobile = useIsMobile();
   const RESOLVE_SUBVIEW_KEY = "planner:resolve-subview";
@@ -1743,6 +1796,7 @@ export function PlannerAssistantPanel({
         onBuildRecipe={onBuildRecipe}
         onScanRecipe={onScanRecipe}
         consumedProposalId={consumedProposalId}
+        onSharePlan={onSharePlan}
       />
     ) : (
       <p className="text-xs text-muted-foreground">Select a mode to get started.</p>
@@ -1822,6 +1876,7 @@ export function PlannerAssistantPanel({
               onBuildRecipe={onBuildRecipe}
               onScanRecipe={onScanRecipe}
               consumedProposalId={consumedProposalId}
+              onSharePlan={onSharePlan}
             />
           ) : (
             <p className="text-xs text-muted-foreground">Select a mode to get started.</p>

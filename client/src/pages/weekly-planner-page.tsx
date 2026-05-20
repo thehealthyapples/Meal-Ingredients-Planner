@@ -1507,30 +1507,6 @@ export default function WeeklyPlannerPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={() => setAssistantMode("settings")} data-testid="button-planner-settings">
-                <Settings className="h-4 w-4 mr-2" />
-                Options
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setAssistantMode("bulk")} data-testid="button-bulk-assign">
-                <Copy className="h-4 w-4 mr-2" />
-                Bulk Assign
-              </DropdownMenuItem>
-              {placeholderItems.length > 0 && (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={() => setAssistantMode("placeholder-review")}
-                    data-testid="button-review-unlinked"
-                  >
-                    <BookOpen className="h-4 w-4 mr-2 text-amber-500" />
-                    <span>Review unlinked</span>
-                    <span className="ml-auto text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100/60 dark:bg-amber-950/30 px-1.5 py-0.5 rounded-full">
-                      {placeholderItems.length}
-                    </span>
-                  </DropdownMenuItem>
-                </>
-              )}
-              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setSharePlanOpen(true)} data-testid="button-share-plan">
                 <Share2 className="h-4 w-4 mr-2" />
                 Share Plan
@@ -2390,6 +2366,7 @@ export default function WeeklyPlannerPage() {
           setAssistantMode(null);
         }}
         consumedProposalId={consumedProposalId}
+        onSharePlan={() => setSharePlanOpen(true)}
       />
       </div>{/* end flex gap-3 */}
       <DragOverlay dropAnimation={null} modifiers={[snapOverlayToCursor]}>
