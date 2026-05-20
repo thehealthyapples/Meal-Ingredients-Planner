@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import type { AssistantMode } from "@/contexts/PlannerContext";
 import { usePlannerWorkspaceContext } from "@/contexts/PlannerWorkspaceContext";
 import { TemplatesPanel } from "@/components/templates-panel";
-import type { User, Meal } from "@shared/schema";
+import type { User, Meal, FreezerMeal } from "@shared/schema";
 import { PlannerMealPickerPanel } from "@/components/PlannerMealPickerPanel";
 import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMealPickerPanel";
 import { usePlannerMealSearch, type WebSearchRecipe } from "@/hooks/use-planner-meal-search";
@@ -66,6 +66,7 @@ interface PlannerAssistantPanelProps {
   onPickerSelect: (mealId: number) => void;
   addingEntry: boolean;
   onAddProduct: (product: PlannerProductResult) => void;
+  freezerMeals?: FreezerMeal[];
   dayViewDay: FullDay | null;
   dayViewLabel: string;
   getMeal: (id: number | null) => Meal | undefined;
@@ -1540,6 +1541,7 @@ export function PlannerAssistantPanel({
   mobileOpen = false,
   onBackToHub,
   consumedProposalId,
+  freezerMeals = [],
 }: PlannerAssistantPanelProps) {
   const isMobile = useIsMobile();
   const RESOLVE_SUBVIEW_KEY = "planner:resolve-subview";
@@ -1606,6 +1608,7 @@ export function PlannerAssistantPanel({
           onSelect={onPickerSelect}
           addingEntry={addingEntry}
           onAddProduct={onAddProduct}
+          freezerMeals={freezerMeals}
         />
       )}
       {mode === "day" && (
@@ -1831,7 +1834,7 @@ export function PlannerAssistantPanel({
   // ── Desktop: active assistant sidebar ────────────────────────────────────
   return (
     <aside
-      className="shrink-0 w-64 sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+      className="shrink-0 w-80 sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
       data-testid="panel-planner-assistant"
     >
       <div className="flex items-center justify-between px-3 pt-3 pb-2.5 shrink-0">

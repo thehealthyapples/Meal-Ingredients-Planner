@@ -1507,15 +1507,6 @@ export default function WeeklyPlannerPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={() => setAssistantMode("scan")} data-testid="button-planner-scan-overflow">
-                <Camera className="h-4 w-4 mr-2" />
-                Scan planner
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setAssistantMode("templates")} data-testid="button-open-templates">
-                <LayoutGrid className="h-4 w-4 mr-2" />
-                Templates
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setAssistantMode("settings")} data-testid="button-planner-settings">
                 <Settings className="h-4 w-4 mr-2" />
                 Options
@@ -2148,7 +2139,7 @@ export default function WeeklyPlannerPage() {
                                             {isPlaceholder && (
                                               <DropdownMenuItem onClick={() => duplicateEntryMutation.mutate({ entryId: entry.id })}>
                                                 <Copy className="h-3.5 w-3.5 mr-2" />
-                                                Duplicate placeholder
+                                                Duplicate meal idea
                                               </DropdownMenuItem>
                                             )}
                                             {/* Phase 1B: Move to another day */}
@@ -2372,6 +2363,7 @@ export default function WeeklyPlannerPage() {
         onPickerSelect={selectMeal}
         addingEntry={addEntryMutation.isPending}
         onAddProduct={addProductToPlanner}
+        freezerMeals={freezerMeals}
         dayViewDay={expandedDay}
         dayViewLabel={expandedDayLabel}
         getMeal={getMeal}
@@ -2445,7 +2437,7 @@ export default function WeeklyPlannerPage() {
                   {isPlaceholder && (
                     <button className="flex items-center gap-3 px-4 py-3.5 text-sm text-foreground active:bg-accent/60 text-left w-full" role="menuitem" data-testid="button-ctx-duplicate-placeholder"
                       onClick={() => { duplicateEntryMutation.mutate({ entryId: contextEntry.entry.id }); setContextEntry(null); }}>
-                      <Copy className="h-4 w-4 text-muted-foreground shrink-0" />Duplicate placeholder
+                      <Copy className="h-4 w-4 text-muted-foreground shrink-0" />Duplicate meal idea
                     </button>
                   )}
                   {!isPlaceholder && getNextDay(contextEntry.dayId) && (
