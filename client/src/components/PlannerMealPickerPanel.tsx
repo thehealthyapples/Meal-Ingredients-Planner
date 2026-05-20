@@ -62,7 +62,7 @@ export function PlannerMealPickerPanel({
   const { toast } = useToast();
   const qc = useQueryClient();
   const [mealSearch, setMealSearch] = useState("");
-  const [mealFilter, setMealFilter] = useState<"all" | "cookbook" | "planner" | "ready" | "product">("all");
+  const [mealFilter, setMealFilter] = useState<"all" | "cookbook" | "planner" | "ready" | "product" | "web">("all");
   const [productQuery, setProductQuery] = useState("");
   const [productResults, setProductResults] = useState<PlannerProductResult[]>([]);
   const [productSearching, setProductSearching] = useState(false);
@@ -74,13 +74,19 @@ export function PlannerMealPickerPanel({
   const { webResults, webLoading, includeWeb, setIncludeWeb } = usePlannerMealSearch({
     meals,
     query: mealSearch,
-    filterMode: (mealFilter === "product" ? "all" : mealFilter) as PlannerMealFilterMode,
+    filterMode: (mealFilter === "product" || mealFilter === "web" ? "all" : mealFilter) as PlannerMealFilterMode,
     plannerMealIdSet,
     excludePlaceholders: true,
     enableWebSearch: mealFilter !== "product",
   });
 
   const [importingWebId, setImportingWebId] = useState<string | null>(null);
+
+  const handleFilterClick = (f: "all" | "cookbook" | "planner" | "ready" | "product" | "web") => {
+    setMealFilter(f);
+    setMealSearch("");
+    if (f === "web") setIncludeWeb(true);
+  };
 
   const handleAddWebRecipe = async (recipe: WebSearchRecipe) => {
     if (importingWebId) return;
@@ -209,16 +215,17 @@ export function PlannerMealPickerPanel({
 
       {/* Filter tabs */}
       <div className="flex gap-1 flex-wrap">
-        {(["all", "cookbook", "planner", "ready", "product"] as const).map((f) => (
+        {(["all", "cookbook", "planner", "ready", "product", "web"] as const).map((f) => (
           <Button
             key={f}
             variant={mealFilter === f ? "default" : "outline"}
             size="sm"
-            className={`text-xs h-7 px-2 ${f === "product" ? "gap-1" : ""}`}
-            onClick={() => { setMealFilter(f); setMealSearch(""); }}
+            className={`text-xs h-7 px-2 ${f === "product" || f === "web" ? "gap-1" : ""}`}
+            onClick={() => handleFilterClick(f)}
             data-testid={`button-filter-${f}`}
           >
             {f === "product" && <Package className="h-3 w-3" />}
+            {f === "web" && <Globe className="h-3 w-3" />}
             {f === "all"
               ? "All"
               : f === "cookbook"
@@ -227,7 +234,9 @@ export function PlannerMealPickerPanel({
               ? "From Planner"
               : f === "ready"
               ? "Ready Meals"
-              : "Shop-bought"}
+              : f === "product"
+              ? "Shop-bought"
+              : "Web recipes"}
           </Button>
         ))}
       </div>
@@ -245,19 +254,21 @@ export function PlannerMealPickerPanel({
               data-testid="input-meal-search"
             />
           </div>
-          <button
-            onClick={() => setIncludeWeb(!includeWeb)}
-            className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors shrink-0 whitespace-nowrap ${
-              includeWeb
-                ? "bg-primary text-primary-foreground border-primary"
-                : "border-border/60 bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
-            }`}
-            data-testid="button-include-web"
-            title={includeWeb ? "Web recipes active — click to disable" : "Search trusted web recipe sources"}
-          >
-            <Globe className="h-3 w-3 shrink-0" />
-            {includeWeb ? "Web on" : "Web recipes"}
-          </button>
+          {mealFilter !== "web" && (
+            <button
+              onClick={() => setIncludeWeb(!includeWeb)}
+              className={`flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border transition-colors shrink-0 whitespace-nowrap ${
+                includeWeb
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border/60 bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+              }`}
+              data-testid="button-include-web"
+              title={includeWeb ? "Web recipes active — click to disable" : "Search trusted web recipe sources"}
+            >
+              <Globe className="h-3 w-3 shrink-0" />
+              {includeWeb ? "Web on" : "Web recipes"}
+            </button>
+          )}
         </div>
       )}
 
@@ -310,137 +321,192 @@ export function PlannerMealPickerPanel({
       {/* Meals list — local/cookbook results always appear first */}
       {mealFilter !== "product" && (
         <div className="overflow-y-auto space-y-0.5" data-testid="list-meal-picker">
-          {filteredMeals.length === 0 && !includeWeb ? (
-            mealFilter === "cookbook" && !mealSearch.trim() ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <ChefHat className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                <p className="text-sm font-medium">Search your cookbook</p>
-                <p className="text-xs mt-1 opacity-70">Type a meal name or ingredient above</p>
+          {mealFilter === "web" ? (
+            /* Web-first mode: web results are the primary content */
+            mealSearch.trim().length < 2 ? (
+              <div className="text-center py-8 text-muted-foreground" data-testid="web-empty-state">
+                <Globe className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                <p className="text-sm font-medium">Search web recipes</p>
+                <p className="text-xs mt-1 opacity-70">Type at least 2 characters to search the web.</p>
               </div>
-            ) : mealSearch.trim() ? (
-              <p className="text-center text-muted-foreground text-sm py-6">No meals found for &ldquo;{mealSearch}&rdquo;</p>
             ) : (
-              <p className="text-center text-muted-foreground text-sm py-6">No meals found</p>
-            )
-          ) : (
-            filteredMeals.map(meal => (
-              <button
-                key={meal.id}
-                className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
-                onClick={() => {
-                  if (!target) {
-                    toast({ title: "Select a meal slot", description: "Click a slot in the planner to add this recipe." });
-                    return;
-                  }
-                  onSelect(meal.id);
-                }}
-                disabled={addingEntry}
-                data-testid={`button-select-meal-${meal.id}`}
-              >
-                {meal.isReadyMeal ? (
-                  <div className="h-9 w-9 rounded-md bg-green-500/10 flex items-center justify-center flex-shrink-0">
-                    <UtensilsCrossed className="h-4 w-4 text-green-500/40" />
-                  </div>
-                ) : meal.imageUrl ? (
-                  <img src={meal.imageUrl} alt={meal.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
-                ) : (
-                  <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-                    <ChefHat className="h-4 w-4 text-muted-foreground" />
+              <>
+                {webLoading && webResults.length === 0 && (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                   </div>
                 )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{meal.name}</p>
-                  <div className="flex items-center gap-1 flex-wrap">
-                    {(meal as any).isHouseholdSafeVariant ? (
-                      <Badge variant="outline" className="text-[10px] px-1 border-teal-400/60 text-teal-600 dark:text-teal-400">Household-safe</Badge>
-                    ) : !meal.isReadyMeal && !(meal as any).isSystemMeal ? (
-                      <Badge variant="outline" className="text-[10px] px-1 border-blue-400/60 text-blue-500">Cookbook</Badge>
+                {webResults.map(recipe => (
+                  <button
+                    key={recipe.id}
+                    className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 text-left disabled:opacity-50"
+                    onClick={() => handleAddWebRecipe(recipe)}
+                    disabled={!!importingWebId || addingEntry}
+                    data-testid={`button-select-web-${recipe.id}`}
+                  >
+                    {recipe.image ? (
+                      <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                        <Globe className="h-4 w-4 text-muted-foreground/40" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{recipe.name}</p>
+                      <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                        <Badge variant="outline" className="text-[10px] px-1 border-orange-300/60 text-orange-600 dark:border-orange-600/40 dark:text-orange-400">
+                          Web recipe
+                        </Badge>
+                        {recipe.source && (
+                          <span className="text-[10px] text-muted-foreground/60">{recipe.source}</span>
+                        )}
+                      </div>
+                    </div>
+                    {importingWebId === recipe.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
                     ) : null}
-                    {meal.isReadyMeal && (
-                      <Badge variant="outline" className="text-[10px] px-1">Ready Meal</Badge>
-                    )}
-                    {meal.audience === "baby" && (
-                      <Badge variant="outline" className="text-[10px] px-1 border-pink-400/60 text-pink-500">
-                        <Baby className="h-2.5 w-2.5 mr-0.5" />Baby
-                      </Badge>
-                    )}
-                    {meal.audience === "child" && (
-                      <Badge variant="outline" className="text-[10px] px-1 border-sky-400/60 text-sky-500">
-                        <PersonStanding className="h-2.5 w-2.5 mr-0.5" />Child
-                      </Badge>
-                    )}
-                    {meal.isDrink && (
-                      <Badge variant="outline" className="text-[10px] px-1 border-purple-400/60 text-purple-500">
-                        <Wine className="h-2.5 w-2.5 mr-0.5" />Drink
-                      </Badge>
-                    )}
+                  </button>
+                ))}
+                {!webLoading && webResults.length === 0 && (
+                  <p className="text-center text-muted-foreground text-sm py-6">No web recipes found for &ldquo;{mealSearch}&rdquo;</p>
+                )}
+              </>
+            )
+          ) : (
+            <>
+              {filteredMeals.length === 0 && !includeWeb ? (
+                mealFilter === "cookbook" && !mealSearch.trim() ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <ChefHat className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                    <p className="text-sm font-medium">Search your cookbook</p>
+                    <p className="text-xs mt-1 opacity-70">Type a meal name or ingredient above</p>
                   </div>
-                </div>
-              </button>
-            ))
-          )}
-
-          {/* Phase 2: Web results — hydrate below cookbook results, never replace them */}
-          {includeWeb && mealSearch.trim().length >= 2 && (webLoading || webResults.length > 0) && (
-            <div className="mt-1" data-testid="section-web-results">
-              <div className="flex items-center gap-2 py-1.5">
-                <div className="h-px flex-1 bg-border/50" />
-                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wide flex items-center gap-1">
-                  <Globe className="h-3 w-3" />
-                  From the web
-                </span>
-                {webLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />}
-                <div className="h-px flex-1 bg-border/50" />
-              </div>
-              {webResults.map(recipe => (
-                <button
-                  key={recipe.id}
-                  className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 text-left disabled:opacity-50"
-                  onClick={() => handleAddWebRecipe(recipe)}
-                  disabled={!!importingWebId || addingEntry}
-                  data-testid={`button-select-web-${recipe.id}`}
-                >
-                  {recipe.image ? (
-                    <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-                      <Globe className="h-4 w-4 text-muted-foreground/40" />
+                ) : mealSearch.trim() ? (
+                  <p className="text-center text-muted-foreground text-sm py-6">No meals found for &ldquo;{mealSearch}&rdquo;</p>
+                ) : (
+                  <p className="text-center text-muted-foreground text-sm py-6">No meals found</p>
+                )
+              ) : (
+                filteredMeals.map(meal => (
+                  <button
+                    key={meal.id}
+                    className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
+                    onClick={() => {
+                      if (!target) {
+                        toast({ title: "Select a meal slot", description: "Click a slot in the planner to add this recipe." });
+                        return;
+                      }
+                      onSelect(meal.id);
+                    }}
+                    disabled={addingEntry}
+                    data-testid={`button-select-meal-${meal.id}`}
+                  >
+                    {meal.isReadyMeal ? (
+                      <div className="h-9 w-9 rounded-md bg-green-500/10 flex items-center justify-center flex-shrink-0">
+                        <UtensilsCrossed className="h-4 w-4 text-green-500/40" />
+                      </div>
+                    ) : meal.imageUrl ? (
+                      <img src={meal.imageUrl} alt={meal.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                        <ChefHat className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{meal.name}</p>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {(meal as any).isHouseholdSafeVariant ? (
+                          <Badge variant="outline" className="text-[10px] px-1 border-teal-400/60 text-teal-600 dark:text-teal-400">Household-safe</Badge>
+                        ) : !meal.isReadyMeal && !(meal as any).isSystemMeal ? (
+                          <Badge variant="outline" className="text-[10px] px-1 border-blue-400/60 text-blue-500">Cookbook</Badge>
+                        ) : null}
+                        {meal.isReadyMeal && (
+                          <Badge variant="outline" className="text-[10px] px-1">Ready Meal</Badge>
+                        )}
+                        {meal.audience === "baby" && (
+                          <Badge variant="outline" className="text-[10px] px-1 border-pink-400/60 text-pink-500">
+                            <Baby className="h-2.5 w-2.5 mr-0.5" />Baby
+                          </Badge>
+                        )}
+                        {meal.audience === "child" && (
+                          <Badge variant="outline" className="text-[10px] px-1 border-sky-400/60 text-sky-500">
+                            <PersonStanding className="h-2.5 w-2.5 mr-0.5" />Child
+                          </Badge>
+                        )}
+                        {meal.isDrink && (
+                          <Badge variant="outline" className="text-[10px] px-1 border-purple-400/60 text-purple-500">
+                            <Wine className="h-2.5 w-2.5 mr-0.5" />Drink
+                          </Badge>
+                        )}
+                      </div>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{recipe.name}</p>
-                    <div className="flex items-center gap-1 flex-wrap mt-0.5">
-                      <Badge variant="outline" className="text-[10px] px-1 border-orange-300/60 text-orange-600 dark:border-orange-600/40 dark:text-orange-400">
-                        Web recipe
-                      </Badge>
-                      {recipe.source && (
-                        <span className="text-[10px] text-muted-foreground/60">{recipe.source}</span>
-                      )}
-                    </div>
-                  </div>
-                  {importingWebId === recipe.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
-                  ) : null}
-                </button>
-              ))}
-              {!webLoading && webResults.length === 0 && mealSearch.trim().length >= 2 && (
-                <p className="text-center text-[11px] text-muted-foreground/60 py-3">No web recipes found</p>
+                  </button>
+                ))
               )}
-            </div>
-          )}
-          {/* Nudge: show when local results are thin and web is OFF */}
-          {!includeWeb && filteredMeals.length < 3 && mealSearch.trim().length >= 2 && (
-            <p className="text-center text-[11px] text-muted-foreground/60 pt-2">
-              Can't find it in your cookbook?{" "}
-              <button
-                onClick={() => setIncludeWeb(true)}
-                className="underline hover:text-foreground/70 transition-colors"
-                data-testid="button-include-web-nudge"
-              >
-                Turn on web recipes
-              </button>{" "}
-              to search trusted recipe sources.
-            </p>
+
+              {/* Phase 2: Web results — hydrate below cookbook results, never replace them */}
+              {includeWeb && mealSearch.trim().length >= 2 && (webLoading || webResults.length > 0) && (
+                <div className="mt-1" data-testid="section-web-results">
+                  <div className="flex items-center gap-2 py-1.5">
+                    <div className="h-px flex-1 bg-border/50" />
+                    <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wide flex items-center gap-1">
+                      <Globe className="h-3 w-3" />
+                      From the web
+                    </span>
+                    {webLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />}
+                    <div className="h-px flex-1 bg-border/50" />
+                  </div>
+                  {webResults.map(recipe => (
+                    <button
+                      key={recipe.id}
+                      className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 text-left disabled:opacity-50"
+                      onClick={() => handleAddWebRecipe(recipe)}
+                      disabled={!!importingWebId || addingEntry}
+                      data-testid={`button-select-web-${recipe.id}`}
+                    >
+                      {recipe.image ? (
+                        <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                          <Globe className="h-4 w-4 text-muted-foreground/40" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{recipe.name}</p>
+                        <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                          <Badge variant="outline" className="text-[10px] px-1 border-orange-300/60 text-orange-600 dark:border-orange-600/40 dark:text-orange-400">
+                            Web recipe
+                          </Badge>
+                          {recipe.source && (
+                            <span className="text-[10px] text-muted-foreground/60">{recipe.source}</span>
+                          )}
+                        </div>
+                      </div>
+                      {importingWebId === recipe.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
+                      ) : null}
+                    </button>
+                  ))}
+                  {!webLoading && webResults.length === 0 && mealSearch.trim().length >= 2 && (
+                    <p className="text-center text-[11px] text-muted-foreground/60 py-3">No web recipes found</p>
+                  )}
+                </div>
+              )}
+              {/* Nudge: show when local results are thin and web is OFF */}
+              {!includeWeb && filteredMeals.length < 3 && mealSearch.trim().length >= 2 && (
+                <p className="text-center text-[11px] text-muted-foreground/60 pt-2">
+                  Can't find it in your cookbook?{" "}
+                  <button
+                    onClick={() => setIncludeWeb(true)}
+                    className="underline hover:text-foreground/70 transition-colors"
+                    data-testid="button-include-web-nudge"
+                  >
+                    Turn on web recipes
+                  </button>{" "}
+                  to search trusted recipe sources.
+                </p>
+              )}
+            </>
           )}
         </div>
       )}
