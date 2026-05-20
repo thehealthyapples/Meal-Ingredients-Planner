@@ -8,22 +8,6 @@ import { buildAnalyserViewModel } from "@/lib/analyser-view-model";
 import { AddToWeekModal } from "@/components/AddToWeekModal";
 import type { AddToWeekProduct } from "@/components/AddToWeekModal";
 
-// ── Compact product result list ───────────────────────────────────────────────
-
-function RatingBadge({ rating }: { rating: number }) {
-  const cls =
-    rating >= 4
-      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"
-      : rating >= 3
-      ? "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400"
-      : "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400";
-  return (
-    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 ${cls}`}>
-      {rating}/5
-    </span>
-  );
-}
-
 // ── Inline product analysis card ──────────────────────────────────────────────
 
 function ProductCard({
@@ -172,25 +156,33 @@ export function PlannerAnalyserContent() {
 
       {!isFetching && products.length > 0 && (
         <div className="space-y-1" data-testid="analyser-results-list">
-          {products.slice(0, 8).map((product, i) => {
-            const rating = product.upfAnalysis?.thaRating ?? null;
-            return (
-              <button
-                key={product.barcode ?? `${product.product_name}-${i}`}
-                onClick={() => setSelectedProduct(product)}
-                className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md border border-border/60 bg-card/60 hover:bg-accent/40 transition-colors text-left"
-                data-testid={`button-analyser-result-${i}`}
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground truncate">{product.product_name}</p>
-                  {product.brand && (
-                    <p className="text-[10px] text-muted-foreground/60 truncate">{product.brand}</p>
+          <p className="text-[10px] text-muted-foreground/50 px-0.5 pb-0.5">
+            {products.length} result{products.length !== 1 ? "s" : ""} — showing highest-rated first
+          </p>
+          {[...products]
+            .sort((a, b) => (b.upfAnalysis?.thaRating ?? 0) - (a.upfAnalysis?.thaRating ?? 0))
+            .slice(0, 8)
+            .map((product, i) => {
+              const rating = product.upfAnalysis?.thaRating ?? null;
+              return (
+                <button
+                  key={product.barcode ?? `${product.product_name}-${i}`}
+                  onClick={() => setSelectedProduct(product)}
+                  className="w-full flex items-center gap-2 px-2.5 py-2 rounded-md border border-border/60 bg-card/60 hover:bg-accent/40 transition-colors text-left"
+                  data-testid={`button-analyser-result-${i}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-foreground truncate">{product.product_name}</p>
+                    {product.brand && (
+                      <p className="text-[10px] text-muted-foreground/60 truncate">{product.brand}</p>
+                    )}
+                  </div>
+                  {rating !== null && (
+                    <AppleRating rating={rating} sizePx={22} showTooltip animate={false} />
                   )}
-                </div>
-                {rating !== null && <RatingBadge rating={rating} />}
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
         </div>
       )}
 
