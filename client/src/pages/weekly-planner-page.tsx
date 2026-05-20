@@ -30,6 +30,9 @@ import type { FullDay, FullWeek, SmartCandidate, MealExplanation, SmartSuggestEn
 import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMealPickerPanel";
 import { SharePlanDialog } from "@/components/share-plan-dialog";
 import { PlannerScanReview, type PlannerScanData, type PlannerDayEntry } from "@/components/PlannerScanReview";
+import { RecipeScanReview, type RecipeScanData } from "@/components/RecipeScanReview";
+import { CameraModal } from "@/components/camera-modal";
+import { emitStageProposal } from "@/lib/planner-staging-bus";
 import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@/lib/nutrition-variety";
 import { getMealNutrients } from "@/lib/nutrition-insights";
 import { NutritionVarietyDots, PlannerVarietyLegend, MealVarietyNudge } from "@/components/nutrition-variety-chips";
@@ -194,14 +197,28 @@ const snapOverlayToCursor: Modifier = ({ activatorEvent, activeNodeRect, overlay
   };
 };
 
-// ── Phase B: Resolve workflow session persistence ──────────────────────────────
-const RESOLVE_TARGET_KEY = "planner:resolve-target";
-const RESOLUTION_CTX_KEY = "planner:resolution-context";
+// ── Resolve session persistence ────────────────────────────────────────────────
+const RESOLVE_SESSION_KEY = "planner:resolve-session";
 const ACTIVE_WEEK_KEY = "planner:active-week";
 
-type ResolutionContext = ResolveTarget & { returnMode: "placeholder-review" | null };
+type ResolveSession = {
+  entryId: number;
+  dayId: number;
+  mealName: string;
+  dayName: string;
+  slotLabel: string;
+  mealType: string;
+  audience: string;
+  isDrink: boolean;
+  position: number;
+  returnMode: "placeholder-review" | null;
+  pendingRecipeLink: {
+    replacementMealId: number;
+    replacementMealName: string;
+  } | null;
+};
 
-function isValidResolveTarget(v: unknown): v is ResolveTarget {
+function isValidResolveSession(v: unknown): v is ResolveSession {
   if (!v || typeof v !== "object") return false;
   const t = v as Record<string, unknown>;
   return (
@@ -209,14 +226,10 @@ function isValidResolveTarget(v: unknown): v is ResolveTarget {
     typeof t.slotLabel === "string" && typeof t.entryId === "number" &&
     typeof t.dayId === "number" && typeof t.mealType === "string" &&
     typeof t.audience === "string" && typeof t.isDrink === "boolean" &&
-    typeof t.position === "number"
+    typeof t.position === "number" &&
+    (t.returnMode === "placeholder-review" || t.returnMode === null) &&
+    (t.pendingRecipeLink === null || (typeof t.pendingRecipeLink === "object" && t.pendingRecipeLink !== null))
   );
-}
-
-function isValidResolutionContext(v: unknown): v is ResolutionContext {
-  if (!isValidResolveTarget(v)) return false;
-  const obj = v as { returnMode?: unknown };
-  return obj.returnMode === "placeholder-review" || obj.returnMode === null;
 }
 
 function loadFromSession<T>(key: string, validate: (v: unknown) => v is T): T | null {
@@ -234,6 +247,25 @@ function saveToSession(key: string, value: unknown): void {
   try {
     if (value === null || value === undefined) sessionStorage.removeItem(key);
     else sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+// Active week: localStorage for cross-session continuity
+function loadActiveWeek(): string {
+  try {
+    const raw = localStorage.getItem(ACTIVE_WEEK_KEY);
+    if (!raw) return "1";
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed === "string" && /^[1-9]\d*$/.test(parsed)) return parsed;
+    localStorage.removeItem(ACTIVE_WEEK_KEY);
+    return "1";
+  } catch { return "1"; }
+}
+
+function saveActiveWeek(value: string | null): void {
+  try {
+    if (value === null) localStorage.removeItem(ACTIVE_WEEK_KEY);
+    else localStorage.setItem(ACTIVE_WEEK_KEY, JSON.stringify(value));
   } catch {}
 }
 
@@ -259,12 +291,7 @@ function saveCookedEntries(ids: Set<number>): void {
 export default function WeeklyPlannerPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const [activeWeek, setActiveWeek] = useState<string>(() => {
-    const stored = loadFromSession(ACTIVE_WEEK_KEY, (v): v is string =>
-      typeof v === "string" && /^[1-9]\d*$/.test(v)
-    );
-    return stored ?? "1";
-  });
+  const [activeWeek, setActiveWeek] = useState<string>(() => loadActiveWeek());
   const [renameWeekId, setRenameWeekId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [clearWeekId, setClearWeekId] = useState<number | null>(null);
@@ -275,15 +302,8 @@ export default function WeeklyPlannerPage() {
   const [expandedDayId, setExpandedDayId] = useState<number | null>(null);
   const [expandedDayLabel, setExpandedDayLabel] = useState("");
   const [mealDetail, setMealDetail] = useState<MealDetailState | null>(null);
-  const [resolveTarget, setResolveTarget] = useState<ResolveTarget | null>(
-    () => loadFromSession(RESOLVE_TARGET_KEY, isValidResolveTarget)
-  );
-  // Phase 5E: deferred recipe-link confirmation
-  type PendingRecipeLink = { entryId: number; mealId: number; targetName: string; recipeName: string; returnToReview: boolean };
-  const [pendingRecipeLink, setPendingRecipeLink] = useState<PendingRecipeLink | null>(null);
-  // Phase B: resolutionContext persists placeholder context across build/scan workflow transitions
-  const [resolutionContext, setResolutionContext] = useState<ResolutionContext | null>(
-    () => loadFromSession(RESOLUTION_CTX_KEY, isValidResolutionContext)
+  const [resolveSession, setResolveSession] = useState<ResolveSession | null>(
+    () => loadFromSession(RESOLVE_SESSION_KEY, isValidResolveSession)
   );
   const [mobileDayIndex, setMobileDayIndex] = useState(0);
   const [mobileQuickAdd, setMobileQuickAdd] = useState<{ dayId: number; mealType: string } | null>(null);
@@ -363,12 +383,8 @@ export default function WeeklyPlannerPage() {
     setMobileQuickAddName("");
   }, [mobileDayIndex]);
 
-  // Phase B: Persist resolve workflow state to sessionStorage
-  useEffect(() => { saveToSession(RESOLVE_TARGET_KEY, resolveTarget); }, [resolveTarget]);
-  useEffect(() => { saveToSession(RESOLUTION_CTX_KEY, resolutionContext); }, [resolutionContext]);
-
-  // Persist active week whenever it changes
-  useEffect(() => { saveToSession(ACTIVE_WEEK_KEY, activeWeek); }, [activeWeek]);
+  useEffect(() => { saveToSession(RESOLVE_SESSION_KEY, resolveSession); }, [resolveSession]);
+  useEffect(() => { saveActiveWeek(activeWeek); }, [activeWeek]);
 
   const { data: plannerSettings } = useQuery<{
     showCalories: boolean;
@@ -441,21 +457,20 @@ export default function WeeklyPlannerPage() {
   // ── Planner context (Phase 1A + 5B: assistant panel routing + selected day) ─
   const { assistantMode, setAssistantMode, selectedDayId, setSelectedDayId } = usePlannerContext();
 
-  // Phase B: Once planner data first loads, validate any restored resolveTarget. If the
-  // entry no longer exists (deleted/stale), clear both the target and the resolve mode.
+  // Once planner data first loads, validate restored resolveSession. If the entry no longer
+  // exists (deleted/stale), clear the session and exit resolve mode.
   useEffect(() => {
     if (resolveTargetValidatedRef.current || !fullPlanner.length) return;
     resolveTargetValidatedRef.current = true;
-    if (!resolveTarget) return;
+    if (!resolveSession) return;
     const liveEntryIds = new Set(
       fullPlanner.flatMap(w => w.days.flatMap(d => d.entries.map(e => e.id)))
     );
-    if (!liveEntryIds.has(resolveTarget.entryId)) {
-      saveToSession(RESOLVE_TARGET_KEY, null);
-      setResolveTarget(null);
+    if (!liveEntryIds.has(resolveSession.entryId)) {
+      setResolveSession(null);
       if (assistantMode === "resolve") setAssistantMode(null);
     }
-  }, [fullPlanner, resolveTarget, assistantMode, setAssistantMode]);
+  }, [fullPlanner, resolveSession, assistantMode, setAssistantMode]);
 
   // Once planner data first loads, validate the restored activeWeek. If the stored week
   // no longer exists (deleted or never created), clear stored state and fall back to "1".
@@ -464,7 +479,7 @@ export default function WeeklyPlannerPage() {
     activeWeekValidatedRef.current = true;
     const valid = fullPlanner.find(w => w.weekNumber === Number(activeWeek));
     if (!valid) {
-      saveToSession(ACTIVE_WEEK_KEY, null);
+      saveActiveWeek(null);
       setActiveWeek("1");
     }
   }, [fullPlanner, activeWeek]);
@@ -506,6 +521,13 @@ export default function WeeklyPlannerPage() {
   });
 
   const pageUploadRef = useRef<HTMLInputElement>(null);
+
+  // Planner-native recipe scan — keeps user on the planner page instead of navigating to /meals
+  const [plannerRecipeScanCameraOpen, setPlannerRecipeScanCameraOpen] = useState(false);
+  const [plannerRecipeScanData, setPlannerRecipeScanData] = useState<RecipeScanData | null>(null);
+  const [plannerRecipeScanLoading, setPlannerRecipeScanLoading] = useState(false);
+  const [plannerRecipeScanError, setPlannerRecipeScanError] = useState<string | undefined>(undefined);
+  const plannerRecipeScanFileRef = useRef<HTMLInputElement>(null);
 
   const { data: categories = [] } = useQuery<MealCategory[]>({
     queryKey: ['/api/categories'],
@@ -1028,71 +1050,77 @@ export default function WeeklyPlannerPage() {
 
   const handleResolveAction = (action: "build" | "scan" | "later") => {
     if (action === "build") {
-      // Phase 3F: capture context before clearing resolveTarget
-      if (resolveTarget) setResolutionContext({ ...resolveTarget, returnMode: null });
-      setResolveTarget(null);
+      // resolveSession holds the context; just close resolve panel and open build modal
       setAssistantMode(null);
       setCreateMealOpen(true);
     } else if (action === "scan") {
-      if (resolveTarget) {
-        // Phase 3G: navigate directly to recipe scan with resolution context
-        const params = new URLSearchParams({
-          plannerImport: "1",
-          mealName: resolveTarget.mealName,
-          day: resolveTarget.dayName,
-          slot: resolveTarget.mealType,
-          plannerResolve: "1",
-          openScan: "1",
-        });
-        params.set("dayId", String(resolveTarget.dayId));
-        params.set("entryId", String(resolveTarget.entryId));
-        setResolveTarget(null);
+      if (resolveSession) {
         setAssistantMode(null);
-        navigate(`/meals?${params.toString()}`);
+        setPlannerRecipeScanCameraOpen(true);
       } else {
         setAssistantMode("scan");
       }
     } else {
-      setResolutionContext(null);
-      setResolveTarget(null);
+      setResolveSession(null);
       setAssistantMode(null);
     }
   };
 
-  // Phase 5E: show confirmation before linking (was immediate in Phase 3E)
   const handleResolveRecipe = (mealId: number) => {
-    if (!resolveTarget) return;
+    if (!resolveSession) return;
     const recipeName = getMeal(mealId)?.name ?? "this recipe";
-    setPendingRecipeLink({ entryId: resolveTarget.entryId, mealId, targetName: resolveTarget.mealName, recipeName, returnToReview: false });
+    setResolveSession({ ...resolveSession, pendingRecipeLink: { replacementMealId: mealId, replacementMealName: recipeName } });
   };
 
-  // Phase 5E: show confirmation before linking (was immediate in Phase 3E)
   const handleResolveRecipeFromReview = (mealId: number, target: ResolveTarget) => {
     const recipeName = getMeal(mealId)?.name ?? "this recipe";
-    setPendingRecipeLink({ entryId: target.entryId, mealId, targetName: target.mealName, recipeName, returnToReview: true });
+    setResolveSession({
+      entryId: target.entryId,
+      dayId: target.dayId,
+      mealName: target.mealName,
+      dayName: target.dayName,
+      slotLabel: target.slotLabel,
+      mealType: target.mealType,
+      audience: target.audience,
+      isDrink: target.isDrink,
+      position: target.position,
+      returnMode: "placeholder-review",
+      pendingRecipeLink: { replacementMealId: mealId, replacementMealName: recipeName },
+    });
   };
 
-  // Phase 3F: build from placeholder-review carries item context
   const handleBuildFromReview = (target: ResolveTarget) => {
-    setResolutionContext({ ...target, returnMode: "placeholder-review" });
+    setResolveSession({
+      entryId: target.entryId,
+      dayId: target.dayId,
+      mealName: target.mealName,
+      dayName: target.dayName,
+      slotLabel: target.slotLabel,
+      mealType: target.mealType,
+      audience: target.audience,
+      isDrink: target.isDrink,
+      position: target.position,
+      returnMode: "placeholder-review",
+      pendingRecipeLink: null,
+    });
     setAssistantMode(null);
     setCreateMealOpen(true);
   };
 
-  // Phase 5E: confirm and execute the deferred recipe-link
   const confirmRecipeLink = () => {
-    if (!pendingRecipeLink) return;
-    const { entryId, mealId, targetName, returnToReview } = pendingRecipeLink;
-    replacePlaceholderMealMutation.mutate({ entryId, mealId }, {
+    if (!resolveSession?.pendingRecipeLink) return;
+    const { replacementMealId, replacementMealName } = resolveSession.pendingRecipeLink;
+    const returnToReview = resolveSession.returnMode === "placeholder-review";
+    const entryId = resolveSession.entryId;
+    const mealName = resolveSession.mealName;
+    replacePlaceholderMealMutation.mutate({ entryId, mealId: replacementMealId }, {
       onSuccess: () => {
-        setPendingRecipeLink(null);
-        setResolveTarget(null);
-        setResolutionContext(null);
+        setResolveSession(null);
         if (!returnToReview) setAssistantMode(null);
-        toast({ title: "Recipe linked", description: `${targetName} has been resolved.` });
+        toast({ title: "Recipe linked", description: `${mealName} has been resolved.` });
       },
       onError: () => {
-        setPendingRecipeLink(null);
+        setResolveSession(prev => prev ? { ...prev, pendingRecipeLink: null } : null);
         toast({ title: "Failed to link recipe", variant: "destructive" });
       },
     });
@@ -1114,21 +1142,42 @@ export default function WeeklyPlannerPage() {
     navigate(`/meals?${params.toString()}`);
   };
 
-  // Phase 3G: scan from placeholder-review navigates directly to recipe scan with full context
   const handleScanFromReview = (target: ResolveTarget) => {
-    const params = new URLSearchParams({
-      plannerImport: "1",
+    setResolveSession({
+      entryId: target.entryId,
+      dayId: target.dayId,
       mealName: target.mealName,
-      day: target.dayName,
-      slot: target.mealType,
-      plannerResolve: "1",
+      dayName: target.dayName,
+      slotLabel: target.slotLabel,
+      mealType: target.mealType,
+      audience: target.audience,
+      isDrink: target.isDrink,
+      position: target.position,
       returnMode: "placeholder-review",
-      openScan: "1",
+      pendingRecipeLink: null,
     });
-    params.set("dayId", String(target.dayId));
-    params.set("entryId", String(target.entryId));
     setAssistantMode(null);
-    navigate(`/meals?${params.toString()}`);
+    setPlannerRecipeScanCameraOpen(true);
+  };
+
+  // Workspace Phase A: recipe scan handler — POSTs to /api/scan, stays on planner page
+  const handlePlannerRecipeScanFile = async (file: File) => {
+    setPlannerRecipeScanLoading(true);
+    setPlannerRecipeScanError(undefined);
+    setPlannerRecipeScanData(null);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      formData.append("scanMode", "recipe");
+      const res = await fetch("/api/scan", { method: "POST", body: formData, credentials: "include" });
+      if (!res.ok) throw new Error("Scan failed");
+      const data: RecipeScanData = await res.json();
+      setPlannerRecipeScanData(data);
+    } catch (err: unknown) {
+      setPlannerRecipeScanError((err as Error)?.message ?? "Scan failed");
+    } finally {
+      setPlannerRecipeScanLoading(false);
+    }
   };
 
   const selectMeal = (mealId: number) => {
@@ -1700,7 +1749,7 @@ export default function WeeklyPlannerPage() {
                                     className={`w-full text-left text-sm transition-colors flex items-start gap-1.5 select-none ${isCooked ? "opacity-50" : ""} ${isPlaceholder ? "text-muted-foreground/70" : "text-foreground hover:text-primary"}`}
                                     onClick={() => {
                                       if (isPlaceholder) {
-                                        setResolveTarget({
+                                        setResolveSession({
                                           mealName: meal.name,
                                           dayName: DAY_NAMES[mobileDay.dayOfWeek],
                                           slotLabel: row.label,
@@ -1710,6 +1759,8 @@ export default function WeeklyPlannerPage() {
                                           audience: row.audience,
                                           isDrink: row.isDrink,
                                           position: entry.position,
+                                          returnMode: null,
+                                          pendingRecipeLink: null,
                                         });
                                         setAssistantMode("resolve");
                                       } else {
@@ -1973,7 +2024,7 @@ export default function WeeklyPlannerPage() {
                                           className={`w-full text-left text-xs leading-snug transition-colors flex items-start gap-0.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
                                           onClick={() => {
                                             if (isPlaceholder) {
-                                              setResolveTarget({
+                                              setResolveSession({
                                                 mealName: meal.name,
                                                 dayName: DAY_NAMES[day.dayOfWeek],
                                                 slotLabel: row.label,
@@ -1983,6 +2034,8 @@ export default function WeeklyPlannerPage() {
                                                 audience: row.audience,
                                                 isDrink: row.isDrink,
                                                 position: entry.position,
+                                                returnMode: null,
+                                                pendingRecipeLink: null,
                                               });
                                               setAssistantMode("resolve");
                                             } else {
@@ -2262,7 +2315,7 @@ export default function WeeklyPlannerPage() {
         mode={assistantMode}
         onClose={() => {
           if (plannerScanOpen) handlePlannerScanOpenChange(false);
-          setResolveTarget(null);
+          if (assistantMode === "resolve") setResolveSession(null);
           setAssistantMode(null);
           setMobileAssistantOpen(false);
         }}
@@ -2300,7 +2353,11 @@ export default function WeeklyPlannerPage() {
               scanError={plannerScanError ?? undefined}
               plannerDays={plannerDays}
               onSaved={() => qc.invalidateQueries({ queryKey: ["/api/planner/full"] })}
-              resolutionContext={resolutionContext}
+              resolutionContext={resolveSession ? {
+                entryId: resolveSession.entryId,
+                mealName: resolveSession.mealName,
+                returnMode: resolveSession.returnMode,
+              } : null}
             />
           ) : undefined
         }
@@ -2320,7 +2377,7 @@ export default function WeeklyPlannerPage() {
         getMeal={getMeal}
         onPlannerInvalidate={() => qc.invalidateQueries({ queryKey: ["/api/planner/full"] })}
         fullPlanner={fullPlanner}
-        resolveTarget={resolveTarget ?? undefined}
+        resolveTarget={resolveSession ?? undefined}
         onResolveAction={handleResolveAction}
         onResolveRecipe={handleResolveRecipe}
         isResolving={replacePlaceholderMealMutation.isPending}
@@ -2333,11 +2390,11 @@ export default function WeeklyPlannerPage() {
         selectedDayLabel={selectedDay ? DAY_NAMES[selectedDay.dayOfWeek] : null}
         onBrowseRecipes={() => setAssistantMode("manual")}
         onBuildRecipe={() => setCreateMealOpen(true)}
-        onScanRecipe={() => navigate("/meals?openScan=1")}
+        onScanRecipe={() => { setResolveSession(null); setPlannerRecipeScanCameraOpen(true); }}
         mobileOpen={mobileAssistantOpen}
         onBackToHub={() => {
           if (plannerScanOpen) handlePlannerScanOpenChange(false);
-          setResolveTarget(null);
+          if (assistantMode === "resolve") setResolveSession(null);
           setAssistantMode(null);
         }}
         consumedProposalId={consumedProposalId}
@@ -2480,18 +2537,35 @@ export default function WeeklyPlannerPage() {
         </SheetContent>
       </Sheet>
 
-      {/* ── Phase 5E: Recipe-link confirmation dialog ── */}
-      <Dialog open={!!pendingRecipeLink} onOpenChange={(v) => { if (!v) setPendingRecipeLink(null); }}>
+      {/* ── Recipe-link confirmation dialog ── */}
+      <Dialog
+        open={!!(resolveSession?.pendingRecipeLink)}
+        onOpenChange={(v) => {
+          if (!v) {
+            setResolveSession(prev => {
+              if (!prev) return null;
+              // From placeholder-review: temp session — clear entirely on cancel
+              if (prev.returnMode === "placeholder-review") return null;
+              // From resolve mode: keep session, clear pending link only
+              return { ...prev, pendingRecipeLink: null };
+            });
+          }
+        }}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Link recipe to planned meal?</DialogTitle>
             <DialogDescription>
-              Use <span className="font-medium text-foreground">{pendingRecipeLink?.recipeName}</span> for{" "}
-              <span className="font-medium text-foreground">{pendingRecipeLink?.targetName}</span>?
+              Use <span className="font-medium text-foreground">{resolveSession?.pendingRecipeLink?.replacementMealName}</span> for{" "}
+              <span className="font-medium text-foreground">{resolveSession?.mealName}</span>?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 sm:justify-end">
-            <Button variant="outline" onClick={() => setPendingRecipeLink(null)}>
+            <Button variant="outline" onClick={() => setResolveSession(prev => {
+              if (!prev) return null;
+              if (prev.returnMode === "placeholder-review") return null;
+              return { ...prev, pendingRecipeLink: null };
+            })}>
               Cancel
             </Button>
             <Button
@@ -2510,16 +2584,14 @@ export default function WeeklyPlannerPage() {
         open={createMealOpen}
         onOpenChange={(v) => {
           setCreateMealOpen(v);
-          // Phase 3F: clear context if modal dismissed without creating
-          if (!v) setResolutionContext(null);
+          if (!v) setResolveSession(null);
         }}
-        initialTitle={resolutionContext?.mealName}
+        initialTitle={resolveSession?.mealName}
         onCreated={(mealId) => {
           qc.invalidateQueries({ queryKey: ["/api/meals"] });
-          // Phase 3F: offer to link newly created recipe to originating placeholder
-          if (resolutionContext) {
-            const ctx = resolutionContext;
-            setResolutionContext(null);
+          if (resolveSession) {
+            const ctx = resolveSession;
+            setResolveSession(null);
             toast({
               title: "Recipe created",
               description: `Link "${ctx.mealName}" to your planner?`,
@@ -3447,6 +3519,66 @@ export default function WeeklyPlannerPage() {
           e.target.value = "";
         }}
         data-testid="input-planner-scan-file"
+      />
+
+      {/* ── Planner-native recipe scan — stays within planner context ── */}
+      <CameraModal
+        open={plannerRecipeScanCameraOpen}
+        onOpenChange={setPlannerRecipeScanCameraOpen}
+        onCapture={(file) => {
+          setPlannerRecipeScanCameraOpen(false);
+          handlePlannerRecipeScanFile(file);
+        }}
+        onUploadInstead={() => {
+          setPlannerRecipeScanCameraOpen(false);
+          plannerRecipeScanFileRef.current?.click();
+        }}
+      />
+      <RecipeScanReview
+        open={plannerRecipeScanLoading || plannerRecipeScanData !== null || plannerRecipeScanError !== undefined}
+        onOpenChange={(v) => {
+          if (!v) {
+            setPlannerRecipeScanData(null);
+            setPlannerRecipeScanError(undefined);
+            setPlannerRecipeScanLoading(false);
+          }
+        }}
+        scanData={plannerRecipeScanData}
+        scanning={plannerRecipeScanLoading}
+        scanError={plannerRecipeScanError}
+        onSaved={() => setPlannerRecipeScanData(null)}
+        onMealCreated={(mealId, mealName) => {
+          qc.invalidateQueries({ queryKey: ["/api/meals"] });
+          const ctx = resolveSession;
+          if (ctx) {
+            replacePlaceholderMealMutation.mutate({ entryId: ctx.entryId, mealId }, {
+              onSuccess: () => {
+                setResolveSession(null);
+                toast({ title: "Recipe linked", description: `${ctx.mealName} resolved with scanned recipe.` });
+                if (ctx.returnMode === "placeholder-review") setAssistantMode("placeholder-review");
+              },
+              onError: () => {
+                setResolveSession(null);
+                toast({ title: "Scan saved, link failed", variant: "destructive" });
+              },
+            });
+          } else {
+            emitStageProposal(mealName, "dinner");
+            toast({ title: "Recipe staged", description: `${mealName} added to your planning tray.` });
+          }
+        }}
+      />
+      <input
+        ref={plannerRecipeScanFileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={e => {
+          const f = e.target.files?.[0];
+          if (f) handlePlannerRecipeScanFile(f);
+          e.target.value = "";
+        }}
+        data-testid="input-planner-recipe-scan-file"
       />
 
       {/* ── Adaptation Review Sheet — mounted at page level to avoid Dialog z-index conflicts ── */}

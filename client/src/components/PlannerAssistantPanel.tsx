@@ -954,6 +954,25 @@ const INTENT_MEAL_TYPES = [
   { key: "snacks",    label: "Snack",     icon: Cookie },
 ] as const;
 
+// ── Workspace Phase A: section open/close persistence ─────────────────────────
+const WORKSPACE_SECTIONS_KEY = "planner-workspace-sections";
+interface WorkspaceSections { plan: boolean; addMeals: boolean; continuePlanning: boolean; }
+function loadWorkspaceSections(): WorkspaceSections {
+  try {
+    const raw = sessionStorage.getItem(WORKSPACE_SECTIONS_KEY);
+    if (!raw) return { plan: true, addMeals: true, continuePlanning: true };
+    const p = JSON.parse(raw) as Record<string, unknown>;
+    return {
+      plan: typeof p.plan === "boolean" ? p.plan : true,
+      addMeals: typeof p.addMeals === "boolean" ? p.addMeals : true,
+      continuePlanning: typeof p.continuePlanning === "boolean" ? p.continuePlanning : true,
+    };
+  } catch { return { plan: true, addMeals: true, continuePlanning: true }; }
+}
+function saveWorkspaceSections(s: WorkspaceSections): void {
+  try { sessionStorage.setItem(WORKSPACE_SECTIONS_KEY, JSON.stringify(s)); } catch {}
+}
+
 interface IdlePanelContentProps {
   onSetMode: (mode: AssistantMode) => void;
   onCreateIntent?: (name: string, mealType: string) => Promise<void>;
@@ -1041,11 +1060,15 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
   const [proposalMealType, setProposalMealType] = useState<string>("dinner");
   const [trayRestored, setTrayRestored] = useState(false);
 
-  // Phase 5G: collapsible section state
-  const [planWeekOpen, setPlanWeekOpen] = useState(true);
-  const [addMealsOpen, setAddMealsOpen] = useState(true);
+  // Workspace Phase A: persist section open/close state across mode switches
+  const [planWeekOpen, setPlanWeekOpen] = useState(() => loadWorkspaceSections().plan);
+  const [addMealsOpen, setAddMealsOpen] = useState(() => loadWorkspaceSections().addMeals);
   const hasContinueItems = proposals.length > 0 || placeholderCount > 0;
-  const [continuePlanningOpen, setContinuePlanningOpen] = useState(true);
+  const [continuePlanningOpen, setContinuePlanningOpen] = useState(() => loadWorkspaceSections().continuePlanning);
+
+  useEffect(() => {
+    saveWorkspaceSections({ plan: planWeekOpen, addMeals: addMealsOpen, continuePlanning: continuePlanningOpen });
+  }, [planWeekOpen, addMealsOpen, continuePlanningOpen]);
 
   // Phase A: restore from session on mount. Banner only fires on first mount per
   // page load (_traySessionRestored flag) — silent on subsequent mode-switch remounts.
@@ -1108,7 +1131,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
   return (
     <div data-testid="panel-assistant-idle">
 
-      {/* ── Section A: Plan Your Week ── */}
+      {/* ── Section A: Plan ── */}
       <div data-testid="section-plan-week">
         <button
           className="w-full flex items-center justify-between py-2 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
@@ -1117,7 +1140,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
           data-testid="button-section-plan-week-toggle"
         >
           <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" data-testid="section-plan-week-label">
-            Plan Your Week
+            Plan
           </span>
           <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${planWeekOpen ? "" : "-rotate-90"}`} />
         </button>
@@ -1153,7 +1176,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
 
       <div className="w-full h-px bg-border/50" />
 
-      {/* ── Section B: Add Meals ── */}
+      {/* ── Section B: Add & Import ── */}
       <div data-testid="section-add-meals">
         <button
           className="w-full flex items-center justify-between py-2 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
@@ -1162,7 +1185,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
           data-testid="button-section-add-meals-toggle"
         >
           <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" data-testid="section-add-meals-label">
-            Add Meals
+            Add & Import
           </span>
           <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${addMealsOpen ? "" : "-rotate-90"}`} />
         </button>
@@ -1367,7 +1390,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
         )}
       </div>
 
-      {/* ── Section C: Continue Planning (shown only when there's pending work) ── */}
+      {/* ── Section C: Review & Stage (shown only when there's pending work) ── */}
       {hasContinueItems && (
         <>
           <div className="w-full h-px bg-border/50" />
@@ -1380,7 +1403,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
             >
               <span className="flex items-center gap-1.5">
                 <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider" data-testid="section-continue-label">
-                  Continue Planning
+                  Review & Stage
                 </span>
                 <span className="text-[10px] font-medium bg-muted text-muted-foreground rounded-full px-1.5 leading-4">
                   {proposals.length + placeholderCount}
@@ -1490,12 +1513,30 @@ export function PlannerAssistantPanel({
   consumedProposalId,
 }: PlannerAssistantPanelProps) {
   const isMobile = useIsMobile();
-  const [resolveSubview, setResolveSubview] = useState<"menu" | "search">("menu");
+  const RESOLVE_SUBVIEW_KEY = "planner:resolve-subview";
+  const [resolveSubview, setResolveSubview] = useState<"menu" | "search">(() => {
+    if (mode !== "resolve") return "menu";
+    try {
+      if (sessionStorage.getItem(RESOLVE_SUBVIEW_KEY) === "search") return "search";
+    } catch {}
+    return "menu";
+  });
   const [reviewSearchTarget, setReviewSearchTarget] = useState<ResolveTarget | null>(null);
 
   useEffect(() => {
     if (mode !== "resolve") setResolveSubview("menu");
   }, [mode]);
+
+  // Persist resolve subview so refresh restores the in-progress search context
+  useEffect(() => {
+    try {
+      if (mode === "resolve" && resolveSubview === "search") {
+        sessionStorage.setItem(RESOLVE_SUBVIEW_KEY, "search");
+      } else {
+        sessionStorage.removeItem(RESOLVE_SUBVIEW_KEY);
+      }
+    } catch {}
+  }, [mode, resolveSubview]);
 
   useEffect(() => {
     if (mode !== "placeholder-review") setReviewSearchTarget(null);
@@ -1655,7 +1696,7 @@ export function PlannerAssistantPanel({
   // ── Mobile: vaul Drawer replaces Radix Sheet ─────────────────────────────
   if (isMobile) {
     const drawerOpen = !!(mobileOpen || mode);
-    const drawerTitle = mode ? activeTitleLabel : "Planner Assistant";
+    const drawerTitle = mode ? activeTitleLabel : "Planning Workspace";
     const drawerIcon = mode
       ? activeTitleIcon
       : <Lightbulb className="h-4 w-4 text-primary" />;
@@ -1734,7 +1775,7 @@ export function PlannerAssistantPanel({
         <div className="flex items-center px-3 pt-3 pb-2.5 shrink-0">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <Lightbulb className="h-4 w-4 text-primary" />
-            Planner Assistant
+            Planning Workspace
           </h3>
         </div>
         <div className="w-full h-px bg-border shrink-0" />
