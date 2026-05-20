@@ -96,6 +96,9 @@ export function PlannerMealPickerPanel({
   const [productSearching, setProductSearching] = useState(false);
   const [productRetailer, setProductRetailer] = useState("");
   const [importingWebId, setImportingWebId] = useState<string | null>(null);
+  // Phase 4: tracks web recipes imported this session — recipe.id → saved meal.id
+  const [importedWebRecipes, setImportedWebRecipes] = useState<Map<string, number>>(new Map());
+  const importedMealIdSet = useMemo(() => new Set(importedWebRecipes.values()), [importedWebRecipes]);
 
   const {
     previewItem,
@@ -204,8 +207,11 @@ export function PlannerMealPickerPanel({
       result = [...nonReady, ...ready];
     }
 
+    // Suppress meals that were just imported from web — they display as transitioned rows in the web section
+    result = result.filter(m => !importedMealIdSet.has(m.id));
+
     return result.slice(0, 100);
-  }, [meals, activeSources, mealSearch, target, categoryIdForSlot, freezerMealIds]);
+  }, [meals, activeSources, mealSearch, target, categoryIdForSlot, freezerMealIds, importedMealIdSet]);
 
   const searchProducts = async () => {
     if (!productQuery.trim()) return;
@@ -254,11 +260,9 @@ export function PlannerMealPickerPanel({
       if (!res.ok) throw new Error("Failed to save recipe");
       const meal = await res.json();
       qc.invalidateQueries({ queryKey: ["/api/meals"] });
-      if (!target) {
-        toast({ title: "Recipe saved to cookbook", description: "Select a meal slot in the planner to add it." });
-        return;
-      }
-      onSelect(meal.id);
+      // Phase 4: track ownership transition — row becomes draggable after this
+      setImportedWebRecipes(prev => new Map(prev).set(recipe.id, meal.id));
+      toast({ title: "Saved to My Cookbook", description: recipe.name });
     } catch {
       toast({ title: "Could not add web recipe", variant: "destructive" });
     } finally {
@@ -433,61 +437,133 @@ export function PlannerMealPickerPanel({
               {webLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />}
               <div className="h-px flex-1 bg-border/50" />
             </div>
-            {webResults.map(recipe => (
-              <div key={recipe.id}>
-                <button
-                  className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 text-left disabled:opacity-50"
-                  onClick={() => {
-                    if (isMobile) {
-                      const pid = `web-${recipe.id}`;
-                      setMobilePreviewId(mobilePreviewId === pid ? null : pid);
-                      return;
-                    }
-                    handleAddWebRecipe(recipe);
-                  }}
-                  onMouseEnter={(e) => !isMobile && openPreview({ kind: "web", recipe }, e.currentTarget)}
-                  onMouseLeave={() => !isMobile && scheduleClose()}
-                  onFocus={(e) => !isMobile && openPreview({ kind: "web", recipe }, e.currentTarget)}
-                  onBlur={() => !isMobile && scheduleClose()}
-                  disabled={!!importingWebId || addingEntry}
-                  data-testid={`button-select-web-${recipe.id}`}
-                >
-                  {recipe.image ? (
-                    <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
-                  ) : (
-                    <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
-                      <Globe className="h-4 w-4 text-muted-foreground/40" />
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{recipe.name}</p>
-                    <div className="flex items-center gap-1 flex-wrap mt-0.5">
-                      <Badge variant="outline" className="text-[10px] px-1 border-orange-300/60 text-orange-600 dark:border-orange-600/40 dark:text-orange-400">
-                        Web recipe
-                      </Badge>
-                      {recipe.source && (
-                        <span className="text-[10px] text-muted-foreground/60">{recipe.source}</span>
-                      )}
-                    </div>
+            {webResults.map(recipe => {
+              const importedMealId = importedWebRecipes.get(recipe.id);
+              const isImported = importedMealId !== undefined;
+
+              if (isImported) {
+                // Phase 4: recipe is now cookbook-owned — render as draggable cookbook row
+                return (
+                  <div key={recipe.id}>
+                    <DraggableSearchResultRow mealId={importedMealId} mealName={recipe.name} sourceOrigin="cookbook">
+                      <button
+                        className="w-full flex items-center gap-3 p-2 rounded-md hover-elevate text-left"
+                        onClick={() => {
+                          if (isMobile) {
+                            const pid = `web-${recipe.id}`;
+                            setMobilePreviewId(mobilePreviewId === pid ? null : pid);
+                            return;
+                          }
+                          if (!target) {
+                            toast({ title: "Select a meal slot", description: "Click a slot in the planner to add this recipe." });
+                            return;
+                          }
+                          onSelect(importedMealId);
+                        }}
+                        onMouseEnter={(e) => !isMobile && openPreview({ kind: "web", recipe }, e.currentTarget)}
+                        onMouseLeave={() => !isMobile && scheduleClose()}
+                        onFocus={(e) => !isMobile && openPreview({ kind: "web", recipe }, e.currentTarget)}
+                        onBlur={() => !isMobile && scheduleClose()}
+                        disabled={addingEntry}
+                        data-testid={`button-select-web-${recipe.id}`}
+                      >
+                        {recipe.image ? (
+                          <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                            <ChefHat className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{recipe.name}</p>
+                          <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                            <Badge variant="outline" className="text-[10px] px-1 border-blue-400/60 text-blue-500">
+                              <ChefHat className="h-2.5 w-2.5 mr-0.5" />Cookbook
+                            </Badge>
+                            {recipe.source && (
+                              <span className="text-[10px] text-muted-foreground/60">{recipe.source}</span>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    </DraggableSearchResultRow>
+                    {isMobile && mobilePreviewId === `web-${recipe.id}` && (
+                      <MealPreviewInline
+                        item={{ kind: "web", recipe }}
+                        onAction={() => {
+                          setMobilePreviewId(null);
+                          if (!target) {
+                            toast({ title: "Select a meal slot", description: "Click a slot in the planner to add this recipe." });
+                            return;
+                          }
+                          onSelect(importedMealId);
+                        }}
+                        actionLabel={target ? "Add to planner" : "Select recipe"}
+                        actionDisabled={addingEntry}
+                        onDismiss={() => setMobilePreviewId(null)}
+                      />
+                    )}
                   </div>
-                  {importingWebId === recipe.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
-                  ) : null}
-                </button>
-                {isMobile && mobilePreviewId === `web-${recipe.id}` && (
-                  <MealPreviewInline
-                    item={{ kind: "web", recipe }}
-                    onAction={() => {
-                      setMobilePreviewId(null);
+                );
+              }
+
+              // Not yet imported — render as external web recipe (click to import)
+              return (
+                <div key={recipe.id}>
+                  <button
+                    className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-muted/40 text-left disabled:opacity-50"
+                    onClick={() => {
+                      if (isMobile) {
+                        const pid = `web-${recipe.id}`;
+                        setMobilePreviewId(mobilePreviewId === pid ? null : pid);
+                        return;
+                      }
                       handleAddWebRecipe(recipe);
                     }}
-                    actionLabel="Import & add"
-                    actionDisabled={!!importingWebId || addingEntry}
-                    onDismiss={() => setMobilePreviewId(null)}
-                  />
-                )}
-              </div>
-            ))}
+                    onMouseEnter={(e) => !isMobile && openPreview({ kind: "web", recipe }, e.currentTarget)}
+                    onMouseLeave={() => !isMobile && scheduleClose()}
+                    onFocus={(e) => !isMobile && openPreview({ kind: "web", recipe }, e.currentTarget)}
+                    onBlur={() => !isMobile && scheduleClose()}
+                    disabled={!!importingWebId || addingEntry}
+                    data-testid={`button-select-web-${recipe.id}`}
+                  >
+                    {recipe.image ? (
+                      <img src={recipe.image} alt={recipe.name} className="h-9 w-9 rounded-md object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="h-9 w-9 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                        <Globe className="h-4 w-4 text-muted-foreground/40" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{recipe.name}</p>
+                      <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                        <Badge variant="outline" className="text-[10px] px-1 border-orange-300/60 text-orange-600 dark:border-orange-600/40 dark:text-orange-400">
+                          Web recipe
+                        </Badge>
+                        {recipe.source && (
+                          <span className="text-[10px] text-muted-foreground/60">{recipe.source}</span>
+                        )}
+                      </div>
+                    </div>
+                    {importingWebId === recipe.id ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground shrink-0" />
+                    ) : null}
+                  </button>
+                  {isMobile && mobilePreviewId === `web-${recipe.id}` && (
+                    <MealPreviewInline
+                      item={{ kind: "web", recipe }}
+                      onAction={() => {
+                        setMobilePreviewId(null);
+                        handleAddWebRecipe(recipe);
+                      }}
+                      actionLabel="Save to My Cookbook"
+                      actionDisabled={!!importingWebId || addingEntry}
+                      onDismiss={() => setMobilePreviewId(null)}
+                    />
+                  )}
+                </div>
+              );
+            })}
             {!webLoading && webResults.length === 0 && mealSearch.trim().length >= 2 && (
               <p className="text-center text-[11px] text-muted-foreground/60 py-3">No web recipes found</p>
             )}
