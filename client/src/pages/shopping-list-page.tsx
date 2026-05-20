@@ -1458,6 +1458,25 @@ export default function ShoppingListPage() {
     return () => { document.title = "The Healthy Apples"; };
   }, []);
 
+  // Scroll position persistence \u2014 saves on unmount, restores on mount.
+  const scrollYRef = useRef(0);
+  useEffect(() => {
+    const SCROLL_KEY = "tha-sl-scroll-y";
+    try {
+      const saved = sessionStorage.getItem(SCROLL_KEY);
+      if (saved) {
+        const y = parseInt(saved, 10);
+        if (!isNaN(y) && y > 0) requestAnimationFrame(() => window.scrollTo(0, y));
+      }
+    } catch {}
+    const onScroll = () => { scrollYRef.current = window.scrollY; };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      try { sessionStorage.setItem(SCROLL_KEY, String(scrollYRef.current)); } catch {}
+    };
+  }, []);
+
   const [sortColumn, setSortColumn] = useState<SortColumn | null>('ingredient');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [editState, setEditState] = useState<EditState | null>(null);
@@ -1630,10 +1649,29 @@ export default function ShoppingListPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] }),
   });
 
+  const EXTRAS_KEY = ['/api/shopping-list/extras'] as const;
+  type ExtrasItem = { id: number; name: string; category: string; alwaysAdd: boolean; inBasket: boolean };
   const updateExtraMutation = useMutation({
     mutationFn: ({ id, alwaysAdd, inBasket }: { id: number; alwaysAdd?: boolean; inBasket?: boolean }) =>
       apiRequest("PATCH", `/api/shopping-list/extras/${id}`, { alwaysAdd, inBasket }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['/api/shopping-list/extras'] }),
+    onMutate: async ({ id, alwaysAdd, inBasket }) => {
+      await queryClient.cancelQueries({ queryKey: EXTRAS_KEY });
+      const snapshot = queryClient.getQueryData<ExtrasItem[]>(EXTRAS_KEY);
+      queryClient.setQueryData<ExtrasItem[]>(EXTRAS_KEY, old =>
+        old ? old.map(e => e.id === id ? {
+          ...e,
+          ...(alwaysAdd !== undefined ? { alwaysAdd } : {}),
+          ...(inBasket !== undefined ? { inBasket } : {}),
+        } : e) : old,
+      );
+      return { snapshot };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot !== undefined) {
+        queryClient.setQueryData(EXTRAS_KEY, ctx.snapshot);
+      }
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: EXTRAS_KEY }),
   });
 
   // ── Shopping list scan state ──────────────────────────────────────────────
@@ -1672,13 +1710,23 @@ export default function ShoppingListPage() {
   };
   // ─────────────────────────────────────────────────────────────────────────
 
-  const [neededThisWeek, setNeededThisWeek] = useState<Set<number>>(new Set());
+  const [neededThisWeek, setNeededThisWeek] = useState<Set<number>>(() => {
+    try {
+      const raw = sessionStorage.getItem("tha-sl-needed-this-week");
+      return raw ? new Set(JSON.parse(raw) as number[]) : new Set();
+    } catch { return new Set(); }
+  });
   const [staplesOpen, setStaplesOpen] = useState(false);
   const [thaPicks, setThaPicks] = useState<Record<string, IngredientProduct[]>>({});
   const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
   const [addItemInput, setAddItemInput] = useState('');
   const [alwaysAddModal, setAlwaysAddModal] = useState<{ extraId: number; extraName: string } | null>(null);
-  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(() => {
+    try {
+      const raw = sessionStorage.getItem("tha-sl-collapsed-categories");
+      return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+    } catch { return new Set(); }
+  });
   const collapsedInitRef = useRef(false);
   const [viewMode, setViewMode] = useState<"basket" | "shop">(() => {
     try {
@@ -1705,13 +1753,11 @@ export default function ShoppingListPage() {
       const next = "cupboard_check" as const;
       setShopPhase(next);
       try { localStorage.setItem("tha-sl-shop-phase", next); } catch {}
-      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
       setViewMode("shop");
     } else {
       const next = "shopping" as const;
       setShopPhase(next);
       try { localStorage.setItem("tha-sl-shop-phase", next); } catch {}
-      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
       setViewMode("shop");
     }
   }
@@ -1731,6 +1777,7 @@ export default function ShoppingListPage() {
     setNeededThisWeek(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
+      try { sessionStorage.setItem("tha-sl-needed-this-week", JSON.stringify(Array.from(next))); } catch {}
       return next;
     });
   };
@@ -1746,6 +1793,7 @@ export default function ShoppingListPage() {
     setCollapsedCategories(prev => {
       const next = new Set(prev);
       if (next.has(cat)) next.delete(cat); else next.add(cat);
+      try { sessionStorage.setItem("tha-sl-collapsed-categories", JSON.stringify(Array.from(next))); } catch {}
       return next;
     });
   }, []);
@@ -1810,8 +1858,14 @@ export default function ShoppingListPage() {
   const autoSmpRef = useRef<{ done: boolean; running: boolean }>({ done: false, running: false });
   const itemCount = savedItems.length;
   const missingThaCount = savedItems.filter(i => i.thaRating === null || i.thaRating === undefined).length;
+  // Stable refs so the effect only re-runs when loadingSaved changes, avoiding
+  // timer cancellation churn each time items update mid-session.
+  const itemCountRef = useRef(itemCount);
+  itemCountRef.current = itemCount;
+  const missingThaCountRef = useRef(missingThaCount);
+  missingThaCountRef.current = missingThaCount;
   useEffect(() => {
-    if (loadingSaved || itemCount === 0 || missingThaCount === 0) return;
+    if (loadingSaved || itemCountRef.current === 0 || missingThaCountRef.current === 0) return;
     if (autoSmpRef.current.done || autoSmpRef.current.running) return;
     autoSmpRef.current.running = true;
     const timer = setTimeout(async () => {
@@ -1828,7 +1882,7 @@ export default function ShoppingListPage() {
       autoSmpRef.current.done = true;
     }, 2000);
     return () => { clearTimeout(timer); autoSmpRef.current.running = false; };
-  }, [loadingSaved, itemCount, missingThaCount, queryClient]);
+  }, [loadingSaved, queryClient]);
 
   const getItemTier = useCallback((item: ShoppingListItem): PriceTier => {
     const catTier = getCategoryDefault(item.category || 'other').tier;
@@ -2026,13 +2080,33 @@ export default function ShoppingListPage() {
       if (!res.ok) throw new Error('Failed to update');
       return res.json();
     },
-    onSuccess: () => {
+    onMutate: async ({ id, fields }) => {
+      // Optimistic update for fields that have no pricing side-effects
+      const PURE_LOCAL = ['shopStatus', 'cupboardQuantity'] as const;
+      const isPureLocal = Object.keys(fields).every(k => (PURE_LOCAL as readonly string[]).includes(k));
+      if (!isPureLocal) return undefined;
+      await queryClient.cancelQueries({ queryKey: [api.shoppingList.list.path] });
+      const snapshot = queryClient.getQueryData<ShoppingListItemExtended[]>([api.shoppingList.list.path]);
+      queryClient.setQueryData<ShoppingListItemExtended[]>([api.shoppingList.list.path], old =>
+        old ? old.map(item => item.id === id ? { ...item, ...fields } : item) : old,
+      );
+      return { snapshot };
+    },
+    onSuccess: (_, { fields }) => {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
-      queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
-      queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
+      // Only refresh pricing queries when pricing-affecting fields change
+      const affectsPricing = 'selectedTier' in fields || 'selectedStore' in fields
+        || 'productName' in fields || 'wholeFoodIntent' in fields;
+      if (affectsPricing) {
+        queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
+        queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
+      }
       setEditState(null);
     },
-    onError: () => {
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot !== undefined) {
+        queryClient.setQueryData([api.shoppingList.list.path], ctx.snapshot);
+      }
       toast({ title: "Couldn't update item", description: "Something went wrong - try again", variant: "destructive" });
     },
   });
@@ -2180,7 +2254,21 @@ export default function ShoppingListPage() {
       if (!res.ok) throw new Error('Failed to toggle checked');
       return res.json();
     },
-    onSuccess: () => {
+    onMutate: async ({ id, checked }) => {
+      await queryClient.cancelQueries({ queryKey: [api.shoppingList.list.path] });
+      const snapshot = queryClient.getQueryData<ShoppingListItemExtended[]>([api.shoppingList.list.path]);
+      queryClient.setQueryData<ShoppingListItemExtended[]>([api.shoppingList.list.path], old =>
+        old ? old.map(item => item.id === id ? { ...item, checked } : item) : old,
+      );
+      return { snapshot };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot !== undefined) {
+        queryClient.setQueryData([api.shoppingList.list.path], ctx.snapshot);
+      }
+      toast({ title: "Couldn't update item", description: "Please try again.", variant: "destructive" });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
     },
   });
@@ -2545,10 +2633,19 @@ export default function ShoppingListPage() {
     return sorted;
   }, [displayItems, sortColumn, sortDirection, pricesByItem, getCheapestForItem, getItemTier, getItemThaRating, sourcesByItem, splitByShop]);
 
-  // Initialise collapsed-category state once data has loaded
+  // Initialise collapsed-category state once data has loaded.
+  // If sessionStorage has previously-saved collapsed state, trust it and skip
+  // recalculation so manual expand/collapse choices survive navigation.
   useEffect(() => {
     if (collapsedInitRef.current) return;
     if (loadingSaved && !shoppingExtras.length) return;
+    try {
+      const saved = sessionStorage.getItem("tha-sl-collapsed-categories");
+      if (saved) {
+        collapsedInitRef.current = true;
+        return;
+      }
+    } catch {}
     const toCollapse = new Set<string>();
     for (const cat of BASKET_DISPLAY_CATEGORIES) {
       const catItems = sortedItems.filter(i => !isStaple(i) && !isHousehold(i) && getBasketCategory(i) === cat);
@@ -2559,6 +2656,7 @@ export default function ShoppingListPage() {
     const hhExtras = shoppingExtras.filter(e => (e.inBasket || e.alwaysAdd) && e.category === 'household');
     if (hhSaved.length === 0 && hhExtras.length === 0) toCollapse.add('household');
     setCollapsedCategories(toCollapse);
+    try { sessionStorage.setItem("tha-sl-collapsed-categories", JSON.stringify(Array.from(toCollapse))); } catch {}
     collapsedInitRef.current = true;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortedItems, shoppingExtras, loadingSaved]);
