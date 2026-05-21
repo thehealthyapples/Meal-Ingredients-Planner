@@ -3225,6 +3225,18 @@ export default function ShoppingListPage() {
                                           )}
                                           {item.quantity > 1 && <Badge variant="secondary" className="text-[10px]" data-testid={`badge-quantity-${item.id}`}>x{item.quantity}</Badge>}
                                           {mergedCount > 1 && <Badge variant="outline" className="text-[10px] text-blue-500 dark:text-blue-400 border-blue-300 dark:border-blue-600" data-testid={`badge-merged-${item.id}`}>×{mergedCount}</Badge>}
+                                          {/* Phase 7: Combined badge — visible collapsed signal when item spans multiple meal sources */}
+                                          {sources.length >= 2 && !item.checked && (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Badge variant="outline" className="text-[10px] text-indigo-500 dark:text-indigo-400 border-indigo-300 dark:border-indigo-600 cursor-default" data-testid={`badge-combined-${item.id}`}>Combined</Badge>
+                                              </TooltipTrigger>
+                                              <TooltipContent side="bottom" className="max-w-[220px]">
+                                                <p className="text-xs font-medium mb-1">Combined from {sources.length} meals:</p>
+                                                {sources.map((s, idx) => <p key={idx} className="text-xs text-muted-foreground">{s.mealName}{s.quantityMultiplier > 1 ? ` (×${s.quantityMultiplier})` : ''}</p>)}
+                                              </TooltipContent>
+                                            </Tooltip>
+                                          )}
                                           {sources.some(s => frozenMealIds.has(s.mealId)) && (
                                             <Tooltip>
                                               <TooltipTrigger asChild>

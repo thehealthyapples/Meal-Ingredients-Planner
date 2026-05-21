@@ -887,6 +887,8 @@ export default function ShoppingListView({
   const [qtyConfidenceDismissed, setQtyConfidenceDismissed] = useState<Set<number>>(new Set());
   const [shopEditId, setShopEditId] = useState<number | null>(null);
   const [shopEditVal, setShopEditVal] = useState<string>("");
+  // Phase 7: tracks which merged-source items have their meal breakdown expanded
+  const [mergedExpandedIds, setMergedExpandedIds] = useState<Set<number>>(new Set());
   // Cupboard check: inline add-item input
   const [addingItem, setAddingItem] = useState(false);
   const [addItemVal, setAddItemVal] = useState("");
@@ -1539,7 +1541,18 @@ export default function ShoppingListView({
       measurementPref,
       item.normalizedName ?? item.productName ?? undefined,
     );
-    const sources = sourcesByItem.get(item.id) ?? [];
+    // Aggregate sources across all merged item IDs, deduplicating by mealId.
+    // item._allIds may contain multiple DB row IDs when the display layer has
+    // collapsed same-named ingredients into one row. Using only item.id would
+    // under-count sources for client-side merged rows.
+    const allItemIds: number[] = (item as any)._allIds ?? [item.id];
+    const _seenMealIds = new Set<number>();
+    const sources: IngredientSource[] = [];
+    for (const _id of allItemIds) {
+      for (const _s of sourcesByItem.get(_id) ?? []) {
+        if (!_seenMealIds.has(_s.mealId)) { _seenMealIds.add(_s.mealId); sources.push(_s); }
+      }
+    }
     const firstMeal = (sources[0] as any)?.mealName as string | undefined;
     const isPantryStaple = pantryKeySet.has(
       normalizeIngredientKey(item.normalizedName ?? item.productName ?? ""),
@@ -1673,6 +1686,38 @@ export default function ShoppingListView({
                   >
                     Looks right
                   </button>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Phase 7: Merged quantity transparency — lightweight inline signal when item spans multiple meals */}
+          {!isEditing && state === "need" && sources.length >= 2 && (() => {
+            const hasCupboardQty = (cupboardQty.get(item.id) ?? 0) > 0;
+            const isExpanded = mergedExpandedIds.has(item.id);
+            return (
+              <div className="tha-print-hide mt-0.5" data-testid={`merged-label-${item.id}`}>
+                <button
+                  type="button"
+                  onClick={() => setMergedExpandedIds(prev => {
+                    const s = new Set(prev);
+                    if (s.has(item.id)) s.delete(item.id); else s.add(item.id);
+                    return s;
+                  })}
+                  className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground/75 transition-colors text-left"
+                  data-testid={`merged-label-btn-${item.id}`}
+                  aria-label={`${isExpanded ? 'Collapse' : 'Expand'} meal breakdown`}
+                >
+                  Combined from {sources.length} meals{hasCupboardQty ? ' · pantry used' : ''}
+                </button>
+                {isExpanded && (
+                  <div className="mt-0.5 space-y-0" data-testid={`merged-breakdown-${item.id}`}>
+                    {sources.map((s, idx) => (
+                      <p key={idx} className="text-[10px] text-muted-foreground/45 leading-tight">
+                        {s.mealName}{s.quantityMultiplier > 1 ? ` (×${s.quantityMultiplier})` : ''}
+                      </p>
+                    ))}
+                  </div>
                 )}
               </div>
             );
