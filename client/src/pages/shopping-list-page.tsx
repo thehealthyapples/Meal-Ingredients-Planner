@@ -62,6 +62,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { estimateFallbackPrice } from "@shared/price-estimates";
 import { formatItemDisplay, cleanProductName, getLiquidDisplayMl } from "@/lib/unit-display";
+import { deriveQuantityConfidence, getQuantityConfidenceLabel } from "@/lib/quantity-confidence";
 import ScoreBadge from "@/components/ui/score-badge";
 import AppleRating from "@/components/AppleRating";
 import BadAppleWarningModal from "@/components/BadAppleWarningModal";
@@ -3314,6 +3315,18 @@ export default function ShoppingListPage() {
                                             }
                                           }} className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3.5 w-3.5" /></button>
                                         </div>
+                                        {/* Quantity confidence hint — only for approximate/assumed, non-checked items */}
+                                        {!item.checked && (() => {
+                                          const confidence = deriveQuantityConfidence(item);
+                                          if (confidence === 'exact' || confidence === 'estimated') return null;
+                                          const label = getQuantityConfidenceLabel(confidence, item);
+                                          if (!label) return null;
+                                          return (
+                                            <p className="text-[9.5px] text-muted-foreground/50 italic mt-0.5" data-testid={`basket-qty-confidence-${item.id}`}>
+                                              {label}
+                                            </p>
+                                          );
+                                        })()}
                                       </div>
                                       {/* Expand toggle */}
                                       <button onClick={() => toggleRowExpanded(item.id)} className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors shrink-0 mt-0.5" aria-label={isExpanded ? "Collapse details" : "Show details"} data-testid={`button-expand-${item.id}`}>

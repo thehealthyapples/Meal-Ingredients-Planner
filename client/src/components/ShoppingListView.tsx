@@ -26,6 +26,7 @@ import { getIngredientDef, isResolvedVariantItem } from "@/lib/ingredient-catalo
 import WholeFoodSelector from "@/components/whole-food-selector";
 import { SpellSuggestions } from "@/components/SpellSuggestions";
 import { sourceLabel, sourcePriority, type SourceFilter } from "@/lib/source-helpers";
+import { deriveQuantityConfidence, getQuantityConfidenceLabel } from "@/lib/quantity-confidence";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -882,6 +883,8 @@ export default function ShoppingListView({
   const [isCommitting, setIsCommitting] = useState(false);
   // Shop-phase attention: tracks which needsReview items have been resolved/dismissed
   const [shopReviewDismissed, setShopReviewDismissed] = useState<Set<number>>(new Set());
+  // Quantity confidence: tracks items the user has dismissed "Looks right" for
+  const [qtyConfidenceDismissed, setQtyConfidenceDismissed] = useState<Set<number>>(new Set());
   const [shopEditId, setShopEditId] = useState<number | null>(null);
   const [shopEditVal, setShopEditVal] = useState<string>("");
   // Cupboard check: inline add-item input
@@ -1645,6 +1648,35 @@ export default function ShoppingListView({
               );
             })()}
           </div>
+
+          {/* Quantity confidence hint — Phase 6 trust visibility */}
+          {!isEditing && state === "need" && (() => {
+            if (qtyConfidenceDismissed.has(item.id)) return null;
+            const confidence = deriveQuantityConfidence(item);
+            const label = getQuantityConfidenceLabel(confidence, item);
+            if (!label) return null;
+            const isActionable = confidence === 'assumed' || confidence === 'approximate';
+            const labelCls = confidence === 'assumed'
+              ? "text-[10px] text-muted-foreground/65"
+              : confidence === 'approximate'
+                ? "text-[10px] text-muted-foreground/55"
+                : "text-[10px] text-muted-foreground/38 italic";
+            return (
+              <div className="tha-print-hide flex items-center gap-1.5 mt-0.5" data-testid={`qty-confidence-${item.id}`}>
+                <span className={labelCls}>{label}</span>
+                {isActionable && (
+                  <button
+                    type="button"
+                    onClick={() => setQtyConfidenceDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; })}
+                    className="text-[9.5px] text-muted-foreground/35 hover:text-muted-foreground/65 underline-offset-2 hover:underline transition-colors"
+                    data-testid={`qty-looks-right-${item.id}`}
+                  >
+                    Looks right
+                  </button>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Variant selections summary — only for active items */}
           {!isEditing && state === "need" && (() => {
