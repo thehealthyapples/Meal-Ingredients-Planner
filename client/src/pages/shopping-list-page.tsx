@@ -1772,6 +1772,14 @@ export default function ShoppingListPage() {
     try { localStorage.setItem("tha-sl-view-mode", viewMode); } catch {}
   }, [viewMode]);
   const prevExtrasLenRef = useRef(0);
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const toggleRowExpanded = useCallback((id: number) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
 
   const toggleNeededThisWeek = (id: number) => {
     setNeededThisWeek(prev => {
@@ -3101,134 +3109,117 @@ export default function ShoppingListPage() {
                       </div>
 
                       {!collapsedCategories.has(cat) && (
-                      <><div className="overflow-x-auto">
-                        <table className="w-full text-xs sm:table-fixed" data-testid={`table-category-${cat}`}>
-                          <colgroup>
-                            <col style={{ width: 210 }} />
-                            <col style={{ width: 80 }} />
-                            <col style={{ width: 150 }} />
-                            <col style={{ width: 200 }} />
-                            <col style={{ width: 70 }} />
-                            <col style={{ width: 95 }} />
-                            <col style={{ width: 110 }} />
-                            <col style={{ width: 80 }} />
-                            <col style={{ width: 90 }} />
-                          </colgroup>
-                          <thead>
-                            <tr className="border-b border-border/40 bg-muted/10">
-                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle sticky left-0 z-10">Ingredient</th>
-                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle hidden sm:table-cell">Optimizer</th>
-                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle">Choice</th>
-                              <th className="px-1.5 py-1 text-left font-medium text-muted-foreground whitespace-nowrap align-middle">Match</th>
-                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap align-middle">Qty</th>
-                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap align-middle">Price</th>
-                              <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap align-middle hidden sm:table-cell">THA Rating</th>
-                              <th className="px-1.5 py-1 text-center font-medium text-muted-foreground whitespace-nowrap align-middle hidden sm:table-cell">Meal</th>
-                              <th className="px-1.5 py-1 text-right font-medium text-muted-foreground whitespace-nowrap align-middle sticky right-0 z-10">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <AnimatePresence>
-                              {displayRows.map(({ primary: item, combinedSources, combinedQtyValue, mergedCount, allIds, allBasketLabels }) => {
-                                const { qty, unitLabel } = formatQty(combinedQtyValue ?? item.quantityValue, item.unit, measurementPref, item.quantityInGrams, item.normalizedName ?? item.productName ?? undefined);
-                                const showStepper = !['g', 'kg', 'ml', 'L', 'oz', 'lb', 'cups', 'tbsp', 'tsp'].includes(unitLabel);
-                                const itemPrices = pricesByItem.get(item.id);
-                                const cheapest = getCheapestForItem(item.id);
-                                const isEditing = editState?.itemId === item.id;
-                                const sources = combinedSources;
-                                const catDef = getCategoryDefault(cat);
-                                const itemTier = (item.selectedTier || catDef.tier) as PriceTier;
-                                const isOverridden = item.selectedTier !== null && item.selectedTier !== catDef.tier;
+                      <>
+                        <AnimatePresence>
+                          {displayRows.map(({ primary: item, combinedSources, combinedQtyValue, mergedCount, allIds, allBasketLabels }) => {
+                            const { qty, unitLabel } = formatQty(combinedQtyValue ?? item.quantityValue, item.unit, measurementPref, item.quantityInGrams, item.normalizedName ?? item.productName ?? undefined);
+                            const showStepper = !['g', 'kg', 'ml', 'L', 'oz', 'lb', 'cups', 'tbsp', 'tsp'].includes(unitLabel);
+                            const itemPrices = pricesByItem.get(item.id);
+                            const cheapest = getCheapestForItem(item.id);
+                            const isEditing = editState?.itemId === item.id;
+                            const sources = combinedSources;
+                            const catDef = getCategoryDefault(cat);
+                            const itemTier = (item.selectedTier || catDef.tier) as PriceTier;
+                            const isOverridden = item.selectedTier !== null && item.selectedTier !== catDef.tier;
+                            const tierOptions = CATEGORY_TIER_OPTIONS[cat] || CATEGORY_TIER_OPTIONS.other;
+                            const tierShort = EXTENDED_TIER_LABELS[itemTier]?.short || itemTier;
 
-                                const wfDef = getIngredientDef(item.normalizedName ?? item.productName);
-                                const isWF = isWholeFood(item) && !!wfDef;
-                                // hasCatDef: show variant selector for any item with a catalogue selectorSchema,
-                                // regardless of itemType (whole_food or packaged like crisps)
-                                const hasCatDef = !!(wfDef && wfDef.selectorSchema.length > 0);
-                                const rowVariantSelections = hasCatDef ? safeParseJsonObject(item.variantSelections) : {};
-                                const rowAttrPreferences = hasCatDef ? safeParseJsonObject(item.attributePreferences) : {};
-                                let wfConfLabel: typeof CONFIDENCE_LABELS[keyof typeof CONFIDENCE_LABELS] | null = null;
-                                let wfConfLevel: string | null = null;
-                                if (isWF && wfDef) {
-                                  const effectiveTier = getEffectiveTier(item);
-                                  const itemCandidates = allPriceMatches.filter(m => m.shoppingListItemId === item.id);
-                                  const intent: WholeFoodIntent = { ingredientName: item.normalizedName ?? item.productName, variantSelections: rowVariantSelections, attributePreferences: rowAttrPreferences, tier: effectiveTier, selectedRetailers };
-                                  const conf = calcConfidence(intent, itemCandidates, selectedRetailers);
-                                  wfConfLabel = CONFIDENCE_LABELS[conf.level];
-                                  wfConfLevel = conf.level;
-                                }
-                                const handleVariantChange = (key: string, value: string) => {
-                                  const next = { ...rowVariantSelections, [key]: value };
-                                  if (!value) delete next[key];
-                                  updateWholeFoodIntent.mutate({ id: item.id, fields: { variantSelections: JSON.stringify(next) } });
-                                };
-                                const handleAttrChange = (key: string, value: boolean) => {
-                                  const next = { ...rowAttrPreferences, [key]: value };
-                                  updateWholeFoodIntent.mutate({ id: item.id, fields: { attributePreferences: JSON.stringify(next) } });
-                                };
+                            const wfDef = getIngredientDef(item.normalizedName ?? item.productName);
+                            const isWF = isWholeFood(item) && !!wfDef;
+                            // hasCatDef: show variant selector for any item with a catalogue selectorSchema,
+                            // regardless of itemType (whole_food or packaged like crisps)
+                            const hasCatDef = !!(wfDef && wfDef.selectorSchema.length > 0);
+                            const rowVariantSelections = hasCatDef ? safeParseJsonObject(item.variantSelections) : {};
+                            const rowAttrPreferences = hasCatDef ? safeParseJsonObject(item.attributePreferences) : {};
+                            let wfConfLabel: typeof CONFIDENCE_LABELS[keyof typeof CONFIDENCE_LABELS] | null = null;
+                            let wfConfLevel: string | null = null;
+                            if (isWF && wfDef) {
+                              const effectiveTier = getEffectiveTier(item);
+                              const itemCandidates = allPriceMatches.filter(m => m.shoppingListItemId === item.id);
+                              const intent: WholeFoodIntent = { ingredientName: item.normalizedName ?? item.productName, variantSelections: rowVariantSelections, attributePreferences: rowAttrPreferences, tier: effectiveTier, selectedRetailers };
+                              const conf = calcConfidence(intent, itemCandidates, selectedRetailers);
+                              wfConfLabel = CONFIDENCE_LABELS[conf.level];
+                              wfConfLevel = conf.level;
+                            }
+                            const handleVariantChange = (key: string, value: string) => {
+                              const next = { ...rowVariantSelections, [key]: value };
+                              if (!value) delete next[key];
+                              updateWholeFoodIntent.mutate({ id: item.id, fields: { variantSelections: JSON.stringify(next) } });
+                            };
+                            const handleAttrChange = (key: string, value: boolean) => {
+                              const next = { ...rowAttrPreferences, [key]: value };
+                              updateWholeFoodIntent.mutate({ id: item.id, fields: { attributePreferences: JSON.stringify(next) } });
+                            };
 
-                                const selectedStore = item.selectedStore || catDef.supermarket || cheapest?.supermarket || '';
-                                const selectedMatch = selectedStore ? itemPrices?.get(selectedStore) : null;
-                                const selectedPrice = selectedMatch?.price;
-                                const isBestPrice = !!(cheapest && selectedStore === cheapest.supermarket);
+                            const selectedStore = item.selectedStore || catDef.supermarket || cheapest?.supermarket || '';
+                            const selectedMatch = selectedStore ? itemPrices?.get(selectedStore) : null;
+                            const selectedPrice = selectedMatch?.price;
+                            const isBestPrice = !!(cheapest && selectedStore === cheapest.supermarket);
 
-                                const itemKey = normalizeIngredientKey((item as any).ingredientName ?? (item as any).name ?? item.normalizedName ?? item.productName ?? '');
-                                const topPick = (thaPicks[itemKey] ?? [])[0];
-                                const showHint = topPick && topPick.productName !== selectedMatch?.productName;
+                            const itemKey = normalizeIngredientKey((item as any).ingredientName ?? (item as any).name ?? item.normalizedName ?? item.productName ?? '');
+                            const topPick = (thaPicks[itemKey] ?? [])[0];
+                            const showHint = topPick && topPick.productName !== selectedMatch?.productName;
 
-                                const availableStores = SUPERMARKET_NAMES.filter(store => itemPrices?.has(store));
-                                const knownStores: string[] = (() => { try { return item.availableStores ? JSON.parse(item.availableStores) : []; } catch { return []; } })();
-                                const isBranded = !!item.matchedProductId;
+                            const availableStores = SUPERMARKET_NAMES.filter(store => itemPrices?.has(store));
+                            const knownStores: string[] = (() => { try { return item.availableStores ? JSON.parse(item.availableStores) : []; } catch { return []; } })();
+                            const isBranded = !!item.matchedProductId;
 
-                                const confShortLabel: Record<string, string> = { high: 'Exact', medium: 'Close', low: 'Sub.' };
-                                const variantSummary = (hasCatDef && Object.keys(rowVariantSelections).length > 0)
-                                  ? Object.values(rowVariantSelections).filter(Boolean).join(' · ')
-                                  : '-';
-                                const tierShort = EXTENDED_TIER_LABELS[itemTier]?.short || itemTier;
-                                const shopDisplay = item.selectedStore || catDef.supermarket || 'Auto';
-                                const choiceSummary = `${variantSummary} · ${tierShort} · ${shopDisplay}`;
+                            const confShortLabel: Record<string, string> = { high: 'Matched', medium: 'Close', low: 'Similar' };
 
-                                return (
-                                  <motion.tr
-                                    key={item.id}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0, height: 0 }}
-                                    className={`group border-b border-border/40 ${item.checked ? 'opacity-50' : ''} ${item.needsReview && !item.checked ? 'bg-amber-50/40 dark:bg-amber-950/15' : ''}`}
-                                    data-testid={`shopping-item-${item.id}`}
-                                  >
-                                    <td className="px-1.5 py-1 sticky left-0 z-10">
-                                      {isEditing && editState?.field === 'productName' ? (
-                                        <div className="flex flex-col gap-1">
-                                          <div className="flex items-center gap-1">
-                                            <Input value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-6 text-xs" autoFocus data-testid={`input-edit-name-${item.id}`} />
-                                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit} data-testid={`button-save-edit-${item.id}`}><Check className="h-3 w-3" /></Button>
-                                            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
-                                          </div>
-                                          <SpellSuggestions
-                                            term={editState.value}
-                                            onPick={(word) => setEditState({ ...editState, value: word })}
-                                            testIdPrefix={`edit-item-${item.id}`}
-                                          />
-                                        </div>
-                                      ) : (
-                                        <div className="flex items-center justify-between gap-3">
-                                          <div className="flex items-center gap-1 flex-wrap min-w-0 flex-1">
-                                          <span className="font-medium text-foreground cursor-pointer" onClick={() => startEdit(item.id, 'productName', item.productName)} data-testid={`text-item-name-${item.id}`}>{capitalizeWords(cleanProductName(item.productName, item.quantityValue))}</span>
+                            const optName = item.normalizedName ?? item.productName;
+                            const optCategory = (item.category || 'other').toLowerCase();
+                            const optKeys = isPantry ? getOptimizerOptions(optName, optCategory) : [];
+                            const itemSel = optimizerSelections[item.id] || [];
+                            const hasOptSelections = itemSel.length > 0;
+                            const toggleOpt = (key: string) => {
+                              setOptimizerSelections(prev => {
+                                const current = prev[item.id] || [];
+                                const next = current.includes(key) ? current.filter(k => k !== key) : [...current, key];
+                                return { ...prev, [item.id]: next };
+                              });
+                            };
+
+                            const isExpanded = expandedRows.has(item.id);
+
+                            return (
+                              <motion.div
+                                key={item.id}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className={`border-b border-border/40 ${item.checked ? 'opacity-50' : ''} ${item.needsReview && !item.checked ? 'bg-amber-50/40 dark:bg-amber-950/15' : ''}`}
+                                data-testid={`shopping-item-${item.id}`}
+                              >
+                                {/* ── Primary row ── */}
+                                <div className="px-3 py-2.5">
+                                  {isEditing && editState?.field === 'productName' ? (
+                                    <div className="flex flex-col gap-1">
+                                      <div className="flex items-center gap-1">
+                                        <Input value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-6 text-xs" autoFocus data-testid={`input-edit-name-${item.id}`} />
+                                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit} data-testid={`button-save-edit-${item.id}`}><Check className="h-3 w-3" /></Button>
+                                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
+                                      </div>
+                                      <SpellSuggestions term={editState.value} onPick={(word) => setEditState({ ...editState, value: word })} testIdPrefix={`edit-item-${item.id}`} />
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-start gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        {/* Name + status badges */}
+                                        <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                                          <span className="text-sm font-medium text-foreground cursor-pointer" onClick={() => startEdit(item.id, 'productName', item.productName)} data-testid={`text-item-name-${item.id}`}>{capitalizeWords(cleanProductName(item.productName, item.quantityValue))}</span>
+                                          {item.needsReview && (
+                                            <Tooltip>
+                                              <TooltipTrigger asChild>
+                                                <Badge className="text-[10px] bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border border-amber-400 dark:border-amber-600 gap-0.5 shrink-0" data-testid={`badge-review-${item.id}`}><AlertTriangle className="h-2.5 w-2.5 shrink-0" />Check item</Badge>
+                                              </TooltipTrigger>
+                                              <TooltipContent><p className="text-xs">{item.validationNote || 'This item may need manual review'}</p></TooltipContent>
+                                            </Tooltip>
+                                          )}
                                           {/* Match-status signal: shown after a price-matching pass when this
-                                              item has no real ProductMatch (covers unmatched and estimate-only).
-                                              Purely visual, non-blocking, no tooltip. Distinct from the
-                                              parser-driven `item.needsReview` "Check item" badge below. */}
+                                              item has no real ProductMatch (covers unmatched and estimate-only). */}
                                           {hasPrices && !allPriceMatches.some(m => m.shoppingListItemId === item.id && m.price !== null && m.price !== undefined) && (
-                                            <button
-                                              type="button"
-                                              onClick={(e) => { e.stopPropagation(); startEdit(item.id, 'productName', item.productName); }}
-                                              className="inline-flex items-center gap-0.5 text-[10.5px] font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline cursor-pointer rounded px-0.5 -mx-0.5 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
-                                              data-testid={`signal-review-${item.id}`}
-                                              aria-label={`Review ${item.productName}`}
-                                            >
-                                              <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-                                              Review
+                                            <button type="button" onClick={(e) => { e.stopPropagation(); startEdit(item.id, 'productName', item.productName); }} className="inline-flex items-center gap-0.5 text-[10.5px] font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 hover:underline cursor-pointer rounded px-0.5 -mx-0.5 focus:outline-none focus:ring-1 focus:ring-amber-500/50" data-testid={`signal-review-${item.id}`} aria-label={`Review ${item.productName}`}>
+                                              <AlertTriangle className="h-3 w-3" aria-hidden="true" />Review
                                             </button>
                                           )}
                                           {item.quantity > 1 && <Badge variant="secondary" className="text-[10px]" data-testid={`badge-quantity-${item.id}`}>x{item.quantity}</Badge>}
@@ -3241,217 +3232,109 @@ export default function ShoppingListPage() {
                                               <TooltipContent><p className="text-xs">You have frozen portions of a meal that uses this ingredient</p></TooltipContent>
                                             </Tooltip>
                                           )}
-                                          {item.needsReview && (
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <Badge className="text-[10px] bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 border border-amber-400 dark:border-amber-600 gap-0.5 shrink-0" data-testid={`badge-review-${item.id}`}><AlertTriangle className="h-2.5 w-2.5 shrink-0" />Check item</Badge>
-                                              </TooltipTrigger>
-                                              <TooltipContent><p className="text-xs">{item.validationNote || 'This item may need manual review'}</p></TooltipContent>
-                                            </Tooltip>
-                                          )}
                                           {item.basketLabel && (() => {
                                             const BASKET_LABEL_CONFIG: Record<string, { text: string; className: string }> = {
-                                              shared:            { text: "Shared ingredient",  className: "text-indigo-600 dark:text-indigo-400 border-indigo-300 dark:border-indigo-600" },
-                                              vegetarian_swap:   { text: "Vegetarian option",  className: "text-green-600 dark:text-green-400 border-green-300 dark:border-green-600" },
-                                              vegetarian:        { text: "Vegetarian option",  className: "text-green-600 dark:text-green-400 border-green-300 dark:border-green-600" },
-                                              keto_swap:         { text: "Low-carb option",    className: "text-yellow-600 dark:text-yellow-400 border-yellow-300 dark:border-yellow-600" },
-                                              keto:              { text: "Low-carb option",    className: "text-yellow-600 dark:text-yellow-400 border-yellow-300 dark:border-yellow-600" },
-                                              optional:          { text: "Optional topping",   className: "text-muted-foreground border-border" },
+                                              shared: { text: "Shared ingredient", className: "text-indigo-600 dark:text-indigo-400 border-indigo-300 dark:border-indigo-600" },
+                                              vegetarian_swap: { text: "Vegetarian option", className: "text-green-600 dark:text-green-400 border-green-300 dark:border-green-600" },
+                                              vegetarian: { text: "Vegetarian option", className: "text-green-600 dark:text-green-400 border-green-300 dark:border-green-600" },
+                                              keto_swap: { text: "Low-carb option", className: "text-yellow-600 dark:text-yellow-400 border-yellow-300 dark:border-yellow-600" },
+                                              keto: { text: "Low-carb option", className: "text-yellow-600 dark:text-yellow-400 border-yellow-300 dark:border-yellow-600" },
+                                              optional: { text: "Optional topping", className: "text-muted-foreground border-border" },
                                             };
                                             const cfg = BASKET_LABEL_CONFIG[item.basketLabel];
-                                            if (cfg) return (
-                                              <Badge variant="outline" className={`text-[10px] ${cfg.className}`} data-testid={`badge-basket-label-${item.id}`}>
-                                                {cfg.text}
-                                              </Badge>
-                                            );
+                                            if (cfg) return <Badge variant="outline" className={`text-[10px] ${cfg.className}`} data-testid={`badge-basket-label-${item.id}`}>{cfg.text}</Badge>;
                                             return null;
                                           })()}
-                                          {/* Source label - shown for all items with an explicit source. */}
                                           {(() => {
                                             const text = sourceLabel(item as any);
                                             if (!text) return null;
-                                            return (
-                                              <Badge variant="outline" className="text-[10px] text-violet-600 dark:text-violet-400 border-violet-300 dark:border-violet-600" data-testid={`badge-source-${item.id}`}>
-                                                {text}
-                                              </Badge>
-                                            );
-                                          })()}
-                                          </div>
-                                          {(() => {
-                                            const smp = getItemThaRating(item.id, item);
-                                            if (smp === 0) return null;
-                                            return (
-                                              <span className="sm:hidden flex-shrink-0 flex items-center gap-0.5 whitespace-nowrap" data-testid={`text-smp-mobile-${item.id}`}>
-                                                <img src={thaAppleSrc} alt="" className="h-8 w-8 object-contain" />
-                                                <span className="text-xs font-semibold text-foreground/70">{Math.round(smp)}</span>
-                                              </span>
-                                            );
+                                            return <Badge variant="outline" className="text-[10px] text-violet-600 dark:text-violet-400 border-violet-300 dark:border-violet-600" data-testid={`badge-source-${item.id}`}>{text}</Badge>;
                                           })()}
                                         </div>
-                                      )}
-                                    </td>
-
-                                    {(() => {
-                                      if (!isPantry) return <td className="px-1.5 py-1 text-muted-foreground hidden sm:table-cell" data-testid={`optimizer-cell-${item.id}`}>-</td>;
-                                      const optName = item.normalizedName ?? item.productName;
-                                      const optCategory = (item.category || 'other').toLowerCase();
-                                      const optKeys = getOptimizerOptions(optName, optCategory);
-                                      const itemSel = optimizerSelections[item.id] || [];
-                                      const triggerLabel = getOptimizerTriggerLabel(itemSel);
-                                      const hasSelections = itemSel.length > 0;
-                                      const toggleOpt = (key: string) => {
-                                        setOptimizerSelections(prev => {
-                                          const current = prev[item.id] || [];
-                                          const next = current.includes(key) ? current.filter(k => k !== key) : [...current, key];
-                                          return { ...prev, [item.id]: next };
-                                        });
-                                      };
-                                      if (optKeys.length === 0) {
-                                        return (
-                                          <td className="px-1.5 py-1 hidden sm:table-cell" data-testid={`optimizer-cell-${item.id}`}>
-                                            <span className="text-[10px] text-muted-foreground">Default</span>
-                                          </td>
-                                        );
-                                      }
-                                      return (
-                                        <td className="px-1.5 py-1 hidden sm:table-cell" data-testid={`optimizer-cell-${item.id}`}>
-                                          <Popover>
-                                            <PopoverTrigger asChild>
-                                              <button
-                                                className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border whitespace-nowrap cursor-pointer transition-colors ${hasSelections ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted/60 text-muted-foreground border-border'}`}
-                                                data-testid={`optimizer-trigger-${item.id}`}
-                                              >
-                                                {triggerLabel}
-                                                <ChevronDown className="h-2.5 w-2.5 ml-0.5 opacity-60" />
-                                              </button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-48 p-2" align="start">
-                                              <div className="flex flex-wrap gap-1">
-                                                {optKeys.map(key => {
-                                                  const isActive = itemSel.includes(key);
-                                                  return (
-                                                    <button
-                                                      key={key}
-                                                      type="button"
-                                                      onClick={() => toggleOpt(key)}
-                                                      className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isActive ? 'bg-primary/10 text-primary border-primary/20 font-medium' : 'bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground'}`}
-                                                      data-testid={`optimizer-chip-${item.id}-${key}`}
-                                                    >
-                                                      {OPTIMIZER_OPTIONS[key]?.label || key}
-                                                    </button>
-                                                  );
-                                                })}
+                                        {/* Controls row: qty · choice indicator · price · checkbox · delete */}
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                          {/* Qty stepper */}
+                                          <div className="flex items-center gap-0.5">
+                                            {isEditing && editState?.field === 'quantityValue' ? (
+                                              <div className="flex items-center gap-1">
+                                                <Input type="number" value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-7 text-xs w-16 text-right" autoFocus data-testid={`input-edit-qty-${item.id}`} />
+                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit}><Check className="h-3 w-3" /></Button>
+                                                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
                                               </div>
-                                            </PopoverContent>
-                                          </Popover>
-                                        </td>
-                                      );
-                                    })()}
-                                    <td className="px-1.5 py-1" data-testid={`choice-cell-${item.id}`}>
-                                      <Popover>
-                                        <PopoverTrigger asChild>
-                                          <button className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border whitespace-nowrap cursor-pointer transition-colors ${isOverridden ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-700' : 'bg-muted/60 text-muted-foreground border-border hover:text-foreground'}`} data-testid={`choice-summary-${item.id}`}>
-                                            <span className="truncate max-w-[120px]">{choiceSummary}</span>
-                                            <ChevronDown className="h-2.5 w-2.5 ml-0.5 flex-shrink-0 opacity-60" />
-                                          </button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-64 p-3" align="start">
-                                          <div className="flex flex-col gap-2">
-                                            {hasCatDef && wfDef && (
-                                              <div className="flex flex-col gap-0.5">
-                                                {wfDef.selectorSchema.map((selector) => {
-                                                  const rawVal = rowVariantSelections[selector.key] ?? "";
-                                                  const multiVals = selector.multi
-                                                    ? rawVal.split(",").map((v: string) => v.trim()).filter(Boolean)
-                                                    : [];
-                                                  return (
-                                                    <div key={selector.key} className="flex flex-wrap gap-0.5">
-                                                      {selector.options.map((option) => {
-                                                        const isSel = selector.multi
-                                                          ? multiVals.includes(option)
-                                                          : rawVal === option;
-                                                        const handleClick = () => {
-                                                          if (selector.multi) {
-                                                            const next = isSel
-                                                              ? multiVals.filter((v: string) => v !== option)
-                                                              : [...multiVals, option];
-                                                            handleVariantChange(selector.key, next.join(","));
-                                                          } else {
-                                                            handleVariantChange(selector.key, isSel ? "" : option);
-                                                          }
-                                                        };
-                                                        return (
-                                                          <button key={option} type="button" onClick={handleClick} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isSel ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`} data-testid={`variant-chip-${item.id}-${selector.key}-${option.replace(/\s+/g, "-").toLowerCase()}`}>{option}</button>
-                                                        );
-                                                      })}
-                                                    </div>
-                                                  );
-                                                })}
-                                                {wfDef.relevantAttributes.length > 0 && (
-                                                  <div className="flex flex-wrap gap-0.5">
-                                                    {wfDef.relevantAttributes.map((attr) => {
-                                                      const isActive = !!rowAttrPreferences[attr];
-                                                      const alabel = attr.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-                                                      return (
-                                                        <button key={attr} type="button" onClick={() => handleAttrChange(attr, !isActive)} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isActive ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`} data-testid={`attr-chip-${item.id}-${attr}`}>{alabel}</button>
-                                                      );
-                                                    })}
-                                                  </div>
+                                            ) : (
+                                              <>
+                                                {showStepper && allIds.length <= 1 && (
+                                                  <button onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: Math.max(0, (item.quantityValue ?? 0) - 1) } })} className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors" data-testid={`button-qty-minus-${item.id}`}><Minus className="h-3 w-3" /></button>
                                                 )}
-                                              </div>
-                                            )}
-                                            <Select value={itemTier} onValueChange={(val) => { const newTier = val === catDef.tier ? null : val; changeItemTier.mutate({ id: item.id, tier: newTier }); }}>
-                                              <SelectTrigger className={`h-7 text-xs ${isOverridden ? 'border-amber-400' : ''}`} data-testid={`select-item-tier-${item.id}`}>
-                                                <SelectValue />
-                                              </SelectTrigger>
-                                              <SelectContent>
-                                                {tierOptions.map(key => <SelectItem key={key} value={key}>{EXTENDED_TIER_LABELS[key]?.label || key}</SelectItem>)}
-                                              </SelectContent>
-                                            </Select>
-                                            {hasPrices && (
-                                              <div className="flex items-center gap-1" data-testid={`select-shop-${item.id}`}>
-                                                <Select value={item.selectedStore || 'auto'} onValueChange={(val) => { updateItem.mutate({ id: item.id, fields: { selectedStore: val === 'auto' ? null : val } }); setGlobalStore('auto'); }}>
-                                                  <SelectTrigger className={`h-6 text-xs ${item.selectedStore ? 'border-amber-400' : ''}`} data-testid={`select-store-${item.id}`}>
-                                                    <SelectValue />
-                                                  </SelectTrigger>
-                                                  <SelectContent>
-                                                    <SelectItem value="auto"><span className="flex items-center gap-1"><TrendingDown className="h-3 w-3" />{isBranded ? 'Choose' : 'Auto'}</span></SelectItem>
-                                                    {availableStores.map(store => {
-                                                      const storeMatch = itemPrices?.get(store);
-                                                      const isKnown = knownStores.includes(store);
-                                                      return (
-                                                        <SelectItem key={store} value={store}>
-                                                          <span className="flex items-center gap-1">
-                                                            {isBranded && isKnown && <Check className="h-3 w-3 text-green-500 flex-shrink-0" />}
-                                                            {store}{storeMatch?.price ? ` £${storeMatch.price.toFixed(2)}` : ''}
-                                                          </span>
-                                                        </SelectItem>
-                                                      );
-                                                    })}
-                                                  </SelectContent>
-                                                </Select>
-                                                {isBranded && item.selectedStore && (() => {
-                                                  const storeMatch = itemPrices?.get(item.selectedStore);
-                                                  return storeMatch?.productUrl ? (
-                                                    <a href={storeMatch.productUrl} target="_blank" rel="noopener noreferrer">
-                                                      <Button variant="ghost" size="icon" className="h-6 w-6" data-testid={`button-store-link-${item.id}`}><ExternalLink className="h-3 w-3" /></Button>
-                                                    </a>
-                                                  ) : null;
-                                                })()}
-                                              </div>
+                                                {allIds.length > 1 ? (
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <span className="tabular-nums whitespace-nowrap text-sm font-medium cursor-default px-0.5" data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent><p className="text-xs">Combined from {allIds.length} sources — use Planned or Quick list tab to edit.</p></TooltipContent>
+                                                  </Tooltip>
+                                                ) : (
+                                                  <span className="cursor-pointer tabular-nums whitespace-nowrap text-sm font-medium px-0.5" onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue ?? 0))} data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
+                                                )}
+                                                {showStepper && allIds.length <= 1 && (
+                                                  <button onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: (item.quantityValue ?? 0) + 1 } })} className="h-5 w-5 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors" data-testid={`button-qty-plus-${item.id}`}><Plus className="h-3 w-3" /></button>
+                                                )}
+                                              </>
                                             )}
                                           </div>
-                                        </PopoverContent>
-                                      </Popover>
-                                    </td>
+                                          {/* Choice summary — tap to expand details */}
+                                          <button onClick={() => toggleRowExpanded(item.id)} className={`inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded border whitespace-nowrap cursor-pointer transition-colors ${isOverridden ? 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-700' : 'bg-muted/60 text-muted-foreground border-border hover:text-foreground'}`} data-testid={`choice-summary-${item.id}`}>
+                                            {isOverridden ? tierShort : 'Options'}
+                                          </button>
+                                          {hasOptSelections && <span className="text-[10px] text-primary font-medium">·</span>}
+                                          <div className="flex-1" />
+                                          {/* Price */}
+                                          <div data-testid={`text-price-${item.id}`}>
+                                            {hasPrices ? (
+                                              <div className="flex items-center gap-1">
+                                                {selectedPrice !== null && selectedPrice !== undefined ? (
+                                                  <span className={`tabular-nums text-sm cursor-pointer ${isBestPrice ? 'text-primary font-semibold' : 'text-foreground'}`} onClick={() => setComparisonItem(item)}>£{selectedPrice.toFixed(2)}</span>
+                                                ) : (
+                                                  <span className="text-sm text-muted-foreground cursor-pointer" onClick={() => setComparisonItem(item)}>-</span>
+                                                )}
+                                                {isBestPrice && <span className="text-[10px] bg-secondary text-secondary-foreground px-1 py-0.5 rounded font-semibold">Best</span>}
+                                              </div>
+                                            ) : <span className="text-sm text-muted-foreground">-</span>}
+                                          </div>
+                                          {/* Checkbox */}
+                                          <Checkbox checked={item.checked || false} onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })} className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" data-testid={`checkbox-item-${item.id}`} />
+                                          {/* Delete */}
+                                          <button onClick={() => {
+                                            const plannedIds = allIds.filter((_, i) => !allBasketLabels[i]?.startsWith("quick_list_"));
+                                            const qlIds = allIds.filter((_, i) => !!allBasketLabels[i]?.startsWith("quick_list_"));
+                                            if (plannedIds.length > 0 && qlIds.length > 0) {
+                                              setRemoveDialog({ planned: plannedIds, quickList: qlIds });
+                                            } else {
+                                              allIds.forEach(id => removeItem.mutate(id));
+                                            }
+                                          }} className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3.5 w-3.5" /></button>
+                                        </div>
+                                      </div>
+                                      {/* Expand toggle */}
+                                      <button onClick={() => toggleRowExpanded(item.id)} className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors shrink-0 mt-0.5" aria-label={isExpanded ? "Collapse details" : "Show details"} data-testid={`button-expand-${item.id}`}>
+                                        {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
 
-                                    <td className="px-1.5 py-1">
-                                      {hasPrices ? (selectedMatch ? (
-                                          <div className="flex items-start gap-1.5">
-                                            {selectedMatch.imageUrl && <img src={selectedMatch.imageUrl} alt={selectedMatch.productName} className="w-7 h-7 rounded object-cover flex-shrink-0 mt-0.5" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} data-testid={`img-product-${item.id}`} />}
-                                            <div className="min-w-0">
+                                {/* ── Expanded details ── */}
+                                {isExpanded && (
+                                  <div className="px-3 pb-3 pt-2 border-t border-border/30 bg-muted/10 space-y-3" data-testid={`expanded-${item.id}`}>
+                                    {/* Product match */}
+                                    {hasPrices && (
+                                      <div>
+                                        {selectedMatch ? (
+                                          <div className="flex items-start gap-2.5">
+                                            {selectedMatch.imageUrl && <img src={selectedMatch.imageUrl} alt={selectedMatch.productName} className="w-10 h-10 rounded object-cover flex-shrink-0 border border-border/40" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} data-testid={`img-product-${item.id}`} />}
+                                            <div className="flex-1 min-w-0">
                                               <div className="flex items-center gap-1.5 flex-wrap">
-                                                <p className="text-xs text-foreground overflow-hidden text-ellipsis whitespace-nowrap" data-testid={`text-product-name-${item.id}`}>{selectedMatch.productName}</p>
+                                                <p className="text-xs font-medium text-foreground" data-testid={`text-product-name-${item.id}`}>{selectedMatch.productName}</p>
                                                 {isWF && wfConfLabel && (
                                                   <Tooltip>
                                                     <TooltipTrigger asChild>
@@ -3459,18 +3342,16 @@ export default function ShoppingListPage() {
                                                         {confShortLabel[wfConfLevel ?? ''] ?? wfConfLabel.label}
                                                       </span>
                                                     </TooltipTrigger>
-                                                    <TooltipContent>
-                                                      <p className="text-xs">{wfConfLabel.label}</p>
-                                                    </TooltipContent>
+                                                    <TooltipContent><p className="text-xs">{wfConfLabel.label}</p></TooltipContent>
                                                   </Tooltip>
                                                 )}
                                               </div>
-                                              {selectedMatch.productWeight && <p className="text-[10px] text-muted-foreground">{selectedMatch.productWeight}</p>}
+                                              {selectedMatch.productWeight && <p className="text-[10px] text-muted-foreground mt-0.5">{selectedMatch.productWeight}</p>}
                                             </div>
                                           </div>
                                         ) : (
                                           <div className="flex items-center gap-1.5">
-                                            <span className="text-muted-foreground">-</span>
+                                            <span className="text-xs text-muted-foreground" data-testid={`text-product-name-${item.id}`}>No product matched</span>
                                             {isWF && wfConfLabel && (
                                               <Tooltip>
                                                 <TooltipTrigger asChild>
@@ -3478,216 +3359,218 @@ export default function ShoppingListPage() {
                                                     {confShortLabel[wfConfLevel ?? ''] ?? wfConfLabel.label}
                                                   </span>
                                                 </TooltipTrigger>
-                                                <TooltipContent>
-                                                  <p className="text-xs">{wfConfLabel.label}</p>
-                                                </TooltipContent>
+                                                <TooltipContent><p className="text-xs">{wfConfLabel.label}</p></TooltipContent>
                                               </Tooltip>
                                             )}
                                           </div>
-                                        )
-                                      ) : <span className="text-muted-foreground">-</span>}
-                                      {hasPrices && showHint && (
-                                        <div className="flex items-center gap-1 mt-0.5">
-                                          <span className="text-[10px] text-amber-600 dark:text-amber-400 inline-flex items-center gap-0.5" data-testid={`text-tha-pick-${item.id}`}><img src={thaAppleSrc} alt="" className="h-3.5 w-3.5 object-contain flex-shrink-0" />{topPick.productName}</span>
-                                          <button className="text-[10px] text-primary hover:underline font-medium" onClick={() => updateItem.mutate({ id: item.id, fields: { matchedStore: topPick.retailer, matchedProductId: null, matchedPrice: null } })} data-testid={`button-use-tha-pick-${item.id}`}>[Use]</button>
-                                        </div>
-                                      )}
-                                    </td>
-
-                                    <td className="px-1.5 py-1 tabular-nums text-muted-foreground">
-                                      {isEditing && editState?.field === 'quantityValue' ? (
-                                        <div className="flex items-center gap-1 justify-end">
-                                          <Input type="number" value={editState.value} onChange={(e) => setEditState({ ...editState, value: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(); if (e.key === 'Escape') cancelEdit(); }} className="h-7 text-xs w-16 text-right" autoFocus data-testid={`input-edit-qty-${item.id}`} />
-                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={saveEdit}><Check className="h-3 w-3" /></Button>
-                                          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={cancelEdit}><X className="h-3 w-3" /></Button>
-                                        </div>
-                                      ) : (
-                                        <div className="flex items-center justify-center gap-0.5">
-                                          {showStepper && allIds.length <= 1 && (
-                                            <button
-                                              onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: Math.max(0, (item.quantityValue ?? 0) - 1) } })}
-                                              className="h-4 w-4 flex-shrink-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-                                              data-testid={`button-qty-minus-${item.id}`}
-                                            ><Minus className="h-2.5 w-2.5" /></button>
-                                          )}
-                                          {allIds.length > 1 ? (
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <span className="tabular-nums whitespace-nowrap px-0.5 cursor-default" data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
-                                              </TooltipTrigger>
-                                              <TooltipContent><p className="text-xs">Combined from {allIds.length} sources - use Planned or Quick list tab to edit.</p></TooltipContent>
-                                            </Tooltip>
-                                          ) : (
-                                            <span className="cursor-pointer tabular-nums whitespace-nowrap px-0.5" onClick={() => startEdit(item.id, 'quantityValue', String(item.quantityValue ?? 0))} data-testid={`text-item-qty-${item.id}`}>{qty} {unitLabel}</span>
-                                          )}
-                                          {showStepper && allIds.length <= 1 && (
-                                            <button
-                                              onClick={() => updateItem.mutate({ id: item.id, fields: { quantityValue: (item.quantityValue ?? 0) + 1 } })}
-                                              className="h-4 w-4 flex-shrink-0 flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
-                                              data-testid={`button-qty-plus-${item.id}`}
-                                            ><Plus className="h-2.5 w-2.5" /></button>
-                                          )}
-                                        </div>
-                                      )}
-                                    </td>
-
-                                    <td className="px-1.5 py-1 text-right" data-testid={`text-price-${item.id}`}>
-                                      {hasPrices ? (
-                                        <div className="flex items-center gap-1 justify-end">
-                                          {selectedPrice !== null && selectedPrice !== undefined ? (
-                                            <span className={`tabular-nums cursor-pointer ${isBestPrice ? 'text-primary font-semibold' : 'text-foreground'}`} onClick={() => setComparisonItem(item)}>£{selectedPrice.toFixed(2)}</span>
-                                          ) : (
-                                            <span className="text-muted-foreground cursor-pointer" onClick={() => setComparisonItem(item)}>-</span>
-                                          )}
-                                          {isBestPrice && <span className="text-[10px] bg-secondary text-secondary-foreground px-1 py-0.5 rounded font-semibold">Best</span>}
-                                        </div>
-                                      ) : <span className="text-muted-foreground">-</span>}
-                                    </td>
-
-                                    <td className="px-1.5 py-1 text-center hidden sm:table-cell" data-testid={`text-smp-${item.id}`}>
-                                      {hasPrices ? (() => {
-                                        const smp = getItemThaRating(item.id, item);
-                                        if (smp === 0) return <span className="text-muted-foreground">-</span>;
-                                        return <AppleRating rating={smp} size="small" />;
-                                      })() : <span className="text-muted-foreground">-</span>}
-                                    </td>
-
-                                    <td className="px-1.5 py-1 text-center hidden sm:table-cell" data-testid={`meal-count-${item.id}`}>
-                                      {(() => {
-                                        const hasPantry = isPantry;
-                                        const hasRecipes = sources.length > 0;
-                                        if (hasPantry && hasRecipes) {
-                                          return (
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <span className="cursor-default text-xs text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🏠 + 🍽 {sources.length}</span>
-                                              </TooltipTrigger>
-                                              <TooltipContent side="bottom" className="max-w-[220px]">
-                                                <p className="text-xs font-medium mb-1">Pantry item also used in {sources.length} recipe(s):</p>
-                                                {sources.map((s, idx) => <p key={idx} className="text-xs text-muted-foreground">{s.mealName}{s.quantityMultiplier > 1 ? ` (x${s.quantityMultiplier})` : ''}</p>)}
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          );
-                                        }
-                                        if (hasPantry && !hasRecipes) {
-                                          return (
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <span className="cursor-default text-xs text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🏠</span>
-                                              </TooltipTrigger>
-                                              <TooltipContent side="bottom">
-                                                <p className="text-xs">Added from pantry</p>
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          );
-                                        }
-                                        if (!hasPantry && hasRecipes) {
-                                          return (
-                                            <Tooltip>
-                                              <TooltipTrigger asChild>
-                                                <span className="cursor-default text-xs text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🍽 {sources.length}</span>
-                                              </TooltipTrigger>
-                                              <TooltipContent side="bottom" className="max-w-[220px]">
-                                                <p className="text-xs font-medium mb-1">Used in {sources.length} recipe(s):</p>
-                                                {sources.map((s, idx) => <p key={idx} className="text-xs text-muted-foreground">{s.mealName}{s.quantityMultiplier > 1 ? ` (x${s.quantityMultiplier})` : ''}</p>)}
-                                              </TooltipContent>
-                                            </Tooltip>
-                                          );
-                                        }
-                                        return <span className="text-muted-foreground">-</span>;
-                                      })()}
-                                    </td>
-
-                                    <td className="px-1.5 py-1 sticky right-0 z-10">
-                                      <div className={`flex items-center justify-end gap-0.5 transition-opacity duration-150 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100${item.checked ? ' md:opacity-100' : ''}`}>
-                                        <Checkbox
-                                          checked={item.checked || false}
-                                          onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })}
-                                          className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
-                                          data-testid={`checkbox-item-${item.id}`}
-                                        />
-                                        <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7 hidden sm:inline-flex" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => setCorrectItem(item)} className="text-muted-foreground h-7 w-7 hidden sm:inline-flex" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
-                                        <Button variant="ghost" size="icon" onClick={() => {
-                                          const plannedIds = allIds.filter((_, i) => !allBasketLabels[i]?.startsWith("quick_list_"));
-                                          const qlIds = allIds.filter((_, i) => !!allBasketLabels[i]?.startsWith("quick_list_"));
-                                          if (plannedIds.length > 0 && qlIds.length > 0) {
-                                            setRemoveDialog({ planned: plannedIds, quickList: qlIds });
-                                          } else {
-                                            allIds.forEach(id => removeItem.mutate(id));
-                                          }
-                                        }} className="text-muted-foreground h-7 w-7" data-testid={`button-remove-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                        )}
+                                        {showHint && (
+                                          <div className="flex items-center gap-1 mt-1">
+                                            <span className="text-[10px] text-amber-600 dark:text-amber-400 inline-flex items-center gap-0.5" data-testid={`text-tha-pick-${item.id}`}><img src={thaAppleSrc} alt="" className="h-3.5 w-3.5 object-contain flex-shrink-0" />{topPick.productName}</span>
+                                            <button className="text-[10px] text-primary hover:underline font-medium" onClick={() => updateItem.mutate({ id: item.id, fields: { matchedStore: topPick.retailer, matchedProductId: null, matchedPrice: null } })} data-testid={`button-use-tha-pick-${item.id}`}>[Use]</button>
+                                          </div>
+                                        )}
                                       </div>
-                                    </td>
-                                  </motion.tr>
-                                );
-                              })}
-                            </AnimatePresence>
-                            {/* Extras rows for this category */}
-                            {catExtras.map(extra => (
-                              <tr key={`extra-${extra.id}`} className={`border-b border-border/30 ${extra.alwaysAdd ? 'bg-primary/3' : ''}`} data-testid={`row-extra-${extra.id}`}>
-                                <td className="px-1.5 py-1.5 sticky left-0 z-10">
-                                  <div className="flex flex-col gap-0.5">
-                                    <span className="font-medium text-foreground/80" data-testid={`text-extra-name-${extra.id}`}>{capitalizeWords(extra.name)}</span>
-                                    <button
-                                      className={`self-start inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`}
-                                      onClick={() => extra.alwaysAdd ? setAlwaysAddModal({ extraId: extra.id, extraName: extra.name }) : updateExtraMutation.mutate({ id: extra.id, alwaysAdd: true })}
-                                      data-testid={`pill-always-${extra.id}`}
-                                    >Always in Basket</button>
+                                    )}
+
+                                    {/* Choice controls */}
+                                    <div data-testid={`choice-cell-${item.id}`}>
+                                      {hasCatDef && wfDef && (
+                                        <div className="flex flex-col gap-1.5 mb-2">
+                                          {wfDef.selectorSchema.map((selector) => {
+                                            const rawVal = rowVariantSelections[selector.key] ?? "";
+                                            const multiVals = selector.multi ? rawVal.split(",").map((v: string) => v.trim()).filter(Boolean) : [];
+                                            return (
+                                              <div key={selector.key} className="flex flex-wrap gap-0.5">
+                                                {selector.options.map((option) => {
+                                                  const isSel = selector.multi ? multiVals.includes(option) : rawVal === option;
+                                                  const handleClick = () => {
+                                                    if (selector.multi) {
+                                                      const next = isSel ? multiVals.filter((v: string) => v !== option) : [...multiVals, option];
+                                                      handleVariantChange(selector.key, next.join(","));
+                                                    } else {
+                                                      handleVariantChange(selector.key, isSel ? "" : option);
+                                                    }
+                                                  };
+                                                  return <button key={option} type="button" onClick={handleClick} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isSel ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`} data-testid={`variant-chip-${item.id}-${selector.key}-${option.replace(/\s+/g, "-").toLowerCase()}`}>{option}</button>;
+                                                })}
+                                              </div>
+                                            );
+                                          })}
+                                          {wfDef.relevantAttributes.length > 0 && (
+                                            <div className="flex flex-wrap gap-0.5">
+                                              {wfDef.relevantAttributes.map((attr) => {
+                                                const isActive = !!rowAttrPreferences[attr];
+                                                const alabel = attr.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+                                                return <button key={attr} type="button" onClick={() => handleAttrChange(attr, !isActive)} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isActive ? "bg-primary/10 text-primary border-primary/20 font-medium" : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`} data-testid={`attr-chip-${item.id}-${attr}`}>{alabel}</button>;
+                                              })}
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <Select value={itemTier} onValueChange={(val) => { const newTier = val === catDef.tier ? null : val; changeItemTier.mutate({ id: item.id, tier: newTier }); }}>
+                                          <SelectTrigger className={`h-7 text-xs w-auto min-w-[120px] ${isOverridden ? 'border-amber-400' : ''}`} data-testid={`select-item-tier-${item.id}`}>
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            {tierOptions.map(key => <SelectItem key={key} value={key}>{EXTENDED_TIER_LABELS[key]?.label || key}</SelectItem>)}
+                                          </SelectContent>
+                                        </Select>
+                                        {hasPrices && (
+                                          <div className="flex items-center gap-1" data-testid={`select-shop-${item.id}`}>
+                                            <Select value={item.selectedStore || 'auto'} onValueChange={(val) => { updateItem.mutate({ id: item.id, fields: { selectedStore: val === 'auto' ? null : val } }); setGlobalStore('auto'); }}>
+                                              <SelectTrigger className={`h-7 text-xs w-auto min-w-[100px] ${item.selectedStore ? 'border-amber-400' : ''}`} data-testid={`select-store-${item.id}`}>
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="auto"><span className="flex items-center gap-1"><TrendingDown className="h-3 w-3" />{isBranded ? 'Choose' : 'Auto'}</span></SelectItem>
+                                                {availableStores.map(store => {
+                                                  const storeMatch = itemPrices?.get(store);
+                                                  const isKnown = knownStores.includes(store);
+                                                  return (
+                                                    <SelectItem key={store} value={store}>
+                                                      <span className="flex items-center gap-1">
+                                                        {isBranded && isKnown && <Check className="h-3 w-3 text-green-500 flex-shrink-0" />}
+                                                        {store}{storeMatch?.price ? ` £${storeMatch.price.toFixed(2)}` : ''}
+                                                      </span>
+                                                    </SelectItem>
+                                                  );
+                                                })}
+                                              </SelectContent>
+                                            </Select>
+                                            {isBranded && item.selectedStore && (() => {
+                                              const storeMatch = itemPrices?.get(item.selectedStore);
+                                              return storeMatch?.productUrl ? (
+                                                <a href={storeMatch.productUrl} target="_blank" rel="noopener noreferrer">
+                                                  <Button variant="ghost" size="icon" className="h-7 w-7" data-testid={`button-store-link-${item.id}`}><ExternalLink className="h-3 w-3" /></Button>
+                                                </a>
+                                              ) : null;
+                                            })()}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* Preferences (pantry items only) */}
+                                    {isPantry && optKeys.length > 0 && (
+                                      <div data-testid={`optimizer-cell-${item.id}`}>
+                                        <div className="flex flex-wrap gap-1">
+                                          {optKeys.map(key => {
+                                            const isActive = itemSel.includes(key);
+                                            return (
+                                              <button key={key} type="button" onClick={() => toggleOpt(key)} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors ${isActive ? 'bg-primary/10 text-primary border-primary/20 font-medium' : 'bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground'}`} data-testid={`optimizer-chip-${item.id}-${key}`}>
+                                                {OPTIMIZER_OPTIONS[key]?.label || key}
+                                              </button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
+                                    {(!isPantry || optKeys.length === 0) && <div className="hidden" data-testid={`optimizer-cell-${item.id}`} />}
+
+                                    {/* Footer: THA rating · meal sources · actions */}
+                                    <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-border/20">
+                                      <div data-testid={`text-smp-${item.id}`}>
+                                        {hasPrices ? (() => {
+                                          const smp = getItemThaRating(item.id, item);
+                                          if (smp === 0) return <span className="text-xs text-muted-foreground">-</span>;
+                                          return <AppleRating rating={smp} size="small" />;
+                                        })() : <span className="text-xs text-muted-foreground">-</span>}
+                                      </div>
+                                      <div data-testid={`meal-count-${item.id}`}>
+                                        {(() => {
+                                          const hasPantryFlag = isPantry;
+                                          const hasRecipes = sources.length > 0;
+                                          if (hasPantryFlag && hasRecipes) {
+                                            return (
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="cursor-default text-xs text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🏠 + 🍽 {sources.length}</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="bottom" className="max-w-[220px]">
+                                                  <p className="text-xs font-medium mb-1">Pantry item also used in {sources.length} recipe(s):</p>
+                                                  {sources.map((s, idx) => <p key={idx} className="text-xs text-muted-foreground">{s.mealName}{s.quantityMultiplier > 1 ? ` (x${s.quantityMultiplier})` : ''}</p>)}
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            );
+                                          }
+                                          if (hasPantryFlag && !hasRecipes) {
+                                            return (
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="cursor-default text-xs text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🏠</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="bottom"><p className="text-xs">Added from pantry</p></TooltipContent>
+                                              </Tooltip>
+                                            );
+                                          }
+                                          if (!hasPantryFlag && hasRecipes) {
+                                            return (
+                                              <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                  <span className="cursor-default text-xs text-muted-foreground" data-testid={`badge-meal-${item.id}`}>🍽 {sources.length}</span>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="bottom" className="max-w-[220px]">
+                                                  <p className="text-xs font-medium mb-1">Used in {sources.length} recipe(s):</p>
+                                                  {sources.map((s, idx) => <p key={idx} className="text-xs text-muted-foreground">{s.mealName}{s.quantityMultiplier > 1 ? ` (x${s.quantityMultiplier})` : ''}</p>)}
+                                                </TooltipContent>
+                                              </Tooltip>
+                                            );
+                                          }
+                                          return <span className="text-xs text-muted-foreground">-</span>;
+                                        })()}
+                                      </div>
+                                      <div className="flex-1" />
+                                      <Button variant="ghost" size="icon" onClick={() => setAnalyseItem(item)} className="text-muted-foreground h-7 w-7" data-testid={`button-analyse-${item.id}`}><Microscope className="h-3 w-3" /></Button>
+                                      <Button variant="ghost" size="icon" onClick={() => setCorrectItem(item)} className="text-muted-foreground h-7 w-7" data-testid={`button-edit-${item.id}`}><Pencil className="h-3 w-3" /></Button>
+                                    </div>
                                   </div>
-                                </td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">-</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">-</td>
-                                <td className="px-1.5 py-1.5 text-muted-foreground hidden sm:table-cell">-</td>
-                                <td className="px-1.5 py-1.5 sticky right-0 z-10">
-                                  <div className="flex items-center justify-end gap-0.5">
-                                    <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" data-testid={`checkbox-extra-${extra.id}`} />
-                                    <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                            {/* Empty state row when no items at all */}
-                            {!hasContent && (
-                              <tr>
-                                <td colSpan={9} className="px-3 py-2 text-xs text-muted-foreground/50 italic">No {capitalizeWords(cat)} items yet</td>
-                              </tr>
-                            )}
-                            {/* Category totals row */}
-                            {hasContent && (() => {
-                              const catPriceTotal = hasPrices ? catItems.reduce((sum, itm) => {
-                                const catDef = getCategoryDefault(cat);
-                                const cheapest = getCheapestForItem(itm.id);
-                                const selStore = itm.selectedStore || catDef.supermarket || cheapest?.supermarket || '';
-                                const match = selStore ? pricesByItem.get(itm.id)?.get(selStore) : null;
-                                return sum + (match?.price ?? 0);
-                              }, 0) : null;
-                              const catRatings = catItems.map(i => getItemThaRating(i.id, i)).filter(r => r > 0);
-                              const catAvgRating = catRatings.length > 0 ? catRatings.reduce((a, b) => a + b, 0) / catRatings.length : null;
-                              const totalCount = catItems.length + catExtras.length;
-                              return (
-                                <tr className="border-t border-border/60 bg-muted/20 font-medium">
-                                  <td colSpan={4} className="px-1.5 py-1 text-right text-[10px] text-muted-foreground sticky left-0 z-10 bg-muted/20">
-                                    {totalCount} {totalCount === 1 ? 'item' : 'items'}
-                                  </td>
-                                  <td className="px-1.5 py-1" />
-                                  <td className="px-1.5 py-1 text-right tabular-nums text-xs">
-                                    {catPriceTotal !== null && catPriceTotal > 0 ? `£${catPriceTotal.toFixed(2)}` : <span className="text-muted-foreground font-normal">-</span>}
-                                  </td>
-                                  <td className="px-1.5 py-1 text-center">
-                                    {catAvgRating !== null ? <AppleRating rating={catAvgRating} size="small" showTooltip={false} /> : <span className="text-muted-foreground font-normal">-</span>}
-                                  </td>
-                                  <td colSpan={2} className="sticky right-0 z-10 bg-muted/20" />
-                                </tr>
-                              );
-                            })()}
-                          </tbody>
-                        </table>
-                      </div>
+                                )}
+                              </motion.div>
+                            );
+                          })}
+                        </AnimatePresence>
+
+                        {/* Extras rows */}
+                        {catExtras.map(extra => (
+                          <div key={`extra-${extra.id}`} className={`px-3 py-2.5 border-b border-border/30 flex items-center gap-2 ${extra.alwaysAdd ? 'bg-primary/[0.03]' : ''}`} data-testid={`row-extra-${extra.id}`}>
+                            <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                              <span className="text-sm font-medium text-foreground/80" data-testid={`text-extra-name-${extra.id}`}>{capitalizeWords(extra.name)}</span>
+                              <button className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`} onClick={() => extra.alwaysAdd ? setAlwaysAddModal({ extraId: extra.id, extraName: extra.name }) : updateExtraMutation.mutate({ id: extra.id, alwaysAdd: true })} data-testid={`pill-always-${extra.id}`}>Always in Basket</button>
+                            </div>
+                            <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" data-testid={`checkbox-extra-${extra.id}`} />
+                            <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-delete-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
+                          </div>
+                        ))}
+
+                        {/* Empty state */}
+                        {!hasContent && (
+                          <p className="px-3 py-3 text-xs text-muted-foreground/50 italic">No {capitalizeWords(cat)} items yet</p>
+                        )}
+
+                        {/* Category summary line */}
+                        {hasContent && (() => {
+                          const catPriceTotal = hasPrices ? catItems.reduce((sum, itm) => {
+                            const itCatDef = getCategoryDefault(cat);
+                            const itCheapest = getCheapestForItem(itm.id);
+                            const selStore = itm.selectedStore || itCatDef.supermarket || itCheapest?.supermarket || '';
+                            const match = selStore ? pricesByItem.get(itm.id)?.get(selStore) : null;
+                            return sum + (match?.price ?? 0);
+                          }, 0) : null;
+                          const catRatings = catItems.map(i => getItemThaRating(i.id, i)).filter(r => r > 0);
+                          const catAvgRating = catRatings.length > 0 ? catRatings.reduce((a, b) => a + b, 0) / catRatings.length : null;
+                          const totalCount = catItems.length + catExtras.length;
+                          return (
+                            <div className="px-3 py-1.5 flex items-center justify-between text-[10px] text-muted-foreground border-t border-border/20 bg-muted/5">
+                              <span>{totalCount} {totalCount === 1 ? 'item' : 'items'}</span>
+                              <div className="flex items-center gap-3">
+                                {catPriceTotal !== null && catPriceTotal > 0 && <span className="tabular-nums font-medium">£{catPriceTotal.toFixed(2)}</span>}
+                                {catAvgRating !== null && <AppleRating rating={catAvgRating} size="small" showTooltip={false} />}
+                              </div>
+                            </div>
+                          );
+                        })()}
                       {/* Inline add panel for this category */}
                       {addingToCategory === cat ? (
                         <div className="flex flex-col gap-2 px-3 py-2 bg-muted/10 border-t border-border/30" data-testid={`add-panel-${cat}`}>
@@ -3748,72 +3631,29 @@ export default function ShoppingListPage() {
                               <span className="text-[10px] font-medium text-muted-foreground">{HOUSEHOLD_SUBCATEGORY_LABELS[subcat]}</span>
                               <span className="text-[10px] text-muted-foreground/50">({subcatSaved.length + subcatExtras.length})</span>
                             </div>
-                            <table className="w-full text-xs table-fixed">
-                              <colgroup>
-                                <col style={{ width: 210 }} />
-                                <col style={{ width: 80 }} />
-                                <col style={{ width: 150 }} />
-                                <col style={{ width: 200 }} />
-                                <col style={{ width: 70 }} />
-                                <col style={{ width: 95 }} />
-                                <col style={{ width: 110 }} />
-                                <col style={{ width: 80 }} />
-                                <col style={{ width: 90 }} />
-                              </colgroup>
-                              <tbody>
-                                {subcatSaved.map(item => {
-                                  const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams, item.normalizedName ?? item.productName ?? undefined);
-                                  return (
-                                    <tr key={`hh-saved-${item.id}`} className={`border-b border-border/30 ${item.checked ? 'opacity-50' : ''}`} data-testid={`row-household-${item.id}`}>
-                                      <td className="px-1.5 py-1.5 sticky left-0 z-10">
-                                        <span className={`font-medium ${item.checked ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{capitalizeWords(item.productName)}</span>
-                                        {item.quantity > 1 && <Badge variant="secondary" className="text-[10px] ml-1">x{item.quantity}</Badge>}
-                                      </td>
-                                      <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                      <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                      <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                      <td className="px-1.5 py-1.5 text-right text-muted-foreground tabular-nums whitespace-nowrap">{qty} {unitLabel}</td>
-                                      <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                      <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                      <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                      <td className="px-1.5 py-1.5 sticky right-0 z-10">
-                                        <div className="flex items-center justify-end gap-0.5">
-                                          <Checkbox checked={item.checked || false} onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })} className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" data-testid={`checkbox-household-${item.id}`} />
-                                          <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-remove-household-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
-                                {subcatExtras.map(extra => (
-                                  <tr key={`hh-extra-${extra.id}`} className="border-b border-border/30" data-testid={`row-hh-extra-${extra.id}`}>
-                                    <td className="px-1.5 py-1.5 sticky left-0 z-10">
-                                      <div className="flex flex-col gap-0.5">
-                                        <span className="font-medium text-foreground/80">{capitalizeWords(extra.name)}</span>
-                                        <button
-                                          className={`self-start inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`}
-                                          onClick={() => extra.alwaysAdd ? setAlwaysAddModal({ extraId: extra.id, extraName: extra.name }) : updateExtraMutation.mutate({ id: extra.id, alwaysAdd: true })}
-                                          data-testid={`pill-always-hh-${extra.id}`}
-                                        >Always in Basket</button>
-                                      </div>
-                                    </td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                    <td className="px-1.5 py-1.5 text-muted-foreground">-</td>
-                                    <td className="px-1.5 py-1.5 sticky right-0 z-10">
-                                      <div className="flex items-center justify-end gap-0.5">
-                                        <Checkbox checked={false} onCheckedChange={() => {}} className="border-muted" />
-                                        <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-6 w-6" data-testid={`button-delete-hh-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
+                            {subcatSaved.map(item => {
+                              const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams, item.normalizedName ?? item.productName ?? undefined);
+                              return (
+                                <div key={`hh-saved-${item.id}`} className={`px-3 py-2 border-b border-border/30 flex items-center gap-2 ${item.checked ? 'opacity-50' : ''}`} data-testid={`row-household-${item.id}`}>
+                                  <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                                    <span className={`text-sm font-medium ${item.checked ? 'line-through text-muted-foreground' : 'text-foreground'}`}>{capitalizeWords(item.productName)}</span>
+                                    {item.quantity > 1 && <Badge variant="secondary" className="text-[10px]">x{item.quantity}</Badge>}
+                                    {(qty && unitLabel) && <span className="text-xs text-muted-foreground tabular-nums">{qty} {unitLabel}</span>}
+                                  </div>
+                                  <Checkbox checked={item.checked || false} onCheckedChange={(checked) => toggleChecked.mutate({ id: item.id, checked: !!checked })} className="border-primary data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground" data-testid={`checkbox-household-${item.id}`} />
+                                  <Button variant="ghost" size="icon" onClick={() => removeItem.mutate(item.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-remove-household-${item.id}`}><Trash2 className="h-3 w-3" /></Button>
+                                </div>
+                              );
+                            })}
+                            {subcatExtras.map(extra => (
+                              <div key={`hh-extra-${extra.id}`} className="px-3 py-2 border-b border-border/30 flex items-center gap-2" data-testid={`row-hh-extra-${extra.id}`}>
+                                <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-medium text-foreground/80">{capitalizeWords(extra.name)}</span>
+                                  <button className={`inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full border transition-colors ${extra.alwaysAdd ? 'border-primary/60 text-primary bg-primary/10 hover:bg-primary/20' : 'border-border text-muted-foreground/60 bg-transparent hover:border-primary/40 hover:text-primary/60'}`} onClick={() => extra.alwaysAdd ? setAlwaysAddModal({ extraId: extra.id, extraName: extra.name }) : updateExtraMutation.mutate({ id: extra.id, alwaysAdd: true })} data-testid={`pill-always-hh-${extra.id}`}>Always in Basket</button>
+                                </div>
+                                <Button variant="ghost" size="icon" onClick={() => deleteExtraMutation.mutate(extra.id)} className="text-muted-foreground h-7 w-7" data-testid={`button-delete-hh-extra-${extra.id}`}><Trash2 className="h-3 w-3" /></Button>
+                              </div>
+                            ))}
                           </div>
                         );
                       })}
@@ -3849,73 +3689,49 @@ export default function ShoppingListPage() {
                       Staples - usually in stock ({sortedItems.filter(i => isStaple(i)).length})
                     </button>
                     {staplesOpen && (
-                      <table className="w-full text-xs">
-                        <tbody>
-                          {sortedItems.filter(i => isStaple(i)).map(item => {
-                            const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams, item.normalizedName ?? item.productName ?? undefined);
-                            const cat = item.category || 'other';
-                            const CatIcon = CATEGORY_ICONS[cat] || CircleDot;
-                            const sources = sourcesByItem.get(item.id) || [];
-                            return (
-                              <tr key={`staple-${item.id}`} className="border-b border-border/30 bg-muted/5 opacity-60" data-testid={`row-staple-${item.id}`}>
-                                <td className="px-2 py-1 w-7" />
-                                <td className="px-2 py-1">
-                                  <div className="flex items-center gap-1.5">
-                                    <CatIcon className="h-3 w-3 text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground line-through">{item.productName}</span>
-                                    {sources.length > 0 && <span className="text-[10px] text-muted-foreground">🍽 {sources.length}</span>}
-                                    <button className="ml-2 text-[10px] text-primary hover:underline whitespace-nowrap" onClick={() => toggleNeededThisWeek(item.id)} data-testid={`button-need-this-week-${item.id}`}>Need this week ↑</button>
-                                  </div>
-                                </td>
-                                <td className="px-2 py-1 text-right text-muted-foreground tabular-nums">{qty} {unitLabel}</td>
-                                <td colSpan={99} />
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                      <div>
+                        {sortedItems.filter(i => isStaple(i)).map(item => {
+                          const { qty, unitLabel } = formatQty(item.quantityValue, item.unit, measurementPref, item.quantityInGrams, item.normalizedName ?? item.productName ?? undefined);
+                          const cat = item.category || 'other';
+                          const CatIcon = CATEGORY_ICONS[cat] || CircleDot;
+                          const sources = sourcesByItem.get(item.id) || [];
+                          return (
+                            <div key={`staple-${item.id}`} className="px-3 py-1.5 border-b border-border/30 bg-muted/5 opacity-60 flex items-center gap-2" data-testid={`row-staple-${item.id}`}>
+                              <CatIcon className="h-3 w-3 text-muted-foreground shrink-0" />
+                              <span className="text-xs text-muted-foreground line-through flex-1 min-w-0">{item.productName}</span>
+                              {sources.length > 0 && <span className="text-[10px] text-muted-foreground">🍽 {sources.length}</span>}
+                              {(qty && unitLabel) && <span className="text-[10px] text-muted-foreground tabular-nums">{qty} {unitLabel}</span>}
+                              <button className="text-[10px] text-primary hover:underline whitespace-nowrap" onClick={() => toggleNeededThisWeek(item.id)} data-testid={`button-need-this-week-${item.id}`}>Need this week ↑</button>
+                            </div>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 )}
               </div>
             )}
 
-            {/* Basket Totals - integrated table footer using same grid */}
+            {/* Basket Totals */}
             {savedItems.length > 0 && (
-              <div className="overflow-x-auto border-t-2 border-border" data-testid="section-basket-totals">
-                <table className="w-full text-xs table-fixed">
-                  <colgroup>
-                    <col style={{ width: 210 }} />
-                    <col style={{ width: 80 }} />
-                    <col style={{ width: 150 }} />
-                    <col style={{ width: 200 }} />
-                    <col style={{ width: 70 }} />
-                    <col style={{ width: 95 }} />
-                    <col style={{ width: 110 }} />
-                    <col style={{ width: 80 }} />
-                    <col style={{ width: 90 }} />
-                  </colgroup>
-                  <tbody>
-                    <tr className="bg-muted/30 font-semibold">
-                      <td colSpan={4} className="px-1.5 py-1.5 text-right text-xs font-semibold text-muted-foreground sticky left-0 z-10 bg-muted/30">
-                        {hasAnyEstimateInTotal ? 'Basket total incl. estimates' : 'Basket total'} · {savedItems.length} {savedItems.length === 1 ? 'item' : 'items'}
-                        {overallConfidence !== null && (
-                          <span className={`ml-2 font-normal ${overallConfidence === 'high' ? 'text-green-600 dark:text-green-400' : overallConfidence === 'medium' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}`}>
-                            · {overallConfidence === 'high' ? 'High' : overallConfidence === 'medium' ? 'Medium' : 'Low'} confidence
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-1.5 py-1.5" />
-                      <td className="px-1.5 py-1.5 text-right tabular-nums" data-testid="text-basket-total-price">
-                        {clientBestTotal !== null ? `£${clientBestTotal.toFixed(2)}` : <span className="text-muted-foreground font-normal">-</span>}
-                      </td>
-                      <td className="px-1.5 py-1.5 text-center" data-testid="text-basket-avg-smp">
-                        {avgThaRating !== null ? <AppleRating rating={avgThaRating} size="small" showTooltip={false} /> : <span className="text-muted-foreground font-normal">-</span>}
-                      </td>
-                      <td colSpan={2} className="sticky right-0 z-10 bg-muted/30" />
-                    </tr>
-                  </tbody>
-                </table>
+              <div className="px-4 py-2.5 border-t-2 border-border bg-muted/20 flex items-center gap-3 flex-wrap" data-testid="section-basket-totals">
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {hasAnyEstimateInTotal ? 'Basket total incl. estimates' : 'Basket total'} · {savedItems.length} {savedItems.length === 1 ? 'item' : 'items'}
+                </span>
+                {overallConfidence !== null && (
+                  <span className={`text-xs font-normal ${overallConfidence === 'high' ? 'text-green-600 dark:text-green-400' : overallConfidence === 'medium' ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-500 dark:text-red-400'}`}>
+                    {overallConfidence === 'high' ? 'Good match' : overallConfidence === 'medium' ? 'Partial match' : 'Low match'}
+                  </span>
+                )}
+                <div className="flex-1" />
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold tabular-nums" data-testid="text-basket-total-price">
+                    {clientBestTotal !== null ? `£${clientBestTotal.toFixed(2)}` : <span className="text-muted-foreground font-normal">-</span>}
+                  </span>
+                  <div data-testid="text-basket-avg-smp">
+                    {avgThaRating !== null ? <AppleRating rating={avgThaRating} size="small" showTooltip={false} /> : null}
+                  </div>
+                </div>
               </div>
             )}
           </CardContent>
