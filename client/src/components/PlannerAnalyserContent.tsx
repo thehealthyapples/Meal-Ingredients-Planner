@@ -1,23 +1,27 @@
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Search, Loader2, ArrowLeft, CalendarDays } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Search, Loader2, ArrowLeft, BookmarkCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import AppleRating from "@/components/AppleRating";
 import type { InputProduct } from "@/lib/analyser-view-model";
 import { buildAnalyserViewModel } from "@/lib/analyser-view-model";
-import { AddToWeekModal } from "@/components/AddToWeekModal";
-import type { AddToWeekProduct } from "@/components/AddToWeekModal";
+import { DraggableSearchResultRow } from "@/components/PlannerDragDrop";
+import { useToast } from "@/hooks/use-toast";
 
 // ── Inline product analysis card ──────────────────────────────────────────────
 
 function ProductCard({
   product,
   allProducts,
-  onAddToWeek,
+  savedMealId,
+  onSave,
+  saving,
 }: {
   product: InputProduct;
   allProducts: InputProduct[];
-  onAddToWeek: () => void;
+  savedMealId?: number;
+  onSave: () => void;
+  saving?: boolean;
 }) {
   const vm = buildAnalyserViewModel(product, allProducts);
   return (
@@ -53,14 +57,21 @@ function ProductCard({
         )}
       </div>
 
-      <button
-        onClick={onAddToWeek}
-        className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-emerald-400/40 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 px-3 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-400 transition-colors"
-        data-testid="button-analyser-add-to-week"
-      >
-        <CalendarDays className="h-4 w-4" />
-        Add to Week
-      </button>
+      {savedMealId !== undefined ? (
+        <p className="text-[11px] text-muted-foreground/60 text-center py-0.5">
+          Saved — drag the handle to add to a day slot or provisioning
+        </p>
+      ) : (
+        <button
+          onClick={onSave}
+          disabled={saving}
+          className="w-full flex items-center justify-center gap-1.5 rounded-lg border border-emerald-400/40 bg-emerald-50/50 dark:bg-emerald-950/20 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 px-3 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-400 transition-colors disabled:opacity-50"
+          data-testid="button-analyser-save-to-cookbook"
+        >
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookmarkCheck className="h-4 w-4" />}
+          Save to Cookbook
+        </button>
+      )}
     </div>
   );
 }
@@ -68,10 +79,13 @@ function ProductCard({
 // ── Main analyser panel content ───────────────────────────────────────────────
 
 export function PlannerAnalyserContent() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<InputProduct | null>(null);
-  const [addToWeekProduct, setAddToWeekProduct] = useState<AddToWeekProduct | null>(null);
+  const [savedProducts, setSavedProducts] = useState<Map<string, number>>(new Map());
+  const [savingKey, setSavingKey] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), 400);
@@ -94,7 +108,52 @@ export function PlannerAnalyserContent() {
 
   const products: InputProduct[] = data?.products ?? [];
 
+  async function handleSaveProduct(product: InputProduct) {
+    const key = product.barcode ?? product.product_name;
+    if (savingKey || savedProducts.has(key)) return;
+    setSavingKey(key);
+    try {
+      const res = await fetch("/api/meals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: product.brand ? `${product.brand} – ${product.product_name}` : product.product_name,
+          ingredients: [],
+          instructions: [],
+          servings: 1,
+          isReadyMeal: true,
+          brand: product.brand ?? undefined,
+          barcode: product.barcode ?? undefined,
+        }),
+      });
+      if (!res.ok) throw new Error("Save failed");
+      const meal = await res.json();
+      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      setSavedProducts(prev => new Map(prev).set(key, meal.id));
+      toast({ title: "Saved to My Cookbook", description: product.product_name });
+    } catch {
+      toast({ title: "Could not save product", variant: "destructive" });
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
   if (selectedProduct) {
+    const productKey = selectedProduct.barcode ?? selectedProduct.product_name;
+    const savedMealId = savedProducts.get(productKey);
+    const isSaving = savingKey === productKey;
+
+    const card = (
+      <ProductCard
+        product={selectedProduct}
+        allProducts={products}
+        savedMealId={savedMealId}
+        onSave={() => handleSaveProduct(selectedProduct)}
+        saving={isSaving}
+      />
+    );
+
     return (
       <div className="space-y-3" data-testid="analyser-product-detail">
         <button
@@ -105,24 +164,15 @@ export function PlannerAnalyserContent() {
           <ArrowLeft className="h-3 w-3" /> Back to results
         </button>
 
-        <ProductCard
-          product={selectedProduct}
-          allProducts={products}
-          onAddToWeek={() =>
-            setAddToWeekProduct({
-              product_name: selectedProduct.product_name,
-              brand: selectedProduct.brand ?? null,
-              barcode: selectedProduct.barcode ?? null,
-              image_url: selectedProduct.image_url,
-            })
-          }
-        />
-
-        <AddToWeekModal
-          open={!!addToWeekProduct}
-          onClose={() => setAddToWeekProduct(null)}
-          product={addToWeekProduct ?? { product_name: "" }}
-        />
+        {savedMealId !== undefined ? (
+          <DraggableSearchResultRow
+            mealId={savedMealId}
+            mealName={selectedProduct.product_name}
+            sourceOrigin="packaged"
+          >
+            {card}
+          </DraggableSearchResultRow>
+        ) : card}
       </div>
     );
   }

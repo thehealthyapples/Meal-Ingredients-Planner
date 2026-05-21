@@ -397,8 +397,8 @@ function CompactRating({ rating }: { rating: number }) {
   return (
     <span className="inline-flex items-center shrink-0" aria-label={`${clamped} apple${clamped !== 1 ? "s" : ""}`}>
       {Array.from({ length: clamped }).map((_, i) => (
-        <img key={i} src={thaAppleUrl} width={36} height={36} alt="" draggable={false}
-          style={{ marginLeft: i === 0 ? 0 : -10 }} />
+        <img key={i} src={thaAppleUrl} width={22} height={22} alt="" draggable={false}
+          style={{ marginLeft: i === 0 ? 0 : -7 }} />
       ))}
     </span>
   );
@@ -721,6 +721,73 @@ function StateChips({
   );
 }
 
+// ── Shopping row actions (shopping phase only) ─────────────────────────────
+// Replaces StateChips in active shopping rows. Provides a large primary "Got it"
+// button (44px hit-target) plus a small secondary "Not here" control. Each
+// state is a distinct tappable element so undoing is always one tap.
+
+function ShoppingRowActions({
+  state,
+  onChange,
+  testIdPrefix,
+}: {
+  state: ShopState;
+  onChange: (s: ShopState) => void;
+  testIdPrefix?: string;
+}) {
+  if (state === "need") {
+    return (
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <button
+          onClick={() => onChange("not_in_shop")}
+          className="h-8 px-2.5 rounded-lg text-[10px] text-muted-foreground/40 hover:text-amber-600 dark:hover:text-amber-400 border border-transparent hover:border-amber-200/60 dark:hover:border-amber-700/40 transition-colors touch-manipulation whitespace-nowrap"
+          data-testid={testIdPrefix ? `${testIdPrefix}-not_in_shop` : undefined}
+          aria-label="Not in this shop — save for next time"
+        >
+          Not here
+        </button>
+        <button
+          onClick={() => onChange("in_basket")}
+          className="h-11 px-4 rounded-xl bg-muted/60 hover:bg-primary/[0.10] active:bg-primary/[0.18] border border-border/50 hover:border-primary/30 text-foreground/70 hover:text-primary font-semibold text-[12px] flex items-center gap-1.5 transition-all duration-100 touch-manipulation select-none"
+          data-testid={testIdPrefix ? `${testIdPrefix}-in_basket` : undefined}
+          aria-label="Mark as in basket"
+        >
+          <Check className="h-3.5 w-3.5 flex-shrink-0" />
+          <span>Got it</span>
+        </button>
+      </div>
+    );
+  }
+
+  if (state === "in_basket") {
+    return (
+      <button
+        onClick={() => onChange("need")}
+        className="flex-shrink-0 h-11 px-4 rounded-xl bg-primary/[0.10] hover:bg-primary/[0.16] active:opacity-75 border border-primary/25 text-primary font-semibold text-[12px] flex items-center gap-1.5 transition-all duration-100 touch-manipulation select-none"
+        data-testid={testIdPrefix ? `${testIdPrefix}-need` : undefined}
+        aria-label="Remove from basket"
+        title="Tap to undo"
+      >
+        <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
+        <span>In basket</span>
+      </button>
+    );
+  }
+
+  // not_in_shop — tap to put back
+  return (
+    <button
+      onClick={() => onChange("need")}
+      className="flex-shrink-0 h-11 px-4 rounded-xl bg-amber-50/80 dark:bg-amber-950/25 hover:bg-amber-100/80 dark:hover:bg-amber-900/30 active:opacity-75 border border-amber-200/60 dark:border-amber-700/40 text-amber-700 dark:text-amber-400 font-medium text-[12px] flex items-center gap-1.5 transition-all duration-100 touch-manipulation select-none"
+      data-testid={testIdPrefix ? `${testIdPrefix}-need` : undefined}
+      aria-label="Put back on list"
+      title="Tap to put back on list"
+    >
+      <span>Next time</span>
+    </button>
+  );
+}
+
 // ── Print state badge ──────────────────────────────────────────────────────
 
 function PrintStateBadge({ state }: { state: ShopState }) {
@@ -813,6 +880,10 @@ export default function ShoppingListView({
   const [multiSelections, setMultiSelections] = useState<Map<number, Set<string>>>(new Map());
   // True while handleHeadToShop is committing pending selections - prevents double-tap.
   const [isCommitting, setIsCommitting] = useState(false);
+  // Shop-phase attention: tracks which needsReview items have been resolved/dismissed
+  const [shopReviewDismissed, setShopReviewDismissed] = useState<Set<number>>(new Set());
+  const [shopEditId, setShopEditId] = useState<number | null>(null);
+  const [shopEditVal, setShopEditVal] = useState<string>("");
   // Cupboard check: inline add-item input
   const [addingItem, setAddingItem] = useState(false);
   const [addItemVal, setAddItemVal] = useState("");
@@ -1167,6 +1238,27 @@ export default function ShoppingListView({
   // ── Progress ─────────────────────────────────────────────────────────────
 
   const activeExtras = useMemo(() => extras.filter((e) => e.inBasket || e.alwaysAdd), [extras]);
+
+  // Needs Attention: needsReview items not yet dismissed in the shopping phase.
+  // Derived from shoppingItems so it automatically respects at-home / cupboard-covered filtering.
+  const needsAttentionItems = useMemo(() => {
+    if (phase !== "shopping") return [] as SLItem[];
+    return shoppingItems.filter(i => i.needsReview === true && !shopReviewDismissed.has(i.id));
+  }, [phase, shoppingItems, shopReviewDismissed]);
+
+  const needsAttentionIdSet = useMemo(
+    () => new Set(needsAttentionItems.map(i => i.id)),
+    [needsAttentionItems],
+  );
+
+  // Shopping Ready: all shopping items except those still in Needs Attention.
+  const shoppingReadyItems = useMemo(
+    () => phase === "shopping"
+      ? shoppingItems.filter(i => !needsAttentionIdSet.has(i.id))
+      : shoppingItems,
+    [shoppingItems, phase, needsAttentionIdSet],
+  );
+
   const totalItems = shoppingItems.length + activeExtras.length;
 
   const inBasketCount =
@@ -1293,7 +1385,8 @@ export default function ShoppingListView({
   const groupedCategories = useMemo(() => {
     const map = new Map<string, { savedItems: SLItem[]; extraItems: typeof extras }>();
     for (const cat of SHOPPING_CATS) map.set(cat.key, { savedItems: [], extraItems: [] });
-    for (const item of shoppingItems) {
+    // In the shopping phase, needs-attention items are shown separately — exclude them here.
+    for (const item of shoppingReadyItems) {
       const key = getItemCatKey(item.category, item.normalizedName ?? item.productName);
       (map.get(key) ?? map.get("other")!).savedItems.push(item);
     }
@@ -1304,7 +1397,7 @@ export default function ShoppingListView({
     return SHOPPING_CATS.map((cat) => ({ ...cat, ...map.get(cat.key)! })).filter(
       (cat) => cat.savedItems.length > 0 || cat.extraItems.length > 0,
     );
-  }, [shoppingItems, activeExtras]);
+  }, [shoppingReadyItems, activeExtras]);
 
   // ── Active category ───────────────────────────────────────────────────────
 
@@ -1492,6 +1585,12 @@ export default function ShoppingListView({
       : state === "not_in_shop" ? "bg-amber-50/60 dark:bg-amber-950/20"
       : "";
 
+    // Content-area opacity: completed items visually recede; action button stays full opacity.
+    const contentOpacity =
+      state === "in_basket"   ? "opacity-40"
+      : state === "not_in_shop" ? "opacity-70"
+      : "";
+
     const nameCls =
       state === "in_basket"   ? "line-through text-muted-foreground/70"
       : state === "not_in_shop" ? "text-amber-700 dark:text-amber-400"
@@ -1500,12 +1599,12 @@ export default function ShoppingListView({
     return (
       <div
         key={item.id}
-        className={`flex items-center gap-3 px-4 py-3 transition-colors duration-100 ${rowBg}`}
+        className={`flex items-center gap-2.5 px-4 py-3.5 transition-colors duration-100 ${rowBg}`}
         data-print-item
       >
-        <div className="flex-1 min-w-0">
+        <div className={`flex-1 min-w-0 transition-opacity duration-150 ${contentOpacity}`}>
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span className={`font-medium text-[13.5px] leading-snug ${nameCls}`}>
+            <span className={`font-medium text-[14px] leading-snug ${nameCls}`}>
               {capWords(cleanProductName(item.productName, item.quantityValue))}
             </span>
             {qty && (
@@ -1533,19 +1632,22 @@ export default function ShoppingListView({
                 Review
               </button>
             )}
-            {(() => {
+            {state === "need" && (() => {
+              const src = (item as any).source;
+              // Only badge non-planner sources — "From plan" is the default and adds noise
+              if (!src || src === "planner") return null;
               const text = sourceLabel(item as any);
               if (!text) return null;
               return (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full border text-violet-600 dark:text-violet-400 border-violet-300 dark:border-violet-600" data-testid={`shop-badge-source-${item.id}`}>
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full border text-violet-600 dark:text-violet-400 border-violet-300/70 dark:border-violet-600/70" data-testid={`shop-badge-source-${item.id}`}>
                   {text}
                 </span>
               );
             })()}
           </div>
 
-          {/* Variant selections summary */}
-          {!isEditing && (() => {
+          {/* Variant selections summary — only for active items */}
+          {!isEditing && state === "need" && (() => {
             const variantsRaw = (() => { try { return JSON.parse(item.variantSelections ?? "{}") as Record<string, string>; } catch { return {} as Record<string, string>; } })();
             const catDef = getIngredientDef(item.normalizedName ?? item.productName ?? "");
             if (!catDef?.selectorSchema.length) return null;
@@ -1774,7 +1876,7 @@ export default function ShoppingListView({
           </div>
         )}
         <div className="tha-print-hide flex-shrink-0">
-          <StateChips
+          <ShoppingRowActions
             state={state}
             onChange={(s) => setItemState(item, s)}
             testIdPrefix={`shopping-view-item-${item.id}`}
@@ -1798,22 +1900,27 @@ export default function ShoppingListView({
       : state === "not_in_shop" ? "text-amber-700 dark:text-amber-400"
       : "text-foreground";
 
+    const extraContentOpacity =
+      state === "in_basket"   ? "opacity-40"
+      : state === "not_in_shop" ? "opacity-70"
+      : "";
+
     return (
       <div
         key={`extra-${extra.id}`}
-        className={`flex items-center gap-3 px-4 py-3 transition-colors duration-100 ${rowBg}`}
+        className={`flex items-center gap-2.5 px-4 py-3.5 transition-colors duration-100 ${rowBg}`}
         data-print-item
       >
-        <div className="flex-1 min-w-0">
-          <span className={`font-medium text-[13.5px] leading-snug ${nameCls}`}>
+        <div className={`flex-1 min-w-0 transition-opacity duration-150 ${extraContentOpacity}`}>
+          <span className={`font-medium text-[14px] leading-snug ${nameCls}`}>
             {capWords(extra.name)}
           </span>
-          {extra.alwaysAdd && (
+          {extra.alwaysAdd && state === "need" && (
             <span className="tha-print-hide ml-2 text-[11px] text-muted-foreground/45">regular</span>
           )}
         </div>
         <div className="tha-print-hide flex-shrink-0">
-          <StateChips
+          <ShoppingRowActions
             state={state}
             onChange={(s) => setExtraState(extra.id, s)}
             testIdPrefix={`shopping-view-extra-${extra.id}`}
@@ -1873,7 +1980,17 @@ export default function ShoppingListView({
               {inBasketCount > 0 && notFoundCount > 0 && " · "}
               {notFoundCount > 0 && <span className="text-amber-600">{notFoundCount} not found</span>}
               {inBasketCount === 0 && notFoundCount === 0 && `${totalItems} items`}
-              {unresolvedCount > 0 && (
+              {/* Shopping phase: show readiness state */}
+              {phase === "shopping" && needsAttentionItems.length > 0 && (
+                <span className="ml-1 text-amber-600 dark:text-amber-400">
+                  {" · "}{needsAttentionItems.length} to review
+                </span>
+              )}
+              {phase === "shopping" && needsAttentionItems.length === 0 && totalItems > 0 && !allSorted && (
+                <span className="ml-1 text-primary/55"> · Ready to shop</span>
+              )}
+              {/* CYC phase: show unresolved count */}
+              {phase === "cupboard_check" && unresolvedCount > 0 && (
                 <span className="ml-1 text-amber-600 dark:text-amber-400"> · {unresolvedCount} to check</span>
               )}
             </p>
@@ -2066,10 +2183,10 @@ export default function ShoppingListView({
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 4,
-                    paddingTop: isActive ? 6 : 5,
-                    paddingRight: isActive ? 12 : 10,
-                    paddingBottom: isActive ? 9 : 6,
-                    paddingLeft: isActive ? 12 : 10,
+                    paddingTop: isActive ? 8 : 7,
+                    paddingRight: isActive ? 13 : 11,
+                    paddingBottom: isActive ? 11 : 8,
+                    paddingLeft: isActive ? 13 : 11,
                     borderRadius: "6px 6px 0 0",
                     borderTopWidth: 2,
                     borderTopStyle: "solid",
@@ -2093,6 +2210,8 @@ export default function ShoppingListView({
                     cursor: "pointer",
                     outline: "none",
                     transition: "color 0.1s, background 0.1s",
+                    touchAction: "manipulation",
+                    WebkitTapHighlightColor: "transparent",
                   }}
                 >
                   <span style={{ fontSize: 13, lineHeight: 1 }} aria-hidden>{cat.emoji}</span>
@@ -2710,7 +2829,266 @@ export default function ShoppingListView({
           All categories rendered in one scrollable list.
           Tabs jump to the corresponding section; sticky headers keep context.
       ─────────────────────────────────────────────────────────────────── */}
-      {phase === "shopping" && !shopSession && <div className="tha-print-hide relative z-10 flex-1 overflow-hidden flex flex-col px-3 sm:px-5 pt-3 pb-3 w-full max-w-3xl mx-auto">
+      {phase === "shopping" && !shopSession && <div className="tha-print-hide relative z-10 flex-1 overflow-hidden flex flex-col px-3 sm:px-5 pt-3 pb-3 w-full max-w-3xl mx-auto gap-2">
+
+        {/* ── Needs Attention section ─────────────────────────────────────────
+            Surfaced at the top of the shopping view whenever needsReview items
+            remain unresolved.  Each card exposes the reason and quick actions.
+            Resolved/dismissed items drop into the Shopping Ready categories below.
+        ──────────────────────────────────────────────────────────────────── */}
+        {needsAttentionItems.length > 0 && (
+          <div
+            className="flex-shrink-0 rounded-xl overflow-hidden"
+            style={{
+              border: "1px solid rgba(245,158,11,0.35)",
+              maxHeight: "42vh",
+              display: "flex",
+              flexDirection: "column",
+            }}
+            data-testid="needs-attention-section"
+          >
+            {/* Section header */}
+            <div
+              className="flex-shrink-0 flex items-center justify-between gap-3 px-4 py-2.5 border-b border-amber-200/50 dark:border-amber-800/40"
+              style={{ background: "rgba(245,158,11,0.07)", borderLeft: "3px solid rgba(245,158,11,0.65)" }}
+            >
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" aria-hidden />
+                <span className="font-semibold text-[13px] text-amber-700 dark:text-amber-400">
+                  Needs attention
+                </span>
+                <span
+                  className="text-[11px] px-1.5 py-0.5 rounded-full font-medium tabular-nums"
+                  style={{ background: "rgba(245,158,11,0.15)", color: "rgba(180,83,9,1)" }}
+                  data-testid="needs-attention-count"
+                >
+                  {needsAttentionItems.length}
+                </span>
+              </div>
+              <span className="text-[10.5px] text-muted-foreground/50 hidden sm:inline">Resolve before shopping</span>
+            </div>
+
+            {/* Needs-attention item cards */}
+            <div
+              className="overflow-y-auto divide-y"
+              style={{ background: "hsl(var(--card) / 0.35)", borderColor: "rgba(245,158,11,0.12)" }}
+            >
+              {needsAttentionItems.map(item => {
+                const itemState = getItemState(item);
+                const qty = fmtQty(item.quantityValue, item.unit, item.quantityInGrams, measurementPref, item.normalizedName ?? item.productName ?? undefined);
+                const displayName = capWords(cleanProductName(item.productName, item.quantityValue));
+                const isAmbiguous = (item as any).reviewReason === "ambiguous_term";
+                const suggestions: string[] = (() => {
+                  if (!isAmbiguous) return [];
+                  try {
+                    const raw = JSON.parse((item as any).reviewSuggestions ?? "[]");
+                    if (Array.isArray(raw)) return raw as string[];
+                    return (raw?.items ?? []) as string[];
+                  } catch { return []; }
+                })();
+                const isEditingHere = shopEditId === item.id;
+                const selected = multiSelections.get(item.id) ?? new Set<string>();
+                const available = suggestions.filter(s => !selected.has(s));
+
+                const dismissItem = () =>
+                  setShopReviewDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; });
+
+                const addPick = (val: string) => setMultiSelections(prev => {
+                  const next = new Map(prev);
+                  const cur = new Set(next.get(item.id) ?? []);
+                  cur.add(val);
+                  next.set(item.id, cur);
+                  return next;
+                });
+
+                const removePick = (val: string) => setMultiSelections(prev => {
+                  const next = new Map(prev);
+                  const cur = new Set(next.get(item.id) ?? []);
+                  cur.delete(val);
+                  if (cur.size === 0) next.delete(item.id); else next.set(item.id, cur);
+                  return next;
+                });
+
+                const confirmPicks = () => {
+                  const picks = Array.from(selected);
+                  if (picks.length === 0) return;
+                  if (picks.length === 1) {
+                    onRenameItem?.(item.id, picks[0]);
+                  } else if (onAddItem) {
+                    picks.forEach(p => onAddItem(p));
+                    onRemoveItem?.(item.id);
+                  } else {
+                    onRenameItem?.(item.id, picks[0]);
+                  }
+                  setMultiSelections(prev => { const m = new Map(prev); m.delete(item.id); return m; });
+                  dismissItem();
+                };
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`px-4 py-3 transition-colors ${itemState === "in_basket" ? "opacity-50" : ""}`}
+                    data-testid={`attention-item-${item.id}`}
+                  >
+                    {/* Name row + shopping action */}
+                    <div className="flex items-start gap-2 min-w-0">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className="font-medium text-[13.5px] text-foreground/85">{displayName}</span>
+                          {qty && <span className="text-[11.5px] tabular-nums text-muted-foreground/60">{qty}</span>}
+                        </div>
+                        <div className="flex items-center gap-1 mt-0.5">
+                          <AlertTriangle className="h-2.5 w-2.5 text-amber-500 flex-shrink-0" aria-hidden />
+                          <span className="text-[10.5px] text-amber-600 dark:text-amber-400">
+                            {isAmbiguous
+                              ? "Ambiguous — which type did you mean?"
+                              : "Not recognized — edit or keep as-is"}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Shopping action — user can still basket the item without resolving */}
+                      <div className="flex-shrink-0 mt-0.5">
+                        <ShoppingRowActions
+                          state={itemState}
+                          onChange={s => setItemState(item, s)}
+                          testIdPrefix={`attention-item-${item.id}`}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Resolution controls */}
+                    {!isEditingHere && (
+                      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                        {isAmbiguous && suggestions.length > 0 ? (
+                          <>
+                            {selected.size > 0 && (
+                              <div className="flex flex-wrap gap-1 w-full mb-1">
+                                {Array.from(selected).map(s => (
+                                  <span
+                                    key={s}
+                                    className="inline-flex items-center gap-1 text-[10.5px] px-2 py-0.5 rounded-full border border-primary/40 bg-primary/[0.08] text-primary"
+                                  >
+                                    {s}
+                                    <button
+                                      onClick={() => removePick(s)}
+                                      aria-label={`Remove ${s}`}
+                                      className="flex items-center text-primary/60 hover:text-primary transition-colors"
+                                    >
+                                      <X className="h-2.5 w-2.5" />
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {available.length > 0 && (
+                              <select
+                                key={`attn-${item.id}-${selected.size}`}
+                                defaultValue=""
+                                onChange={e => { const v = e.target.value; if (v) addPick(v); }}
+                                className="text-[11px] h-7 pl-2 pr-6 rounded-lg border border-primary/40 bg-background/80 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 cursor-pointer"
+                              >
+                                <option value="" disabled>
+                                  {selected.size === 0 ? "Select type…" : "+ Add another type"}
+                                </option>
+                                {available.map(s => (
+                                  <option key={s} value={s}>{s}</option>
+                                ))}
+                              </select>
+                            )}
+                            {selected.size > 0 && (
+                              <button
+                                onClick={confirmPicks}
+                                className="text-[11px] px-3 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                                data-testid={`attention-confirm-${item.id}`}
+                              >
+                                {selected.size === 1 ? "Confirm" : `Add ${selected.size} items`}
+                              </button>
+                            )}
+                            <button
+                              onClick={dismissItem}
+                              className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-muted-foreground/70 hover:bg-muted/40 transition-colors"
+                              data-testid={`attention-keep-${item.id}`}
+                            >
+                              Keep as-is
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            {onRenameItem && (
+                              <button
+                                onClick={() => { setShopEditVal(item.productName ?? ""); setShopEditId(item.id); }}
+                                className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/70 hover:bg-muted/50 transition-colors"
+                                data-testid={`attention-edit-${item.id}`}
+                              >
+                                Edit name
+                              </button>
+                            )}
+                            <button
+                              onClick={dismissItem}
+                              className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-muted-foreground/70 hover:bg-muted/40 transition-colors"
+                              data-testid={`attention-keep-${item.id}`}
+                            >
+                              Keep as-is
+                            </button>
+                            {onRemoveItem && (
+                              <button
+                                onClick={() => onRemoveItem(item.id)}
+                                className="text-[11px] px-2.5 py-1 rounded-lg border border-rose-200/60 dark:border-rose-800/40 bg-background/70 text-rose-500/80 hover:bg-rose-50/50 dark:hover:bg-rose-950/20 transition-colors"
+                                data-testid={`attention-remove-${item.id}`}
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Inline edit */}
+                    {isEditingHere && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <input
+                          autoFocus
+                          value={shopEditVal}
+                          onChange={e => setShopEditVal(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === "Enter") {
+                              const trimmed = shopEditVal.trim();
+                              if (trimmed) onRenameItem?.(item.id, trimmed);
+                              dismissItem();
+                              setShopEditId(null);
+                            }
+                            if (e.key === "Escape") setShopEditId(null);
+                          }}
+                          className="flex-1 h-7 text-[12px] px-2 rounded-md border border-primary/40 bg-background/80 focus:outline-none focus:ring-1 focus:ring-primary/30"
+                          placeholder="e.g. Broccoli"
+                        />
+                        <button
+                          onClick={() => {
+                            const trimmed = shopEditVal.trim();
+                            if (trimmed) onRenameItem?.(item.id, trimmed);
+                            dismissItem();
+                            setShopEditId(null);
+                          }}
+                          className="h-7 px-3 text-[11px] rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setShopEditId(null)}
+                          className="h-7 px-2 text-[11px] rounded-md border border-border/60 text-muted-foreground hover:bg-muted/50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {groupedCategories.length > 0 ? (
           <div
             className="flex-1 flex flex-col min-h-0 rounded-xl overflow-hidden"
@@ -2759,6 +3137,21 @@ export default function ShoppingListView({
               className="flex-1 min-h-0 overflow-y-auto"
               style={{ background: "hsl(var(--card) / 0.30)" }}
             >
+              {/* Shopping ready label — visible when Needs Attention section is also present */}
+              {needsAttentionItems.length > 0 && (
+                <div
+                  className="flex items-center gap-2 px-4 py-2 border-b border-border/20"
+                  style={{ background: "hsl(var(--muted) / 0.30)" }}
+                  data-testid="shopping-ready-label"
+                >
+                  <span className="text-[10.5px] font-medium text-muted-foreground/50 uppercase tracking-wide">
+                    Shopping ready
+                  </span>
+                  <span className="text-[10px] text-muted-foreground/35 tabular-nums">
+                    {shoppingReadyItems.length + activeExtras.length}
+                  </span>
+                </div>
+              )}
               {groupedCategories.map((cat, catIndex) => {
                 const { total, got, allDone } = getCatProgress(cat);
                 return (
@@ -2770,6 +3163,24 @@ export default function ShoppingListView({
                       else sectionRefs.current.delete(cat.key);
                     }}
                   >
+                    {/* Aisle-style section heading — provides in-list position context */}
+                    <div
+                      className={`flex items-center gap-2.5 px-4 py-2 border-b ${catIndex > 0 ? "border-t mt-1" : ""}`}
+                      style={{
+                        background: `${cat.tabAccent}0e`,
+                        borderColor: cat.panelBorderColor,
+                      }}
+                    >
+                      <span className="text-[13px] leading-none select-none" aria-hidden>{cat.emoji}</span>
+                      <span className="font-semibold text-[12px]" style={{ color: cat.tabAccent }}>{cat.label}</span>
+                      <span className="text-[10px] text-muted-foreground/45 ml-auto tabular-nums">
+                        {allDone
+                          ? <span style={{ color: cat.tabAccent }}>Done ✓</span>
+                          : got > 0
+                            ? `${got} / ${total}`
+                            : `${total} item${total !== 1 ? "s" : ""}`}
+                      </span>
+                    </div>
                     {/* Items in this category - soft-grouped by source priority */}
                     <div className="divide-y divide-border/25">
                       {[...cat.savedItems]
@@ -2821,8 +3232,8 @@ export default function ShoppingListView({
               )}
             </div>
           </div>
-        ) : (
-          /* Empty basket state */
+        ) : needsAttentionItems.length === 0 ? (
+          /* Empty basket state — only shown when there are no items at all */
           <div
             className="flex-1 rounded-xl flex flex-col items-center justify-center py-20 text-center"
             style={{
@@ -2836,7 +3247,7 @@ export default function ShoppingListView({
             <p className="font-medium text-base text-foreground/60 mb-1">Your basket is empty</p>
             <p className="text-sm text-muted-foreground/50">Add items to your basket first.</p>
           </div>
-        )}
+        ) : null /* needs-attention section already shown above */}
       </div>}
 
       {/* ══════════════════════════════════════════════════════════════════

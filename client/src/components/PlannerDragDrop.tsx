@@ -39,7 +39,8 @@ export type DragItemData = PlannerEntryDragData | ProposalCardDragData | SearchR
 
 export type DropZoneData =
   | { type: "planner-slot"; dayId: number; mealType: string; audience: string; isDrink: boolean }
-  | { type: "mobile-day-nav"; dayId: number; dayIndex: number };
+  | { type: "mobile-day-nav"; dayId: number; dayIndex: number }
+  | { type: "provisioning"; weekId: number };
 
 interface EntryProps {
   entry: PlannerEntry;
@@ -288,6 +289,31 @@ export function DraggableSearchResultRow({
       >
         <GripVertical className="h-4 w-4" />
       </div>
+    </div>
+  );
+}
+
+// Droppable weekly provisioning area — accepts search-result drags from the assistant panel
+interface DroppableProvisioningProps {
+  weekId: number;
+  children: React.ReactNode;
+  className?: string;
+  "data-testid"?: string;
+}
+
+export function DroppableProvisioning({ weekId, children, className, "data-testid": testId }: DroppableProvisioningProps) {
+  const { isOver, setNodeRef } = useDroppable({
+    id: `provisioning-${weekId}`,
+    data: { type: "provisioning", weekId } as DropZoneData,
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${className ?? ""} rounded-lg transition-colors ${isOver ? "ring-1 ring-emerald-500/50 bg-emerald-500/5" : ""}`}
+      data-testid={testId}
+    >
+      {children}
     </div>
   );
 }
