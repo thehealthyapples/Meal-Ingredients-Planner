@@ -1615,7 +1615,7 @@ export default function ShoppingListView({
     return (
       <div
         key={item.id}
-        className={`flex items-center gap-2.5 px-4 py-3.5 transition-colors duration-100 ${rowBg}`}
+        className={`flex items-center gap-2.5 px-4 ${state === "in_basket" ? "py-2" : "py-3.5"} transition-colors duration-100 ${rowBg}`}
         data-print-item
       >
         <div className={`flex-1 min-w-0 transition-opacity duration-150 ${contentOpacity}`}>
@@ -1662,59 +1662,131 @@ export default function ShoppingListView({
             })()}
           </div>
 
-          {/* Quantity confidence hint — Phase 6 trust visibility */}
+          {/* Phase 8: Unified metadata disclosure — single primary helper row, progressive detail */}
           {!isEditing && state === "need" && (() => {
-            if (qtyConfidenceDismissed.has(item.id)) return null;
+            const hasPantryDeduction = (cupboardQty.get(item.id) ?? 0) > 0;
             const confidence = deriveQuantityConfidence(item);
-            const label = getQuantityConfidenceLabel(confidence, item);
-            if (!label) return null;
-            const isActionable = confidence === 'assumed' || confidence === 'approximate';
-            const labelCls = confidence === 'assumed'
-              ? "text-[10px] text-muted-foreground/65"
-              : confidence === 'approximate'
-                ? "text-[10px] text-muted-foreground/55"
-                : "text-[10px] text-muted-foreground/38 italic";
-            return (
-              <div className="tha-print-hide flex items-center gap-1.5 mt-0.5" data-testid={`qty-confidence-${item.id}`}>
-                <span className={labelCls}>{label}</span>
-                {isActionable && (
-                  <button
-                    type="button"
-                    onClick={() => setQtyConfidenceDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; })}
-                    className="text-[9.5px] text-muted-foreground/35 hover:text-muted-foreground/65 underline-offset-2 hover:underline transition-colors"
-                    data-testid={`qty-looks-right-${item.id}`}
-                  >
-                    Looks right
-                  </button>
-                )}
-              </div>
-            );
-          })()}
+            const confLabel = getQuantityConfidenceLabel(confidence, item);
+            const isConfVisible = !!confLabel && !qtyConfidenceDismissed.has(item.id);
+            const isConfActionable = confidence === 'assumed' || confidence === 'approximate';
+            const hasMergedSources = sources.length >= 2;
 
-          {/* Phase 7: Merged quantity transparency — lightweight inline signal when item spans multiple meals */}
-          {!isEditing && state === "need" && sources.length >= 2 && (() => {
-            const hasCupboardQty = (cupboardQty.get(item.id) ?? 0) > 0;
+            if (!hasPantryDeduction && !isConfVisible && !hasMergedSources) return null;
+
+            // Priority: 1. pantry deduction  2. confidence warning  3. combined attribution
+            let primaryText: string;
+            let primaryCls: string;
+            if (hasPantryDeduction) {
+              primaryText = 'Using pantry stock';
+              primaryCls = "text-[10px] text-emerald-600/70 dark:text-emerald-500/60";
+            } else if (isConfVisible) {
+              primaryText = confLabel!;
+              primaryCls = confidence === 'assumed'
+                ? "text-[10px] text-muted-foreground/65"
+                : confidence === 'approximate'
+                  ? "text-[10px] text-muted-foreground/55"
+                  : "text-[10px] text-muted-foreground/38 italic";
+            } else {
+              primaryText = `Combined from ${sources.length} meals`;
+              primaryCls = "text-[10px] text-muted-foreground/50";
+            }
+
             const isExpanded = mergedExpandedIds.has(item.id);
+
             return (
-              <div className="tha-print-hide mt-0.5" data-testid={`merged-label-${item.id}`}>
-                <button
-                  type="button"
-                  onClick={() => setMergedExpandedIds(prev => {
-                    const s = new Set(prev);
-                    if (s.has(item.id)) s.delete(item.id); else s.add(item.id);
-                    return s;
-                  })}
-                  className="text-[10px] text-muted-foreground/50 hover:text-muted-foreground/75 transition-colors text-left"
-                  data-testid={`merged-label-btn-${item.id}`}
-                  aria-label={`${isExpanded ? 'Collapse' : 'Expand'} meal breakdown`}
-                >
-                  Combined from {sources.length} meals{hasCupboardQty ? ' · pantry used' : ''}
-                </button>
-                {isExpanded && (
-                  <div className="mt-0.5 space-y-0" data-testid={`merged-breakdown-${item.id}`}>
+              <div className="tha-print-hide mt-0.5" data-testid={hasMergedSources ? `merged-label-${item.id}` : undefined}>
+                <div className="flex items-center gap-1.5">
+                  {/* Primary metadata — highest priority item */}
+                  <span
+                    className={primaryCls}
+                    data-testid={isConfVisible && !hasPantryDeduction ? `qty-confidence-${item.id}` : undefined}
+                  >
+                    {primaryText}
+                  </span>
+
+                  {/* Looks right dismiss — when confidence is primary and actionable */}
+                  {isConfVisible && isConfActionable && !hasPantryDeduction && (
+                    <button
+                      type="button"
+                      onClick={() => setQtyConfidenceDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; })}
+                      className="text-[9.5px] text-muted-foreground/35 hover:text-muted-foreground/65 underline-offset-2 hover:underline transition-colors"
+                      data-testid={`qty-looks-right-${item.id}`}
+                    >
+                      Looks right
+                    </button>
+                  )}
+
+                  {/* Expand/collapse chevron — only when meal breakdown is available */}
+                  {hasMergedSources && (
+                    <button
+                      type="button"
+                      onClick={() => setMergedExpandedIds(prev => {
+                        const s = new Set(prev);
+                        if (s.has(item.id)) s.delete(item.id); else s.add(item.id);
+                        return s;
+                      })}
+                      className="text-[9px] text-muted-foreground/30 hover:text-muted-foreground/60 transition-colors leading-none select-none"
+                      aria-label={`${isExpanded ? 'Collapse' : 'Expand'} meal breakdown`}
+                      data-testid={`merged-label-btn-${item.id}`}
+                    >
+                      {isExpanded ? '▲' : '▼'}
+                    </button>
+                  )}
+                </div>
+
+                {/* Fallback: confidence shown inline when pantry is primary but no meal detail to expand */}
+                {!hasMergedSources && hasPantryDeduction && isConfVisible && (
+                  <div className="flex items-center gap-1.5 mt-0.5" data-testid={`qty-confidence-${item.id}`}>
+                    <span className={confidence === 'assumed'
+                      ? "text-[10px] text-muted-foreground/65"
+                      : "text-[10px] text-muted-foreground/55"}>
+                      {confLabel}
+                    </span>
+                    {isConfActionable && (
+                      <button
+                        type="button"
+                        onClick={() => setQtyConfidenceDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; })}
+                        className="text-[9.5px] text-muted-foreground/35 hover:text-muted-foreground/65 underline-offset-2 hover:underline transition-colors"
+                        data-testid={`qty-looks-right-${item.id}`}
+                      >
+                        Looks right
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Expanded detail — meal breakdown and secondary metadata */}
+                {hasMergedSources && isExpanded && (
+                  <div className="mt-1 space-y-0.5" data-testid={`merged-breakdown-${item.id}`}>
+                    {/* Confidence secondary row — shown in detail when pantry is primary */}
+                    {hasPantryDeduction && isConfVisible && (
+                      <div className="flex items-center gap-1.5" data-testid={`qty-confidence-${item.id}`}>
+                        <span className={confidence === 'assumed'
+                          ? "text-[10px] text-muted-foreground/65"
+                          : "text-[10px] text-muted-foreground/55"}>
+                          {confLabel}
+                        </span>
+                        {isConfActionable && (
+                          <button
+                            type="button"
+                            onClick={() => setQtyConfidenceDismissed(prev => { const s = new Set(prev); s.add(item.id); return s; })}
+                            className="text-[9.5px] text-muted-foreground/35 hover:text-muted-foreground/65 underline-offset-2 hover:underline transition-colors"
+                          >
+                            Looks right
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {/* Combined attribution header — only when combined is not already the primary */}
+                    {(hasPantryDeduction || isConfVisible) && (
+                      <p className="text-[10px] text-muted-foreground/50">
+                        Combined from {sources.length} meals
+                      </p>
+                    )}
+                    {/* Meal list */}
                     {sources.map((s, idx) => (
                       <p key={idx} className="text-[10px] text-muted-foreground/45 leading-tight">
-                        {s.mealName}{s.quantityMultiplier > 1 ? ` (×${s.quantityMultiplier})` : ''}
+                        · {s.mealName}{s.quantityMultiplier > 1 ? ` ×${s.quantityMultiplier}` : ''}
                       </p>
                     ))}
                   </div>
