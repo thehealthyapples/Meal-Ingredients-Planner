@@ -4198,6 +4198,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
       const allIngredients: string[] = [];
       const mealMap: { meal: { id: number; name: string }; count: number; ingredients: string[] }[] = [];
+      const freezerDeductions: { mealId: number; mealName: string; portionsRequested: number; portionsDeducted: number }[] = [];
 
       const readyMealItems: { mealId: number; name: string; count: number }[] = [];
 
@@ -4207,6 +4208,8 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           let count = sel.count;
           const frozenPortions = frozenPortionsByMeal.get(meal.id) || 0;
           if (frozenPortions > 0) {
+            const deducted = Math.min(frozenPortions, sel.count);
+            freezerDeductions.push({ mealId: meal.id, mealName: meal.name, portionsRequested: sel.count, portionsDeducted: deducted });
             count = Math.max(0, count - frozenPortions);
           }
           if (count === 0) continue;
@@ -4328,7 +4331,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         }
       }
 
-      res.status(201).json(items);
+      res.status(201).json({ items, freezerDeductions });
 
       const _fmUserId = req.user!.id;
       const _fmItemCount = items.length;

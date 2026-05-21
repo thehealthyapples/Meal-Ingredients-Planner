@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -22,7 +22,7 @@ import { usePlannerContext } from "@/contexts/PlannerContext";
 import { PlannerWorkspaceContext } from "@/contexts/PlannerWorkspaceContext";
 import { useSmartSuggest } from "@/hooks/use-smart-suggest";
 import { usePlannerScan } from "@/hooks/use-planner-scan";
-import { usePlannerOperations } from "@/hooks/use-planner-operations";
+import { usePlannerOperations, type ShoppingHandoffData } from "@/hooks/use-planner-operations";
 import { PlannerAssistantPanel } from "@/components/PlannerAssistantPanel";
 import type { ResolveTarget, PlaceholderItem } from "@/components/PlannerAssistantPanel";
 import { SmartReviewPanelContent } from "@/components/SmartReviewPanelContent";
@@ -69,7 +69,7 @@ import {
   type DragOverEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
-import { DroppablePlannerCell, SortablePlannerEntry, MobileSortableMealEntry, MobileDayDropTarget, type DragItemData, type DropZoneData } from "@/components/PlannerDragDrop";
+import { DroppablePlannerCell, SortablePlannerEntry, MobileSortableMealEntry, MobileDayDropTarget, DroppableProvisioning, type DragItemData, type DropZoneData } from "@/components/PlannerDragDrop";
 
 interface MatrixRow {
   id: string;
@@ -457,6 +457,9 @@ export default function WeeklyPlannerPage() {
   // ── Planner context (Phase 1A + 5B: assistant panel routing + selected day) ─
   const { assistantMode, setAssistantMode, selectedDayId, setSelectedDayId } = usePlannerContext();
 
+  // ── Shopping handoff state (Phase 3: post-generation continuity) ─────────────
+  const [shoppingHandoff, setShoppingHandoff] = useState<ShoppingHandoffData | null>(null);
+
   // Once planner data first loads, validate restored resolveSession. If the entry no longer
   // exists (deleted/stale), clear the session and exit resolve mode.
   useEffect(() => {
@@ -675,6 +678,18 @@ export default function WeeklyPlannerPage() {
     onError: () => toast({ title: "Failed to remove item", variant: "destructive" }),
   });
 
+  const addProvisioningFromDragMutation = useMutation({
+    mutationFn: async ({ weekId, name, mealId }: { weekId: number; name: string; mealId: number }) => {
+      const res = await apiRequest("POST", `/api/planner/weeks/${weekId}/provisioning`, { name, mealId });
+      return res.json();
+    },
+    onSuccess: (_, { weekId }) => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/weeks", weekId, "provisioning"] });
+      setProvisioningOpen(true);
+    },
+    onError: () => toast({ title: "Could not add to provisioning", variant: "destructive" }),
+  });
+
   const { data: weekOverrides = [] } = useQuery<WeekEaterOverride[]>({
     queryKey: ["/api/planner/weeks", activeWeekId, "eater-overrides"],
     queryFn: async () => {
@@ -787,6 +802,11 @@ export default function WeeklyPlannerPage() {
     },
   });
 
+  const handleShoppingHandoff = useCallback((data: ShoppingHandoffData) => {
+    setShoppingHandoff(data);
+    setAssistantMode("shopping-ready");
+  }, [setAssistantMode]);
+
   const {
     upsertEntryMutation,
     addEntryMutation,
@@ -809,6 +829,7 @@ export default function WeeklyPlannerPage() {
     selectedDayId,
     onSlotCleared: () => setClearSlotConfirm(null),
     onWeekCleared: () => setClearWeekId(null),
+    onShoppingHandoff: handleShoppingHandoff,
   });
 
   // Phase 5A: copy all entries from one day to another
@@ -932,6 +953,16 @@ export default function WeeklyPlannerPage() {
 
     // Phase 3: search-result from Planner Assistant discovery (cookbook/freezer/packaged)
     if (dragData.type === "search-result") {
+      // Drop onto weekly provisioning tray
+      if (overData.type === "provisioning") {
+        addProvisioningFromDragMutation.mutate({
+          weekId: overData.weekId,
+          name: dragData.mealName,
+          mealId: dragData.mealId,
+        });
+        return;
+      }
+
       let targetDayId: number;
       let targetMealType: string;
       let targetAudience: string;
@@ -2344,7 +2375,7 @@ export default function WeeklyPlannerPage() {
             </div>
             {/* ── Weekly Provisioning — moved here from below DndContext for better visibility ── */}
             {week.weekNumber === Number(activeWeek) && activeWeekId && (
-              <div className="mt-4 mb-2" data-testid="section-weekly-provisioning">
+              <DroppableProvisioning weekId={activeWeekId} className="mt-4 mb-2" data-testid="section-weekly-provisioning">
                 <button
                   className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card hover:bg-muted/30 transition-colors text-left"
                   onClick={() => setProvisioningOpen(v => !v)}
@@ -2393,7 +2424,7 @@ export default function WeeklyPlannerPage() {
                     )}
                   </div>
                 )}
-              </div>
+              </DroppableProvisioning>
             )}
 
           </TabsContent>
@@ -2489,6 +2520,8 @@ export default function WeeklyPlannerPage() {
         }}
         consumedProposalId={consumedProposalId}
         onSharePlan={() => setSharePlanOpen(true)}
+        shoppingHandoff={shoppingHandoff}
+        basketMealsCount={basketMealIds.length}
       />
       </div>{/* end flex gap-3 */}
       <DragOverlay dropAnimation={null} modifiers={[snapOverlayToCursor]}>

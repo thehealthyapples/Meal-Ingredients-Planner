@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { subscribeStagingBus } from "@/lib/planner-staging-bus";
-import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, Globe, Copy, Share2, Microscope } from "lucide-react";
+import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, Globe, Copy, Share2, Microscope, ShoppingCart, Snowflake, PackageCheck } from "lucide-react";
+import type { ShoppingHandoffData, FreezerDeduction } from "@/hooks/use-planner-operations";
 import { PlannerAnalyserContent } from "@/components/PlannerAnalyserContent";
 import { useToast } from "@/hooks/use-toast";
 import { DraggableProposalCard } from "@/components/PlannerDragDrop";
@@ -100,6 +101,10 @@ interface PlannerAssistantPanelProps {
   consumedProposalId?: string | null;
   /** Phase 2: open share-plan dialog from hub Manage section */
   onSharePlan?: () => void;
+  /** Phase 3: post-generation shopping handoff data */
+  shoppingHandoff?: ShoppingHandoffData | null;
+  /** Phase 3: number of distinct meals currently in shopping list (from basketMealIds) */
+  basketMealsCount?: number;
 }
 
 function useIsMobile() {
@@ -1023,6 +1028,8 @@ interface IdlePanelContentProps {
   consumedProposalId?: string | null;
   /** Phase 2: open share-plan dialog from hub */
   onSharePlan?: () => void;
+  /** Phase 3: number of distinct meals in shopping list for summary section */
+  basketMealsCount?: number;
 }
 
 interface ProposalItem {
@@ -1085,11 +1092,12 @@ function loadTraySession(): ProposalItem[] | null {
 // banner re-appearing on every mode switch (which unmounts/remounts IdlePanelContent).
 let _traySessionRestored = false;
 
-function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeholderCount = 0, onBrowseRecipes, onBuildRecipe, onScanRecipe, consumedProposalId, onSharePlan }: IdlePanelContentProps) {
+function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeholderCount = 0, onBrowseRecipes, onBuildRecipe, onScanRecipe, consumedProposalId, onSharePlan, basketMealsCount = 0 }: IdlePanelContentProps) {
   const [intentOpen, setIntentOpen] = useState(false);
   const [intentName, setIntentName] = useState("");
   const [intentMealType, setIntentMealType] = useState<string>("dinner");
   const [intentSaving, setIntentSaving] = useState(false);
+  const [shoppingOpen, setShoppingOpen] = useState(true);
 
   const [proposals, setProposals] = useState<ProposalItem[]>([]);
   const [proposalName, setProposalName] = useState("");
@@ -1421,7 +1429,47 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
         )}
       </div>
 
-      {/* ── Section D: Review & Place (shown only when there's pending work) ── */}
+      {/* ── Section D: Shopping — shown when meals have been sent to shopping ── */}
+      {basketMealsCount > 0 && (
+        <>
+          <div className="w-full h-px bg-border/50" />
+          <div data-testid="section-shopping-summary">
+            <button
+              className="w-full flex items-center justify-between py-2 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+              onClick={() => setShoppingOpen(v => !v)}
+              aria-expanded={shoppingOpen}
+              data-testid="button-section-shopping-toggle"
+            >
+              <span className="flex items-center gap-1.5">
+                <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+                  Shopping
+                </span>
+                <span className="text-[10px] font-medium rounded-full px-1.5 leading-4 bg-emerald-100/80 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400">
+                  {basketMealsCount} meal{basketMealsCount !== 1 ? "s" : ""}
+                </span>
+              </span>
+              <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${shoppingOpen ? "" : "-rotate-90"}`} />
+            </button>
+            {shoppingOpen && (
+              <div className="pb-1.5 space-y-1.5" data-testid="section-shopping-summary-body">
+                <p className="text-xs text-muted-foreground">
+                  Shopping generated for {basketMealsCount} meal{basketMealsCount !== 1 ? "s" : ""} this week.
+                </p>
+                <a
+                  href="/shopping-list"
+                  className="w-full flex items-center gap-2 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2 text-sm text-foreground transition-colors"
+                  data-testid="button-shopping-summary-view"
+                >
+                  <ShoppingCart className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  <span className="flex-1">View shopping list</span>
+                </a>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ── Section E: Review & Place (shown only when there's pending work) ── */}
       {hasContinueItems && (
         <>
           <div className="w-full h-px bg-border/50" />
@@ -1536,6 +1584,92 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
   );
 }
 
+// ── Shopping Handoff Panel ────────────────────────────────────────────────────
+
+interface ShoppingHandoffPanelProps {
+  itemCount: number;
+  needsReviewCount: number;
+  freezerDeductions: FreezerDeduction[];
+}
+
+function ShoppingHandoffPanel({ itemCount, needsReviewCount, freezerDeductions }: ShoppingHandoffPanelProps) {
+  return (
+    <div className="space-y-3" data-testid="panel-shopping-ready">
+
+      {/* Status summary */}
+      <div className="flex items-start gap-2.5 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 px-3 py-3">
+        <PackageCheck className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+        <div className="space-y-0.5 min-w-0">
+          <p className="text-sm font-medium text-foreground">Shopping ready</p>
+          <p className="text-xs text-muted-foreground">
+            {itemCount} item{itemCount !== 1 ? "s" : ""} added to your list
+          </p>
+        </div>
+      </div>
+
+      {/* Operational callouts */}
+      <div className="space-y-1.5">
+        {needsReviewCount > 0 && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-amber-200/60 dark:border-amber-700/40 bg-amber-50/40 dark:bg-amber-950/10" data-testid="shopping-handoff-review-callout">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400" />
+            <p className="text-xs text-amber-700 dark:text-amber-400 flex-1">
+              {needsReviewCount} ingredient{needsReviewCount !== 1 ? "s" : ""} need{needsReviewCount === 1 ? "s" : ""} review
+            </p>
+          </div>
+        )}
+
+        {freezerDeductions.length > 0 && (
+          <div className="rounded-lg border border-sky-200/60 dark:border-sky-700/40 bg-sky-50/40 dark:bg-sky-950/10 px-3 py-2.5" data-testid="shopping-handoff-freezer-callout">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Snowflake className="h-3.5 w-3.5 shrink-0 text-sky-500" />
+              <p className="text-xs font-medium text-sky-700 dark:text-sky-400">Freezer stock applied</p>
+            </div>
+            <ul className="space-y-0.5 pl-5">
+              {freezerDeductions.map((d) => (
+                <li key={d.mealId} className="text-xs text-muted-foreground leading-snug">
+                  {d.mealName}{d.portionsDeducted > 1 ? ` ×${d.portionsDeducted}` : ""}
+                  {d.portionsDeducted < d.portionsRequested && (
+                    <span className="text-muted-foreground/60"> (partial)</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-muted-foreground/60 mt-1.5 pl-5">
+              Ingredients for these meals removed from shopping
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Action CTAs */}
+      <div className="space-y-2 pt-1">
+        <a
+          href="/shopping-list"
+          className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors"
+          data-testid="button-shopping-handoff-check-cupboards"
+        >
+          <ClipboardList className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="flex-1">Check cupboards</span>
+          <span className="text-[11px] text-muted-foreground/50 shrink-0">Verify stock</span>
+        </a>
+        <a
+          href="/shopping-list"
+          className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-2.5 text-sm font-medium transition-colors"
+          data-testid="button-shopping-handoff-open-shopping"
+        >
+          <ShoppingCart className="h-4 w-4" />
+          Open shopping list
+        </a>
+      </div>
+
+      {/* Contextual note */}
+      <p className="text-[11px] text-muted-foreground/50 text-center leading-snug pt-1">
+        Your planner is still here — come back to adjust at any time.
+      </p>
+    </div>
+  );
+}
+
 function getPanelIcon(mode: AssistantMode) {
   if (mode === "smart") return <Sparkles className="h-4 w-4 text-primary" />;
   if (mode === "smart-review") return <Sparkles className="h-4 w-4 text-primary" />;
@@ -1548,6 +1682,7 @@ function getPanelIcon(mode: AssistantMode) {
   if (mode === "resolve") return <BookOpen className="h-4 w-4 text-primary" />;
   if (mode === "placeholder-review") return <ClipboardList className="h-4 w-4 text-primary" />;
   if (mode === "analyser") return <Microscope className="h-4 w-4 text-primary" />;
+  if (mode === "shopping-ready") return <PackageCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />;
   return <ScanLine className="h-4 w-4 text-primary" />;
 }
 
@@ -1564,6 +1699,7 @@ function getPanelTitle(mode: AssistantMode, dayLabel?: string) {
   if (mode === "resolve") return "Link a Recipe";
   if (mode === "placeholder-review") return "Unlinked Meals";
   if (mode === "analyser") return "Analyse Products";
+  if (mode === "shopping-ready") return "Shopping Ready";
   return "Planner Assistant";
 }
 
@@ -1607,6 +1743,8 @@ export function PlannerAssistantPanel({
   consumedProposalId,
   freezerMeals = [],
   onSharePlan,
+  shoppingHandoff,
+  basketMealsCount = 0,
 }: PlannerAssistantPanelProps) {
   const isMobile = useIsMobile();
   const RESOLVE_SUBVIEW_KEY = "planner:resolve-subview";
@@ -1661,6 +1799,13 @@ export function PlannerAssistantPanel({
       {mode === "smart" && <SmartContent />}
       {mode === "analyser" && <PlannerAnalyserContent />}
       {mode === "settings" && <PlannerSettingsContent />}
+      {mode === "shopping-ready" && shoppingHandoff && (
+        <ShoppingHandoffPanel
+          itemCount={shoppingHandoff.itemCount}
+          needsReviewCount={shoppingHandoff.needsReviewCount}
+          freezerDeductions={shoppingHandoff.freezerDeductions}
+        />
+      )}
       {mode === "templates" && (
         <TemplatesPanel inline open onClose={onClose} user={user} />
       )}
@@ -1810,6 +1955,7 @@ export function PlannerAssistantPanel({
         onScanRecipe={onScanRecipe}
         consumedProposalId={consumedProposalId}
         onSharePlan={onSharePlan}
+        basketMealsCount={basketMealsCount}
       />
     ) : (
       <p className="text-xs text-muted-foreground">Select a mode to get started.</p>
@@ -1890,6 +2036,7 @@ export function PlannerAssistantPanel({
               onScanRecipe={onScanRecipe}
               consumedProposalId={consumedProposalId}
               onSharePlan={onSharePlan}
+              basketMealsCount={basketMealsCount}
             />
           ) : (
             <p className="text-xs text-muted-foreground">Select a mode to get started.</p>

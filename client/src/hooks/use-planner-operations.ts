@@ -6,6 +6,19 @@ import type { FullWeek, FullDay } from "@/lib/planner-types";
 import type { PlannerEntry } from "@shared/schema";
 import type { EntryTarget } from "@/components/PlannerMealPickerPanel";
 
+export interface FreezerDeduction {
+  mealId: number;
+  mealName: string;
+  portionsRequested: number;
+  portionsDeducted: number;
+}
+
+export interface ShoppingHandoffData {
+  itemCount: number;
+  needsReviewCount: number;
+  freezerDeductions: FreezerDeduction[];
+}
+
 // Minimal duplicates of page-level slot helpers — kept local to avoid a shared-utils file
 function getSlotEntries(entries: PlannerEntry[], mealType: string, audience: string, isDrink = false): PlannerEntry[] {
   return entries
@@ -18,6 +31,7 @@ interface UsePlannerOperationsOptions {
   selectedDayId: number | null;
   onSlotCleared?: () => void;
   onWeekCleared?: () => void;
+  onShoppingHandoff?: (data: ShoppingHandoffData) => void;
 }
 
 export function usePlannerOperations({
@@ -25,6 +39,7 @@ export function usePlannerOperations({
   selectedDayId,
   onSlotCleared,
   onWeekCleared,
+  onShoppingHandoff,
 }: UsePlannerOperationsOptions) {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -287,13 +302,24 @@ export function usePlannerOperations({
       const res = await apiRequest("POST", api.shoppingList.generateFromMeals.path, { mealSelections });
       return res.json();
     },
-    onSuccess: (_data, mealSelections) => {
+    onSuccess: (data, mealSelections) => {
       qc.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
       qc.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
       qc.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
       qc.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
-      const totalServings = mealSelections.reduce((sum, s) => sum + s.count, 0);
-      toast({ title: "Added to basket", description: `${totalServings} meal serving${totalServings !== 1 ? "s" : ""}` });
+      qc.invalidateQueries({ queryKey: ["/api/planner/basket-meal-ids"] });
+
+      // Parse structured response (server returns { items, freezerDeductions })
+      const items: { needsReview?: boolean }[] = Array.isArray(data) ? data : (data?.items ?? []);
+      const deductions: FreezerDeduction[] = Array.isArray(data) ? [] : (data?.freezerDeductions ?? []);
+      const needsReviewCount = items.filter(i => i.needsReview).length;
+
+      if (onShoppingHandoff && items.length > 0) {
+        onShoppingHandoff({ itemCount: items.length, needsReviewCount, freezerDeductions: deductions });
+      } else {
+        const totalServings = mealSelections.reduce((sum, s) => sum + s.count, 0);
+        toast({ title: "Added to basket", description: `${totalServings} meal serving${totalServings !== 1 ? "s" : ""}` });
+      }
     },
     onError: () => {
       toast({ title: "Failed to add to basket", variant: "destructive" });
