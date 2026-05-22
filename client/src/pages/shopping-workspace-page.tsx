@@ -561,7 +561,7 @@ function WorkspaceRow({
     >
       {/* ── Shop mode collapsed row ───────────────────────────────── */}
       {shopMode && (
-        <div className="grid grid-cols-[20px_5rem_1fr_auto_auto] items-center gap-x-2 px-4 py-3">
+        <div className="grid grid-cols-[20px_5rem_1fr_auto_2.75rem] items-center gap-x-2 px-4 py-3">
 
           {/* Col 1 — state circle */}
           <button
