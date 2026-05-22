@@ -9,10 +9,12 @@ import {
 } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   ChevronDown, ChevronUp, ShoppingCart, ChefHat,
   Leaf, Loader2, Info, Store, Clock, Check, Package,
   X, ScanLine, Sparkles, Camera, AlertCircle, RefreshCw,
+  Search,
 } from "lucide-react";
 import ScoreBadge from "@/components/ui/score-badge";
 import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
@@ -107,6 +109,14 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
   const [scannedProduct, setScannedProduct] = useState<ScannedProduct | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Manual search state
+  const [manualQuery, setManualQuery] = useState("");
+  const [manualResults, setManualResults] = useState<any[]>([]);
+  const [isManualSearching, setIsManualSearching] = useState(false);
+  const [manualSearchDone, setManualSearchDone] = useState(false);
+  const [manualSearchError, setManualSearchError] = useState(false);
+  const manualSearchRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (open && item) {
       setProducts([]);
@@ -114,6 +124,11 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
       setShowCurrentDetail(false);
       setScanState("idle");
       setScannedProduct(null);
+      setManualQuery("");
+      setManualResults([]);
+      setIsManualSearching(false);
+      setManualSearchDone(false);
+      setManualSearchError(false);
       doSearch(item.productName);
     }
   }, [open, item?.id]);
@@ -208,6 +223,55 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
       setScanState("found");
     } catch {
       setScanState("unresolved");
+    }
+  }
+
+  async function doManualSearch() {
+    const q = manualQuery.trim();
+    if (!q) return;
+    setIsManualSearching(true);
+    setManualSearchDone(false);
+    setManualSearchError(false);
+    try {
+      const res = await fetch(`/api/search-products?q=${encodeURIComponent(q)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Search failed");
+      const data = await res.json();
+      setManualResults(data.products || []);
+      setManualSearchDone(true);
+    } catch {
+      setManualSearchError(true);
+    } finally {
+      setIsManualSearching(false);
+    }
+  }
+
+  async function handleSelectManualProduct(product: any) {
+    if (!item) return;
+    const storesArray: string[] = product.availableStores || [];
+    const productThaRating = product.upfAnalysis?.thaRating ?? null;
+    try {
+      const url = buildUrl(api.shoppingList.update.path, { id: item.id });
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          // Do NOT change productName — preserve shopping intent
+          matchedProductId: product.barcode || null,
+          matchedStore: product.availableStores?.[0] || null,
+          matchedPrice: null,
+          availableStores: storesArray.length > 0 ? JSON.stringify(storesArray) : null,
+          thaRating: productThaRating,
+        }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed");
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      setSelectedBarcode(product.barcode ?? null);
+      toast({ title: "Updated product choice", description: "Your list item name is unchanged." });
+    } catch {
+      toast({ title: "Couldn't save selection", variant: "destructive" });
     }
   }
 
@@ -501,21 +565,33 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
 
             {scanState === "unresolved" && (
               <Card className="border-border/60 bg-muted/10">
-                <CardContent className="p-4 space-y-2.5">
+                <CardContent className="p-4 space-y-3">
                   <div className="flex items-start gap-2.5">
                     <AlertCircle className="h-4 w-4 text-muted-foreground/60 shrink-0 mt-0.5" />
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      THA could not identify this product. Try another photo or continue with your current choice.
+                      THA could not identify this product from the photo.
                     </p>
                   </div>
-                  <button
-                    onClick={() => { setScanState("idle"); setScannedProduct(null); }}
-                    className="text-xs text-primary hover:underline touch-manipulation flex items-center gap-1"
-                    data-testid="analyser-scan-retry"
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                    Try again
-                  </button>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <button
+                      onClick={() => { setScanState("idle"); setScannedProduct(null); }}
+                      className="text-xs text-muted-foreground hover:text-foreground touch-manipulation flex items-center gap-1"
+                      data-testid="analyser-scan-retry"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      Scan again
+                    </button>
+                    <button
+                      onClick={() => {
+                        manualSearchRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                      className="text-xs font-medium text-primary hover:underline touch-manipulation flex items-center gap-1"
+                      data-testid="analyser-manual-search-from-scan"
+                    >
+                      <Search className="h-3 w-3" />
+                      Search manually
+                    </button>
+                  </div>
                 </CardContent>
               </Card>
             )}
@@ -529,6 +605,90 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
                 onSelect={() => handleSelectBetterOption(scannedProduct.raw)}
                 onRetry={() => { setScanState("idle"); setScannedProduct(null); }}
               />
+            )}
+          </div>
+
+          {/* ── Search product manually ───────────────────────────────── */}
+          <div ref={manualSearchRef} data-testid="analyser-manual-search-section">
+            <p className={`${SECTION_LABEL} mb-2 flex items-center gap-1.5`}>
+              <Search className="h-3 w-3" />
+              Search product manually
+            </p>
+            <p className="text-[10px] text-muted-foreground/70 mb-3 leading-relaxed">
+              Search by product name, brand, or description. Select a result to update your fulfilment choice — your list item name stays unchanged.
+            </p>
+            <div className="flex gap-2 mb-3">
+              <Input
+                value={manualQuery}
+                onChange={(e) => setManualQuery(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") doManualSearch(); }}
+                placeholder="e.g. Birds Eye fish fingers"
+                className="text-sm h-10 flex-1"
+                data-testid="analyser-manual-search-input"
+                aria-label="Search for a product"
+              />
+              <button
+                onClick={doManualSearch}
+                disabled={isManualSearching || !manualQuery.trim()}
+                className="px-3.5 h-10 rounded-md bg-primary text-primary-foreground text-xs font-medium shrink-0 flex items-center gap-1.5 hover:bg-primary/90 active:bg-primary/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors touch-manipulation"
+                data-testid="analyser-manual-search-submit"
+              >
+                {isManualSearching ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Search className="h-3.5 w-3.5" />
+                )}
+                Search
+              </button>
+            </div>
+
+            {isManualSearching && (
+              <Card className="border-border/60">
+                <CardContent className="p-4 flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                  <span className="text-xs">Searching products…</span>
+                </CardContent>
+              </Card>
+            )}
+
+            {!isManualSearching && manualSearchError && (
+              <Card className="border-border/60 bg-muted/20">
+                <CardContent className="p-4 space-y-2">
+                  <p className="text-xs text-muted-foreground">Could not complete the search. Check your connection and try again.</p>
+                  <button
+                    onClick={doManualSearch}
+                    className="text-xs text-primary hover:underline touch-manipulation flex items-center gap-1"
+                    data-testid="analyser-manual-search-retry"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    Try again
+                  </button>
+                </CardContent>
+              </Card>
+            )}
+
+            {!isManualSearching && !manualSearchError && manualSearchDone && manualResults.length === 0 && (
+              <Card className="border-border/60 bg-muted/20">
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">No products found for that search. Try a different term or brand name.</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {!isManualSearching && !manualSearchError && manualResults.length > 0 && (
+              <div className="space-y-2" data-testid="analyser-manual-search-results">
+                {manualResults.slice(0, 6).map((product, idx) => (
+                  <ManualSearchResultCard
+                    key={product.barcode ?? idx}
+                    product={product}
+                    currentRating={item.thaRating ?? null}
+                    selectedBarcode={selectedBarcode}
+                    currentProductName={item.productName}
+                    onSelect={() => handleSelectManualProduct(product)}
+                    idx={idx}
+                  />
+                ))}
+              </div>
             )}
           </div>
 
@@ -653,6 +813,112 @@ function ScannedProductCard({
           Scanned product. Choosing this updates your fulfilment choice only — your list item "
           {capitalizeWords(currentProductName)}" is unchanged.
         </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── ManualSearchResultCard ────────────────────────────────────────────────────
+
+function buildManualBadges(
+  product: any,
+  currentRating: number | null,
+): Array<{ label: string; positive: boolean }> {
+  const badges: Array<{ label: string; positive: boolean }> = [];
+  const r: number | null = product.upfAnalysis?.thaRating ?? null;
+
+  if (r !== null && currentRating !== null) {
+    if (r > currentRating) badges.push({ label: `Higher THA score (${r}/5)`, positive: true });
+    else if (r === currentRating) badges.push({ label: "Similar option", positive: false });
+    else badges.push({ label: "Lower score than current", positive: false });
+  } else if (r !== null) {
+    badges.push({ label: `THA score: ${r}/5`, positive: true });
+  }
+
+  const additiveCount: number = product.upfAnalysis?.additiveMatches?.length ?? 0;
+  if (additiveCount === 0 && r !== null) badges.push({ label: "Cleaner option", positive: true });
+
+  return badges.slice(0, 3);
+}
+
+function ManualSearchResultCard({
+  product,
+  currentRating,
+  selectedBarcode,
+  currentProductName,
+  onSelect,
+  idx,
+}: {
+  product: any;
+  currentRating: number | null;
+  selectedBarcode: string | null;
+  currentProductName: string;
+  onSelect: () => void;
+  idx: number;
+}) {
+  const isSelected = selectedBarcode !== null && selectedBarcode === product.barcode;
+  const badges = buildManualBadges(product, currentRating);
+  const rating: number | null = product.upfAnalysis?.thaRating ?? null;
+
+  return (
+    <Card
+      className="border-border/60"
+      data-testid={`analyser-manual-result-${idx}`}
+    >
+      <CardContent className="p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-sm leading-snug">{product.product_name}</p>
+            {product.brand && <p className="text-xs text-muted-foreground">{product.brand}</p>}
+            {badges.length > 0 && (
+              <div className="mt-1.5 flex flex-wrap gap-1">
+                {badges.map((badge, i) => (
+                  <Badge
+                    key={i}
+                    className={`text-[10px] no-default-hover-elevate ${
+                      badge.positive
+                        ? "bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700"
+                        : "bg-muted/60 text-muted-foreground border-border/60"
+                    }`}
+                  >
+                    {badge.positive && <Sparkles className="h-2.5 w-2.5 mr-1" />}
+                    {badge.label}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {product.availableStores && product.availableStores.length > 0 && (
+              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                <Store className="h-3 w-3 text-muted-foreground shrink-0" />
+                {product.availableStores.map((s: string) => (
+                  <Badge key={s} variant="outline" className="text-[10px] no-default-hover-elevate">{s}</Badge>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            {rating !== null && <ScoreBadge score={rating} size={26} />}
+            {isSelected ? (
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <Check className="h-3 w-3" />Chosen
+              </span>
+            ) : (
+              <button
+                onClick={onSelect}
+                className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted/40 text-foreground border border-border/60 hover:bg-muted/60 active:bg-muted/80 transition-colors touch-manipulation"
+                data-testid={`analyser-manual-select-${idx}`}
+              >
+                <Check className="h-3 w-3 mr-1 inline-block" />
+                Choose
+              </button>
+            )}
+          </div>
+        </div>
+        {isSelected && (
+          <p className="text-[10px] text-muted-foreground/60 leading-relaxed mt-2 pt-2 border-t border-border/40">
+            Fulfilment updated. Your list item "{capitalizeWords(currentProductName)}" is unchanged.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
