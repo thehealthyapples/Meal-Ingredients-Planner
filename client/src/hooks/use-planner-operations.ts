@@ -29,6 +29,7 @@ function getSlotEntries(entries: PlannerEntry[], mealType: string, audience: str
 interface UsePlannerOperationsOptions {
   fullPlanner: FullWeek[];
   selectedDayId: number | null;
+  activeWeekNumber: number;
   onSlotCleared?: () => void;
   onWeekCleared?: () => void;
   onShoppingHandoff?: (data: ShoppingHandoffData) => void;
@@ -37,6 +38,7 @@ interface UsePlannerOperationsOptions {
 export function usePlannerOperations({
   fullPlanner,
   selectedDayId,
+  activeWeekNumber,
   onSlotCleared,
   onWeekCleared,
   onShoppingHandoff,
@@ -346,7 +348,15 @@ export function usePlannerOperations({
   });
 
   const createPlannerIntent = async (name: string, mealType: string, dayIdOverride?: number): Promise<void> => {
-    const targetDayId = dayIdOverride ?? selectedDayId;
+    // Compute the visually-selected day so saves land on the displayed week even when
+    // selectedDayId is null (user never clicked a cell) or stale (from a previous week).
+    const activeWeekDays = (fullPlanner.find(w => w.weekNumber === activeWeekNumber)?.days ?? [])
+      .slice()
+      .sort((a, b) => [1, 2, 3, 4, 5, 6, 0].indexOf(a.dayOfWeek) - [1, 2, 3, 4, 5, 6, 0].indexOf(b.dayOfWeek));
+    const selectedDay = selectedDayId
+      ? activeWeekDays.find(d => d.id === selectedDayId) ?? activeWeekDays[0] ?? null
+      : activeWeekDays[0] ?? null;
+    const targetDayId = dayIdOverride ?? selectedDay?.id ?? null;
     if (!targetDayId) {
       toast({ title: "Select a day first", description: "Click a day header in the planner grid to select it.", variant: "destructive" });
       return;

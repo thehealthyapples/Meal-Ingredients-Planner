@@ -41,7 +41,7 @@ async function run() {
       `SELECT id FROM schema_migrations ORDER BY applied_at DESC, id DESC LIMIT 1`
     );
     const latestMig = migRows[0]?.id ?? "(none)";
-    const expectedHead = "2026-05-05_add_product_events_and_activity_summary";
+    const expectedHead = "2026-05-22_add_shopping_fulfilment_memory";
     if (latestMig === expectedHead) {
       pass("Schema at head", latestMig);
     } else {
@@ -164,12 +164,45 @@ async function run() {
       `SELECT column_name FROM information_schema.columns WHERE table_name = 'planner_entries'`
     );
     const peColNames = peCols.map(r => r.column_name);
-    const requiredPeCols = ["position", "adaptation_result", "guest_eaters"];
+    const requiredPeCols = ["position", "adaptation_result", "guest_eaters", "original_meal_id_before_variant"];
     const missingPeCols = requiredPeCols.filter(c => !peColNames.includes(c));
     if (missingPeCols.length === 0) {
       pass("planner_entries columns", "All planner_entries columns present");
     } else {
       fail("planner_entries columns", `Missing: ${missingPeCols.join(", ")}`);
+    }
+
+    // ── 11. meals: household-safe variant columns exist ───────────────────────
+    const { rows: mealCols } = await client.query<{ column_name: string }>(
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'meals'`
+    );
+    const mealColNames = mealCols.map(r => r.column_name);
+    const requiredMealCols = ["is_household_safe_variant", "household_safe_for", "variant_kind", "show_in_cookbook"];
+    const missingMealCols = requiredMealCols.filter(c => !mealColNames.includes(c));
+    if (missingMealCols.length === 0) {
+      pass("meals variant columns", "All household-safe variant columns present");
+    } else {
+      fail("meals variant columns", `Missing: ${missingMealCols.join(", ")}`);
+    }
+
+    // ── 12. week_provisioning_items table exists ──────────────────────────────
+    const { rows: wpiExists } = await client.query<{ exists: boolean }>(
+      `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'week_provisioning_items') AS exists`
+    );
+    if (wpiExists[0]?.exists) {
+      pass("week_provisioning_items table", "Table exists");
+    } else {
+      fail("week_provisioning_items table", "Table missing — migration 2026-05-20_add_week_provisioning_items may not have applied");
+    }
+
+    // ── 13. shopping_fulfilment_memory table exists ───────────────────────────
+    const { rows: sfmExists } = await client.query<{ exists: boolean }>(
+      `SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'shopping_fulfilment_memory') AS exists`
+    );
+    if (sfmExists[0]?.exists) {
+      pass("shopping_fulfilment_memory table", "Table exists");
+    } else {
+      fail("shopping_fulfilment_memory table", "Table missing — migration 2026-05-22_add_shopping_fulfilment_memory may not have applied");
     }
 
   } finally {

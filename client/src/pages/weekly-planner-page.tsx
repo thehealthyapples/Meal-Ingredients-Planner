@@ -827,6 +827,7 @@ export default function WeeklyPlannerPage() {
   } = usePlannerOperations({
     fullPlanner,
     selectedDayId,
+    activeWeekNumber: Number(activeWeek),
     onSlotCleared: () => setClearSlotConfirm(null),
     onWeekCleared: () => setClearWeekId(null),
     onShoppingHandoff: handleShoppingHandoff,
