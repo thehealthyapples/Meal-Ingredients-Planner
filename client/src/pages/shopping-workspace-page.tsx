@@ -582,27 +582,33 @@ function WorkspaceRow({
               )}
             </button>
 
-            {/* Content: name + qty + THA + chevron */}
+            {/* Content: qty + name + THA + chevron */}
             <div className="flex-1 min-w-0 flex items-start gap-2">
               <button
                 className="flex-1 min-w-0 text-left"
                 onClick={onToggleExpand}
                 data-testid={`ws-row-expand-${item.id}`}
               >
-                <span
-                  className={`text-sm font-medium leading-snug block truncate ${
-                    effectiveShopState !== "need"
-                      ? "text-muted-foreground"
-                      : "text-foreground"
-                  }`}
-                >
-                  {capitalizeWords(item.productName)}
-                </span>
-                {qtyLabel && (
-                  <span className="text-xs text-muted-foreground mt-0.5 block">
-                    {qtyLabel}
+                <div className="flex items-baseline gap-2 flex-wrap">
+                  {qtyLabel && (
+                    <span className={`font-semibold text-[15px] tabular-nums leading-tight flex-shrink-0 ${
+                      effectiveShopState !== "need"
+                        ? "text-muted-foreground/40"
+                        : "text-foreground/80"
+                    }`}>
+                      {qtyLabel}
+                    </span>
+                  )}
+                  <span
+                    className={`font-medium text-[14px] leading-snug ${
+                      effectiveShopState !== "need"
+                        ? "text-muted-foreground"
+                        : "text-foreground"
+                    }`}
+                  >
+                    {capitalizeWords(item.productName)}
                   </span>
-                )}
+                </div>
               </button>
 
               {/* THA + chevron — also expands */}
