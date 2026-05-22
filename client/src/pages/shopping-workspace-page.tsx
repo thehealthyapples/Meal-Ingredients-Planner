@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   ChevronDown, ChevronUp, ShoppingBasket,
   FlaskConical, Leaf, AlertTriangle, Home, UtensilsCrossed,
-  CheckCircle2, ClipboardList, ShoppingCart,
+  CheckCircle2, ClipboardList, ShoppingCart, ShoppingBag, Clock,
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +32,32 @@ type WorkspaceItem = ShoppingListItem & {
   }>;
 };
 
+// Pantry: "adjusting" is transient (input visible); resolves to "have_enough" or "need_to_buy"
+type PantryDecision = "have_enough" | "need_to_buy" | "adjusting";
+type QuantityDecision = "accepted" | "editing" | "later";
+
+type PrepItemState = {
+  pantryDecision?: PantryDecision;
+  quantityDecision?: QuantityDecision;
+  editValue?: string;
+};
+
+type PrepAction =
+  | { type: "pantry"; decision: PantryDecision }
+  | { type: "quantity"; decision: QuantityDecision }
+  | { type: "editValue"; value: string }
+  | { type: "editConfirm" }
+  | { type: "clear" };
+
+type PrepSummary = {
+  pantryTotal: number;
+  pantryReviewed: number;
+  uncertainTotal: number;
+  uncertainResolved: number;
+  attentionTotal: number;
+  allPrepDone: boolean;
+};
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -43,7 +69,7 @@ const MODES: Array<{
   helper: string;
 }> = [
   { id: "review", label: "Review", Icon: ClipboardList, helper: "Check your list before you go" },
-  { id: "prep", label: "Prep", Icon: Home, helper: "Pantry, quantities and uncertainties" },
+  { id: "prep", label: "Prep", Icon: Home, helper: "Review pantry items and confirm quantities" },
   { id: "shop", label: "Shop", Icon: ShoppingCart, helper: "In-store check-off" },
 ];
 
@@ -57,8 +83,26 @@ function getOperationalHint(
   item: WorkspaceItem,
   isPantryStocked: boolean,
   sourcesForItem: IngredientSource[],
+  prepState?: PrepItemState,
 ): { text: string; tone: "amber" | "green" | "muted" } | null {
-  if (isPantryStocked) return { text: "In pantry", tone: "green" };
+  // Pantry item hints — always amber until confirmed (pantry = candidate, not certainty)
+  if (isPantryStocked) {
+    if (prepState?.pantryDecision === "have_enough") {
+      return { text: "Pantry reviewed", tone: "green" };
+    }
+    if (prepState?.pantryDecision === "need_to_buy") {
+      return null; // now acts as a regular shopping item
+    }
+    return { text: "Pantry item", tone: "amber" };
+  }
+
+  // Quantity decision overrides (prep mode)
+  if (prepState?.quantityDecision === "accepted") {
+    return { text: "Quantity confirmed", tone: "green" };
+  }
+  if (prepState?.quantityDecision === "later") {
+    return { text: "Review later", tone: "muted" };
+  }
 
   const conf = deriveQuantityConfidence(item);
   if (conf === "assumed") return { text: "Quantity estimated", tone: "amber" };
@@ -68,6 +112,248 @@ function getOperationalHint(
 
   if (sourcesForItem.length > 1) {
     return { text: `${sourcesForItem.length} meals`, tone: "muted" };
+  }
+
+  return null;
+}
+
+// ── PrepActionPanel ───────────────────────────────────────────────────────────
+
+function PrepActionPanel({
+  item,
+  isPantryStocked,
+  prepState,
+  onPrepAction,
+}: {
+  item: WorkspaceItem;
+  isPantryStocked: boolean;
+  prepState: PrepItemState;
+  onPrepAction: (action: PrepAction) => void;
+}) {
+  const conf = deriveQuantityConfidence(item);
+  const hasQuantityUncertainty = conf === "assumed" || conf === "approximate";
+  const unitLabel = item.unit && item.unit !== "unit" ? item.unit : "";
+
+  // ── Pantry review workflow ────────────────────────────────────────────────
+  if (isPantryStocked) {
+    // Unreviewed — show action buttons
+    if (!prepState.pantryDecision) {
+      return (
+        <div className="rounded-lg bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 p-3 space-y-2.5">
+          <p className="text-xs font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+            <Home className="h-3.5 w-3.5 shrink-0" />
+            Pantry item — do you have enough at home?
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => onPrepAction({ type: "pantry", decision: "have_enough" })}
+              className="flex-1 min-w-[90px] px-3 py-2.5 text-xs font-medium rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-500/20 active:bg-emerald-500/30 transition-colors"
+            >
+              Have enough
+            </button>
+            <button
+              onClick={() => onPrepAction({ type: "pantry", decision: "need_to_buy" })}
+              className="flex-1 min-w-[90px] px-3 py-2.5 text-xs font-medium rounded-lg bg-muted/60 text-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors"
+            >
+              Need to buy
+            </button>
+            <button
+              onClick={() => onPrepAction({ type: "pantry", decision: "adjusting" })}
+              className="flex-1 min-w-[90px] px-3 py-2.5 text-xs font-medium rounded-lg bg-muted/60 text-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors"
+            >
+              Adjust amount
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Adjusting — inline quantity input
+    if (prepState.pantryDecision === "adjusting") {
+      return (
+        <div className="rounded-lg bg-muted/30 border border-border/40 p-3 space-y-2.5">
+          <p className="text-xs font-medium text-foreground">How much do you still need to buy?</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={prepState.editValue ?? (item.quantityValue?.toString() ?? "")}
+              onChange={(e) => onPrepAction({ type: "editValue", value: e.target.value })}
+              className="w-24 text-sm px-2.5 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+              autoFocus
+            />
+            {unitLabel && (
+              <span className="text-xs text-muted-foreground">{unitLabel}</span>
+            )}
+            <button
+              onClick={() => onPrepAction({ type: "editConfirm" })}
+              className="px-3 py-2 text-xs font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              Confirm
+            </button>
+            <button
+              onClick={() => onPrepAction({ type: "clear" })}
+              className="px-2 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Resolved: have enough
+    if (prepState.pantryDecision === "have_enough") {
+      return (
+        <div className="flex items-center gap-2 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/30 px-3 py-2.5">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            Pantry reviewed — have enough
+          </span>
+          <button
+            onClick={() => onPrepAction({ type: "clear" })}
+            className="ml-auto text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors shrink-0"
+          >
+            undo
+          </button>
+        </div>
+      );
+    }
+
+    // Resolved: need to buy (including adjusted)
+    if (prepState.pantryDecision === "need_to_buy") {
+      const adjustedLabel = prepState.editValue
+        ? ` — buying ${prepState.editValue}${unitLabel ? ` ${unitLabel}` : ""}`
+        : "";
+      return (
+        <div className="flex items-center gap-2 rounded-lg bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/30 px-3 py-2.5">
+          <ShoppingBag className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
+          <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
+            Pantry reviewed{adjustedLabel || " — buying this"}
+          </span>
+          <button
+            onClick={() => onPrepAction({ type: "clear" })}
+            className="ml-auto text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors shrink-0"
+          >
+            undo
+          </button>
+        </div>
+      );
+    }
+  }
+
+  // ── Quantity resolution workflow ──────────────────────────────────────────
+  if (hasQuantityUncertainty) {
+    const estimateLabel =
+      conf === "assumed" ? "Quantity estimated by AI" : "Amount roughly estimated";
+
+    // Unresolved — show action buttons
+    if (!prepState.quantityDecision) {
+      return (
+        <div className="rounded-lg bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 p-3 space-y-2.5">
+          <p className="text-xs font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+            {estimateLabel} — confirm before shopping
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => onPrepAction({ type: "quantity", decision: "accepted" })}
+              className="flex-1 min-w-[100px] px-3 py-2.5 text-xs font-medium rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-500/20 active:bg-emerald-500/30 transition-colors"
+            >
+              Accept estimate
+            </button>
+            <button
+              onClick={() => onPrepAction({ type: "quantity", decision: "editing" })}
+              className="flex-1 min-w-[100px] px-3 py-2.5 text-xs font-medium rounded-lg bg-muted/60 text-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors"
+            >
+              Edit quantity
+            </button>
+            <button
+              onClick={() => onPrepAction({ type: "quantity", decision: "later" })}
+              className="flex-1 min-w-[100px] px-3 py-2.5 text-xs font-medium rounded-lg bg-muted/60 text-muted-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors"
+            >
+              Mark for later
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Editing — inline quantity input
+    if (prepState.quantityDecision === "editing") {
+      return (
+        <div className="rounded-lg bg-muted/30 border border-border/40 p-3 space-y-2.5">
+          <p className="text-xs font-medium text-foreground">Set your quantity</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <input
+              type="number"
+              min="0"
+              step="any"
+              value={prepState.editValue ?? (item.quantityValue?.toString() ?? "")}
+              onChange={(e) => onPrepAction({ type: "editValue", value: e.target.value })}
+              className="w-24 text-sm px-2.5 py-2 rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+              autoFocus
+            />
+            {unitLabel && (
+              <span className="text-xs text-muted-foreground">{unitLabel}</span>
+            )}
+            <button
+              onClick={() => onPrepAction({ type: "editConfirm" })}
+              className="px-3 py-2 text-xs font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              Confirm
+            </button>
+            <button
+              onClick={() => onPrepAction({ type: "clear" })}
+              className="px-2 py-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Resolved: accepted
+    if (prepState.quantityDecision === "accepted") {
+      const customQty = prepState.editValue;
+      const displayQty = customQty
+        ? `${customQty}${unitLabel ? ` ${unitLabel}` : ""}`
+        : item.quantityValue != null && unitLabel
+          ? `${item.quantityValue} ${unitLabel}`
+          : null;
+      return (
+        <div className="flex items-center gap-2 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/30 px-3 py-2.5">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+            Quantity confirmed{displayQty ? ` — ${displayQty}` : ""}
+          </span>
+          <button
+            onClick={() => onPrepAction({ type: "clear" })}
+            className="ml-auto text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors shrink-0"
+          >
+            undo
+          </button>
+        </div>
+      );
+    }
+
+    // Resolved: later
+    if (prepState.quantityDecision === "later") {
+      return (
+        <div className="flex items-center gap-2 rounded-lg bg-muted/30 border border-border/30 px-3 py-2.5">
+          <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="text-xs text-muted-foreground">Marked for later review</span>
+          <button
+            onClick={() => onPrepAction({ type: "clear" })}
+            className="ml-auto text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors shrink-0"
+          >
+            undo
+          </button>
+        </div>
+      );
+    }
   }
 
   return null;
@@ -84,6 +370,9 @@ function WorkspaceRow({
   onToggleExpand,
   onToggleChecked,
   shopMode,
+  prepMode,
+  prepState,
+  onPrepAction,
 }: {
   item: WorkspaceItem;
   sources: IngredientSource[];
@@ -93,11 +382,19 @@ function WorkspaceRow({
   onToggleExpand: () => void;
   onToggleChecked: (checked: boolean) => void;
   shopMode: boolean;
+  prepMode?: boolean;
+  prepState?: PrepItemState;
+  onPrepAction?: (action: PrepAction) => void;
 }) {
   const pantryKey = (item.normalizedName ?? item.productName).toLowerCase();
   const isPantryStocked = pantryKeySet.has(pantryKey);
 
-  const hint = getOperationalHint(item, isPantryStocked, sources);
+  const hint = getOperationalHint(
+    item,
+    isPantryStocked,
+    sources,
+    prepMode ? (prepState ?? {}) : undefined,
+  );
   const conf = deriveQuantityConfidence(item);
   const confLabel = getQuantityConfidenceLabel(conf, item);
 
@@ -199,33 +496,45 @@ function WorkspaceRow({
             transition={{ duration: 0.18 }}
             className="overflow-hidden"
           >
-            <div className="px-4 pb-4 pt-1 space-y-3 border-t border-border/20 ml-9">
+            <div className="px-4 pb-4 pt-2 space-y-3 border-t border-border/20 ml-9">
 
-              {/* Pantry status */}
-              {isPantryStocked && (
-                <div className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+              {/* ── Prep action panel (prep mode only) ───────────────── */}
+              {prepMode && onPrepAction && (
+                <PrepActionPanel
+                  item={item}
+                  isPantryStocked={isPantryStocked}
+                  prepState={prepState ?? {}}
+                  onPrepAction={onPrepAction}
+                />
+              )}
+
+              {/* ── Pantry note (review mode) ─────────────────────────── */}
+              {!prepMode && isPantryStocked && (
+                <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
                   <Home className="h-3.5 w-3.5 shrink-0" />
-                  <span>In your pantry — check before buying</span>
+                  <span>Pantry item — check at home before buying</span>
                 </div>
               )}
 
               {/* Quantity confidence */}
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Quantity</span>
-                <Badge
-                  variant="outline"
-                  className={`text-[10px] ${
-                    conf === "exact"
-                      ? "border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400"
-                      : conf === "estimated"
-                        ? "border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400"
-                        : conf === "approximate"
-                          ? "border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400"
-                          : "border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-400"
-                  }`}
-                >
-                  {confLabel}
-                </Badge>
+                {confLabel && (
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] ${
+                      conf === "exact"
+                        ? "border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400"
+                        : conf === "estimated"
+                          ? "border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400"
+                          : conf === "approximate"
+                            ? "border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400"
+                            : "border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-400"
+                    }`}
+                  >
+                    {confLabel}
+                  </Badge>
+                )}
                 {item.quantityValue != null && item.unit && item.unit !== "unit" && (
                   <span className="text-xs text-muted-foreground">
                     {item.quantityValue} {item.unit}
@@ -359,10 +668,12 @@ function SummaryBar({
   mode,
   items,
   pantryKeySet,
+  prepSummary,
 }: {
   mode: WorkspaceMode;
   items: WorkspaceItem[];
   pantryKeySet: Set<string>;
+  prepSummary?: PrepSummary;
 }) {
   const unchecked = items.filter((i) => !i.checked);
   const checked = items.filter((i) => i.checked);
@@ -370,10 +681,6 @@ function SummaryBar({
   const pantryCount = unchecked.filter((i) =>
     pantryKeySet.has((i.normalizedName ?? i.productName).toLowerCase()),
   ).length;
-  const uncertainCount = unchecked.filter((i) => {
-    const conf = deriveQuantityConfidence(i);
-    return conf === "assumed" || conf === "approximate";
-  }).length;
 
   const total = unchecked.length + checked.length;
   const pct = total > 0 ? Math.round((checked.length / total) * 100) : 0;
@@ -401,33 +708,71 @@ function SummaryBar({
     );
   }
 
-  if (mode === "prep") {
+  if (mode === "prep" && prepSummary) {
+    const { pantryTotal, pantryReviewed, uncertainTotal, uncertainResolved, attentionTotal, allPrepDone } = prepSummary;
+    const hasAnything = pantryTotal + uncertainTotal + attentionTotal > 0;
+
     return (
-      <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-3 mb-4 space-y-1">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-          Pre-shop checklist
+      <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-3 mb-4 space-y-2">
+        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+          Prep progress
         </p>
-        <div className="flex items-center gap-4 flex-wrap text-sm">
-          {pantryCount > 0 && (
-            <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-              <Home className="h-3.5 w-3.5" />
-              {pantryCount} in your pantry
-            </span>
+        <div className="space-y-1.5">
+          {pantryTotal > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Home className="h-3.5 w-3.5" />
+                Pantry items
+              </span>
+              <span
+                className={`text-xs font-medium tabular-nums ${
+                  pantryReviewed === pantryTotal
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-foreground"
+                }`}
+              >
+                {pantryReviewed}/{pantryTotal} reviewed
+              </span>
+            </div>
           )}
-          {uncertainCount > 0 && (
-            <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              {uncertainCount} quantities to confirm
-            </span>
+          {uncertainTotal > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Quantities
+              </span>
+              <span
+                className={`text-xs font-medium tabular-nums ${
+                  uncertainResolved === uncertainTotal
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-foreground"
+                }`}
+              >
+                {uncertainResolved}/{uncertainTotal} confirmed
+              </span>
+            </div>
           )}
-          {attentionCount > 0 && (
-            <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              {attentionCount} need a closer look
-            </span>
+          {attentionTotal > 0 && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Need attention
+              </span>
+              <span className="text-xs font-medium text-amber-600 dark:text-amber-400 tabular-nums">
+                {attentionTotal}
+              </span>
+            </div>
           )}
-          {pantryCount === 0 && uncertainCount === 0 && attentionCount === 0 && (
-            <span className="text-muted-foreground flex items-center gap-1">
+          {allPrepDone && (
+            <div className="flex items-center gap-1.5 pt-0.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                All prep done — ready to shop
+              </span>
+            </div>
+          )}
+          {!hasAnything && (
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
               List looks ready
             </span>
@@ -459,9 +804,9 @@ function SummaryBar({
           </span>
         )}
         {pantryCount > 0 && (
-          <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+          <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
             <Home className="h-3.5 w-3.5" />
-            {pantryCount} in pantry
+            {pantryCount} pantry items
           </span>
         )}
       </div>
@@ -471,13 +816,31 @@ function SummaryBar({
 
 // ── Prep group header ─────────────────────────────────────────────────────────
 
-function PrepGroupHeader({ label, count }: { label: string; count: number }) {
+function PrepGroupHeader({
+  label,
+  count,
+  resolvedCount,
+}: {
+  label: string;
+  count: number;
+  resolvedCount?: number;
+}) {
+  const isComplete = resolvedCount !== undefined && resolvedCount === count;
   return (
     <div className="px-4 py-1.5 border-t border-border/30 bg-muted/20 flex items-center justify-between">
-      <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+      <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium flex items-center gap-1.5">
+        {isComplete && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
         {label}
       </span>
-      <span className="text-[10px] text-muted-foreground/60">{count}</span>
+      <span
+        className={`text-[10px] font-medium tabular-nums ${
+          isComplete
+            ? "text-emerald-600 dark:text-emerald-400"
+            : "text-muted-foreground/60"
+        }`}
+      >
+        {resolvedCount !== undefined ? `${resolvedCount}/${count}` : count}
+      </span>
     </div>
   );
 }
@@ -491,6 +854,7 @@ export default function ShoppingWorkspacePage() {
 
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [mode, setMode] = useState<WorkspaceMode>("review");
+  const [prepStates, setPrepStates] = useState<Map<number, PrepItemState>>(new Map());
 
   const measurementPref: "metric" | "imperial" =
     (user?.measurementPreference as "metric" | "imperial") || "metric";
@@ -552,6 +916,39 @@ export default function ShoppingWorkspacePage() {
     },
   });
 
+  function handlePrepAction(itemId: number, action: PrepAction) {
+    setPrepStates((prev) => {
+      const next = new Map(prev);
+      const current = next.get(itemId) ?? {};
+
+      switch (action.type) {
+        case "pantry":
+          next.set(itemId, { ...current, pantryDecision: action.decision, editValue: undefined });
+          break;
+        case "quantity":
+          next.set(itemId, { ...current, quantityDecision: action.decision, editValue: undefined });
+          break;
+        case "editValue":
+          next.set(itemId, { ...current, editValue: action.value });
+          break;
+        case "editConfirm":
+          if (current.pantryDecision === "adjusting") {
+            // Pantry adjust confirmed — need to buy with custom quantity
+            next.set(itemId, { ...current, pantryDecision: "need_to_buy" });
+          } else {
+            // Quantity edit confirmed
+            next.set(itemId, { ...current, quantityDecision: "accepted" });
+          }
+          break;
+        case "clear":
+          next.delete(itemId);
+          break;
+      }
+
+      return next;
+    });
+  }
+
   const uncheckedItems = useMemo(() => items.filter((i) => !i.checked), [items]);
   const checkedItems = useMemo(() => items.filter((i) => i.checked), [items]);
 
@@ -572,11 +969,34 @@ export default function ShoppingWorkspacePage() {
     return { pantry, uncertain, attention, ready };
   }, [uncheckedItems, pantryKeySet]);
 
+  // Prep summary for progressive header
+  const prepSummary = useMemo((): PrepSummary => {
+    const pantryTotal = prepGroups.pantry.length;
+    const pantryReviewed = prepGroups.pantry.filter((i) => {
+      const s = prepStates.get(i.id);
+      return s?.pantryDecision === "have_enough" || s?.pantryDecision === "need_to_buy";
+    }).length;
+    const uncertainTotal = prepGroups.uncertain.length;
+    const uncertainResolved = prepGroups.uncertain.filter((i) => {
+      const s = prepStates.get(i.id);
+      return s?.quantityDecision === "accepted" || s?.quantityDecision === "later";
+    }).length;
+    const attentionTotal = prepGroups.attention.length;
+    const allPrepDone =
+      (pantryTotal === 0 || pantryReviewed === pantryTotal) &&
+      (uncertainTotal === 0 || uncertainResolved === uncertainTotal) &&
+      attentionTotal === 0 &&
+      pantryTotal + uncertainTotal > 0;
+
+    return { pantryTotal, pantryReviewed, uncertainTotal, uncertainResolved, attentionTotal, allPrepDone };
+  }, [prepGroups, prepStates]);
+
   function handleToggleExpand(itemId: number) {
     setExpandedId((prev) => (prev === itemId ? null : itemId));
   }
 
   function renderRow(item: WorkspaceItem) {
+    const isPrepMode = mode === "prep";
     return (
       <WorkspaceRow
         key={item.id}
@@ -588,6 +1008,9 @@ export default function ShoppingWorkspacePage() {
         onToggleExpand={() => handleToggleExpand(item.id)}
         onToggleChecked={(checked) => toggleChecked.mutate({ id: item.id, checked })}
         shopMode={mode === "shop"}
+        prepMode={isPrepMode}
+        prepState={isPrepMode ? (prepStates.get(item.id) ?? {}) : undefined}
+        onPrepAction={isPrepMode ? (action) => handlePrepAction(item.id, action) : undefined}
       />
     );
   }
@@ -611,7 +1034,12 @@ export default function ShoppingWorkspacePage() {
 
       {/* ── Summary bar ───────────────────────────────────────────────── */}
       {!isLoading && items.length > 0 && (
-        <SummaryBar mode={mode} items={items} pantryKeySet={pantryKeySet} />
+        <SummaryBar
+          mode={mode}
+          items={items}
+          pantryKeySet={pantryKeySet}
+          prepSummary={mode === "prep" ? prepSummary : undefined}
+        />
       )}
 
       {/* ── Shopping rows ─────────────────────────────────────────────── */}
@@ -666,25 +1094,39 @@ export default function ShoppingWorkspacePage() {
             <>
               {prepGroups.pantry.length > 0 && (
                 <>
-                  <PrepGroupHeader label="Using cupboard stock" count={prepGroups.pantry.length} />
+                  <PrepGroupHeader
+                    label="Pantry items — check at home"
+                    count={prepGroups.pantry.length}
+                    resolvedCount={prepSummary.pantryReviewed}
+                  />
                   {prepGroups.pantry.map(renderRow)}
                 </>
               )}
               {prepGroups.uncertain.length > 0 && (
                 <>
-                  <PrepGroupHeader label="Quantities to confirm" count={prepGroups.uncertain.length} />
+                  <PrepGroupHeader
+                    label="Quantities to confirm"
+                    count={prepGroups.uncertain.length}
+                    resolvedCount={prepSummary.uncertainResolved}
+                  />
                   {prepGroups.uncertain.map(renderRow)}
                 </>
               )}
               {prepGroups.attention.length > 0 && (
                 <>
-                  <PrepGroupHeader label="Needs a closer look" count={prepGroups.attention.length} />
+                  <PrepGroupHeader
+                    label="Needs a closer look"
+                    count={prepGroups.attention.length}
+                  />
                   {prepGroups.attention.map(renderRow)}
                 </>
               )}
               {prepGroups.ready.length > 0 && (
                 <>
-                  <PrepGroupHeader label="Ready to buy" count={prepGroups.ready.length} />
+                  <PrepGroupHeader
+                    label="Ready to buy"
+                    count={prepGroups.ready.length}
+                  />
                   {prepGroups.ready.map(renderRow)}
                 </>
               )}
