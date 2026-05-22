@@ -431,9 +431,9 @@ export function TopBar() {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Link
-                  href="/basket"
-                  className={`relative flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/basket" || location === "/analyse-basket" ? "bg-[hsl(62,28%,86%)] text-[hsl(62,38%,22%)] dark:bg-[hsl(62,15%,17%)] dark:text-[hsl(62,28%,68%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
-                  aria-label="Basket"
+                  href="/shopping-workspace"
+                  className={`relative flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket" ? "bg-[hsl(62,28%,86%)] text-[hsl(62,38%,22%)] dark:bg-[hsl(62,15%,17%)] dark:text-[hsl(62,28%,68%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+                  aria-label="Shopping"
                   data-testid="button-topbar-basket"
                 >
                   <ShoppingBasket className="h-5 w-5" />
@@ -444,7 +444,7 @@ export function TopBar() {
                   )}
                 </Link>
               </TooltipTrigger>
-              <TooltipContent>Basket{itemCount > 0 ? ` (${itemCount})` : ""}</TooltipContent>
+              <TooltipContent>Shopping{itemCount > 0 ? ` (${itemCount})` : ""}</TooltipContent>
             </Tooltip>
             <AppleMenu location={location} isAdmin={isAdmin} data-testid="button-topbar-apple-menu" />
           </div>
@@ -493,9 +493,9 @@ export function TopBar() {
           {/* Right: Basket + Apple menu */}
           <div className="flex items-center">
             <Link
-              href="/basket"
-              className={`relative flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/basket" || location === "/analyse-basket" ? "text-[hsl(62,38%,22%)] dark:text-[hsl(62,28%,68%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
-              aria-label="Basket"
+              href="/shopping-workspace"
+              className={`relative flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket" ? "text-[hsl(62,38%,22%)] dark:text-[hsl(62,28%,68%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+              aria-label="Shopping"
               data-testid="button-topbar-basket"
             >
               <ShoppingBasket className="h-5 w-5" />

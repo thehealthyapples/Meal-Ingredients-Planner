@@ -2997,12 +2997,11 @@ export default function ShoppingListPage() {
               <DropdownMenuSeparator />
               <Link href="/shopping-workspace" asChild>
                 <DropdownMenuItem
-                  className="text-muted-foreground focus:text-foreground"
-                  data-testid="button-preview-workspace"
+                  className="text-foreground focus:text-foreground"
+                  data-testid="button-open-workspace"
                 >
-                  <Sparkles className="h-4 w-4 mr-2 text-violet-500" />
-                  <span className="flex-1">Preview New Workspace</span>
-                  <span className="ml-1 text-[9px] uppercase tracking-widest text-violet-500 font-semibold">Beta</span>
+                  <ShoppingBasket className="h-4 w-4 mr-2 text-primary/70" />
+                  <span className="flex-1">Shopping Workspace</span>
                 </DropdownMenuItem>
               </Link>
               <DropdownMenuSeparator />
