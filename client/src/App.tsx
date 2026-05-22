@@ -35,6 +35,7 @@ import QuickMealPage from "@/pages/quick-meal-page";
 import ListPage from "@/pages/list-page";
 import HomePage from "@/pages/home-page";
 import DashboardPage from "@/pages/dashboard";
+import ShoppingWorkspacePage from "@/pages/shopping-workspace-page";
 
 let _contentRenderMeasured = false;
 
@@ -201,6 +202,7 @@ function Router() {
       <Route path="/quick-meal" component={() => <ProtectedRoute component={QuickMealPage} />} />
       <Route path="/list" component={() => <ProtectedRoute component={ListPage} />} />
       <Route path="/shopping-list" component={() => <ProtectedRoute component={ListPage} />} />
+      <Route path="/shopping-workspace" component={() => <ProtectedRoute component={ShoppingWorkspacePage} />} />
 
       <Route component={NotFound} />
     </Switch>

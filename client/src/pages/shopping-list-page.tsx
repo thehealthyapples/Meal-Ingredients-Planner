@@ -2995,6 +2995,17 @@ export default function ShoppingListPage() {
                 {recalculateScores.isPending ? "Recalculating…" : "Recalculate Scores"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <Link href="/shopping-workspace" asChild>
+                <DropdownMenuItem
+                  className="text-muted-foreground focus:text-foreground"
+                  data-testid="button-preview-workspace"
+                >
+                  <Sparkles className="h-4 w-4 mr-2 text-violet-500" />
+                  <span className="flex-1">Preview New Workspace</span>
+                  <span className="ml-1 text-[9px] uppercase tracking-widest text-violet-500 font-semibold">Beta</span>
+                </DropdownMenuItem>
+              </Link>
+              <DropdownMenuSeparator />
               {hasQuickListItems ? (
                 <DropdownMenuItem onClick={() => setClearDialogOpen(true)} className="text-destructive focus:text-destructive" data-testid="button-clear-all">
                   <Trash2 className="h-4 w-4 mr-2" />
