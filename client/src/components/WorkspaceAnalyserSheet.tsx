@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Drawer,
@@ -12,7 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   ChevronDown, ChevronUp, ShoppingCart, ChefHat,
   Leaf, Loader2, Info, Store, Clock, Check, Package,
-  X, ScanLine, Sparkles,
+  X, ScanLine, Sparkles, Camera, AlertCircle, RefreshCw,
 } from "lucide-react";
 import ScoreBadge from "@/components/ui/score-badge";
 import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
@@ -20,6 +20,7 @@ import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import type { ShoppingListItem } from "@shared/schema";
+import { BrowserMultiFormatReader } from "@zxing/browser";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,33 @@ function ratingColor(r: number | null) {
 
 const SECTION_LABEL = "text-[10px] font-medium tracking-[0.12em] uppercase text-muted-foreground/70";
 
+// ── Scan types ────────────────────────────────────────────────────────────────
+
+type ScanState = "idle" | "processing" | "found" | "unresolved";
+
+interface ScannedProduct {
+  barcode: string;
+  product_name: string;
+  brand: string | null;
+  thaRating: number | null;
+  availableStores: string[];
+  scanConfidence: "high" | "low";
+  raw: any;
+}
+
+async function decodeBarcodeFromFile(file: File): Promise<string | null> {
+  const blobUrl = URL.createObjectURL(file);
+  try {
+    const reader = new BrowserMultiFormatReader();
+    const result = await reader.decodeFromImageUrl(blobUrl);
+    return result.getText();
+  } catch {
+    return null;
+  } finally {
+    URL.revokeObjectURL(blobUrl);
+  }
+}
+
 // ── WorkspaceAnalyserSheet ────────────────────────────────────────────────────
 
 interface Props {
@@ -75,12 +103,17 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
   const [isSearching, setIsSearching] = useState(false);
   const [showCurrentDetail, setShowCurrentDetail] = useState(false);
   const [selectedBarcode, setSelectedBarcode] = useState<string | null>(null);
+  const [scanState, setScanState] = useState<ScanState>("idle");
+  const [scannedProduct, setScannedProduct] = useState<ScannedProduct | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open && item) {
       setProducts([]);
       setSelectedBarcode(null);
       setShowCurrentDetail(false);
+      setScanState("idle");
+      setScannedProduct(null);
       doSearch(item.productName);
     }
   }, [open, item?.id]);
@@ -128,6 +161,53 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
       toast({ title: "Better option noted", description: `Linked to "${product.product_name}" — your list item name is unchanged.` });
     } catch {
       toast({ title: "Couldn't save selection", variant: "destructive" });
+    }
+  }
+
+  async function handleScanFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    setScanState("processing");
+    setScannedProduct(null);
+
+    try {
+      const barcode = await decodeBarcodeFromFile(file);
+
+      if (!barcode) {
+        setScanState("unresolved");
+        return;
+      }
+
+      const res = await fetch(`/api/products/barcode/${encodeURIComponent(barcode)}`, {
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        setScanState("unresolved");
+        return;
+      }
+
+      const data = await res.json();
+      const p = data.product;
+      if (!p?.product_name) {
+        setScanState("unresolved");
+        return;
+      }
+
+      setScannedProduct({
+        barcode: p.barcode ?? barcode,
+        product_name: p.product_name,
+        brand: p.brand ?? null,
+        thaRating: p.upfAnalysis?.thaRating ?? null,
+        availableStores: p.availableStores ?? [],
+        scanConfidence: p.scanConfidence ?? "high",
+        raw: p,
+      });
+      setScanState("found");
+    } catch {
+      setScanState("unresolved");
     }
   }
 
@@ -379,16 +459,77 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
             )}
           </div>
 
-          {/* ── Scan placeholder ──────────────────────────────────────── */}
-          <div
-            className="flex items-center gap-2.5 rounded-lg border border-dashed border-border/50 px-4 py-3 bg-muted/10"
-            data-testid="analyser-scan-placeholder"
-          >
-            <ScanLine className="h-4 w-4 text-muted-foreground/40 shrink-0" />
-            <div>
-              <p className="text-xs text-muted-foreground/60 font-medium">Scan in store</p>
-              <p className="text-[10px] text-muted-foreground/40">Barcode scanning coming soon</p>
-            </div>
+          {/* ── Scan in store ─────────────────────────────────────────── */}
+          <div data-testid="analyser-scan-section">
+            {/* Native file input — visually hidden, triggered by button */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              aria-hidden="true"
+              tabIndex={-1}
+              onChange={handleScanFile}
+            />
+
+            <p className={`${SECTION_LABEL} mb-2 flex items-center gap-1.5`}>
+              <ScanLine className="h-3 w-3" />
+              Scan in store
+            </p>
+
+            {scanState === "idle" && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2.5 rounded-lg border border-border/60 bg-muted/10 px-4 py-3.5 text-sm font-medium text-muted-foreground hover:bg-muted/20 hover:text-foreground active:bg-muted/30 transition-colors touch-manipulation"
+                data-testid="analyser-scan-trigger"
+              >
+                <Camera className="h-4 w-4 shrink-0" />
+                <span className="hidden sm:inline">Upload product photo</span>
+                <span className="sm:hidden">Scan product</span>
+              </button>
+            )}
+
+            {scanState === "processing" && (
+              <Card className="border-border/60 bg-muted/10">
+                <CardContent className="p-4 flex items-center gap-2.5">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+                  <p className="text-xs text-muted-foreground">Reading product…</p>
+                </CardContent>
+              </Card>
+            )}
+
+            {scanState === "unresolved" && (
+              <Card className="border-border/60 bg-muted/10">
+                <CardContent className="p-4 space-y-2.5">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle className="h-4 w-4 text-muted-foreground/60 shrink-0 mt-0.5" />
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      THA could not identify this product. Try another photo or continue with your current choice.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => { setScanState("idle"); setScannedProduct(null); }}
+                    className="text-xs text-primary hover:underline touch-manipulation flex items-center gap-1"
+                    data-testid="analyser-scan-retry"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    Try again
+                  </button>
+                </CardContent>
+              </Card>
+            )}
+
+            {scanState === "found" && scannedProduct && (
+              <ScannedProductCard
+                scannedProduct={scannedProduct}
+                currentRating={item.thaRating ?? null}
+                currentProductName={item.productName}
+                selectedBarcode={selectedBarcode}
+                onSelect={() => handleSelectBetterOption(scannedProduct.raw)}
+                onRetry={() => { setScanState("idle"); setScannedProduct(null); }}
+              />
+            )}
           </div>
 
           {/* ── THA score explanation ─────────────────────────────────── */}
@@ -405,6 +546,115 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
         </div>
       </DrawerContent>
     </Drawer>
+  );
+}
+
+// ── ScannedProductCard ────────────────────────────────────────────────────────
+
+function ScannedProductCard({
+  scannedProduct,
+  currentRating,
+  currentProductName,
+  selectedBarcode,
+  onSelect,
+  onRetry,
+}: {
+  scannedProduct: ScannedProduct;
+  currentRating: number | null;
+  currentProductName: string;
+  selectedBarcode: string | null;
+  onSelect: () => void;
+  onRetry: () => void;
+}) {
+  const isSelected = selectedBarcode === scannedProduct.barcode;
+  const comparison = buildWhyBetter(scannedProduct.raw, currentRating);
+  const isBetter =
+    scannedProduct.thaRating !== null &&
+    currentRating !== null &&
+    scannedProduct.thaRating > currentRating;
+
+  return (
+    <Card
+      className="border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/20"
+      data-testid="analyser-scanned-product"
+    >
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-sm leading-snug">{scannedProduct.product_name}</p>
+            {scannedProduct.brand && (
+              <p className="text-xs text-muted-foreground">{scannedProduct.brand}</p>
+            )}
+            {scannedProduct.scanConfidence === "low" && (
+              <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-0.5">
+                Limited ingredient data — score is indicative only
+              </p>
+            )}
+          </div>
+          <div className="shrink-0">
+            {scannedProduct.thaRating !== null && (
+              <ScoreBadge score={scannedProduct.thaRating} size={28} />
+            )}
+          </div>
+        </div>
+
+        {comparison.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {comparison.map((reason, i) => (
+              <Badge
+                key={i}
+                className="text-[10px] bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700 no-default-hover-elevate"
+              >
+                <Sparkles className="h-2.5 w-2.5 mr-1" />
+                {reason}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {scannedProduct.availableStores.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap">
+            <Store className="h-3 w-3 text-muted-foreground shrink-0" />
+            {scannedProduct.availableStores.map((s) => (
+              <Badge key={s} variant="outline" className="text-[10px] no-default-hover-elevate">
+                {s}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-3 pt-1 border-t border-amber-200/60 dark:border-amber-800/40">
+          {isSelected ? (
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+              <Check className="h-3 w-3" />
+              Updated product choice. Your list item name is unchanged.
+            </span>
+          ) : (
+            <button
+              onClick={onSelect}
+              className="px-3 py-1.5 text-xs font-medium rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 hover:bg-amber-500/20 active:bg-amber-500/30 transition-colors touch-manipulation"
+              data-testid="analyser-select-scanned"
+            >
+              <Check className="h-3 w-3 mr-1 inline-block" />
+              {isBetter ? "Choose this (cleaner option)" : "Choose as fulfilment"}
+            </button>
+          )}
+          <button
+            onClick={onRetry}
+            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 touch-manipulation"
+            data-testid="analyser-scan-again"
+          >
+            <RefreshCw className="h-2.5 w-2.5" />
+            Scan again
+          </button>
+        </div>
+
+        <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
+          Scanned product. Choosing this updates your fulfilment choice only — your list item "
+          {capitalizeWords(currentProductName)}" is unchanged.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
