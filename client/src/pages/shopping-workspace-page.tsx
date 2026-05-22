@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { useUser } from "@/hooks/use-user";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
@@ -107,14 +107,14 @@ const SHOP_STATE_CONFIG: Record<ShopItemState, {
     groupClass: "text-foreground",
   },
   found: {
-    label: "Found in store",
+    label: "Found it",
     circleClass: "border-emerald-500 bg-emerald-500",
     labelClass: "text-emerald-600 dark:text-emerald-400",
     chipClass: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800/50 hover:bg-emerald-500/20 active:bg-emerald-500/30",
     groupClass: "text-emerald-600 dark:text-emerald-400",
   },
   defer: {
-    label: "Buy next shop",
+    label: "Next shop",
     circleClass: "border-blue-400 bg-blue-400",
     labelClass: "text-blue-600 dark:text-blue-400",
     chipClass: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/70 dark:border-blue-800/50 hover:bg-blue-500/20 active:bg-blue-500/30",
@@ -133,6 +133,43 @@ const SHOP_STATE_CONFIG: Record<ShopItemState, {
 
 function capitalizeWords(str: string): string {
   return str.replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// ── Store category grouping ────────────────────────────────────────────────────
+
+const STORE_CATEGORY_ORDER = [
+  "fruit_veg", "dairy_eggs", "meat", "fish", "bakery", "grains",
+  "pantry", "tinned", "condiments", "herbs", "oils", "nuts",
+  "legumes", "snacks", "frozen", "drinks", "ready_meals", "household", "other",
+];
+
+const STORE_CATEGORY_DISPLAY: Record<string, string> = {
+  fruit_veg:  "Fruit & Vegetables",
+  dairy_eggs: "Dairy & Eggs",
+  meat:       "Meat & Poultry",
+  fish:       "Fish & Seafood",
+  bakery:     "Bakery",
+  grains:     "Grains & Cereals",
+  pantry:     "Pantry Staples",
+  tinned:     "Tinned & Canned",
+  condiments: "Condiments & Sauces",
+  herbs:      "Herbs & Spices",
+  oils:       "Oils & Vinegars",
+  nuts:       "Nuts & Seeds",
+  legumes:    "Pulses & Legumes",
+  snacks:     "Snacks",
+  frozen:     "Frozen",
+  drinks:     "Drinks",
+  ready_meals:"Ready Meals",
+  household:  "Household",
+  other:      "Other",
+};
+
+function getStoreCategoryKey(item: WorkspaceItem): string {
+  const raw = (item.category ?? "other").toLowerCase();
+  if (raw === "fruit" || raw === "produce") return "fruit_veg";
+  if (raw === "dairy" || raw === "eggs" || raw === "dairy-eggs") return "dairy_eggs";
+  return STORE_CATEGORY_DISPLAY[raw] ? raw : "other";
 }
 
 function getOperationalHint(
@@ -412,63 +449,43 @@ function ShopActionPanel({
   shopState: ShopItemState;
   onShopStateChange: (state: ShopItemState | null) => void;
 }) {
-  const options: Array<{
-    state: ShopItemState;
-    label: string;
-    Icon: React.ComponentType<{ className?: string }>;
-    activeClass: string;
-    inactiveClass: string;
-  }> = [
-    {
-      state: "found",
-      label: "Found in store",
-      Icon: CheckCircle2,
-      activeClass: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700",
-      inactiveClass: "bg-muted/40 text-foreground border-border/50 hover:bg-muted active:bg-muted/80",
-    },
-    {
-      state: "defer",
-      label: "Buy next shop",
-      Icon: Clock,
-      activeClass: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700",
-      inactiveClass: "bg-muted/40 text-foreground border-border/50 hover:bg-muted active:bg-muted/80",
-    },
-    {
-      state: "have",
-      label: "Already have at home",
-      Icon: Home,
-      activeClass: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700",
-      inactiveClass: "bg-muted/40 text-foreground border-border/50 hover:bg-muted active:bg-muted/80",
-    },
-    {
-      state: "need",
-      label: "Still need",
-      Icon: ShoppingCart,
-      activeClass: "bg-primary/10 text-primary border-primary/30",
-      inactiveClass: "bg-muted/40 text-muted-foreground border-border/50 hover:bg-muted active:bg-muted/80",
-    },
-  ];
-
   return (
     <div className="rounded-lg bg-muted/20 border border-border/30 p-3 space-y-2.5">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-        Shopping status
+      <p className="text-xs font-medium text-muted-foreground">
+        In store — did you find this item?
       </p>
-      <div className="grid grid-cols-2 gap-2">
-        {options.map(({ state, label, Icon, activeClass, inactiveClass }) => (
-          <button
-            key={state}
-            onClick={() => onShopStateChange(state === "need" ? null : state)}
-            className={`flex items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-colors touch-manipulation ${
-              shopState === state ? activeClass : inactiveClass
-            }`}
-          >
-            <Icon className="h-3.5 w-3.5 shrink-0" />
-            {label}
-          </button>
-        ))}
+      <div className="flex gap-2">
+        <button
+          onClick={() => onShopStateChange(shopState === "found" ? null : "found")}
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-colors touch-manipulation ${
+            shopState === "found"
+              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700"
+              : "bg-muted/40 text-foreground border-border/50 hover:bg-muted active:bg-muted/80"
+          }`}
+        >
+          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+          Found it
+        </button>
+        <button
+          onClick={() => onShopStateChange(shopState === "defer" ? null : "defer")}
+          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-colors touch-manipulation ${
+            shopState === "defer"
+              ? "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700"
+              : "bg-muted/40 text-foreground border-border/50 hover:bg-muted active:bg-muted/80"
+          }`}
+        >
+          <Clock className="h-3.5 w-3.5 shrink-0" />
+          Next shop
+        </button>
       </div>
-      {/* Future: Scan & swap entrypoint — place inline scan button here */}
+      {shopState !== "need" && (
+        <button
+          onClick={() => onShopStateChange(null)}
+          className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors touch-manipulation"
+        >
+          Undo — move back to needed
+        </button>
+      )}
     </div>
   );
 }
@@ -608,24 +625,18 @@ function WorkspaceRow({
           {/* Col 4 — action chips (auto, same content = same width across all need rows) */}
           <div>
             {effectiveShopState === "need" ? (
-              <div className="flex gap-1">
+              <div className="flex gap-1.5">
                 <button
                   onClick={() => onShopStateChange?.("found")}
-                  className="px-2 py-0.5 text-xs font-medium rounded border transition-colors touch-manipulation bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800/50 hover:bg-emerald-500/20 active:bg-emerald-500/30"
+                  className="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors touch-manipulation bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800/50 hover:bg-emerald-500/20 active:bg-emerald-500/30"
                 >
-                  Found
+                  Found it
                 </button>
                 <button
                   onClick={() => onShopStateChange?.("defer")}
-                  className="px-2 py-0.5 text-xs font-medium rounded border transition-colors touch-manipulation bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/70 dark:border-blue-800/50 hover:bg-blue-500/20 active:bg-blue-500/30"
+                  className="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors touch-manipulation bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/70 dark:border-blue-800/50 hover:bg-blue-500/20 active:bg-blue-500/30"
                 >
-                  Skip today
-                </button>
-                <button
-                  onClick={() => onShopStateChange?.("have")}
-                  className="px-2 py-0.5 text-xs font-medium rounded border transition-colors touch-manipulation bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200/70 dark:border-amber-800/50 hover:bg-amber-500/20 active:bg-amber-500/30"
-                >
-                  Have it
+                  Next shop
                 </button>
               </div>
             ) : (
@@ -951,7 +962,7 @@ function SummaryBar({
             {foundCount > 0 && (
               <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3 shrink-0" />
-                {foundCount} found
+                {foundCount} found it
               </span>
             )}
             {deferCount > 0 && (
@@ -963,7 +974,7 @@ function SummaryBar({
             {haveCount > 0 && (
               <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <Home className="h-3 w-3 shrink-0" />
-                {haveCount} have it
+                {haveCount} already have
               </span>
             )}
           </div>
@@ -1134,15 +1145,36 @@ function ShopGroupHeader({
   );
 }
 
+// ── Shop category header ──────────────────────────────────────────────────────
+
+function ShopCategoryHeader({ label, count }: { label: string; count: number }) {
+  return (
+    <div className="px-4 py-1.5 border-t border-border/30 bg-muted/10 flex items-center justify-between">
+      <span className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground/80">
+        {label}
+      </span>
+      <span className="text-[10px] font-medium tabular-nums text-muted-foreground/60">
+        {count}
+      </span>
+    </div>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ShoppingWorkspacePage() {
   const { user } = useUser();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const search = useSearch();
 
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [mode, setMode] = useState<WorkspaceMode>("review");
+  const [mode, setMode] = useState<WorkspaceMode>(() => {
+    const params = new URLSearchParams(search);
+    const stage = params.get("stage");
+    if (stage === "review" || stage === "prep" || stage === "shop") return stage;
+    return "review";
+  });
   const [prepStates, setPrepStates] = useState<Map<number, PrepItemState>>(new Map());
   const [analyserItem, setAnalyserItem] = useState<WorkspaceItem | null>(null);
 
@@ -1150,6 +1182,16 @@ export default function ShoppingWorkspacePage() {
     document.title = "Shopping Workspace – The Healthy Apples";
     return () => { document.title = "The Healthy Apples"; };
   }, []);
+
+  // Sync mode when URL search param changes (e.g. clicking Shop nav while workspace is already open)
+  useEffect(() => {
+    const params = new URLSearchParams(search);
+    const stage = params.get("stage");
+    if (stage === "review" || stage === "prep" || stage === "shop") {
+      setMode(stage);
+      setExpandedId(null);
+    }
+  }, [search]);
 
   const measurementPref: "metric" | "imperial" =
     (user?.measurementPreference as "metric" | "imperial") || "metric";
@@ -1297,6 +1339,24 @@ export default function ShoppingWorkspacePage() {
     return { need, found, defer, have };
   }, [items]);
 
+  // Shop "need" items grouped by in-store category — memoized for performance
+  const shopNeedByCategory = useMemo(() => {
+    const map = new Map<string, WorkspaceItem[]>();
+    for (const item of shopGroups.need) {
+      const key = getStoreCategoryKey(item);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(item);
+    }
+    // Return as ordered array following store category order
+    return STORE_CATEGORY_ORDER
+      .filter((key) => map.has(key))
+      .map((key) => ({
+        key,
+        label: STORE_CATEGORY_DISPLAY[key] ?? "Other",
+        items: map.get(key)!,
+      }));
+  }, [shopGroups.need]);
+
   const shopSummary = useMemo((): ShopSummary => ({
     needCount: shopGroups.need.length,
     foundCount: shopGroups.found.length,
@@ -1442,7 +1502,7 @@ export default function ShoppingWorkspacePage() {
             </>
           )}
 
-          {/* ── Shop mode: operational groups ─────────────────────── */}
+          {/* ── Shop mode: category groups + status groups ────────── */}
           {mode === "shop" && (
             <>
               {items.length === 0 ? (
@@ -1451,7 +1511,7 @@ export default function ShoppingWorkspacePage() {
                 </div>
               ) : (
                 <>
-                  {/* Still need */}
+                  {/* Still need — grouped by in-store category */}
                   {shopGroups.need.length > 0 && (
                     <>
                       {(shopGroups.found.length > 0 || shopGroups.defer.length > 0 || shopGroups.have.length > 0) && (
@@ -1461,15 +1521,23 @@ export default function ShoppingWorkspacePage() {
                           variant="need"
                         />
                       )}
-                      {shopGroups.need.map(renderRow)}
+                      {shopNeedByCategory.length > 1
+                        ? shopNeedByCategory.map(({ key, label, items: catItems }) => (
+                            <div key={key}>
+                              <ShopCategoryHeader label={label} count={catItems.length} />
+                              {catItems.map(renderRow)}
+                            </div>
+                          ))
+                        : shopGroups.need.map(renderRow)
+                      }
                     </>
                   )}
 
-                  {/* Found in store */}
+                  {/* Found it */}
                   {shopGroups.found.length > 0 && (
                     <>
                       <ShopGroupHeader
-                        label="Found in store"
+                        label="Found it"
                         count={shopGroups.found.length}
                         variant="found"
                       />
@@ -1477,11 +1545,11 @@ export default function ShoppingWorkspacePage() {
                     </>
                   )}
 
-                  {/* Buy next shop */}
+                  {/* Next shop */}
                   {shopGroups.defer.length > 0 && (
                     <>
                       <ShopGroupHeader
-                        label="Buy next shop"
+                        label="Next shop"
                         count={shopGroups.defer.length}
                         variant="defer"
                       />
@@ -1489,7 +1557,7 @@ export default function ShoppingWorkspacePage() {
                     </>
                   )}
 
-                  {/* Already have */}
+                  {/* Already have (set via Prep stage) */}
                   {shopGroups.have.length > 0 && (
                     <>
                       <ShopGroupHeader

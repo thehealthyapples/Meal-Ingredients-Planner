@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  LayoutDashboard, CalendarDays, ShoppingBasket,
+  LayoutDashboard, CalendarDays, ShoppingBasket, ShoppingCart,
   LogOut, ShieldCheck, Star,
   Sliders, Search, ChevronLeft, ChevronRight,
   Microscope, BookOpen, Heart, ChefHat,
@@ -39,15 +39,17 @@ const NAV_ITEMS_MAIN = [
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/analyser", label: "Analyser", icon: Microscope },
   { href: "/my-diary", label: "My Diary", icon: BookOpen },
+  { href: "/shopping-workspace?stage=shop", label: "Shop", icon: ShoppingCart },
 ];
 
-// Mobile bottom nav - 5 core tools (no More layer)
+// Mobile bottom nav - 6 core tools (no More layer)
 const MOBILE_BOTTOM_ITEMS = [
   { href: "/cookbook", label: "Cookbook", icon: ChefHat },
   { href: "/planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/analyser", label: "Analyser", icon: Microscope },
   { href: "/my-diary", label: "Diary", icon: BookOpen },
+  { href: "/shopping-workspace?stage=shop", label: "Shop", icon: ShoppingCart },
 ];
 
 const REALM_STYLES: Record<string, { active: string; hover: string; inactive: string; mobileActive: string; mobileInactive: string }> = {
@@ -90,6 +92,14 @@ const REALM_STYLES: Record<string, { active: string; hover: string; inactive: st
     inactive:       "bg-[hsl(348,16%,94%)] text-[hsl(348,28%,44%)] dark:bg-[hsl(348,10%,12%)] dark:text-[hsl(348,18%,48%)]",
     mobileActive:   "bg-[hsl(348,35%,87%)] text-[hsl(348,45%,24%)] dark:bg-[hsl(348,22%,20%)] dark:text-[hsl(348,35%,72%)]",
     mobileInactive: "bg-[hsl(348,18%,92%)] text-[hsl(348,24%,46%)] dark:bg-[hsl(348,10%,14%)] dark:text-[hsl(348,14%,44%)]",
+  },
+  "/shopping-workspace": {
+    // market teal - fresh, operational, in-store feel
+    active:         "bg-[hsl(190,30%,88%)] text-[hsl(190,42%,20%)] dark:bg-[hsl(190,18%,17%)] dark:text-[hsl(190,32%,72%)]",
+    hover:          "hover:bg-[hsl(190,22%,92%)] hover:text-[hsl(190,34%,28%)] dark:hover:bg-[hsl(190,12%,14%)] dark:hover:text-[hsl(190,22%,60%)]",
+    inactive:       "bg-[hsl(190,12%,94%)] text-[hsl(190,22%,42%)] dark:bg-[hsl(190,8%,12%)] dark:text-[hsl(190,14%,48%)]",
+    mobileActive:   "bg-[hsl(190,30%,86%)] text-[hsl(190,42%,20%)] dark:bg-[hsl(190,18%,19%)] dark:text-[hsl(190,32%,72%)]",
+    mobileInactive: "bg-[hsl(190,16%,92%)] text-[hsl(190,18%,44%)] dark:bg-[hsl(190,8%,14%)] dark:text-[hsl(190,12%,46%)]",
   },
 };
 
@@ -137,7 +147,7 @@ function SidebarNavItem({
   href: string; label: string; icon: React.ComponentType<{ className?: string }>;
   isCollapsed: boolean; isActive: boolean; onClick?: () => void; badge?: number;
 }) {
-  const realm = REALM_STYLES[href];
+  const realm = REALM_STYLES[href.split("?")[0]];
   const linkEl = (
     <Link
       href={href}
@@ -215,7 +225,7 @@ function SidebarBody({
             label={item.label}
             icon={item.icon}
             isCollapsed={isCollapsed}
-            isActive={location === item.href || (item.href === "/my-diary" && location === "/diary")}
+            isActive={location === item.href.split("?")[0] || (item.href === "/my-diary" && location === "/diary")}
             onClick={onClose}
           />
         ))}
@@ -630,9 +640,9 @@ export function MobileNav() {
     >
       <div className="flex items-center justify-around px-1 py-1 max-w-lg mx-auto">
         {MOBILE_BOTTOM_ITEMS.map((item) => {
-          const isActive = location === item.href || (item.href === "/my-diary" && location === "/diary");
+          const isActive = location === item.href.split("?")[0] || (item.href === "/my-diary" && location === "/diary");
           const Icon = item.icon;
-          const realm = REALM_STYLES[item.href];
+          const realm = REALM_STYLES[item.href.split("?")[0]];
           return (
             <Link
               key={item.href}
