@@ -582,37 +582,38 @@ function WorkspaceRow({
               )}
             </button>
 
-            {/* Content: qty + name + chips + THA + chevron — single row */}
+            {/* Fixed grid: [qty] [name — flex-1] [chips] [apple+chevron] */}
             <div className="flex-1 min-w-0 flex items-center gap-2">
-              {/* qty + name — shrinks to give chips room */}
+
+              {/* qty — left anchor, never squished */}
+              {qtyLabel && (
+                <button onClick={onToggleExpand} className="shrink-0 text-left">
+                  <span className={`font-semibold text-[15px] tabular-nums leading-tight ${
+                    effectiveShopState !== "need"
+                      ? "text-muted-foreground/40"
+                      : "text-foreground/80"
+                  }`}>
+                    {qtyLabel}
+                  </span>
+                </button>
+              )}
+
+              {/* name — fills remaining space, truncates */}
               <button
-                className="min-w-0 shrink text-left"
+                className="flex-1 min-w-0 text-left"
                 onClick={onToggleExpand}
                 data-testid={`ws-row-expand-${item.id}`}
               >
-                <div className="flex items-baseline gap-2">
-                  {qtyLabel && (
-                    <span className={`font-semibold text-[15px] tabular-nums leading-tight flex-shrink-0 ${
-                      effectiveShopState !== "need"
-                        ? "text-muted-foreground/40"
-                        : "text-foreground/80"
-                    }`}>
-                      {qtyLabel}
-                    </span>
-                  )}
-                  <span
-                    className={`font-medium text-[14px] leading-snug truncate ${
-                      effectiveShopState !== "need"
-                        ? "text-muted-foreground"
-                        : "text-foreground"
-                    }`}
-                  >
-                    {capitalizeWords(item.productName)}
-                  </span>
-                </div>
+                <span className={`font-medium text-[14px] leading-snug block truncate ${
+                  effectiveShopState !== "need"
+                    ? "text-muted-foreground"
+                    : "text-foreground"
+                }`}>
+                  {capitalizeWords(item.productName)}
+                </span>
               </button>
 
-              {/* Action chips — inline between name and apple score */}
+              {/* action chips — between name and apple, never squished */}
               {effectiveShopState === "need" && (
                 <div className="flex gap-1 shrink-0">
                   <button
@@ -649,7 +650,7 @@ function WorkspaceRow({
                 </div>
               )}
 
-              {/* THA + chevron — also expands */}
+              {/* apple + chevron — right anchor */}
               <button
                 onClick={onToggleExpand}
                 className="flex items-center gap-1.5 shrink-0 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
