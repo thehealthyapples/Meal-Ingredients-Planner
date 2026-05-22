@@ -561,112 +561,97 @@ function WorkspaceRow({
     >
       {/* ── Shop mode collapsed row ───────────────────────────────── */}
       {shopMode && (
-        <>
-          <div className="flex items-center gap-3 px-4 py-3">
-            {/* State circle — tap to toggle found quickly */}
-            <button
-              onClick={() =>
-                onShopStateChange?.(effectiveShopState === "found" ? null : "found")
-              }
-              aria-label={effectiveShopState === "need" ? "Mark as found" : "Undo"}
-              className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors touch-manipulation border-2 ${shopConfig.circleClass}`}
-            >
-              {effectiveShopState === "found" && (
-                <CheckCircle2 className="h-3 w-3 text-white" />
-              )}
-              {effectiveShopState === "defer" && (
-                <Clock className="h-3 w-3 text-white" />
-              )}
-              {effectiveShopState === "have" && (
-                <Home className="h-3 w-3 text-white" />
-              )}
-            </button>
+        <div className="grid grid-cols-[20px_5rem_1fr_auto_auto] items-center gap-x-2 px-4 py-3">
 
-            {/* Fixed grid: [qty] [name — flex-1] [chips] [apple+chevron] */}
-            <div className="flex-1 min-w-0 flex items-center gap-2">
+          {/* Col 1 — state circle */}
+          <button
+            onClick={() =>
+              onShopStateChange?.(effectiveShopState === "found" ? null : "found")
+            }
+            aria-label={effectiveShopState === "need" ? "Mark as found" : "Undo"}
+            className={`h-5 w-5 rounded-full flex items-center justify-center transition-colors touch-manipulation border-2 ${shopConfig.circleClass}`}
+          >
+            {effectiveShopState === "found" && <CheckCircle2 className="h-3 w-3 text-white" />}
+            {effectiveShopState === "defer" && <Clock className="h-3 w-3 text-white" />}
+            {effectiveShopState === "have" && <Home className="h-3 w-3 text-white" />}
+          </button>
 
-              {/* qty — left anchor, never squished */}
-              {qtyLabel && (
-                <button onClick={onToggleExpand} className="shrink-0 text-left">
-                  <span className={`font-semibold text-[15px] tabular-nums leading-tight ${
-                    effectiveShopState !== "need"
-                      ? "text-muted-foreground/40"
-                      : "text-foreground/80"
-                  }`}>
-                    {qtyLabel}
-                  </span>
+          {/* Col 2 — qty (fixed 5rem, always same position) */}
+          <button onClick={onToggleExpand} className="text-left">
+            {qtyLabel && (
+              <span className={`font-semibold text-[15px] tabular-nums leading-tight ${
+                effectiveShopState !== "need"
+                  ? "text-muted-foreground/40"
+                  : "text-foreground/80"
+              }`}>
+                {qtyLabel}
+              </span>
+            )}
+          </button>
+
+          {/* Col 3 — name (1fr, wraps for long names) */}
+          <button
+            onClick={onToggleExpand}
+            data-testid={`ws-row-expand-${item.id}`}
+            className="text-left min-w-0"
+          >
+            <span className={`font-medium text-[14px] leading-snug ${
+              effectiveShopState !== "need"
+                ? "text-muted-foreground"
+                : "text-foreground"
+            }`}>
+              {capitalizeWords(item.productName)}
+            </span>
+          </button>
+
+          {/* Col 4 — action chips (auto, same content = same width across all need rows) */}
+          <div>
+            {effectiveShopState === "need" ? (
+              <div className="flex gap-1">
+                <button
+                  onClick={() => onShopStateChange?.("found")}
+                  className="px-2 py-0.5 text-xs font-medium rounded border transition-colors touch-manipulation bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800/50 hover:bg-emerald-500/20 active:bg-emerald-500/30"
+                >
+                  Found
                 </button>
-              )}
-
-              {/* name — fills remaining space, truncates */}
-              <button
-                className="flex-1 min-w-0 text-left"
-                onClick={onToggleExpand}
-                data-testid={`ws-row-expand-${item.id}`}
-              >
-                <span className={`font-medium text-[14px] leading-snug block truncate ${
-                  effectiveShopState !== "need"
-                    ? "text-muted-foreground"
-                    : "text-foreground"
-                }`}>
-                  {capitalizeWords(item.productName)}
+                <button
+                  onClick={() => onShopStateChange?.("defer")}
+                  className="px-2 py-0.5 text-xs font-medium rounded border transition-colors touch-manipulation bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/70 dark:border-blue-800/50 hover:bg-blue-500/20 active:bg-blue-500/30"
+                >
+                  Skip today
+                </button>
+                <button
+                  onClick={() => onShopStateChange?.("have")}
+                  className="px-2 py-0.5 text-xs font-medium rounded border transition-colors touch-manipulation bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200/70 dark:border-amber-800/50 hover:bg-amber-500/20 active:bg-amber-500/30"
+                >
+                  Have it
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span className={`text-xs font-medium ${shopConfig.labelClass}`}>
+                  {shopConfig.label}
                 </span>
-              </button>
-
-              {/* action chips — between name and apple, never squished */}
-              {effectiveShopState === "need" && (
-                <div className="flex gap-1 shrink-0">
-                  <button
-                    onClick={() => onShopStateChange?.("found")}
-                    className="px-2 py-0.5 text-xs font-medium rounded border transition-colors touch-manipulation bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800/50 hover:bg-emerald-500/20 active:bg-emerald-500/30"
-                  >
-                    Found
-                  </button>
-                  <button
-                    onClick={() => onShopStateChange?.("defer")}
-                    className="px-2 py-0.5 text-xs font-medium rounded border transition-colors touch-manipulation bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/70 dark:border-blue-800/50 hover:bg-blue-500/20 active:bg-blue-500/30"
-                  >
-                    Skip today
-                  </button>
-                  <button
-                    onClick={() => onShopStateChange?.("have")}
-                    className="px-2 py-0.5 text-xs font-medium rounded border transition-colors touch-manipulation bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200/70 dark:border-amber-800/50 hover:bg-amber-500/20 active:bg-amber-500/30"
-                  >
-                    Have it
-                  </button>
-                </div>
-              )}
-              {effectiveShopState !== "need" && (
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className={`text-xs font-medium ${shopConfig.labelClass}`}>
-                    {shopConfig.label}
-                  </span>
-                  <button
-                    onClick={() => onShopStateChange?.(null)}
-                    className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors touch-manipulation"
-                  >
-                    undo
-                  </button>
-                </div>
-              )}
-
-              {/* apple + chevron — right anchor */}
-              <button
-                onClick={onToggleExpand}
-                className="flex items-center gap-1.5 shrink-0 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-              >
-                {item.thaRating != null && (
-                  <ScoreBadge score={item.thaRating} size={22} />
-                )}
-                {expanded ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </button>
-            </div>
+                <button
+                  onClick={() => onShopStateChange?.(null)}
+                  className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors touch-manipulation"
+                >
+                  undo
+                </button>
+              </div>
+            )}
           </div>
-        </>
+
+          {/* Col 5 — apple score + chevron (auto, pinned right) */}
+          <button
+            onClick={onToggleExpand}
+            className="flex items-center gap-1.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+          >
+            {item.thaRating != null && <ScoreBadge score={item.thaRating} size={22} />}
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+
+        </div>
       )}
 
       {/* ── Review / Prep mode collapsed row ─────────────────────── */}
