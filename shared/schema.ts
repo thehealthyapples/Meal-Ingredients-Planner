@@ -1122,6 +1122,29 @@ export type InsertHouseholdEater = z.infer<typeof insertHouseholdEaterSchema>;
 export type PlannerEntryEater = typeof plannerEntryEaters.$inferSelect;
 export type WeekEaterOverride = typeof plannerWeekEaterOverrides.$inferSelect;
 
+// ─── Household Fulfilment Memory ──────────────────────────────────────────────
+
+export const shoppingFulfilmentMemory = pgTable("shopping_fulfilment_memory", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id, { onDelete: "cascade" }),
+  normalizedItemName: text("normalized_item_name").notNull(),
+  originalItemName: text("original_item_name"),
+  barcode: text("barcode"),
+  productName: text("product_name").notNull(),
+  brand: text("brand"),
+  thaRating: integer("tha_rating"),
+  availableStores: jsonb("available_stores").$type<string[]>(),
+  source: text("source").notNull(),
+  chosenAt: timestamp("chosen_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  index("sfm_household_id_idx").on(table.householdId),
+  index("sfm_household_item_idx").on(table.householdId, table.normalizedItemName),
+]);
+
+export type ShoppingFulfilmentMemoryEntry = typeof shoppingFulfilmentMemory.$inferSelect;
+
 // ─── Weekly Provisioning ───────────────────────────────────────────────────────
 
 export const weekProvisioningItems = pgTable("week_provisioning_items", {

@@ -39,6 +39,9 @@ import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/r
 import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
 import { getHouseholdForUser } from "./lib/household";
 import { pool } from "./db";
+import { db } from "./db";
+import { shoppingFulfilmentMemory } from "@shared/schema";
+import { eq, and, desc } from "drizzle-orm";
 import { SAVINGS_RATES } from "./lib/savings-config";
 import multer from "multer";
 
@@ -9537,6 +9540,111 @@ Generate a complete recipe using these as the foundation.`;
   });
 
   // GET /api/meals/:mealId/uplift-applications
+  // ── Household Fulfilment Memory ────────────────────────────────────────────
+  // Server-backed per-household record of explicit fulfilment choices.
+  // No auto-selection. No ranking changes. Explicit "Use again" only.
+
+  app.get("/api/shopping/fulfilment-memory", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const rawItemName = String(req.query.itemName ?? "").trim();
+      if (!rawItemName) return res.json({ entries: [] });
+
+      let householdId: number;
+      try {
+        householdId = await getHouseholdForUser(req.user!.id);
+      } catch {
+        return res.json({ entries: [] });
+      }
+
+      const normalizedItemName = rawItemName
+        .toLowerCase()
+        .replace(/[^\w\s]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!normalizedItemName) return res.json({ entries: [] });
+
+      const rows = await db
+        .select()
+        .from(shoppingFulfilmentMemory)
+        .where(
+          and(
+            eq(shoppingFulfilmentMemory.householdId, householdId),
+            eq(shoppingFulfilmentMemory.normalizedItemName, normalizedItemName)
+          )
+        )
+        .orderBy(desc(shoppingFulfilmentMemory.chosenAt))
+        .limit(6);
+
+      // Deduplicate by barcode, keeping the most recent choice per product
+      const seen = new Set<string>();
+      const deduped = rows
+        .filter(e => {
+          const key = e.barcode || e.productName.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .slice(0, 3);
+
+      return res.json({ entries: deduped });
+    } catch (err) {
+      console.error("[FulfilmentMemory] GET error:", err);
+      return res.status(500).json({ error: "Failed to fetch fulfilment memory" });
+    }
+  });
+
+  app.post("/api/shopping/fulfilment-memory", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { itemName, normalizedItemName, barcode, productName, brand, thaRating, availableStores, source } = req.body;
+
+      if (!itemName || !productName) {
+        return res.status(400).json({ error: "itemName and productName are required" });
+      }
+
+      const ALLOWED_SOURCES = ["scanned", "manual_search", "cleaner_option", "previous_fulfilment"];
+      if (!ALLOWED_SOURCES.includes(String(source))) {
+        return res.status(400).json({ error: "Invalid source value" });
+      }
+
+      let householdId: number;
+      try {
+        householdId = await getHouseholdForUser(req.user!.id);
+      } catch {
+        // User has no household — soft failure, don't block the client
+        return res.json({ ok: false, reason: "no_household" });
+      }
+
+      const normalizedName = (normalizedItemName || itemName)
+        .toLowerCase()
+        .replace(/[^\w\s]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (!normalizedName) {
+        return res.status(400).json({ error: "Cannot normalize item name" });
+      }
+
+      await db.insert(shoppingFulfilmentMemory).values({
+        householdId,
+        normalizedItemName: normalizedName,
+        originalItemName: String(itemName).trim().slice(0, 200) || null,
+        barcode: barcode ? String(barcode).trim().slice(0, 100) : null,
+        productName: String(productName).trim().slice(0, 200),
+        brand: brand ? String(brand).trim().slice(0, 100) : null,
+        thaRating: typeof thaRating === "number" && !isNaN(thaRating) ? Math.round(thaRating) : null,
+        availableStores: Array.isArray(availableStores) ? availableStores.slice(0, 10) : [],
+        source: String(source),
+      });
+
+      return res.json({ ok: true });
+    } catch (err) {
+      console.error("[FulfilmentMemory] POST error:", err);
+      return res.status(500).json({ error: "Failed to save fulfilment memory" });
+    }
+  });
+
   // Returns accepted uplift provenance for a meal.
 
   app.get('/api/meals/:mealId/uplift-applications', async (req, res) => {

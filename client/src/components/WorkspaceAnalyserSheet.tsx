@@ -61,9 +61,15 @@ function ratingColor(r: number | null) {
 
 const SECTION_LABEL = "text-[10px] font-medium tracking-[0.12em] uppercase text-muted-foreground/70";
 
-// ── Fulfilment Memory (localStorage — no schema change required) ───────────────
+// ── Fulfilment Memory ─────────────────────────────────────────────────────────
+// Server is primary (household-level, cross-device).
+// localStorage remains as fallback/cache — not removed in this phase.
 
 const FULFILMENT_MEMORY_KEY = "tha_fulfilment_memory";
+
+// Source values align with server schema. Old localStorage values ("scan", "search")
+// are normalized to the new format on read.
+type FulfilmentSource = "scanned" | "manual_search" | "cleaner_option" | "previous_fulfilment";
 
 interface FulfilmentMemoryEntry {
   barcode: string;
@@ -71,7 +77,7 @@ interface FulfilmentMemoryEntry {
   brand: string | null;
   thaRating: number | null;
   availableStores: string[];
-  source: "scan" | "search" | "cleaner_option";
+  source: FulfilmentSource;
   chosenAt: string;
 }
 
@@ -81,10 +87,24 @@ function itemMemoryKey(item: ShoppingListItem): string {
   return (item.normalizedName || item.productName).toLowerCase().trim();
 }
 
+function normalizeSource(raw: string): FulfilmentSource {
+  if (raw === "scan" || raw === "scanned") return "scanned";
+  if (raw === "search" || raw === "manual_search") return "manual_search";
+  if (raw === "previous_fulfilment") return "previous_fulfilment";
+  return "cleaner_option";
+}
+
 function readFulfilmentMemory(): FulfilmentMemoryStore {
   try {
     const raw = localStorage.getItem(FULFILMENT_MEMORY_KEY);
-    return raw ? (JSON.parse(raw) as FulfilmentMemoryStore) : {};
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as Record<string, any[]>;
+    // Normalize old source values on read so they match the current type
+    const normalized: FulfilmentMemoryStore = {};
+    for (const [key, entries] of Object.entries(parsed)) {
+      normalized[key] = entries.map(e => ({ ...e, source: normalizeSource(e.source ?? "") }));
+    }
+    return normalized;
   } catch {
     return {};
   }
@@ -98,7 +118,7 @@ function getPreviousChoices(item: ShoppingListItem): FulfilmentMemoryEntry[] {
 function saveFulfilmentChoice(
   item: ShoppingListItem,
   product: any,
-  source: FulfilmentMemoryEntry["source"],
+  source: FulfilmentSource,
 ): void {
   try {
     const name = String(product.product_name ?? "").trim();
@@ -123,6 +143,72 @@ function saveFulfilmentChoice(
   }
 }
 
+async function fetchServerFulfilmentMemory(item: ShoppingListItem): Promise<FulfilmentMemoryEntry[]> {
+  try {
+    const itemName = item.productName;
+    const res = await fetch(
+      `/api/shopping/fulfilment-memory?itemName=${encodeURIComponent(itemName)}`,
+      { credentials: "include" }
+    );
+    if (!res.ok) return [];
+    const data = await res.json();
+    const rows: any[] = data.entries ?? [];
+    return rows.map(r => ({
+      barcode: r.barcode ?? r.productName?.toLowerCase() ?? "",
+      productName: r.productName ?? "",
+      brand: r.brand ?? null,
+      thaRating: r.thaRating ?? null,
+      availableStores: r.availableStores ?? [],
+      source: normalizeSource(r.source ?? ""),
+      chosenAt: r.chosenAt ?? "",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function postServerFulfilmentMemory(
+  item: ShoppingListItem,
+  product: any,
+  source: FulfilmentSource,
+): void {
+  const productName = String(product.product_name ?? "").trim();
+  if (!productName) return;
+  fetch("/api/shopping/fulfilment-memory", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      itemName: item.productName,
+      normalizedItemName: itemMemoryKey(item),
+      barcode: product.barcode ?? null,
+      productName,
+      brand: product.brand ?? null,
+      thaRating: product.upfAnalysis?.thaRating ?? product.thaRating ?? null,
+      availableStores: product.availableStores ?? [],
+      source,
+    }),
+  }).catch(() => {
+    // Server write failure must not block the selected fulfilment
+  });
+}
+
+function mergeFulfilmentEntries(
+  server: FulfilmentMemoryEntry[],
+  local: FulfilmentMemoryEntry[],
+): FulfilmentMemoryEntry[] {
+  const seen = new Set<string>();
+  const result: FulfilmentMemoryEntry[] = [];
+  for (const e of [...server, ...local]) {
+    const key = e.barcode || e.productName.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(e);
+    }
+  }
+  return result.slice(0, 3);
+}
+
 function memoryEntryToProduct(entry: FulfilmentMemoryEntry): any {
   return {
     barcode: entry.barcode,
@@ -133,9 +219,10 @@ function memoryEntryToProduct(entry: FulfilmentMemoryEntry): any {
   };
 }
 
-function sourceBadgeLabel(source: FulfilmentMemoryEntry["source"]): string {
-  if (source === "scan") return "Previously scanned";
-  if (source === "search") return "Previously chosen via search";
+function sourceBadgeLabel(source: FulfilmentSource): string {
+  if (source === "scanned") return "Previously scanned";
+  if (source === "manual_search") return "Previously chosen via search";
+  if (source === "previous_fulfilment") return "Previously used again";
   return "Previously selected cleaner option";
 }
 
@@ -210,7 +297,19 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
       setIsManualSearching(false);
       setManualSearchDone(false);
       setManualSearchError(false);
-      setPreviousChoices(getPreviousChoices(item));
+
+      // Show localStorage choices immediately, then overlay with server memory
+      const local = getPreviousChoices(item);
+      setPreviousChoices(local);
+
+      const loadServerMemory = async () => {
+        const server = await fetchServerFulfilmentMemory(item);
+        // Merge: server is primary, local is fallback for dedup
+        const merged = mergeFulfilmentEntries(server, local);
+        setPreviousChoices(merged);
+      };
+      loadServerMemory();
+
       doSearch(item.productName);
     }
   }, [open, item?.id]);
@@ -233,7 +332,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
   }
 
   // Link a better product to the shopping list item without renaming the shopping intent
-  async function handleSelectBetterOption(product: any, source: FulfilmentMemoryEntry["source"] = "cleaner_option") {
+  async function handleSelectBetterOption(product: any, source: FulfilmentSource = "cleaner_option") {
     if (!item) return;
     const storesArray: string[] = product.availableStores || [];
     const productThaRating = product.upfAnalysis?.thaRating ?? null;
@@ -256,6 +355,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
       setSelectedBarcode(product.barcode ?? null);
       saveFulfilmentChoice(item, product, source);
+      postServerFulfilmentMemory(item, product, source);
       setPreviousChoices(getPreviousChoices(item));
       toast({ title: "Better option noted", description: `Linked to "${product.product_name}" — your list item name is unchanged.` });
     } catch {
@@ -353,7 +453,8 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
       if (!res.ok) throw new Error("Failed");
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
       setSelectedBarcode(product.barcode ?? null);
-      saveFulfilmentChoice(item, product, "search");
+      saveFulfilmentChoice(item, product, "manual_search");
+      postServerFulfilmentMemory(item, product, "manual_search");
       setPreviousChoices(getPreviousChoices(item));
       toast({ title: "Updated product choice", description: "Your list item name is unchanged." });
     } catch {
@@ -495,7 +596,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
                     entry={entry}
                     currentItem={item}
                     selectedBarcode={selectedBarcode}
-                    onSelect={() => handleSelectBetterOption(memoryEntryToProduct(entry), entry.source)}
+                    onSelect={() => handleSelectBetterOption(memoryEntryToProduct(entry), "previous_fulfilment")}
                     idx={idx}
                   />
                 ))}
@@ -710,7 +811,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
                 currentRating={item.thaRating ?? null}
                 currentProductName={item.productName}
                 selectedBarcode={selectedBarcode}
-                onSelect={() => handleSelectBetterOption(scannedProduct.raw, "scan")}
+                onSelect={() => handleSelectBetterOption(scannedProduct.raw, "scanned")}
                 onRetry={() => { setScanState("idle"); setScannedProduct(null); }}
               />
             )}

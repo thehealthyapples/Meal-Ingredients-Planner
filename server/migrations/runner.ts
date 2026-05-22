@@ -1061,6 +1061,29 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-05-22_add_shopping_fulfilment_memory",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS shopping_fulfilment_memory (
+        id SERIAL PRIMARY KEY,
+        household_id INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+        normalized_item_name TEXT NOT NULL,
+        original_item_name TEXT,
+        barcode TEXT,
+        product_name TEXT NOT NULL,
+        brand TEXT,
+        tha_rating INTEGER,
+        available_stores JSONB,
+        source TEXT NOT NULL,
+        chosen_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS sfm_household_id_idx ON shopping_fulfilment_memory (household_id)`,
+      `CREATE INDEX IF NOT EXISTS sfm_household_item_idx ON shopping_fulfilment_memory (household_id, normalized_item_name)`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
