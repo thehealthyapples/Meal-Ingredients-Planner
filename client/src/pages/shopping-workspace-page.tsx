@@ -561,15 +561,15 @@ function WorkspaceRow({
     >
       {/* ── Shop mode collapsed row ───────────────────────────────── */}
       {shopMode && (
-        <div className="grid grid-cols-[20px_5rem_1fr_auto_2.75rem] items-center gap-x-2 px-4 py-3">
+        <div className="grid grid-cols-[20px_5rem_1fr_auto_2.75rem] items-center gap-x-2 px-4 py-3 overflow-hidden">
 
-          {/* Col 1 — state circle */}
+          {/* Col 1 — state circle, centred in its cell */}
           <button
             onClick={() =>
               onShopStateChange?.(effectiveShopState === "found" ? null : "found")
             }
             aria-label={effectiveShopState === "need" ? "Mark as found" : "Undo"}
-            className={`h-5 w-5 rounded-full flex items-center justify-center transition-colors touch-manipulation border-2 ${shopConfig.circleClass}`}
+            className={`place-self-center h-5 w-5 rounded-full flex items-center justify-center transition-colors touch-manipulation border-2 ${shopConfig.circleClass}`}
           >
             {effectiveShopState === "found" && <CheckCircle2 className="h-3 w-3 text-white" />}
             {effectiveShopState === "defer" && <Clock className="h-3 w-3 text-white" />}
