@@ -15,7 +15,7 @@ export default function AppleRating({ rating, size = 25 }: Props) {
   const overlap = Math.round(size * OVERLAP);
 
   return (
-    <div className="inline-flex items-center gap-1" data-testid={`apple-rating-icons-${rating}`}>
+    <div className="inline-flex items-center gap-1 align-middle" data-testid={`apple-rating-icons-${rating}`}>
       <div className="inline-flex items-center">
         {Array.from({ length: fullCount }).map((_, i) => (
           <img

@@ -646,7 +646,7 @@ function WorkspaceRow({
           {/* Col 5 — apple score + chevron (auto, pinned right) */}
           <button
             onClick={onToggleExpand}
-            className="flex items-center gap-1.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            className="self-center flex items-center gap-1.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
           >
             {item.thaRating != null && <ScoreBadge score={item.thaRating} size={22} />}
             {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -696,7 +696,7 @@ function WorkspaceRow({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center self-center gap-2 shrink-0">
               {item.thaRating != null && !item.checked && (
                 <ScoreBadge score={item.thaRating} size={22} />
               )}
