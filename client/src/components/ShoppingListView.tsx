@@ -398,8 +398,8 @@ function CompactRating({ rating }: { rating: number }) {
   return (
     <span className="inline-flex items-center shrink-0" aria-label={`${clamped} apple${clamped !== 1 ? "s" : ""}`}>
       {Array.from({ length: clamped }).map((_, i) => (
-        <img key={i} src={thaAppleUrl} width={22} height={22} alt="" draggable={false}
-          style={{ marginLeft: i === 0 ? 0 : -7 }} />
+        <img key={i} src={thaAppleUrl} width={18} height={18} alt="" draggable={false}
+          style={{ marginLeft: i === 0 ? 0 : -6 }} />
       ))}
     </span>
   );
@@ -1620,14 +1620,14 @@ export default function ShoppingListView({
       >
         <div className={`flex-1 min-w-0 transition-opacity duration-150 ${contentOpacity}`}>
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span className={`font-medium text-[14px] leading-snug ${nameCls}`}>
-              {capWords(cleanProductName(item.productName, item.quantityValue))}
-            </span>
             {qty && (
-              <span className={`text-[11.5px] tabular-nums ${state !== "need" ? "text-muted-foreground/45" : "text-muted-foreground/70"}`}>
+              <span className={`font-semibold text-[15px] tabular-nums leading-tight flex-shrink-0 ${state !== "need" ? "text-muted-foreground/40" : "text-foreground/80"}`}>
                 {qty}
               </span>
             )}
+            <span className={`font-medium text-[14px] leading-snug ${nameCls}`}>
+              {capWords(cleanProductName(item.productName, item.quantityValue))}
+            </span>
             {/* Match-status signal: surfaced whenever an active item has no real
                 ProductMatch attached (covers both unmatched and estimate-only).
                 Purely visual, non-blocking, no tooltip. Distinct from the
@@ -1655,7 +1655,7 @@ export default function ShoppingListView({
               const text = sourceLabel(item as any);
               if (!text) return null;
               return (
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full border text-violet-600 dark:text-violet-400 border-violet-300/70 dark:border-violet-600/70" data-testid={`shop-badge-source-${item.id}`}>
+                <span className="text-[9.5px] text-muted-foreground/45" data-testid={`shop-badge-source-${item.id}`}>
                   {text}
                 </span>
               );
@@ -1875,11 +1875,11 @@ export default function ShoppingListView({
                     )
                   ) : (
                     <>
-                      <span className="text-[11px] text-muted-foreground/70 truncate max-w-[160px]">
+                      <span className="text-[10.5px] text-muted-foreground/50 truncate max-w-[160px]">
                         {resolvedMatch.productName}
                       </span>
                       {resolvedMatch.price != null && (
-                        <span className="text-[11px] text-muted-foreground/70 tabular-nums">
+                        <span className="text-[10.5px] text-muted-foreground/55 tabular-nums">
                           £{resolvedMatch.price.toFixed(2)}
                         </span>
                       )}
@@ -1995,7 +1995,7 @@ export default function ShoppingListView({
                     <span className="text-[11px] text-muted-foreground/40 italic">No price yet</span>
                   )}
                   {firstMeal && (
-                    <p className="text-[11px] text-muted-foreground/55 leading-tight">
+                    <p className="text-[10.5px] text-muted-foreground/40 leading-tight">
                       {firstMeal}{isPantryStaple ? " · staple" : ""}
                     </p>
                   )}
@@ -3314,14 +3314,14 @@ export default function ShoppingListView({
                   >
                     {/* Aisle-style section heading — provides in-list position context */}
                     <div
-                      className={`flex items-center gap-2.5 px-4 py-2 border-b ${catIndex > 0 ? "border-t mt-1" : ""}`}
+                      className={`flex items-center gap-2.5 px-4 py-2.5 border-b ${catIndex > 0 ? "border-t mt-2" : ""}`}
                       style={{
-                        background: `${cat.tabAccent}0e`,
+                        background: `${cat.tabAccent}16`,
                         borderColor: cat.panelBorderColor,
                       }}
                     >
-                      <span className="text-[13px] leading-none select-none" aria-hidden>{cat.emoji}</span>
-                      <span className="font-semibold text-[12px]" style={{ color: cat.tabAccent }}>{cat.label}</span>
+                      <span className="text-[14px] leading-none select-none" aria-hidden>{cat.emoji}</span>
+                      <span className="font-semibold text-[13.5px]" style={{ color: cat.tabAccent }}>{cat.label}</span>
                       <span className="text-[10px] text-muted-foreground/45 ml-auto tabular-nums">
                         {allDone
                           ? <span style={{ color: cat.tabAccent }}>Done ✓</span>
