@@ -16,6 +16,7 @@ import { deriveQuantityConfidence, getQuantityConfidenceLabel } from "@/lib/quan
 import ScoreBadge from "@/components/ui/score-badge";
 import type { ShoppingListItem, IngredientSource } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
+import { WorkspaceAnalyserSheet } from "@/components/WorkspaceAnalyserSheet";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -487,6 +488,7 @@ function WorkspaceRow({
   prepMode,
   prepState,
   onPrepAction,
+  onOpenAnalyser,
 }: {
   item: WorkspaceItem;
   sources: IngredientSource[];
@@ -501,6 +503,7 @@ function WorkspaceRow({
   prepMode?: boolean;
   prepState?: PrepItemState;
   onPrepAction?: (action: PrepAction) => void;
+  onOpenAnalyser?: () => void;
 }) {
   const pantryKey = (item.normalizedName ?? item.productName).toLowerCase();
   const isPantryStocked = pantryKeySet.has(pantryKey);
@@ -837,15 +840,15 @@ function WorkspaceRow({
               {/* Analyser access */}
               <div className="flex items-center gap-2 pt-1 border-t border-border/20">
                 <FlaskConical className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <Link
-                  href="/basket"
-                  className="text-xs text-primary hover:underline"
-                  data-testid={`ws-analyse-link-${item.id}`}
+                <button
+                  onClick={onOpenAnalyser}
+                  className="text-xs text-primary hover:underline touch-manipulation"
+                  data-testid={`ws-analyse-btn-${item.id}`}
                 >
-                  Open Analyser
-                </Link>
+                  Analyse
+                </button>
                 <span className="text-[10px] text-muted-foreground/60">
-                  · Product details, healthier swaps, whole-food options
+                  · THA score, cleaner options, whole-food route
                 </span>
               </div>
 
@@ -1149,6 +1152,7 @@ export default function ShoppingWorkspacePage() {
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [mode, setMode] = useState<WorkspaceMode>("review");
   const [prepStates, setPrepStates] = useState<Map<number, PrepItemState>>(new Map());
+  const [analyserItem, setAnalyserItem] = useState<WorkspaceItem | null>(null);
 
   const measurementPref: "metric" | "imperial" =
     (user?.measurementPreference as "metric" | "imperial") || "metric";
@@ -1365,6 +1369,7 @@ export default function ShoppingWorkspacePage() {
         prepMode={isPrepMode}
         prepState={isPrepMode ? (prepStates.get(item.id) ?? {}) : undefined}
         onPrepAction={isPrepMode ? (action) => handlePrepAction(item.id, action) : undefined}
+        onOpenAnalyser={() => setAnalyserItem(item)}
       />
     );
   }
@@ -1577,17 +1582,24 @@ export default function ShoppingWorkspacePage() {
         </div>
       )}
 
-      {/* ── Analyser access footer ─────────────────────────────────────── */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground/70 px-1">
+      {/* ── Fallback footer ────────────────────────────────────────────── */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground/50 px-1">
         <FlaskConical className="h-3.5 w-3.5 shrink-0" />
         <span>
-          Full product analysis, healthier swaps and scoring in{" "}
-          <Link href="/basket" className="text-primary/80 hover:text-primary hover:underline">
+          Full product database also available in{" "}
+          <Link href="/basket" className="hover:text-muted-foreground hover:underline">
             Basket
           </Link>
           .
         </span>
       </div>
+
+      {/* ── In-workspace analyser sheet ─────────────────────────────────── */}
+      <WorkspaceAnalyserSheet
+        open={analyserItem !== null}
+        onOpenChange={(v) => { if (!v) setAnalyserItem(null); }}
+        item={analyserItem}
+      />
 
     </div>
   );
