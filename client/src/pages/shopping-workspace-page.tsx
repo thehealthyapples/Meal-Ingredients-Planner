@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { useUser } from "@/hooks/use-user";
@@ -17,6 +17,7 @@ import ScoreBadge from "@/components/ui/score-badge";
 import type { ShoppingListItem, IngredientSource } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
 import { WorkspaceAnalyserSheet } from "@/components/WorkspaceAnalyserSheet";
+import { PageHeader } from "@/components/PageHeader";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1145,6 +1146,11 @@ export default function ShoppingWorkspacePage() {
   const [prepStates, setPrepStates] = useState<Map<number, PrepItemState>>(new Map());
   const [analyserItem, setAnalyserItem] = useState<WorkspaceItem | null>(null);
 
+  useEffect(() => {
+    document.title = "Shopping Workspace – The Healthy Apples";
+    return () => { document.title = "The Healthy Apples"; };
+  }, []);
+
   const measurementPref: "metric" | "imperial" =
     (user?.measurementPreference as "metric" | "imperial") || "metric";
 
@@ -1368,19 +1374,15 @@ export default function ShoppingWorkspacePage() {
   const currentMode = MODES.find((m) => m.id === mode)!;
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-4 pb-20">
-
-      {/* ── Workspace header ──────────────────────────────────────────── */}
-      <div className="mb-4 space-y-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <ShoppingBasket className="h-4 w-4 text-primary/70 shrink-0" />
-          <span className="text-sm font-semibold text-foreground">
-            Household Shopping
-          </span>
-        </div>
-        <ModeSwitcher mode={mode} onChange={(m) => { setMode(m); setExpandedId(null); }} />
-        <p className="text-xs text-muted-foreground">{currentMode.helper}</p>
-      </div>
+    <>
+      <PageHeader
+        title="Shopping Workspace"
+        icon={<ShoppingBasket className="h-5 w-5" />}
+        realm="basket"
+        center={<ModeSwitcher mode={mode} onChange={(m) => { setMode(m); setExpandedId(null); }} />}
+        meta={<span>{currentMode.helper}</span>}
+      />
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-20">
 
       {/* ── Summary bar ───────────────────────────────────────────────── */}
       {!isLoading && items.length > 0 && (
@@ -1592,6 +1594,7 @@ export default function ShoppingWorkspacePage() {
         item={analyserItem}
       />
 
-    </div>
+      </div>
+    </>
   );
 }
