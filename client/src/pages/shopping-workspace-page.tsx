@@ -579,7 +579,7 @@ function WorkspaceRow({
     >
       {/* ── Shop mode collapsed row ───────────────────────────────── */}
       {shopMode && (
-        <div className="grid grid-cols-[20px_5rem_1fr_auto_2.75rem] items-center gap-x-2 px-4 py-3 overflow-hidden">
+        <div className="grid grid-cols-[20px_1fr_auto_2.75rem] items-center gap-x-2 px-4 py-3 min-h-[52px]">
 
           {/* Col 1 — state circle, centred in its cell */}
           <button
@@ -594,54 +594,50 @@ function WorkspaceRow({
             {effectiveShopState === "have" && <Home className="h-3 w-3 text-white" />}
           </button>
 
-          {/* Col 2 — qty (fixed 5rem, always same position) */}
-          <button onClick={onToggleExpand} className="text-left">
-            {qtyLabel && (
-              <span className={`font-semibold text-[15px] tabular-nums leading-tight ${
-                effectiveShopState !== "need"
-                  ? "text-muted-foreground/40"
-                  : "text-foreground/80"
-              }`}>
-                {qtyLabel}
-              </span>
-            )}
-          </button>
-
-          {/* Col 3 — name (1fr, wraps for long names) */}
+          {/* Col 2 — name + qty sub-label (1fr, mirrors Review/Prep layout) */}
           <button
             onClick={onToggleExpand}
             data-testid={`ws-row-expand-${item.id}`}
             className="text-left min-w-0"
           >
-            <span className={`font-medium text-[14px] leading-snug ${
+            <span className={`font-medium text-[14px] leading-snug block truncate ${
               effectiveShopState !== "need"
                 ? "text-muted-foreground"
                 : "text-foreground"
             }`}>
               {capitalizeWords(item.productName)}
             </span>
+            {qtyLabel && (
+              <span className={`text-xs leading-tight block tabular-nums ${
+                effectiveShopState !== "need"
+                  ? "text-muted-foreground/40"
+                  : "text-muted-foreground/70"
+              }`}>
+                {qtyLabel}
+              </span>
+            )}
           </button>
 
-          {/* Col 4 — action chips (auto, same content = same width across all need rows) */}
-          <div>
+          {/* Col 3 — action chips */}
+          <div className="flex items-center">
             {effectiveShopState === "need" ? (
               <div className="flex gap-1.5">
                 <button
                   onClick={() => onShopStateChange?.("found")}
-                  className="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors touch-manipulation bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800/50 hover:bg-emerald-500/20 active:bg-emerald-500/30"
+                  className="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors touch-manipulation whitespace-nowrap bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800/50 hover:bg-emerald-500/20 active:bg-emerald-500/30"
                 >
                   Found it
                 </button>
                 <button
                   onClick={() => onShopStateChange?.("defer")}
-                  className="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors touch-manipulation bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/70 dark:border-blue-800/50 hover:bg-blue-500/20 active:bg-blue-500/30"
+                  className="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors touch-manipulation whitespace-nowrap bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/70 dark:border-blue-800/50 hover:bg-blue-500/20 active:bg-blue-500/30"
                 >
                   Next shop
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-1.5">
-                <span className={`text-xs font-medium ${shopConfig.labelClass}`}>
+                <span className={`text-xs font-medium whitespace-nowrap ${shopConfig.labelClass}`}>
                   {shopConfig.label}
                 </span>
                 <button
@@ -654,7 +650,7 @@ function WorkspaceRow({
             )}
           </div>
 
-          {/* Col 5 — apple score + chevron (auto, pinned right) */}
+          {/* Col 4 — apple score + chevron (pinned right) */}
           <button
             onClick={onToggleExpand}
             className="self-center flex items-center gap-1.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
@@ -1521,7 +1517,7 @@ export default function ShoppingWorkspacePage() {
                           variant="need"
                         />
                       )}
-                      {shopNeedByCategory.length > 1
+                      {shopNeedByCategory.length >= 1
                         ? shopNeedByCategory.map(({ key, label, items: catItems }) => (
                             <div key={key}>
                               <ShopCategoryHeader label={label} count={catItems.length} />

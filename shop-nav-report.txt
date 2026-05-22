@@ -1,0 +1,110 @@
+SHOP NAV IMPLEMENTATION REPORT
+Generated: 2026-05-22
+===============================
+
+ROLLBACK IDENTIFIER
+-------------------
+Tag: rollback/shop-nav-v1 → commit bbe2d4b
+Rollback command: git reset --hard rollback/shop-nav-v1
+
+
+CURRENT ACTION-STATE AUDIT
+---------------------------
+Action label     | Writes to shopStatus field
+-----------------|---------------------------------
+Found it         | "found"
+Next shop        | "defer"
+undo             | null (resets to "need")
+Already have     | "have" — set by Prep stage only, never set in Shop
+
+"Skip today" and "Have it" were already removed in prior commit cb98f1b.
+No state semantics changed.
+
+
+FILES CHANGED
+-------------
+client/src/pages/shopping-workspace-page.tsx — 1 file, 19 insertions / 23 deletions
+
+
+WHAT EACH PART DELIVERED
+-------------------------
+
+A + B — Shop in desktop sidebar and mobile tray:
+  Already present from commit cb98f1b.
+  ShoppingCart icon, label "Shop", href /shopping-workspace?stage=shop,
+  position 6 in both NAV_ITEMS_MAIN and MOBILE_BOTTOM_ITEMS.
+  Active state fires on any /shopping-workspace location, so it stays lit
+  across all three stages. Realm colour: market teal.
+
+C — Stage switcher preserved:
+  ModeSwitcher with Review / Prep / Shop tabs unchanged.
+
+D — Shop actions simplified:
+  Already correct — only "Found it" (emerald) and "Next shop" (blue) on the
+  collapsed row; no "Have it" / "Skip today" anywhere.
+
+E — Spacing consistency (this change):
+  Shop collapsed row changed from:
+    grid-cols-[20px_5rem_1fr_auto_2.75rem]  (5 col, no min-height)
+  to:
+    grid-cols-[20px_1fr_auto_2.75rem]       (4 col, min-h-[52px])
+  This matches the Review/Prep row height contract.
+  Quantity is now a sub-label below the product name (same pattern as
+  Review/Prep), freeing ~80px on mobile.
+  Added whitespace-nowrap to action chip text so buttons don't break
+  across lines on narrow screens.
+
+F — Category grouping (this change):
+  Changed threshold from shopNeedByCategory.length > 1 to >= 1.
+  Category headers now appear even when all "still needed" items fall into
+  a single category (e.g. a list that's entirely "Fruit & Vegetables").
+  Fallback to "other" bucket handles uncategorised taxonomy values.
+  Memoized via useMemo — no render-loop risk.
+
+G — Review and Prep preserved:
+  No changes to PrepActionPanel, PrepGroupHeader, prep grouping logic,
+  review mode, or checked-item handling.
+
+
+PERFORMANCE SAFEGUARDS
+-----------------------
+- shopNeedByCategory remains useMemo-computed from shopGroups.need (itself memoized)
+- No new queries, no new cache invalidations
+- No scroll listeners added
+
+
+BUILD RESULT
+------------
+✓ built in 7.93s (vite + server bundle)
+
+
+TYPECHECK RESULT
+----------------
+npx tsc --noEmit → clean (no output)
+
+
+REMAINING LIMITATIONS
+---------------------
+- The "Already have" group (amber) in Shop stage is read-only — items reach
+  it only via Prep. If a user never uses Prep, this group stays empty. By design.
+- Category matching uses exact taxonomy key lookup. Items with novel ingredient
+  names not in INGREDIENT_TAXONOMY will fall into "Other" until the taxonomy
+  is extended.
+- The active state in the sidebar lights Shop for the entire /shopping-workspace
+  path, not exclusively when stage=shop — acceptable trade-off since the
+  workspace is always the same route.
+
+
+ROLLBACK PLAN
+-------------
+git reset --hard rollback/shop-nav-v1
+# or
+git checkout rollback/shop-nav-v1
+
+
+DATA IMPACT DECLARATION
+-----------------------
+Reads existing data:          yes
+Writes new data:              existing shopping item state only
+Changes meaning of existing:  no
+Requires backfill:            no
