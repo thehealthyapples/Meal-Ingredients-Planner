@@ -58,6 +58,17 @@ type PrepSummary = {
   allPrepDone: boolean;
 };
 
+// Shop operational states — persisted via shopStatus field
+type ShopItemState = "need" | "found" | "defer" | "have";
+
+type ShopSummary = {
+  needCount: number;
+  foundCount: number;
+  deferCount: number;
+  haveCount: number;
+  total: number;
+};
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -70,8 +81,51 @@ const MODES: Array<{
 }> = [
   { id: "review", label: "Review", Icon: ClipboardList, helper: "Check your list before you go" },
   { id: "prep", label: "Prep", Icon: Home, helper: "Review pantry items and confirm quantities" },
-  { id: "shop", label: "Shop", Icon: ShoppingCart, helper: "In-store check-off" },
+  { id: "shop", label: "Shop", Icon: ShoppingCart, helper: "In-store — track what you find, skip, or already have" },
 ];
+
+function getShopState(item: WorkspaceItem): ShopItemState {
+  const s = item.shopStatus;
+  if (s === "found" || s === "defer" || s === "have") return s;
+  return "need";
+}
+
+const SHOP_STATE_CONFIG: Record<ShopItemState, {
+  label: string;
+  circleClass: string;
+  labelClass: string;
+  chipClass: string;
+  groupClass: string;
+}> = {
+  need: {
+    label: "Still need",
+    circleClass: "border-muted-foreground/30 bg-transparent hover:border-emerald-400",
+    labelClass: "text-muted-foreground",
+    chipClass: "",
+    groupClass: "text-foreground",
+  },
+  found: {
+    label: "Found in store",
+    circleClass: "border-emerald-500 bg-emerald-500",
+    labelClass: "text-emerald-600 dark:text-emerald-400",
+    chipClass: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800/50 hover:bg-emerald-500/20 active:bg-emerald-500/30",
+    groupClass: "text-emerald-600 dark:text-emerald-400",
+  },
+  defer: {
+    label: "Buy next shop",
+    circleClass: "border-blue-400 bg-blue-400",
+    labelClass: "text-blue-600 dark:text-blue-400",
+    chipClass: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/70 dark:border-blue-800/50 hover:bg-blue-500/20 active:bg-blue-500/30",
+    groupClass: "text-blue-600 dark:text-blue-400",
+  },
+  have: {
+    label: "Already have",
+    circleClass: "border-amber-500 bg-amber-500",
+    labelClass: "text-amber-600 dark:text-amber-400",
+    chipClass: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200/70 dark:border-amber-800/50 hover:bg-amber-500/20 active:bg-amber-500/30",
+    groupClass: "text-amber-600 dark:text-amber-400",
+  },
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -85,18 +139,16 @@ function getOperationalHint(
   sourcesForItem: IngredientSource[],
   prepState?: PrepItemState,
 ): { text: string; tone: "amber" | "green" | "muted" } | null {
-  // Pantry item hints — always amber until confirmed (pantry = candidate, not certainty)
   if (isPantryStocked) {
     if (prepState?.pantryDecision === "have_enough") {
       return { text: "Pantry reviewed", tone: "green" };
     }
     if (prepState?.pantryDecision === "need_to_buy") {
-      return null; // now acts as a regular shopping item
+      return null;
     }
     return { text: "Pantry item", tone: "amber" };
   }
 
-  // Quantity decision overrides (prep mode)
   if (prepState?.quantityDecision === "accepted") {
     return { text: "Quantity confirmed", tone: "green" };
   }
@@ -134,9 +186,7 @@ function PrepActionPanel({
   const hasQuantityUncertainty = conf === "assumed" || conf === "approximate";
   const unitLabel = item.unit && item.unit !== "unit" ? item.unit : "";
 
-  // ── Pantry review workflow ────────────────────────────────────────────────
   if (isPantryStocked) {
-    // Unreviewed — show action buttons
     if (!prepState.pantryDecision) {
       return (
         <div className="rounded-lg bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 p-3 space-y-2.5">
@@ -168,7 +218,6 @@ function PrepActionPanel({
       );
     }
 
-    // Adjusting — inline quantity input
     if (prepState.pantryDecision === "adjusting") {
       return (
         <div className="rounded-lg bg-muted/30 border border-border/40 p-3 space-y-2.5">
@@ -203,7 +252,6 @@ function PrepActionPanel({
       );
     }
 
-    // Resolved: have enough
     if (prepState.pantryDecision === "have_enough") {
       return (
         <div className="flex items-center gap-2 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/30 px-3 py-2.5">
@@ -221,7 +269,6 @@ function PrepActionPanel({
       );
     }
 
-    // Resolved: need to buy (including adjusted)
     if (prepState.pantryDecision === "need_to_buy") {
       const adjustedLabel = prepState.editValue
         ? ` — buying ${prepState.editValue}${unitLabel ? ` ${unitLabel}` : ""}`
@@ -243,12 +290,10 @@ function PrepActionPanel({
     }
   }
 
-  // ── Quantity resolution workflow ──────────────────────────────────────────
   if (hasQuantityUncertainty) {
     const estimateLabel =
       conf === "assumed" ? "Quantity estimated by AI" : "Amount roughly estimated";
 
-    // Unresolved — show action buttons
     if (!prepState.quantityDecision) {
       return (
         <div className="rounded-lg bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 p-3 space-y-2.5">
@@ -280,7 +325,6 @@ function PrepActionPanel({
       );
     }
 
-    // Editing — inline quantity input
     if (prepState.quantityDecision === "editing") {
       return (
         <div className="rounded-lg bg-muted/30 border border-border/40 p-3 space-y-2.5">
@@ -315,7 +359,6 @@ function PrepActionPanel({
       );
     }
 
-    // Resolved: accepted
     if (prepState.quantityDecision === "accepted") {
       const customQty = prepState.editValue;
       const displayQty = customQty
@@ -339,7 +382,6 @@ function PrepActionPanel({
       );
     }
 
-    // Resolved: later
     if (prepState.quantityDecision === "later") {
       return (
         <div className="flex items-center gap-2 rounded-lg bg-muted/30 border border-border/30 px-3 py-2.5">
@@ -359,6 +401,76 @@ function PrepActionPanel({
   return null;
 }
 
+// ── ShopActionPanel ───────────────────────────────────────────────────────────
+
+function ShopActionPanel({
+  shopState,
+  onShopStateChange,
+}: {
+  shopState: ShopItemState;
+  onShopStateChange: (state: ShopItemState | null) => void;
+}) {
+  const options: Array<{
+    state: ShopItemState;
+    label: string;
+    Icon: React.ComponentType<{ className?: string }>;
+    activeClass: string;
+    inactiveClass: string;
+  }> = [
+    {
+      state: "found",
+      label: "Found in store",
+      Icon: CheckCircle2,
+      activeClass: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700",
+      inactiveClass: "bg-muted/40 text-foreground border-border/50 hover:bg-muted active:bg-muted/80",
+    },
+    {
+      state: "defer",
+      label: "Buy next shop",
+      Icon: Clock,
+      activeClass: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700",
+      inactiveClass: "bg-muted/40 text-foreground border-border/50 hover:bg-muted active:bg-muted/80",
+    },
+    {
+      state: "have",
+      label: "Already have at home",
+      Icon: Home,
+      activeClass: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-300 dark:border-amber-700",
+      inactiveClass: "bg-muted/40 text-foreground border-border/50 hover:bg-muted active:bg-muted/80",
+    },
+    {
+      state: "need",
+      label: "Still need",
+      Icon: ShoppingCart,
+      activeClass: "bg-primary/10 text-primary border-primary/30",
+      inactiveClass: "bg-muted/40 text-muted-foreground border-border/50 hover:bg-muted active:bg-muted/80",
+    },
+  ];
+
+  return (
+    <div className="rounded-lg bg-muted/20 border border-border/30 p-3 space-y-2.5">
+      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        Shopping status
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        {options.map(({ state, label, Icon, activeClass, inactiveClass }) => (
+          <button
+            key={state}
+            onClick={() => onShopStateChange(state === "need" ? null : state)}
+            className={`flex items-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-colors touch-manipulation ${
+              shopState === state ? activeClass : inactiveClass
+            }`}
+          >
+            <Icon className="h-3.5 w-3.5 shrink-0" />
+            {label}
+          </button>
+        ))}
+      </div>
+      {/* Future: Scan & swap entrypoint — place inline scan button here */}
+    </div>
+  );
+}
+
 // ── WorkspaceRow ─────────────────────────────────────────────────────────────
 
 function WorkspaceRow({
@@ -370,6 +482,8 @@ function WorkspaceRow({
   onToggleExpand,
   onToggleChecked,
   shopMode,
+  shopState,
+  onShopStateChange,
   prepMode,
   prepState,
   onPrepAction,
@@ -382,6 +496,8 @@ function WorkspaceRow({
   onToggleExpand: () => void;
   onToggleChecked: (checked: boolean) => void;
   shopMode: boolean;
+  shopState?: ShopItemState;
+  onShopStateChange?: (state: ShopItemState | null) => void;
   prepMode?: boolean;
   prepState?: PrepItemState;
   onPrepAction?: (action: PrepAction) => void;
@@ -414,37 +530,160 @@ function WorkspaceRow({
         ? "text-emerald-600 dark:text-emerald-400"
         : "text-muted-foreground";
 
+  const effectiveShopState = shopState ?? "need";
+  const shopConfig = SHOP_STATE_CONFIG[effectiveShopState];
+  const qtyLabel = item.quantityValue != null
+    ? (formatItemDisplay(item.productName, item.quantityValue, item.unit, measurementPref).split(" — ")[1] ?? "")
+    : "";
+
+  // Row-level state styling
+  const rowOpacity = shopMode
+    ? effectiveShopState !== "need" ? "opacity-60" : ""
+    : item.checked ? "opacity-50" : "";
+
+  const rowBg = shopMode
+    ? effectiveShopState === "found"
+      ? "bg-emerald-50/15 dark:bg-emerald-950/10"
+      : effectiveShopState === "defer"
+        ? "bg-blue-50/10 dark:bg-blue-950/10"
+        : effectiveShopState === "have"
+          ? "bg-amber-50/15 dark:bg-amber-950/10"
+          : ""
+    : item.needsReview && !item.checked ? "bg-amber-50/30 dark:bg-amber-950/10" : "";
+
   return (
     <div
-      className={`border-b border-border/30 transition-colors ${
-        item.checked ? "opacity-50" : ""
-      } ${item.needsReview && !item.checked ? "bg-amber-50/30 dark:bg-amber-950/10" : ""}`}
+      className={`border-b border-border/30 transition-colors ${rowOpacity} ${rowBg}`}
       data-testid={`workspace-row-${item.id}`}
     >
-      {/* ── Collapsed row ────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 px-4 py-3 min-h-[52px]">
-        <Checkbox
-          checked={item.checked || false}
-          onCheckedChange={(v) => onToggleChecked(!!v)}
-          className="border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground shrink-0"
-          data-testid={`ws-checkbox-${item.id}`}
-        />
-
-        <button
-          className="flex-1 min-w-0 flex items-center gap-2 text-left group"
-          onClick={onToggleExpand}
-          data-testid={`ws-row-expand-${item.id}`}
-        >
-          <div className="flex-1 min-w-0">
-            <span
-              className={`text-sm font-medium leading-snug block truncate ${
-                item.checked ? "line-through text-muted-foreground" : "text-foreground"
-              }`}
+      {/* ── Shop mode collapsed row ───────────────────────────────── */}
+      {shopMode && (
+        <>
+          <div className="flex items-start gap-3 px-4 pt-3 pb-2">
+            {/* State circle — tap to toggle found quickly */}
+            <button
+              onClick={() =>
+                onShopStateChange?.(effectiveShopState === "found" ? null : "found")
+              }
+              aria-label={effectiveShopState === "need" ? "Mark as found" : "Undo"}
+              className={`mt-0.5 h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors touch-manipulation border-2 ${shopConfig.circleClass}`}
             >
-              {capitalizeWords(item.productName)}
-            </span>
+              {effectiveShopState === "found" && (
+                <CheckCircle2 className="h-3 w-3 text-white" />
+              )}
+              {effectiveShopState === "defer" && (
+                <Clock className="h-3 w-3 text-white" />
+              )}
+              {effectiveShopState === "have" && (
+                <Home className="h-3 w-3 text-white" />
+              )}
+            </button>
 
-            {!shopMode && (
+            {/* Content: name + qty + THA + chevron */}
+            <div className="flex-1 min-w-0 flex items-start gap-2">
+              <button
+                className="flex-1 min-w-0 text-left"
+                onClick={onToggleExpand}
+                data-testid={`ws-row-expand-${item.id}`}
+              >
+                <span
+                  className={`text-sm font-medium leading-snug block truncate ${
+                    effectiveShopState !== "need"
+                      ? "text-muted-foreground"
+                      : "text-foreground"
+                  }`}
+                >
+                  {capitalizeWords(item.productName)}
+                </span>
+                {qtyLabel && (
+                  <span className="text-xs text-muted-foreground mt-0.5 block">
+                    {qtyLabel}
+                  </span>
+                )}
+              </button>
+
+              {/* THA + chevron — also expands */}
+              <button
+                onClick={onToggleExpand}
+                className="flex items-center gap-1.5 shrink-0 pt-0.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+              >
+                {item.thaRating != null && (
+                  <ScoreBadge score={item.thaRating} size={22} />
+                )}
+                {expanded ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Quick progression chips — only when still needed */}
+          {effectiveShopState === "need" && (
+            <div className="flex gap-1.5 px-4 pb-3 flex-wrap ml-8">
+              <button
+                onClick={() => onShopStateChange?.("found")}
+                className="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors touch-manipulation bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800/50 hover:bg-emerald-500/20 active:bg-emerald-500/30"
+              >
+                Found
+              </button>
+              <button
+                onClick={() => onShopStateChange?.("defer")}
+                className="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors touch-manipulation bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/70 dark:border-blue-800/50 hover:bg-blue-500/20 active:bg-blue-500/30"
+              >
+                Skip today
+              </button>
+              <button
+                onClick={() => onShopStateChange?.("have")}
+                className="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors touch-manipulation bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200/70 dark:border-amber-800/50 hover:bg-amber-500/20 active:bg-amber-500/30"
+              >
+                Have it
+              </button>
+            </div>
+          )}
+
+          {/* State label + undo — when item has a state */}
+          {effectiveShopState !== "need" && (
+            <div className="flex items-center gap-2 px-4 pb-2.5 ml-8">
+              <span className={`text-xs font-medium ${shopConfig.labelClass}`}>
+                {shopConfig.label}
+              </span>
+              <button
+                onClick={() => onShopStateChange?.(null)}
+                className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors touch-manipulation"
+              >
+                undo
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Review / Prep mode collapsed row ─────────────────────── */}
+      {!shopMode && (
+        <div className="flex items-center gap-3 px-4 py-3 min-h-[52px]">
+          <Checkbox
+            checked={item.checked || false}
+            onCheckedChange={(v) => onToggleChecked(!!v)}
+            className="border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground shrink-0"
+            data-testid={`ws-checkbox-${item.id}`}
+          />
+
+          <button
+            className="flex-1 min-w-0 flex items-center gap-2 text-left group"
+            onClick={onToggleExpand}
+            data-testid={`ws-row-expand-${item.id}`}
+          >
+            <div className="flex-1 min-w-0">
+              <span
+                className={`text-sm font-medium leading-snug block truncate ${
+                  item.checked ? "line-through text-muted-foreground" : "text-foreground"
+                }`}
+              >
+                {capitalizeWords(item.productName)}
+              </span>
+
               <div className="flex items-center gap-2 mt-0.5">
                 {item.quantityValue != null && (
                   <span className="text-xs text-muted-foreground">
@@ -460,32 +699,25 @@ function WorkspaceRow({
                   </span>
                 )}
               </div>
-            )}
+            </div>
 
-            {shopMode && item.quantityValue != null && (
-              <span className="text-xs text-muted-foreground mt-0.5 block">
-                {formatItemDisplay(item.productName, item.quantityValue, item.unit, measurementPref)
-                  .split(" — ")[1] ?? ""}
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {item.thaRating != null && !item.checked && (
-              <ScoreBadge score={item.thaRating} size={22} />
-            )}
-            <span className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
-              {expanded ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
+            <div className="flex items-center gap-2 shrink-0">
+              {item.thaRating != null && !item.checked && (
+                <ScoreBadge score={item.thaRating} size={22} />
               )}
-            </span>
-          </div>
-        </button>
-      </div>
+              <span className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
+                {expanded ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </span>
+            </div>
+          </button>
+        </div>
+      )}
 
-      {/* ── Expanded detail ───────────────────────────────────────────── */}
+      {/* ── Expanded detail ───────────────────────────────────────── */}
       <AnimatePresence initial={false}>
         {expanded && (
           <motion.div
@@ -498,7 +730,15 @@ function WorkspaceRow({
           >
             <div className="px-4 pb-4 pt-2 space-y-3 border-t border-border/20 ml-9">
 
-              {/* ── Prep action panel (prep mode only) ───────────────── */}
+              {/* ── Shop action panel (shop mode only) ───────────── */}
+              {shopMode && onShopStateChange && (
+                <ShopActionPanel
+                  shopState={effectiveShopState}
+                  onShopStateChange={onShopStateChange}
+                />
+              )}
+
+              {/* ── Prep action panel (prep mode only) ───────────── */}
               {prepMode && onPrepAction && (
                 <PrepActionPanel
                   item={item}
@@ -508,8 +748,8 @@ function WorkspaceRow({
                 />
               )}
 
-              {/* ── Pantry note (review mode) ─────────────────────────── */}
-              {!prepMode && isPantryStocked && (
+              {/* ── Pantry note (review mode) ─────────────────────── */}
+              {!prepMode && !shopMode && isPantryStocked && (
                 <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
                   <Home className="h-3.5 w-3.5 shrink-0" />
                   <span>Pantry item — check at home before buying</span>
@@ -669,11 +909,13 @@ function SummaryBar({
   items,
   pantryKeySet,
   prepSummary,
+  shopSummary,
 }: {
   mode: WorkspaceMode;
   items: WorkspaceItem[];
   pantryKeySet: Set<string>;
   prepSummary?: PrepSummary;
+  shopSummary?: ShopSummary;
 }) {
   const unchecked = items.filter((i) => !i.checked);
   const checked = items.filter((i) => i.checked);
@@ -682,28 +924,55 @@ function SummaryBar({
     pantryKeySet.has((i.normalizedName ?? i.productName).toLowerCase()),
   ).length;
 
-  const total = unchecked.length + checked.length;
-  const pct = total > 0 ? Math.round((checked.length / total) * 100) : 0;
+  if (mode === "shop" && shopSummary) {
+    const { needCount, foundCount, deferCount, haveCount, total } = shopSummary;
+    const resolved = foundCount + haveCount;
+    const pct = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
-  if (mode === "shop") {
     return (
-      <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-3 mb-4">
-        <div className="flex items-center justify-between mb-2">
+      <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-3 mb-4 space-y-2.5">
+        <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-foreground">
-            {unchecked.length > 0
-              ? `${unchecked.length} remaining`
-              : "All done — great shop"}
+            {needCount === 0 && total > 0
+              ? "All items accounted for"
+              : needCount === total
+                ? `${total} item${total !== 1 ? "s" : ""} to find`
+                : `${needCount} still needed`}
           </span>
-          <span className="text-sm text-muted-foreground">
-            {checked.length}/{total}
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {resolved}/{total}
           </span>
         </div>
+
         <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
           <div
             className="h-full rounded-full bg-primary transition-all duration-300"
             style={{ width: `${pct}%` }}
           />
         </div>
+
+        {(foundCount > 0 || deferCount > 0 || haveCount > 0) && (
+          <div className="flex items-center gap-3 flex-wrap pt-0.5">
+            {foundCount > 0 && (
+              <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3 shrink-0" />
+                {foundCount} found
+              </span>
+            )}
+            {deferCount > 0 && (
+              <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                <Clock className="h-3 w-3 shrink-0" />
+                {deferCount} next shop
+              </span>
+            )}
+            {haveCount > 0 && (
+              <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <Home className="h-3 w-3 shrink-0" />
+                {haveCount} have it
+              </span>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -783,6 +1052,7 @@ function SummaryBar({
   }
 
   // Review mode
+  const total = unchecked.length + checked.length;
   return (
     <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-3 mb-4 space-y-1">
       <div className="flex items-center gap-4 flex-wrap text-sm">
@@ -840,6 +1110,30 @@ function PrepGroupHeader({
         }`}
       >
         {resolvedCount !== undefined ? `${resolvedCount}/${count}` : count}
+      </span>
+    </div>
+  );
+}
+
+// ── Shop group header ─────────────────────────────────────────────────────────
+
+function ShopGroupHeader({
+  label,
+  count,
+  variant = "need",
+}: {
+  label: string;
+  count: number;
+  variant?: ShopItemState;
+}) {
+  const colorClass = SHOP_STATE_CONFIG[variant].groupClass;
+  return (
+    <div className="px-4 py-1.5 border-t border-border/30 bg-muted/20 flex items-center justify-between">
+      <span className={`text-[10px] uppercase tracking-wide font-medium ${colorClass}`}>
+        {label}
+      </span>
+      <span className={`text-[10px] font-medium tabular-nums ${colorClass}`}>
+        {count}
       </span>
     </div>
   );
@@ -916,6 +1210,42 @@ export default function ShoppingWorkspacePage() {
     },
   });
 
+  // Shop status is persisted via shopStatus field on the item
+  const updateShopStatus = useMutation({
+    mutationFn: async ({ id, shopStatus }: { id: number; shopStatus: string | null }) => {
+      const url = buildUrl(api.shoppingList.update.path, { id });
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shopStatus }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    onMutate: async ({ id, shopStatus }) => {
+      await queryClient.cancelQueries({ queryKey: [api.shoppingList.list.path] });
+      const snapshot = queryClient.getQueryData<WorkspaceItem[]>([api.shoppingList.list.path]);
+      queryClient.setQueryData<WorkspaceItem[]>([api.shoppingList.list.path], (old) =>
+        old ? old.map((item) => (item.id === id ? { ...item, shopStatus } : item)) : old,
+      );
+      return { snapshot };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot !== undefined) {
+        queryClient.setQueryData([api.shoppingList.list.path], ctx.snapshot);
+      }
+      toast({ title: "Couldn't update item", variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+    },
+  });
+
+  function handleShopStateChange(itemId: number, state: ShopItemState | null) {
+    updateShopStatus.mutate({ id: itemId, shopStatus: state });
+  }
+
   function handlePrepAction(itemId: number, action: PrepAction) {
     setPrepStates((prev) => {
       const next = new Map(prev);
@@ -933,10 +1263,8 @@ export default function ShoppingWorkspacePage() {
           break;
         case "editConfirm":
           if (current.pantryDecision === "adjusting") {
-            // Pantry adjust confirmed — need to buy with custom quantity
             next.set(itemId, { ...current, pantryDecision: "need_to_buy" });
           } else {
-            // Quantity edit confirmed
             next.set(itemId, { ...current, quantityDecision: "accepted" });
           }
           break;
@@ -951,6 +1279,30 @@ export default function ShoppingWorkspacePage() {
 
   const uncheckedItems = useMemo(() => items.filter((i) => !i.checked), [items]);
   const checkedItems = useMemo(() => items.filter((i) => i.checked), [items]);
+
+  // Shop mode groups — all items, partitioned by shopStatus
+  const shopGroups = useMemo(() => {
+    const need: WorkspaceItem[] = [];
+    const found: WorkspaceItem[] = [];
+    const defer: WorkspaceItem[] = [];
+    const have: WorkspaceItem[] = [];
+    for (const item of items) {
+      const state = getShopState(item);
+      if (state === "found") found.push(item);
+      else if (state === "defer") defer.push(item);
+      else if (state === "have") have.push(item);
+      else need.push(item);
+    }
+    return { need, found, defer, have };
+  }, [items]);
+
+  const shopSummary = useMemo((): ShopSummary => ({
+    needCount: shopGroups.need.length,
+    foundCount: shopGroups.found.length,
+    deferCount: shopGroups.defer.length,
+    haveCount: shopGroups.have.length,
+    total: items.length,
+  }), [shopGroups, items]);
 
   // Prep mode grouping
   const prepGroups = useMemo(() => {
@@ -969,7 +1321,6 @@ export default function ShoppingWorkspacePage() {
     return { pantry, uncertain, attention, ready };
   }, [uncheckedItems, pantryKeySet]);
 
-  // Prep summary for progressive header
   const prepSummary = useMemo((): PrepSummary => {
     const pantryTotal = prepGroups.pantry.length;
     const pantryReviewed = prepGroups.pantry.filter((i) => {
@@ -997,6 +1348,7 @@ export default function ShoppingWorkspacePage() {
 
   function renderRow(item: WorkspaceItem) {
     const isPrepMode = mode === "prep";
+    const isShopMode = mode === "shop";
     return (
       <WorkspaceRow
         key={item.id}
@@ -1007,7 +1359,9 @@ export default function ShoppingWorkspacePage() {
         expanded={expandedId === item.id}
         onToggleExpand={() => handleToggleExpand(item.id)}
         onToggleChecked={(checked) => toggleChecked.mutate({ id: item.id, checked })}
-        shopMode={mode === "shop"}
+        shopMode={isShopMode}
+        shopState={isShopMode ? getShopState(item) : undefined}
+        onShopStateChange={isShopMode ? (state) => handleShopStateChange(item.id, state) : undefined}
         prepMode={isPrepMode}
         prepState={isPrepMode ? (prepStates.get(item.id) ?? {}) : undefined}
         onPrepAction={isPrepMode ? (action) => handlePrepAction(item.id, action) : undefined}
@@ -1039,6 +1393,7 @@ export default function ShoppingWorkspacePage() {
           items={items}
           pantryKeySet={pantryKeySet}
           prepSummary={mode === "prep" ? prepSummary : undefined}
+          shopSummary={mode === "shop" ? shopSummary : undefined}
         />
       )}
 
@@ -1064,8 +1419,8 @@ export default function ShoppingWorkspacePage() {
       ) : (
         <div className="rounded-xl border border-border/50 bg-card/60 overflow-hidden mb-6">
 
-          {/* ── Review / Shop mode: flat list ─────────────────────── */}
-          {(mode === "review" || mode === "shop") && (
+          {/* ── Review mode: flat list ─────────────────────────────── */}
+          {mode === "review" && (
             <>
               {uncheckedItems.length === 0 && checkedItems.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-muted-foreground">
@@ -1083,6 +1438,82 @@ export default function ShoppingWorkspacePage() {
                       </div>
                       {checkedItems.map(renderRow)}
                     </>
+                  )}
+                </>
+              )}
+            </>
+          )}
+
+          {/* ── Shop mode: operational groups ─────────────────────── */}
+          {mode === "shop" && (
+            <>
+              {items.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  Your shopping list is empty.
+                </div>
+              ) : (
+                <>
+                  {/* Still need */}
+                  {shopGroups.need.length > 0 && (
+                    <>
+                      {(shopGroups.found.length > 0 || shopGroups.defer.length > 0 || shopGroups.have.length > 0) && (
+                        <ShopGroupHeader
+                          label="Still need"
+                          count={shopGroups.need.length}
+                          variant="need"
+                        />
+                      )}
+                      {shopGroups.need.map(renderRow)}
+                    </>
+                  )}
+
+                  {/* Found in store */}
+                  {shopGroups.found.length > 0 && (
+                    <>
+                      <ShopGroupHeader
+                        label="Found in store"
+                        count={shopGroups.found.length}
+                        variant="found"
+                      />
+                      {shopGroups.found.map(renderRow)}
+                    </>
+                  )}
+
+                  {/* Buy next shop */}
+                  {shopGroups.defer.length > 0 && (
+                    <>
+                      <ShopGroupHeader
+                        label="Buy next shop"
+                        count={shopGroups.defer.length}
+                        variant="defer"
+                      />
+                      {shopGroups.defer.map(renderRow)}
+                    </>
+                  )}
+
+                  {/* Already have */}
+                  {shopGroups.have.length > 0 && (
+                    <>
+                      <ShopGroupHeader
+                        label="Already have"
+                        count={shopGroups.have.length}
+                        variant="have"
+                      />
+                      {shopGroups.have.map(renderRow)}
+                    </>
+                  )}
+
+                  {/* All accounted for */}
+                  {shopGroups.need.length === 0 && items.length > 0 && (
+                    <div className="px-4 py-4 text-center">
+                      <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto mb-1.5" />
+                      <p className="text-sm font-medium text-foreground">
+                        All items accounted for
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Great shop — nothing left to find
+                      </p>
+                    </div>
                   )}
                 </>
               )}
