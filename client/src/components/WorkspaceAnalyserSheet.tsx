@@ -14,7 +14,7 @@ import {
   ChevronDown, ChevronUp, ShoppingCart, ChefHat,
   Leaf, Loader2, Info, Store, Clock, Check, Package,
   X, ScanLine, Sparkles, Camera, AlertCircle, RefreshCw,
-  Search,
+  Search, History,
 } from "lucide-react";
 import ScoreBadge from "@/components/ui/score-badge";
 import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
@@ -60,6 +60,84 @@ function ratingColor(r: number | null) {
 }
 
 const SECTION_LABEL = "text-[10px] font-medium tracking-[0.12em] uppercase text-muted-foreground/70";
+
+// ── Fulfilment Memory (localStorage — no schema change required) ───────────────
+
+const FULFILMENT_MEMORY_KEY = "tha_fulfilment_memory";
+
+interface FulfilmentMemoryEntry {
+  barcode: string;
+  productName: string;
+  brand: string | null;
+  thaRating: number | null;
+  availableStores: string[];
+  source: "scan" | "search" | "cleaner_option";
+  chosenAt: string;
+}
+
+type FulfilmentMemoryStore = Record<string, FulfilmentMemoryEntry[]>;
+
+function itemMemoryKey(item: ShoppingListItem): string {
+  return (item.normalizedName || item.productName).toLowerCase().trim();
+}
+
+function readFulfilmentMemory(): FulfilmentMemoryStore {
+  try {
+    const raw = localStorage.getItem(FULFILMENT_MEMORY_KEY);
+    return raw ? (JSON.parse(raw) as FulfilmentMemoryStore) : {};
+  } catch {
+    return {};
+  }
+}
+
+function getPreviousChoices(item: ShoppingListItem): FulfilmentMemoryEntry[] {
+  const mem = readFulfilmentMemory();
+  return mem[itemMemoryKey(item)] ?? [];
+}
+
+function saveFulfilmentChoice(
+  item: ShoppingListItem,
+  product: any,
+  source: FulfilmentMemoryEntry["source"],
+): void {
+  try {
+    const name = String(product.product_name ?? "").trim();
+    if (!name) return;
+    const barcode = String(product.barcode ?? name);
+    const mem = readFulfilmentMemory();
+    const key = itemMemoryKey(item);
+    const existing = mem[key] ?? [];
+    const entry: FulfilmentMemoryEntry = {
+      barcode,
+      productName: name,
+      brand: product.brand ?? null,
+      thaRating: product.upfAnalysis?.thaRating ?? product.thaRating ?? null,
+      availableStores: product.availableStores ?? [],
+      source,
+      chosenAt: new Date().toISOString(),
+    };
+    mem[key] = [entry, ...existing.filter((e) => e.barcode !== barcode)].slice(0, 3);
+    localStorage.setItem(FULFILMENT_MEMORY_KEY, JSON.stringify(mem));
+  } catch {
+    // Non-fatal: storage errors must not break the analyser
+  }
+}
+
+function memoryEntryToProduct(entry: FulfilmentMemoryEntry): any {
+  return {
+    barcode: entry.barcode,
+    product_name: entry.productName,
+    brand: entry.brand,
+    availableStores: entry.availableStores,
+    upfAnalysis: { thaRating: entry.thaRating },
+  };
+}
+
+function sourceBadgeLabel(source: FulfilmentMemoryEntry["source"]): string {
+  if (source === "scan") return "Previously scanned";
+  if (source === "search") return "Previously chosen via search";
+  return "Previously selected cleaner option";
+}
 
 // ── Scan types ────────────────────────────────────────────────────────────────
 
@@ -117,6 +195,9 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
   const [manualSearchError, setManualSearchError] = useState(false);
   const manualSearchRef = useRef<HTMLDivElement>(null);
 
+  // Fulfilment memory — previous choices for this item
+  const [previousChoices, setPreviousChoices] = useState<FulfilmentMemoryEntry[]>([]);
+
   useEffect(() => {
     if (open && item) {
       setProducts([]);
@@ -129,6 +210,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
       setIsManualSearching(false);
       setManualSearchDone(false);
       setManualSearchError(false);
+      setPreviousChoices(getPreviousChoices(item));
       doSearch(item.productName);
     }
   }, [open, item?.id]);
@@ -151,7 +233,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
   }
 
   // Link a better product to the shopping list item without renaming the shopping intent
-  async function handleSelectBetterOption(product: any) {
+  async function handleSelectBetterOption(product: any, source: FulfilmentMemoryEntry["source"] = "cleaner_option") {
     if (!item) return;
     const storesArray: string[] = product.availableStores || [];
     const productThaRating = product.upfAnalysis?.thaRating ?? null;
@@ -173,6 +255,8 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
       if (!res.ok) throw new Error("Failed");
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
       setSelectedBarcode(product.barcode ?? null);
+      saveFulfilmentChoice(item, product, source);
+      setPreviousChoices(getPreviousChoices(item));
       toast({ title: "Better option noted", description: `Linked to "${product.product_name}" — your list item name is unchanged.` });
     } catch {
       toast({ title: "Couldn't save selection", variant: "destructive" });
@@ -269,6 +353,8 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
       if (!res.ok) throw new Error("Failed");
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
       setSelectedBarcode(product.barcode ?? null);
+      saveFulfilmentChoice(item, product, "search");
+      setPreviousChoices(getPreviousChoices(item));
       toast({ title: "Updated product choice", description: "Your list item name is unchanged." });
     } catch {
       toast({ title: "Couldn't save selection", variant: "destructive" });
@@ -394,6 +480,28 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
               </CardContent>
             </Card>
           </div>
+
+          {/* ── Previous fulfilments ──────────────────────────────────────── */}
+          {previousChoices.length > 0 && (
+            <div data-testid="analyser-previous-fulfilments">
+              <p className={`${SECTION_LABEL} mb-2 flex items-center gap-1.5`}>
+                <History className="h-3 w-3" />
+                Previous fulfilments
+              </p>
+              <div className="space-y-2">
+                {previousChoices.slice(0, 2).map((entry, idx) => (
+                  <PreviousFulfilmentCard
+                    key={`${entry.barcode}-${idx}`}
+                    entry={entry}
+                    currentItem={item}
+                    selectedBarcode={selectedBarcode}
+                    onSelect={() => handleSelectBetterOption(memoryEntryToProduct(entry), entry.source)}
+                    idx={idx}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ── Cleaner shop option ────────────────────────────────────── */}
           <div data-testid="analyser-cleaner-options">
@@ -602,7 +710,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
                 currentRating={item.thaRating ?? null}
                 currentProductName={item.productName}
                 selectedBarcode={selectedBarcode}
-                onSelect={() => handleSelectBetterOption(scannedProduct.raw)}
+                onSelect={() => handleSelectBetterOption(scannedProduct.raw, "scan")}
                 onRetry={() => { setScanState("idle"); setScannedProduct(null); }}
               />
             )}
@@ -919,6 +1027,70 @@ function ManualSearchResultCard({
             Fulfilment updated. Your list item "{capitalizeWords(currentProductName)}" is unchanged.
           </p>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── PreviousFulfilmentCard ────────────────────────────────────────────────────
+
+function PreviousFulfilmentCard({
+  entry,
+  currentItem,
+  selectedBarcode,
+  onSelect,
+  idx,
+}: {
+  entry: FulfilmentMemoryEntry;
+  currentItem: ShoppingListItem;
+  selectedBarcode: string | null;
+  onSelect: () => void;
+  idx: number;
+}) {
+  const isSelected = selectedBarcode === entry.barcode;
+
+  return (
+    <Card className="border-border/60 bg-muted/10" data-testid={`analyser-previous-fulfilment-${idx}`}>
+      <CardContent className="p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-sm leading-snug truncate">{entry.productName}</p>
+            {entry.brand && <p className="text-xs text-muted-foreground">{entry.brand}</p>}
+            <div className="mt-1.5 flex flex-wrap gap-1">
+              <Badge className="text-[10px] bg-muted/60 text-muted-foreground border-border/60 no-default-hover-elevate">
+                <History className="h-2.5 w-2.5 mr-1" />
+                {sourceBadgeLabel(entry.source)}
+              </Badge>
+            </div>
+            {entry.availableStores.length > 0 && (
+              <div className="flex items-center gap-1 mt-1.5 flex-wrap">
+                <Store className="h-3 w-3 text-muted-foreground shrink-0" />
+                {entry.availableStores.map((s) => (
+                  <Badge key={s} variant="outline" className="text-[10px] no-default-hover-elevate">{s}</Badge>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            {entry.thaRating !== null && <ScoreBadge score={entry.thaRating} size={26} />}
+            {isSelected ? (
+              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <Check className="h-3 w-3" />Chosen
+              </span>
+            ) : (
+              <button
+                onClick={onSelect}
+                className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted/40 text-foreground border border-border/60 hover:bg-muted/60 active:bg-muted/80 transition-colors touch-manipulation"
+                data-testid={`analyser-previous-select-${idx}`}
+              >
+                Use again
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground/50 mt-2 leading-relaxed">
+          Your list item "{capitalizeWords(currentItem.productName)}" will remain unchanged.
+        </p>
       </CardContent>
     </Card>
   );
