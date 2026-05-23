@@ -1975,7 +1975,7 @@ export class DatabaseStorage implements IStorage {
       console.warn(`[Pantry Seed] No household for user ${userId}, skipping food pantry seed`);
       return;
     }
-    const defaults: { name: string; category: "larder" | "fridge" | "freezer" | "fruit"; sortOrder: number }[] = [
+    const defaults: { name: string; category: "larder" | "fridge" | "freezer" | "household" | "fruit" | "pet"; sortOrder: number }[] = [
       // FRIDGE
       { name: "Milk", category: "fridge", sortOrder: 0 },
       { name: "Butter", category: "fridge", sortOrder: 1 },

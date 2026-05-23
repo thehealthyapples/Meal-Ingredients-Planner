@@ -7012,7 +7012,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const schema = z.object({
         ingredient: z.string().min(1),
         displayName: z.string().optional(),
-        category: z.enum(["larder", "fridge", "freezer", "household"]),
+        category: z.enum(["larder", "fridge", "freezer", "household", "fruit", "pet"]),
         notes: z.string().optional(),
       });
       const { ingredient, displayName, category, notes } = schema.parse(req.body);

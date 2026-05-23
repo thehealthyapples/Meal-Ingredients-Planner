@@ -1084,6 +1084,14 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-05-23_add_pet_pantry_category",
+    statements: [
+      "ALTER TABLE user_pantry_items DROP CONSTRAINT IF EXISTS user_pantry_items_category_check",
+      "ALTER TABLE user_pantry_items ADD CONSTRAINT user_pantry_items_category_check CHECK (category IN ('larder','fridge','freezer','household','fruit','pet'))",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
