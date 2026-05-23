@@ -851,9 +851,10 @@ function ModeSwitcher({
           onClick={() => onChange(id)}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
             mode === id
-              ? "bg-background text-foreground shadow-sm"
+              ? "shadow-sm"
               : "text-muted-foreground hover:text-foreground"
           }`}
+          style={mode === id ? { backgroundColor: "var(--realm-bg)", color: "var(--realm-text)" } : undefined}
           data-testid={`ws-mode-${id}`}
         >
           <Icon className="h-3.5 w-3.5" />
