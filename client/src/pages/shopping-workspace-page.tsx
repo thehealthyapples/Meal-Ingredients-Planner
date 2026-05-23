@@ -379,27 +379,27 @@ function PrepActionPanel({
 
     if (!prepState.quantityDecision) {
       return (
-        <div className="rounded-lg bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 p-3 space-y-2.5">
-          <p className="text-xs font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+        <div className="space-y-1">
+          <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
+            <AlertTriangle className="h-3 w-3 shrink-0" />
             {estimateLabel} — confirm before shopping
           </p>
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-1.5 flex-wrap">
             <button
               onClick={() => onPrepAction({ type: "quantity", decision: "accepted" })}
-              className="flex-1 min-w-[100px] px-3 py-2.5 text-xs font-medium rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-500/20 active:bg-emerald-500/30 transition-colors"
+              className="px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-500/20 active:bg-emerald-500/30 transition-colors touch-manipulation"
             >
               Accept estimate
             </button>
             <button
               onClick={() => onPrepAction({ type: "quantity", decision: "editing" })}
-              className="flex-1 min-w-[100px] px-3 py-2.5 text-xs font-medium rounded-lg bg-muted/60 text-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors"
+              className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted/60 text-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors touch-manipulation"
             >
               Edit quantity
             </button>
             <button
               onClick={() => onPrepAction({ type: "quantity", decision: "later" })}
-              className="flex-1 min-w-[100px] px-3 py-2.5 text-xs font-medium rounded-lg bg-muted/60 text-muted-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors"
+              className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted/60 text-muted-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors touch-manipulation"
             >
               Mark for later
             </button>
