@@ -662,58 +662,82 @@ function WorkspaceRow({
 
       {/* ── Review / Prep mode collapsed row ─────────────────────── */}
       {!shopMode && (
-        <div className="flex items-center gap-3 px-4 py-3 min-h-[52px]">
-          <Checkbox
-            checked={item.checked || false}
-            onCheckedChange={(v) => onToggleChecked(!!v)}
-            className="border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground shrink-0"
-            data-testid={`ws-checkbox-${item.id}`}
-          />
+        <div className="px-4 py-3 min-h-[52px]">
+          {/* Main row line */}
+          <div className="flex items-center gap-3">
+            <Checkbox
+              checked={item.checked || false}
+              onCheckedChange={(v) => onToggleChecked(!!v)}
+              className="border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground shrink-0"
+              data-testid={`ws-checkbox-${item.id}`}
+            />
 
-          <button
-            className="flex-1 min-w-0 flex items-center gap-2 text-left group"
-            onClick={onToggleExpand}
-            data-testid={`ws-row-expand-${item.id}`}
-          >
-            <div className="flex-1 min-w-0">
-              <span
-                className={`text-sm font-medium leading-snug block truncate ${
-                  item.checked ? "line-through text-muted-foreground" : "text-foreground"
-                }`}
-              >
-                {capitalizeWords(item.productName)}
-              </span>
-
-              <div className="flex items-center gap-2 mt-0.5">
-                {item.quantityValue != null && (
-                  <span className="text-xs text-muted-foreground">
-                    {formatItemDisplay(item.productName, item.quantityValue, item.unit, measurementPref)
-                      .split(" — ")[1] ?? ""}
-                  </span>
-                )}
-                {hint && !item.checked && (
-                  <span className={`text-xs ${hintToneClass} flex items-center gap-0.5`}>
-                    {hint.tone === "amber" && <AlertTriangle className="h-3 w-3 shrink-0" />}
-                    {hint.tone === "green" && <CheckCircle2 className="h-3 w-3 shrink-0" />}
-                    {hint.text}
+            {/* Name + qty inline — clicking expands */}
+            <button
+              className="flex-1 min-w-0 text-left"
+              onClick={onToggleExpand}
+              data-testid={`ws-row-expand-${item.id}`}
+            >
+              <div className="flex items-baseline gap-1.5 min-w-0">
+                <span
+                  className={`text-sm font-medium leading-snug truncate ${
+                    item.checked ? "line-through text-muted-foreground" : "text-foreground"
+                  }`}
+                >
+                  {capitalizeWords(item.productName)}
+                </span>
+                {qtyLabel && (
+                  <span className={`text-xs tabular-nums shrink-0 whitespace-nowrap ${
+                    item.checked ? "text-muted-foreground/50" : "text-muted-foreground"
+                  }`}>
+                    {qtyLabel}
                   </span>
                 )}
               </div>
-            </div>
+              {hint && !item.checked && (
+                <div className="flex items-center gap-0.5 mt-0.5">
+                  {hint.tone === "amber" && <AlertTriangle className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />}
+                  {hint.tone === "green" && <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" />}
+                  <span className={`text-xs ${hintToneClass}`}>{hint.text}</span>
+                </div>
+              )}
+            </button>
 
-            <div className="flex items-center self-center gap-2 shrink-0">
+            {/* Analyse — row-level CTA for review mode */}
+            {!prepMode && !item.checked && onOpenAnalyser && (
+              <button
+                onClick={onOpenAnalyser}
+                className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-border/50 bg-muted/40 hover:bg-muted text-foreground/80 transition-colors touch-manipulation whitespace-nowrap"
+                data-testid={`ws-analyse-btn-${item.id}`}
+              >
+                <FlaskConical className="h-3 w-3 shrink-0" />
+                Analyse
+              </button>
+            )}
+
+            {/* Score + chevron */}
+            <button
+              onClick={onToggleExpand}
+              className="self-center flex items-center gap-1.5 shrink-0 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            >
               {item.thaRating != null && !item.checked && (
                 <ScoreBadge score={item.thaRating} size={22} />
               )}
-              <span className="text-muted-foreground/50 group-hover:text-muted-foreground transition-colors">
-                {expanded ? (
-                  <ChevronUp className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </span>
+              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </button>
+          </div>
+
+          {/* Prep actions — inline, visible without expansion */}
+          {prepMode && !item.checked && onPrepAction && (
+            <div className="mt-2 ml-7">
+              <PrepActionPanel
+                item={item}
+                isPantryStocked={isPantryStocked}
+                prepState={prepState ?? {}}
+                onPrepAction={onPrepAction}
+              />
             </div>
-          </button>
+          )}
         </div>
       )}
 
@@ -730,25 +754,7 @@ function WorkspaceRow({
           >
             <div className="px-4 pb-4 pt-2 space-y-3 border-t border-border/20 ml-9">
 
-              {/* ── Shop action panel (shop mode only) ───────────── */}
-              {shopMode && onShopStateChange && (
-                <ShopActionPanel
-                  shopState={effectiveShopState}
-                  onShopStateChange={onShopStateChange}
-                />
-              )}
-
-              {/* ── Prep action panel (prep mode only) ───────────── */}
-              {prepMode && onPrepAction && (
-                <PrepActionPanel
-                  item={item}
-                  isPantryStocked={isPantryStocked}
-                  prepState={prepState ?? {}}
-                  onPrepAction={onPrepAction}
-                />
-              )}
-
-              {/* ── Pantry note (review mode) ─────────────────────── */}
+              {/* Pantry note (review mode) */}
               {!prepMode && !shopMode && isPantryStocked && (
                 <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
                   <Home className="h-3.5 w-3.5 shrink-0" />
@@ -791,20 +797,22 @@ function WorkspaceRow({
                 </div>
               )}
 
-              {/* Analyser access */}
-              <div className="flex items-center gap-2 pt-1 border-t border-border/20">
-                <FlaskConical className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <button
-                  onClick={onOpenAnalyser}
-                  className="text-xs text-primary hover:underline touch-manipulation"
-                  data-testid={`ws-analyse-btn-${item.id}`}
-                >
-                  Analyse
-                </button>
-                <span className="text-[10px] text-muted-foreground/60">
-                  · THA score, cleaner options, whole-food route
-                </span>
-              </div>
+              {/* Analyser — secondary access for prep/shop (review shows it inline in the row) */}
+              {(prepMode || shopMode) && (
+                <div className="flex items-center gap-2 pt-1 border-t border-border/20">
+                  <FlaskConical className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <button
+                    onClick={onOpenAnalyser}
+                    className="text-xs text-primary hover:underline touch-manipulation"
+                    data-testid={`ws-analyse-btn-expanded-${item.id}`}
+                  >
+                    Analyse
+                  </button>
+                  <span className="text-[10px] text-muted-foreground/60">
+                    · THA score, cleaner options, whole-food route
+                  </span>
+                </div>
+              )}
 
             </div>
           </motion.div>
