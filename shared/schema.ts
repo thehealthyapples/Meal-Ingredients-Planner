@@ -930,6 +930,8 @@ export const userPantryItems = pgTable("user_pantry_items", {
   isDeleted: boolean("is_deleted").notNull().default(false),
   sortOrder: integer("sort_order").notNull().default(0),
   notes: text("notes"),
+  needQuantityValue: real("need_quantity_value"),
+  needUnit: text("need_unit"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

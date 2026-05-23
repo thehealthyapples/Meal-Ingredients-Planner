@@ -1092,6 +1092,14 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-05-23_add_pantry_need_quantity",
+    statements: [
+      "ALTER TABLE user_pantry_items ADD COLUMN IF NOT EXISTS need_quantity_value REAL",
+      "ALTER TABLE user_pantry_items ADD COLUMN IF NOT EXISTS need_unit TEXT",
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

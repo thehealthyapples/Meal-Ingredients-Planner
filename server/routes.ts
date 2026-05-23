@@ -7014,9 +7014,11 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         displayName: z.string().optional(),
         category: z.enum(["larder", "fridge", "freezer", "household", "fruit", "pet"]),
         notes: z.string().optional(),
+        needQuantityValue: z.number().positive().finite().optional().nullable(),
+        needUnit: z.string().max(32).optional().nullable(),
       });
-      const { ingredient, displayName, category, notes } = schema.parse(req.body);
-      const item = await storage.addPantryItem(req.user!.id, ingredient, category, notes, displayName ?? ingredient);
+      const { ingredient, displayName, category, notes, needQuantityValue, needUnit } = schema.parse(req.body);
+      const item = await storage.addPantryItem(req.user!.id, ingredient, category, notes, displayName ?? ingredient, undefined, needQuantityValue ?? null, needUnit ?? null);
       res.status(201).json(item);
 
       const _piUserId = req.user!.id;
@@ -7037,6 +7039,26 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       }
       console.error("[Pantry] POST error:", err);
       res.status(500).json({ message: "Failed to add pantry item" });
+    }
+  });
+
+  app.patch("/api/pantry/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid id" });
+      const schema = z.object({
+        needQuantityValue: z.number().positive().finite().nullable(),
+        needUnit: z.string().max(32).nullable(),
+      });
+      const { needQuantityValue, needUnit } = schema.parse(req.body);
+      const updated = await storage.updatePantryItemQuantity(req.user!.id, id, needQuantityValue, needUnit);
+      if (!updated) return res.status(404).json({ message: "Item not found" });
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      console.error("[Pantry] PATCH error:", err);
+      res.status(500).json({ message: "Failed to update pantry item" });
     }
   });
 

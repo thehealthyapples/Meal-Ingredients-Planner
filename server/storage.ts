@@ -205,7 +205,8 @@ export interface IStorage {
 
   // ── Pantry Staples ───────────────────────────────────────────────────────────
   getPantryItems(userId: number): Promise<UserPantryItem[]>;
-  addPantryItem(userId: number, ingredient: string, category: string, notes?: string, displayName?: string, isDefault?: boolean): Promise<UserPantryItem>;
+  addPantryItem(userId: number, ingredient: string, category: string, notes?: string, displayName?: string, isDefault?: boolean, needQuantityValue?: number | null, needUnit?: string | null): Promise<UserPantryItem>;
+  updatePantryItemQuantity(userId: number, id: number, needQuantityValue: number | null, needUnit: string | null): Promise<UserPantryItem | null>;
   deletePantryItem(userId: number, id: number): Promise<void>;
   seedDefaultHouseholdItems(userId: number): Promise<void>;
   seedDefaultFoodPantryItems(userId: number): Promise<void>;
@@ -1893,7 +1894,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(userPantryItems.sortOrder, userPantryItems.createdAt);
   }
 
-  async addPantryItem(userId: number, ingredient: string, category: string, notes?: string, displayName?: string, isDefault?: boolean): Promise<UserPantryItem> {
+  async addPantryItem(userId: number, ingredient: string, category: string, notes?: string, displayName?: string, isDefault?: boolean, needQuantityValue?: number | null, needUnit?: string | null): Promise<UserPantryItem> {
     const householdId = await getHouseholdForUser(userId);
     const ingredientKey = normalizeIngredientKey(ingredient);
     const [item] = await db
@@ -1907,9 +1908,21 @@ export class DatabaseStorage implements IStorage {
         notes: notes ?? null,
         isDefault: isDefault ?? false,
         isDeleted: false,
+        needQuantityValue: needQuantityValue ?? null,
+        needUnit: needUnit ?? null,
       })
       .returning();
     return item;
+  }
+
+  async updatePantryItemQuantity(userId: number, id: number, needQuantityValue: number | null, needUnit: string | null): Promise<UserPantryItem | null> {
+    const householdId = await getHouseholdForUser(userId);
+    const [updated] = await db
+      .update(userPantryItems)
+      .set({ needQuantityValue, needUnit })
+      .where(and(eq(userPantryItems.id, id), eq(userPantryItems.householdId, householdId), eq(userPantryItems.isDeleted, false)))
+      .returning();
+    return updated ?? null;
   }
 
   async deletePantryItem(userId: number, id: number): Promise<void> {
