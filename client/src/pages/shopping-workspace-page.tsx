@@ -91,7 +91,7 @@ const MODES: Array<{
   helper: string;
 }> = [
   { id: "review", label: "Review", Icon: ClipboardList, helper: "Check your list before you go" },
-  { id: "prep", label: "Prep", Icon: Home, helper: "Review pantry items and confirm quantities" },
+  { id: "prep", label: "Prep", Icon: Home, helper: "Check what you have at home and confirm quantities" },
   { id: "shop", label: "Shop", Icon: ShoppingCart, helper: "In-store — track what you find, skip, or already have" },
 ];
 
@@ -233,12 +233,12 @@ function getOperationalHint(
 ): { text: string; tone: "amber" | "green" | "muted" } | null {
   if (isPantryStocked) {
     if (prepState?.pantryDecision === "have_enough") {
-      return { text: "Pantry reviewed", tone: "green" };
+      return { text: "Checked at home", tone: "green" };
     }
     if (prepState?.pantryDecision === "need_to_buy") {
       return null;
     }
-    return { text: "Pantry item", tone: "amber" };
+    return { text: "Have you run out of this?", tone: "amber" };
   }
 
   if (prepState?.quantityDecision === "accepted") {
@@ -343,7 +343,7 @@ function PrepActionPanel({
         <div className="flex items-center gap-2 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-800/30 px-3 py-2.5">
           <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
-            Pantry reviewed — have enough
+            Checked at home — have enough
           </span>
           <button
             onClick={() => onPrepAction({ type: "clear" })}
@@ -363,7 +363,7 @@ function PrepActionPanel({
         <div className="flex items-center gap-2 rounded-lg bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-800/30 px-3 py-2.5">
           <ShoppingBag className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
           <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
-            Pantry reviewed{adjustedLabel || " — buying this"}
+            Checked at home{adjustedLabel || " — buying this"}
           </span>
           <button
             onClick={() => onPrepAction({ type: "clear" })}
@@ -726,7 +726,7 @@ function WorkspaceRow({
               {!prepMode && !shopMode && isPantryStocked && (
                 <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
                   <Home className="h-3.5 w-3.5 shrink-0" />
-                  <span>Pantry item — check at home before buying</span>
+                  <span>Usually at home — check before buying</span>
                 </div>
               )}
 
@@ -963,7 +963,7 @@ function SummaryBar({
         {pantryCount > 0 && (
           <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
             <Home className="h-3.5 w-3.5" />
-            {pantryCount} pantry items
+            {pantryCount} to check at home
           </span>
         )}
       </div>
@@ -1549,7 +1549,7 @@ export default function ShoppingWorkspacePage() {
               {prepGroups.pantry.length > 0 && (
                 <>
                   <PrepGroupHeader
-                    label="Pantry items — check at home"
+                    label="Check at home first"
                     count={prepGroups.pantry.length}
                     resolvedCount={prepSummary.pantryReviewed}
                   />
