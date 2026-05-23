@@ -526,7 +526,7 @@ function WorkspaceRow({
     >
       {/* ── Shop mode collapsed row ───────────────────────────────── */}
       {shopMode && (
-        <div className="grid grid-cols-[20px_minmax(2.75rem,auto)_1fr_auto_auto] items-center gap-x-2 px-4 py-3 min-h-[52px]">
+        <div className="grid grid-cols-[20px_minmax(2.75rem,auto)_1fr_auto_2.75rem] items-center gap-x-2 px-4 py-3 min-h-[52px]">
 
           {/* Col 1 — state circle, centred in its cell */}
           <button
@@ -604,7 +604,7 @@ function WorkspaceRow({
           {/* Col 5 — apple score + chevron (pinned right) */}
           <button
             onClick={onToggleExpand}
-            className="self-center flex items-center gap-1.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+            className="self-center flex items-center justify-end gap-1.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
           >
             {item.thaRating != null && <ScoreBadge score={item.thaRating} size={22} />}
             {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
