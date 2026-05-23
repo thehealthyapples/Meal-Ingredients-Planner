@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearch } from "wouter";
 import { useUser } from "@/hooks/use-user";
@@ -15,7 +15,8 @@ import {
   ChevronDown, ChevronUp, ShoppingBasket,
   FlaskConical, Leaf, AlertTriangle, Home, UtensilsCrossed,
   CheckCircle2, ClipboardList, ShoppingCart, ShoppingBag, Clock,
-  RefreshCw, Scale,
+  RefreshCw, Scale, Search, ScanLine, Maximize2, Minimize2,
+  Download, ExternalLink, Trash2, Columns2, Copy, Store, Check,
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +28,30 @@ import { motion, AnimatePresence } from "framer-motion";
 import { WorkspaceAnalyserSheet } from "@/components/WorkspaceAnalyserSheet";
 import { PageHeader } from "@/components/PageHeader";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import RetailerLogo from "@/components/RetailerLogo";
+import { CameraModal } from "@/components/camera-modal";
+import { ShoppingListScanReview, type ShoppingListScanData } from "@/components/ShoppingListScanReview";
+
+const SUPERMARKET_NAMES = ["Tesco", "Sainsbury's", "Asda", "Morrisons", "Aldi", "Lidl", "Waitrose", "Marks & Spencer", "Ocado"];
+
+const SUPERMARKET_SEARCH_URLS: Record<string, string> = {
+  "Tesco": "https://www.tesco.com/groceries/en-GB/search?query={query}",
+  "Sainsbury's": "https://www.sainsburys.co.uk/gol-ui/SearchDisplayView?filters[keyword]={query}",
+  "Asda": "https://groceries.asda.com/search/{query}",
+  "Morrisons": "https://groceries.morrisons.com/search?entry={query}",
+  "Waitrose": "https://www.waitrose.com/ecom/shop/search?&searchTerm={query}",
+  "Ocado": "https://www.ocado.com/search?entry={query}",
+  "Aldi": "https://www.aldi.co.uk/search?q={query}",
+  "Lidl": "https://www.lidl.co.uk/p/q/{query}",
+  "Marks & Spencer": "https://www.marksandspencer.com/l/food-and-wine?q={query}",
+};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1059,6 +1084,28 @@ export default function ShoppingWorkspacePage() {
   const [prepStates, setPrepStates] = useState<Map<number, PrepItemState>>(new Map());
   const [analyserItem, setAnalyserItem] = useState<WorkspaceItem | null>(null);
 
+  // ── Parity features (ported from old Basket page) ──────────────────────────
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [splitByShop, setSplitByShop] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportSupermarket, setExportSupermarket] = useState("Tesco");
+  const [basketDialogOpen, setBasketDialogOpen] = useState(false);
+  const [basketSending, setBasketSending] = useState<string | null>(null);
+  const [basketResult, setBasketResult] = useState<{
+    supermarket: string;
+    itemUrls: { name: string; url: string }[];
+    matchedCount: number;
+    totalCount: number;
+    estimatedTotal?: number;
+    message?: string;
+  } | null>(null);
+  const [slScanLoading, setSlScanLoading] = useState(false);
+  const [slScanData, setSlScanData] = useState<ShoppingListScanData | null>(null);
+  const [slReviewOpen, setSlReviewOpen] = useState(false);
+  const [slCameraOpen, setSlCameraOpen] = useState(false);
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  const slFileRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     document.title = "Shopping – The Healthy Apples";
     return () => { document.title = "The Healthy Apples"; };
@@ -1073,6 +1120,12 @@ export default function ShoppingWorkspacePage() {
       setExpandedId(null);
     }
   }, [search]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape" && isFullscreen) setIsFullscreen(false); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [isFullscreen]);
 
   const measurementPref: "metric" | "imperial" =
     (user?.measurementPreference as "metric" | "imperial") || "metric";
@@ -1209,6 +1262,149 @@ export default function ShoppingWorkspacePage() {
     },
   });
 
+  const lookupPrices = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(api.shoppingList.lookupPrices.path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to match");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      toast({ title: "Products Matched", description: "Real grocery products matched across supermarkets." });
+    },
+    onError: () => toast({ title: "Could not match products", variant: "destructive" }),
+  });
+
+  const clearAll = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(api.shoppingList.clear.path, { method: "DELETE", credentials: "include" });
+      if (!res.ok) throw new Error("Failed to clear");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      toast({ title: "Shopping list cleared" });
+      setClearDialogOpen(false);
+    },
+    onError: () => toast({ title: "Failed to clear list", variant: "destructive" }),
+  });
+
+  const { data: enhancedSupermarkets = [] } = useQuery<{
+    name: string; key: string; hasDirectBasket: boolean;
+  }[]>({
+    queryKey: ["/api/basket/supermarkets-enhanced"],
+  });
+  const primarySupermarkets = enhancedSupermarkets.filter((s) => s.hasDirectBasket);
+  const otherSupermarkets = enhancedSupermarkets.filter((s) => !s.hasDirectBasket);
+
+  const handleShoppingListScan = async (file: File) => {
+    setSlScanLoading(true);
+    const scanId = Math.random().toString(36).slice(2, 10);
+    const formData = new FormData();
+    formData.append("image", file);
+    formData.append("mode", "shopping_list");
+    try {
+      const res = await fetch("/api/scan", {
+        method: "POST", body: formData, credentials: "include",
+        headers: { "X-Scan-Id": scanId },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ variant: "destructive", title: "Scan failed", description: data.message || "Could not read image." });
+        return;
+      }
+      setSlScanData(data as ShoppingListScanData);
+      setSlReviewOpen(true);
+    } catch {
+      toast({ variant: "destructive", title: "Scan failed", description: "Could not connect. Please try again." });
+    } finally {
+      setSlScanLoading(false);
+      if (slFileRef.current) slFileRef.current.value = "";
+    }
+  };
+
+  const handleExport = (format: "list" | "links" | "copy") => {
+    const lines: string[] = [];
+    lines.push(`Shopping List — ${new Date().toLocaleDateString()}`);
+    lines.push(`Supermarket: ${exportSupermarket}`);
+    lines.push("");
+    for (const item of items) {
+      const display = formatItemDisplay(item.productName, item.quantityValue, item.unit, measurementPref);
+      const parts = display.split(" — ");
+      const qty = parts[1] ?? "";
+      lines.push(`${capitalizeWords(item.productName)}${qty ? ` | ${qty}` : ""}`);
+    }
+    const text = lines.join("\n");
+    if (format === "copy") {
+      navigator.clipboard.writeText(text).then(
+        () => toast({ title: "Copied to clipboard" }),
+        () => toast({ title: "Copy failed", variant: "destructive" }),
+      );
+    } else if (format === "list") {
+      const blob = new Blob([text], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `shopping-list-${exportSupermarket.toLowerCase().replace(/[^a-z0-9]/g, "-")}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: "Downloaded", description: `List saved for ${exportSupermarket}.` });
+    } else {
+      const searchBase = SUPERMARKET_SEARCH_URLS[exportSupermarket];
+      if (!searchBase) {
+        toast({ title: "No search URL", description: "Try Download List instead.", variant: "destructive" });
+        return;
+      }
+      items.slice(0, 10).forEach((item) => {
+        window.open(searchBase.replace("{query}", encodeURIComponent(item.productName)), "_blank");
+      });
+      if (items.length > 10) {
+        toast({ title: "Opened first 10 items", description: `${items.length - 10} more — use Download List for the full list.` });
+      }
+    }
+    setExportDialogOpen(false);
+  };
+
+  const handleSendBasket = async (supermarket: string) => {
+    if (items.length === 0) {
+      toast({ title: "Empty list", description: "Add items first.", variant: "destructive" });
+      return;
+    }
+    setBasketSending(supermarket);
+    setBasketResult(null);
+    try {
+      const res = await fetch("/api/basket/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ supermarket }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      const result = await res.json();
+      if (result.success && result.itemUrls?.length > 0) {
+        setBasketResult(result);
+        result.itemUrls.slice(0, 8).forEach((item: { url: string }) => window.open(item.url, "_blank"));
+        const opened = Math.min(result.itemUrls.length, 8);
+        const remaining = result.itemUrls.length - opened;
+        toast({
+          title: `${result.supermarket} Basket`,
+          description: remaining > 0
+            ? `Opened ${opened} of ${result.itemUrls.length} items.`
+            : `Opened ${opened} product pages.`,
+        });
+      } else {
+        toast({ title: "Could not send", description: result.message || "Unable to create basket.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: `Couldn't send to ${supermarket}`, variant: "destructive" });
+    } finally {
+      setBasketSending(null);
+    }
+  };
+
   function handleShopStateChange(itemId: number, state: ShopItemState | null) {
     updateShopStatus.mutate({ id: itemId, shopStatus: toServerShopStatus(state) });
   }
@@ -1269,9 +1465,13 @@ export default function ShoppingWorkspacePage() {
     [shopGroups.need],
   );
 
-  // Review unchecked items grouped by the same in-store category structure
+  // Review unchecked items: grouped by in-store category (default) or flat A–Z when splitByShop is on
   const reviewUncheckedByCategory = useMemo(
     () => groupByStoreCategory(uncheckedItems),
+    [uncheckedItems],
+  );
+  const reviewUncheckedAlpha = useMemo(
+    () => [...uncheckedItems].sort((a, b) => a.productName.localeCompare(b.productName)),
     [uncheckedItems],
   );
 
@@ -1351,47 +1551,128 @@ export default function ShoppingWorkspacePage() {
 
   const currentMode = MODES.find((m) => m.id === mode)!;
 
+  const menuDropdown = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="flex items-center justify-center h-[52px] w-[52px] rounded-lg transition-colors hover:bg-accent/60"
+          data-testid="button-workspace-menu"
+        >
+          <img src={thaAppleSrc} alt="Menu" className="h-[48px] w-[48px] object-contain" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuItem
+          onClick={() => lookupPrices.mutate()}
+          disabled={lookupPrices.isPending || items.length === 0}
+          data-testid="button-lookup-prices"
+        >
+          {lookupPrices.isPending ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+          {lookupPrices.isPending ? "Matching products…" : "Match Products"}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setSplitByShop((v) => !v)} data-testid="toggle-split-by-shop">
+          <Columns2 className="h-4 w-4 mr-2" />
+          Split by shop
+          {splitByShop && <Check className="h-3.5 w-3.5 ml-auto text-primary" />}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => setSlCameraOpen(true)}
+          disabled={slScanLoading}
+          data-testid="button-scan-shopping-list"
+        >
+          {slScanLoading ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <ScanLine className="h-4 w-4 mr-2" />}
+          {slScanLoading ? "Scanning…" : "Scan list"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => setIsFullscreen((v) => !v)} data-testid="button-fullscreen-toggle">
+          {isFullscreen ? <Minimize2 className="h-4 w-4 mr-2" /> : <Maximize2 className="h-4 w-4 mr-2" />}
+          {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => togglePreference.mutate()}
+          disabled={togglePreference.isPending}
+          data-testid="button-toggle-units"
+        >
+          <Scale className="h-4 w-4 mr-2" />
+          {measurementPref === "metric" ? "Switch to Imperial" : "Switch to Metric"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => setBasketDialogOpen(true)}
+          disabled={items.length === 0}
+          data-testid="button-send-to-supermarket"
+        >
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          Send to Supermarket
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setExportDialogOpen(true)}
+          disabled={items.length === 0}
+          data-testid="button-export-list"
+        >
+          <Download className="h-4 w-4 mr-2" />
+          Export / Download
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => recalculateScores.mutate()}
+          disabled={recalculateScores.isPending}
+          data-testid="button-recalculate-scores"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${recalculateScores.isPending ? "animate-spin" : ""}`} />
+          {recalculateScores.isPending ? "Recalculating…" : "Recalculate Scores"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <Link href="/shopping" asChild>
+          <DropdownMenuItem data-testid="button-open-basket">
+            <ShoppingBasket className="h-4 w-4 mr-2 text-primary/70" />
+            <span className="flex-1">Basket</span>
+          </DropdownMenuItem>
+        </Link>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => setClearDialogOpen(true)}
+          disabled={items.length === 0}
+          className="text-destructive focus:text-destructive"
+          data-testid="button-clear-all"
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Clear List…
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
     <>
-      <PageHeader
-        title="Shopping"
-        icon={<ShoppingBasket className="h-5 w-5" />}
-        realm="basket"
-        center={<ModeSwitcher mode={mode} onChange={(m) => { setMode(m); setExpandedId(null); }} />}
-        meta={<span>{currentMode.helper}</span>}
-        actions={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="flex items-center justify-center h-[52px] w-[52px] rounded-lg transition-colors hover:bg-accent/60"
-                data-testid="button-workspace-menu"
-              >
-                <img src={thaAppleSrc} alt="Menu" className="h-[48px] w-[48px] object-contain" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem
-                onClick={() => recalculateScores.mutate()}
-                disabled={recalculateScores.isPending}
-                data-testid="button-recalculate-scores"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${recalculateScores.isPending ? "animate-spin" : ""}`} />
-                {recalculateScores.isPending ? "Recalculating…" : "Recalculate Scores"}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => togglePreference.mutate()}
-                disabled={togglePreference.isPending}
-                data-testid="button-toggle-units"
-              >
-                <Scale className="h-4 w-4 mr-2" />
-                {measurementPref === "metric" ? "Switch to Imperial" : "Switch to Metric"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        }
-      />
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-20">
+      {!isFullscreen && (
+        <PageHeader
+          title="Shopping"
+          icon={<ShoppingBasket className="h-5 w-5" />}
+          realm="basket"
+          center={<ModeSwitcher mode={mode} onChange={(m) => { setMode(m); setExpandedId(null); }} />}
+          meta={<span>{currentMode.helper}</span>}
+          actions={menuDropdown}
+        />
+      )}
+      <div className={isFullscreen
+        ? "fixed inset-0 z-50 bg-background overflow-auto flex flex-col"
+        : "max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-20"}
+      >
+      {isFullscreen && (
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border/50 bg-background shrink-0">
+          <div className="flex items-center gap-2">
+            <ShoppingBasket className="h-4 w-4 text-primary" />
+            <span className="font-semibold text-sm">Shopping</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <ModeSwitcher mode={mode} onChange={(m) => { setMode(m); setExpandedId(null); }} />
+            {menuDropdown}
+          </div>
+        </div>
+      )}
+      <div className={isFullscreen ? "flex-1 overflow-auto px-4 py-4 sm:px-6 sm:py-6" : ""}>
 
       {/* ── Summary bar ───────────────────────────────────────────────── */}
       {!isLoading && items.length > 0 && (
@@ -1435,14 +1716,16 @@ export default function ShoppingWorkspacePage() {
                 </div>
               ) : (
                 <>
-                  {reviewUncheckedByCategory.length >= 1
-                    ? reviewUncheckedByCategory.map(({ key, label, items: catItems }) => (
-                        <div key={key}>
-                          <ShopCategoryHeader label={label} count={catItems.length} />
-                          {catItems.map(renderRow)}
-                        </div>
-                      ))
-                    : uncheckedItems.map(renderRow)
+                  {splitByShop
+                    ? reviewUncheckedAlpha.map(renderRow)
+                    : reviewUncheckedByCategory.length >= 1
+                      ? reviewUncheckedByCategory.map(({ key, label, items: catItems }) => (
+                          <div key={key}>
+                            <ShopCategoryHeader label={label} count={catItems.length} />
+                            {catItems.map(renderRow)}
+                          </div>
+                        ))
+                      : uncheckedItems.map(renderRow)
                   }
                   {checkedItems.length > 0 && (
                     <>
@@ -1619,7 +1902,210 @@ export default function ShoppingWorkspacePage() {
         item={analyserItem}
       />
 
-      </div>
+      </div>{/* /inner content div */}
+      </div>{/* /outer fullscreen-or-page div */}
+
+      {/* ── Export dialog ──────────────────────────────────────────── */}
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="sm:max-w-[420px]" data-testid="dialog-export-list">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Store className="h-5 w-5 text-primary" />
+              Export List
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Choose Supermarket</label>
+              <Select value={exportSupermarket} onValueChange={setExportSupermarket}>
+                <SelectTrigger data-testid="select-export-supermarket">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPERMARKET_NAMES.map((name) => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Export your {items.length} items as a text file, copy to clipboard, or open search pages.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => handleExport("copy")} className="gap-1" data-testid="button-copy-clipboard">
+              <Copy className="h-4 w-4" />
+              Copy
+            </Button>
+            <Button variant="outline" onClick={() => handleExport("list")} className="gap-1" data-testid="button-export-text">
+              <Download className="h-4 w-4" />
+              Download
+            </Button>
+            <Button onClick={() => handleExport("links")} className="gap-1" data-testid="button-export-links">
+              <ExternalLink className="h-4 w-4" />
+              Search Pages
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Send to Supermarket dialog ─────────────────────────────── */}
+      <Dialog open={basketDialogOpen} onOpenChange={(open) => { setBasketDialogOpen(open); if (!open) setBasketResult(null); }}>
+        <DialogContent className="sm:max-w-[560px]" data-testid="dialog-send-to-supermarket">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-primary" />
+              Send to Supermarket
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-muted-foreground">
+              Send your {items.length} items to a supermarket. Matched products open directly; others open as search pages.
+            </p>
+            {primarySupermarkets.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/70">Direct Basket</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {primarySupermarkets.map((store) => (
+                    <button
+                      key={store.key}
+                      className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 py-3.5 hover:bg-accent/40 transition-colors disabled:opacity-50"
+                      disabled={basketSending !== null}
+                      onClick={() => handleSendBasket(store.name)}
+                      data-testid={`button-basket-${store.key}`}
+                    >
+                      {basketSending === store.name
+                        ? <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
+                        : <RetailerLogo name={store.name} size="h-7" />}
+                      <span className="text-xs font-medium text-foreground/70">{store.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {otherSupermarkets.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground/70">Search Pages</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {otherSupermarkets.map((store) => (
+                    <button
+                      key={store.key}
+                      className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-2 py-2.5 hover:bg-accent/40 transition-colors disabled:opacity-50"
+                      disabled={basketSending !== null}
+                      onClick={() => handleSendBasket(store.name)}
+                      data-testid={`button-basket-${store.key}`}
+                    >
+                      {basketSending === store.name
+                        ? <RefreshCw className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                        : <RetailerLogo name={store.name} size="h-5" />}
+                      <span className="text-[11px] font-medium text-foreground/70 truncate w-full text-center">{store.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {enhancedSupermarkets.length === 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {SUPERMARKET_NAMES.map((name) => (
+                  <button
+                    key={name}
+                    className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-2 py-2.5 hover:bg-accent/40 transition-colors disabled:opacity-50"
+                    disabled={basketSending !== null}
+                    onClick={() => handleSendBasket(name)}
+                    data-testid={`button-basket-${name.toLowerCase().replace(/[^a-z]/g, "")}`}
+                  >
+                    {basketSending === name
+                      ? <RefreshCw className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                      : <RetailerLogo name={name} size="h-5" />}
+                    <span className="text-[11px] font-medium text-foreground/70 truncate w-full text-center">{name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {basketResult && (
+              <div className="border border-border rounded-md p-3 space-y-2 bg-muted/30">
+                <span className="text-sm font-medium">{basketResult.supermarket} Basket</span>
+                {basketResult.message && <p className="text-xs text-muted-foreground">{basketResult.message}</p>}
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{basketResult.matchedCount} product links</span>
+                  <span>{basketResult.totalCount - basketResult.matchedCount} search pages</span>
+                </div>
+                {basketResult.itemUrls.length > 8 && (
+                  <Button
+                    variant="outline" size="sm" className="gap-1 w-full"
+                    onClick={() => {
+                      const remaining = basketResult.itemUrls.slice(8);
+                      remaining.forEach((item) => window.open(item.url, "_blank"));
+                      toast({ title: `Opened ${remaining.length} more items` });
+                    }}
+                    data-testid="button-open-remaining-items"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Open remaining {basketResult.itemUrls.length - 8} items
+                  </Button>
+                )}
+              </div>
+            )}
+            <div className="border-t border-border pt-3 flex items-center gap-2">
+              <Download className="h-4 w-4 text-muted-foreground shrink-0" />
+              <p className="text-xs text-muted-foreground">
+                Want a text file instead?{" "}
+                <button
+                  className="text-primary underline underline-offset-2"
+                  onClick={() => { setBasketDialogOpen(false); setExportDialogOpen(true); }}
+                >
+                  Download formatted list
+                </button>
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Clear confirmation dialog ──────────────────────────────── */}
+      <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+        <DialogContent className="sm:max-w-[360px]" data-testid="dialog-clear-list">
+          <DialogHeader>
+            <DialogTitle>Clear shopping list?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            This will remove all {items.length} item{items.length !== 1 ? "s" : ""} from your shopping list. This cannot be undone.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setClearDialogOpen(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={() => clearAll.mutate()}
+              disabled={clearAll.isPending}
+              data-testid="button-confirm-clear"
+            >
+              {clearAll.isPending ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Clear List
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Hidden file input for scan fallback ───────────────────── */}
+      <input
+        ref={slFileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleShoppingListScan(f); }}
+      />
+      <CameraModal
+        open={slCameraOpen}
+        onOpenChange={setSlCameraOpen}
+        onCapture={handleShoppingListScan}
+        onUploadInstead={() => slFileRef.current?.click()}
+      />
+      <ShoppingListScanReview
+        open={slReviewOpen}
+        onOpenChange={setSlReviewOpen}
+        scanData={slScanData}
+      />
     </>
   );
 }
