@@ -196,6 +196,26 @@ function getStoreCategoryKey(item: WorkspaceItem): string {
   return STORE_CATEGORY_DISPLAY[raw] ? raw : "other";
 }
 
+// Partition items into in-store category groups, ordered by STORE_CATEGORY_ORDER.
+// Uncategorised items fall under "other" so they always remain visible.
+function groupByStoreCategory(
+  items: WorkspaceItem[],
+): { key: string; label: string; items: WorkspaceItem[] }[] {
+  const map = new Map<string, WorkspaceItem[]>();
+  for (const item of items) {
+    const key = getStoreCategoryKey(item);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(item);
+  }
+  return STORE_CATEGORY_ORDER
+    .filter((key) => map.has(key))
+    .map((key) => ({
+      key,
+      label: STORE_CATEGORY_DISPLAY[key] ?? "Other",
+      items: map.get(key)!,
+    }));
+}
+
 function getOperationalHint(
   item: WorkspaceItem,
   isPantryStocked: boolean,
@@ -1276,22 +1296,16 @@ export default function ShoppingWorkspacePage() {
   }, [items]);
 
   // Shop "need" items grouped by in-store category — memoized for performance
-  const shopNeedByCategory = useMemo(() => {
-    const map = new Map<string, WorkspaceItem[]>();
-    for (const item of shopGroups.need) {
-      const key = getStoreCategoryKey(item);
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(item);
-    }
-    // Return as ordered array following store category order
-    return STORE_CATEGORY_ORDER
-      .filter((key) => map.has(key))
-      .map((key) => ({
-        key,
-        label: STORE_CATEGORY_DISPLAY[key] ?? "Other",
-        items: map.get(key)!,
-      }));
-  }, [shopGroups.need]);
+  const shopNeedByCategory = useMemo(
+    () => groupByStoreCategory(shopGroups.need),
+    [shopGroups.need],
+  );
+
+  // Review unchecked items grouped by the same in-store category structure
+  const reviewUncheckedByCategory = useMemo(
+    () => groupByStoreCategory(uncheckedItems),
+    [uncheckedItems],
+  );
 
   const shopSummary = useMemo((): ShopSummary => ({
     needCount: shopGroups.need.length,
@@ -1422,7 +1436,15 @@ export default function ShoppingWorkspacePage() {
                 </div>
               ) : (
                 <>
-                  {uncheckedItems.map(renderRow)}
+                  {reviewUncheckedByCategory.length >= 1
+                    ? reviewUncheckedByCategory.map(({ key, label, items: catItems }) => (
+                        <div key={key}>
+                          <ShopCategoryHeader label={label} count={catItems.length} />
+                          {catItems.map(renderRow)}
+                        </div>
+                      ))
+                    : uncheckedItems.map(renderRow)
+                  }
                   {checkedItems.length > 0 && (
                     <>
                       <div className="px-4 py-1.5 border-t border-border/30 bg-muted/20">
