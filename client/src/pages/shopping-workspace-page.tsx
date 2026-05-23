@@ -86,10 +86,34 @@ const MODES: Array<{
   { id: "shop", label: "Shop", Icon: ShoppingCart, helper: "In-store — track what you find, skip, or already have" },
 ];
 
+// The UI reasons in ShopItemState, but the API only accepts the canonical
+// shop_status values validated server-side (routes.ts). These helpers translate
+// in both directions so Shop actions persist instead of 400-ing on legacy aliases.
+const SHOP_STATE_TO_SERVER: Record<Exclude<ShopItemState, "need">, string> = {
+  found: "in_basket",
+  defer: "deferred",
+  have: "already_got",
+};
+
+function toServerShopStatus(state: ShopItemState | null): string | null {
+  if (state == null || state === "need") return null;
+  return SHOP_STATE_TO_SERVER[state];
+}
+
 function getShopState(item: WorkspaceItem): ShopItemState {
-  const s = item.shopStatus;
-  if (s === "found" || s === "defer" || s === "have") return s;
-  return "need";
+  switch (item.shopStatus) {
+    case "found":
+    case "in_basket":
+      return "found";
+    case "defer":
+    case "deferred":
+      return "defer";
+    case "have":
+    case "already_got":
+      return "have";
+    default:
+      return "need";
+  }
 }
 
 const SHOP_STATE_CONFIG: Record<ShopItemState, {
@@ -1198,7 +1222,7 @@ export default function ShoppingWorkspacePage() {
   });
 
   function handleShopStateChange(itemId: number, state: ShopItemState | null) {
-    updateShopStatus.mutate({ id: itemId, shopStatus: state });
+    updateShopStatus.mutate({ id: itemId, shopStatus: toServerShopStatus(state) });
   }
 
   function handlePrepAction(itemId: number, action: PrepAction) {
