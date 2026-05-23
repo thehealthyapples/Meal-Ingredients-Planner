@@ -5,9 +5,17 @@ import { useUser } from "@/hooks/use-user";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
   ChevronDown, ChevronUp, ShoppingBasket,
   FlaskConical, Leaf, AlertTriangle, Home, UtensilsCrossed,
   CheckCircle2, ClipboardList, ShoppingCart, ShoppingBag, Clock,
+  RefreshCw, Scale,
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +26,7 @@ import type { ShoppingListItem, IngredientSource } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
 import { WorkspaceAnalyserSheet } from "@/components/WorkspaceAnalyserSheet";
 import { PageHeader } from "@/components/PageHeader";
+import thaAppleSrc from "@/assets/icons/tha-apple.png";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -507,6 +516,10 @@ function WorkspaceRow({
 }) {
   const pantryKey = (item.normalizedName ?? item.productName).toLowerCase();
   const isPantryStocked = pantryKeySet.has(pantryKey);
+  const prepConf = deriveQuantityConfidence(item);
+  const hasQuantityUncertainty = prepConf === "assumed" || prepConf === "approximate";
+  // PrepActionPanel returns null for attention items that are neither pantry nor qty-uncertain
+  const prepPanelEmpty = prepMode && !isPantryStocked && !hasQuantityUncertainty;
 
   const hint = getOperationalHint(
     item,
@@ -647,7 +660,7 @@ function WorkspaceRow({
               </button>
             </div>
           )}
-          {/* Prep: chips only (label now in item col hint above) */}
+          {/* Prep: chips (or Analyse fallback for attention-only items) */}
           {prepMode && !item.checked && onPrepAction && (
             <PrepActionPanel
               item={item}
@@ -655,6 +668,16 @@ function WorkspaceRow({
               prepState={prepState ?? {}}
               onPrepAction={onPrepAction}
             />
+          )}
+          {prepMode && !item.checked && prepPanelEmpty && onOpenAnalyser && (
+            <button
+              onClick={onOpenAnalyser}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-amber-200/70 dark:border-amber-800/50 bg-amber-50/60 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100/80 dark:hover:bg-amber-950/30 transition-colors touch-manipulation whitespace-nowrap"
+              data-testid={`ws-analyse-btn-${item.id}`}
+            >
+              <FlaskConical className="h-3 w-3 shrink-0" />
+              Analyse
+            </button>
           )}
           {/* Review: Analyse */}
           {!shopMode && !prepMode && !item.checked && onOpenAnalyser && (
@@ -1143,6 +1166,49 @@ export default function ShoppingWorkspacePage() {
     },
   });
 
+  const recalculateScores = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(api.shoppingList.autoSmp.path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force: true }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to recalculate");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      const count = data?.updated?.length ?? 0;
+      toast({
+        title: "Scores updated",
+        description: count > 0
+          ? `${count} item${count === 1 ? "" : "s"} re-scored with the latest rules.`
+          : "All scores are already up to date.",
+      });
+    },
+    onError: () => {
+      toast({ title: "Could not recalculate", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const togglePreference = useMutation({
+    mutationFn: async () => {
+      const newPref = measurementPref === "metric" ? "imperial" : "metric";
+      const res = await fetch("/api/user/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ measurementPreference: newPref }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update preference");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+    },
+  });
+
   function handleShopStateChange(itemId: number, state: ShopItemState | null) {
     updateShopStatus.mutate({ id: itemId, shopStatus: toServerShopStatus(state) });
   }
@@ -1293,6 +1359,37 @@ export default function ShoppingWorkspacePage() {
         realm="basket"
         center={<ModeSwitcher mode={mode} onChange={(m) => { setMode(m); setExpandedId(null); }} />}
         meta={<span>{currentMode.helper}</span>}
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center justify-center h-[52px] w-[52px] rounded-lg transition-colors hover:bg-accent/60"
+                data-testid="button-workspace-menu"
+              >
+                <img src={thaAppleSrc} alt="Menu" className="h-[48px] w-[48px] object-contain" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                onClick={() => recalculateScores.mutate()}
+                disabled={recalculateScores.isPending}
+                data-testid="button-recalculate-scores"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${recalculateScores.isPending ? "animate-spin" : ""}`} />
+                {recalculateScores.isPending ? "Recalculating…" : "Recalculate Scores"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => togglePreference.mutate()}
+                disabled={togglePreference.isPending}
+                data-testid="button-toggle-units"
+              >
+                <Scale className="h-4 w-4 mr-2" />
+                {measurementPref === "metric" ? "Switch to Imperial" : "Switch to Metric"}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
       />
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-20">
 

@@ -1,18 +1,14 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover, PopoverContent, PopoverTrigger,
-} from "@/components/ui/popover";
-import { Trash2, Plus, Loader2, Home, Refrigerator, Archive, Layers, ShoppingBasket, ChevronDown, ChevronRight, PawPrint, Settings2, Apple, Search, X } from "lucide-react";
+  Trash2, Plus, Loader2, Home, Refrigerator, Archive, Layers,
+  ShoppingBasket, ChevronDown, PawPrint, Apple, Search, X,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";
@@ -44,50 +40,118 @@ function PantryIcon({ className }: { className?: string }) {
   );
 }
 
-const ALL_FOOD_CATEGORIES = [
-  { value: "larder", label: "Larder", icon: Archive },
-  { value: "fridge", label: "Fridge", icon: Refrigerator },
-  { value: "freezer", label: "Freezer", icon: Layers },
-  { value: "fruit", label: "Fruit", icon: Apple },
-  { value: "pet", label: "Pet Food & Care", icon: PawPrint },
-] as const;
+// ── Category definitions ──────────────────────────────────────────────────────
 
-type FoodCategory = "larder" | "fridge" | "freezer" | "fruit" | "pet";
+const FOOD_CATS = [
+  { value: "larder"  as const, label: "Larder",  icon: Archive      },
+  { value: "fridge"  as const, label: "Fridge",  icon: Refrigerator },
+  { value: "freezer" as const, label: "Freezer", icon: Layers       },
+  { value: "fruit"   as const, label: "Fruit",   icon: Apple        },
+];
 
-function loadVisibleCats(): Set<FoodCategory> {
-  try {
-    const saved = localStorage.getItem("pantry-visible-cats");
-    if (saved) return new Set(JSON.parse(saved) as FoodCategory[]);
-  } catch {}
-  return new Set<FoodCategory>(["larder", "fridge", "freezer", "fruit", "pet"]);
+const HOME_CATS = [
+  { value: "household" as const, label: "Household",       icon: Home     },
+  { value: "pet"       as const, label: "Pet Food & Care", icon: PawPrint },
+];
+
+type FoodCat = typeof FOOD_CATS[number]["value"];
+type HomeCat = typeof HOME_CATS[number]["value"];
+
+const FOOD_CAT_EMPTY: Record<FoodCat, string> = {
+  larder:  "No larder staples yet — try adding olive oil or pasta.",
+  fridge:  "No fridge staples yet — try adding milk or eggs.",
+  freezer: "No freezer items yet.",
+  fruit:   "No fruit yet — try adding apples or berries.",
+};
+
+const HOME_CAT_EMPTY: Record<HomeCat, string> = {
+  household: "No household items yet.",
+  pet:       "No pet food or care items yet.",
+};
+
+// ── Category tab buttons ──────────────────────────────────────────────────────
+// Used in the page banner (via PageHeader center/actions) and not inside cards.
+// Selected = realm-bg/realm-text; unselected = muted foreground.
+
+function CategoryTabs<T extends string>({
+  categories,
+  active,
+  onChange,
+  className,
+}: {
+  categories: Array<{ value: T; label: string; icon: React.ComponentType<{ className?: string }> }>;
+  active: T;
+  onChange: (v: T) => void;
+  className?: string;
+}) {
+  return (
+    <div
+      className={className ?? "flex items-center gap-1 rounded-lg bg-muted/40 p-1"}
+      role="tablist"
+    >
+      {categories.map(({ value, label, icon: Icon }) => (
+        <button
+          key={value}
+          role="tab"
+          aria-selected={active === value}
+          onClick={() => onChange(value)}
+          className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all flex-1 min-w-0 ${
+            active === value
+              ? "shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+          style={active === value
+            ? { backgroundColor: "var(--realm-bg)", color: "var(--realm-text)" }
+            : undefined}
+          data-testid={`button-pantry-cat-${value}`}
+        >
+          <Icon className="h-3.5 w-3.5 shrink-0" />
+          <span className="hidden sm:inline truncate">{label}</span>
+          <span className="sm:hidden truncate">{label.split(" ")[0]}</span>
+        </button>
+      ))}
+    </div>
+  );
 }
 
-function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoading: boolean }) {
+// ── Food Pantry Section ───────────────────────────────────────────────────────
+// Tabs are rendered in the page banner — not inside this card.
+
+function FoodPantrySection({
+  items,
+  isLoading,
+  activeCategory,
+  onCategoryChange,
+}: {
+  items: PantryItem[];
+  isLoading: boolean;
+  activeCategory: FoodCat;
+  onCategoryChange: (c: FoodCat) => void;
+}) {
   const { toast } = useToast();
   const qclient = useQueryClient();
-  const [ingredient, setIngredient] = useState("");
-  const [category, setCategory] = useState<FoodCategory>("larder");
-  const [openSections, setOpenSections] = useState<Record<FoodCategory, boolean>>({
-    larder: true,
-    fridge: false,
-    freezer: false,
-    fruit: false,
-    pet: false,
-  });
+
+  // Single query state drives both live filtering and new-item add
+  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [sending, setSending] = useState(false);
   const [sendQty, setSendQty] = useState(1);
-  const [visibleCats, setVisibleCats] = useState<Set<FoodCategory>>(loadVisibleCats);
-  const [filterQuery, setFilterQuery] = useState("");
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
-  const [serverKnowledge, setServerKnowledge] = useState<Map<string, "loading" | null | { supports: string[]; highlights?: string[]; whyItMatters: string; goodToKnow?: string; howToChoose?: string[]; tags: string[] }>>(new Map());
+  const [serverKnowledge, setServerKnowledge] = useState<Map<string, "loading" | null | {
+    supports: string[];
+    highlights?: string[];
+    whyItMatters: string;
+    goodToKnow?: string;
+    howToChoose?: string[];
+    tags: string[];
+  }>>(new Map());
 
   const addMutation = useMutation({
     mutationFn: (data: { ingredient: string; displayName: string; category: string }) =>
       apiRequest("POST", "/api/pantry", data),
     onSuccess: () => {
       qclient.invalidateQueries({ queryKey: ["/api/pantry"] });
-      setIngredient("");
+      setQuery("");
     },
     onError: (err: any) => {
       const body = err?.body ?? err;
@@ -108,30 +172,47 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
     onError: () => toast({ title: "Failed to remove item", variant: "destructive" }),
   });
 
-  const foodCatValues = ALL_FOOD_CATEGORIES.map(c => c.value as string);
-  const foodItems = items.filter(i => foodCatValues.includes(i.category));
-  const grouped = ALL_FOOD_CATEGORIES
-    .filter(cat => visibleCats.has(cat.value as FoodCategory))
-    .map(cat => ({
-      ...cat,
-      items: foodItems.filter(i => i.category === cat.value),
-    }));
+  const foodCatValues = FOOD_CATS.map(c => c.value as string);
+  const allFoodItems = items.filter(i => foodCatValues.includes(i.category));
+  const activeItems = allFoodItems.filter(i => i.category === activeCategory);
 
-  const filteredGrouped = useMemo(() => {
-    if (!filterQuery.trim()) return grouped;
-    return grouped
-      .map(group => ({
-        ...group,
-        items: group.items.filter(item =>
-          pantryItemMatchesQuery(
-            item.displayName || item.ingredientKey,
-            item.ingredientKey,
-            filterQuery,
-          )
-        ),
-      }))
-      .filter(group => group.items.length > 0);
-  }, [grouped, filterQuery]);
+  const displayedItems = useMemo(() => {
+    if (!query.trim()) return activeItems;
+    return activeItems.filter(item =>
+      pantryItemMatchesQuery(item.displayName || item.ingredientKey, item.ingredientKey, query)
+    );
+  }, [activeItems, query]);
+
+  // Called when banner tab changes
+  const handleCategoryChange = (cat: FoodCat) => {
+    onCategoryChange(cat);
+    setSelected(new Set());
+    setQuery("");
+  };
+
+  const handleAdd = () => {
+    if (!query.trim()) return;
+    addMutation.mutate({ ingredient: query.trim(), displayName: query.trim(), category: activeCategory });
+  };
+
+  const toggleItem = (id: number) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    const ids = displayedItems.map(i => i.id);
+    const allSelected = ids.every(id => selected.has(id));
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (allSelected) ids.forEach(id => next.delete(id));
+      else ids.forEach(id => next.add(id));
+      return next;
+    });
+  };
 
   const toggleExpanded = (id: number, ingredientKey: string) => {
     setExpandedItems(prev => {
@@ -153,38 +234,10 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
     });
   };
 
-  const handleAdd = () => {
-    if (!ingredient.trim()) return;
-    addMutation.mutate({ ingredient: ingredient.trim(), displayName: ingredient.trim(), category });
-  };
-
-  const toggleSection = (cat: FoodCategory) => {
-    setOpenSections(prev => ({ ...prev, [cat]: !prev[cat] }));
-  };
-
-  const toggleItem = (id: number) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const toggleGroupAll = (groupItems: PantryItem[]) => {
-    const ids = groupItems.map(i => i.id);
-    const allSelected = ids.every(id => selected.has(id));
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (allSelected) ids.forEach(id => next.delete(id));
-      else ids.forEach(id => next.add(id));
-      return next;
-    });
-  };
-
   const sendToBasket = async () => {
     if (selected.size === 0) return;
     setSending(true);
-    const toSend = foodItems.filter(i => selected.has(i.id));
+    const toSend = allFoodItems.filter(i => selected.has(i.id));
     try {
       await Promise.all(
         toSend.map(item =>
@@ -208,109 +261,70 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
     }
   };
 
-  const toggleCatVisible = (cat: FoodCategory) => {
-    setVisibleCats(prev => {
-      const next = new Set(prev);
-      if (next.has(cat) && next.size > 1) next.delete(cat);
-      else next.add(cat);
-      localStorage.setItem("pantry-visible-cats", JSON.stringify(Array.from(next)));
-      return next;
-    });
-  };
-
-  const emptyLabel: Record<FoodCategory, string> = {
-    larder: "No larder staples yet - try adding olive oil or pasta.",
-    fridge: "No fridge staples yet - try adding milk or eggs.",
-    freezer: "No freezer items yet.",
-    fruit: "No fruit yet - try adding apples or berries.",
-    pet: "No pet food or care items yet.",
-  };
+  const selectedInActive = displayedItems.filter(i => selected.has(i.id)).length;
+  const allActiveSelected = displayedItems.length > 0 && displayedItems.every(i => selected.has(i.id));
+  const catLabel = FOOD_CATS.find(c => c.value === activeCategory)?.label.toLowerCase() ?? "pantry";
 
   return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between mb-1">
+    <Card className="p-4 sm:p-5">
+      {/* Section header row */}
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <PantryIcon className="h-4 w-4 text-primary" />
-          <h2 className="text-base font-medium">Food Pantry</h2>
+          <h2 className="text-base font-semibold">Food</h2>
         </div>
-        <div className="flex items-center gap-2">
-          {selected.size > 0 && (
-            <div className="flex items-center gap-1.5">
-              <input
-                type="number"
-                min={1}
-                value={sendQty}
-                onChange={e => setSendQty(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-14 h-8 text-[13px] px-2 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums text-center"
-                aria-label="Quantity to send"
-                data-testid="input-food-send-qty"
-              />
-              <Button
-                size="sm"
-                onClick={sendToBasket}
-                disabled={sending}
-                data-testid="button-food-send-to-basket"
-              >
-                {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingBasket className="h-3 w-3 mr-1" />}
-                Send {selected.size} to Basket
-              </Button>
-            </div>
-          )}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7" data-testid="button-pantry-settings">
-                <Settings2 className="h-3.5 w-3.5 text-muted-foreground" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-48 p-3" align="end">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Show sections</p>
-              <div className="space-y-2">
-                {ALL_FOOD_CATEGORIES.map(cat => {
-                  const Icon = cat.icon;
-                  return (
-                    <label key={cat.value} className="flex items-center gap-2 cursor-pointer select-none">
-                      <Checkbox
-                        checked={visibleCats.has(cat.value as FoodCategory)}
-                        onCheckedChange={() => toggleCatVisible(cat.value as FoodCategory)}
-                        data-testid={`checkbox-visible-${cat.value}`}
-                      />
-                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-sm">{cat.label}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </PopoverContent>
-          </Popover>
-        </div>
+        {selected.size > 0 && (
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              min={1}
+              value={sendQty}
+              onChange={e => setSendQty(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-12 h-8 text-[13px] px-2 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums text-center"
+              aria-label="Quantity to send"
+              data-testid="input-food-send-qty"
+            />
+            <Button
+              size="sm"
+              onClick={sendToBasket}
+              disabled={sending}
+              data-testid="button-food-send-to-basket"
+            >
+              {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingBasket className="h-3 w-3 mr-1" />}
+              Send {selected.size}
+            </Button>
+          </div>
+        )}
       </div>
-      <p className="text-xs text-muted-foreground mb-4">
-        Tick items you need this week and tap "Send to Basket", or just keep them here to auto-collapse in your shopping list.
-      </p>
 
-      <div className="flex gap-2 mb-5 flex-wrap">
-        <Input
-          placeholder="e.g. olive oil, chilli flakes…"
-          value={ingredient}
-          onChange={e => setIngredient(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && handleAdd()}
-          className="flex-1 min-w-[150px] text-sm"
-          data-testid="input-food-pantry-ingredient"
-        />
-        <Select value={category} onValueChange={v => setCategory(v as FoodCategory)}>
-          <SelectTrigger className="w-32 text-sm shrink-0" data-testid="select-food-pantry-category">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {ALL_FOOD_CATEGORIES.map(c => (
-              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Unified search + add — single field drives live filtering and new-item add */}
+      <div className="flex gap-2 mb-3">
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 pointer-events-none" />
+          <input
+            type="text"
+            placeholder={`Search ${catLabel} or add ingredient…`}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleAdd()}
+            className="w-full pl-8 pr-8 py-2 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring"
+            data-testid="input-food-pantry-ingredient"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+              aria-label="Clear"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
         <Button
           size="sm"
           onClick={handleAdd}
-          disabled={!ingredient.trim() || addMutation.isPending}
+          disabled={!query.trim() || addMutation.isPending}
           data-testid="button-food-pantry-add"
         >
           {addMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
@@ -318,216 +332,195 @@ function FoodPantrySection({ items, isLoading }: { items: PantryItem[]; isLoadin
         </Button>
       </div>
 
-      {/* Benefit / ingredient search */}
-      <div className="relative mb-4">
-        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/50 pointer-events-none" />
-        <input
-          type="text"
-          placeholder="Search by ingredient or benefit (e.g. gut health, omega-3)"
-          value={filterQuery}
-          onChange={e => setFilterQuery(e.target.value)}
-          className="w-full pl-8 pr-8 py-2 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
-          data-testid="input-pantry-search"
-        />
-        {filterQuery && (
-          <button
-            type="button"
-            onClick={() => setFilterQuery("")}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-            aria-label="Clear search"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
-
+      {/* Items list */}
       {isLoading ? (
         <div className="space-y-2">
           <Skeleton className="h-6 w-full" />
           <Skeleton className="h-6 w-3/4" />
         </div>
-      ) : filterQuery.trim() && filteredGrouped.length === 0 ? (
+      ) : query.trim() && displayedItems.length === 0 ? (
         <p className="text-sm text-muted-foreground italic text-center py-6">
-          No items matched "{filterQuery}"
+          No items matched "{query}"
         </p>
       ) : (
-        <div className="border border-border rounded-md overflow-hidden">
-          {filteredGrouped.map((group, idx) => {
-            const Icon = group.icon;
-            const isOpen = openSections[group.value as FoodCategory];
-            const ChevronIcon = isOpen ? ChevronDown : ChevronRight;
-            const groupSelectedCount = group.items.filter(i => selected.has(i.id)).length;
-            const allGroupSelected = group.items.length > 0 && groupSelectedCount === group.items.length;
-            return (
-              <div key={group.value} className={idx > 0 ? "border-t border-border" : ""}>
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between px-3 py-3 hover:bg-muted/50 transition-colors text-left"
-                  onClick={() => toggleSection(group.value as FoodCategory)}
-                  data-testid={`button-toggle-${group.value}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-sm font-medium">{group.label}</span>
-                    <Badge variant="secondary" className="text-[10px] h-4 px-1.5">{group.items.length}</Badge>
-                    {groupSelectedCount > 0 && (
-                      <Badge variant="default" className="text-[10px] h-4 px-1.5">{groupSelectedCount} selected</Badge>
-                    )}
-                  </div>
-                  <ChevronIcon className="h-4 w-4 text-muted-foreground" />
-                </button>
-                {isOpen && (
-                  <div className="bg-muted/20 px-3 pb-3">
-                    {group.items.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic pt-2">
-                        {emptyLabel[group.value as FoodCategory]}
-                      </p>
-                    ) : (
-                      <div className="pt-1">
-                        <label className="flex items-center gap-3 pb-2 mb-1 border-b border-border/50 cursor-pointer select-none min-h-[2.75rem]">
-                          <Checkbox
-                            checked={allGroupSelected}
-                            onCheckedChange={() => toggleGroupAll(group.items)}
-                            data-testid={`checkbox-select-all-${group.value}`}
-                          />
-                          <span className="text-xs text-muted-foreground">Select all</span>
-                        </label>
-                        <div className="space-y-0 max-h-64 overflow-y-auto">
-                          {group.items.map(item => {
-                            const staticKnow = getPantryKnowledge(item.ingredientKey);
-                            const serverKnow = serverKnowledge.get(item.ingredientKey);
-                            const knowledge = staticKnow ?? (serverKnow !== "loading" ? serverKnow ?? null : null);
-                            const hasKnowledge = !!staticKnow || serverKnow !== undefined;
-                            const isExpanded = expandedItems.has(item.id);
-                            const isLoadingKnowledge = serverKnow === "loading";
-                            return (
-                              <div key={item.id} className="group" data-testid={`row-food-pantry-item-${item.id}`}>
-                                <div className="flex items-center">
-                                  <label
-                                    className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
-                                    data-testid={`label-food-${item.id}`}
-                                  >
-                                    <Checkbox
-                                      checked={selected.has(item.id)}
-                                      onCheckedChange={() => toggleItem(item.id)}
-                                      data-testid={`checkbox-food-${item.id}`}
-                                    />
-                                    <span className="text-sm flex-1 min-w-0 truncate">{item.displayName || item.ingredientKey}</span>
-                                  </label>
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleExpanded(item.id, item.ingredientKey)}
-                                    className="p-2 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors shrink-0"
-                                    title={isExpanded ? "Hide details" : "Learn about this ingredient"}
-                                    data-testid={`button-food-pantry-expand-${item.id}`}
-                                  >
-                                    <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`} />
-                                  </button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                                    onClick={() => deleteMutation.mutate(item.id)}
-                                    disabled={deleteMutation.isPending}
-                                    data-testid={`button-food-pantry-delete-${item.id}`}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                                {isExpanded && (
-                                  <div className="pl-9 pr-3 pb-3 space-y-2.5 border-t border-border/30 mt-0.5">
-                                    {isLoadingKnowledge && (
-                                      <p className="text-xs text-muted-foreground/50 italic pt-2.5">Loading ingredient info…</p>
-                                    )}
-                                    {!isLoadingKnowledge && knowledge && (
-                                      <>
-                                        {knowledge.supports.length > 0 && (
-                                          <div className="pt-2.5">
-                                            <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1.5">Supports</p>
-                                            <div className="flex flex-wrap gap-1">
-                                              {knowledge.supports.map(s => (
-                                                <span key={s} className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">
-                                                  {s}
-                                                </span>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        )}
-                                        {knowledge.highlights && knowledge.highlights.length > 0 && (
-                                          <div className={knowledge.supports.length === 0 ? "pt-2.5" : ""}>
-                                            <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1.5">Highlights</p>
-                                            <div className="flex flex-wrap gap-1">
-                                              {knowledge.highlights.map(h => (
-                                                <span key={h} className="text-[11px] px-2 py-0.5 rounded-full bg-accent/40 text-muted-foreground border border-border/40">
-                                                  {h}
-                                                </span>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        )}
-                                        <div>
-                                          <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-0.5">Why it matters</p>
-                                          <p className="text-xs text-muted-foreground/80 leading-relaxed">{knowledge.whyItMatters}</p>
-                                        </div>
-                                        {knowledge.goodToKnow && (
-                                          <div>
-                                            <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-0.5">Good to know</p>
-                                            <p className="text-xs text-muted-foreground/80 leading-relaxed">{knowledge.goodToKnow}</p>
-                                          </div>
-                                        )}
-                                        {knowledge.howToChoose && knowledge.howToChoose.length > 0 && (
-                                          <div>
-                                            <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1">How to choose</p>
-                                            <ul className="space-y-0.5">
-                                              {knowledge.howToChoose.map((tip, i) => (
-                                                <li key={i} className="text-xs text-muted-foreground/80 flex items-start gap-1.5">
-                                                  <span className="text-muted-foreground/40 mt-0.5 shrink-0">·</span>
-                                                  {tip}
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          </div>
-                                        )}
-                                      </>
-                                    )}
-                                    {!isLoadingKnowledge && !knowledge && (
-                                      <p className="text-xs text-muted-foreground/50 italic pt-2.5">No additional info available yet.</p>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+        <div
+          className="rounded-lg border border-border/40 overflow-hidden"
+          style={{ background: "color-mix(in srgb, var(--realm-bg) 22%, white)" }}
+        >
+          {displayedItems.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic px-4 py-5">
+              {FOOD_CAT_EMPTY[activeCategory]}
+            </p>
+          ) : (
+            <div className="px-3 pt-1 pb-2">
+              <label className="flex items-center gap-3 pb-2 mb-1 border-b border-border/40 cursor-pointer select-none min-h-[2.75rem]">
+                <Checkbox
+                  checked={allActiveSelected}
+                  onCheckedChange={toggleAll}
+                  data-testid={`checkbox-select-all-${activeCategory}`}
+                />
+                <span className="text-xs text-muted-foreground">Select all</span>
+                {selectedInActive > 0 && (
+                  <Badge variant="default" className="text-[10px] h-4 px-1.5 ml-auto">
+                    {selectedInActive} selected
+                  </Badge>
                 )}
+              </label>
+
+              <div className="space-y-0 max-h-72 overflow-y-auto">
+                {displayedItems.map(item => {
+                  const staticKnow = getPantryKnowledge(item.ingredientKey);
+                  const serverKnow = serverKnowledge.get(item.ingredientKey);
+                  const knowledge = staticKnow ?? (serverKnow !== "loading" ? serverKnow ?? null : null);
+                  const isExpanded = expandedItems.has(item.id);
+                  const isLoadingKnowledge = serverKnow === "loading";
+
+                  return (
+                    <div key={item.id} className="group" data-testid={`row-food-pantry-item-${item.id}`}>
+                      <div className="flex items-center">
+                        <label
+                          className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
+                          data-testid={`label-food-${item.id}`}
+                        >
+                          <Checkbox
+                            checked={selected.has(item.id)}
+                            onCheckedChange={() => toggleItem(item.id)}
+                            data-testid={`checkbox-food-${item.id}`}
+                          />
+                          <span className="text-sm flex-1 min-w-0 truncate">{item.displayName || item.ingredientKey}</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => toggleExpanded(item.id, item.ingredientKey)}
+                          className="p-2 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors shrink-0"
+                          title={isExpanded ? "Hide details" : "Learn about this ingredient"}
+                          data-testid={`button-food-pantry-expand-${item.id}`}
+                        >
+                          <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`} />
+                        </button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          onClick={() => deleteMutation.mutate(item.id)}
+                          disabled={deleteMutation.isPending}
+                          data-testid={`button-food-pantry-delete-${item.id}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+
+                      {isExpanded && (
+                        <div className="pl-9 pr-3 pb-3 space-y-2.5 border-t border-border/30 mt-0.5">
+                          {isLoadingKnowledge && (
+                            <p className="text-xs text-muted-foreground/50 italic pt-2.5">Loading ingredient info…</p>
+                          )}
+                          {!isLoadingKnowledge && knowledge && (
+                            <>
+                              {knowledge.supports.length > 0 && (
+                                <div className="pt-2.5">
+                                  <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1.5">Supports</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {knowledge.supports.map(s => (
+                                      <span key={s} className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">{s}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {knowledge.highlights && knowledge.highlights.length > 0 && (
+                                <div className={knowledge.supports.length === 0 ? "pt-2.5" : ""}>
+                                  <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1.5">Highlights</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {knowledge.highlights.map(h => (
+                                      <span key={h} className="text-[11px] px-2 py-0.5 rounded-full bg-accent/40 text-muted-foreground border border-border/40">{h}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              <div>
+                                <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-0.5">Why it matters</p>
+                                <p className="text-xs text-muted-foreground/80 leading-relaxed">{knowledge.whyItMatters}</p>
+                              </div>
+                              {knowledge.goodToKnow && (
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-0.5">Good to know</p>
+                                  <p className="text-xs text-muted-foreground/80 leading-relaxed">{knowledge.goodToKnow}</p>
+                                </div>
+                              )}
+                              {knowledge.howToChoose && knowledge.howToChoose.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1">How to choose</p>
+                                  <ul className="space-y-0.5">
+                                    {knowledge.howToChoose.map((tip, i) => (
+                                      <li key={i} className="text-xs text-muted-foreground/80 flex items-start gap-1.5">
+                                        <span className="text-muted-foreground/40 mt-0.5 shrink-0">·</span>
+                                        {tip}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {!isLoadingKnowledge && !knowledge && (
+                            <p className="text-xs text-muted-foreground/50 italic pt-2.5">No additional info available yet.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          )}
         </div>
       )}
     </Card>
   );
 }
 
-function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading: boolean }) {
+// ── Home Pantry Section ───────────────────────────────────────────────────────
+// Tabs are rendered in the page banner — not inside this card.
+// Unified query field drives both live filtering and new-item add (same pattern as Food).
+
+function HomePantrySection({
+  items,
+  isLoading,
+  activeCategory,
+  onCategoryChange,
+}: {
+  items: PantryItem[];
+  isLoading: boolean;
+  activeCategory: HomeCat;
+  onCategoryChange: (c: HomeCat) => void;
+}) {
   const { toast } = useToast();
   const qclient = useQueryClient();
-  const [newItem, setNewItem] = useState("");
+
+  // Single query state drives both live filtering and new-item add
+  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [sending, setSending] = useState(false);
   const [sendQty, setSendQty] = useState(1);
 
-  const householdItems = items.filter(i => i.category === "household");
+  const homeCatValues = HOME_CATS.map(c => c.value as string);
+  const allHomeItems = items.filter(i => homeCatValues.includes(i.category));
+  const activeItems = allHomeItems.filter(i => i.category === activeCategory);
+
+  const displayedItems = useMemo(() => {
+    if (!query.trim()) return activeItems;
+    const q = query.toLowerCase();
+    return activeItems.filter(item =>
+      (item.displayName || item.ingredientKey).toLowerCase().includes(q)
+    );
+  }, [activeItems, query]);
 
   const addMutation = useMutation({
-    mutationFn: (name: string) =>
-      apiRequest("POST", "/api/pantry", { ingredient: name, displayName: name, category: "household" }),
+    mutationFn: ({ name, cat }: { name: string; cat: string }) =>
+      apiRequest("POST", "/api/pantry", { ingredient: name, displayName: name, category: cat }),
     onSuccess: () => {
       qclient.invalidateQueries({ queryKey: ["/api/pantry"] });
-      setNewItem("");
+      setQuery("");
     },
     onError: (err: any) => {
       const body = err?.body ?? err;
@@ -548,6 +541,12 @@ function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading
     onError: () => toast({ title: "Failed to remove item", variant: "destructive" }),
   });
 
+  const handleAdd = () => {
+    if (!query.trim()) return;
+    // Pass category explicitly to avoid stale closure
+    addMutation.mutate({ name: query.trim(), cat: activeCategory });
+  };
+
   const toggleSelect = (id: number) => {
     setSelected(prev => {
       const next = new Set(prev);
@@ -557,17 +556,26 @@ function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading
   };
 
   const toggleAll = () => {
-    if (selected.size === householdItems.length) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(householdItems.map(i => i.id)));
-    }
+    const ids = displayedItems.map(i => i.id);
+    const allSel = ids.every(id => selected.has(id));
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (allSel) ids.forEach(id => next.delete(id));
+      else ids.forEach(id => next.add(id));
+      return next;
+    });
+  };
+
+  const handleCategoryChange = (cat: HomeCat) => {
+    onCategoryChange(cat);
+    setSelected(new Set());
+    setQuery("");
   };
 
   const sendToBasket = async () => {
     if (selected.size === 0) return;
     setSending(true);
-    const toSend = householdItems.filter(i => selected.has(i.id));
+    const toSend = allHomeItems.filter(i => selected.has(i.id));
     try {
       await Promise.all(
         toSend.map(item =>
@@ -575,8 +583,8 @@ function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading
             productName: item.displayName || item.ingredientKey,
             quantityValue: sendQty,
             unit: "unit",
-            category: "household",
-            source: "household",
+            category: item.category,
+            source: item.category === "pet" ? "pantry" : "household",
           })
         )
       );
@@ -591,12 +599,16 @@ function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading
     }
   };
 
+  const allActiveSelected = displayedItems.length > 0 && displayedItems.every(i => selected.has(i.id));
+  const catLabel = HOME_CATS.find(c => c.value === activeCategory)?.label.toLowerCase() ?? "item";
+
   return (
-    <Card className="p-5">
-      <div className="flex items-center justify-between mb-1">
+    <Card className="p-4 sm:p-5">
+      {/* Section header row */}
+      <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Home className="h-4 w-4 text-primary" />
-          <h2 className="text-base font-medium">Household Essentials</h2>
+          <h2 className="text-base font-semibold">Home</h2>
         </div>
         {selected.size > 0 && (
           <div className="flex items-center gap-1.5">
@@ -605,7 +617,7 @@ function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading
               min={1}
               value={sendQty}
               onChange={e => setSendQty(Math.max(1, parseInt(e.target.value) || 1))}
-              className="w-14 h-8 text-[13px] px-2 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums text-center"
+              className="w-12 h-8 text-[13px] px-2 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums text-center"
               aria-label="Quantity to send"
               data-testid="input-household-send-qty"
             />
@@ -616,28 +628,40 @@ function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading
               data-testid="button-send-to-basket"
             >
               {sending ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <ShoppingBasket className="h-3 w-3 mr-1" />}
-              Send {selected.size} to Basket
+              Send {selected.size}
             </Button>
           </div>
         )}
       </div>
-      <p className="text-xs text-muted-foreground mb-4">
-        Tick items you need this week, then tap "Send to Basket".
-      </p>
 
-      <div className="flex gap-2 mb-5">
-        <Input
-          placeholder="Add household item…"
-          value={newItem}
-          onChange={e => setNewItem(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && newItem.trim() && addMutation.mutate(newItem.trim())}
-          className="flex-1 text-sm"
-          data-testid="input-household-item"
-        />
+      {/* Unified search + add — same pattern as Food panel */}
+      <div className="flex gap-2 mb-3">
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 pointer-events-none" />
+          <input
+            type="text"
+            placeholder={`Search ${catLabel} or add item…`}
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleAdd()}
+            className="w-full pl-8 pr-8 py-2 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring"
+            data-testid="input-household-item"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+              aria-label="Clear"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
         <Button
           size="sm"
-          onClick={() => newItem.trim() && addMutation.mutate(newItem.trim())}
-          disabled={!newItem.trim() || addMutation.isPending}
+          onClick={handleAdd}
+          disabled={!query.trim() || addMutation.isPending}
           data-testid="button-household-add"
         >
           {addMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
@@ -645,64 +669,110 @@ function HouseholdSection({ items, isLoading }: { items: PantryItem[]; isLoading
         </Button>
       </div>
 
+      {/* Items list */}
       {isLoading ? (
         <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-11 w-full" />
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
-      ) : householdItems.length === 0 ? (
-        <p className="text-xs text-muted-foreground italic">No household items yet.</p>
+      ) : query.trim() && displayedItems.length === 0 ? (
+        <p className="text-sm text-muted-foreground italic text-center py-6">
+          No items matched "{query}"
+        </p>
       ) : (
-        <div>
-          <label className="flex items-center gap-3 pb-2 border-b border-border mb-2 cursor-pointer select-none min-h-[2.75rem]">
-            <Checkbox
-              checked={selected.size === householdItems.length && householdItems.length > 0}
-              onCheckedChange={toggleAll}
-              data-testid="checkbox-select-all-household"
-            />
-            <span className="text-xs text-muted-foreground">Select all</span>
-          </label>
-          <div className="max-h-72 overflow-y-auto">
-            {householdItems.map(item => (
-              <div key={item.id} className="flex items-center group" data-testid={`row-household-item-${item.id}`}>
-                <label
-                  className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
-                  data-testid={`label-household-${item.id}`}
-                >
-                  <Checkbox
-                    checked={selected.has(item.id)}
-                    onCheckedChange={() => toggleSelect(item.id)}
-                    data-testid={`checkbox-household-${item.id}`}
-                  />
-                  <span className="flex-1 text-sm truncate">{item.displayName || item.ingredientKey}</span>
-                </label>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-9 w-9 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                  onClick={() => deleteMutation.mutate(item.id)}
-                  disabled={deleteMutation.isPending}
-                  data-testid={`button-household-delete-${item.id}`}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+        <div
+          className="rounded-lg border border-border/40 overflow-hidden"
+          style={{ background: "color-mix(in srgb, var(--realm-bg) 22%, white)" }}
+        >
+          {displayedItems.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic px-4 py-5">
+              {HOME_CAT_EMPTY[activeCategory]}
+            </p>
+          ) : (
+            <div className="px-3 pt-1 pb-2">
+              <label className="flex items-center gap-3 pb-2 border-b border-border/40 mb-1 cursor-pointer select-none min-h-[2.75rem]">
+                <Checkbox
+                  checked={allActiveSelected}
+                  onCheckedChange={toggleAll}
+                  data-testid="checkbox-select-all-household"
+                />
+                <span className="text-xs text-muted-foreground">Select all</span>
+                {selected.size > 0 && (
+                  <Badge variant="default" className="text-[10px] h-4 px-1.5 ml-auto">
+                    {selected.size} selected
+                  </Badge>
+                )}
+              </label>
+              <div className="max-h-72 overflow-y-auto">
+                {displayedItems.map(item => (
+                  <div key={item.id} className="flex items-center group" data-testid={`row-household-item-${item.id}`}>
+                    <label
+                      className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
+                      data-testid={`label-household-${item.id}`}
+                    >
+                      <Checkbox
+                        checked={selected.has(item.id)}
+                        onCheckedChange={() => toggleSelect(item.id)}
+                        data-testid={`checkbox-household-${item.id}`}
+                      />
+                      <span className="flex-1 text-sm truncate">{item.displayName || item.ingredientKey}</span>
+                    </label>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                      onClick={() => deleteMutation.mutate(item.id)}
+                      disabled={deleteMutation.isPending}
+                      data-testid={`button-household-delete-${item.id}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
       )}
     </Card>
   );
 }
 
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function PantryPage() {
   const { data: items = [], isLoading } = useQuery<PantryItem[]>({
     queryKey: ["/api/pantry"],
   });
 
-  // Rotate by day-of-month - stable per session, different each day
+  // Tab state lifted to page level so tabs can live in the banner
+  const [activeFood, setActiveFood] = useState<FoodCat>("larder");
+  const [activeHome, setActiveHome] = useState<HomeCat>("household");
+
   const microInsight = MICRO_INSIGHTS[new Date().getDate() % MICRO_INSIGHTS.length];
+
+  // Food tabs go in the PageHeader center (2/3 of layout = the dominant area)
+  const headerCenter = (
+    <div className="flex items-center gap-2 w-full" style={{ maxWidth: 480 }}>
+      <CategoryTabs
+        categories={FOOD_CATS}
+        active={activeFood}
+        onChange={setActiveFood}
+        className="flex items-center gap-1 rounded-lg bg-muted/40 p-1 flex-[2] min-w-0"
+      />
+    </div>
+  );
+
+  // Home tabs go in the PageHeader actions (right side, narrower)
+  const headerActions = (
+    <CategoryTabs
+      categories={HOME_CATS}
+      active={activeHome}
+      onChange={setActiveHome}
+      className="flex items-center gap-1 rounded-lg bg-muted/40 p-1"
+    />
+  );
 
   return (
     <>
@@ -711,9 +781,16 @@ export default function PantryPage() {
         icon={<PantryIcon className="h-5 w-5" />}
         realm="pantry"
         titleTestId="text-pantry-title"
-        context="Your everyday choices live here."
+        center={headerCenter}
+        actions={headerActions}
+        meta={<span>Your everyday choices live here.</span>}
       />
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-6">
+
+      {/* data-realm propagates CSS custom properties so tabs use var(--realm-bg/text) */}
+      <div
+        data-realm="pantry"
+        className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 space-y-3"
+      >
         <p className="text-xs text-muted-foreground/50 italic" data-testid="text-pantry-micro-insight">
           {microInsight}
         </p>
@@ -723,8 +800,25 @@ export default function PantryPage() {
           message="Add the ingredients you have at home - fridge, freezer, and larder. Your pantry helps tailor meal suggestions and avoids duplicates when you shop."
         />
 
-        <FoodPantrySection items={items} isLoading={isLoading} />
-        <HouseholdSection items={items} isLoading={isLoading} />
+        {/* Two-column layout: Food (dominant, 2/3) | Home (narrower, 1/3) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 pb-8">
+          <div className="lg:col-span-2">
+            <FoodPantrySection
+              items={items}
+              isLoading={isLoading}
+              activeCategory={activeFood}
+              onCategoryChange={setActiveFood}
+            />
+          </div>
+          <div className="lg:col-span-1">
+            <HomePantrySection
+              items={items}
+              isLoading={isLoading}
+              activeCategory={activeHome}
+              onCategoryChange={setActiveHome}
+            />
+          </div>
+        </div>
       </div>
     </>
   );
