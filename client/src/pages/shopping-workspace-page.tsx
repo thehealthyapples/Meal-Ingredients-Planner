@@ -272,31 +272,25 @@ function PrepActionPanel({
   if (isPantryStocked) {
     if (!prepState.pantryDecision) {
       return (
-        <div className="space-y-1">
-          <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
-            <Home className="h-3 w-3 shrink-0" />
-            Common pantry item — check before buying
-          </p>
-          <div className="flex gap-1.5 flex-wrap">
-            <button
-              onClick={() => onPrepAction({ type: "pantry", decision: "have_enough" })}
-              className="px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-500/20 active:bg-emerald-500/30 transition-colors touch-manipulation"
-            >
-              Have enough
-            </button>
-            <button
-              onClick={() => onPrepAction({ type: "pantry", decision: "need_to_buy" })}
-              className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted/60 text-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors touch-manipulation"
-            >
-              Need to buy
-            </button>
-            <button
-              onClick={() => onPrepAction({ type: "pantry", decision: "adjusting" })}
-              className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted/60 text-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors touch-manipulation"
-            >
-              Adjust amount
-            </button>
-          </div>
+        <div className="flex gap-1.5 flex-wrap">
+          <button
+            onClick={() => onPrepAction({ type: "pantry", decision: "have_enough" })}
+            className="px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-500/20 active:bg-emerald-500/30 transition-colors touch-manipulation"
+          >
+            Have enough
+          </button>
+          <button
+            onClick={() => onPrepAction({ type: "pantry", decision: "need_to_buy" })}
+            className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted/60 text-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors touch-manipulation"
+          >
+            Need to buy
+          </button>
+          <button
+            onClick={() => onPrepAction({ type: "pantry", decision: "adjusting" })}
+            className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted/60 text-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors touch-manipulation"
+          >
+            Adjust amount
+          </button>
         </div>
       );
     }
@@ -379,31 +373,25 @@ function PrepActionPanel({
 
     if (!prepState.quantityDecision) {
       return (
-        <div className="space-y-1">
-          <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1">
-            <AlertTriangle className="h-3 w-3 shrink-0" />
-            {estimateLabel} — confirm before shopping
-          </p>
-          <div className="flex gap-1.5 flex-wrap">
-            <button
-              onClick={() => onPrepAction({ type: "quantity", decision: "accepted" })}
-              className="px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-500/20 active:bg-emerald-500/30 transition-colors touch-manipulation"
-            >
-              Accept estimate
-            </button>
-            <button
-              onClick={() => onPrepAction({ type: "quantity", decision: "editing" })}
-              className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted/60 text-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors touch-manipulation"
-            >
-              Edit quantity
-            </button>
-            <button
-              onClick={() => onPrepAction({ type: "quantity", decision: "later" })}
-              className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted/60 text-muted-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors touch-manipulation"
-            >
-              Mark for later
-            </button>
-          </div>
+        <div className="flex gap-1.5 flex-wrap">
+          <button
+            onClick={() => onPrepAction({ type: "quantity", decision: "accepted" })}
+            className="px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-500/20 active:bg-emerald-500/30 transition-colors touch-manipulation"
+          >
+            Accept estimate
+          </button>
+          <button
+            onClick={() => onPrepAction({ type: "quantity", decision: "editing" })}
+            className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted/60 text-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors touch-manipulation"
+          >
+            Edit quantity
+          </button>
+          <button
+            onClick={() => onPrepAction({ type: "quantity", decision: "later" })}
+            className="px-2.5 py-1 text-xs font-medium rounded-md bg-muted/60 text-muted-foreground border border-border/60 hover:bg-muted active:bg-muted/80 transition-colors touch-manipulation"
+          >
+            Mark for later
+          </button>
         </div>
       );
     }
@@ -568,175 +556,135 @@ function WorkspaceRow({
       className={`border-b border-border/30 transition-colors ${rowOpacity} ${rowBg}`}
       data-testid={`workspace-row-${item.id}`}
     >
-      {/* ── Shop mode collapsed row ───────────────────────────────── */}
-      {shopMode && (
-        <div className="grid grid-cols-[20px_minmax(2.75rem,auto)_1fr_auto_2.75rem] items-center gap-x-2 px-4 py-3 min-h-[52px]">
+      {/* ── Collapsed row — flex with pinned-right score and chevron ─────── */}
+      <div className="flex items-center gap-x-2 px-4 py-3 min-h-[52px]">
 
-          {/* Col 1 — state circle, centred in its cell */}
-          <button
-            onClick={() =>
-              onShopStateChange?.(effectiveShopState === "found" ? null : "found")
-            }
-            aria-label={effectiveShopState === "need" ? "Mark as found" : "Undo"}
-            className={`place-self-center h-5 w-5 rounded-full flex items-center justify-center transition-colors touch-manipulation border-2 ${shopConfig.circleClass}`}
-          >
-            {effectiveShopState === "found" && <CheckCircle2 className="h-3 w-3 text-white" />}
-            {effectiveShopState === "defer" && <Clock className="h-3 w-3 text-white" />}
-            {effectiveShopState === "have" && <Home className="h-3 w-3 text-white" />}
-          </button>
+        {/* Indicator — 28px fixed (circle for Shop, checkbox for Review/Prep) */}
+        <div className="shrink-0 w-7 flex items-center justify-center">
+          {shopMode ? (
+            <button
+              onClick={() => onShopStateChange?.(effectiveShopState === "found" ? null : "found")}
+              aria-label={effectiveShopState === "need" ? "Mark as found" : "Undo"}
+              className={`h-5 w-5 rounded-full flex items-center justify-center transition-colors touch-manipulation border-2 ${shopConfig.circleClass}`}
+            >
+              {effectiveShopState === "found" && <CheckCircle2 className="h-3 w-3 text-white" />}
+              {effectiveShopState === "defer" && <Clock className="h-3 w-3 text-white" />}
+              {effectiveShopState === "have" && <Home className="h-3 w-3 text-white" />}
+            </button>
+          ) : (
+            <Checkbox
+              checked={item.checked || false}
+              onCheckedChange={(v) => onToggleChecked(!!v)}
+              className="border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+              data-testid={`ws-checkbox-${item.id}`}
+            />
+          )}
+        </div>
 
-          {/* Col 2 — qty anchor (compact, before name, scannable while scrolling) */}
-          <button onClick={onToggleExpand} className="text-left" tabIndex={qtyLabel ? 0 : -1}>
+        {/* Item name + qty — fills remaining space; hint for Review + Prep */}
+        <button
+          className="flex-1 min-w-0 text-left"
+          onClick={onToggleExpand}
+          data-testid={`ws-row-expand-${item.id}`}
+        >
+          <div className="flex items-baseline gap-1.5 min-w-0 flex-wrap">
+            <span className={`text-sm font-medium leading-snug truncate ${
+              shopMode
+                ? effectiveShopState !== "need" ? "text-muted-foreground" : "text-foreground"
+                : item.checked ? "line-through text-muted-foreground" : "text-foreground"
+            }`}>
+              {capitalizeWords(item.productName)}
+            </span>
             {qtyLabel && (
-              <span className={`font-semibold text-[15px] leading-tight tabular-nums whitespace-nowrap ${
-                effectiveShopState !== "need"
-                  ? "text-muted-foreground/40"
-                  : "text-foreground/80"
+              <span className={`text-xs tabular-nums shrink-0 whitespace-nowrap ${
+                shopMode
+                  ? effectiveShopState !== "need" ? "text-muted-foreground/40" : "text-muted-foreground"
+                  : item.checked ? "text-muted-foreground/50" : "text-muted-foreground"
               }`}>
                 {qtyLabel}
               </span>
             )}
-          </button>
-
-          {/* Col 3 — name (1fr, truncates so qty + actions stay aligned) */}
-          <button
-            onClick={onToggleExpand}
-            data-testid={`ws-row-expand-${item.id}`}
-            className="text-left min-w-0"
-          >
-            <span className={`font-medium text-[14px] leading-snug block truncate ${
-              effectiveShopState !== "need"
-                ? "text-muted-foreground"
-                : "text-foreground"
-            }`}>
-              {capitalizeWords(item.productName)}
-            </span>
-          </button>
-
-          {/* Col 4 — action chips */}
-          <div className="flex items-center">
-            {effectiveShopState === "need" ? (
-              <div className="flex gap-1.5">
-                <button
-                  onClick={() => onShopStateChange?.("found")}
-                  className="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors touch-manipulation whitespace-nowrap bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800/50 hover:bg-emerald-500/20 active:bg-emerald-500/30"
-                >
-                  Found it
-                </button>
-                <button
-                  onClick={() => onShopStateChange?.("defer")}
-                  className="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors touch-manipulation whitespace-nowrap bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/70 dark:border-blue-800/50 hover:bg-blue-500/20 active:bg-blue-500/30"
-                >
-                  Next shop
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1.5">
-                <span className={`text-xs font-medium whitespace-nowrap ${shopConfig.labelClass}`}>
-                  {shopConfig.label}
-                </span>
-                <button
-                  onClick={() => onShopStateChange?.(null)}
-                  className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors touch-manipulation"
-                >
-                  undo
-                </button>
-              </div>
-            )}
           </div>
-
-          {/* Col 5 — apple score + chevron (pinned right) */}
-          <button
-            onClick={onToggleExpand}
-            className="self-center flex items-center justify-end gap-1.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-          >
-            {item.thaRating != null && <ScoreBadge score={item.thaRating} size={22} />}
-            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </button>
-
-        </div>
-      )}
-
-      {/* ── Review / Prep mode collapsed row ─────────────────────── */}
-      {!shopMode && (
-        <div className="px-4 py-3 min-h-[52px]">
-          {/* Main row line */}
-          <div className="flex items-center gap-3">
-            <Checkbox
-              checked={item.checked || false}
-              onCheckedChange={(v) => onToggleChecked(!!v)}
-              className="border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground shrink-0"
-              data-testid={`ws-checkbox-${item.id}`}
-            />
-
-            {/* Name + qty inline — clicking expands */}
-            <button
-              className="flex-1 min-w-0 text-left"
-              onClick={onToggleExpand}
-              data-testid={`ws-row-expand-${item.id}`}
-            >
-              <div className="flex items-baseline gap-1.5 min-w-0">
-                <span
-                  className={`text-sm font-medium leading-snug truncate ${
-                    item.checked ? "line-through text-muted-foreground" : "text-foreground"
-                  }`}
-                >
-                  {capitalizeWords(item.productName)}
-                </span>
-                {qtyLabel && (
-                  <span className={`text-xs tabular-nums shrink-0 whitespace-nowrap ${
-                    item.checked ? "text-muted-foreground/50" : "text-muted-foreground"
-                  }`}>
-                    {qtyLabel}
-                  </span>
-                )}
-              </div>
-              {hint && !item.checked && (
-                <div className="flex items-center gap-0.5 mt-0.5">
-                  {hint.tone === "amber" && <AlertTriangle className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />}
-                  {hint.tone === "green" && <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" />}
-                  <span className={`text-xs ${hintToneClass}`}>{hint.text}</span>
-                </div>
-              )}
-            </button>
-
-            {/* Analyse — row-level CTA for review mode */}
-            {!prepMode && !item.checked && onOpenAnalyser && (
-              <button
-                onClick={onOpenAnalyser}
-                className="shrink-0 flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-border/50 bg-muted/40 hover:bg-muted text-foreground/80 transition-colors touch-manipulation whitespace-nowrap"
-                data-testid={`ws-analyse-btn-${item.id}`}
-              >
-                <FlaskConical className="h-3 w-3 shrink-0" />
-                Analyse
-              </button>
-            )}
-
-            {/* Score + chevron */}
-            <button
-              onClick={onToggleExpand}
-              className="self-center flex items-center gap-1.5 shrink-0 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-            >
-              {item.thaRating != null && !item.checked && (
-                <ScoreBadge score={item.thaRating} size={22} />
-              )}
-              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </button>
-          </div>
-
-          {/* Prep actions — inline, visible without expansion */}
-          {prepMode && !item.checked && onPrepAction && (
-            <div className="mt-1 ml-7">
-              <PrepActionPanel
-                item={item}
-                isPantryStocked={isPantryStocked}
-                prepState={prepState ?? {}}
-                onPrepAction={onPrepAction}
-              />
+          {/* Hint — Review and Prep (label moved here from PrepActionPanel undecided) */}
+          {hint && !item.checked && !shopMode && (
+            <div className="flex items-center gap-0.5 mt-0.5">
+              {hint.tone === "amber" && <AlertTriangle className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />}
+              {hint.tone === "green" && <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" />}
+              <span className={`text-xs ${hintToneClass}`}>{hint.text}</span>
             </div>
           )}
+        </button>
+
+        {/* CTA slot — fixed min-width anchors left edge; content left-aligned */}
+        <div className="shrink-0 flex items-center min-w-[160px] sm:min-w-[240px]">
+          {/* Shop: Found it / Next shop or status + undo */}
+          {shopMode && effectiveShopState === "need" && (
+            <div className="flex gap-1.5">
+              <button
+                onClick={() => onShopStateChange?.("found")}
+                className="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors touch-manipulation whitespace-nowrap bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200/70 dark:border-emerald-800/50 hover:bg-emerald-500/20 active:bg-emerald-500/30"
+              >
+                Found it
+              </button>
+              <button
+                onClick={() => onShopStateChange?.("defer")}
+                className="px-2.5 py-1 text-xs font-medium rounded-md border transition-colors touch-manipulation whitespace-nowrap bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-200/70 dark:border-blue-800/50 hover:bg-blue-500/20 active:bg-blue-500/30"
+              >
+                Next shop
+              </button>
+            </div>
+          )}
+          {shopMode && effectiveShopState !== "need" && (
+            <div className="flex items-center gap-1.5">
+              <span className={`text-xs font-medium whitespace-nowrap ${shopConfig.labelClass}`}>
+                {shopConfig.label}
+              </span>
+              <button
+                onClick={() => onShopStateChange?.(null)}
+                className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors touch-manipulation"
+              >
+                undo
+              </button>
+            </div>
+          )}
+          {/* Prep: chips only (label now in item col hint above) */}
+          {prepMode && !item.checked && onPrepAction && (
+            <PrepActionPanel
+              item={item}
+              isPantryStocked={isPantryStocked}
+              prepState={prepState ?? {}}
+              onPrepAction={onPrepAction}
+            />
+          )}
+          {/* Review: Analyse */}
+          {!shopMode && !prepMode && !item.checked && onOpenAnalyser && (
+            <button
+              onClick={onOpenAnalyser}
+              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-border/50 bg-muted/40 hover:bg-muted text-foreground/80 transition-colors touch-manipulation whitespace-nowrap"
+              data-testid={`ws-analyse-btn-${item.id}`}
+            >
+              <FlaskConical className="h-3 w-3 shrink-0" />
+              Analyse
+            </button>
+          )}
         </div>
-      )}
+
+        {/* Score — fixed 78px = max 5 apples at size=22 so chevron never shifts */}
+        <div className="shrink-0 w-[78px] flex items-center justify-center">
+          {item.thaRating != null && (shopMode || !item.checked) && (
+            <ScoreBadge score={item.thaRating} size={22} />
+          )}
+        </div>
+
+        {/* Chevron — fixed far-right */}
+        <button
+          onClick={onToggleExpand}
+          className="shrink-0 flex items-center justify-center text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+        >
+          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+
+      </div>
 
       {/* ── Expanded detail ───────────────────────────────────────── */}
       <AnimatePresence initial={false}>
@@ -893,49 +841,38 @@ function SummaryBar({
     const pct = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
     return (
-      <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-3 mb-4 space-y-2.5">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-foreground">
+      <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-2.5 mb-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-medium text-foreground shrink-0">
             {needCount === 0 && total > 0
-              ? "All items accounted for"
+              ? "All accounted for"
               : needCount === total
-                ? `${total} item${total !== 1 ? "s" : ""} to find`
+                ? `${total} to find`
                 : `${needCount} still needed`}
           </span>
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {resolved}/{total}
-          </span>
-        </div>
-
-        <div className="h-1.5 rounded-full bg-muted/60 overflow-hidden">
-          <div
-            className="h-full rounded-full bg-primary transition-all duration-300"
-            style={{ width: `${pct}%` }}
-          />
-        </div>
-
-        {(foundCount > 0 || deferCount > 0 || haveCount > 0) && (
-          <div className="flex items-center gap-3 flex-wrap pt-0.5">
-            {foundCount > 0 && (
-              <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3 shrink-0" />
-                {foundCount} found it
-              </span>
-            )}
-            {deferCount > 0 && (
-              <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                <Clock className="h-3 w-3 shrink-0" />
-                {deferCount} next shop
-              </span>
-            )}
-            {haveCount > 0 && (
-              <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                <Home className="h-3 w-3 shrink-0" />
-                {haveCount} already have
-              </span>
-            )}
+          <div className="flex-1 min-w-[40px] h-1.5 rounded-full bg-muted/60 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all duration-300"
+              style={{ width: `${pct}%` }}
+            />
           </div>
-        )}
+          <span className="text-xs text-muted-foreground tabular-nums shrink-0">{resolved}/{total}</span>
+          {foundCount > 0 && (
+            <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0">
+              <CheckCircle2 className="h-3 w-3" />{foundCount}
+            </span>
+          )}
+          {deferCount > 0 && (
+            <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 shrink-0">
+              <Clock className="h-3 w-3" />{deferCount}
+            </span>
+          )}
+          {haveCount > 0 && (
+            <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 shrink-0">
+              <Home className="h-3 w-3" />{haveCount}
+            </span>
+          )}
+        </div>
       </div>
     );
   }
@@ -945,68 +882,32 @@ function SummaryBar({
     const hasAnything = pantryTotal + uncertainTotal + attentionTotal > 0;
 
     return (
-      <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-3 mb-4 space-y-2">
-        <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
-          Prep progress
-        </p>
-        <div className="space-y-1.5">
+      <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-2.5 mb-4">
+        <div className="flex items-center gap-3 flex-wrap text-xs">
+          <span className="font-medium text-foreground shrink-0">Prep</span>
           {pantryTotal > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Home className="h-3.5 w-3.5" />
-                Pantry items
-              </span>
-              <span
-                className={`text-xs font-medium tabular-nums ${
-                  pantryReviewed === pantryTotal
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-foreground"
-                }`}
-              >
-                {pantryReviewed}/{pantryTotal} reviewed
-              </span>
-            </div>
+            <span className={`flex items-center gap-1 shrink-0 ${pantryReviewed === pantryTotal ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+              <Home className="h-3 w-3" />{pantryReviewed}/{pantryTotal} pantry
+            </span>
           )}
           {uncertainTotal > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                Quantities
-              </span>
-              <span
-                className={`text-xs font-medium tabular-nums ${
-                  uncertainResolved === uncertainTotal
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-foreground"
-                }`}
-              >
-                {uncertainResolved}/{uncertainTotal} confirmed
-              </span>
-            </div>
+            <span className={`flex items-center gap-1 shrink-0 ${uncertainResolved === uncertainTotal ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
+              <AlertTriangle className="h-3 w-3" />{uncertainResolved}/{uncertainTotal} qty
+            </span>
           )}
           {attentionTotal > 0 && (
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                Need attention
-              </span>
-              <span className="text-xs font-medium text-amber-600 dark:text-amber-400 tabular-nums">
-                {attentionTotal}
-              </span>
-            </div>
+            <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 shrink-0">
+              <AlertTriangle className="h-3 w-3" />{attentionTotal} attention
+            </span>
           )}
           {allPrepDone && (
-            <div className="flex items-center gap-1.5 pt-0.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-              <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                All prep done — ready to shop
-              </span>
-            </div>
+            <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0">
+              <CheckCircle2 className="h-3 w-3" />Ready to shop
+            </span>
           )}
           {!hasAnything && (
-            <span className="text-xs text-muted-foreground flex items-center gap-1">
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-              List looks ready
+            <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0">
+              <CheckCircle2 className="h-3 w-3" />List looks ready
             </span>
           )}
         </div>
@@ -1060,7 +961,7 @@ function PrepGroupHeader({
 }) {
   const isComplete = resolvedCount !== undefined && resolvedCount === count;
   return (
-    <div className="px-4 py-1.5 border-t border-border/30 bg-muted/20 flex items-center justify-between">
+    <div className="px-4 py-1.5 border-t border-border/30 bg-[hsl(26,15%,96%)] dark:bg-[hsl(26,8%,15%)] flex items-center justify-between">
       <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium flex items-center gap-1.5">
         {isComplete && <CheckCircle2 className="h-3 w-3 text-emerald-500" />}
         {label}
@@ -1091,7 +992,7 @@ function ShopGroupHeader({
 }) {
   const colorClass = SHOP_STATE_CONFIG[variant].groupClass;
   return (
-    <div className="px-4 py-1.5 border-t border-border/30 bg-muted/20 flex items-center justify-between">
+    <div className="px-4 py-1.5 border-t border-border/30 bg-[hsl(26,15%,96%)] dark:bg-[hsl(26,8%,15%)] flex items-center justify-between">
       <span className={`text-[10px] uppercase tracking-wide font-medium ${colorClass}`}>
         {label}
       </span>
@@ -1106,7 +1007,7 @@ function ShopGroupHeader({
 
 function ShopCategoryHeader({ label, count }: { label: string; count: number }) {
   return (
-    <div className="px-4 py-1.5 border-t border-border/30 bg-muted/10 flex items-center justify-between">
+    <div className="px-4 py-1.5 border-t border-border/30 bg-[hsl(26,12%,97%)] dark:bg-[hsl(26,5%,13%)] flex items-center justify-between">
       <span className="text-[10px] uppercase tracking-wide font-semibold text-muted-foreground/80">
         {label}
       </span>
@@ -1448,7 +1349,7 @@ export default function ShoppingWorkspacePage() {
                   }
                   {checkedItems.length > 0 && (
                     <>
-                      <div className="px-4 py-1.5 border-t border-border/30 bg-muted/20">
+                      <div className="px-4 py-1.5 border-t border-border/30 bg-[hsl(26,15%,96%)] dark:bg-[hsl(26,8%,15%)]">
                         <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
                           Checked ({checkedItems.length})
                         </span>
