@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -24,6 +24,102 @@ interface PantryItem {
   isDefault: boolean;
   isDeleted: boolean;
   notes: string | null;
+  needQuantityValue: number | null;
+  needUnit: string | null;
+}
+
+// ── Need Quantity inline control ──────────────────────────────────────────────
+
+function NeedQuantityControl({
+  item,
+  onPatch,
+}: {
+  item: PantryItem;
+  onPatch: (id: number, qty: number | null, unit: string | null) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState("");
+  const [unit, setUnit] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const hasNeed = item.needQuantityValue !== null;
+
+  const save = () => {
+    const n = parseFloat(val);
+    if (isNaN(n) || n <= 0) {
+      setEditing(false);
+      return;
+    }
+    onPatch(item.id, n, unit.trim() || null);
+    setEditing(false);
+  };
+
+  const handleFocusOut = (e: React.FocusEvent<HTMLDivElement>) => {
+    if (!containerRef.current?.contains(e.relatedTarget as Node)) save();
+  };
+
+  if (editing) {
+    return (
+      <div
+        ref={containerRef}
+        className="flex items-center gap-1 shrink-0"
+        onBlur={handleFocusOut}
+      >
+        <input
+          autoFocus
+          type="number"
+          min={0.1}
+          step={0.5}
+          value={val}
+          onChange={e => setVal(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
+          className="w-12 h-6 text-xs px-1.5 rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums text-center"
+          data-testid={`input-need-qty-${item.id}`}
+        />
+        <input
+          type="text"
+          placeholder="unit"
+          value={unit}
+          onChange={e => setUnit(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
+          className="w-12 h-6 text-xs px-1.5 rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30"
+          data-testid={`input-need-unit-${item.id}`}
+        />
+      </div>
+    );
+  }
+
+  if (hasNeed) {
+    return (
+      <div className="flex items-center gap-0.5 shrink-0">
+        <button
+          onClick={() => { setVal(item.needQuantityValue!.toString()); setUnit(item.needUnit ?? ""); setEditing(true); }}
+          className="text-[11px] px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200/70 text-amber-700 hover:bg-amber-100 transition-colors dark:bg-amber-950/20 dark:border-amber-800/50 dark:text-amber-400"
+          data-testid={`button-need-qty-edit-${item.id}`}
+        >
+          Need {item.needQuantityValue}{item.needUnit ? ` ${item.needUnit}` : ""}
+        </button>
+        <button
+          onClick={() => onPatch(item.id, null, null)}
+          className="p-1 text-muted-foreground/30 hover:text-destructive transition-colors"
+          title="Clear need quantity"
+          data-testid={`button-need-qty-clear-${item.id}`}
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => { setVal("1"); setUnit(""); setEditing(true); }}
+      className="shrink-0 text-[11px] px-2 py-0.5 rounded-full border border-dashed border-muted-foreground/25 text-muted-foreground/40 hover:text-muted-foreground/70 hover:border-muted-foreground/40 transition-colors"
+      data-testid={`button-need-qty-add-${item.id}`}
+    >
+      + Need
+    </button>
+  );
 }
 
 function PantryIcon({ className }: { className?: string }) {
@@ -172,6 +268,17 @@ function FoodPantrySection({
     onError: () => toast({ title: "Failed to remove item", variant: "destructive" }),
   });
 
+  const patchQuantityMutation = useMutation({
+    mutationFn: ({ id, needQuantityValue, needUnit }: { id: number; needQuantityValue: number | null; needUnit: string | null }) =>
+      apiRequest("PATCH", `/api/pantry/${id}`, { needQuantityValue, needUnit }),
+    onSuccess: () => qclient.invalidateQueries({ queryKey: ["/api/pantry"] }),
+    onError: () => toast({ title: "Failed to update need quantity", variant: "destructive" }),
+  });
+
+  const handlePatchQuantity = (id: number, qty: number | null, unit: string | null) => {
+    patchQuantityMutation.mutate({ id, needQuantityValue: qty, needUnit: unit });
+  };
+
   const foodCatValues = FOOD_CATS.map(c => c.value as string);
   const allFoodItems = items.filter(i => foodCatValues.includes(i.category));
   const activeItems = allFoodItems.filter(i => i.category === activeCategory);
@@ -260,6 +367,10 @@ function FoodPantrySection({
       setSending(false);
     }
   };
+
+  const needItems = displayedItems.filter(i => i.needQuantityValue !== null);
+  const inPantryItems = displayedItems.filter(i => i.needQuantityValue === null);
+  const showGroupHeaders = needItems.length > 0;
 
   const selectedInActive = displayedItems.filter(i => selected.has(i.id)).length;
   const allActiveSelected = displayedItems.length > 0 && displayedItems.every(i => selected.has(i.id));
@@ -367,109 +478,126 @@ function FoodPantrySection({
                 )}
               </label>
 
-              <div className="space-y-0 max-h-72 overflow-y-auto">
-                {displayedItems.map(item => {
-                  const staticKnow = getPantryKnowledge(item.ingredientKey);
-                  const serverKnow = serverKnowledge.get(item.ingredientKey);
-                  const knowledge = staticKnow ?? (serverKnow !== "loading" ? serverKnow ?? null : null);
-                  const isExpanded = expandedItems.has(item.id);
-                  const isLoadingKnowledge = serverKnow === "loading";
+              <div className="max-h-72 overflow-y-auto">
+                {([
+                  ...(showGroupHeaders ? [{ group: "need" as const, groupItems: needItems }] : []),
+                  { group: "inPantry" as const, groupItems: showGroupHeaders ? inPantryItems : displayedItems },
+                ]).map(({ group, groupItems }) => (
+                  <div key={group}>
+                    {showGroupHeaders && (
+                      <p className={`text-[10px] uppercase tracking-[0.08em] font-semibold px-0.5 pt-1.5 pb-0.5 ${
+                        group === "need"
+                          ? "text-amber-600/80 dark:text-amber-400/70"
+                          : "text-muted-foreground/40 mt-1"
+                      }`}>
+                        {group === "need" ? "Need" : "In Pantry"}
+                      </p>
+                    )}
+                    {groupItems.map(item => {
+                      const staticKnow = getPantryKnowledge(item.ingredientKey);
+                      const serverKnow = serverKnowledge.get(item.ingredientKey);
+                      const knowledge = staticKnow ?? (serverKnow !== "loading" ? serverKnow ?? null : null);
+                      const isExpanded = expandedItems.has(item.id);
+                      const isLoadingKnowledge = serverKnow === "loading";
 
-                  return (
-                    <div key={item.id} className="group" data-testid={`row-food-pantry-item-${item.id}`}>
-                      <div className="flex items-center">
-                        <label
-                          className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
-                          data-testid={`label-food-${item.id}`}
-                        >
-                          <Checkbox
-                            checked={selected.has(item.id)}
-                            onCheckedChange={() => toggleItem(item.id)}
-                            data-testid={`checkbox-food-${item.id}`}
-                          />
-                          <span className="text-sm flex-1 min-w-0 truncate">{item.displayName || item.ingredientKey}</span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => toggleExpanded(item.id, item.ingredientKey)}
-                          className="p-2 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors shrink-0"
-                          title={isExpanded ? "Hide details" : "Learn about this ingredient"}
-                          data-testid={`button-food-pantry-expand-${item.id}`}
-                        >
-                          <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`} />
-                        </button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                          onClick={() => deleteMutation.mutate(item.id)}
-                          disabled={deleteMutation.isPending}
-                          data-testid={`button-food-pantry-delete-${item.id}`}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
+                      return (
+                        <div key={item.id} className="group" data-testid={`row-food-pantry-item-${item.id}`}>
+                          <div className="flex items-center gap-1">
+                            <label
+                              className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
+                              data-testid={`label-food-${item.id}`}
+                            >
+                              <Checkbox
+                                checked={selected.has(item.id)}
+                                onCheckedChange={() => toggleItem(item.id)}
+                                data-testid={`checkbox-food-${item.id}`}
+                              />
+                              <span className="text-sm flex-1 min-w-0 truncate">{item.displayName || item.ingredientKey}</span>
+                            </label>
+                            <NeedQuantityControl item={item} onPatch={handlePatchQuantity} />
+                            <button
+                              type="button"
+                              onClick={() => toggleExpanded(item.id, item.ingredientKey)}
+                              className="p-2 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors shrink-0"
+                              title={isExpanded ? "Hide details" : "Learn about this ingredient"}
+                              data-testid={`button-food-pantry-expand-${item.id}`}
+                            >
+                              <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`} />
+                            </button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-9 w-9 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                              onClick={() => deleteMutation.mutate(item.id)}
+                              disabled={deleteMutation.isPending}
+                              data-testid={`button-food-pantry-delete-${item.id}`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
 
-                      {isExpanded && (
-                        <div className="pl-9 pr-3 pb-3 space-y-2.5 border-t border-border/30 mt-0.5">
-                          {isLoadingKnowledge && (
-                            <p className="text-xs text-muted-foreground/50 italic pt-2.5">Loading ingredient info…</p>
-                          )}
-                          {!isLoadingKnowledge && knowledge && (
-                            <>
-                              {knowledge.supports.length > 0 && (
-                                <div className="pt-2.5">
-                                  <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1.5">Supports</p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {knowledge.supports.map(s => (
-                                      <span key={s} className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">{s}</span>
-                                    ))}
+                          {isExpanded && (
+                            <div className="pl-9 pr-3 pb-3 space-y-2.5 border-t border-border/30 mt-0.5">
+                              {isLoadingKnowledge && (
+                                <p className="text-xs text-muted-foreground/50 italic pt-2.5">Loading ingredient info…</p>
+                              )}
+                              {!isLoadingKnowledge && knowledge && (
+                                <>
+                                  {knowledge.supports.length > 0 && (
+                                    <div className="pt-2.5">
+                                      <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1.5">Supports</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {knowledge.supports.map(s => (
+                                          <span key={s} className="text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/60">{s}</span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {knowledge.highlights && knowledge.highlights.length > 0 && (
+                                    <div className={knowledge.supports.length === 0 ? "pt-2.5" : ""}>
+                                      <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1.5">Highlights</p>
+                                      <div className="flex flex-wrap gap-1">
+                                        {knowledge.highlights.map(h => (
+                                          <span key={h} className="text-[11px] px-2 py-0.5 rounded-full bg-accent/40 text-muted-foreground border border-border/40">{h}</span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-0.5">Why it matters</p>
+                                    <p className="text-xs text-muted-foreground/80 leading-relaxed">{knowledge.whyItMatters}</p>
                                   </div>
-                                </div>
+                                  {knowledge.goodToKnow && (
+                                    <div>
+                                      <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-0.5">Good to know</p>
+                                      <p className="text-xs text-muted-foreground/80 leading-relaxed">{knowledge.goodToKnow}</p>
+                                    </div>
+                                  )}
+                                  {knowledge.howToChoose && knowledge.howToChoose.length > 0 && (
+                                    <div>
+                                      <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1">How to choose</p>
+                                      <ul className="space-y-0.5">
+                                        {knowledge.howToChoose.map((tip, i) => (
+                                          <li key={i} className="text-xs text-muted-foreground/80 flex items-start gap-1.5">
+                                            <span className="text-muted-foreground/40 mt-0.5 shrink-0">·</span>
+                                            {tip}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </>
                               )}
-                              {knowledge.highlights && knowledge.highlights.length > 0 && (
-                                <div className={knowledge.supports.length === 0 ? "pt-2.5" : ""}>
-                                  <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1.5">Highlights</p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {knowledge.highlights.map(h => (
-                                      <span key={h} className="text-[11px] px-2 py-0.5 rounded-full bg-accent/40 text-muted-foreground border border-border/40">{h}</span>
-                                    ))}
-                                  </div>
-                                </div>
+                              {!isLoadingKnowledge && !knowledge && (
+                                <p className="text-xs text-muted-foreground/50 italic pt-2.5">No additional info available yet.</p>
                               )}
-                              <div>
-                                <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-0.5">Why it matters</p>
-                                <p className="text-xs text-muted-foreground/80 leading-relaxed">{knowledge.whyItMatters}</p>
-                              </div>
-                              {knowledge.goodToKnow && (
-                                <div>
-                                  <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-0.5">Good to know</p>
-                                  <p className="text-xs text-muted-foreground/80 leading-relaxed">{knowledge.goodToKnow}</p>
-                                </div>
-                              )}
-                              {knowledge.howToChoose && knowledge.howToChoose.length > 0 && (
-                                <div>
-                                  <p className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/50 font-medium mb-1">How to choose</p>
-                                  <ul className="space-y-0.5">
-                                    {knowledge.howToChoose.map((tip, i) => (
-                                      <li key={i} className="text-xs text-muted-foreground/80 flex items-start gap-1.5">
-                                        <span className="text-muted-foreground/40 mt-0.5 shrink-0">·</span>
-                                        {tip}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
-                              )}
-                            </>
-                          )}
-                          {!isLoadingKnowledge && !knowledge && (
-                            <p className="text-xs text-muted-foreground/50 italic pt-2.5">No additional info available yet.</p>
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -541,6 +669,17 @@ function HomePantrySection({
     onError: () => toast({ title: "Failed to remove item", variant: "destructive" }),
   });
 
+  const patchQuantityMutation = useMutation({
+    mutationFn: ({ id, needQuantityValue, needUnit }: { id: number; needQuantityValue: number | null; needUnit: string | null }) =>
+      apiRequest("PATCH", `/api/pantry/${id}`, { needQuantityValue, needUnit }),
+    onSuccess: () => qclient.invalidateQueries({ queryKey: ["/api/pantry"] }),
+    onError: () => toast({ title: "Failed to update need quantity", variant: "destructive" }),
+  });
+
+  const handlePatchQuantity = (id: number, qty: number | null, unit: string | null) => {
+    patchQuantityMutation.mutate({ id, needQuantityValue: qty, needUnit: unit });
+  };
+
   const handleAdd = () => {
     if (!query.trim()) return;
     // Pass category explicitly to avoid stale closure
@@ -598,6 +737,10 @@ function HomePantrySection({
       setSending(false);
     }
   };
+
+  const homeNeedItems = displayedItems.filter(i => i.needQuantityValue !== null);
+  const homeInPantryItems = displayedItems.filter(i => i.needQuantityValue === null);
+  const homeShowGroupHeaders = homeNeedItems.length > 0;
 
   const allActiveSelected = displayedItems.length > 0 && displayedItems.every(i => selected.has(i.id));
   const catLabel = HOME_CATS.find(c => c.value === activeCategory)?.label.toLowerCase() ?? "item";
@@ -705,29 +848,46 @@ function HomePantrySection({
                 )}
               </label>
               <div className="max-h-72 overflow-y-auto">
-                {displayedItems.map(item => (
-                  <div key={item.id} className="flex items-center group" data-testid={`row-household-item-${item.id}`}>
-                    <label
-                      className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
-                      data-testid={`label-household-${item.id}`}
-                    >
-                      <Checkbox
-                        checked={selected.has(item.id)}
-                        onCheckedChange={() => toggleSelect(item.id)}
-                        data-testid={`checkbox-household-${item.id}`}
-                      />
-                      <span className="flex-1 text-sm truncate">{item.displayName || item.ingredientKey}</span>
-                    </label>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                      onClick={() => deleteMutation.mutate(item.id)}
-                      disabled={deleteMutation.isPending}
-                      data-testid={`button-household-delete-${item.id}`}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                {([
+                  ...(homeShowGroupHeaders ? [{ group: "need" as const, groupItems: homeNeedItems }] : []),
+                  { group: "inPantry" as const, groupItems: homeShowGroupHeaders ? homeInPantryItems : displayedItems },
+                ]).map(({ group, groupItems }) => (
+                  <div key={group}>
+                    {homeShowGroupHeaders && (
+                      <p className={`text-[10px] uppercase tracking-[0.08em] font-semibold px-0.5 pt-1.5 pb-0.5 ${
+                        group === "need"
+                          ? "text-amber-600/80 dark:text-amber-400/70"
+                          : "text-muted-foreground/40 mt-1"
+                      }`}>
+                        {group === "need" ? "Need" : "In Pantry"}
+                      </p>
+                    )}
+                    {groupItems.map(item => (
+                      <div key={item.id} className="flex items-center gap-1 group" data-testid={`row-household-item-${item.id}`}>
+                        <label
+                          className="flex items-center gap-3 flex-1 min-w-0 py-2.5 cursor-pointer select-none min-h-[2.75rem]"
+                          data-testid={`label-household-${item.id}`}
+                        >
+                          <Checkbox
+                            checked={selected.has(item.id)}
+                            onCheckedChange={() => toggleSelect(item.id)}
+                            data-testid={`checkbox-household-${item.id}`}
+                          />
+                          <span className="flex-1 text-sm truncate">{item.displayName || item.ingredientKey}</span>
+                        </label>
+                        <NeedQuantityControl item={item} onPatch={handlePatchQuantity} />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                          onClick={() => deleteMutation.mutate(item.id)}
+                          disabled={deleteMutation.isPending}
+                          data-testid={`button-household-delete-${item.id}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 ))}
               </div>
