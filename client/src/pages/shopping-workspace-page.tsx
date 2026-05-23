@@ -440,53 +440,6 @@ function PrepActionPanel({
   return null;
 }
 
-// ── ShopActionPanel ───────────────────────────────────────────────────────────
-
-function ShopActionPanel({
-  shopState,
-  onShopStateChange,
-}: {
-  shopState: ShopItemState;
-  onShopStateChange: (state: ShopItemState | null) => void;
-}) {
-  return (
-    <div className="rounded-lg bg-muted/20 border border-border/30 p-4 space-y-3">
-      <div className="flex gap-2">
-        <button
-          onClick={() => onShopStateChange(shopState === "found" ? null : "found")}
-          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-colors touch-manipulation ${
-            shopState === "found"
-              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-700"
-              : "bg-muted/40 text-foreground border-border/50 hover:bg-muted active:bg-muted/80"
-          }`}
-        >
-          <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-          Found it
-        </button>
-        <button
-          onClick={() => onShopStateChange(shopState === "defer" ? null : "defer")}
-          className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 text-xs font-medium rounded-lg border transition-colors touch-manipulation ${
-            shopState === "defer"
-              ? "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-700"
-              : "bg-muted/40 text-foreground border-border/50 hover:bg-muted active:bg-muted/80"
-          }`}
-        >
-          <Clock className="h-3.5 w-3.5 shrink-0" />
-          Next shop
-        </button>
-      </div>
-      {shopState !== "need" && (
-        <button
-          onClick={() => onShopStateChange(null)}
-          className="text-[11px] text-muted-foreground/60 hover:text-muted-foreground transition-colors touch-manipulation"
-        >
-          Undo — move back to needed
-        </button>
-      )}
-    </div>
-  );
-}
-
 // ── WorkspaceRow ─────────────────────────────────────────────────────────────
 
 function WorkspaceRow({
