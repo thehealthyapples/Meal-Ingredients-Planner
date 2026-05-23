@@ -12,7 +12,7 @@ import {
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import { formatItemDisplay } from "@/lib/unit-display";
-import { deriveQuantityConfidence, getQuantityConfidenceLabel } from "@/lib/quantity-confidence";
+import { deriveQuantityConfidence } from "@/lib/quantity-confidence";
 import ScoreBadge from "@/components/ui/score-badge";
 import type { ShoppingListItem, IngredientSource } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
@@ -231,7 +231,7 @@ function PrepActionPanel({
         <div className="rounded-lg bg-amber-50/40 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 p-3 space-y-2.5">
           <p className="text-xs font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
             <Home className="h-3.5 w-3.5 shrink-0" />
-            Pantry item — do you have enough at home?
+            Common pantry item — check before buying
           </p>
           <div className="flex gap-2 flex-wrap">
             <button
@@ -450,10 +450,7 @@ function ShopActionPanel({
   onShopStateChange: (state: ShopItemState | null) => void;
 }) {
   return (
-    <div className="rounded-lg bg-muted/20 border border-border/30 p-3 space-y-2.5">
-      <p className="text-xs font-medium text-muted-foreground">
-        In store — did you find this item?
-      </p>
+    <div className="rounded-lg bg-muted/20 border border-border/30 p-4 space-y-3">
       <div className="flex gap-2">
         <button
           onClick={() => onShopStateChange(shopState === "found" ? null : "found")}
@@ -532,9 +529,6 @@ function WorkspaceRow({
     sources,
     prepMode ? (prepState ?? {}) : undefined,
   );
-  const conf = deriveQuantityConfidence(item);
-  const confLabel = getQuantityConfidenceLabel(conf, item);
-
   const mealSources = item.sources ?? [];
   const mealAttribution = mealSources
     .map((s) => {
@@ -579,7 +573,7 @@ function WorkspaceRow({
     >
       {/* ── Shop mode collapsed row ───────────────────────────────── */}
       {shopMode && (
-        <div className="grid grid-cols-[20px_1fr_auto_2.75rem] items-center gap-x-2 px-4 py-3 min-h-[52px]">
+        <div className="grid grid-cols-[20px_minmax(2.75rem,auto)_1fr_auto_auto] items-center gap-x-2 px-4 py-3 min-h-[52px]">
 
           {/* Col 1 — state circle, centred in its cell */}
           <button
@@ -594,7 +588,20 @@ function WorkspaceRow({
             {effectiveShopState === "have" && <Home className="h-3 w-3 text-white" />}
           </button>
 
-          {/* Col 2 — name + qty sub-label (1fr, mirrors Review/Prep layout) */}
+          {/* Col 2 — qty anchor (compact, before name, scannable while scrolling) */}
+          <button onClick={onToggleExpand} className="text-left" tabIndex={qtyLabel ? 0 : -1}>
+            {qtyLabel && (
+              <span className={`font-semibold text-[15px] leading-tight tabular-nums whitespace-nowrap ${
+                effectiveShopState !== "need"
+                  ? "text-muted-foreground/40"
+                  : "text-foreground/80"
+              }`}>
+                {qtyLabel}
+              </span>
+            )}
+          </button>
+
+          {/* Col 3 — name (1fr, truncates so qty + actions stay aligned) */}
           <button
             onClick={onToggleExpand}
             data-testid={`ws-row-expand-${item.id}`}
@@ -607,18 +614,9 @@ function WorkspaceRow({
             }`}>
               {capitalizeWords(item.productName)}
             </span>
-            {qtyLabel && (
-              <span className={`text-xs leading-tight block tabular-nums ${
-                effectiveShopState !== "need"
-                  ? "text-muted-foreground/40"
-                  : "text-muted-foreground/70"
-              }`}>
-                {qtyLabel}
-              </span>
-            )}
           </button>
 
-          {/* Col 3 — action chips */}
+          {/* Col 4 — action chips */}
           <div className="flex items-center">
             {effectiveShopState === "need" ? (
               <div className="flex gap-1.5">
@@ -650,7 +648,7 @@ function WorkspaceRow({
             )}
           </div>
 
-          {/* Col 4 — apple score + chevron (pinned right) */}
+          {/* Col 5 — apple score + chevron (pinned right) */}
           <button
             onClick={onToggleExpand}
             className="self-center flex items-center gap-1.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors"
@@ -758,35 +756,6 @@ function WorkspaceRow({
                 </div>
               )}
 
-              {/* Quantity confidence */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Quantity</span>
-                {confLabel && (
-                  <Badge
-                    variant="outline"
-                    className={`text-[10px] ${
-                      conf === "exact"
-                        ? "border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400"
-                        : conf === "estimated"
-                          ? "border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400"
-                          : conf === "approximate"
-                            ? "border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-400"
-                            : "border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-400"
-                    }`}
-                  >
-                    {confLabel}
-                  </Badge>
-                )}
-                {item.quantityValue != null && item.unit && item.unit !== "unit" && (
-                  <span className="text-xs text-muted-foreground">
-                    {item.quantityValue} {item.unit}
-                    {item.quantityInGrams != null && item.unit !== "g" && (
-                      <span className="text-muted-foreground/50"> · {Math.round(item.quantityInGrams)}g</span>
-                    )}
-                  </span>
-                )}
-              </div>
-
               {/* Meal attribution */}
               {mealAttribution.length > 0 && (
                 <div>
@@ -812,20 +781,6 @@ function WorkspaceRow({
                 <p className="text-xs text-muted-foreground">
                   Combined from {sources.length} meals
                 </p>
-              )}
-
-              {/* THA score */}
-              {item.thaRating != null && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Health score</span>
-                  <ScoreBadge score={item.thaRating} size={20} />
-                  {item.itemType === "whole_food" && (
-                    <Badge className="text-[10px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 no-default-hover-elevate">
-                      <Leaf className="h-2.5 w-2.5 mr-1" />
-                      Whole food
-                    </Badge>
-                  )}
-                </div>
               )}
 
               {/* Needs attention flag */}
@@ -1175,7 +1130,7 @@ export default function ShoppingWorkspacePage() {
   const [analyserItem, setAnalyserItem] = useState<WorkspaceItem | null>(null);
 
   useEffect(() => {
-    document.title = "Shopping Workspace – The Healthy Apples";
+    document.title = "Shopping – The Healthy Apples";
     return () => { document.title = "The Healthy Apples"; };
   }, []);
 
@@ -1432,7 +1387,7 @@ export default function ShoppingWorkspacePage() {
   return (
     <>
       <PageHeader
-        title="Shopping Workspace"
+        title="Shopping"
         icon={<ShoppingBasket className="h-5 w-5" />}
         realm="basket"
         center={<ModeSwitcher mode={mode} onChange={(m) => { setMode(m); setExpandedId(null); }} />}

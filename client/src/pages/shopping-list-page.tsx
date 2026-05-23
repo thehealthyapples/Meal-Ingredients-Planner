@@ -3001,7 +3001,7 @@ export default function ShoppingListPage() {
                   data-testid="button-open-workspace"
                 >
                   <ShoppingBasket className="h-4 w-4 mr-2 text-primary/70" />
-                  <span className="flex-1">Shopping Workspace</span>
+                  <span className="flex-1">Shopping</span>
                 </DropdownMenuItem>
               </Link>
               <DropdownMenuSeparator />
