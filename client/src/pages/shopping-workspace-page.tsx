@@ -20,9 +20,10 @@ import {
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
-import { formatItemDisplay } from "@/lib/unit-display";
+import { formatItemDisplay, formatQuantityMetric, formatQuantityImperial, getLiquidDisplayMl } from "@/lib/unit-display";
 import { deriveQuantityConfidence } from "@/lib/quantity-confidence";
 import ScoreBadge from "@/components/ui/score-badge";
+import { canShowScoreForItem } from "@/lib/basket-item-classifier";
 import type { ShoppingListItem, IngredientSource } from "@shared/schema";
 import { motion, AnimatePresence } from "framer-motion";
 import { WorkspaceAnalyserSheet } from "@/components/WorkspaceAnalyserSheet";
@@ -84,6 +85,9 @@ type PrepAction =
   | { type: "editValue"; value: string }
   | { type: "editConfirm" }
   | { type: "clear" };
+
+type SourceFilter = "all" | "planned" | "extras" | "home" | "quick_list";
+type SortOrder = "default" | "apple_score" | "price" | "item" | "item_category";
 
 type PrepSummary = {
   pantryTotal: number;
@@ -250,6 +254,57 @@ function groupByStoreCategory(
     }));
 }
 
+function applySortOrder(items: WorkspaceItem[], order: SortOrder): WorkspaceItem[] {
+  if (order === "default") return items;
+  const arr = [...items];
+  if (order === "apple_score") {
+    arr.sort((a, b) => {
+      if (a.thaRating == null && b.thaRating == null) return 0;
+      if (a.thaRating == null) return 1;
+      if (b.thaRating == null) return -1;
+      return b.thaRating - a.thaRating;
+    });
+  } else if (order === "price") {
+    arr.sort((a, b) => {
+      if (a.matchedPrice == null && b.matchedPrice == null) return 0;
+      if (a.matchedPrice == null) return 1;
+      if (b.matchedPrice == null) return -1;
+      return a.matchedPrice - b.matchedPrice;
+    });
+  } else if (order === "item" || order === "item_category") {
+    arr.sort((a, b) => a.productName.localeCompare(b.productName, undefined, { sensitivity: "base" }));
+  }
+  return arr;
+}
+
+const SOURCE_FILTERS: { id: SourceFilter; label: string }[] = [
+  { id: "all",        label: "All" },
+  { id: "planned",    label: "Planned" },
+  { id: "extras",     label: "Extras" },
+  { id: "home",       label: "Home" },
+  { id: "quick_list", label: "Quick List" },
+];
+
+function isItemInSource(
+  item: WorkspaceItem,
+  filter: SourceFilter,
+  pantryKeySet: Set<string>,
+  sourcesByItem: Map<number, IngredientSource[]>,
+): boolean {
+  if (filter === "all") return true;
+  const key = (item.normalizedName ?? item.productName).toLowerCase();
+  const isQL = item.source === "quick_list" || !!item.basketLabel?.startsWith("quick_list_");
+  if (filter === "quick_list") return isQL;
+  if (isQL) return false;
+  const isPlanned =
+    item.source === "planner" ||
+    (item.source == null && (sourcesByItem.get(item.id)?.length ?? 0) > 0);
+  if (filter === "planned") return isPlanned;
+  if (filter === "home") return pantryKeySet.has(key);
+  // extras: manually added — not from planner, not from quick list
+  return !isPlanned;
+}
+
 function getOperationalHint(
   item: WorkspaceItem,
   isPantryStocked: boolean,
@@ -277,7 +332,10 @@ function getOperationalHint(
   if (conf === "assumed") return { text: "Quantity estimated", tone: "amber" };
   if (conf === "approximate") return { text: "Roughly estimated", tone: "amber" };
 
-  if (item.needsReview) return { text: "Needs attention", tone: "amber" };
+  if (item.needsReview) {
+    if (item.reviewReason === "ambiguous_term") return { text: "Which did you mean?", tone: "amber" };
+    return { text: "Needs attention", tone: "amber" };
+  }
 
   if (sourcesForItem.length > 1) {
     return { text: `${sourcesForItem.length} meals`, tone: "muted" };
@@ -523,6 +581,9 @@ function WorkspaceRow({
   prepState,
   onPrepAction,
   onOpenAnalyser,
+  onCorrectItem,
+  onAddItem,
+  onConfirmSuggestions,
 }: {
   item: WorkspaceItem;
   sources: IngredientSource[];
@@ -538,7 +599,40 @@ function WorkspaceRow({
   prepState?: PrepItemState;
   onPrepAction?: (action: PrepAction) => void;
   onOpenAnalyser?: () => void;
+  onCorrectItem?: (newName: string) => void;
+  onAddItem?: (name: string) => void;
+  onConfirmSuggestions?: (picks: string[]) => void;
 }) {
+  const [editVal, setEditVal] = useState("");
+  const [editMode, setEditMode] = useState(false);
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
+
+  // Parse suggestions once at component scope — used by both inline strip and expanded pane
+  const isAmbiguous = item.reviewReason === "ambiguous_term";
+  const suggestions: string[] = (() => {
+    if (!item.needsReview || !isAmbiguous) return [];
+    try {
+      const raw = JSON.parse(item.reviewSuggestions ?? "[]");
+      if (Array.isArray(raw)) return raw as string[];
+      return ((raw as { items?: string[] })?.items ?? []) as string[];
+    } catch { return []; }
+  })();
+  // True when inline pills should appear (Review mode, ambiguous, has suggestions, unchecked)
+  const isAmbiguousReview = !shopMode && !prepMode && !item.checked && isAmbiguous && suggestions.length > 0;
+
+  // Hoisted confirm handler shared by inline strip and expanded pane
+  function confirmSuggestions() {
+    const picks = Array.from(selectedSuggestions);
+    if (picks.length === 0) return;
+    if (onConfirmSuggestions) {
+      onConfirmSuggestions(picks);
+    } else {
+      onCorrectItem?.(picks[0]);
+      picks.slice(1).forEach((p) => onAddItem?.(p));
+    }
+    setSelectedSuggestions(new Set());
+  }
+
   const pantryKey = (item.normalizedName ?? item.productName).toLowerCase();
   const isPantryStocked = pantryKeySet.has(pantryKey);
   const prepConf = deriveQuantityConfidence(item);
@@ -570,9 +664,35 @@ function WorkspaceRow({
 
   const effectiveShopState = shopState ?? "need";
   const shopConfig = SHOP_STATE_CONFIG[effectiveShopState];
-  const qtyLabel = item.quantityValue != null
-    ? (formatItemDisplay(item.productName, item.quantityValue, item.unit, measurementPref).split(" — ")[1] ?? "")
-    : "";
+  const qtyLabel = (() => {
+    // Primary path: structured quantity + unit → canonical formatter
+    if (item.quantityValue != null && item.unit && item.unit !== "descriptive") {
+      const display = formatItemDisplay(item.productName, item.quantityValue, item.unit, measurementPref);
+      // split on em-dash separator; rejoin in case name contains em-dash
+      const parts = display.split("—");
+      return parts.length > 1 ? parts.slice(1).join("—").trim() : "";
+    }
+    // Gram fallback: quantityInGrams when unit is null (e.g. planner items stored as g)
+    const g = item.quantityInGrams;
+    if (g != null && g > 0) {
+      const liquidMl = getLiquidDisplayMl(g, item.normalizedName ?? item.productName);
+      if (liquidMl !== null) {
+        return measurementPref === "metric"
+          ? (liquidMl >= 1000 ? `${+(liquidMl / 1000).toFixed(1).replace(/\.?0+$/, "")}L` : `${Math.round(liquidMl)}ml`)
+          : (liquidMl >= 240 ? `${+(liquidMl / 240).toFixed(1).replace(/\.?0+$/, "")} cups`
+            : liquidMl >= 15 ? `${+(liquidMl / 15).toFixed(1).replace(/\.?0+$/, "")} tbsp`
+            : `${+(liquidMl / 5).toFixed(1).replace(/\.?0+$/, "")} tsp`);
+      }
+      return measurementPref === "metric"
+        ? formatQuantityMetric(g, "g")
+        : formatQuantityImperial(g, "g");
+    }
+    // Bare count: quantityValue > 1 with no unit (e.g. "2" for count items)
+    if (item.quantityValue != null && item.quantityValue > 1) {
+      return String(item.quantityValue % 1 === 0 ? item.quantityValue : item.quantityValue.toFixed(1));
+    }
+    return "";
+  })();
 
   // Row-level state styling
   const rowOpacity = shopMode
@@ -704,22 +824,36 @@ function WorkspaceRow({
               Analyse
             </button>
           )}
-          {/* Review: Analyse */}
-          {!shopMode && !prepMode && !item.checked && onOpenAnalyser && (
-            <button
-              onClick={onOpenAnalyser}
-              className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-border/50 bg-muted/40 hover:bg-muted text-foreground/80 transition-colors touch-manipulation whitespace-nowrap"
-              data-testid={`ws-analyse-btn-${item.id}`}
-            >
-              <FlaskConical className="h-3 w-3 shrink-0" />
-              Analyse
-            </button>
+          {/* Review: ambiguous with inline pills → no CTA (strip below handles it); other review → Review btn; normal → Analyse */}
+          {!shopMode && !prepMode && !item.checked && (
+            item.needsReview ? (
+              // Ambiguous items with suggestions: inline strip replaces CTA
+              isAmbiguousReview ? null : (
+                <button
+                  onClick={onToggleExpand}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-amber-200/70 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100/60 dark:hover:bg-amber-950/30 transition-colors touch-manipulation whitespace-nowrap"
+                  data-testid={`ws-resolve-btn-${item.id}`}
+                >
+                  <AlertTriangle className="h-3 w-3 shrink-0" />
+                  Review
+                </button>
+              )
+            ) : onOpenAnalyser ? (
+              <button
+                onClick={onOpenAnalyser}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-border/50 bg-muted/40 hover:bg-muted text-foreground/80 transition-colors touch-manipulation whitespace-nowrap"
+                data-testid={`ws-analyse-btn-${item.id}`}
+              >
+                <FlaskConical className="h-3 w-3 shrink-0" />
+                Analyse
+              </button>
+            ) : null
           )}
         </div>
 
         {/* Score — fixed 78px = max 5 apples at size=22 so chevron never shifts */}
         <div className="shrink-0 w-[78px] flex items-center justify-center">
-          {item.thaRating != null && (shopMode || !item.checked) && (
+          {canShowScoreForItem(item) && item.thaRating != null && (shopMode || !item.checked) && (
             <ScoreBadge score={item.thaRating} size={22} />
           )}
         </div>
@@ -733,6 +867,48 @@ function WorkspaceRow({
         </button>
 
       </div>
+
+      {/* ── Inline suggestion strip — ambiguous Review items only ─── */}
+      {isAmbiguousReview && (
+        <div className="flex flex-wrap items-center gap-1.5 px-4 pb-2.5 ml-9">
+          {suggestions.map((s) => {
+            const isSelected = selectedSuggestions.has(s);
+            return (
+              <button
+                key={s}
+                onClick={() => setSelectedSuggestions((prev) => {
+                  const n = new Set(prev);
+                  if (isSelected) n.delete(s); else n.add(s);
+                  return n;
+                })}
+                className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors touch-manipulation ${
+                  isSelected
+                    ? "bg-primary/10 text-primary border-primary/40 dark:bg-primary/20"
+                    : "bg-muted/50 text-foreground/80 border-border/50 hover:bg-muted hover:border-border hover:text-foreground"
+                }`}
+              >
+                {s}
+              </button>
+            );
+          })}
+          {selectedSuggestions.size > 0 && (
+            <button
+              onClick={confirmSuggestions}
+              className="px-2.5 py-1 text-xs font-semibold rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors touch-manipulation"
+              data-testid={`ws-confirm-suggestion-${item.id}`}
+            >
+              {selectedSuggestions.size === 1 ? "Confirm" : `Add ${selectedSuggestions.size} items`}
+            </button>
+          )}
+          <button
+            onClick={onToggleExpand}
+            className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors touch-manipulation ml-0.5"
+            aria-label="More options"
+          >
+            more →
+          </button>
+        </div>
+      )}
 
       {/* ── Expanded detail ───────────────────────────────────────── */}
       <AnimatePresence initial={false}>
@@ -782,13 +958,128 @@ function WorkspaceRow({
                 </p>
               )}
 
-              {/* Needs attention flag */}
-              {item.needsReview && (
-                <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 rounded-md bg-amber-50/60 dark:bg-amber-950/20 px-2 py-1.5">
-                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                  <span>{item.validationNote || "This item may need a closer look"}</span>
-                </div>
-              )}
+              {/* Needs attention — with inline correction flow in Review mode */}
+              {item.needsReview && (() => {
+                // isAmbiguous, suggestions, confirmSuggestions are hoisted to component scope
+
+                // Review mode gets full correction UI; prep/shop modes show the flag only
+                if (!prepMode && !shopMode && onCorrectItem) {
+                  const available = suggestions.filter((s) => !selectedSuggestions.has(s));
+
+                  return (
+                    <div className="rounded-md border border-amber-200/70 dark:border-amber-800/40 bg-amber-50/50 dark:bg-amber-950/15 px-3 py-2.5 space-y-2">
+                      <div className="flex items-start gap-1.5">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                        <span className="text-xs text-amber-700 dark:text-amber-300 leading-snug">
+                          {isAmbiguous
+                            ? "Ambiguous — which did you mean?"
+                            : (item.validationNote || "Item needs review — please verify")}
+                        </span>
+                      </div>
+
+                      {/* Disambiguation: suggestion chips */}
+                      {isAmbiguous && suggestions.length > 0 && (
+                        <div className="space-y-1.5">
+                          {selectedSuggestions.size > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {Array.from(selectedSuggestions).map((s) => (
+                                <span
+                                  key={s}
+                                  className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-primary/40 bg-primary/[0.08] text-primary"
+                                >
+                                  {s}
+                                  <button
+                                    onClick={() => setSelectedSuggestions((prev) => { const n = new Set(prev); n.delete(s); return n; })}
+                                    aria-label={`Remove ${s}`}
+                                    className="flex items-center text-primary/60 hover:text-primary transition-colors"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {available.length > 0 && (
+                            <select
+                              key={selectedSuggestions.size}
+                              defaultValue=""
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                if (v) setSelectedSuggestions((prev) => new Set(Array.from(prev).concat(v)));
+                              }}
+                              className="text-[11px] h-7 pl-2 pr-6 rounded-lg border border-primary/40 bg-background/80 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 cursor-pointer"
+                            >
+                              <option value="" disabled>
+                                {selectedSuggestions.size === 0 ? "Select type…" : "+ Add another"}
+                              </option>
+                              {available.map((s) => (
+                                <option key={s} value={s}>{s}</option>
+                              ))}
+                            </select>
+                          )}
+                          {selectedSuggestions.size > 0 && (
+                            <button
+                              onClick={confirmSuggestions}
+                              className="text-[11px] px-3 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                            >
+                              {selectedSuggestions.size === 1 ? "Confirm" : `Add ${selectedSuggestions.size} items`}
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Non-ambiguous: inline edit */}
+                      {!isAmbiguous && (
+                        <div>
+                          {editMode ? (
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="text"
+                                value={editVal}
+                                onChange={(e) => setEditVal(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && editVal.trim()) { onCorrectItem(editVal.trim()); setEditMode(false); }
+                                  if (e.key === "Escape") setEditMode(false);
+                                }}
+                                className="flex-1 text-[11px] h-7 px-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
+                                autoFocus
+                              />
+                              <button
+                                onClick={() => { if (editVal.trim()) { onCorrectItem(editVal.trim()); setEditMode(false); } }}
+                                disabled={!editVal.trim()}
+                                className="text-[11px] px-2.5 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40"
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                onClick={() => setEditMode(false)}
+                                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => { setEditVal(item.productName); setEditMode(true); }}
+                              className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/70 hover:bg-muted/50 hover:border-border transition-colors"
+                            >
+                              Edit name
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                // Prep / shop modes: simple flag
+                return (
+                  <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 rounded-md bg-amber-50/60 dark:bg-amber-950/20 px-2 py-1.5">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                    <span>{item.validationNote || "This item may need a closer look"}</span>
+                  </div>
+                );
+              })()}
 
               {/* Analyser — secondary access for prep/shop (review shows it inline in the row) */}
               {(prepMode || shopMode) && (
@@ -857,141 +1148,6 @@ function ModeSwitcher({
           {label}
         </button>
       ))}
-    </div>
-  );
-}
-
-// ── Summary bar ───────────────────────────────────────────────────────────────
-
-function SummaryBar({
-  mode,
-  items,
-  pantryKeySet,
-  prepSummary,
-  shopSummary,
-}: {
-  mode: WorkspaceMode;
-  items: WorkspaceItem[];
-  pantryKeySet: Set<string>;
-  prepSummary?: PrepSummary;
-  shopSummary?: ShopSummary;
-}) {
-  const unchecked = items.filter((i) => !i.checked);
-  const checked = items.filter((i) => i.checked);
-  const attentionCount = unchecked.filter((i) => i.needsReview).length;
-  const pantryCount = unchecked.filter((i) =>
-    pantryKeySet.has((i.normalizedName ?? i.productName).toLowerCase()),
-  ).length;
-
-  if (mode === "shop" && shopSummary) {
-    const { needCount, foundCount, deferCount, haveCount, total } = shopSummary;
-    const resolved = foundCount + haveCount;
-    const pct = total > 0 ? Math.round((resolved / total) * 100) : 0;
-
-    return (
-      <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-2.5 mb-4">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-foreground shrink-0">
-            {needCount === 0 && total > 0
-              ? "All accounted for"
-              : needCount === total
-                ? `${total} to find`
-                : `${needCount} still needed`}
-          </span>
-          <div className="flex-1 min-w-[40px] h-1.5 rounded-full bg-muted/60 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary transition-all duration-300"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <span className="text-xs text-muted-foreground tabular-nums shrink-0">{resolved}/{total}</span>
-          {foundCount > 0 && (
-            <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0">
-              <CheckCircle2 className="h-3 w-3" />{foundCount}
-            </span>
-          )}
-          {deferCount > 0 && (
-            <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 shrink-0">
-              <Clock className="h-3 w-3" />{deferCount}
-            </span>
-          )}
-          {haveCount > 0 && (
-            <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 shrink-0">
-              <Home className="h-3 w-3" />{haveCount}
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (mode === "prep" && prepSummary) {
-    const { pantryTotal, pantryReviewed, uncertainTotal, uncertainResolved, attentionTotal, allPrepDone } = prepSummary;
-    const hasAnything = pantryTotal + uncertainTotal + attentionTotal > 0;
-
-    return (
-      <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-2.5 mb-4">
-        <div className="flex items-center gap-3 flex-wrap text-xs">
-          <span className="font-medium text-foreground shrink-0">Prep</span>
-          {pantryTotal > 0 && (
-            <span className={`flex items-center gap-1 shrink-0 ${pantryReviewed === pantryTotal ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
-              <Home className="h-3 w-3" />{pantryReviewed}/{pantryTotal} pantry
-            </span>
-          )}
-          {uncertainTotal > 0 && (
-            <span className={`flex items-center gap-1 shrink-0 ${uncertainResolved === uncertainTotal ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
-              <AlertTriangle className="h-3 w-3" />{uncertainResolved}/{uncertainTotal} qty
-            </span>
-          )}
-          {attentionTotal > 0 && (
-            <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 shrink-0">
-              <AlertTriangle className="h-3 w-3" />{attentionTotal} attention
-            </span>
-          )}
-          {allPrepDone && (
-            <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0">
-              <CheckCircle2 className="h-3 w-3" />Ready to shop
-            </span>
-          )}
-          {!hasAnything && (
-            <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1 shrink-0">
-              <CheckCircle2 className="h-3 w-3" />List looks ready
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Review mode
-  const total = unchecked.length + checked.length;
-  return (
-    <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-3 mb-4 space-y-1">
-      <div className="flex items-center gap-4 flex-wrap text-sm">
-        <span className="font-medium text-foreground">
-          {unchecked.length > 0
-            ? `${unchecked.length} item${unchecked.length !== 1 ? "s" : ""} to buy`
-            : "All done"}
-        </span>
-        {checked.length > 0 && (
-          <span className="text-muted-foreground flex items-center gap-1">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            {checked.length} checked
-          </span>
-        )}
-        {attentionCount > 0 && (
-          <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
-            <AlertTriangle className="h-3.5 w-3.5" />
-            {attentionCount} need attention
-          </span>
-        )}
-        {pantryCount > 0 && (
-          <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
-            <Home className="h-3.5 w-3.5" />
-            {pantryCount} to check at home
-          </span>
-        )}
-      </div>
     </div>
   );
 }
@@ -1106,6 +1262,12 @@ export default function ShoppingWorkspacePage() {
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
   const slFileRef = useRef<HTMLInputElement>(null);
 
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>(() => {
+    const params = new URLSearchParams(search);
+    return params.get("source") === "quick-list" ? "quick_list" : "all";
+  });
+  const [sortOrder, setSortOrder] = useState<SortOrder>("default");
+
   useEffect(() => {
     document.title = "Shopping – The Healthy Apples";
     return () => { document.title = "The Healthy Apples"; };
@@ -1119,6 +1281,7 @@ export default function ShoppingWorkspacePage() {
       setMode(stage);
       setExpandedId(null);
     }
+    if (params.get("source") === "quick-list") setSourceFilter("quick_list");
   }, [search]);
 
   useEffect(() => {
@@ -1292,6 +1455,51 @@ export default function ShoppingWorkspacePage() {
     onError: () => toast({ title: "Failed to clear list", variant: "destructive" }),
   });
 
+  const correctItem = useMutation({
+    mutationFn: async ({ id, productName }: { id: number; productName: string }) => {
+      const res = await fetch(`/api/shopping-list/${id}/correct`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productName }),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to correct item");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+    },
+    onError: () => toast({ title: "Couldn't update item", variant: "destructive" }),
+  });
+
+  const addShoppingItem = useMutation({
+    mutationFn: async ({
+      productName,
+      source,
+      basketLabel,
+    }: {
+      productName: string;
+      source?: string | null;
+      basketLabel?: string | null;
+    }) => {
+      const body: Record<string, unknown> = { productName };
+      if (source) body.source = source;
+      if (basketLabel) body.basketLabel = basketLabel;
+      const res = await fetch(api.shoppingList.add.path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to add item");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+    },
+    onError: () => toast({ title: "Couldn't add item", variant: "destructive" }),
+  });
+
   const { data: enhancedSupermarkets = [] } = useQuery<{
     name: string; key: string; hasDirectBasket: boolean;
   }[]>({
@@ -1443,13 +1651,47 @@ export default function ShoppingWorkspacePage() {
   const uncheckedItems = useMemo(() => items.filter((i) => !i.checked), [items]);
   const checkedItems = useMemo(() => items.filter((i) => i.checked), [items]);
 
-  // Shop mode groups — all items, partitioned by shopStatus
+  const hasMatchedPrices = useMemo(() => items.some((i) => i.matchedPrice != null), [items]);
+
+  const filterCounts = useMemo((): Record<SourceFilter, number> => ({
+    all:        uncheckedItems.length,
+    planned:    uncheckedItems.filter((item) => isItemInSource(item, "planned",    pantryKeySet, sourcesByItem)).length,
+    extras:     uncheckedItems.filter((item) => isItemInSource(item, "extras",     pantryKeySet, sourcesByItem)).length,
+    home:       uncheckedItems.filter((item) => isItemInSource(item, "home",       pantryKeySet, sourcesByItem)).length,
+    quick_list: uncheckedItems.filter((item) => isItemInSource(item, "quick_list", pantryKeySet, sourcesByItem)).length,
+  }), [uncheckedItems, pantryKeySet, sourcesByItem]);
+
+  // All items (checked + unchecked) filtered by source — drives Shop groups and checked sections
+  const filteredItems = useMemo(
+    () => sourceFilter === "all"
+      ? items
+      : items.filter((item) => isItemInSource(item, sourceFilter, pantryKeySet, sourcesByItem)),
+    [items, sourceFilter, pantryKeySet, sourcesByItem],
+  );
+
+  const filteredUncheckedItems = useMemo(
+    () => filteredItems.filter((i) => !i.checked),
+    [filteredItems],
+  );
+
+  const filteredCheckedItems = useMemo(
+    () => filteredItems.filter((i) => i.checked),
+    [filteredItems],
+  );
+
+  const sortedFilteredItems = useMemo(
+    () => applySortOrder(filteredUncheckedItems, sortOrder),
+    [filteredUncheckedItems, sortOrder],
+  );
+
+  // Shop mode groups — source-filtered items sorted then partitioned by shopStatus
   const shopGroups = useMemo(() => {
+    const sorted = applySortOrder(filteredItems, sortOrder);
     const need: WorkspaceItem[] = [];
     const found: WorkspaceItem[] = [];
     const defer: WorkspaceItem[] = [];
     const have: WorkspaceItem[] = [];
-    for (const item of items) {
+    for (const item of sorted) {
       const state = getShopState(item);
       if (state === "found") found.push(item);
       else if (state === "defer") defer.push(item);
@@ -1457,7 +1699,7 @@ export default function ShoppingWorkspacePage() {
       else need.push(item);
     }
     return { need, found, defer, have };
-  }, [items]);
+  }, [filteredItems, sortOrder]);
 
   // Shop "need" items grouped by in-store category — memoized for performance
   const shopNeedByCategory = useMemo(
@@ -1467,12 +1709,12 @@ export default function ShoppingWorkspacePage() {
 
   // Review unchecked items: grouped by in-store category (default) or flat A–Z when splitByShop is on
   const reviewUncheckedByCategory = useMemo(
-    () => groupByStoreCategory(uncheckedItems),
-    [uncheckedItems],
+    () => groupByStoreCategory(sortedFilteredItems),
+    [sortedFilteredItems],
   );
   const reviewUncheckedAlpha = useMemo(
-    () => [...uncheckedItems].sort((a, b) => a.productName.localeCompare(b.productName)),
-    [uncheckedItems],
+    () => [...filteredUncheckedItems].sort((a, b) => a.productName.localeCompare(b.productName)),
+    [filteredUncheckedItems],
   );
 
   const shopSummary = useMemo((): ShopSummary => ({
@@ -1480,16 +1722,16 @@ export default function ShoppingWorkspacePage() {
     foundCount: shopGroups.found.length,
     deferCount: shopGroups.defer.length,
     haveCount: shopGroups.have.length,
-    total: items.length,
-  }), [shopGroups, items]);
+    total: filteredItems.length,
+  }), [shopGroups, filteredItems]);
 
-  // Prep mode grouping
+  // Prep mode grouping — source-filtered unchecked items
   const prepGroups = useMemo(() => {
     const pantry: WorkspaceItem[] = [];
     const uncertain: WorkspaceItem[] = [];
     const attention: WorkspaceItem[] = [];
     const ready: WorkspaceItem[] = [];
-    for (const item of uncheckedItems) {
+    for (const item of sortedFilteredItems) {
       const key = (item.normalizedName ?? item.productName).toLowerCase();
       const group = getPrepGroup(item, pantryKeySet.has(key));
       if (group === "pantry") pantry.push(item);
@@ -1498,7 +1740,7 @@ export default function ShoppingWorkspacePage() {
       else ready.push(item);
     }
     return { pantry, uncertain, attention, ready };
-  }, [uncheckedItems, pantryKeySet]);
+  }, [sortedFilteredItems, pantryKeySet]);
 
   const prepSummary = useMemo((): PrepSummary => {
     const pantryTotal = prepGroups.pantry.length;
@@ -1545,11 +1787,32 @@ export default function ShoppingWorkspacePage() {
         prepState={isPrepMode ? (prepStates.get(item.id) ?? {}) : undefined}
         onPrepAction={isPrepMode ? (action) => handlePrepAction(item.id, action) : undefined}
         onOpenAnalyser={() => setAnalyserItem(item)}
+        onCorrectItem={!isShopMode && !isPrepMode ? (newName) => correctItem.mutate({ id: item.id, productName: newName }) : undefined}
+        onAddItem={!isShopMode && !isPrepMode ? (name) => addShoppingItem.mutate({ productName: name }) : undefined}
+        onConfirmSuggestions={!isShopMode && !isPrepMode ? async (picks) => {
+          if (picks.length === 0) return;
+          try {
+            await correctItem.mutateAsync({ id: item.id, productName: picks[0] });
+            if (picks.length > 1) {
+              await Promise.all(
+                picks.slice(1).map((name) =>
+                  addShoppingItem.mutateAsync({
+                    productName: name,
+                    source: item.source ?? undefined,
+                    basketLabel: item.basketLabel ?? undefined,
+                  })
+                )
+              );
+            }
+          } catch {
+            // individual mutations surface their own error toasts
+          } finally {
+            queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+          }
+        } : undefined}
       />
     );
   }
-
-  const currentMode = MODES.find((m) => m.id === mode)!;
 
   const menuDropdown = (
     <DropdownMenu>
@@ -1644,6 +1907,83 @@ export default function ShoppingWorkspacePage() {
     </DropdownMenu>
   );
 
+  // ── Compact header status text ─────────────────────────────────────────────
+  let headerStatusText: string | null = null;
+  if (items.length > 0 && !isLoading) {
+    if (mode === "shop" && shopSummary) {
+      const { needCount, total, foundCount, haveCount } = shopSummary;
+      const resolved = foundCount + haveCount;
+      if (total > 0) headerStatusText = needCount === 0 ? "All found" : `${needCount} to find`;
+    } else if (mode === "prep" && prepSummary) {
+      const { allPrepDone, pantryTotal, pantryReviewed, uncertainTotal, uncertainResolved } = prepSummary;
+      if (allPrepDone) {
+        headerStatusText = "Ready to shop";
+      } else {
+        const parts: string[] = [];
+        if (pantryTotal > 0) parts.push(`${pantryReviewed}/${pantryTotal} pantry`);
+        if (uncertainTotal > 0) parts.push(`${uncertainResolved}/${uncertainTotal} qty`);
+        headerStatusText = parts.join(" · ") || null;
+      }
+    } else {
+      const n = filteredUncheckedItems.length;
+      const c = filteredCheckedItems.length;
+      if (n === 0 && c > 0) headerStatusText = "All done";
+      else if (n > 0) headerStatusText = c > 0 ? `${n} to buy · ${c} ✓` : `${n} to buy`;
+    }
+  }
+
+  // ── Workspace control bar (filters + status + sort) ────────────────────────
+  const workspaceControlBar = items.length > 0 && !isLoading ? (
+    <div className="flex items-center gap-2 min-w-0">
+      {/* Source filter pills — horizontally scrollable */}
+      <div className="flex items-center gap-1 min-w-0 flex-1 overflow-x-auto no-scrollbar">
+        {SOURCE_FILTERS.map(({ id, label }) => {
+          const count = filterCounts[id];
+          if (id !== "all" && count === 0) return null;
+          return (
+            <button
+              key={id}
+              onClick={() => setSourceFilter(id)}
+              className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium rounded-full border transition-all ${
+                sourceFilter === id
+                  ? "bg-primary/10 text-primary border-primary/40 dark:bg-primary/20"
+                  : "bg-transparent text-muted-foreground border-border/50 hover:border-border hover:text-foreground"
+              }`}
+            >
+              {label}
+              {id !== "all" && (
+                <span className={`tabular-nums ${sourceFilter === id ? "opacity-70" : "opacity-50"}`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {/* Compact status — hidden on xs to preserve space */}
+      {headerStatusText && (
+        <span className="hidden sm:block shrink-0 text-[10px] text-muted-foreground/60 whitespace-nowrap tabular-nums border-l border-border/30 pl-2">
+          {headerStatusText}
+        </span>
+      )}
+      {/* Sort dropdown */}
+      <div className="shrink-0 border-l border-border/30 pl-2">
+        <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as SortOrder)}>
+          <SelectTrigger className="h-6 text-[11px] w-[120px] border-border/50 bg-transparent px-2">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            <SelectItem value="default">Default</SelectItem>
+            <SelectItem value="apple_score">Apple Score</SelectItem>
+            {hasMatchedPrices && <SelectItem value="price">Price</SelectItem>}
+            <SelectItem value="item">By Item</SelectItem>
+            <SelectItem value="item_category">By Category + Item</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  ) : undefined;
+
   return (
     <>
       {!isFullscreen && (
@@ -1652,7 +1992,7 @@ export default function ShoppingWorkspacePage() {
           icon={<ShoppingBasket className="h-5 w-5" />}
           realm="basket"
           center={<ModeSwitcher mode={mode} onChange={(m) => { setMode(m); setExpandedId(null); }} />}
-          meta={<span>{currentMode.helper}</span>}
+          controlBar={workspaceControlBar}
           actions={menuDropdown}
         />
       )}
@@ -1661,29 +2001,25 @@ export default function ShoppingWorkspacePage() {
         : "max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-20"}
       >
       {isFullscreen && (
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-border/50 bg-background shrink-0">
-          <div className="flex items-center gap-2">
-            <ShoppingBasket className="h-4 w-4 text-primary" />
-            <span className="font-semibold text-sm">Shopping</span>
+        <div className="border-b border-border/50 bg-background shrink-0">
+          <div className="flex items-center justify-between px-4 sm:px-6 py-3">
+            <div className="flex items-center gap-2">
+              <ShoppingBasket className="h-4 w-4 text-primary" />
+              <span className="font-semibold text-sm">Shopping</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ModeSwitcher mode={mode} onChange={(m) => { setMode(m); setExpandedId(null); }} />
+              {menuDropdown}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <ModeSwitcher mode={mode} onChange={(m) => { setMode(m); setExpandedId(null); }} />
-            {menuDropdown}
-          </div>
+          {workspaceControlBar && (
+            <div className="px-4 sm:px-6 pb-2.5">
+              {workspaceControlBar}
+            </div>
+          )}
         </div>
       )}
       <div className={isFullscreen ? "flex-1 overflow-auto px-4 py-4 sm:px-6 sm:py-6" : ""}>
-
-      {/* ── Summary bar ───────────────────────────────────────────────── */}
-      {!isLoading && items.length > 0 && (
-        <SummaryBar
-          mode={mode}
-          items={items}
-          pantryKeySet={pantryKeySet}
-          prepSummary={mode === "prep" ? prepSummary : undefined}
-          shopSummary={mode === "shop" ? shopSummary : undefined}
-        />
-      )}
 
       {/* ── Shopping rows ─────────────────────────────────────────────── */}
       {isLoading ? (
@@ -1705,6 +2041,8 @@ export default function ShoppingWorkspacePage() {
           </p>
         </div>
       ) : (
+        <>
+
         <div className="rounded-xl border border-border/50 bg-card/60 overflow-hidden mb-6">
 
           {/* ── Review mode: flat list ─────────────────────────────── */}
@@ -1716,25 +2054,31 @@ export default function ShoppingWorkspacePage() {
                 </div>
               ) : (
                 <>
-                  {splitByShop
-                    ? reviewUncheckedAlpha.map(renderRow)
-                    : reviewUncheckedByCategory.length >= 1
-                      ? reviewUncheckedByCategory.map(({ key, label, items: catItems }) => (
-                          <div key={key}>
-                            <ShopCategoryHeader label={label} count={catItems.length} />
-                            {catItems.map(renderRow)}
-                          </div>
-                        ))
-                      : uncheckedItems.map(renderRow)
+                  {sortedFilteredItems.length === 0 && sourceFilter !== "all" ? (
+                    <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                      No items match this filter.
+                    </div>
+                  ) : sortOrder === "item"
+                    ? sortedFilteredItems.map(renderRow)
+                    : sortOrder === "item_category" || !splitByShop
+                      ? reviewUncheckedByCategory.length >= 1
+                        ? reviewUncheckedByCategory.map(({ key, label, items: catItems }) => (
+                            <div key={key}>
+                              <ShopCategoryHeader label={label} count={catItems.length} />
+                              {catItems.map(renderRow)}
+                            </div>
+                          ))
+                        : sortedFilteredItems.map(renderRow)
+                      : reviewUncheckedAlpha.map(renderRow)
                   }
-                  {checkedItems.length > 0 && (
+                  {filteredCheckedItems.length > 0 && (
                     <>
                       <div className="px-4 py-1.5 border-t border-border/30 bg-[hsl(26,15%,96%)] dark:bg-[hsl(26,8%,15%)]">
                         <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
-                          Checked ({checkedItems.length})
+                          Checked ({filteredCheckedItems.length})
                         </span>
                       </div>
-                      {checkedItems.map(renderRow)}
+                      {filteredCheckedItems.map(renderRow)}
                     </>
                   )}
                 </>
@@ -1749,6 +2093,10 @@ export default function ShoppingWorkspacePage() {
                 <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                   Your shopping list is empty.
                 </div>
+              ) : filteredItems.length === 0 && sourceFilter !== "all" ? (
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  No items match this filter.
+                </div>
               ) : (
                 <>
                   {/* Still need — grouped by in-store category */}
@@ -1761,14 +2109,16 @@ export default function ShoppingWorkspacePage() {
                           variant="need"
                         />
                       )}
-                      {shopNeedByCategory.length >= 1
-                        ? shopNeedByCategory.map(({ key, label, items: catItems }) => (
-                            <div key={key}>
-                              <ShopCategoryHeader label={label} count={catItems.length} />
-                              {catItems.map(renderRow)}
-                            </div>
-                          ))
-                        : shopGroups.need.map(renderRow)
+                      {sortOrder === "item"
+                        ? shopGroups.need.map(renderRow)
+                        : shopNeedByCategory.length >= 1
+                          ? shopNeedByCategory.map(({ key, label, items: catItems }) => (
+                              <div key={key}>
+                                <ShopCategoryHeader label={label} count={catItems.length} />
+                                {catItems.map(renderRow)}
+                              </div>
+                            ))
+                          : shopGroups.need.map(renderRow)
                       }
                     </>
                   )}
@@ -1810,7 +2160,7 @@ export default function ShoppingWorkspacePage() {
                   )}
 
                   {/* All accounted for */}
-                  {shopGroups.need.length === 0 && items.length > 0 && (
+                  {shopGroups.need.length === 0 && filteredItems.length > 0 && (
                     <div className="px-4 py-4 text-center">
                       <CheckCircle2 className="h-6 w-6 text-emerald-500 mx-auto mb-1.5" />
                       <p className="text-sm font-medium text-foreground">
@@ -1829,6 +2179,11 @@ export default function ShoppingWorkspacePage() {
           {/* ── Prep mode: grouped list ────────────────────────────── */}
           {mode === "prep" && (
             <>
+              {filteredUncheckedItems.length === 0 && filteredCheckedItems.length === 0 && sourceFilter !== "all" && (
+                <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  No items match this filter.
+                </div>
+              )}
               {prepGroups.pantry.length > 0 && (
                 <>
                   <PrepGroupHeader
@@ -1867,20 +2222,21 @@ export default function ShoppingWorkspacePage() {
                   {prepGroups.ready.map(renderRow)}
                 </>
               )}
-              {checkedItems.length > 0 && (
+              {filteredCheckedItems.length > 0 && (
                 <>
                   <div className="px-4 py-1.5 border-t border-border/30 bg-muted/20">
                     <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
-                      Checked ({checkedItems.length})
+                      Checked ({filteredCheckedItems.length})
                     </span>
                   </div>
-                  {checkedItems.map(renderRow)}
+                  {filteredCheckedItems.map(renderRow)}
                 </>
               )}
             </>
           )}
 
         </div>
+        </>
       )}
 
       {/* ── Fallback footer ────────────────────────────────────────────── */}
