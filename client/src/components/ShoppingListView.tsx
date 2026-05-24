@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/select";
 import type { ShoppingListItem, IngredientSource, ProductMatch, IngredientProduct } from "@shared/schema";
 import { cleanProductName, getLiquidDisplayMl } from "@/lib/unit-display";
-import { isWholeFood } from "@/lib/basket-item-classifier";
+import { isWholeFood, canShowScoreForItem } from "@/lib/basket-item-classifier";
 import { getIngredientDef, isResolvedVariantItem } from "@/lib/ingredient-catalogue";
 import WholeFoodSelector from "@/components/whole-food-selector";
 import { SpellSuggestions } from "@/components/SpellSuggestions";
@@ -1592,9 +1592,13 @@ export default function ShoppingListView({
     // Whole foods are always 5 apples - the whole-food rule takes absolute priority.
     // Raw counts, product-match ratings, or DB values must never leak into this number.
     const itemIsWholeFood = isWholeFood(item);
+    // resolvedMatch.thaRating comes from actual product search results (trusted).
+    // item.thaRating is only shown when the trust gate confirms the item is resolved.
     const effectiveRating: number | null = itemIsWholeFood
       ? 5
-      : (resolvedMatch?.thaRating ?? item.thaRating ?? null);
+      : resolvedMatch?.thaRating != null
+        ? resolvedMatch.thaRating
+        : canShowScoreForItem(item) ? (item.thaRating ?? null) : null;
 
     const rowBg =
       state === "in_basket"   ? "bg-primary/[0.04] dark:bg-primary/[0.07]"

@@ -3981,9 +3981,35 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       // Build basket update — clear cached price matches when name changes
       const updates: Record<string, any> = { thaRating: null };
       if (productName !== undefined) {
-        updates.productName = String(productName).trim();
-        const { normalizeName } = await import('./lib/ingredient-utils');
-        updates.normalizedName = normalizeName(updates.productName);
+        const cleanName = String(productName).trim();
+        // Re-run the resolution layer so that correcting "berries" → "strawberries"
+        // clears needsReview, updates category, and stamps resolutionState correctly.
+        const { resolveItem } = await import('./lib/item-resolver');
+        let resolved: Awaited<ReturnType<typeof resolveItem>>;
+        try {
+          resolved = resolveItem(cleanName, { callerCategory: category ?? item.category ?? null });
+        } catch {
+          resolved = {
+            originalText: cleanName,
+            productName: cleanName,
+            normalizedName: cleanName.toLowerCase(),
+            canonicalName: null,
+            category: category ?? item.category ?? 'other',
+            subcategory: null,
+            resolutionState: 'resolved',
+            reviewReason: null,
+            reviewSuggestions: null,
+            validationNote: null,
+            needsReview: false,
+          };
+        }
+        updates.productName = resolved.productName;
+        updates.normalizedName = resolved.normalizedName;
+        updates.category = resolved.category;
+        updates.resolutionState = resolved.resolutionState;
+        updates.reviewReason = resolved.reviewReason;
+        updates.reviewSuggestions = resolved.reviewSuggestions;
+        updates.needsReview = resolved.needsReview;
         updates.matchedProductId = null;
         updates.matchedStore = null;
         updates.matchedPrice = null;
@@ -3995,9 +4021,9 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         if (!isNaN(qv) && qv >= 0) updates.quantityValue = qv;
       }
       if (unit !== undefined) updates.unit = String(unit).trim() || null;
-      if (category !== undefined) updates.category = String(category).trim() || null;
+      if (category !== undefined && !updates.category) updates.category = String(category).trim() || null;
 
-      await storage.updateShoppingListItem(id, updates);
+      const updatedItem = await storage.updateShoppingListItem(id, updates);
 
       let recipesUpdated = 0;
 
@@ -4041,7 +4067,7 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         }
       }
 
-      res.json({ updated: true, recipesUpdated });
+      res.json({ updated: true, recipesUpdated, item: updatedItem ?? null });
     } catch (err) {
       console.error('[correct-item] Error:', err);
       res.status(500).json({ message: 'Failed to save correction' });

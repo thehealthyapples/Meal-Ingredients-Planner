@@ -203,7 +203,8 @@ export function resolveItem(rawText: string, options: ResolveOptions = {}): Reso
     if (
       options.callerCategory != null &&
       options.callerCategory !== canonical.category &&
-      options.callerCategory !== 'uncategorised'
+      options.callerCategory !== 'uncategorised' &&
+      options.callerCategory !== 'other'  // 'other' means "unknown", not a trusted assertion
     ) {
       return {
         originalText,

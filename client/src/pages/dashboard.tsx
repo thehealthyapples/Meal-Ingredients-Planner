@@ -22,6 +22,7 @@ import { api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import AppleRating from "@/components/ui/apple-rating";
+import { canShowScoreForItem } from "@/lib/basket-item-classifier";
 import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -185,7 +186,9 @@ export default function Dashboard() {
 
   const avgThaScore = useMemo(() => {
     const rated = shoppingListItems.filter(
-      (i: any) => i.thaRating !== null && i.thaRating !== undefined && (i.thaRating as number) > 0
+      (i: any) =>
+        canShowScoreForItem(i) &&
+        i.thaRating !== null && i.thaRating !== undefined && (i.thaRating as number) > 0
     );
     if (!rated.length) return null;
     return rated.reduce((sum: number, i: any) => sum + (i.thaRating as number), 0) / rated.length;

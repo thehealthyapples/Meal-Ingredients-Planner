@@ -348,7 +348,7 @@ export default function QuickMealPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
       toast({ title: "Added to basket", description: `${parts.length} item${parts.length === 1 ? "" : "s"}` });
-      navigate("/basket");
+      navigate("/shopping-workspace");
     },
     onError: () => {
       toast({ title: "Failed to create basket list", variant: "destructive" });

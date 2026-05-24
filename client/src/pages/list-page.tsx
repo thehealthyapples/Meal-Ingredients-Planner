@@ -344,9 +344,7 @@ export default function ListPage() {
       saveToHistory(basket);
       setHistory(loadHistory());
 
-      const navParams = new URLSearchParams({ quickList: basketLabel, shopMode: "1", fromQuickList: "1" });
-      if (shop) navParams.set("store", shop);
-      navigate(`/basket?${navParams.toString()}`);
+      navigate("/shopping-workspace?source=quick-list");
 
       const addedCount = merged.size;
       toast({

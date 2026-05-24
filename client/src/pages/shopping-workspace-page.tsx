@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearch } from "wouter";
 import { useUser } from "@/hooks/use-user";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -12,11 +11,11 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  ChevronDown, ChevronUp, ShoppingBasket,
-  FlaskConical, Leaf, AlertTriangle, Home, UtensilsCrossed,
+  ShoppingBasket,
+  FlaskConical, Leaf, AlertTriangle, Home,
   CheckCircle2, ClipboardList, ShoppingCart, ShoppingBag, Clock,
   RefreshCw, Scale, Search, ScanLine, Maximize2, Minimize2,
-  Download, ExternalLink, Trash2, Columns2, Copy, Store, Check,
+  Download, ExternalLink, Trash2, Columns2, Copy, Store, Check, Plus,
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +24,6 @@ import { deriveQuantityConfidence } from "@/lib/quantity-confidence";
 import ScoreBadge from "@/components/ui/score-badge";
 import { canShowScoreForItem } from "@/lib/basket-item-classifier";
 import type { ShoppingListItem, IngredientSource } from "@shared/schema";
-import { motion, AnimatePresence } from "framer-motion";
 import { WorkspaceAnalyserSheet } from "@/components/WorkspaceAnalyserSheet";
 import { PageHeader } from "@/components/PageHeader";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -53,6 +51,35 @@ const SUPERMARKET_SEARCH_URLS: Record<string, string> = {
   "Lidl": "https://www.lidl.co.uk/p/q/{query}",
   "Marks & Spencer": "https://www.marksandspencer.com/l/food-and-wine?q={query}",
 };
+
+// ── Shopping unit options ─────────────────────────────────────────────────────
+// UK-focused list for the inline quantity/unit editor. Reuses the canonical
+// unit strings that formatQuantityMetric / formatQuantityImperial understand.
+const SHOPPING_UNITS: { value: string; label: string }[] = [
+  { value: "",        label: "— no unit —" },
+  { value: "g",       label: "g" },
+  { value: "kg",      label: "kg" },
+  { value: "ml",      label: "ml" },
+  { value: "L",       label: "L" },
+  { value: "tsp",     label: "tsp" },
+  { value: "tbsp",    label: "tbsp" },
+  { value: "cup",     label: "cup" },
+  { value: "oz",      label: "oz" },
+  { value: "lb",      label: "lb" },
+  { value: "piece",   label: "piece" },
+  { value: "punnet",  label: "punnet" },
+  { value: "jar",     label: "jar" },
+  { value: "tin",     label: "tin" },
+  { value: "can",     label: "can" },
+  { value: "pack",    label: "pack" },
+  { value: "bag",     label: "bag" },
+  { value: "bottle",  label: "bottle" },
+  { value: "bunch",   label: "bunch" },
+  { value: "clove",   label: "clove" },
+  { value: "slice",   label: "slice" },
+  { value: "sachet",  label: "sachet" },
+  { value: "handful", label: "handful" },
+];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -111,7 +138,6 @@ type ShopSummary = {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 const MODES: Array<{
   id: WorkspaceMode;
@@ -571,8 +597,6 @@ function WorkspaceRow({
   sources,
   pantryKeySet,
   measurementPref,
-  expanded,
-  onToggleExpand,
   onToggleChecked,
   shopMode,
   shopState,
@@ -584,13 +608,12 @@ function WorkspaceRow({
   onCorrectItem,
   onAddItem,
   onConfirmSuggestions,
+  onUpdateMeasurement,
 }: {
   item: WorkspaceItem;
   sources: IngredientSource[];
   pantryKeySet: Set<string>;
   measurementPref: "metric" | "imperial";
-  expanded: boolean;
-  onToggleExpand: () => void;
   onToggleChecked: (checked: boolean) => void;
   shopMode: boolean;
   shopState?: ShopItemState;
@@ -602,10 +625,14 @@ function WorkspaceRow({
   onCorrectItem?: (newName: string) => void;
   onAddItem?: (name: string) => void;
   onConfirmSuggestions?: (picks: string[]) => void;
+  onUpdateMeasurement?: (qty: number | null, unit: string | null) => void;
 }) {
   const [editVal, setEditVal] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [selectedSuggestions, setSelectedSuggestions] = useState<Set<string>>(new Set());
+  const [qtyEditMode, setQtyEditMode] = useState(false);
+  const [qtyEditQty, setQtyEditQty] = useState("");
+  const [qtyEditUnit, setQtyEditUnit] = useState("");
 
   // Parse suggestions once at component scope — used by both inline strip and expanded pane
   const isAmbiguous = item.reviewReason === "ambiguous_term";
@@ -633,6 +660,24 @@ function WorkspaceRow({
     setSelectedSuggestions(new Set());
   }
 
+  function activateQtyEdit() {
+    if (!onUpdateMeasurement || item.checked) return;
+    const rawQty = item.quantityValue;
+    setQtyEditQty(rawQty != null && rawQty > 0
+      ? String(rawQty % 1 === 0 ? rawQty : parseFloat(rawQty.toFixed(4)))
+      : "");
+    setQtyEditUnit(item.unit ?? "");
+    setQtyEditMode(true);
+  }
+
+  function saveQtyEdit() {
+    const num = parseFloat(qtyEditQty);
+    const qty = !isNaN(num) && num > 0 ? num : null;
+    const unit = qtyEditUnit.trim() || null;
+    onUpdateMeasurement?.(qty, unit);
+    setQtyEditMode(false);
+  }
+
   const pantryKey = (item.normalizedName ?? item.productName).toLowerCase();
   const isPantryStocked = pantryKeySet.has(pantryKey);
   const prepConf = deriveQuantityConfidence(item);
@@ -646,15 +691,6 @@ function WorkspaceRow({
     sources,
     prepMode ? (prepState ?? {}) : undefined,
   );
-  const mealSources = item.sources ?? [];
-  const mealAttribution = mealSources
-    .map((s) => {
-      if (s.dayOfWeek != null && s.mealSlot) return `${DAY_NAMES[s.dayOfWeek]} ${s.mealSlot}`;
-      if (s.mealName) return s.mealName;
-      return null;
-    })
-    .filter(Boolean);
-
   const hintToneClass =
     hint?.tone === "amber"
       ? "text-amber-600 dark:text-amber-400"
@@ -739,12 +775,8 @@ function WorkspaceRow({
           )}
         </div>
 
-        {/* Item name + qty — fills remaining space; hint for Review + Prep */}
-        <button
-          className="flex-1 min-w-0 text-left"
-          onClick={onToggleExpand}
-          data-testid={`ws-row-expand-${item.id}`}
-        >
+        {/* Item name + qty */}
+        <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-1.5 min-w-0 flex-wrap">
             <span className={`text-sm font-medium leading-snug truncate ${
               shopMode
@@ -753,17 +785,72 @@ function WorkspaceRow({
             }`}>
               {capitalizeWords(item.productName)}
             </span>
-            {qtyLabel && (
-              <span className={`text-xs tabular-nums shrink-0 whitespace-nowrap ${
-                shopMode
-                  ? effectiveShopState !== "need" ? "text-muted-foreground/40" : "text-muted-foreground"
-                  : item.checked ? "text-muted-foreground/50" : "text-muted-foreground"
+            {/* Qty chip — editable when unchecked; read-only when checked */}
+            {/* Qty — edit controls inline when editing, chip when not */}
+            {qtyEditMode && !item.checked ? (
+              <>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={qtyEditQty}
+                  onChange={(e) => setQtyEditQty(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveQtyEdit();
+                    if (e.key === "Escape") setQtyEditMode(false);
+                  }}
+                  className="w-16 h-8 text-xs px-2 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 tabular-nums shrink-0"
+                  autoFocus
+                  placeholder="qty"
+                />
+                <select
+                  value={qtyEditUnit}
+                  onChange={(e) => setQtyEditUnit(e.target.value)}
+                  className="h-8 text-xs pl-2 pr-6 rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/30 cursor-pointer shrink-0"
+                >
+                  {SHOPPING_UNITS.map((u) => (
+                    <option key={u.value} value={u.value}>{u.label}</option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={saveQtyEdit}
+                  className="px-3 h-8 text-xs font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors touch-manipulation shrink-0"
+                >
+                  Save
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setQtyEditMode(false)}
+                  className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation shrink-0"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : !item.checked && onUpdateMeasurement ? (
+              <button
+                type="button"
+                onClick={activateQtyEdit}
+                title={qtyLabel ? "Edit quantity" : "Add quantity"}
+                className={`inline-flex items-center gap-0.5 text-xs tabular-nums shrink-0 whitespace-nowrap touch-manipulation transition-colors rounded-full px-2 py-0.5 border ${
+                  qtyLabel
+                    ? shopMode && effectiveShopState !== "need"
+                      ? "border-border/30 bg-muted/20 text-muted-foreground/50"
+                      : "border-border/50 bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    : "border-dashed border-border/60 text-muted-foreground/70 hover:border-border hover:text-muted-foreground hover:bg-muted/30"
+                }`}
+              >
+                {qtyLabel ? qtyLabel : <><Plus className="h-3 w-3" /><span>Add qty</span></>}
+              </button>
+            ) : qtyLabel ? (
+              <span className={`text-xs tabular-nums shrink-0 whitespace-nowrap px-2 py-0.5 rounded-full border border-border/30 bg-muted/20 ${
+                item.checked ? "text-muted-foreground/50" : "text-muted-foreground"
               }`}>
                 {qtyLabel}
               </span>
-            )}
+            ) : null}
           </div>
-          {/* Hint — Review and Prep (label moved here from PrepActionPanel undecided) */}
+          {/* Hint — Review and Prep */}
           {hint && !item.checked && !shopMode && (
             <div className="flex items-center gap-0.5 mt-0.5">
               {hint.tone === "amber" && <AlertTriangle className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />}
@@ -771,10 +858,10 @@ function WorkspaceRow({
               <span className={`text-xs ${hintToneClass}`}>{hint.text}</span>
             </div>
           )}
-        </button>
+        </div>
 
-        {/* CTA slot — fixed min-width anchors left edge; content left-aligned */}
-        <div className="shrink-0 flex items-center min-w-[160px] sm:min-w-[240px]">
+        {/* CTA slot */}
+        <div className="shrink-0 flex items-center min-w-[160px] sm:min-w-[200px]">
           {/* Shop: Found it / Next shop or status + undo */}
           {shopMode && effectiveShopState === "need" && (
             <div className="flex gap-1.5">
@@ -824,13 +911,12 @@ function WorkspaceRow({
               Analyse
             </button>
           )}
-          {/* Review: ambiguous with inline pills → no CTA (strip below handles it); other review → Review btn; normal → Analyse */}
+          {/* Review: ambiguous → pills strip handles it; non-ambiguous → Review; normal → Analyse */}
           {!shopMode && !prepMode && !item.checked && (
             item.needsReview ? (
-              // Ambiguous items with suggestions: inline strip replaces CTA
               isAmbiguousReview ? null : (
                 <button
-                  onClick={onToggleExpand}
+                  onClick={() => { setEditVal(item.productName); setEditMode(true); }}
                   className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md border border-amber-200/70 dark:border-amber-800/50 bg-amber-50/50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 hover:bg-amber-100/60 dark:hover:bg-amber-950/30 transition-colors touch-manipulation whitespace-nowrap"
                   data-testid={`ws-resolve-btn-${item.id}`}
                 >
@@ -851,20 +937,12 @@ function WorkspaceRow({
           )}
         </div>
 
-        {/* Score — fixed 78px = max 5 apples at size=22 so chevron never shifts */}
+        {/* Score */}
         <div className="shrink-0 w-[78px] flex items-center justify-center">
           {canShowScoreForItem(item) && item.thaRating != null && (shopMode || !item.checked) && (
             <ScoreBadge score={item.thaRating} size={22} />
           )}
         </div>
-
-        {/* Chevron — fixed far-right */}
-        <button
-          onClick={onToggleExpand}
-          className="shrink-0 flex items-center justify-center text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-        >
-          {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-        </button>
 
       </div>
 
@@ -900,208 +978,39 @@ function WorkspaceRow({
               {selectedSuggestions.size === 1 ? "Confirm" : `Add ${selectedSuggestions.size} items`}
             </button>
           )}
-          <button
-            onClick={onToggleExpand}
-            className="text-[10px] text-muted-foreground/40 hover:text-muted-foreground transition-colors touch-manipulation ml-0.5"
-            aria-label="More options"
-          >
-            more →
-          </button>
         </div>
       )}
 
-      {/* ── Expanded detail ───────────────────────────────────────── */}
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            key="expanded"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.18 }}
-            className="overflow-hidden"
+      {/* ── Rename correction strip — non-ambiguous Review items ─── */}
+      {editMode && !isAmbiguous && item.needsReview && !shopMode && !prepMode && (
+        <div className="flex items-center gap-1.5 px-4 pb-2.5 ml-9">
+          <input
+            type="text"
+            value={editVal}
+            onChange={(e) => setEditVal(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && editVal.trim()) { onCorrectItem?.(editVal.trim()); setEditMode(false); }
+              if (e.key === "Escape") setEditMode(false);
+            }}
+            className="flex-1 text-xs h-8 px-2.5 rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
+            autoFocus
+            placeholder="Correct item name…"
+          />
+          <button
+            onClick={() => { if (editVal.trim()) { onCorrectItem?.(editVal.trim()); setEditMode(false); } }}
+            disabled={!editVal.trim()}
+            className="px-3 h-8 text-xs font-semibold rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40 touch-manipulation shrink-0"
           >
-            <div className="px-4 pb-4 pt-2 space-y-3 border-t border-border/20 ml-9">
-
-              {/* Pantry note (review mode) */}
-              {!prepMode && !shopMode && isPantryStocked && (
-                <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
-                  <Home className="h-3.5 w-3.5 shrink-0" />
-                  <span>Usually at home — check before buying</span>
-                </div>
-              )}
-
-              {/* Meal attribution */}
-              {mealAttribution.length > 0 && (
-                <div>
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium block mb-1">
-                    Needed for
-                  </span>
-                  <div className="flex flex-wrap gap-1">
-                    {mealAttribution.map((attr, i) => (
-                      <Badge
-                        key={i}
-                        variant="outline"
-                        className="text-[10px] flex items-center gap-1"
-                      >
-                        <UtensilsCrossed className="h-2.5 w-2.5" />
-                        {attr}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {sources.length > 1 && mealAttribution.length === 0 && (
-                <p className="text-xs text-muted-foreground">
-                  Combined from {sources.length} meals
-                </p>
-              )}
-
-              {/* Needs attention — with inline correction flow in Review mode */}
-              {item.needsReview && (() => {
-                // isAmbiguous, suggestions, confirmSuggestions are hoisted to component scope
-
-                // Review mode gets full correction UI; prep/shop modes show the flag only
-                if (!prepMode && !shopMode && onCorrectItem) {
-                  const available = suggestions.filter((s) => !selectedSuggestions.has(s));
-
-                  return (
-                    <div className="rounded-md border border-amber-200/70 dark:border-amber-800/40 bg-amber-50/50 dark:bg-amber-950/15 px-3 py-2.5 space-y-2">
-                      <div className="flex items-start gap-1.5">
-                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-                        <span className="text-xs text-amber-700 dark:text-amber-300 leading-snug">
-                          {isAmbiguous
-                            ? "Ambiguous — which did you mean?"
-                            : (item.validationNote || "Item needs review — please verify")}
-                        </span>
-                      </div>
-
-                      {/* Disambiguation: suggestion chips */}
-                      {isAmbiguous && suggestions.length > 0 && (
-                        <div className="space-y-1.5">
-                          {selectedSuggestions.size > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {Array.from(selectedSuggestions).map((s) => (
-                                <span
-                                  key={s}
-                                  className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border border-primary/40 bg-primary/[0.08] text-primary"
-                                >
-                                  {s}
-                                  <button
-                                    onClick={() => setSelectedSuggestions((prev) => { const n = new Set(prev); n.delete(s); return n; })}
-                                    aria-label={`Remove ${s}`}
-                                    className="flex items-center text-primary/60 hover:text-primary transition-colors"
-                                  >
-                                    ×
-                                  </button>
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                          {available.length > 0 && (
-                            <select
-                              key={selectedSuggestions.size}
-                              defaultValue=""
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                if (v) setSelectedSuggestions((prev) => new Set(Array.from(prev).concat(v)));
-                              }}
-                              className="text-[11px] h-7 pl-2 pr-6 rounded-lg border border-primary/40 bg-background/80 text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 cursor-pointer"
-                            >
-                              <option value="" disabled>
-                                {selectedSuggestions.size === 0 ? "Select type…" : "+ Add another"}
-                              </option>
-                              {available.map((s) => (
-                                <option key={s} value={s}>{s}</option>
-                              ))}
-                            </select>
-                          )}
-                          {selectedSuggestions.size > 0 && (
-                            <button
-                              onClick={confirmSuggestions}
-                              className="text-[11px] px-3 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                            >
-                              {selectedSuggestions.size === 1 ? "Confirm" : `Add ${selectedSuggestions.size} items`}
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Non-ambiguous: inline edit */}
-                      {!isAmbiguous && (
-                        <div>
-                          {editMode ? (
-                            <div className="flex items-center gap-1.5">
-                              <input
-                                type="text"
-                                value={editVal}
-                                onChange={(e) => setEditVal(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" && editVal.trim()) { onCorrectItem(editVal.trim()); setEditMode(false); }
-                                  if (e.key === "Escape") setEditMode(false);
-                                }}
-                                className="flex-1 text-[11px] h-7 px-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30"
-                                autoFocus
-                              />
-                              <button
-                                onClick={() => { if (editVal.trim()) { onCorrectItem(editVal.trim()); setEditMode(false); } }}
-                                disabled={!editVal.trim()}
-                                className="text-[11px] px-2.5 py-1 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-40"
-                              >
-                                Confirm
-                              </button>
-                              <button
-                                onClick={() => setEditMode(false)}
-                                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => { setEditVal(item.productName); setEditMode(true); }}
-                              className="text-[11px] px-2.5 py-1 rounded-lg border border-border/60 bg-background/70 text-foreground/70 hover:bg-muted/50 hover:border-border transition-colors"
-                            >
-                              Edit name
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-
-                // Prep / shop modes: simple flag
-                return (
-                  <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 rounded-md bg-amber-50/60 dark:bg-amber-950/20 px-2 py-1.5">
-                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                    <span>{item.validationNote || "This item may need a closer look"}</span>
-                  </div>
-                );
-              })()}
-
-              {/* Analyser — secondary access for prep/shop (review shows it inline in the row) */}
-              {(prepMode || shopMode) && (
-                <div className="flex items-center gap-2 pt-1 border-t border-border/20">
-                  <FlaskConical className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <button
-                    onClick={onOpenAnalyser}
-                    className="text-xs text-primary hover:underline touch-manipulation"
-                    data-testid={`ws-analyse-btn-expanded-${item.id}`}
-                  >
-                    Analyse
-                  </button>
-                  <span className="text-[10px] text-muted-foreground/60">
-                    · THA score, cleaner options, whole-food route
-                  </span>
-                </div>
-              )}
-
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            Confirm
+          </button>
+          <button
+            onClick={() => setEditMode(false)}
+            className="h-8 px-2 text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1230,7 +1139,6 @@ export default function ShoppingWorkspacePage() {
   const { toast } = useToast();
   const search = useSearch();
 
-  const [expandedId, setExpandedId] = useState<number | null>(null);
   const [mode, setMode] = useState<WorkspaceMode>(() => {
     const params = new URLSearchParams(search);
     const stage = params.get("stage");
@@ -1279,7 +1187,6 @@ export default function ShoppingWorkspacePage() {
     const stage = params.get("stage");
     if (stage === "review" || stage === "prep" || stage === "shop") {
       setMode(stage);
-      setExpandedId(null);
     }
     if (params.get("source") === "quick-list") setSourceFilter("quick_list");
   }, [search]);
@@ -1455,6 +1362,51 @@ export default function ShoppingWorkspacePage() {
     onError: () => toast({ title: "Failed to clear list", variant: "destructive" }),
   });
 
+  const updateMeasurement = useMutation({
+    mutationFn: async ({ id, qty, unit }: { id: number; qty: number | null; unit: string | null }) => {
+      const url = buildUrl(api.shoppingList.update.path, { id });
+      const body: Record<string, unknown> = {};
+      if (qty !== null) body.quantityValue = qty;
+      body.unit = unit ?? "";
+      const res = await fetch(url, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("Failed to update measurement");
+      return res.json() as Promise<ShoppingListItem>;
+    },
+    onMutate: async ({ id, qty, unit }) => {
+      const snapshot = queryClient.getQueryData<WorkspaceItem[]>([api.shoppingList.list.path]);
+      // Optimistic update — apply immediately so the row reflects the new qty/unit
+      queryClient.setQueryData<WorkspaceItem[]>([api.shoppingList.list.path], (old) =>
+        old ? old.map((it) =>
+          it.id === id
+            ? { ...it, ...(qty !== null && { quantityValue: qty }), unit: unit ?? "" }
+            : it
+        ) : old,
+      );
+      await queryClient.cancelQueries({ queryKey: [api.shoppingList.list.path] });
+      return { snapshot };
+    },
+    onSuccess: (data, { id }) => {
+      // Apply server response (has derived quantityInGrams etc.)
+      queryClient.setQueryData<WorkspaceItem[]>([api.shoppingList.list.path], (old) =>
+        old ? old.map((it) => it.id === id ? { ...it, ...data } : it) : old,
+      );
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot !== undefined) {
+        queryClient.setQueryData([api.shoppingList.list.path], ctx.snapshot);
+      }
+      toast({ title: "Couldn't update measurement", variant: "destructive" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+    },
+  });
+
   const correctItem = useMutation({
     mutationFn: async ({ id, productName }: { id: number; productName: string }) => {
       const res = await fetch(`/api/shopping-list/${id}/correct`, {
@@ -1464,12 +1416,59 @@ export default function ShoppingWorkspacePage() {
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to correct item");
-      return res.json();
+      return res.json() as Promise<{ updated: boolean; recipesUpdated: number; item: ShoppingListItem | null }>;
     },
-    onSuccess: () => {
+    onMutate: async ({ id, productName }) => {
+      // Snapshot BEFORE setQueryData so rollback restores original state
+      const snapshot = queryClient.getQueryData<WorkspaceItem[]>([api.shoppingList.list.path]);
+      // Apply optimistic update SYNCHRONOUSLY (before any await) so pills disappear
+      // in the same React render batch as the user's Confirm click.
+      queryClient.setQueryData<WorkspaceItem[]>([api.shoppingList.list.path], (old) =>
+        old ? old.map((it) =>
+          it.id === id
+            ? {
+                ...it,
+                productName,
+                normalizedName: productName.toLowerCase(),
+                needsReview: false,
+                reviewReason: null,
+                reviewSuggestions: null,
+                resolutionState: "resolved" as const,
+                thaRating: null,
+              }
+            : it
+        ) : old,
+      );
+      // Cancel in-flight queries AFTER the optimistic update to prevent them
+      // from overwriting our update before the real server response arrives.
+      await queryClient.cancelQueries({ queryKey: [api.shoppingList.list.path] });
+      return { snapshot };
+    },
+    onSuccess: (data, { id }) => {
+      // Apply the full server-resolved item (including correct category) so the
+      // item moves to the right category group without waiting for a full refetch.
+      if (data.item) {
+        queryClient.setQueryData<WorkspaceItem[]>([api.shoppingList.list.path], (old) =>
+          old ? old.map((it) =>
+            it.id === id
+              ? {
+                  ...it,           // preserve addedByDisplayName, sources
+                  ...data.item!,   // apply server-resolved fields (category, review state, etc.)
+                }
+              : it
+          ) : old,
+        );
+      }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot !== undefined) {
+        queryClient.setQueryData([api.shoppingList.list.path], ctx.snapshot);
+      }
+      toast({ title: "Couldn't update item", variant: "destructive" });
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
     },
-    onError: () => toast({ title: "Couldn't update item", variant: "destructive" }),
   });
 
   const addShoppingItem = useMutation({
@@ -1477,14 +1476,20 @@ export default function ShoppingWorkspacePage() {
       productName,
       source,
       basketLabel,
+      quantityValue,
+      unit,
     }: {
       productName: string;
       source?: string | null;
       basketLabel?: string | null;
+      quantityValue?: number | null;
+      unit?: string | null;
     }) => {
       const body: Record<string, unknown> = { productName };
       if (source) body.source = source;
       if (basketLabel) body.basketLabel = basketLabel;
+      if (quantityValue != null) body.quantityValue = quantityValue;
+      if (unit) body.unit = unit;
       const res = await fetch(api.shoppingList.add.path, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1763,10 +1768,6 @@ export default function ShoppingWorkspacePage() {
     return { pantryTotal, pantryReviewed, uncertainTotal, uncertainResolved, attentionTotal, allPrepDone };
   }, [prepGroups, prepStates]);
 
-  function handleToggleExpand(itemId: number) {
-    setExpandedId((prev) => (prev === itemId ? null : itemId));
-  }
-
   function renderRow(item: WorkspaceItem) {
     const isPrepMode = mode === "prep";
     const isShopMode = mode === "shop";
@@ -1777,8 +1778,6 @@ export default function ShoppingWorkspacePage() {
         sources={sourcesByItem.get(item.id) ?? []}
         pantryKeySet={pantryKeySet}
         measurementPref={measurementPref}
-        expanded={expandedId === item.id}
-        onToggleExpand={() => handleToggleExpand(item.id)}
         onToggleChecked={(checked) => toggleChecked.mutate({ id: item.id, checked })}
         shopMode={isShopMode}
         shopState={isShopMode ? getShopState(item) : undefined}
@@ -1789,10 +1788,18 @@ export default function ShoppingWorkspacePage() {
         onOpenAnalyser={() => setAnalyserItem(item)}
         onCorrectItem={!isShopMode && !isPrepMode ? (newName) => correctItem.mutate({ id: item.id, productName: newName }) : undefined}
         onAddItem={!isShopMode && !isPrepMode ? (name) => addShoppingItem.mutate({ productName: name }) : undefined}
+        onUpdateMeasurement={!item.checked ? (qty, unit) => updateMeasurement.mutate({ id: item.id, qty, unit }) : undefined}
         onConfirmSuggestions={!isShopMode && !isPrepMode ? async (picks) => {
           if (picks.length === 0) return;
+          // Carry qty/unit from the parent ambiguous item to all derived items
+          const inheritedQty = item.quantityValue ?? undefined;
+          const inheritedUnit = item.unit ?? undefined;
           try {
             await correctItem.mutateAsync({ id: item.id, productName: picks[0] });
+            // Apply inherited qty/unit to the corrected item if one was set
+            if (inheritedQty != null || inheritedUnit) {
+              updateMeasurement.mutate({ id: item.id, qty: inheritedQty ?? null, unit: inheritedUnit ?? null });
+            }
             if (picks.length > 1) {
               await Promise.all(
                 picks.slice(1).map((name) =>
@@ -1800,6 +1807,8 @@ export default function ShoppingWorkspacePage() {
                     productName: name,
                     source: item.source ?? undefined,
                     basketLabel: item.basketLabel ?? undefined,
+                    quantityValue: inheritedQty,
+                    unit: inheritedUnit,
                   })
                 )
               );
@@ -1991,7 +2000,7 @@ export default function ShoppingWorkspacePage() {
           title="Shopping"
           icon={<ShoppingBasket className="h-5 w-5" />}
           realm="basket"
-          center={<ModeSwitcher mode={mode} onChange={(m) => { setMode(m); setExpandedId(null); }} />}
+          center={<ModeSwitcher mode={mode} onChange={(m) => { setMode(m); }} />}
           controlBar={workspaceControlBar}
           actions={menuDropdown}
         />
@@ -2008,7 +2017,7 @@ export default function ShoppingWorkspacePage() {
               <span className="font-semibold text-sm">Shopping</span>
             </div>
             <div className="flex items-center gap-2">
-              <ModeSwitcher mode={mode} onChange={(m) => { setMode(m); setExpandedId(null); }} />
+              <ModeSwitcher mode={mode} onChange={(m) => { setMode(m); }} />
               {menuDropdown}
             </div>
           </div>

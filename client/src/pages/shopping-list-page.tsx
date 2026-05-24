@@ -68,7 +68,7 @@ import AppleRating from "@/components/AppleRating";
 import BadAppleWarningModal from "@/components/BadAppleWarningModal";
 import type { ShoppingListItem, ProductMatch, IngredientSource, SupermarketLink, FreezerMeal, IngredientProduct } from "@shared/schema";
 import { getIngredientDef } from "@/lib/ingredient-catalogue";
-import { isWholeFood } from "@/lib/basket-item-classifier";
+import { isWholeFood, canShowScoreForItem } from "@/lib/basket-item-classifier";
 import { safeParseJsonObject, safeStringifyJsonObject } from "@/lib/json-utils";
 import { resolveBestMatch, type WholeFoodIntent } from "@/lib/whole-food-matcher";
 import { calcConfidence, CONFIDENCE_LABELS, type ConfidenceLevel } from "@/lib/food-confidence";
@@ -711,7 +711,6 @@ function EditItemModal({ item, sources, onClose }: {
 }
 
 function getCurrentProductInsight(item: ShoppingListItem): { headline: string; detail: string } {
-  const rating = item.thaRating;
   const isWF = item.itemType === 'whole_food';
   const cat = item.category || 'other';
 
@@ -721,6 +720,14 @@ function getCurrentProductInsight(item: ShoppingListItem): { headline: string; d
       detail: 'This ingredient is a whole or minimally processed food - no additives, no unnecessary processing. About as good as it gets.',
     };
   }
+  // Trust gate: unresolved packaged items must not display authoritative scores.
+  if (!canShowScoreForItem(item)) {
+    return {
+      headline: 'Analysis required',
+      detail: 'Scan the barcode or search for a specific product to see an accurate Apple Score for this item.',
+    };
+  }
+  const rating = item.thaRating;
   if (rating === null || rating === undefined) {
     return {
       headline: 'Not yet scored',
@@ -935,11 +942,11 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
             <Microscope className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
             <div className="min-w-0 flex-1">
               <DialogTitle className="text-base leading-snug">{capitalizeWords(item.productName)}</DialogTitle>
-              <p className={`text-xs font-medium mt-0.5 ${ratingColor(item.thaRating ?? null)}`}>
+              <p className={`text-xs font-medium mt-0.5 ${canShowScoreForItem(item) ? ratingColor(item.thaRating ?? null) : "text-muted-foreground"}`}>
                 {insight.headline}
               </p>
             </div>
-            <ScoreBadge score={item.thaRating ?? 0} size={32} />
+            {canShowScoreForItem(item) && <ScoreBadge score={item.thaRating ?? 0} size={32} />}
           </div>
         </DialogHeader>
 
@@ -972,12 +979,12 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="font-semibold text-sm leading-snug">{capitalizeWords(item.productName)}</p>
-                    <p className={`text-xs font-medium mt-0.5 ${ratingColor(item.thaRating ?? null)}`}>
+                    <p className={`text-xs font-medium mt-0.5 ${canShowScoreForItem(item) ? ratingColor(item.thaRating ?? null) : "text-muted-foreground"}`}>
                       {insight.headline}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <ScoreBadge score={item.thaRating ?? 0} size={28} />
+                    {canShowScoreForItem(item) && <ScoreBadge score={item.thaRating ?? 0} size={28} />}
                     <button
                       className="text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setShowCurrentDetail(v => !v)}
@@ -999,7 +1006,7 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                           <Leaf className="h-2.5 w-2.5 mr-1" />Whole food
                         </Badge>
                       )}
-                      {item.itemType === 'packaged' && item.thaRating !== null && item.thaRating <= 2 && (
+                      {canShowScoreForItem(item) && item.itemType === 'packaged' && item.thaRating !== null && item.thaRating <= 2 && (
                         <Badge className="text-[10px] bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 no-default-hover-elevate">
                           Worth reconsidering
                         </Badge>
@@ -1187,13 +1194,18 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
                 <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-2" data-testid="compare-card-current">
                   <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Current</p>
                   <div className="flex items-center gap-2">
-                    <ScoreBadge score={item.thaRating ?? 0} size={22} />
+                    {canShowScoreForItem(item)
+                      ? <ScoreBadge score={item.thaRating ?? 0} size={22} />
+                      : <span className="text-[10px] text-muted-foreground/70 font-medium">Analysis Required</span>
+                    }
                     <span className="text-xs font-medium truncate">{capitalizeWords(item.productName)}</span>
                   </div>
                   <div className="space-y-1 text-xs text-muted-foreground">
                     <div className="flex justify-between"><span>Effort</span><span className="font-medium text-foreground">None</span></div>
                     <div className="flex justify-between"><span>Convenience</span><span className="font-medium text-foreground">High</span></div>
-                    <div className="flex justify-between"><span>Ingredients</span><span className={`font-medium ${(item.thaRating ?? 0) >= 4 ? 'text-green-600' : (item.thaRating ?? 0) >= 3 ? 'text-yellow-600' : 'text-red-500'}`}>{(item.thaRating ?? 0) >= 4 ? 'Clean' : (item.thaRating ?? 0) >= 3 ? 'Mixed' : 'Industrial'}</span></div>
+                    {canShowScoreForItem(item) && (
+                      <div className="flex justify-between"><span>Ingredients</span><span className={`font-medium ${(item.thaRating ?? 0) >= 4 ? 'text-green-600' : (item.thaRating ?? 0) >= 3 ? 'text-yellow-600' : 'text-red-500'}`}>{(item.thaRating ?? 0) >= 4 ? 'Clean' : (item.thaRating ?? 0) >= 3 ? 'Mixed' : 'Industrial'}</span></div>
+                    )}
                   </div>
                 </div>
                 {/* Cleaner shop option */}
@@ -2410,7 +2422,10 @@ export default function ShoppingListPage() {
   }, [hasPrices, displayItems, allPriceMatches, selectedRetailers, getCategoryDefault, currentTier, estimatedExtra, hasAnyEstimateInTotal]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const avgThaRating = useMemo(() => {
-    const rated = displayItems.filter(i => i.thaRating !== null && i.thaRating !== undefined && (i.thaRating as number) > 0);
+    const rated = displayItems.filter(i =>
+      canShowScoreForItem(i) &&
+      i.thaRating !== null && i.thaRating !== undefined && (i.thaRating as number) > 0
+    );
     if (rated.length === 0) return null;
     return rated.reduce((sum, i) => sum + (i.thaRating as number), 0) / rated.length;
   }, [displayItems]);
@@ -3510,6 +3525,7 @@ export default function ShoppingListPage() {
                                         {hasPrices ? (() => {
                                           const smp = getItemThaRating(item.id, item);
                                           if (smp === 0) return <span className="text-xs text-muted-foreground">-</span>;
+                                          if (!canShowScoreForItem(item)) return <span className="text-xs text-muted-foreground">-</span>;
                                           return <AppleRating rating={smp} size="small" />;
                                         })() : <span className="text-xs text-muted-foreground">-</span>}
                                       </div>
@@ -3593,7 +3609,7 @@ export default function ShoppingListPage() {
                             const match = selStore ? pricesByItem.get(itm.id)?.get(selStore) : null;
                             return sum + (match?.price ?? 0);
                           }, 0) : null;
-                          const catRatings = catItems.map(i => getItemThaRating(i.id, i)).filter(r => r > 0);
+                          const catRatings = catItems.filter(i => canShowScoreForItem(i)).map(i => getItemThaRating(i.id, i)).filter(r => r > 0);
                           const catAvgRating = catRatings.length > 0 ? catRatings.reduce((a, b) => a + b, 0) / catRatings.length : null;
                           const totalCount = catItems.length + catExtras.length;
                           return (

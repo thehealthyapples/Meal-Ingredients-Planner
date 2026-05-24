@@ -27,6 +27,8 @@ interface PageHeaderProps {
   center?: ReactNode;
   /** Second row: operational status / context line. Only used when center is provided. */
   meta?: ReactNode;
+  /** Full-width control bar rendered below all header content. No forced text styling. */
+  controlBar?: ReactNode;
   wide?: boolean;
   titleTestId?: string;
   className?: string;
@@ -40,6 +42,7 @@ export function PageHeader({
   actions,
   center,
   meta,
+  controlBar,
   wide = false,
   titleTestId,
   className,
@@ -85,6 +88,12 @@ export function PageHeader({
             {meta && (
               <div className="mt-1.5 pt-1.5 border-t border-border/30 text-[11px] text-muted-foreground flex items-center gap-1.5 flex-wrap leading-none">
                 {meta}
+              </div>
+            )}
+            {/* Row 3: Control bar (filters, sort, stage controls) */}
+            {controlBar && (
+              <div className="mt-2 pt-2 border-t border-border/30">
+                {controlBar}
               </div>
             )}
           </div>

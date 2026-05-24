@@ -23,6 +23,7 @@ import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import type { ShoppingListItem } from "@shared/schema";
 import { BrowserMultiFormatReader } from "@zxing/browser";
+import { canShowScoreForItem } from "@/lib/basket-item-classifier";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -31,14 +32,20 @@ function capitalizeWords(s: string) {
 }
 
 function getCurrentProductInsight(item: ShoppingListItem): { headline: string; detail: string } {
-  const rating = item.thaRating;
-  const isWF = item.itemType === "whole_food";
-  if (isWF) {
+  if (item.itemType === "whole_food") {
     return {
       headline: "Already a whole food",
       detail: "This ingredient is a whole or minimally processed food — no additives, no unnecessary processing.",
     };
   }
+  // Trust gate: unresolved packaged items must not display authoritative scores.
+  if (!canShowScoreForItem(item)) {
+    return {
+      headline: "Analysis required",
+      detail: "Scan the barcode or search for a specific product to see an accurate Apple Score for this item.",
+    };
+  }
+  const rating = item.thaRating;
   if (rating === null || rating === undefined) {
     return {
       headline: "Not yet scored",
@@ -298,6 +305,9 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
       setManualSearchDone(false);
       setManualSearchError(false);
 
+      // Pre-populate manual search with item name so user can retry without typing
+      setManualQuery(item.productName);
+
       // Show localStorage choices immediately, then overlay with server memory
       const local = getPreviousChoices(item);
       setPreviousChoices(local);
@@ -463,8 +473,8 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
   }
 
   const rankedChoices = useMemo(
-    () => (item ? rankChoices(products, item.thaRating ?? null, preferredStore).slice(0, 3) : []),
-    [products, item?.thaRating, preferredStore],
+    () => (item ? rankChoices(products, canShowScoreForItem(item) ? (item.thaRating ?? null) : null, preferredStore).slice(0, 3) : []),
+    [products, item?.thaRating, item?.itemType, item?.resolutionState, item?.matchedProductId, preferredStore],
   );
 
   const wholeFoodAlt = useMemo(
@@ -475,6 +485,10 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
   if (!item) return null;
 
   const insight = getCurrentProductInsight(item);
+  // For unresolved items the stored thaRating is an auto-estimate — never use it
+  // as a comparison baseline in product alternatives. Pass null so alternatives
+  // show their own score without anchoring against a fabricated current score.
+  const trustedCurrentRating = canShowScoreForItem(item) ? (item.thaRating ?? null) : null;
   const isWF = item.itemType === "whole_food";
 
   return (
@@ -490,7 +504,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
               <DrawerTitle className="text-base leading-snug" data-testid="analyser-sheet-title">
                 {capitalizeWords(item.productName)}
               </DrawerTitle>
-              <p className={`text-xs font-medium mt-0.5 ${ratingColor(item.thaRating ?? null)}`}>
+              <p className={`text-xs font-medium mt-0.5 ${canShowScoreForItem(item) ? ratingColor(item.thaRating ?? null) : "text-muted-foreground"}`}>
                 {insight.headline}
               </p>
               <p className="text-[10px] text-muted-foreground/60 mt-0.5">
@@ -498,7 +512,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0 pt-0.5">
-              {item.thaRating != null && (
+              {canShowScoreForItem(item) && item.thaRating != null && (
                 <ScoreBadge score={item.thaRating} size={36} />
               )}
               <DrawerClose asChild>
@@ -543,12 +557,12 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
                     <p className="font-semibold text-sm leading-snug">
                       {capitalizeWords(item.productName)}
                     </p>
-                    <p className={`text-xs font-medium mt-0.5 ${ratingColor(item.thaRating ?? null)}`}>
+                    <p className={`text-xs font-medium mt-0.5 ${canShowScoreForItem(item) ? ratingColor(item.thaRating ?? null) : "text-muted-foreground"}`}>
                       {insight.headline}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {item.thaRating != null && <ScoreBadge score={item.thaRating} size={28} />}
+                    {canShowScoreForItem(item) && item.thaRating != null && <ScoreBadge score={item.thaRating} size={28} />}
                     <button
                       className="text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setShowCurrentDetail((v) => !v)}
@@ -696,18 +710,32 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
               </div>
             ) : products.length > 0 ? (
               <Card className="border-border/60 bg-muted/30">
-                <CardContent className="p-4">
+                <CardContent className="p-4 space-y-2">
                   <p className="text-xs text-muted-foreground">
-                    No clearly better packaged alternative found for this item.
+                    No clearly better packaged alternative found. Try the manual search below to browse all products.
                   </p>
+                  <button
+                    onClick={() => doSearch(item.productName)}
+                    className="text-xs text-primary hover:underline touch-manipulation flex items-center gap-1"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    Retry search
+                  </button>
                 </CardContent>
               </Card>
             ) : (
               <Card className="border-border/60 bg-muted/30">
-                <CardContent className="p-4">
+                <CardContent className="p-4 space-y-2">
                   <p className="text-xs text-muted-foreground">
-                    No results yet — alternatives load automatically.
+                    No alternatives loaded — the product database may be slow.
                   </p>
+                  <button
+                    onClick={() => doSearch(item.productName)}
+                    className="text-xs text-primary hover:underline touch-manipulation flex items-center gap-1"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                    Retry search
+                  </button>
                 </CardContent>
               </Card>
             )}
@@ -808,7 +836,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
             {scanState === "found" && scannedProduct && (
               <ScannedProductCard
                 scannedProduct={scannedProduct}
-                currentRating={item.thaRating ?? null}
+                currentRating={trustedCurrentRating}
                 currentProductName={item.productName}
                 selectedBarcode={selectedBarcode}
                 onSelect={() => handleSelectBetterOption(scannedProduct.raw, "scanned")}
@@ -890,7 +918,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
                   <ManualSearchResultCard
                     key={product.barcode ?? idx}
                     product={product}
-                    currentRating={item.thaRating ?? null}
+                    currentRating={trustedCurrentRating}
                     selectedBarcode={selectedBarcode}
                     currentProductName={item.productName}
                     onSelect={() => handleSelectManualProduct(product)}
