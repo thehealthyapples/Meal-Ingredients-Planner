@@ -1641,24 +1641,15 @@ function ShoppingHandoffPanel({ itemCount, needsReviewCount, freezerDeductions }
         )}
       </div>
 
-      {/* Action CTAs */}
-      <div className="space-y-2 pt-1">
+      {/* Action CTA */}
+      <div className="pt-1">
         <a
-          href="/shopping-list"
-          className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors"
-          data-testid="button-shopping-handoff-check-cupboards"
-        >
-          <ClipboardList className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <span className="flex-1">Check cupboards</span>
-          <span className="text-[11px] text-muted-foreground/50 shrink-0">Verify stock</span>
-        </a>
-        <a
-          href="/shopping-list"
+          href="/shopping-workspace?stage=review&source=planned"
           className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-2.5 text-sm font-medium transition-colors"
           data-testid="button-shopping-handoff-open-shopping"
         >
           <ShoppingCart className="h-4 w-4" />
-          Open shopping list
+          Go to Shopping Review
         </a>
       </div>
 

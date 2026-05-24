@@ -1172,7 +1172,9 @@ export default function ShoppingWorkspacePage() {
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>(() => {
     const params = new URLSearchParams(search);
-    return params.get("source") === "quick-list" ? "quick_list" : "all";
+    if (params.get("source") === "quick-list") return "quick_list";
+    if (params.get("source") === "planned") return "planned";
+    return "all";
   });
   const [sortOrder, setSortOrder] = useState<SortOrder>("default");
 
@@ -1189,6 +1191,7 @@ export default function ShoppingWorkspacePage() {
       setMode(stage);
     }
     if (params.get("source") === "quick-list") setSourceFilter("quick_list");
+    if (params.get("source") === "planned") setSourceFilter("planned");
   }, [search]);
 
   useEffect(() => {
