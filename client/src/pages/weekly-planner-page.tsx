@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Utensils, Package, Store, Users, Wand2, Camera, BookOpen, MoreHorizontal, Check, GripVertical } from "lucide-react";
+import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Package, Store, Users, Wand2, Camera, BookOpen, MoreHorizontal, Check, GripVertical } from "lucide-react";
 import { CreateMealModal } from "@/components/create-meal-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -1555,35 +1555,37 @@ export default function WeeklyPlannerPage() {
             </button>
           )}
           <div className="h-4 w-px bg-border" />
-          {/* Mobile: Plan hub trigger — standard button styling */}
-          <Button
-            size="sm"
-            className="px-2.5 text-xs md:hidden"
-            onClick={() => setMobileAssistantOpen(true)}
-            data-testid="button-mobile-assistant-hub"
-          >
-            <Sparkles className="mr-1 h-3 w-3" />
-            Plan
-          </Button>
-          {/* Desktop: Smart planner trigger */}
-          <Button
-            size="sm"
-            className="hidden md:inline-flex px-2.5 text-xs"
-            onClick={() => setAssistantMode("smart")}
-            disabled={smartLoading}
-            data-testid="button-plan-my-week"
-          >
-            {smartLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
-            {smartLoading ? "Planning…" : "Plan"}
-          </Button>
-          <Button size="sm" variant="outline" className="hidden md:inline-flex px-2.5 text-xs" onClick={() => setCreateMealOpen(true)} data-testid="button-create-meal">
-            <Utensils className="h-3 w-3 mr-1" />
-            Create Meal
-          </Button>
-          <Button size="sm" variant="outline" className="px-2.5 text-xs" onClick={() => addAllToBasket(sortedDays)} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
-            <ShoppingBasket className="h-3 w-3 mr-1" />
-            {addToBasketMutation.isPending ? "…" : "+Week"}
-          </Button>
+          {/* Banner action buttons — Plan + Send week to basket */}
+          <div className="flex items-center gap-1 rounded-md border border-border/60 bg-background/60 px-1 py-0.5">
+            {/* Mobile: Plan hub trigger */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-0 px-2.5 text-xs md:hidden"
+              onClick={() => setMobileAssistantOpen(true)}
+              data-testid="button-mobile-assistant-hub"
+            >
+              <Sparkles className="mr-1 h-3 w-3" />
+              Plan
+            </Button>
+            {/* Desktop: Smart planner trigger */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-0 hidden md:inline-flex px-2.5 text-xs"
+              onClick={() => setAssistantMode("smart")}
+              disabled={smartLoading}
+              data-testid="button-plan-my-week"
+            >
+              {smartLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
+              {smartLoading ? "Planning…" : "Plan"}
+            </Button>
+            <div className="w-px h-4 bg-border/60" />
+            <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs" onClick={() => addAllToBasket(sortedDays)} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
+              <ShoppingBasket className="h-3 w-3 mr-1" />
+              {addToBasketMutation.isPending ? "…" : "Send week to basket"}
+            </Button>
+          </div>
           {placeholderItems.length > 0 && (
             <button
               onClick={() => setAssistantMode("placeholder-review")}
