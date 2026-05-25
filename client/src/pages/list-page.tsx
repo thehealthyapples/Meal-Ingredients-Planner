@@ -91,7 +91,7 @@ export default function ListPage() {
   const [aiCleaned, setAiCleaned] = useState(false);
 
   useEffect(() => {
-    document.title = "List – The Healthy Apples";
+    document.title = "Quick List – The Healthy Apples";
     return () => { document.title = "The Healthy Apples"; };
   }, []);
 
@@ -386,11 +386,11 @@ export default function ListPage() {
   return (
     <>
       <PageHeader
-        title="Shopping List"
+        title="Quick List"
         icon={<NotepadText className="h-5 w-5" />}
         realm="list"
         titleTestId="text-list-title"
-        context="Type or paste your items - we'll organise the rest."
+        context="Popping to the shop? Type, paste or import from Cookbook for a quick list - with all the benefits of The Healthy Apples flow."
       />
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-5">
 

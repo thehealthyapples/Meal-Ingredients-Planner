@@ -13,7 +13,7 @@ import {
   LogOut, ShieldCheck, Star,
   Sliders, Search, ChevronLeft, ChevronRight,
   Microscope, BookOpen, Heart, ChefHat,
-  User, NotepadText,
+  User, ListPlus,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -34,16 +34,18 @@ function PantryIcon({ className }: { className?: string }) {
 
 // Sidebar nav - high-frequency items (Dashboard, Search, Basket, Profile) live in the top bar
 const NAV_ITEMS_MAIN = [
+  { href: "/shopping-list", label: "Quick List", icon: ListPlus },
   { href: "/cookbook", label: "Cookbook", icon: ChefHat },
   { href: "/planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/analyser", label: "Analyser", icon: Microscope },
-  { href: "/my-diary", label: "My Diary", icon: BookOpen },
   { href: "/shopping-workspace?stage=shop", label: "Shop", icon: ShoppingCart },
+  { href: "/my-diary", label: "My Diary", icon: BookOpen },
 ];
 
-// Mobile bottom nav - 6 core tools (no More layer)
+// Mobile bottom nav - 7 items; Quick List leads on the left
 const MOBILE_BOTTOM_ITEMS = [
+  { href: "/shopping-list", label: "List", icon: ListPlus },
   { href: "/cookbook", label: "Cookbook", icon: ChefHat },
   { href: "/planner", label: "Planner", icon: CalendarDays },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
@@ -100,6 +102,14 @@ const REALM_STYLES: Record<string, { active: string; hover: string; inactive: st
     inactive:       "bg-[hsl(190,12%,94%)] text-[hsl(190,22%,42%)] dark:bg-[hsl(190,8%,12%)] dark:text-[hsl(190,14%,48%)]",
     mobileActive:   "bg-[hsl(190,30%,86%)] text-[hsl(190,42%,20%)] dark:bg-[hsl(190,18%,19%)] dark:text-[hsl(190,32%,72%)]",
     mobileInactive: "bg-[hsl(190,16%,92%)] text-[hsl(190,18%,44%)] dark:bg-[hsl(190,8%,14%)] dark:text-[hsl(190,12%,46%)]",
+  },
+  "/shopping-list": {
+    // soft sage - light, quick-capture feel
+    active:         "bg-[hsl(95,22%,88%)] text-[hsl(95,32%,22%)] dark:bg-[hsl(95,14%,17%)] dark:text-[hsl(95,26%,70%)]",
+    hover:          "hover:bg-[hsl(95,16%,92%)] hover:text-[hsl(95,26%,28%)] dark:hover:bg-[hsl(95,10%,14%)] dark:hover:text-[hsl(95,18%,58%)]",
+    inactive:       "bg-[hsl(95,10%,94%)] text-[hsl(95,20%,42%)] dark:bg-[hsl(95,6%,12%)] dark:text-[hsl(95,12%,46%)]",
+    mobileActive:   "bg-[hsl(95,22%,86%)] text-[hsl(95,32%,22%)] dark:bg-[hsl(95,14%,19%)] dark:text-[hsl(95,26%,70%)]",
+    mobileInactive: "bg-[hsl(95,12%,92%)] text-[hsl(95,16%,44%)] dark:bg-[hsl(95,6%,14%)] dark:text-[hsl(95,10%,44%)]",
   },
 };
 
@@ -412,19 +422,6 @@ export function TopBar() {
               </TooltipTrigger>
               <TooltipContent>Search</TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Link
-                  href="/shopping-list"
-                  className={`flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/shopping-list" || location === "/list" ? "bg-[hsl(95,32%,88%)] text-[hsl(95,40%,22%)] dark:bg-[hsl(95,16%,17%)] dark:text-[hsl(95,32%,70%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
-                  aria-label="List"
-                  data-testid="button-topbar-list"
-                >
-                  <NotepadText className="h-5 w-5" />
-                </Link>
-              </TooltipTrigger>
-              <TooltipContent>List</TooltipContent>
-            </Tooltip>
           </div>
 
           {/* Center: logo */}
@@ -481,14 +478,6 @@ export function TopBar() {
             >
               <Search className="h-5 w-5" />
             </button>
-            <Link
-              href="/shopping-list"
-              className={`flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/shopping-list" || location === "/list" ? "text-[hsl(95,40%,22%)] dark:text-[hsl(95,32%,70%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
-              aria-label="List"
-              data-testid="button-topbar-list-mobile"
-            >
-              <NotepadText className="h-5 w-5" />
-            </Link>
           </div>
 
           {/* Center: logo */}
@@ -647,7 +636,7 @@ export function MobileNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 px-2 py-2 rounded-lg transition-colors min-w-[52px] min-h-[44px] justify-center ${
+              className={`flex flex-col items-center gap-0.5 px-1.5 py-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] justify-center ${
                 isActive
                   ? realm ? realm.mobileActive : "bg-accent text-primary"
                   : realm ? realm.mobileInactive : "text-muted-foreground"
