@@ -49,12 +49,24 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
   const isFreeLimitReached = !hasPremium && sharedCount >= 1 && activeTemplate?.visibility !== "shared";
 
   const saveMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/plan-templates/mine", { name: "My 6 Week Plan" }),
+    mutationFn: async () => {
+      const res = await fetch("/api/plan-templates/mine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: "My 6 Week Plan" }),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || "Failed to save plan");
+      }
+      return res.json();
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/plan-templates/library"] });
       toast({ title: "Plan saved" });
     },
-    onError: () => toast({ title: "Couldn't save plan", description: "Something went wrong - try again", variant: "destructive" }),
+    onError: (err: Error) => toast({ title: "Couldn't save plan", description: err.message, variant: "destructive" }),
   });
 
   const shareMutation = useMutation({

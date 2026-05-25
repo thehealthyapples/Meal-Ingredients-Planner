@@ -285,10 +285,15 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
 
   const saveTemplateMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/plan-templates/mine", { name: saveName, description: saveDescription || undefined });
+      const res = await fetch("/api/plan-templates/mine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: saveName, description: saveDescription || undefined }),
+        credentials: "include",
+      });
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Failed to save");
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || "Failed to save template");
       }
       return res.json();
     },
@@ -300,7 +305,7 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
       setSaveDescription("");
     },
     onError: (err: Error) => {
-      toast({ title: "Couldn't save template", description: "Something went wrong - try again", variant: "destructive" });
+      toast({ title: "Couldn't save template", description: err.message, variant: "destructive" });
     },
   });
 
