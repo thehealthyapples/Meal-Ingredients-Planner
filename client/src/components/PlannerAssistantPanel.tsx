@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { subscribeStagingBus } from "@/lib/planner-staging-bus";
 import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, Globe, Copy, Share2, Microscope, ShoppingCart, Snowflake, PackageCheck } from "lucide-react";
@@ -1098,6 +1099,7 @@ function loadTraySession(): ProposalItem[] | null {
 let _traySessionRestored = false;
 
 function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeholderCount = 0, onBrowseRecipes, onBuildRecipe, onScanRecipe, consumedProposalId, onSharePlan, basketMealsCount = 0 }: IdlePanelContentProps) {
+  const [, navigate] = useLocation();
   const [intentOpen, setIntentOpen] = useState(false);
   const [intentName, setIntentName] = useState("");
   const [intentMealType, setIntentMealType] = useState<string>("dinner");
@@ -1460,14 +1462,14 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
                 <p className="text-xs text-muted-foreground">
                   Shopping generated for {basketMealsCount} meal{basketMealsCount !== 1 ? "s" : ""} this week.
                 </p>
-                <a
-                  href="/shopping-list"
+                <button
+                  onClick={() => navigate("/shopping-workspace?stage=shop&source=planned")}
                   className="w-full flex items-center gap-2 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2 text-sm text-foreground transition-colors"
                   data-testid="button-shopping-summary-view"
                 >
                   <ShoppingCart className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                   <span className="flex-1">View shopping list</span>
-                </a>
+                </button>
               </div>
             )}
           </div>
@@ -1598,6 +1600,7 @@ interface ShoppingHandoffPanelProps {
 }
 
 function ShoppingHandoffPanel({ itemCount, needsReviewCount, freezerDeductions }: ShoppingHandoffPanelProps) {
+  const [, navigate] = useLocation();
   return (
     <div className="space-y-3" data-testid="panel-shopping-ready">
 
@@ -1648,14 +1651,14 @@ function ShoppingHandoffPanel({ itemCount, needsReviewCount, freezerDeductions }
 
       {/* Action CTA */}
       <div className="pt-1">
-        <a
-          href="/shopping-workspace?stage=review&source=planned"
+        <button
+          onClick={() => navigate("/shopping-workspace?stage=shop&source=planned")}
           className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 px-3 py-2.5 text-sm font-medium transition-colors"
           data-testid="button-shopping-handoff-open-shopping"
         >
           <ShoppingCart className="h-4 w-4" />
-          Go to Shopping Review
-        </a>
+          View Shopping List
+        </button>
       </div>
 
       {/* Contextual note */}
