@@ -414,20 +414,6 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
   const { isMealInBasket, addToBasket } = useBasket();
   const inBasket = isMealInBasket(mealId);
 
-  const editCopyMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest('POST', buildUrl(api.meals.copy.path, { id: mealId }));
-      return res.json() as Promise<{ id: number; name: string }>;
-    },
-    onSuccess: (newMeal) => {
-      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
-      navigate(`/meals/${newMeal.id}`);
-    },
-    onError: () => {
-      toast({ title: "Failed to create editable copy", variant: "destructive" });
-    },
-  });
-
   const addToListMutation = useMutation({
     mutationFn: async (ctx?: { eaterIds?: number[]; guestEaters?: GuestEater[] }) => {
       const res = await apiRequest('POST', api.shoppingList.generateFromMeals.path, {
@@ -494,7 +480,7 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
 
   return (
     <div className="w-full flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         <Tooltip>
           <TooltipTrigger asChild>
             <Popover>
@@ -609,45 +595,17 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  size="icon"
+                  size="sm"
                   variant="ghost"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (mealFormat === "grouped") {
-                      navigate(`/meals/${mealId}`);
-                    } else {
-                      editCopyMutation.mutate();
-                    }
-                  }}
-                  disabled={editCopyMutation.isPending}
-                  data-testid={`button-edit-recipe-${mealId}`}
+                  className="text-xs px-2 h-7"
+                  onClick={(e) => { e.stopPropagation(); navigate(`/meals/${mealId}`); }}
+                  data-testid={`button-view-recipe-${mealId}`}
                 >
-                  {editCopyMutation.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Pencil className="h-4 w-4" />
-                  )}
+                  <Eye className="h-3.5 w-3.5 mr-1" />
+                  View
                 </Button>
               </TooltipTrigger>
-              <TooltipContent><p className="text-xs">Edit recipe</p></TooltipContent>
-            </Tooltip>
-          )}
-          {!hideEdit && mealFormat === "grouped" && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/quick-meal?edit=${mealId}`);
-                  }}
-                  data-testid={`button-build-meal-${mealId}`}
-                >
-                  <Layers className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">Edit in Build a Meal</p></TooltipContent>
+              <TooltipContent><p className="text-xs">View recipe</p></TooltipContent>
             </Tooltip>
           )}
           {!hideBasket && (
@@ -3344,7 +3302,7 @@ export default function MealsPage() {
                       exit={{ opacity: 0, y: 12 }}
                       transition={{ duration: 0.2, delay: index * 0.03 }}
                     >
-                  <Card className="h-full flex flex-col group cursor-pointer overflow-hidden hover-elevate transition-all duration-200" onClick={(e) => { e.stopPropagation(); setExpandedMealId(expandedMealId === meal.id ? null : meal.id); setExpandedTab("ingredients"); }} data-testid={`card-meal-${meal.id}`}>
+                  <Card className="h-full flex flex-col group cursor-pointer overflow-hidden hover-elevate transition-all duration-200" onClick={(e) => { e.stopPropagation(); navigate(`/meals/${meal.id}`); }} data-testid={`card-meal-${meal.id}`}>
                     <div className="relative w-full h-24 sm:h-32 overflow-hidden rounded-t-md">
                       {meal.isReadyMeal && !meal.imageUrl ? (
                         <div className="w-full h-full flex flex-col items-center justify-center gap-2 px-4 relative bg-accent/30" data-testid={`placeholder-ready-meal-${meal.id}`}>
@@ -3527,7 +3485,7 @@ export default function MealsPage() {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                    <CardFooter className="py-1.5 px-3 flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <CardFooter className="py-2 px-3 flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
                       {!meal.isReadyMeal && (
                         <div className="hidden group-hover:flex items-center gap-1.5 flex-wrap w-full">
                           <NutritionBadges mealId={meal.id} nutrition={nutritionMap.get(meal.id)} />
@@ -3580,7 +3538,7 @@ export default function MealsPage() {
                       exit={{ opacity: 0, x: -12 }}
                       transition={{ duration: 0.15, delay: index * 0.02 }}
                     >
-                  <Card className="group cursor-pointer" onClick={() => { setExpandedMealId(expandedMealId === meal.id ? null : meal.id); setExpandedTab("ingredients"); }} data-testid={`card-meal-${meal.id}`}>
+                  <Card className="group cursor-pointer" onClick={() => navigate(`/meals/${meal.id}`)} data-testid={`card-meal-${meal.id}`}>
                     <div className="flex items-stretch relative">
                       {meal.isReadyMeal ? (
                         <div className="w-24 sm:w-28 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center gap-1 px-2 relative bg-accent/30">

@@ -483,7 +483,7 @@ export default function MealDetailPage() {
               ) : (
                 <Pencil className="h-4 w-4 mr-1" />
               )}
-              Edit (Copy)
+              Edit
             </Button>
           )}
           <Button
