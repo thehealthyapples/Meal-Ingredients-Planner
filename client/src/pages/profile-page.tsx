@@ -85,15 +85,24 @@ export default function ProfilePage() {
 
   const updateMutation = useMutation({
     mutationFn: async (data: any) => {
-      const res = await apiRequest("PUT", "/api/profile", data);
+      const res = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(`${res.status}: ${body.message || res.statusText}`);
+      }
       return res.json();
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["/api/profile"], data);
       toast({ title: "Profile saved" });
     },
-    onError: () => {
-      toast({ title: "Couldn't save changes", description: "Something went wrong - try again", variant: "destructive" });
+    onError: (err: Error) => {
+      toast({ title: "Couldn't save changes", description: err.message, variant: "destructive" });
     },
   });
 
