@@ -6902,10 +6902,6 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const targetId = parseInt(String(req.params.id), 10);
       if (isNaN(targetId)) return res.status(400).json({ message: "Invalid user id" });
 
-      if (targetId === req.user!.id) {
-        return res.status(400).json({ message: "Admins cannot change their own subscription tier via this endpoint" });
-      }
-
       const { subscriptionTier } = z.object({
         subscriptionTier: z.enum(["free", "premium", "friends_family"]),
       }).parse(req.body);
