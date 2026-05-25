@@ -1,0 +1,195 @@
+SHOPPING MULTI-SELECT RESOLUTION FIXED: COMPLETE
+=================================================
+
+1. ROLLBACK IDENTIFIER
+----------------------
+stash@{0} — saved as "rollback-point-before-multiselect-fix"
+
+Restore with:
+  git stash apply stash@{0}
+
+
+2. ROOT CAUSE OF ONLY ONE ITEM DISPLAYING
+------------------------------------------
+Two compounding bugs:
+
+ROOT CAUSE A — Source filter mismatch (primary):
+  When "blueberries" was added via addShoppingItem.mutate("blueberries"),
+  only { productName: "blueberries" } was sent to POST /api/shopping-list.
+  The server assigned source: "manual" to the new item.
+
+  The corrected item (strawberries, via /correct) RETAINS the original
+  item's source: "quick_list" because the /correct endpoint never touches
+  the source field.
+
+  If the user navigated to Shopping Workspace from the Quick List page,
+  the URL contains ?source=quick-list, which sets sourceFilter =
+  "quick_list" in component state. The isItemInSource() filter then
+  checks:
+    const isQL = item.source === "quick_list" || item.basketLabel?.startsWith("quick_list_")
+
+  Strawberries passes (source: "quick_list" inherited via /correct).
+  Blueberries fails (source: "manual") → filtered out → invisible.
+
+ROOT CAUSE B — Race condition on invalidateQueries (secondary):
+  correctItem.mutate() and addShoppingItem.mutate() were fired in the
+  same synchronous call (confirmSuggestions). Both run in parallel.
+
+  When correctItem completed first, its onSuccess called
+  queryClient.invalidateQueries → refetch #1 started.
+
+  When addShoppingItem completed shortly after, its onSuccess also called
+  queryClient.invalidateQueries. But in TanStack Query, query.fetch()
+  while a fetch is already in-flight returns the in-flight promise rather
+  than starting a new one. If refetch #1 completed before blueberries was
+  written to the DB, blueberries never appeared.
+
+
+3. FILES CHANGED
+----------------
+client/src/pages/shopping-workspace-page.tsx  — only file changed
+
+
+4. EXACT FIX APPLIED
+---------------------
+Change 1 — WorkspaceRow: added onConfirmSuggestions to destructuring + type:
+
+  Props destructure:
+    onCorrectItem,
+    onAddItem,
+    onConfirmSuggestions,   ← new
+
+  Type annotation:
+    onConfirmSuggestions?: (picks: string[]) => void;  ← new
+
+Change 2 — confirmSuggestions() inside WorkspaceRow: delegates to handler:
+
+  Before:
+    onCorrectItem(picks[0]);
+    picks.slice(1).forEach((p) => onAddItem?.(p));
+
+  After:
+    if (onConfirmSuggestions) {
+      onConfirmSuggestions(picks);    // atomic path (used in Review mode)
+    } else {
+      onCorrectItem(picks[0]);        // fallback (unchanged)
+      picks.slice(1).forEach((p) => onAddItem?.(p));
+    }
+
+Change 3 — addShoppingItem mutation: accepts object instead of string:
+
+  Before:  mutationFn: async (productName: string) => ...
+           body: JSON.stringify({ productName })
+
+  After:   mutationFn: async ({ productName, source, basketLabel }) => ...
+           body: JSON.stringify({ productName, ...source, ...basketLabel })
+
+  onAddItem call site updated:
+    (name) => addShoppingItem.mutate({ productName: name })
+
+Change 4 — renderRow: onConfirmSuggestions passed atomically:
+
+  onConfirmSuggestions={async (picks) => {
+    // 1. Await correct of first pick (clears needsReview on original item)
+    await correctItem.mutateAsync({ id: item.id, productName: picks[0] });
+
+    // 2. Await all additional adds IN PARALLEL, inheriting original item's
+    //    source and basketLabel so they pass source-filter checks
+    if (picks.length > 1) {
+      await Promise.all(
+        picks.slice(1).map((name) =>
+          addShoppingItem.mutateAsync({
+            productName: name,
+            source: item.source ?? undefined,
+            basketLabel: item.basketLabel ?? undefined,
+          })
+        )
+      );
+    }
+
+    // 3. Single final invalidate AFTER all writes complete
+    queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+  }}
+
+
+5. WHETHER /ADD ITEMS WERE CREATED OR HIDDEN
+---------------------------------------------
+Items WERE being created in the database successfully. The /add POST
+returned 201 and blueberries was inserted. It was hidden by the
+sourceFilter === "quick_list" check, because the new item had
+source: "manual" instead of source: "quick_list".
+
+After this fix, additional disambiguation items inherit item.source and
+item.basketLabel from the original ambiguous item, so they pass the same
+source filter the corrected item does.
+
+
+6. QUERY INVALIDATION / REFETCH BEHAVIOUR
+------------------------------------------
+Before: Two independent invalidations fired at approximately the same
+        time. TanStack Query's fetch() deduplication meant only one
+        actual HTTP GET was triggered, and it may have run before
+        blueberries was committed to DB.
+
+After:  correctItem.mutateAsync() is awaited first. Then all additional
+        addShoppingItem.mutateAsync() calls run in parallel via
+        Promise.all(). Only after ALL writes have completed does the
+        single final queryClient.invalidateQueries() fire. This guarantees
+        the subsequent GET /api/shopping-list will see all items.
+
+        The individual mutations' onSuccess handlers still call
+        invalidateQueries — these are now redundant but harmless (they
+        just mark the query stale before the final invalidation does).
+
+
+7. MANUAL TEST RESULTS (traced through code)
+---------------------------------------------
+Test                                          Result
+----                                          ------
+Add "berries" quick list item                 source: "quick_list", needsReview: true
+Open Shopping Workspace Review                "Choose item" amber CTA visible
+Click Choose item, expand row                 Disambiguation panel with suggestion chips
+Select strawberries + blueberries             Two chips shown, "Add 2 items" button visible
+Click Add 2 items                             onConfirmSuggestions(["strawberries","blueberries"])
+After confirm: strawberries visible           correctItem.mutateAsync resolves → source: "quick_list"
+After confirm: blueberries visible            addShoppingItem.mutateAsync with source: "quick_list"
+Original berries gone                         /correct replaces productName on the same row id
+Both visible with quick_list filter           Both have source: "quick_list" → pass isItemInSource
+Both score as whole-food once scored          category: "fruit" → isWholeFood true
+Repeat with strawberries + raspberries        Same flow, raspberries also in canonical map as fruit
+Single-selection still works                  onConfirmSuggestions(["strawberries"]) → picks.length===1
+                                              → only correctItem.mutateAsync fires, no adds
+Review → Prep → Shop flow                     Mode switcher unchanged, no regressions
+
+
+8. BUILD/TYPECHECK RESULTS
+---------------------------
+npx tsc --noEmit   → PASS (no errors)
+npm run build      → PASS (built in 9.5s, client + server, zero new errors)
+
+
+9. REMAINING RISKS
+------------------
+- Items already in DB from before this fix with source: "manual" added
+  via the old /add path: those items have incorrect source metadata.
+  They will not be retroactively fixed. Users can switch the source
+  filter to "all" to see them.
+
+- Set iteration order in confirmSuggestions: Array.from(selectedSuggestions)
+  preserves insertion order. The first chip added becomes picks[0] (the
+  item that replaces the original via /correct). If the user adds
+  blueberries first then strawberries, blueberries becomes the corrected
+  item. This is cosmetically fine since both end up in the list.
+
+- mutateAsync bubbles errors instead of swallowing them. The try/catch
+  in onConfirmSuggestions catches any rejection. Individual onError
+  handlers still fire toasts for each failed mutation. The finally block
+  always runs invalidateQueries, even on partial failure — this is
+  intentional to refresh the list to a consistent state.
+
+- basketLabel inheritance: original "berries" may have a basketLabel like
+  "quick_list_abc123". Additional disambiguation items inherit this same
+  basketLabel. If basketLabel carries per-item identity semantics in
+  other parts of the system, this could cause label collisions. Current
+  inspection shows basketLabel is used only for source classification
+  and household sharing — no collision risk for standard quick-list items.

@@ -1,0 +1,178 @@
+UNIVERSAL APPLE SCORE TRUST GATE: COMPLETE
+
+================================================================================
+1. ARCHITECTURE IMPLEMENTED
+================================================================================
+
+A canonical trust-state model was created in shared/apple-score-trust.ts.
+The visibility gate is enforced purely at the display layer — no schema changes,
+no scoring formula changes, no server-side modifications.
+
+The gate function canShowAuthoritativeAppleScore(item) is called at every Apple
+Score display surface before rendering any 1–5 apple badge or score-derived text.
+
+================================================================================
+2. TRUST-STATE MODEL
+================================================================================
+
+Type: AppleScoreTrustState (shared/apple-score-trust.ts)
+
+  WHOLE_FOOD_TRUSTED     — itemType === 'whole_food'
+                           Score display: ALLOWED
+                           Always 5 apples
+
+  PRODUCT_RESOLVED       — resolutionState === 'matched_to_product'
+                           OR matchedProductId is set (non-null, non-empty)
+                           Score display: ALLOWED
+                           Uses the matched/scanned product's thaRating
+
+  ANALYSIS_REQUIRED      — raw, resolved-by-name-only, unclassified packaged
+                           Score display: BLOCKED
+                           Shows "Analysis required" text instead
+
+  PRODUCT_MATCH_PENDING  — resolutionState === 'needs_review'
+                           Score display: BLOCKED
+                           User has started a flow but hasn't confirmed
+
+  MANUAL_OVERRIDE        — Reserved for future use (user-set values)
+                           Score display: ALLOWED
+
+Derivation priority:
+  1. whole_food itemType → WHOLE_FOOD_TRUSTED
+  2. resolutionState = 'matched_to_product' → PRODUCT_RESOLVED
+  3. matchedProductId non-null → PRODUCT_RESOLVED
+  4. resolutionState = 'needs_review' → PRODUCT_MATCH_PENDING
+  5. Everything else → ANALYSIS_REQUIRED
+
+================================================================================
+3. SURFACES UPDATED
+================================================================================
+
+  shared/apple-score-trust.ts           [NEW] — canonical trust model
+  client/src/lib/basket-item-classifier.ts — re-exports trust functions
+
+  Display gates applied to:
+  ├── client/src/pages/shopping-workspace-page.tsx
+  │     Row-level ScoreBadge (22px) — gated
+  │
+  ├── client/src/components/WorkspaceAnalyserSheet.tsx
+  │     Header ScoreBadge (36px) — gated
+  │     Current product ScoreBadge (28px) — gated
+  │     Insight headline color — muted when unresolved
+  │     getCurrentProductInsight() — returns "Analysis required" when unresolved
+  │     currentRating passed to alternatives — null when unresolved
+  │     rankChoices baseline — null when unresolved
+  │
+  ├── client/src/pages/shopping-list-page.tsx
+  │     Header ScoreBadge (32px) — gated
+  │     Current product ScoreBadge (28px) — gated
+  │     Compare options "Current" ScoreBadge (22px) — shows "Analysis Required"
+  │     "Worth reconsidering" badge — gated
+  │     "Ingredients: Clean/Mixed/Industrial" row — gated
+  │     Table row AppleRating — gated
+  │     avgThaRating (basket total) — excludes unresolved items
+  │     catAvgRating (category totals) — excludes unresolved items
+  │     getCurrentProductInsight() — returns "Analysis required" when unresolved
+  │
+  ├── client/src/components/ShoppingListView.tsx
+  │     CompactRating via effectiveRating — null for unresolved items
+  │     item.thaRating in effectiveRating — only used when trust gate passes
+  │
+  └── client/src/pages/dashboard.tsx
+        avgThaScore — excludes unresolved items from basket average
+
+================================================================================
+4. REMAINING SAFE SURFACES (NO CHANGES NEEDED)
+================================================================================
+
+  PlannerAnalyserContent.tsx — products from OFF search (always have analysis)
+  AnalyserDetailV2.tsx — products from full ingredient analysis
+  product-picker-sheet.tsx — products with upfAnalysis
+  meals-page.tsx (barcode scan result) — barcode-confirmed product
+  meals-page.tsx (product search results) — products with upfAnalysis
+  products-page.tsx (product history) — explicitly scanned/searched products
+  WorkspaceAnalyserSheet.tsx (fulfilment memory) — previously confirmed choices
+  WorkspaceAnalyserSheet.tsx (scanned product card) — barcode-confirmed
+  ShoppingListView.tsx (resolvedMatch) — product match ratings from real search
+
+================================================================================
+5. SCHEMA CHANGES MADE OR AVOIDED
+================================================================================
+
+  NO schema changes were made.
+
+  The canonical trust state is derived entirely from existing fields:
+    - itemType (whole_food | packaged | null)
+    - resolutionState (raw | needs_review | resolved | matched_to_product)
+    - matchedProductId (non-null = product was matched)
+
+  No new columns, no migrations, no backfill required.
+
+================================================================================
+6. EXISTING DATA IMPACT
+================================================================================
+
+  Reads existing data: YES (reads itemType, resolutionState, matchedProductId)
+  Writes new data: NO
+  Changes meaning of existing data: NO
+  Requires backfill: NO
+
+  Items with auto-scored thaRating (from the autoSmp endpoint) that are
+  unresolved packaged items will no longer display their scores. The scores
+  remain in the database — they are not deleted or changed. If an item is
+  later resolved (user picks a product), the score will display normally.
+
+================================================================================
+7. STALE SCORES
+================================================================================
+
+  Existing auto-scored thaRatings on unresolved items remain in the database.
+  They are NOT displayed due to the trust gate. No cleanup was performed.
+
+  Stale unresolved scores do NOT leak into any visible UI after this change.
+
+  No backfill proposed at this time — scores remain dormant until items are
+  resolved, at which point the matched product provides a trusted rating anyway.
+
+================================================================================
+8. ROLLBACK IDENTIFIER
+================================================================================
+
+  Tag: pre-apple-score-trust-gate
+  Commit: c77b702
+
+  To rollback:
+    git checkout pre-apple-score-trust-gate
+
+================================================================================
+9. DEFERRED RISKS
+================================================================================
+
+  a) Server autoSmp endpoint still calculates scores for unresolved packaged
+     items and stores them in the database. These are now display-blocked but
+     still present. A future migration could add a thaRatingSource column to
+     distinguish auto-estimated scores from confirmed product scores.
+     REQUIRES APPROVAL before any such schema change.
+
+  b) The sort-by-apple-score feature in shopping-workspace-page.tsx still uses
+     thaRating (including unresolved auto-scores) for ordering. This is an
+     organisational feature, not an authoritative score display. Left unchanged
+     to avoid disrupting shopping workflow. Could be refined in a future pass.
+
+  c) getItemThaRating() in shopping-list-page.tsx falls through from item.thaRating
+     to productMatches.thaRating. The item.thaRating branch is now gated, but the
+     productMatches.thaRating path returns scores from price-lookup results. These
+     come from the ingredient_products.tags.thaRating field (curated THA values)
+     or productMatches.thaRating (from product search). These are trusted sources.
+
+================================================================================
+10. REQUIRED FUTURE MIGRATIONS
+================================================================================
+
+  If a thaRatingSource field is desired (to distinguish auto-score vs confirmed
+  product score), the following would be required:
+    - Schema migration: ADD COLUMN thaRatingSource TEXT to shopping_list
+    - Backfill: auto-scored items → 'auto_estimated', matched items → 'product_confirmed'
+    - Update autoSmp endpoint to set thaRatingSource = 'auto_estimated'
+    - Update product matching flow to set thaRatingSource = 'product_confirmed'
+  This has NOT been implemented. REQUIRES APPROVAL from product owner before proceeding.

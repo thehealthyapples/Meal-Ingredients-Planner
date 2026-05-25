@@ -1621,7 +1621,7 @@ export default function WeeklyPlannerPage() {
         </div>
       }
     />
-    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6" data-realm="planner">
       <DndContext
         sensors={dndSensors}
         collisionDetection={mobileFriendlyCollision}
@@ -3447,7 +3447,7 @@ export default function WeeklyPlannerPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                      className="realm-banner-btn-danger"
                       onClick={() => {
                         deleteEntryMutation.mutate(entry.id);
                         setMealDetail(null);
@@ -3461,6 +3461,7 @@ export default function WeeklyPlannerPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="realm-banner-btn"
                       onClick={() => {
                         setMealDetail(null);
                         openPicker({ dayId, mealType, audience, isDrink });
@@ -3475,6 +3476,7 @@ export default function WeeklyPlannerPage() {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="realm-banner-btn"
                         onClick={() => {
                           setMealDetail(null);
                           const query = meal.brand
@@ -3491,6 +3493,7 @@ export default function WeeklyPlannerPage() {
                       <Button
                         variant="outline"
                         size="sm"
+                        className="realm-banner-btn"
                         onClick={() => {
                           setMealDetail(null);
                           navigate(`/meals/${meal.id}`);
@@ -3503,6 +3506,7 @@ export default function WeeklyPlannerPage() {
                     )}
                     <Button
                       size="sm"
+                      className="realm-banner-btn"
                       onClick={() => setMealDetail(null)}
                       data-testid="button-meal-detail-close"
                     >

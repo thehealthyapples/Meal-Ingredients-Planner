@@ -1,0 +1,145 @@
+SHOPPING ROW CTA ALIGNMENT IMPLEMENTED: YES
+
+================================================================================
+ROLLBACK IDENTIFIER
+================================================================================
+Tag: rollback/shop-cta-align-v0 = commit 3fc5e39
+To roll back:
+  git checkout rollback/shop-cta-align-v0 -- \
+    client/src/pages/shopping-workspace-page.tsx \
+    client/src/pages/shopping-list-page.tsx
+
+================================================================================
+FILES CHANGED
+================================================================================
+- client/src/pages/shopping-workspace-page.tsx — all layout changes
+- client/src/pages/shopping-list-page.tsx — no new changes (prior "Shopping"
+  rename carried through rollback commit)
+
+================================================================================
+EXACT LAYOUT CHANGES MADE
+================================================================================
+
+Review/Prep row restructured (!shopMode section):
+  - Collapsed row split from one large expand-button into:
+    [Checkbox] [button: name+qty] [Analyse (review only)] [button: score+chevron]
+  - Quantity displayed inline beside item name using items-baseline gap-1.5
+    wrapper — tabular-nums shrink-0 whitespace-nowrap styling
+  - Hint/attention indicators remain as a subline below the name within the
+    expand button
+
+Review mode — Analyse promoted to row level:
+  - Rendered as px-2.5 py-1 text-xs chip button at row level
+  - Condition: !prepMode && !item.checked && onOpenAnalyser
+  - Removed from expanded section for review mode
+
+Prep mode — PrepActionPanel promoted to row level:
+  - Rendered below the name row (within the collapsed row div) with mt-2 ml-7
+    indentation
+  - Condition: prepMode && !item.checked && onPrepAction
+  - Removed from expanded section entirely
+
+Shop mode — unchanged (already row-level from prior commit):
+  - grid-cols-[20px_minmax(2.75rem,auto)_1fr_auto_auto] fixed column grid
+  - Found it / Next shop in Col 4, consistent across all rows
+  - Apple + chevron in Col 5 with self-center flex items-center gap-1.5
+
+Expanded content simplified:
+  - Removed: ShopActionPanel (entire component deleted — dead code)
+  - Removed: PrepActionPanel from expanded (moved to row)
+  - Removed: Analyse from expanded in review mode
+  - Kept: pantry note (review only), meal attribution, needs-attention flag
+  - Kept: Analyse in expanded for prep/shop modes only
+    (data-testid="ws-analyse-btn-expanded-{id}")
+
+================================================================================
+QUANTITY DISPLAY CHANGES
+================================================================================
+- Review rows: quantity now on the same line as item name (items-baseline flex,
+  secondary text-muted-foreground colour)
+- Prep rows: same inline layout, plus PrepActionPanel visible below without
+  expansion
+
+================================================================================
+CTA VISIBILITY CHANGES
+================================================================================
+- Analyse: row-level in Review (was expand-only)
+- Accept estimate / Edit quantity / Mark for later: row-level in Prep
+  (was expand-only)
+- Found it / Next shop: unchanged, already row-level
+- Dropdown/expanded: secondary details only
+
+================================================================================
+CTA HANDLER VERIFICATION
+================================================================================
+CTA                           Handler                                   Status
+---------------------------------------------------------------------------
+Analyse (Review row)          onOpenAnalyser → setAnalyserItem(item)   PASS
+                              → WorkspaceAnalyserSheet
+Analyse (Prep/Shop expanded)  Same onOpenAnalyser                       PASS
+Accept estimate               onPrepAction({ type:"quantity",           PASS
+                              decision:"accepted" }) → handlePrepAction
+                              → setPrepStates
+Edit quantity                 onPrepAction({ type:"quantity",           PASS
+                              decision:"editing" })
+Mark for later                onPrepAction({ type:"quantity",           PASS
+                              decision:"later" })
+Found it                      onShopStateChange?.("found") →            PASS
+                              handleShopStateChange →
+                              updateShopStatus.mutate
+Next shop                     onShopStateChange?.("defer")              PASS
+
+All existing handlers reused unchanged. No new handler behaviour introduced.
+
+================================================================================
+APPLE ALIGNMENT RESULT
+================================================================================
+- Shop mode Col 5: self-center flex items-center gap-1.5 on button +
+  place-self-center on Col 1 circle — grid items-center applies to all cells
+- Review/Prep mode score button: self-center flex items-center gap-1.5 shrink-0
+- AppleRating renders inline-flex items-center images with display:block —
+  no baseline offset
+
+================================================================================
+EXPANDED-ROW RESULT
+================================================================================
+- ShopActionPanel removed entirely (dead code deleted)
+- PrepActionPanel removed from expanded section (now inline in row)
+- Analyse removed from expanded for review mode
+- Expanded shows: pantry note (review), meal attribution, needs-attention flag,
+  and Analyse as secondary access for prep/shop
+
+================================================================================
+BUILD RESULT
+================================================================================
+PASS — clean, built in 9.14s
+
+================================================================================
+TYPECHECK RESULT
+================================================================================
+PASS — npx tsc --noEmit exits 0, no output
+
+================================================================================
+MANUAL TEST RESULT
+================================================================================
+Browser headless runner blocked by missing libglib-2.0.so.0 in this
+environment. Verified via:
+  - Production build bundle contains all expected strings and patterns
+  - Source-level audit confirms all spec requirements met
+  - Handler call chains traced end-to-end in source
+
+================================================================================
+CONFIRMATION — NO DATA/SCHEMA/API/STATE-MACHINE CHANGES
+================================================================================
+- No database schema changes
+- No API routes changed
+- No item status lifecycle changed
+- No product matching, pricing, or AI logic touched
+- No quantity calculation or unit logic touched
+- No route paths changed
+
+================================================================================
+SUGGESTION ONLY — NO BEHAVIOUR CHANGES MADE
+================================================================================
+None found. All handlers were already wired; the work was purely visual
+repositioning of existing buttons.

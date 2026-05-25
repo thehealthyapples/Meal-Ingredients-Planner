@@ -1,0 +1,141 @@
+PANTRY QUANTITY FOUNDATION COMPLETE: YES
+========================================
+Date: 2026-05-23
+Commit: c278af4
+
+──────────────────────────────────────────────────────────────────────────────
+ROLLBACK IDENTIFIER
+──────────────────────────────────────────────────────────────────────────────
+
+Tag:    rollback/pre-pantry-quantity-foundation
+Commit: bcb90e6 (Phase 0 — category fix)
+
+──────────────────────────────────────────────────────────────────────────────
+FILES CHANGED (4)
+──────────────────────────────────────────────────────────────────────────────
+
+shared/schema.ts
+server/migrations/runner.ts
+server/storage.ts
+server/routes.ts
+
+──────────────────────────────────────────────────────────────────────────────
+MIGRATION NAME
+──────────────────────────────────────────────────────────────────────────────
+
+2026-05-23_add_pantry_need_quantity
+
+──────────────────────────────────────────────────────────────────────────────
+SCHEMA CHANGES
+──────────────────────────────────────────────────────────────────────────────
+
+user_pantry_items table — two new nullable columns added:
+
+  need_quantity_value  REAL  NULL   (no default)
+  need_unit            TEXT  NULL   (no default)
+
+Existing rows receive NULL. No backfill. No data rewrite.
+Drizzle schema updated to match.
+
+──────────────────────────────────────────────────────────────────────────────
+API CHANGES
+──────────────────────────────────────────────────────────────────────────────
+
+POST /api/pantry — extended (backward compatible)
+  New optional fields accepted:
+    needQuantityValue: number (positive, finite) | null  — optional
+    needUnit: string (max 32 chars) | null               — optional
+  Existing creates without these fields still work unchanged.
+
+PATCH /api/pantry/:id — new route
+  Purpose: update quantity fields on an existing pantry item
+  Auth: required
+  Body:
+    needQuantityValue: number (positive, finite) | null  — required
+    needUnit: string (max 32 chars) | null               — required
+  Responses:
+    200 — updated item JSON
+    400 — validation error
+    404 — item not found / not owned by caller
+    500 — server error
+  Behaviour:
+    Only updates needQuantityValue and needUnit.
+    Passing null clears the field.
+    Preserves all other item fields.
+    Checks household ownership — cannot update other users' items.
+
+──────────────────────────────────────────────────────────────────────────────
+STORAGE CHANGES
+──────────────────────────────────────────────────────────────────────────────
+
+IStorage interface:
+  addPantryItem — signature extended with optional needQuantityValue, needUnit
+  updatePantryItemQuantity — new method added
+
+DatabaseStorage implementation:
+  addPantryItem — passes quantity fields to INSERT
+  updatePantryItemQuantity — new implementation using UPDATE with household
+                             ownership check and isDeleted guard
+
+──────────────────────────────────────────────────────────────────────────────
+BUILD RESULT
+──────────────────────────────────────────────────────────────────────────────
+
+npm run build:     PASS (built in 8.20s, zero errors)
+npx tsc --noEmit:  PASS (zero errors)
+
+──────────────────────────────────────────────────────────────────────────────
+TESTS RUN
+──────────────────────────────────────────────────────────────────────────────
+
+Build + type check: PASS
+Architecture verified: all four layers (schema/migration/storage/route) are
+consistent and type-safe.
+
+Manual browser tests (to be run against deployed environment):
+  1.  Existing Pantry loads                   — unaffected
+  2.  Create item without quantity            — backward compatible
+  3.  Create item with quantity               — new capability
+  4.  PATCH item to set quantity              — new capability
+  5.  PATCH item to clear quantity (null)     — new capability
+  6.  Delete item                             — unaffected
+  7.  Fruit category                          — unaffected
+  8.  Pet Food & Care category                — unaffected
+  9.  Shopping loads                          — unaffected (no changes)
+  10. Planner loads                           — unaffected (no changes)
+
+──────────────────────────────────────────────────────────────────────────────
+DATA IMPACT
+──────────────────────────────────────────────────────────────────────────────
+
+Existing rows:    unchanged — receive NULL for both new columns
+New data written: only when caller explicitly passes needQuantityValue/needUnit
+Backfill:         none required
+Meaning changed:  no
+
+──────────────────────────────────────────────────────────────────────────────
+ROLLBACK NOTES
+──────────────────────────────────────────────────────────────────────────────
+
+Code rollback:  git revert c278af4
+DB rollback (if migration ran):
+  ALTER TABLE user_pantry_items DROP COLUMN IF EXISTS need_quantity_value;
+  ALTER TABLE user_pantry_items DROP COLUMN IF EXISTS need_unit;
+  DELETE FROM schema_migrations WHERE id = '2026-05-23_add_pantry_need_quantity';
+
+Any quantity values written after deployment would be lost on DB rollback.
+No other data cleanup required.
+
+──────────────────────────────────────────────────────────────────────────────
+PHASE 2 READINESS
+──────────────────────────────────────────────────────────────────────────────
+
+Pantry visual/UX pass CAN safely proceed next.
+
+The quantity foundation is in place end-to-end:
+  GET /api/pantry returns needQuantityValue and needUnit on every item
+  POST /api/pantry accepts optional quantity at create time
+  PATCH /api/pantry/:id allows setting or clearing quantity
+
+UI can now add a quantity editor without any further backend work.
+Shopping and Planner were not touched. No UI redesign was included.

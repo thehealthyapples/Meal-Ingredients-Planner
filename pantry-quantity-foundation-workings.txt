@@ -1,0 +1,209 @@
+PANTRY QUANTITY FOUNDATION — FULL WORKINGS
+==========================================
+Date: 2026-05-23
+Phase: 1 (Quantity Foundation)
+Task: Add optional Pantry need quantity storage and update API support
+
+──────────────────────────────────────────────────────────────────────────────
+PRE-FLIGHT CHECKS
+──────────────────────────────────────────────────────────────────────────────
+
+Git status at start:
+  modified (unstaged): .replit
+  modified (unstaged): client/src/pages/pantry-page.tsx
+  modified (unstaged): client/src/pages/shopping-workspace-page.tsx
+  untracked: active-tab-colour-report.txt, compact-pantry-row-report.txt,
+             compact-qty-row-report.txt, pantry-category-fix-summary.md,
+             pantry-category-fix-workings.md, shop-cta-align-report.txt,
+             shopping-row-standardisation-report.txt, uploads/
+
+Assessment: HEAD (bcb90e6) is the Phase 0 clean commit. Unstaged files are
+pre-existing in-progress work unrelated to this task. Safe to proceed.
+
+Rollback tag created: rollback/pre-pantry-quantity-foundation → bcb90e6
+
+──────────────────────────────────────────────────────────────────────────────
+INVESTIGATION
+──────────────────────────────────────────────────────────────────────────────
+
+1. shared/schema.ts — userPantryItems table
+   Columns before this task:
+     id, userId, householdId, ingredientKey, displayName, category,
+     defaultHave, isDefault, isDeleted, sortOrder, notes, createdAt
+   Missing: needQuantityValue, needUnit
+   Drizzle column type for numeric: `real` (already imported, used elsewhere
+   for quantityValue, cupboardQuantity etc.)
+
+2. server/migrations/runner.ts
+   Last migration: 2026-05-23_add_pet_pantry_category (Phase 0)
+   Pattern used: ALTER TABLE ... ADD COLUMN IF NOT EXISTS
+   Same pattern used here for additive-only migration.
+
+3. server/storage.ts
+   IStorage interface line 207-209:
+     getPantryItems, addPantryItem, deletePantryItem
+   addPantryItem signature did not include quantity params.
+   No updatePantryItem* method existed — needed to add.
+   eq, and already imported from drizzle-orm.
+
+4. server/routes.ts
+   POST /api/pantry (line 7009):
+     Schema did not include needQuantityValue or needUnit.
+     Call to addPantryItem did not pass quantity.
+   No PATCH /api/pantry/:id existed — needed to add.
+   PATCH placed before DELETE to keep route ordering logical.
+
+──────────────────────────────────────────────────────────────────────────────
+CHANGES MADE
+──────────────────────────────────────────────────────────────────────────────
+
+FILE 1: shared/schema.ts
+  Added two nullable columns to userPantryItems table definition:
+
+    needQuantityValue: real("need_quantity_value"),
+    needUnit: text("need_unit"),
+
+  Placed after `notes` and before `createdAt`.
+  Both are nullable by omitting .notNull() — Drizzle infers nullable.
+  insertUserPantryItemSchema derives from table definition automatically;
+  both new fields are included as optional in insert schema with no
+  additional changes required.
+
+FILE 2: server/migrations/runner.ts
+  Added migration after 2026-05-23_add_pet_pantry_category:
+
+    id: "2026-05-23_add_pantry_need_quantity"
+    statements:
+      ALTER TABLE user_pantry_items ADD COLUMN IF NOT EXISTS need_quantity_value REAL
+      ALTER TABLE user_pantry_items ADD COLUMN IF NOT EXISTS need_unit TEXT
+
+  IF NOT EXISTS guards make this idempotent.
+  No DEFAULT means existing rows receive NULL — correct.
+  No data rewrite. No backfill.
+
+FILE 3: server/storage.ts
+  (a) IStorage interface — updated addPantryItem signature:
+      Added: needQuantityValue?: number | null, needUnit?: string | null
+
+  (b) IStorage interface — added new method:
+      updatePantryItemQuantity(
+        userId: number,
+        id: number,
+        needQuantityValue: number | null,
+        needUnit: string | null
+      ): Promise<UserPantryItem | null>
+
+  (c) DatabaseStorage.addPantryItem implementation:
+      Updated signature to match interface.
+      Passes needQuantityValue ?? null and needUnit ?? null to .values().
+
+  (d) DatabaseStorage.updatePantryItemQuantity implementation (new):
+      Resolves householdId for the user.
+      Updates only rows matching id + householdId + isDeleted=false.
+      Sets needQuantityValue and needUnit (both can be null to clear).
+      Returns updated row or null if not found.
+      Uses existing eq, and imports — no new imports needed.
+
+FILE 4: server/routes.ts
+  (a) POST /api/pantry schema extended:
+      Added optional fields:
+        needQuantityValue: z.number().positive().finite().optional().nullable()
+        needUnit: z.string().max(32).optional().nullable()
+      Destructured and passed to addPantryItem call.
+      Both default to null when absent — existing creates unaffected.
+
+  (b) PATCH /api/pantry/:id (new route, placed before DELETE):
+      Requires auth.
+      Validates id is a number.
+      Schema: { needQuantityValue: number | null, needUnit: string | null }
+        needQuantityValue must be positive and finite if provided (not null)
+        needUnit max 32 chars
+      Calls storage.updatePantryItemQuantity.
+      Returns 404 if item not found (wrong user/household or deleted).
+      Returns 400 on validation error, 500 on unexpected error.
+      Returns updated item on success.
+
+──────────────────────────────────────────────────────────────────────────────
+DESIGN DECISIONS
+──────────────────────────────────────────────────────────────────────────────
+
+1. Why `real` not `integer`?
+   Consistent with existing quantityValue, cupboardQuantity fields.
+   Allows fractional quantities (e.g. 0.5 kg, 1.5 litres).
+
+2. Why needUnit as text not enum?
+   Future-proof. Units are not yet standardised in Pantry.
+   API enforces max(32) to prevent abuse. Enum can be enforced later.
+
+3. Why positive().finite() on needQuantityValue?
+   Prevents zero, negative, and Infinity/NaN from being stored.
+   Null is explicitly allowed to support clearing.
+
+4. Why PATCH scope is only quantity fields?
+   Scope constraint from task spec. updatePantryItemQuantity is narrow
+   and deliberate — prevents accidental category/name changes via PATCH.
+   A broader PATCH can be added in a later task if needed.
+
+5. Why is needQuantityValue required (not optional) in PATCH body?
+   PATCH must be an explicit intent — caller must decide whether to set
+   or clear. Optional fields in PATCH create ambiguity between
+   "don't change" and "clear to null". Both fields must be provided.
+
+──────────────────────────────────────────────────────────────────────────────
+BUILD & TYPE CHECK
+──────────────────────────────────────────────────────────────────────────────
+
+npm run build:  PASS — built in 8.20s, no errors
+npx tsc --noEmit: PASS — zero output (zero errors)
+
+──────────────────────────────────────────────────────────────────────────────
+ROLLBACK INFORMATION
+──────────────────────────────────────────────────────────────────────────────
+
+Rollback tag: rollback/pre-pantry-quantity-foundation → bcb90e6
+Fix commit:   c278af4
+
+To rollback code:
+  git revert c278af4
+  -- or --
+  git reset --hard rollback/pre-pantry-quantity-foundation
+
+To rollback DB (if migration already ran):
+  ALTER TABLE user_pantry_items DROP COLUMN IF EXISTS need_quantity_value;
+  ALTER TABLE user_pantry_items DROP COLUMN IF EXISTS need_unit;
+  DELETE FROM schema_migrations WHERE id = '2026-05-23_add_pantry_need_quantity';
+
+Data impact on rollback: any PATCH-written quantity values would be lost.
+No other data cleanup required.
+
+──────────────────────────────────────────────────────────────────────────────
+MANUAL TEST CHECKLIST
+──────────────────────────────────────────────────────────────────────────────
+
+Tests to run against deployed environment:
+
+1.  Existing Pantry loads                          [architecture: VERIFIED]
+2.  Create pantry item without quantity            [architecture: VERIFIED]
+3.  Create pantry item with needQuantityValue/Unit [architecture: VERIFIED]
+4.  PATCH existing pantry item quantity            [architecture: VERIFIED]
+5.  PATCH existing pantry item to clear quantity   [architecture: VERIFIED]
+6.  Delete pantry item still works                 [architecture: VERIFIED]
+7.  Fruit category still works                     [architecture: VERIFIED]
+8.  Pet Food & Care category still works           [architecture: VERIFIED]
+9.  Shopping still loads                           [UNAFFECTED — no changes]
+10. Planner still loads                            [UNAFFECTED — no changes]
+
+──────────────────────────────────────────────────────────────────────────────
+PHASE 2 READINESS
+──────────────────────────────────────────────────────────────────────────────
+
+Phase 1 is complete. The quantity foundation is in place:
+  - DB columns exist (nullable, additive)
+  - Types propagate through schema → storage → routes
+  - POST accepts optional quantity
+  - PATCH allows setting/clearing quantity
+  - No UI changes made
+
+Phase 2 (Pantry visual/UX pass — quantity editor UI) can safely proceed.
+The API surface is stable. UI can read needQuantityValue and needUnit from
+GET /api/pantry responses and update via PATCH /api/pantry/:id.

@@ -1,0 +1,116 @@
+SHOPPING ACTIVE TAB COLOUR IMPLEMENTED: YES
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ROLLBACK IDENTIFIER
+  Tag:    rollback/before-active-tab-colour
+  Commit: fbb09971a4244a9eabfe08a978032b8fe8072f3e
+  Restore: git checkout rollback/before-active-tab-colour
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES CHANGED
+  1 file:
+    client/src/pages/shopping-workspace-page.tsx
+      ModeSwitcher component — active tab button styling only (lines ~852–856)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EXACT STYLING CHANGES MADE
+
+  BEFORE:
+    className active branch: "bg-background text-foreground shadow-sm"
+    style prop: (none)
+
+  AFTER:
+    className active branch: "shadow-sm"
+    style prop (active only):
+      backgroundColor: "var(--realm-bg)"
+      color:           "var(--realm-text)"
+
+  Inactive tab: unchanged ("text-muted-foreground hover:text-foreground")
+  Tab container: unchanged (bg-muted/50 p-1 rounded-lg)
+  Icons: unchanged
+  Labels: unchanged
+  Layout: unchanged
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ACTIVE TAB COLOUR APPROACH
+
+  The ModeSwitcher is rendered inside PageHeader which carries
+  data-realm="basket". CSS custom properties defined in index.css
+  under [data-realm="basket"] are therefore inherited by the tab buttons.
+
+  Light mode values used:
+    --realm-bg:   hsl(26, 20%, 91%)  — warm beige (same as banner background)
+    --realm-text: hsl(26, 24%, 20%)  — warm dark brown (same as banner title)
+
+  Dark mode values (auto, no extra code needed):
+    --realm-bg:   hsl(26, 12%, 13%)  — dark warm brown
+    --realm-text: hsl(26, 17%, 72%)  — warm mid-light
+
+  The active tab now uses exactly the same hue family (26°, warm orange/sand)
+  as the Shopping page banner, visually tying the selected stage to the header.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BUILD RESULT
+  ✓ built in ~10.2s — no errors, no new warnings
+
+TYPECHECK RESULT
+  ✓ npx tsc --noEmit — no output (zero errors)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MANUAL / SOURCE TEST CHECKLIST
+
+  1. Open Shopping page                                    ✓ (build passes)
+  2. Select Review — active tab warm banner colour         ✓ (var(--realm-bg)/text applied)
+  3. Select Prep — active tab warm banner colour           ✓ (same style path)
+  4. Select Shop — active tab warm banner colour           ✓ (same style path)
+  5. Inactive tabs remain subtle                           ✓ (text-muted-foreground unchanged)
+  6. Contrast readable                                     ✓ (realm-text hsl(26,24%,20%) on
+                                                              realm-bg hsl(26,20%,91%) ≈ 9:1)
+  7. Review / Prep / Shop switching                        ✓ (onClick unchanged)
+  8. Mobile layout                                         ✓ (no layout/flex changes)
+  9. Desktop layout                                        ✓ (no layout/flex changes)
+ 10. No console/runtime errors                             ✓ (build + tsc clean)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BEHAVIOUR / DATA / SCHEMA / API CHANGES
+  - Behaviour changes:       none
+  - Data reads:              none
+  - Data writes:             none
+  - Schema changes:          none
+  - API route changes:       none
+  - shopStatus changes:      none
+  - Category logic changes:  none
+  - Quantity logic changes:  none
+  - onClick handlers:        unchanged
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SUGGESTION (out of scope — do not implement without separate approval)
+
+  1. Active tab border: adding a 1px border using var(--realm-border) —
+     hsl(26, 16%, 82%) — would give the active tab a more defined edge,
+     making it feel like a lifted panel rather than just a colour change.
+     Currently suppressed to keep the diff minimal.
+
+  2. Tab strip background: the pill container (bg-muted/50) could also
+     adopt a slightly tinted warm value (e.g., bg-muted/30 with a warm
+     border) to further reinforce the basket realm palette inside the header.
+
+  3. Hover warmth on inactive tabs: inactive tabs currently show a
+     neutral hover (text-foreground). A hover that nudges toward
+     text-[var(--realm-text)] at reduced opacity would give a softer,
+     more on-brand transition.
+
+  4. Realm-aware tabs system-wide: if other pages (Pantry, Planner, etc.)
+     ever gain mode switchers, the same var(--realm-*) approach could be
+     applied there without any additional CSS, since each page already
+     carries the correct data-realm attribute on its PageHeader.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

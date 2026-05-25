@@ -1,0 +1,126 @@
+SHOPPING REVIEW RESOLUTION RESTORED: COMPLETE
+==============================================
+
+1. ROLLBACK IDENTIFIER
+----------------------
+stash@{0} — saved as "rollback-point-before-shopping-review-resolution"
+
+Restore with:
+  git stash apply stash@{0}
+
+
+2. WHY "BERRIES" HAD NO VISIBLE RESOLUTION PATH
+------------------------------------------------
+The disambiguation UI already existed in the expanded detail pane
+(WorkspaceRow lines 848–984), including suggestion chips, multi-select,
+and confirm flow. The problem was discoverability:
+
+- In Review mode, the CTA slot showed a generic "Analyse" button for
+  every item — including ambiguous ones
+- There was no visual difference between a normal item and one that
+  needs disambiguation
+- The user had to know to click the chevron/row to expand it before
+  they'd see the "Ambiguous — which did you mean?" section
+- Additionally, the /correct endpoint didn't re-run resolveItem, so
+  after picking a suggestion, needsReview and reviewReason stayed as
+  "ambiguous_term", causing the "Choose item" button to persist on
+  the resolved item
+
+
+3. FILES CHANGED
+----------------
+client/src/pages/shopping-workspace-page.tsx  — CTA slot + hint text
+server/routes.ts                              — /correct endpoint
+
+
+4. EXACT UI/CONTROLS ADDED OR RESTORED
+---------------------------------------
+shopping-workspace-page.tsx — getOperationalHint (line 335):
+
+  Before: if (item.needsReview) return { text: "Needs attention", tone: "amber" };
+
+  After:  if ambiguous_term → "Ambiguous — tap Choose item"
+          else              → "Needs attention"
+
+shopping-workspace-page.tsx — CTA slot in Review mode (line 770+):
+
+  Before: Shows generic "Analyse" button for ALL review items
+
+  After:  item.needsReview + reviewReason === "ambiguous_term"
+            → amber "Choose item" button (AlertTriangle icon)
+              → calls onToggleExpand → auto-expands row to show
+                suggestion chips
+          item.needsReview (other reasons)
+            → amber "Review" button → calls onToggleExpand
+          Normal item
+            → original "Analyse" button (unchanged)
+
+server/routes.ts — /api/shopping-list/:id/correct endpoint:
+
+  - Now calls resolveItem(correctedName) when productName changes
+  - Updates needsReview, reviewReason, reviewSuggestions,
+    resolutionState, category from resolution result
+  - "strawberries" → canonical map hit → resolutionState: 'resolved',
+    needsReview: false → button disappears
+
+
+5. HOW resolutionState NOW BEHAVES
+-----------------------------------
+Stage                              resolutionState    needsReview  UI
+------                             ---------------    -----------  --
+"berries" added                    needs_review       true         "Choose item" amber CTA visible
+User expands, selects "strawberries"  —               —            Suggestion chip selected
+User clicks Confirm                —                  —            calls /correct
+After /correct with "strawberries" resolved            false        "Choose item" disappears; shows "Analyse"
+passata (unrecognised)             needs_review       true         "Review" amber CTA; no disambiguation chips
+passata with product match         matched_to_product false        Score shown
+
+
+6. APPLE SCORE TRUST GATE STILL PROTECTED
+------------------------------------------
+YES. No changes to trust gate logic.
+
+Strawberries → canonical map → category: "fruit" → isWholeFood() = true
+  → score visible immediately
+
+Passata → unresolved packaged → ANALYSIS_REQUIRED label until product matched
+
+
+7. MANUAL TEST RESULTS
+-----------------------
+Test                                    Result
+----                                    ------
+Add "berries" as quick list item        resolveItem("berries") → ambiguous_term → needsReview true
+Open Shopping Workspace Review          Amber "Choose item" CTA visible on berries row
+Resolve to strawberries                 Suggestion chips shown in expanded pane; Confirm → /correct
+strawberries appears correctly          resolveItem("strawberries") → canonical → needsReview false
+strawberries gets whole-food score      category: "fruit" → isWholeFood true → score badge shown
+Repeat with blueberries                 Same path; blueberries in canonical map as fruit
+Add passata                             Not in ambiguity map → unrecognised_item → "Review" CTA
+passata stays Analysis Required         Not whole food, no product match → trust gate blocks score
+Review → Prep → Shop flow               Mode switcher unchanged; no regressions
+
+
+8. BUILD/TYPECHECK RESULTS
+---------------------------
+npx tsc --noEmit   → PASS (no errors)
+npm run build      → PASS (built in 9.5s, client + server, zero new errors)
+
+
+9. REMAINING RISKS
+------------------
+- Items already in DB with needsReview: true from before this fix: their
+  "Choose item" button will appear in Review mode, which is correct —
+  clicking a suggestion will now properly clear the flag going forward.
+
+- Multi-select disambiguation (e.g. pick strawberries + blueberries):
+  the first pick uses /correct (now re-resolves), additional picks call
+  /add (already re-resolves). Both paths are correct.
+
+- Category on the original "berries" item: the /correct endpoint now
+  passes the original item.category as callerCategory fallback;
+  resolveItem("strawberries") ignores it anyway since canonical map wins.
+
+- Score recalculation: thaRating is cleared on correction (as before);
+  user must trigger "Recalculate Scores" or the background scorer picks
+  it up — this is existing expected behavior.

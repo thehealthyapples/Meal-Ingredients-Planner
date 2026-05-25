@@ -684,7 +684,7 @@ function DailySignalsPanel({
             {dirty && <span className="text-[10px] text-muted-foreground">Unsaved</span>}
             <Button
               size="sm"
-              className="h-6 text-[10px] px-2.5"
+              className="h-6 text-[10px] px-2.5 realm-banner-btn"
               onClick={submit}
               disabled={saveMut.isPending}
               data-testid="button-save-metrics"
@@ -700,7 +700,7 @@ function DailySignalsPanel({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-6 text-[10px] px-2"
+                className="h-6 text-[10px] px-2 realm-banner-btn"
                 onClick={onCsvClick}
                 data-testid="button-import-csv"
               >
@@ -1556,7 +1556,7 @@ export default function FoodDiaryPage() {
           </button>
         }
       />
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6" data-realm="diary">
 
         {/* UPF awareness banner */}
         {!upfDismissed && (
@@ -1601,7 +1601,7 @@ export default function FoodDiaryPage() {
               </div>
             )}
 
-            <div className={`lg:gap-4 ${(showDetailedTracking || showWeightTracking) ? "lg:grid lg:grid-cols-[minmax(0,1fr)_280px_220px]" : ""}`}>
+            <div className="lg:gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_280px_220px]">
               {/* ── Left: meal slots ──────────────────────────────── */}
               <div className="space-y-3">
                 <FirstVisitHint
@@ -1618,7 +1618,7 @@ export default function FoodDiaryPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full h-8 text-xs"
+                  className="w-full h-8 text-xs realm-banner-btn"
                   onClick={() => setCopyModalOpen(true)}
                   data-testid="button-copy-from-planner"
                 >
@@ -1650,7 +1650,7 @@ export default function FoodDiaryPage() {
                             <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 ml-auto mr-0.5 transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`} />
                           </button>
                           <Button
-                            variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1 shrink-0"
+                            variant="ghost" size="sm" className="h-6 px-2 text-xs gap-1 shrink-0 realm-banner-btn"
                             onClick={() => setAddModalSlot(key)}
                             data-testid={`button-add-${key}`}
                           >
@@ -1727,28 +1727,24 @@ export default function FoodDiaryPage() {
               </div>
 
               {/* ── Middle: Daily Signals ─────────────────────────── */}
-              {(showDetailedTracking || showWeightTracking) && (
-                <div className="mt-4 lg:mt-0">
-                  <DailySignalsPanel
-                    metrics={diary?.metrics ?? null}
-                    date={date}
-                    onSaved={() => {}}
-                    onCsvClick={() => setImportModalOpen(true)}
-                    extraEnabled={extraMetrics}
-                    onExtraChange={updateExtraMetrics}
-                    customDefs={customDefs}
-                    onCustomDefsChange={updateCustomDefs}
-                    onWeightSaved={(kg) => updateProfileMutation.mutate({ weightKg: kg })}
-                  />
-                </div>
-              )}
+              <div className="mt-4 lg:mt-0">
+                <DailySignalsPanel
+                  metrics={diary?.metrics ?? null}
+                  date={date}
+                  onSaved={() => {}}
+                  onCsvClick={() => setImportModalOpen(true)}
+                  extraEnabled={extraMetrics}
+                  onExtraChange={updateExtraMetrics}
+                  customDefs={customDefs}
+                  onCustomDefsChange={updateCustomDefs}
+                  onWeightSaved={(kg) => updateProfileMutation.mutate({ weightKg: kg })}
+                />
+              </div>
 
               {/* ── Right: Looking Forward ────────────────────────── */}
-              {(showDetailedTracking || showWeightTracking) && (
-                <div className="mt-3 lg:mt-0">
-                  <LookingForwardWidget />
-                </div>
-              )}
+              <div className="mt-3 lg:mt-0">
+                <LookingForwardWidget />
+              </div>
             </div>
 
           </>

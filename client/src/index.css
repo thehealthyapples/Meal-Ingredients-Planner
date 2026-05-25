@@ -271,6 +271,17 @@
 .realm-banner-btn:active:not(:disabled) {
   background-color: color-mix(in srgb, var(--realm-bg) 5%, var(--realm-border)) !important;
 }
+/* Danger variant — same background rhythm, destructive text colour */
+.realm-banner-btn-danger {
+  background-color: color-mix(in srgb, var(--realm-bg) 55%, var(--realm-border)) !important;
+  color: hsl(var(--destructive)) !important;
+}
+.realm-banner-btn-danger:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--realm-bg) 30%, var(--realm-border)) !important;
+}
+.realm-banner-btn-danger:active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--realm-bg) 5%, var(--realm-border)) !important;
+}
 
 /* ── Shared sticky page header ───────────────────────────────────────────── */
 

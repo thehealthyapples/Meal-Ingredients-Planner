@@ -1,0 +1,55 @@
+SHOPPING COMPACT PANTRY ROW IMPLEMENTED: YES
+
+ROLLBACK IDENTIFIER
+  Tag:    rollback/before-compact-pantry-row
+  Commit: ceac0f4
+  Restore: git checkout rollback/before-compact-pantry-row
+
+IMPLEMENTATION COMMIT
+  a0d4182 — feat: compact two-line Prep/Pantry action row
+
+FILES CHANGED
+  client/src/pages/shopping-workspace-page.tsx (8 insertions, 8 deletions)
+
+EXACT LAYOUT CHANGES MADE
+  PrepActionPanel — pantry-undecided state only:
+  - Outer wrapper removed: rounded-lg bg-amber-50/40 p-3 space-y-2.5 → space-y-1
+    (card background, border, and padding eliminated)
+  - Hint text: font-medium gap-1.5 h-3.5 w-3.5 → gap-1 h-3 w-3 (tighter)
+  - Button gap: gap-2 → gap-1.5
+  - Each button: flex-1 min-w-[90px] px-3 py-2.5 rounded-lg
+                 → px-2.5 py-1 rounded-md touch-manipulation (compact chips)
+
+  WorkspaceRow — spacer above action strip: mt-2 → mt-1
+
+HANDLERS NOT CHANGED
+  All three onClick callbacks unchanged:
+  - Have enough   → onPrepAction({ type: "pantry", decision: "have_enough" })
+  - Need to buy   → onPrepAction({ type: "pantry", decision: "need_to_buy" })
+  - Adjust amount → onPrepAction({ type: "pantry", decision: "adjusting" })
+
+BUILD RESULT
+  PASS — built in 10.29s, no errors
+
+TYPECHECK RESULT
+  PASS — npx tsc --noEmit returned no output (zero errors)
+
+MANUAL / SOURCE TEST RESULTS
+  1. Prep/Pantry buttons appear without expanding row         PASS (rendered outside AnimatePresence)
+  2. Buttons sit inside the row, not in a large panel        PASS (card wrapper removed)
+  3. Row remains compact                                     PASS (py-1 buttons, mt-1 spacer)
+  4. Have enough / Need to buy / Adjust amount call handlers PASS (callbacks unchanged)
+  5. Expanded content is secondary/details only              PASS (meal attribution, analyser, flags)
+  6. Apples and chevron remain aligned                       PASS (line 1 layout unchanged)
+  7. Review and Shop stages still render                     PASS (!shopMode/shopMode branches untouched)
+  8. No console/runtime errors                               PASS (TypeScript clean, build clean)
+
+DATA / SCHEMA / API / STATUS / CATEGORY CHANGES
+  None. CSS-class-only edit inside PrepActionPanel pantry-undecided branch.
+
+SUGGESTION (out of scope only)
+  - The quantity-uncertainty buttons (Accept estimate, Edit quantity, Mark for later)
+    still use the same large rounded-lg p-3 card pattern and could receive the same
+    compact treatment in a future pass if desired.
+  - On very narrow screens (<280px) three buttons may wrap to two rows via flex-wrap;
+    this is intentional and all buttons remain tappable.

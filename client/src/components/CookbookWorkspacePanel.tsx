@@ -52,7 +52,7 @@ function WorkspaceIdleContent({
       </button>
       <div className="flex gap-2 pb-2" data-testid="cookbook-workspace-create-buttons">
         <button
-          className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+          className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
           onClick={() => onSetMode("build")}
           data-testid="button-cookbook-build"
         >
@@ -60,7 +60,7 @@ function WorkspaceIdleContent({
           <span className="text-[10px] font-medium leading-none">Build</span>
         </button>
         <button
-          className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+          className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
           onClick={() => onSetMode("scan")}
           data-testid="button-cookbook-scan"
         >
@@ -69,7 +69,7 @@ function WorkspaceIdleContent({
         </button>
         {onAddRecipe && (
           <button
-            className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+            className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
             onClick={onAddRecipe}
             data-testid="button-cookbook-add-recipe"
           >
@@ -92,7 +92,7 @@ function WorkspaceIdleContent({
       </button>
       <div className="flex gap-2 pb-2">
         <button
-          className={`flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border px-1.5 py-2.5 text-foreground transition-colors ${viewMode === 'grid' ? 'bg-accent/70' : 'bg-card hover:bg-accent/50'}`}
+          className={`flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border px-1.5 py-2.5 transition-colors realm-banner-btn ${viewMode === 'grid' ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
           onClick={() => onViewModeChange('grid')}
           data-testid="button-view-grid"
         >
@@ -100,7 +100,7 @@ function WorkspaceIdleContent({
           <span className="text-[10px] font-medium leading-none">Grid</span>
         </button>
         <button
-          className={`flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border px-1.5 py-2.5 text-foreground transition-colors ${viewMode === 'list' ? 'bg-accent/70' : 'bg-card hover:bg-accent/50'}`}
+          className={`flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border px-1.5 py-2.5 transition-colors realm-banner-btn ${viewMode === 'list' ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
           onClick={() => onViewModeChange('list')}
           data-testid="button-view-list"
         >
@@ -108,7 +108,7 @@ function WorkspaceIdleContent({
           <span className="text-[10px] font-medium leading-none">List</span>
         </button>
         <button
-          className={`flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border px-1.5 py-2.5 text-foreground transition-colors relative ${filterCount > 0 ? 'bg-accent/70' : 'bg-card hover:bg-accent/50'}`}
+          className={`flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border px-1.5 py-2.5 transition-colors relative realm-banner-btn ${filterCount > 0 ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
           onClick={() => onSetMode("filter")}
           data-testid="button-toggle-advanced-filters"
         >
@@ -168,7 +168,7 @@ function WorkspaceScanContent({
       />
 
       <button
-        className="w-full flex items-center gap-3 rounded-md border border-border bg-card hover:bg-accent/50 px-3 py-3 text-sm font-medium transition-colors disabled:opacity-50"
+        className="w-full flex items-center gap-3 rounded-md border border-border realm-banner-btn px-3 py-3 text-sm font-medium transition-colors disabled:opacity-50"
         onClick={onCameraClick}
         disabled={scanLoading}
         data-testid="button-workspace-camera"
@@ -178,7 +178,7 @@ function WorkspaceScanContent({
       </button>
 
       <button
-        className="w-full flex items-center gap-3 rounded-md border border-border bg-card hover:bg-accent/50 px-3 py-3 text-sm font-medium transition-colors disabled:opacity-50"
+        className="w-full flex items-center gap-3 rounded-md border border-border realm-banner-btn px-3 py-3 text-sm font-medium transition-colors disabled:opacity-50"
         onClick={() => fileInputRef.current?.click()}
         disabled={scanLoading}
         data-testid="button-workspace-upload"

@@ -1,0 +1,198 @@
+SHOPPING ROW STRUCTURE STANDARDISED: YES
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ROLLBACK IDENTIFIER
+  Tag:    rollback/before-row-standardisation
+  Commit: 2502a5e6d6f053cc3ae8865e583daf285783f6d5
+  Restore: git checkout rollback/before-row-standardisation
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES CHANGED
+  1 file:
+    client/src/pages/shopping-workspace-page.tsx
+      WorkspaceRow component — collapsed row block replaced
+      Lines ~571–739 (before) → single unified grid block (after)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EXACT ROW STRUCTURE IMPLEMENTED
+
+  grid grid-cols-[28px_1fr_auto_auto] items-center gap-x-2 px-4 py-3 min-h-[52px]
+
+  ┌────────┬─────────────────────────────┬─────────────────┬──────────────┐
+  │ Col 1  │ Col 2                       │ Col 3           │ Col 4        │
+  │ 28px   │ 1fr                         │ auto            │ auto         │
+  │ circle │ item name + qty             │ stage CTAs      │ score+chev   │
+  │ or cb  │ + hint (review only)        │                 │              │
+  └────────┴─────────────────────────────┴─────────────────┴──────────────┘
+
+  - Col 1 (28px): state circle (Shop) or Checkbox (Review/Prep)
+  - Col 2 (1fr):  product name (text-sm font-medium) + qty (text-xs muted) inline
+                  hint line below — Review mode only (PrepActionPanel covers Prep)
+  - Col 3 (auto): CTAs — stage-specific, always row-level, never in a lower panel
+  - Col 4 (auto): ScoreBadge (if thaRating present) + ChevronDown/Up together
+
+  BEFORE: Two independent render branches
+    {shopMode && <div className="grid grid-cols-[20px_minmax(2.75rem,auto)_1fr_auto_2.75rem]">}
+    {!shopMode && <div className="px-4 py-3">  <-- flex, Prep CTAs in separate mt-1 ml-7 div
+
+  AFTER: One unified render
+    <div className="grid grid-cols-[28px_1fr_auto_auto]">
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+REVIEW ROW RESULT
+  [Checkbox] [Item name + qty] [Analyse button] [Score+chevron]
+  - Checkbox: 28px col 1, place-self-center
+  - Name+qty: col 2, name truncates, qty as text-xs tabular-nums
+  - Hint line: shown below name (amber/green) — review mode only
+  - Analyse: col 3, row-level chip, same position as Prep/Shop CTAs
+  - Score+chevron: col 4, always far right
+
+PREP ROW RESULT
+  [Checkbox] [Item name + qty] [PrepActionPanel chips] [Score+chevron]
+  - Checkbox: 28px col 1
+  - Name+qty: col 2 (hint suppressed — PrepActionPanel provides context)
+  - Prep CTAs: col 3, inline with item — removed the mt-1 ml-7 lower panel
+    Pantry: Have enough / Need to buy / Adjust amount
+    Quantity: Accept estimate / Edit quantity / Mark for later
+    Resolved: compact confirmed banners
+  - Score+chevron: col 4, same position as Review/Shop
+
+SHOP ROW RESULT
+  [Circle] [Item name + qty] [Found it + Next shop / status+undo] [Score+chevron]
+  - Circle button: 28px col 1 (same width as Review/Prep checkbox col)
+  - Name+qty: col 2 — qty merged into item column (was a separate leading column)
+    Name: text-sm font-medium; qty: text-xs text-muted-foreground (inline)
+  - CTAs: col 3, Found it / Next shop when need; status label + undo when actioned
+  - Score+chevron: col 4, same position as Review/Prep
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CTA HANDLER VERIFICATION
+  All onClick handlers reused verbatim — only the wrapper layout changed.
+
+  Analyse:        onClick={onOpenAnalyser}                         ✓ unchanged
+  Have enough:    onPrepAction({ type:"pantry", decision:"have_enough" })   ✓ PrepActionPanel
+  Need to buy:    onPrepAction({ type:"pantry", decision:"need_to_buy" })   ✓ PrepActionPanel
+  Adjust amount:  onPrepAction({ type:"pantry", decision:"adjusting" })     ✓ PrepActionPanel
+  Accept estimate:onPrepAction({ type:"quantity", decision:"accepted" })    ✓ PrepActionPanel
+  Edit quantity:  onPrepAction({ type:"quantity", decision:"editing" })     ✓ PrepActionPanel
+  Mark for later: onPrepAction({ type:"quantity", decision:"later" })       ✓ PrepActionPanel
+  Found it:       onShopStateChange?.("found")                    ✓ unchanged
+  Next shop:      onShopStateChange?.("defer")                    ✓ unchanged
+  Circle toggle:  onShopStateChange?.(found ? null : "found")     ✓ unchanged
+  Undo:           onShopStateChange?.(null)                       ✓ unchanged
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+APPLE SCORE ALIGNMENT RESULT
+  - Score now lives exclusively in col 4 (auto) across ALL three modes
+  - In the old code: Shop had score in a 2.75rem fixed col; Review/Prep had it
+    in a shrink-0 flex item — different mechanisms, different visual positions
+  - New: all modes share the same grid column (col 4), so score aligns row-to-row
+  - Score shown: thaRating != null AND (shopMode OR !item.checked)
+  - Score does not overlap CTAs — they are separate grid columns
+
+CHEVRON ALIGNMENT RESULT
+  - Chevron is always inside col 4 (same button element as score)
+  - In the old code: Shop had a 2.75rem fixed col; Review/Prep had a shrink-0 flex item
+  - New: single grid column, chevron always far right regardless of name/CTA length
+  - Uses place-self-center for vertical alignment
+
+EXPANDED-ROW RESULT
+  - Expanded content block unchanged (lines ~741+)
+  - Uses ml-9 (36px) to align with item name start — matches 28px col 1 + 8px gap
+  - Contains: pantry note, meal attribution, validation note, Analyse secondary link
+  - Analyse secondary link in expanded content for Prep/Shop remains (non-primary access)
+  - No item name, qty, category, or primary CTAs duplicated in expanded content
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BUILD RESULT
+  ✓ built in ~10.7s — no errors, no new warnings
+
+TYPECHECK RESULT
+  ✓ npx tsc --noEmit — no output (zero errors)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MANUAL / SOURCE TEST CHECKLIST
+
+  1. Open Shopping page                                       ✓
+  2. Review: [checkbox][item+qty][Analyse][score+chevron]     ✓ grid col 3 = Analyse
+  3. Review: checkbox same width as Shop circle               ✓ both 28px col 1
+  4. Prep: [checkbox][item+qty][PrepAction chips][score+chev] ✓ grid col 3 = PrepActionPanel
+  5. Prep: buttons row-level, not in lower panel              ✓ mt-1 ml-7 div removed
+  6. Shop: [circle][item+qty][Found it/Next shop][score+chev] ✓ grid col 3 = shop CTAs
+  7. CTA columns align vertically across all rows             ✓ all in grid col 3
+  8. Apple score column aligns vertically across all rows     ✓ all in grid col 4
+  9. Apple score does not overlap CTAs                        ✓ separate grid columns
+ 10. Chevron column consistent                                ✓ always in col 4 (last)
+ 11. Expanded content secondary only                         ✓ unchanged, ml-9 aligned
+ 12. Review/Prep/Shop CTAs call existing handlers             ✓ verified above
+ 13. Category grouping unchanged                              ✓ grouping code untouched
+ 14. Mobile: CTAs in col 3 can wrap inside their cell        ✓ flex-wrap on PrepActionPanel
+ 15. No console/runtime errors                                ✓ build + tsc clean
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BEHAVIOUR / DATA / SCHEMA / API / STATUS / CATEGORY CHANGES
+  - Behaviour changes:          none (handlers, lifecycle, state unchanged)
+  - Data reads:                 none
+  - Data writes:                none
+  - Schema changes:             none
+  - API route changes:          none
+  - shopStatus mappings:        none (SHOP_STATE_TO_SERVER unchanged)
+  - Category logic:             none (groupByStoreCategory unchanged)
+  - Quantity logic:             none (deriveQuantityConfidence unchanged)
+  - Pantry ownership logic:     none
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+NOTABLE BEHAVIOUR DELTA (visual only, no data impact)
+
+  1. Shop qty display: was a large leading column (font-semibold text-[15px] before
+     the name). Now inline with name (text-xs muted, after name). Same value shown,
+     different weight/position. Change matches the unified spec: "quantity shown
+     beside item name where available."
+
+  2. Prep hint line: was shown in col 2 for all states (e.g., "Pantry item" amber
+     alongside the PrepActionPanel's own "Common pantry item — check before buying").
+     Now hint is suppressed in Prep mode — PrepActionPanel carries all context, so
+     there is no duplicate text. For attention/multi-source items in Prep where
+     PrepActionPanel returns null, the hint is also suppressed; the Prep group header
+     ("Needs Attention") already signals these items.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SUGGESTION (out of scope — do not implement without separate approval)
+
+  1. Shop qty weight: the Shop qty was previously styled as font-semibold text-[15px]
+     (prominent leading anchor for in-store scanning). The unified style is text-xs
+     muted (consistent with Review/Prep). If user research shows shoppers prefer the
+     larger leading qty in-store, a shop-specific qty weight could be restored within
+     the same col 2 without breaking the grid.
+
+  2. Prep hint on null-panel items: items in Prep that have needsReview=true but are
+     not pantry/uncertain (PrepActionPanel returns null) no longer show a "Needs
+     attention" hint inline. If inline visibility is needed for these, the condition
+     could be relaxed to: show hint when !shopMode AND (PrepActionPanel would return
+     null). This requires a lightweight check of the same isPantryStocked/conf flags.
+
+  3. Score min-width: col 4 is "auto" — if many rows have no score, col 4 shrinks to
+     the chevron width only (16px). Adding a min-width like w-8 to col 4 would ensure
+     the chevron always sits at a consistent x-position regardless of score presence.
+
+  4. Analyse in Prep/Shop expanded: the expanded panel still shows a secondary Analyse
+     link for Prep/Shop modes. As the primary Analyse button is now only in Review,
+     consider whether a small Analyse icon-only button in col 3 of Prep/Shop rows
+     (alongside the primary CTA) would reduce the need to expand just to analyse.
+
+  5. Mobile col 3 wrapping: on very narrow screens (< 360px), col 3 with two buttons
+     may push col 4 off screen. Adding overflow-hidden or a max-w constraint to the
+     grid could prevent this if reported in testing.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

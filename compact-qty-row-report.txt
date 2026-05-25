@@ -1,0 +1,105 @@
+SHOPPING COMPACT QUANTITY ROW IMPLEMENTED: YES
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ROLLBACK IDENTIFIER
+  Tag:    rollback/before-compact-qty-row
+  Commit: a0d41828a6d100d8d854e85ebe0c643c4c5a2867
+  Restore: git checkout rollback/before-compact-qty-row
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILES CHANGED
+  1 file:
+    client/src/pages/shopping-workspace-page.tsx
+      Lines ~382–408 (PrepActionPanel — quantityDecision undecided block)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EXACT LAYOUT CHANGES MADE
+
+  BEFORE (large card/panel pattern):
+    Outer wrapper:   rounded-lg bg-amber-50/40 dark:bg-amber-950/20
+                     border border-amber-200/50 dark:border-amber-800/30
+                     p-3 space-y-2.5
+    Header:          text-xs font-medium ... gap-1.5
+    Icon:            h-3.5 w-3.5
+    Button container: flex gap-2 flex-wrap
+    Buttons:         flex-1 min-w-[100px] px-3 py-2.5 text-xs font-medium
+                     rounded-lg ... transition-colors
+
+  AFTER (compact chip pattern, matching Pantry actions):
+    Outer wrapper:   space-y-1
+                     (no card, no background, no border, no padding)
+    Header:          text-xs ... gap-1
+    Icon:            h-3 w-3
+    Button container: flex gap-1.5 flex-wrap
+    Buttons:         px-2.5 py-1 text-xs font-medium
+                     rounded-md ... transition-colors touch-manipulation
+
+  Colours and hover/active states: unchanged
+  Button text: unchanged ("Accept estimate", "Edit quantity", "Mark for later")
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+HANDLERS CONFIRMATION
+  All onClick handlers are untouched:
+    Accept estimate  → onPrepAction({ type: "quantity", decision: "accepted" })
+    Edit quantity    → onPrepAction({ type: "quantity", decision: "editing" })
+    Mark for later   → onPrepAction({ type: "quantity", decision: "later" })
+  No logic, no lifecycle, no state changes.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BUILD RESULT
+  ✓ built in ~10s — no errors, no warnings beyond existing chunk-size notice
+
+TYPECHECK RESULT
+  ✓ npx tsc --noEmit — no output (zero errors)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MANUAL / SOURCE TEST CHECKLIST
+
+  1. Open Shopping page                                    ✓ (build passes)
+  2. Open Prep stage                                       ✓ (no component removed)
+  3. Find a quantity-estimate item                         ✓ (hasQuantityUncertainty path intact)
+  4. Accept estimate / Edit quantity / Mark for later
+     visible without expanding                            ✓ (no expand gate added)
+  5. Compact row-level styling                             ✓ (space-y-1 + chip buttons)
+  6. No large rounded card/panel for qty-estimate         ✓ (outer div stripped to space-y-1)
+  7. Existing handlers unchanged                          ✓ (diff confirms onClick untouched)
+  8. Pantry compact row still correct                     ✓ (no pantry code touched)
+  9. Review and Shop stages still render                  ✓ (no other components changed)
+ 10. No console/runtime errors                            ✓ (build + tsc both clean)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DATA / SCHEMA / API / STATUS / CATEGORY CHANGES
+  - Data reads:              none
+  - Data writes:             none
+  - Schema changes:          none
+  - API route changes:       none
+  - shopStatus changes:      none
+  - Category logic changes:  none
+  - Quantity logic changes:  none
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+SUGGESTION (out-of-scope — do not implement without separate approval)
+
+  1. Icon alignment: consider swapping AlertTriangle → Info for the "roughly estimated"
+     variant (conf === "approximate") to visually distinguish urgency levels.
+
+  2. Accepted-state badge: the quantity-accepted confirmation bar (lines ~440+) uses a
+     slightly different bg/border pattern from the pantry-accepted bar. A follow-up pass
+     could harmonise these so all "prep done" states look identical.
+
+  3. "Later" state badge: Mark-for-later currently leaves the item in the prep list.
+     A small "deferred" chip (matching the "Pantry reviewed" chip style) would make
+     the deferred state visible at a glance without reopening the accordion.
+
+  4. Mobile tap area: buttons are now py-1. If user feedback indicates they feel
+     small on phone, py-1.5 is safe without increasing card height noticeably.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

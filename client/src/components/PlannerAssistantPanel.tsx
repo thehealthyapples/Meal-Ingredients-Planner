@@ -245,7 +245,7 @@ function ScanContent({ onScanFile, scanLoading, onUploadClick }: ScanContentProp
   const uploadButton = (
     <Button
       variant="outline"
-      className="w-full"
+      className="w-full realm-banner-btn"
       disabled={scanLoading}
       onClick={onUploadClick}
       data-testid="button-assistant-upload"
@@ -298,10 +298,10 @@ function ScanContent({ onScanFile, scanLoading, onUploadClick }: ScanContentProp
 
         {cameraStatus === "live" && (
           <div className="flex gap-2">
-            <Button className="flex-1" onClick={takePhoto} data-testid="button-panel-camera-capture">
+            <Button className="flex-1 realm-banner-btn" onClick={takePhoto} data-testid="button-panel-camera-capture">
               <Camera className="h-4 w-4 mr-2" />Capture
             </Button>
-            <Button variant="ghost" size="icon" onClick={closeCamera} title="Cancel" data-testid="button-panel-camera-cancel">
+            <Button variant="ghost" size="icon" className="realm-banner-btn" onClick={closeCamera} title="Cancel" data-testid="button-panel-camera-cancel">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -309,11 +309,11 @@ function ScanContent({ onScanFile, scanLoading, onUploadClick }: ScanContentProp
 
         {cameraStatus === "captured" && (
           <div className="flex gap-2">
-            <Button className="flex-1" onClick={usePhoto} disabled={scanLoading} data-testid="button-panel-camera-use">
+            <Button className="flex-1 realm-banner-btn" onClick={usePhoto} disabled={scanLoading} data-testid="button-panel-camera-use">
               {scanLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Scan this photo
             </Button>
-            <Button variant="outline" onClick={retake} disabled={scanLoading} data-testid="button-panel-camera-retake">
+            <Button variant="outline" className="realm-banner-btn" onClick={retake} disabled={scanLoading} data-testid="button-panel-camera-retake">
               Retake
             </Button>
           </div>
@@ -322,7 +322,7 @@ function ScanContent({ onScanFile, scanLoading, onUploadClick }: ScanContentProp
         {(cameraStatus === "error" || cameraStatus === "loading") && (
           <div className="space-y-2">
             {uploadButton}
-            <Button variant="ghost" className="w-full text-muted-foreground" onClick={closeCamera} data-testid="button-panel-camera-cancel-error">
+            <Button variant="ghost" className="w-full realm-banner-btn" onClick={closeCamera} data-testid="button-panel-camera-cancel-error">
               Cancel
             </Button>
           </div>
@@ -341,7 +341,7 @@ function ScanContent({ onScanFile, scanLoading, onUploadClick }: ScanContentProp
       </div>
       <div className="space-y-2">
         <Button
-          className="w-full"
+          className="w-full realm-banner-btn"
           onClick={openCamera}
           disabled={scanLoading}
           data-testid="button-assistant-take-photo"
@@ -500,7 +500,7 @@ function SmartContent() {
       </div>
 
       <Button
-        className="w-full"
+        className="w-full realm-banner-btn"
         onClick={onRunSmartSuggest}
         disabled={smartLoading}
         data-testid="button-run-smart-suggest"
@@ -878,7 +878,7 @@ function ResolveContent({ mealName, dayName, slotLabel, onSearch, onAction }: Re
 
       <div className="space-y-2">
         <button
-          className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+          className="w-full flex items-center gap-2.5 rounded-lg border border-border realm-banner-btn px-3 py-2.5 text-sm transition-colors text-left"
           onClick={onSearch}
           data-testid="button-resolve-search"
         >
@@ -886,7 +886,7 @@ function ResolveContent({ mealName, dayName, slotLabel, onSearch, onAction }: Re
           Search cookbook
         </button>
         <button
-          className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+          className="w-full flex items-center gap-2.5 rounded-lg border border-border realm-banner-btn px-3 py-2.5 text-sm transition-colors text-left"
           onClick={() => onAction("build")}
           data-testid="button-resolve-build"
         >
@@ -894,7 +894,7 @@ function ResolveContent({ mealName, dayName, slotLabel, onSearch, onAction }: Re
           Build recipe
         </button>
         <button
-          className="w-full flex items-center gap-2.5 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2.5 text-sm text-foreground transition-colors text-left"
+          className="w-full flex items-center gap-2.5 rounded-lg border border-border realm-banner-btn px-3 py-2.5 text-sm transition-colors text-left"
           onClick={() => onAction("scan")}
           data-testid="button-resolve-scan"
         >
@@ -1199,7 +1199,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
         {planWeekOpen && (
           <div className="flex gap-2 pb-2" data-testid="section-plan-week-body">
             <button
-              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
               onClick={() => onSetMode("smart")}
               data-testid="button-idle-smart"
             >
@@ -1207,7 +1207,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               <span className="text-[10px] font-medium leading-none">Smart</span>
             </button>
             <button
-              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
               onClick={() => onSetMode("scan")}
               data-testid="button-idle-scan"
             >
@@ -1215,7 +1215,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               <span className="text-[10px] font-medium leading-none">Scan</span>
             </button>
             <button
-              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
               onClick={() => onSetMode("templates")}
               data-testid="button-idle-templates"
             >
@@ -1223,7 +1223,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               <span className="text-[10px] font-medium leading-none">Templates</span>
             </button>
             <button
-              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
               onClick={() => onSetMode("analyser")}
               data-testid="button-idle-analyser"
             >
@@ -1255,7 +1255,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
             <div className="flex gap-2 mb-2" data-testid="section-add-meals-grid">
               {onCreateIntent && (
                 <button
-                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
                   onClick={() => setIntentOpen(v => !v)}
                   data-testid="button-idle-add-intent"
                 >
@@ -1265,7 +1265,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               )}
               {onBrowseRecipes && (
                 <button
-                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
                   onClick={onBrowseRecipes}
                   data-testid="button-idle-browse-recipes"
                 >
@@ -1275,7 +1275,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               )}
               {onBuildRecipe && (
                 <button
-                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
                   onClick={onBuildRecipe}
                   data-testid="button-idle-build-recipe"
                 >
@@ -1285,7 +1285,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               )}
               {onScanRecipe && (
                 <button
-                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
                   onClick={onScanRecipe}
                   data-testid="button-idle-scan-recipe"
                 >
@@ -1375,7 +1375,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
                 <button
                   onClick={addProposal}
                   disabled={!proposalName.trim()}
-                  className="h-7 px-2.5 rounded-md bg-muted hover:bg-muted/80 disabled:opacity-40 text-xs font-medium transition-colors flex items-center gap-1 shrink-0 whitespace-nowrap"
+                  className="h-7 px-2.5 rounded-md realm-banner-btn disabled:opacity-40 text-xs font-medium transition-colors flex items-center gap-1 shrink-0 whitespace-nowrap"
                   data-testid="button-proposal-stage"
                 >
                   <Plus className="h-3 w-3 shrink-0" />Stage
@@ -1406,7 +1406,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
             {/* Compact 3-across grid */}
             <div className="flex gap-2">
               <button
-                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
                 onClick={() => onSetMode("settings")}
                 data-testid="button-idle-settings"
               >
@@ -1414,7 +1414,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
                 <span className="text-[10px] font-medium leading-none">Options</span>
               </button>
               <button
-                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
                 onClick={() => onSetMode("bulk")}
                 data-testid="button-idle-bulk-assign"
               >
@@ -1423,7 +1423,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               </button>
               {onSharePlan && (
                 <button
-                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
                   onClick={onSharePlan}
                   data-testid="button-idle-share-plan"
                 >
@@ -1464,7 +1464,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
                 </p>
                 <button
                   onClick={() => navigate("/shopping-workspace?stage=shop&source=planned")}
-                  className="w-full flex items-center gap-2 rounded-lg border border-border bg-card hover:bg-accent/40 px-3 py-2 text-sm text-foreground transition-colors"
+                  className="w-full flex items-center gap-2 rounded-lg border border-border realm-banner-btn px-3 py-2 text-sm transition-colors"
                   data-testid="button-shopping-summary-view"
                 >
                   <ShoppingCart className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />

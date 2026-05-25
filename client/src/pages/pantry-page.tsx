@@ -395,6 +395,7 @@ function FoodPantrySection({
             />
             <Button
               size="sm"
+              className="realm-banner-btn"
               onClick={sendToBasket}
               disabled={sending}
               data-testid="button-food-send-to-basket"
@@ -432,6 +433,7 @@ function FoodPantrySection({
         </div>
         <Button
           size="sm"
+          className="realm-banner-btn"
           onClick={handleAdd}
           disabled={!query.trim() || addMutation.isPending}
           data-testid="button-food-pantry-add"
@@ -764,6 +766,7 @@ function HomePantrySection({
             />
             <Button
               size="sm"
+              className="realm-banner-btn"
               onClick={sendToBasket}
               disabled={sending}
               data-testid="button-send-to-basket"
@@ -801,6 +804,7 @@ function HomePantrySection({
         </div>
         <Button
           size="sm"
+          className="realm-banner-btn"
           onClick={handleAdd}
           disabled={!query.trim() || addMutation.isPending}
           data-testid="button-household-add"

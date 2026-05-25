@@ -480,140 +480,35 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
 
   return (
     <div className="w-full flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
-      <div className="flex items-center gap-1.5">
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-xs font-semibold shrink-0 min-w-8"
-                  data-testid={`button-qty-${mealId}`}
-                >
-                  {qty}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-12 p-1" align="start" side="top">
-                <div className="flex flex-col gap-0.5">
-                  {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
-                    <Button
-                      key={n}
-                      size="sm"
-                      variant={n === qty ? "default" : "ghost"}
-                      className="text-xs min-w-8"
-                      onClick={(e) => { e.stopPropagation(); setQty(n); }}
-                      data-testid={`button-qty-select-${mealId}-${n}`}
-                    >
-                      {n}
-                    </Button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
-          </TooltipTrigger>
-          <TooltipContent><p className="text-xs">Quantity</p></TooltipContent>
-        </Tooltip>
-
-        <div className="flex items-center gap-1 flex-1 justify-end flex-wrap">
-          {servings != null && servings >= 1 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground px-1 shrink-0" data-testid={`text-servings-${mealId}`}>
-                  <UtensilsCrossed className="h-3.5 w-3.5" />
-                  <span className="font-medium">{servings}</span>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">{servings === 1 ? '1 serving' : `${servings} servings`}</p></TooltipContent>
-            </Tooltip>
-          )}
-          {mealFormat === "grouped" ? (() => {
-            const groupedSources = parseGroupedSources(instructions);
-            const webParts = groupedSources
-              ? Object.entries(groupedSources).filter(([, s]) => s.type === "web" && s.url)
-              : [];
-            if (webParts.length === 0) return null;
-            return (
-              <Tooltip>
-                <Popover>
-                  <TooltipTrigger asChild>
-                    <PopoverTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={(e) => e.stopPropagation()}
-                        data-testid={`button-grouped-sources-${mealId}`}
-                      >
-                        <Globe className="h-4 w-4" />
-                      </Button>
-                    </PopoverTrigger>
-                  </TooltipTrigger>
-                  <PopoverContent className="w-64 p-2" align="end" side="top" onClick={(e) => e.stopPropagation()}>
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Recipe sources</p>
-                    <div className="space-y-1">
-                      {webParts.map(([label, source]) => (
-                        <a
-                          key={label}
-                          href={source.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center justify-between gap-2 text-xs rounded px-2 py-1.5 hover:bg-accent transition-colors"
-                          data-testid={`link-grouped-source-${mealId}-${label}`}
-                        >
-                          <span className="font-medium truncate">{label}</span>
-                          <span className="text-muted-foreground shrink-0 flex items-center gap-1">
-                            {source.sourceName && <span className="text-[10px]">{source.sourceName}</span>}
-                            <ExternalLink className="h-2.5 w-2.5" />
-                          </span>
-                        </a>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
-                <TooltipContent><p className="text-xs">Recipe sources</p></TooltipContent>
-              </Tooltip>
-            );
-          })() : sourceUrl && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <a
-                  href={sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  data-testid={`link-source-${mealId}`}
-                >
-                  <Button size="icon" variant="ghost" asChild>
-                    <span><Globe className="h-4 w-4" /></span>
-                  </Button>
-                </a>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">View original recipe</p></TooltipContent>
-            </Tooltip>
-          )}
-          {!hideEdit && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-xs px-2 h-7"
-                  onClick={(e) => { e.stopPropagation(); navigate(`/meals/${mealId}`); }}
-                  data-testid={`button-view-recipe-${mealId}`}
-                >
-                  <Eye className="h-3.5 w-3.5 mr-1" />
-                  View
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">View recipe</p></TooltipContent>
-            </Tooltip>
-          )}
-          {!hideBasket && (
+      {/* Row 1: View recipe | Add to basket | Analyse | Add to planner */}
+      <div className="grid grid-cols-4 gap-1">
+        <div className="flex items-center justify-center">
+          {!hideEdit ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   size="icon"
                   variant="ghost"
+                  className="h-7 w-7 realm-banner-btn"
+                  onClick={(e) => { e.stopPropagation(); navigate(`/meals/${mealId}`); }}
+                  data-testid={`button-view-recipe-${mealId}`}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">View recipe</p></TooltipContent>
+            </Tooltip>
+          ) : null}
+        </div>
+
+        <div className="flex items-center justify-center">
+          {!hideBasket ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 realm-banner-btn"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (isReadyMeal) {
@@ -627,110 +522,158 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                   data-testid={`button-add-basket-${mealId}`}
                 >
                   {(isReadyMeal ? addProductToBasketMutation.isPending : addToListMutation.isPending) ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
-                    <ShoppingBasket className="h-4 w-4" />
+                    <ShoppingBasket className="h-3.5 w-3.5" />
                   )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent><p className="text-xs">Add to basket</p></TooltipContent>
             </Tooltip>
-          )}
+          ) : null}
+        </div>
 
-        {!isReadyMeal && (
+        <div className="flex items-center justify-center">
+          {!isReadyMeal ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 realm-banner-btn"
+                  onClick={(e) => { e.stopPropagation(); analyzeMutation.mutate(); }}
+                  disabled={analyzeMutation.isPending}
+                  data-testid={`button-analyze-meal-${mealId}`}
+                >
+                  {analyzeMutation.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Microscope className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">Analyse</p></TooltipContent>
+            </Tooltip>
+          ) : null}
+        </div>
+
+        <div className="flex items-center justify-center">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={(e) => { e.stopPropagation(); analyzeMutation.mutate(); }}
-                disabled={analyzeMutation.isPending}
-                data-testid={`button-analyze-meal-${mealId}`}
+                className="h-7 w-7 realm-banner-btn"
+                onClick={(e) => { e.stopPropagation(); setPlannerOpen(true); }}
+                data-testid={`button-add-planner-${mealId}`}
               >
-                {analyzeMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Microscope className="h-4 w-4" />
-                )}
+                <CalendarDays className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent><p className="text-xs">Analyse</p></TooltipContent>
+            <TooltipContent><p className="text-xs">Add to planner</p></TooltipContent>
           </Tooltip>
-        )}
+        </div>
+      </div>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={(e) => { e.stopPropagation(); setPlannerOpen(true); }}
-              data-testid={`button-add-planner-${mealId}`}
-            >
-              <CalendarDays className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent><p className="text-xs">Add to planner</p></TooltipContent>
-        </Tooltip>
+      {/* Row 2: Servings per recipe | Qty picker | Add to freezer | Add to quick list */}
+      <div className="grid grid-cols-4 gap-1">
+        <div className="flex items-center justify-center">
+          {servings != null && servings >= 1 ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="inline-flex items-center justify-center gap-0.5 h-7 w-7 text-xs text-muted-foreground" data-testid={`text-servings-${mealId}`}>
+                  <UtensilsCrossed className="h-3 w-3 shrink-0" />
+                  <span className="font-medium">{servings}</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">{servings === 1 ? '1 serving per recipe' : `${servings} servings per recipe`}</p></TooltipContent>
+            </Tooltip>
+          ) : null}
+        </div>
 
-        {isFreezerEligible && (
+        <div className="flex items-center justify-center">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-blue-400"
-                onClick={(e) => { e.stopPropagation(); onFreezeClick(); }}
-                data-testid={`button-freeze-${mealId}`}
-              >
-                <Snowflake className="h-4 w-4" />
-              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 text-[11px] font-semibold realm-banner-btn"
+                    data-testid={`button-qty-${mealId}`}
+                  >
+                    {qty}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-12 p-1" align="center" side="top">
+                  <div className="flex flex-col gap-0.5">
+                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+                      <Button
+                        key={n}
+                        size="sm"
+                        variant={n === qty ? "default" : "ghost"}
+                        className="text-xs min-w-8"
+                        onClick={(e) => { e.stopPropagation(); setQty(n); }}
+                        data-testid={`button-qty-select-${mealId}-${n}`}
+                      >
+                        {n}
+                      </Button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
             </TooltipTrigger>
-            <TooltipContent><p className="text-xs">Add to freezer</p></TooltipContent>
+            <TooltipContent><p className="text-xs">How many servings</p></TooltipContent>
           </Tooltip>
-        )}
+        </div>
 
-        {onAddToList && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-primary"
-                onClick={(e) => { e.stopPropagation(); onAddToList(ingredients); }}
-                data-testid={`button-add-to-list-${mealId}`}
-              >
-                <ListPlus className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p className="text-xs">Add to quick list</p></TooltipContent>
-          </Tooltip>
-        )}
+        <div className="flex items-center justify-center">
+          {isFreezerEligible ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-blue-400 realm-banner-btn"
+                  onClick={(e) => { e.stopPropagation(); onFreezeClick(); }}
+                  data-testid={`button-freeze-${mealId}`}
+                >
+                  <Snowflake className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">Add to freezer</p></TooltipContent>
+            </Tooltip>
+          ) : null}
+        </div>
 
-        {showListButton && onAddToQuickList && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-primary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (isReadyMeal) {
-                    appendPendingIngredient(mealName);
-                    toast({ title: "Added to quick list", description: mealName });
-                  } else {
-                    setListDialogMode('quicklist');
-                    setListContextOpen(true);
-                  }
-                }}
-                data-testid={`button-add-to-list-${mealId}`}
-              >
-                <ListPlus className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p className="text-xs">Add to quick list</p></TooltipContent>
-          </Tooltip>
-        )}
+        <div className="flex items-center justify-center">
+          {(onAddToList || (showListButton && onAddToQuickList)) ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-primary realm-banner-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onAddToList) {
+                      onAddToList(ingredients);
+                    } else if (isReadyMeal) {
+                      appendPendingIngredient(mealName);
+                      toast({ title: "Added to quick list", description: mealName });
+                    } else {
+                      setListDialogMode('quicklist');
+                      setListContextOpen(true);
+                    }
+                  }}
+                  data-testid={`button-add-to-list-${mealId}`}
+                >
+                  <ListPlus className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">Add to quick list</p></TooltipContent>
+            </Tooltip>
+          ) : null}
         </div>
       </div>
 
@@ -1765,6 +1708,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
             <Button
               size="icon"
               variant="ghost"
+              className="realm-banner-btn"
               onClick={handleEdit}
               disabled={isDisabled}
               data-testid={`button-web-edit-${recipe.id}`}
@@ -1779,6 +1723,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
             <Button
               size="icon"
               variant="ghost"
+              className="realm-banner-btn"
               onClick={handleBasket}
               disabled={isDisabled}
               data-testid={`button-web-basket-${recipe.id}`}
@@ -1793,6 +1738,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
             <Button
               size="icon"
               variant="ghost"
+              className="realm-banner-btn"
               onClick={handleAnalyse}
               disabled={isDisabled}
               data-testid={`button-web-analyse-${recipe.id}`}
@@ -1807,6 +1753,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
             <Button
               size="icon"
               variant="ghost"
+              className="realm-banner-btn"
               onClick={handlePlanner}
               disabled={isDisabled}
               data-testid={`button-web-planner-${recipe.id}`}
@@ -1822,7 +1769,7 @@ function WebPreviewActionBar({ recipe, importedMealId, importedMeal, onImport, n
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-primary"
+                className="text-primary realm-banner-btn"
                 onClick={handleAddToList}
                 disabled={isDisabled}
                 data-testid={`button-web-add-to-list-${recipe.id}`}
@@ -2784,22 +2731,6 @@ export default function MealsPage() {
             data-testid="input-scan-file"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleScanFile(f); }}
           />
-          {/* Scan product (barcode) stays in header — it's a product flow, not recipe */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="px-2 sm:px-3 realm-banner-btn"
-            onClick={() => setBarcodeScanOpen(true)}
-            disabled={barcodeFetching}
-            data-testid="button-scan-product"
-          >
-            {barcodeFetching ? (
-              <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
-            ) : (
-              <ScanLine className="h-4 w-4 sm:mr-1.5" />
-            )}
-            <span className="hidden sm:inline">Scan Product</span>
-          </Button>
           {/* Add Recipe: primary CTA; externalOpen allows workspace panel shortcut to trigger it */}
           <CreateMealDialog
             onScan={() => setCameraModalOpen(true)}
@@ -2935,7 +2866,7 @@ export default function MealsPage() {
                 variant={searchSource === value ? "secondary" : "ghost"}
                 size="sm"
                 title={label}
-                className={`${idx === 0 ? "rounded-r-none" : idx === 2 ? "rounded-l-none border-l border-border" : "rounded-none border-l border-border"} px-2 sm:px-3`}
+                className={`${idx === 0 ? "rounded-r-none" : idx === 2 ? "rounded-l-none border-l border-border" : "rounded-none border-l border-border"} px-2 sm:px-3 realm-banner-btn`}
                 onClick={() => setSearchSource(value)}
                 data-testid={`button-search-source-${value}`}
               >
@@ -2986,7 +2917,7 @@ export default function MealsPage() {
               <Button
                 variant={webDietRestrictions.includes("Gluten-Free") ? "secondary" : "outline"}
                 size="sm"
-                className="h-7 text-xs"
+                className="h-7 text-xs realm-banner-btn"
                 onClick={() => {
                   setMatchMyProfile(false);
                   setWebDietRestrictions(prev =>
@@ -3000,7 +2931,7 @@ export default function MealsPage() {
               <Button
                 variant={webDietRestrictions.includes("Dairy-Free") ? "secondary" : "outline"}
                 size="sm"
-                className="h-7 text-xs"
+                className="h-7 text-xs realm-banner-btn"
                 onClick={() => {
                   setMatchMyProfile(false);
                   setWebDietRestrictions(prev =>
@@ -3216,7 +3147,7 @@ export default function MealsPage() {
                                   variant={isImported ? "secondary" : "default"}
                                   onClick={() => handleWebImport(recipe)}
                                   disabled={isImporting || isImported}
-                                  className="shrink-0 gap-1"
+                                  className="shrink-0 gap-1 realm-banner-btn"
                                   data-testid={`button-web-import-${recipe.id}`}
                                 >
                                   {isImporting ? (
@@ -3247,6 +3178,7 @@ export default function MealsPage() {
                 <div className="text-center pt-2">
                   <Button
                     variant="outline"
+                    className="realm-banner-btn"
                     onClick={handleWebLoadMore}
                     disabled={webIsSearching}
                     data-testid="button-web-load-more"
@@ -3823,7 +3755,7 @@ export default function MealsPage() {
                     key={v.id}
                     variant="outline"
                     size="sm"
-                    className="h-7 text-xs"
+                    className="h-7 text-xs realm-banner-btn"
                     disabled={cookbookVisibilityMutation.isPending}
                     onClick={() => cookbookVisibilityMutation.mutate({ mealId: v.id, show: true })}
                     data-testid={`button-variant-show-${v.id}`}
@@ -3931,7 +3863,7 @@ export default function MealsPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="w-full text-xs"
+                          className="w-full text-xs realm-banner-btn"
                           disabled={frozen.remainingPortions <= 0 || usePortionMutation.isPending}
                           onClick={() => usePortionMutation.mutate(frozen.id)}
                           data-testid={`button-use-portion-${frozen.id}`}
@@ -3998,6 +3930,7 @@ export default function MealsPage() {
         <div className="flex flex-col items-center gap-1 py-6">
           <Button
             variant="outline"
+            className="realm-banner-btn"
             onClick={() => setVisibleCount(c => c + 48)}
             data-testid="button-load-more-meals"
           >
@@ -4136,7 +4069,7 @@ export default function MealsPage() {
                                   variant={isSaved ? "secondary" : "default"}
                                   onClick={() => handleSaveProduct(product)}
                                   disabled={isSaving || isSaved}
-                                  className="shrink-0 gap-1"
+                                  className="shrink-0 gap-1 realm-banner-btn"
                                   data-testid={`button-save-product-${productKey}`}
                                 >
                                   {isSaving ? (
@@ -4158,7 +4091,7 @@ export default function MealsPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="flex-1 gap-1.5"
+                                  className="flex-1 gap-1.5 realm-banner-btn"
                                   onClick={() => addProductToBasketMutation.mutate(product)}
                                   disabled={addProductToBasketMutation.isPending}
                                   data-testid={`button-add-to-basket-${productKey}`}
@@ -4171,7 +4104,7 @@ export default function MealsPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="flex-1 gap-1.5"
+                                  className="flex-1 gap-1.5 realm-banner-btn"
                                   onClick={() => { appendPendingIngredient(product.product_name + (product.brand ? ` (${product.brand})` : "")); toast({ title: "Added to quick list" }); }}
                                   data-testid={`button-quicklist-product-${productKey}`}
                                 >
@@ -4192,6 +4125,7 @@ export default function MealsPage() {
                 <div className="text-center pt-2">
                   <Button
                     variant="outline"
+                    className="realm-banner-btn"
                     onClick={handleProductLoadMore}
                     disabled={productIsSearching}
                     data-testid="button-product-load-more"
@@ -4245,7 +4179,7 @@ export default function MealsPage() {
               <Button
                 variant={webDietRestrictions.includes("Gluten-Free") ? "secondary" : "outline"}
                 size="sm"
-                className="h-7 text-xs"
+                className="h-7 text-xs realm-banner-btn"
                 onClick={() => {
                   setMatchMyProfile(false);
                   setWebDietRestrictions(prev =>
@@ -4259,7 +4193,7 @@ export default function MealsPage() {
               <Button
                 variant={webDietRestrictions.includes("Dairy-Free") ? "secondary" : "outline"}
                 size="sm"
-                className="h-7 text-xs"
+                className="h-7 text-xs realm-banner-btn"
                 onClick={() => {
                   setMatchMyProfile(false);
                   setWebDietRestrictions(prev =>
@@ -4475,7 +4409,7 @@ export default function MealsPage() {
                                   variant={isImported ? "secondary" : "default"}
                                   onClick={() => handleWebImport(recipe)}
                                   disabled={isImporting || isImported}
-                                  className="shrink-0 gap-1"
+                                  className="shrink-0 gap-1 realm-banner-btn"
                                   data-testid={`button-web-import-${recipe.id}`}
                                 >
                                   {isImporting ? (
@@ -4506,6 +4440,7 @@ export default function MealsPage() {
                 <div className="text-center pt-2">
                   <Button
                     variant="outline"
+                    className="realm-banner-btn"
                     onClick={handleWebLoadMore}
                     disabled={webIsSearching}
                     data-testid="button-web-load-more"
@@ -5050,7 +4985,7 @@ function AddMealGatewayDialog({ onScan }: { onScan: () => void }) {
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>
-          <Button title="Add Recipe" className="px-2 sm:px-4" data-testid="button-add-meal">
+          <Button title="Add Recipe" className="px-2 sm:px-4 realm-banner-btn" data-testid="button-add-meal">
             <Plus className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Add Recipe</span>
           </Button>
@@ -5846,7 +5781,7 @@ function CreateMealDialog({ externalOpen, onExternalOpenChange, initialName, onS
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       {externalOpen === undefined && (
         <DialogTrigger asChild>
-          <Button title="Add Recipe" className="px-2 sm:px-4" data-testid="button-add-meal">
+          <Button title="Add Recipe" className="px-2 sm:px-4 realm-banner-btn" data-testid="button-add-meal">
             <Plus className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Add Recipe</span>
           </Button>

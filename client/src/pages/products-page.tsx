@@ -1142,7 +1142,7 @@ export default function ProductsPage() {
         </div>
       }
     />
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6" data-realm="analyser">
       <div className="space-y-6">
         <FirstVisitHint
           areaKey="analyser"
@@ -1287,6 +1287,7 @@ export default function ProductsPage() {
                   size="sm"
                   variant={sortBy === opt.key ? 'default' : 'outline'}
                   onClick={() => setSortBy(opt.key)}
+                  className="realm-banner-btn"
                   data-testid={`button-sort-${opt.key}`}
                 >
                   {opt.label}
@@ -1387,13 +1388,13 @@ export default function ProductsPage() {
                                 )}
                               </div>
                               <div className="px-4 pb-4 mt-auto flex gap-2">
-                                <Button size="sm" className="flex-1 gap-1" onClick={(e) => { e.stopPropagation(); addToList.mutate(product); }} disabled={addToList.isPending} data-testid={`button-add-product-${product.barcode || index}`}>
+                                <Button size="sm" className="flex-1 gap-1 realm-banner-btn" onClick={(e) => { e.stopPropagation(); addToList.mutate(product); }} disabled={addToList.isPending} data-testid={`button-add-product-${product.barcode || index}`}>
                                   <ShoppingBasket className="h-3.5 w-3.5" />Add to basket
                                 </Button>
-                                <Button size="sm" variant="outline" className="gap-1" onClick={(e) => { e.stopPropagation(); handleAddToQuickList(product); }} data-testid={`button-quick-list-product-grouped-${product.barcode || index}`}>
+                                <Button size="sm" variant="outline" className="gap-1 realm-banner-btn" onClick={(e) => { e.stopPropagation(); handleAddToQuickList(product); }} data-testid={`button-quick-list-product-grouped-${product.barcode || index}`}>
                                   <ListPlus className="h-3.5 w-3.5" />
                                 </Button>
-                                <Button size="sm" variant={isInCompare(product) ? 'default' : 'outline'} onClick={(e) => { e.stopPropagation(); toggleCompare(product); }} className="gap-1" data-testid={`button-compare-${product.barcode || index}`}>
+                                <Button size="sm" variant={isInCompare(product) ? 'default' : 'outline'} onClick={(e) => { e.stopPropagation(); toggleCompare(product); }} className="gap-1 realm-banner-btn" data-testid={`button-compare-${product.barcode || index}`}>
                                   <Scale className="h-3.5 w-3.5" />{isInCompare(product) ? 'Added' : 'Compare'}
                                 </Button>
                               </div>
@@ -1549,7 +1550,7 @@ export default function ProductsPage() {
                           <div className="px-4 pb-4 mt-auto flex gap-2">
                             <Button
                               size="sm"
-                              className="flex-1 gap-1"
+                              className="flex-1 gap-1 realm-banner-btn"
                               onClick={(e) => { e.stopPropagation(); addToList.mutate(product); }}
                               disabled={addToList.isPending}
                               data-testid={`button-add-product-${product.barcode || index}`}
@@ -1560,7 +1561,7 @@ export default function ProductsPage() {
                             <Button
                               size="sm"
                               variant="outline"
-                              className="gap-1"
+                              className="gap-1 realm-banner-btn"
                               onClick={(e) => { e.stopPropagation(); handleAddToQuickList(product); }}
                               data-testid={`button-quick-list-product-${product.barcode || index}`}
                             >
@@ -1570,7 +1571,7 @@ export default function ProductsPage() {
                               size="sm"
                               variant={isInCompare(product) ? 'default' : 'outline'}
                               onClick={(e) => { e.stopPropagation(); toggleCompare(product); }}
-                              className="gap-1"
+                              className="gap-1 realm-banner-btn"
                               data-testid={`button-compare-${product.barcode || index}`}
                             >
                               <Scale className="h-3.5 w-3.5" />

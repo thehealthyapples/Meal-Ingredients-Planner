@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingBasket, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, AlarmClock, ListPlus } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingBasket, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, AlarmClock, ListPlus, Wand2, Check } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { appendPendingIngredient } from "@/lib/quick-list";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
@@ -67,6 +68,17 @@ function generateSchedule(
     .map(e => ({ label: e.label, startTime: minsToTimeStr(e.startMins), duration: e.duration }));
 }
 
+type AdaptGoalResult = { goal: SwapGoal; result: AdaptResult };
+
+const ADAPT_ACTIONS: { goal: SwapGoal; icon: JSX.Element; label: string }[] = [
+  { goal: "household",    icon: <Users      className="h-3.5 w-3.5" />, label: "Adapt for my household"   },
+  { goal: "vegetarian",  icon: <Leaf       className="h-3.5 w-3.5" />, label: "Make this vegetarian"     },
+  { goal: "keto",        icon: <Zap        className="h-3.5 w-3.5" />, label: "Make this keto"           },
+  { goal: "lower-cost",  icon: <TrendingDown className="h-3.5 w-3.5" />, label: "Lower the cost"         },
+  { goal: "less-processed", icon: <Sprout  className="h-3.5 w-3.5" />, label: "Make this less processed" },
+  { goal: "under-time",  icon: <Clock      className="h-3.5 w-3.5" />, label: "Keep under 30 mins"       },
+];
+
 export default function MealDetailPage() {
   const [, params] = useRoute("/meals/:id");
   const [, navigate] = useLocation();
@@ -75,8 +87,10 @@ export default function MealDetailPage() {
   const mealId = params?.id ? Number(params.id) : null;
   const [reimportOpen, setReimportOpen] = useState(false);
   const [reimportUrl, setReimportUrl] = useState("");
-  const [adaptResult, setAdaptResult] = useState<AdaptResult | null>(null);
-  const [adaptingGoal, setAdaptingGoal] = useState<string | null>(null);
+  const [adaptResults, setAdaptResults] = useState<AdaptGoalResult[]>([]);
+  const [selectedGoals, setSelectedGoals] = useState<Set<SwapGoal>>(new Set());
+  const [adaptOpen, setAdaptOpen] = useState(false);
+  const [adaptBusy, setAdaptBusy] = useState(false);
 
   const [editName, setEditName] = useState("");
   const [editIngredients, setEditIngredients] = useState<string[]>([]);
@@ -311,19 +325,27 @@ export default function MealDetailPage() {
     },
   });
 
-  const adaptMutation = useMutation({
-    mutationFn: async (goal: SwapGoal) => {
-      const res = await apiRequest("POST", `/api/meals/${mealId}/adapt`, { goal });
-      return res.json() as Promise<AdaptResult>;
-    },
-    onSuccess: (data, goal) => {
-      setAdaptResult(data);
-      setAdaptingGoal(goal);
-    },
-    onError: () => {
-      toast({ title: "Adaptation failed", description: "Could not adapt this recipe. Please try again.", variant: "destructive" });
-    },
-  });
+  const applyAdaptations = async () => {
+    if (selectedGoals.size === 0 || adaptBusy) return;
+    setAdaptBusy(true);
+    setAdaptResults([]);
+    setAdaptOpen(false);
+    const goals = Array.from(selectedGoals) as SwapGoal[];
+    const settled = await Promise.allSettled(
+      goals.map(goal =>
+        apiRequest("POST", `/api/meals/${mealId}/adapt`, { goal })
+          .then(r => r.json() as Promise<AdaptResult>)
+          .then(result => ({ goal, result }))
+      )
+    );
+    const results = settled
+      .filter((s): s is PromiseFulfilledResult<AdaptGoalResult> => s.status === "fulfilled")
+      .map(s => s.value);
+    const failed = settled.filter(s => s.status === "rejected").length;
+    if (failed > 0) toast({ title: `${failed} adaptation${failed > 1 ? "s" : ""} failed`, variant: "destructive" });
+    setAdaptResults(results);
+    setAdaptBusy(false);
+  };
 
   const markChanged = useCallback(() => setHasChanges(true), []);
 
@@ -408,10 +430,78 @@ export default function MealDetailPage() {
       title={isEditedCopy ? editName : meal.name}
       icon={<ChefHat className="h-5 w-5" />}
       actions={
-        <Button variant="ghost" size="sm" onClick={() => navigate("/cookbook")} data-testid="button-back">
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Cookbook
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="ghost" size="sm" onClick={() => navigate("/cookbook")} data-testid="button-back">
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Cookbook
+          </Button>
+          <div className="h-4 w-px bg-[var(--realm-border)]" />
+          <div className="flex items-center gap-1 rounded-md border border-[var(--realm-border)] px-1 py-0.5">
+            {isEditedCopy && (
+              <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs realm-banner-btn" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !hasChanges} data-testid="button-save-recipe">
+                {saveMutation.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+                Save
+              </Button>
+            )}
+            <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs realm-banner-btn" onClick={() => isPackagedProduct ? addProductToBasketMutation.mutate() : addToListMutation.mutate()} disabled={isPackagedProduct ? addProductToBasketMutation.isPending : addToListMutation.isPending} data-testid="button-add-to-list">
+              {(isPackagedProduct ? addProductToBasketMutation.isPending : addToListMutation.isPending) ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <ShoppingBasket className="h-3.5 w-3.5 mr-1" />}
+              Add to basket
+            </Button>
+            {isPackagedProduct && (
+              <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs realm-banner-btn" onClick={() => { appendPendingIngredient(meal.name); toast({ title: "Added to quick list", description: meal.name }); }} data-testid="button-add-to-quick-list">
+                <ListPlus className="h-3.5 w-3.5 mr-1" />
+                Quick List
+              </Button>
+            )}
+            {!isEditedCopy && (
+              <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs realm-banner-btn" onClick={() => copyMutation.mutate()} disabled={copyMutation.isPending} data-testid="button-edit-copy">
+                {copyMutation.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Pencil className="h-3.5 w-3.5 mr-1" />}
+                Edit
+              </Button>
+            )}
+            <Popover open={adaptOpen} onOpenChange={setAdaptOpen}>
+              <PopoverTrigger asChild>
+                <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs realm-banner-btn" disabled={adaptBusy} data-testid="button-adapt-trigger">
+                  {adaptBusy ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Wand2 className="h-3.5 w-3.5 mr-1" />}
+                  Adapt{selectedGoals.size > 0 ? ` (${selectedGoals.size})` : ""}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-56 p-2" align="end" data-testid="popover-adapt">
+                <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1.5">Adapt recipe</p>
+                <div className="space-y-0.5">
+                  {ADAPT_ACTIONS.map(({ goal, icon, label }) => {
+                    const checked = selectedGoals.has(goal);
+                    return (
+                      <button
+                        key={goal}
+                        className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-colors ${checked ? "bg-accent" : "hover:bg-accent/60"}`}
+                        onClick={() => setSelectedGoals(prev => { const n = new Set(prev); checked ? n.delete(goal) : n.add(goal); return n; })}
+                        data-testid={`adapt-option-${goal}`}
+                      >
+                        <div className={`flex items-center justify-center h-4 w-4 rounded border shrink-0 ${checked ? "bg-primary border-primary" : "border-input"}`}>
+                          {checked && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+                        </div>
+                        <span className="text-muted-foreground shrink-0">{icon}</span>
+                        <span className="text-xs">{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-2 pt-2 border-t border-border/50">
+                  <Button size="sm" className="w-full text-xs" disabled={selectedGoals.size === 0} onClick={applyAdaptations} data-testid="button-adapt-apply">
+                    <Wand2 className="h-3.5 w-3.5 mr-1" />
+                    Apply{selectedGoals.size > 1 ? ` (${selectedGoals.size})` : ""}
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <div className="w-px h-4 bg-[var(--realm-border)]" />
+            <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs realm-banner-btn-danger" onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending} data-testid="button-delete-meal">
+              {deleteMutation.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 mr-1" />}
+              Delete
+            </Button>
+          </div>
+        </div>
       }
     />
     <motion.div
@@ -419,165 +509,66 @@ export default function MealDetailPage() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe"
     >
-      <div className="flex items-center gap-3 mb-6">
-        {isEditedCopy ? (
+      {isEditedCopy && (
+        <div className="mb-4 flex items-center gap-2">
           <Input
             value={editName}
             onChange={(e) => { setEditName(e.target.value); markChanged(); }}
             className="text-2xl font-semibold tracking-tight flex-1 border-dashed"
             data-testid="input-edit-name"
           />
-        ) : (
-          <h1 className="text-2xl font-semibold tracking-tight flex-1 truncate" data-testid="text-meal-name">{meal.name}</h1>
-        )}
-        <div className="flex items-center gap-2 flex-wrap">
-          {isEditedCopy && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() => saveMutation.mutate()}
-              disabled={saveMutation.isPending || !hasChanges}
-              data-testid="button-save-recipe"
-            >
-              {saveMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-1" />
-              )}
-              Save
-            </Button>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => isPackagedProduct ? addProductToBasketMutation.mutate() : addToListMutation.mutate()}
-            disabled={isPackagedProduct ? addProductToBasketMutation.isPending : addToListMutation.isPending}
-            data-testid="button-add-to-list"
-          >
-            {(isPackagedProduct ? addProductToBasketMutation.isPending : addToListMutation.isPending)
-              ? <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              : <ShoppingBasket className="h-4 w-4 mr-1" />}
-            Add to basket
-          </Button>
-          {isPackagedProduct && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { appendPendingIngredient(meal.name); toast({ title: "Added to quick list", description: meal.name }); }}
-              data-testid="button-add-to-quick-list"
-            >
-              <ListPlus className="h-4 w-4 mr-1" />
-              Quick List
-            </Button>
-          )}
-          {!isEditedCopy && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => copyMutation.mutate()}
-              disabled={copyMutation.isPending}
-              data-testid="button-edit-copy"
-            >
-              {copyMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-              ) : (
-                <Pencil className="h-4 w-4 mr-1" />
-              )}
-              Edit
-            </Button>
-          )}
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => deleteMutation.mutate()}
-            disabled={deleteMutation.isPending}
-            data-testid="button-delete-meal"
-          >
-            <Trash2 className="h-4 w-4 mr-1" />
-            Delete
-          </Button>
-        </div>
-      </div>
-
-      {isEditedCopy && (
-        <div className="mb-4">
-          <Badge variant="secondary" className="text-xs" data-testid="badge-edited-copy">
+          <Badge variant="secondary" className="text-xs shrink-0" data-testid="badge-edited-copy">
             <Pencil className="h-3 w-3 mr-1" />
             Edited copy
           </Badge>
         </div>
       )}
 
-      <div className="flex gap-2 flex-wrap mb-3" data-testid="section-recipe-actions">
-        {([
-          { id: "adapt-household", goal: "household"      as SwapGoal, icon: <Users className="h-3.5 w-3.5 mr-1.5" />,        label: "Adapt for my household"   },
-          { id: "make-vegetarian", goal: "vegetarian"     as SwapGoal, icon: <Leaf className="h-3.5 w-3.5 mr-1.5" />,         label: "Make this vegetarian"     },
-          { id: "make-keto",       goal: "keto"           as SwapGoal, icon: <Zap className="h-3.5 w-3.5 mr-1.5" />,          label: "Make this keto"           },
-          { id: "lower-cost",      goal: "lower-cost"     as SwapGoal, icon: <TrendingDown className="h-3.5 w-3.5 mr-1.5" />, label: "Lower the cost"           },
-          { id: "less-processed",  goal: "less-processed" as SwapGoal, icon: <Sprout className="h-3.5 w-3.5 mr-1.5" />,       label: "Make this less processed" },
-          { id: "under-30",        goal: "under-time"     as SwapGoal, icon: <Clock className="h-3.5 w-3.5 mr-1.5" />,        label: "Keep under 30 mins"       },
-        ] as const).map((action) => {
-          const isActive = adaptingGoal === action.goal && adaptMutation.isPending;
-          return (
-            <Button
-              key={action.id}
-              variant={adaptingGoal === action.goal && adaptResult ? "secondary" : "outline"}
-              size="sm"
-              className="text-xs h-7 px-2.5"
-              data-testid={`button-recipe-action-${action.id}`}
-              disabled={adaptMutation.isPending}
-              onClick={() => { setAdaptResult(null); adaptMutation.mutate(action.goal); }}
-            >
-              {isActive ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : action.icon}
-              {action.label}
-            </Button>
-          );
-        })}
-      </div>
-
-      {adaptResult && (
-        <Card className="mb-5 border-muted" data-testid="card-adapt-result">
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between gap-2 mb-3">
-              <p className="text-sm font-medium" data-testid="text-adapt-explanation">{adaptResult.explanation}</p>
-              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 -mt-0.5" onClick={() => { setAdaptResult(null); setAdaptingGoal(null); }} data-testid="button-close-adapt">
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-
-            {(adaptResult.costChange || adaptResult.prepTimeChangeDelta != null) && (
-              <div className="flex gap-3 mb-3 text-xs text-muted-foreground">
-                {adaptResult.costChange && adaptResult.costChange !== "same" && (
-                  <span data-testid="text-adapt-cost">
-                    Cost: <span className={adaptResult.costChange === "lower" ? "text-green-600" : "text-amber-600"}>
-                      {adaptResult.costChange === "lower" ? "likely lower" : "likely higher"}
-                    </span>
-                  </span>
-                )}
-                {adaptResult.prepTimeChangeDelta != null && adaptResult.prepTimeChangeDelta !== 0 && (
-                  <span data-testid="text-adapt-time">
-                    Time: <span className="text-green-600">~{Math.abs(adaptResult.prepTimeChangeDelta)} min saved</span>
-                  </span>
-                )}
-              </div>
-            )}
-
-            {adaptResult.changedIngredients.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic" data-testid="text-adapt-no-changes">No ingredient changes needed.</p>
-            ) : (
-              <div className="space-y-1.5" data-testid="list-adapt-changes">
-                {adaptResult.changedIngredients.map((c, i) => (
-                  <div key={i} className="text-xs" data-testid={`item-adapt-change-${i}`}>
-                    <span className="line-through text-muted-foreground">{c.original}</span>
-                    <span className="mx-1.5 text-muted-foreground">→</span>
-                    <span className="font-medium">{c.replacement}</span>
-                    <span className="ml-1.5 text-muted-foreground">({c.reason})</span>
+      {adaptResults.length > 0 && (
+        <div className="space-y-3 mb-5" data-testid="section-adapt-results">
+          {adaptResults.map(({ goal, result }) => {
+            const action = ADAPT_ACTIONS.find(a => a.goal === goal);
+            return (
+              <Card key={goal} className="border-muted" data-testid={`card-adapt-result-${goal}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-muted-foreground shrink-0">{action?.icon}</span>
+                      <p className="text-sm font-medium">{result.explanation}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 -mt-0.5" onClick={() => setAdaptResults(r => r.filter(x => x.goal !== goal))}>
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  {(result.costChange || result.prepTimeChangeDelta != null) && (
+                    <div className="flex gap-3 mb-3 text-xs text-muted-foreground">
+                      {result.costChange && result.costChange !== "same" && (
+                        <span>Cost: <span className={result.costChange === "lower" ? "text-green-600" : "text-amber-600"}>{result.costChange === "lower" ? "likely lower" : "likely higher"}</span></span>
+                      )}
+                      {result.prepTimeChangeDelta != null && result.prepTimeChangeDelta !== 0 && (
+                        <span>Time: <span className="text-green-600">~{Math.abs(result.prepTimeChangeDelta)} min saved</span></span>
+                      )}
+                    </div>
+                  )}
+                  {result.changedIngredients.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">No ingredient changes needed.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {result.changedIngredients.map((c, i) => (
+                        <div key={i} className="text-xs">
+                          <span className="line-through text-muted-foreground">{c.original}</span>
+                          <span className="mx-1.5 text-muted-foreground">→</span>
+                          <span className="font-medium">{c.replacement}</span>
+                          <span className="ml-1.5 text-muted-foreground">({c.reason})</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -720,7 +711,7 @@ export default function MealDetailPage() {
           )}
         </div>
 
-        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardContent className="p-5">
               <div className="flex items-center justify-between gap-2 mb-4">
@@ -805,7 +796,7 @@ export default function MealDetailPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="md:col-span-2">
             <CardContent className="p-5">
               <div className="flex items-center justify-between gap-2 mb-4">
                 <h2 className="text-lg font-semibold" data-testid="text-instructions-heading">Instructions</h2>
