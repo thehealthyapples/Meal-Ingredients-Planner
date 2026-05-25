@@ -186,6 +186,8 @@ export interface IStorage {
   setGlobalTemplateStatus(id: string, status: "draft" | "published" | "archived", publishedAt?: Date | null): Promise<MealPlanTemplate>;
   deletePrivateTemplate(id: string, userId: number): Promise<void>;
   snapshotPlannerToTemplate(templateId: string, userId: number): Promise<{ itemCount: number }>;
+  snapshotWeekToTemplate(templateId: string, weekId: number): Promise<{ itemCount: number }>;
+  applyWeekTemplate(templateId: string, targetWeekId: number, mode: "replace" | "keep"): Promise<{ createdCount: number; updatedCount: number }>;
   importTemplateItems(userId: number, templateId: string, scope: { type: "all" | "week" | "day" | "meal"; weekNumber?: number; dayOfWeek?: number; mealSlot?: string }, mode: "replace" | "keep"): Promise<{ createdCount: number; updatedCount: number; skippedCount: number }>;
   getMealsExport(source?: "web" | "custom" | "all"): Promise<{ id: number; name: string; mealSourceType: string; sourceUrl: string | null; userId: number; createdAt: Date }[]>;
 
@@ -1675,6 +1677,46 @@ export class DatabaseStorage implements IStorage {
     });
 
     return { itemCount: newItems.length };
+  }
+
+  async snapshotWeekToTemplate(templateId: string, weekId: number): Promise<{ itemCount: number }> {
+    const week = await db.query.plannerWeeks.findFirst({ where: eq(plannerWeeks.id, weekId) });
+    if (!week) throw new Error("Week not found");
+    const days = await this.getPlannerDays(weekId);
+    const newItems: { templateId: string; weekNumber: number; dayOfWeek: number; mealSlot: string; mealId: number }[] = [];
+    for (const day of days) {
+      const entries = await this.getPlannerEntriesForDay(day.id);
+      for (const entry of entries) {
+        if (entry.isDrink || !entry.mealId) continue;
+        const templateDay = day.dayOfWeek === 0 ? 7 : day.dayOfWeek;
+        newItems.push({ templateId, weekNumber: 1, dayOfWeek: templateDay, mealSlot: entry.mealType, mealId: entry.mealId });
+      }
+    }
+    await db.transaction(async (tx) => {
+      await tx.delete(mealPlanTemplateItems).where(eq(mealPlanTemplateItems.templateId, templateId));
+      if (newItems.length > 0) await tx.insert(mealPlanTemplateItems).values(newItems);
+      await tx.update(mealPlanTemplates).set({ updatedAt: new Date() }).where(eq(mealPlanTemplates.id, templateId));
+    });
+    return { itemCount: newItems.length };
+  }
+
+  async applyWeekTemplate(templateId: string, targetWeekId: number, mode: "replace" | "keep"): Promise<{ createdCount: number; updatedCount: number }> {
+    const items = await db.select().from(mealPlanTemplateItems)
+      .where(and(eq(mealPlanTemplateItems.templateId, templateId), eq(mealPlanTemplateItems.weekNumber, 1)));
+    const days = await this.getPlannerDays(targetWeekId);
+    const dayMap = new Map(days.map(d => [d.dayOfWeek === 0 ? 7 : d.dayOfWeek, d.id]));
+    let createdCount = 0; let updatedCount = 0;
+    for (const item of items) {
+      const dayId = dayMap.get(item.dayOfWeek);
+      if (!dayId) continue;
+      const existing = await db.query.plannerEntries.findFirst({
+        where: and(eq(plannerEntries.dayId, dayId), eq(plannerEntries.mealType, item.mealSlot), eq(plannerEntries.audience, "adult")),
+      });
+      if (mode === "keep" && existing) continue;
+      await this.upsertPlannerEntry(dayId, item.mealSlot, "adult", item.mealId);
+      existing ? updatedCount++ : createdCount++;
+    }
+    return { createdCount, updatedCount };
   }
 
   async importTemplateItems(

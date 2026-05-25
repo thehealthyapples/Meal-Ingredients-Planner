@@ -5310,6 +5310,46 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // Save a single planner week as a private week template
+  app.post("/api/planner/weeks/:weekId/save-week-template", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const weekId = parseInt(String(req.params.weekId), 10);
+      if (isNaN(weekId)) return res.status(400).json({ message: "Invalid week id" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const week = await storage.getPlannerWeek(weekId);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Week not found" });
+      const { name } = z.object({ name: z.string().min(1).max(80) }).parse(req.body);
+      const template = await storage.createPrivateTemplate(req.user!.id, { name, description: "__week_template__" });
+      const { itemCount } = await storage.snapshotWeekToTemplate(template.id, weekId);
+      res.status(201).json({ id: template.id, name: template.name, itemCount });
+    } catch (err) {
+      if (err instanceof z.ZodError) return res.status(400).json({ message: err.errors[0].message });
+      console.error("[Planner] save-week-template error:", err);
+      res.status(500).json({ message: "Failed to save week" });
+    }
+  });
+
+  // Apply a week template to a specific planner week
+  app.post("/api/plan-templates/:id/apply-to-week/:weekId", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const weekId = parseInt(String(req.params.weekId), 10);
+      if (isNaN(weekId)) return res.status(400).json({ message: "Invalid week id" });
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const week = await storage.getPlannerWeek(weekId);
+      if (!week || week.householdId !== householdId) return res.status(404).json({ message: "Week not found" });
+      const template = await storage.getTemplateWithItems(req.params.id);
+      if (!template) return res.status(404).json({ message: "Template not found" });
+      const mode = req.query.mode === "keep" ? "keep" : "replace";
+      const { createdCount, updatedCount } = await storage.applyWeekTemplate(template.id, weekId, mode);
+      res.json({ createdCount, updatedCount });
+    } catch (err) {
+      console.error("[Planner] apply-to-week error:", err);
+      res.status(500).json({ message: "Failed to apply week template" });
+    }
+  });
+
   // Planner routes (6-week planner)
   app.get("/api/planner/weeks", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);

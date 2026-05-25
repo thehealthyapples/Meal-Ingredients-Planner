@@ -297,6 +297,9 @@ export default function WeeklyPlannerPage() {
   const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<EntryTarget | null>(null);
   const [sharePlanOpen, setSharePlanOpen] = useState(false);
+  const [saveWeekOpen, setSaveWeekOpen] = useState(false);
+  const [saveWeekName, setSaveWeekName] = useState("");
+  const [loadWeekOpen, setLoadWeekOpen] = useState(false);
   const [expandedDayId, setExpandedDayId] = useState<number | null>(null);
   const [expandedDayLabel, setExpandedDayLabel] = useState("");
   const [mealDetail, setMealDetail] = useState<MealDetailState | null>(null);
@@ -783,6 +786,52 @@ export default function WeeklyPlannerPage() {
       qc.invalidateQueries({ queryKey: ["/api/planner/entries", mealDetail?.entry.id, "guests"] });
     },
     onError: () => toast({ title: "Failed to remove guest", variant: "destructive" }),
+  });
+
+  const { data: myWeekTemplates = [] } = useQuery<any[]>({
+    queryKey: ["/api/plan-templates/mine"],
+    queryFn: async () => {
+      const res = await fetch("/api/plan-templates/mine", { credentials: "include" });
+      if (!res.ok) return [];
+      const all = await res.json();
+      return all.filter((t: any) => t.description === "__week_template__");
+    },
+  });
+
+  const saveWeekMutation = useMutation({
+    mutationFn: async ({ weekId, name }: { weekId: number; name: string }) => {
+      const res = await fetch(`/api/planner/weeks/${weekId}/save-week-template`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+        credentials: "include",
+      });
+      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.message || "Failed to save week"); }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["/api/plan-templates/mine"] });
+      toast({ title: "Week saved", description: `"${data.name}" saved with ${data.itemCount} meals` });
+      setSaveWeekOpen(false);
+      setSaveWeekName("");
+    },
+    onError: (err: Error) => toast({ title: "Couldn't save week", description: err.message, variant: "destructive" }),
+  });
+
+  const loadWeekMutation = useMutation({
+    mutationFn: async ({ templateId, weekId }: { templateId: string; weekId: number }) => {
+      const res = await fetch(`/api/plan-templates/${templateId}/apply-to-week/${weekId}?mode=replace`, {
+        method: "POST", credentials: "include",
+      });
+      if (!res.ok) { const b = await res.json().catch(() => ({})); throw new Error(b.message || "Failed to load week"); }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      toast({ title: "Week loaded", description: `${data.createdCount + data.updatedCount} meals added` });
+      setLoadWeekOpen(false);
+    },
+    onError: (err: Error) => toast({ title: "Couldn't load week", description: err.message, variant: "destructive" }),
   });
 
   const renameMutation = useMutation({
@@ -1498,8 +1547,8 @@ export default function WeeklyPlannerPage() {
       icon={<CalendarDays className="h-5 w-5" />}
       realm="planner"
       titleTestId="text-weekly-planner-title"
-      context={<span data-testid="text-week-progress">{weekStats.filled} meals planned out of {weekStats.total} this week</span>}
-      actions={
+      meta={<span data-testid="text-week-progress">{weekStats.filled} meals planned out of {weekStats.total} this week</span>}
+      center={
         <div className="flex flex-wrap items-center gap-0.5 sm:gap-1">
           {renameWeekId === activeWeekData?.id ? (
             <input
@@ -1603,6 +1652,15 @@ export default function WeeklyPlannerPage() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={() => { setSaveWeekName(activeWeekData?.weekName || ""); setSaveWeekOpen(true); }} data-testid="button-save-week">
+                <BookOpen className="h-4 w-4 mr-2" />
+                Save This Week
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setLoadWeekOpen(true)} data-testid="button-load-week" disabled={myWeekTemplates.length === 0}>
+                <Plus className="h-4 w-4 mr-2" />
+                Load Saved Week
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setSharePlanOpen(true)} data-testid="button-share-plan">
                 <Share2 className="h-4 w-4 mr-2" />
                 Share Plan
@@ -3546,6 +3604,62 @@ export default function WeeklyPlannerPage() {
       </Dialog>
 
       <SharePlanDialog open={sharePlanOpen} onOpenChange={setSharePlanOpen} />
+
+      {/* ── Save Week Dialog ── */}
+      <Dialog open={saveWeekOpen} onOpenChange={(v) => { if (!v) setSaveWeekOpen(false); }}>
+        <DialogContent className="max-w-sm" data-testid="dialog-save-week">
+          <DialogHeader>
+            <DialogTitle>Save this week</DialogTitle>
+            <DialogDescription>Give this week a name so you can load it into any week later.</DialogDescription>
+          </DialogHeader>
+          <Input
+            placeholder="e.g. Family Favourites"
+            value={saveWeekName}
+            onChange={(e) => setSaveWeekName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && saveWeekName.trim() && activeWeekData) saveWeekMutation.mutate({ weekId: activeWeekData.id, name: saveWeekName.trim() }); }}
+            autoFocus
+            data-testid="input-save-week-name"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveWeekOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => activeWeekData && saveWeekMutation.mutate({ weekId: activeWeekData.id, name: saveWeekName.trim() })}
+              disabled={!saveWeekName.trim() || saveWeekMutation.isPending}
+              data-testid="button-confirm-save-week"
+            >
+              {saveWeekMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Load Saved Week Dialog ── */}
+      <Dialog open={loadWeekOpen} onOpenChange={(v) => { if (!v) setLoadWeekOpen(false); }}>
+        <DialogContent className="max-w-sm" data-testid="dialog-load-week">
+          <DialogHeader>
+            <DialogTitle>Load saved week</DialogTitle>
+            <DialogDescription>Choose a saved week to fill into {activeWeekData?.weekName ?? "this week"}. Existing meals will be replaced.</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+            {myWeekTemplates.map((t: any) => (
+              <button
+                key={t.id}
+                onClick={() => activeWeekData && loadWeekMutation.mutate({ templateId: t.id, weekId: activeWeekData.id })}
+                disabled={loadWeekMutation.isPending}
+                className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-border hover:bg-accent/50 transition-colors text-left"
+                data-testid={`button-load-week-${t.id}`}
+              >
+                <span className="text-sm font-medium">{t.name}</span>
+                <span className="text-xs text-muted-foreground">{t.itemCount} meals</span>
+              </button>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setLoadWeekOpen(false)}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ── Phase 5A: Copy Day Dialog ── */}
       <Dialog open={copyDayOpen} onOpenChange={(v) => { if (!v) { setCopyDayOpen(false); setCopyDaySourceId(null); setCopyDayTargetId(""); } }}>
