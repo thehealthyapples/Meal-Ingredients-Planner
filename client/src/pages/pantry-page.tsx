@@ -165,6 +165,7 @@ const HOME_CAT_EMPTY: Record<HomeCat, string> = {
   pet:       "No pet food or care items yet.",
 };
 
+
 // ── Category tab buttons ──────────────────────────────────────────────────────
 // Used in the page banner (via PageHeader center/actions) and not inside cards.
 // Selected = realm-bg/realm-text; unselected = muted foreground.

@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -1471,7 +1470,80 @@ export default function FoodDiaryPage() {
         title="My Diary"
         icon={<BookOpen className="h-5 w-5" />}
         realm="diary"
-        context="No pressure. Just clearer choices."
+        meta={<span>No pressure. Just clearer choices.</span>}
+        center={
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40" role="tablist">
+              {([
+                { id: "diary", label: "Daily Log", Icon: BookOpen },
+                { id: "progress", label: "Progress", Icon: TrendingUp },
+              ] as const).map(({ id, label, Icon }) => (
+                <button
+                  key={id}
+                  role="tab"
+                  aria-selected={activeTab === id}
+                  onClick={() => setActiveTab(id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                    activeTab === id
+                      ? "shadow-sm realm-banner-btn"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                  data-testid={`tab-${id}`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
+            {activeTab === "diary" && (
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="flex items-center justify-center h-8 w-8 rounded-md border border-input bg-background hover:bg-accent text-sm"
+                  onClick={prevDay}
+                  data-testid="button-prev-day"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+                <span className="text-sm font-medium px-2 min-w-[120px] text-center" data-testid="text-diary-date">
+                  {formatDisplayDate(date)}
+                </span>
+                <button
+                  type="button"
+                  className="flex items-center justify-center h-8 w-8 rounded-md border border-input bg-background hover:bg-accent text-sm"
+                  onClick={nextDay}
+                  data-testid="button-next-day"
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+                {!isToday && (
+                  <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={goToday} data-testid="button-today">
+                    <Calendar className="h-3 w-3 mr-1" />Today
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
+        }
+        controlBar={
+          activeTab === "progress" ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">Show:</span>
+              {(["week", "month", "year"] as ProgressRange[]).map((r) => (
+                <Button
+                  key={r}
+                  variant={progressRange === r ? "default" : "outline"}
+                  size="sm"
+                  className="h-8 text-xs capitalize realm-banner-btn"
+                  onClick={() => setProgressRange(r)}
+                  data-testid={`button-range-${r}`}
+                >
+                  {r.charAt(0).toUpperCase() + r.slice(1)}
+                </Button>
+              ))}
+            </div>
+          ) : undefined
+        }
         actions={
           <button
             type="button"
@@ -1506,77 +1578,6 @@ export default function FoodDiaryPage() {
             </button>
           </div>
         )}
-
-        {/* Controls row */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "diary" | "progress")}>
-            <TabsList data-testid="tabs-diary">
-              <TabsTrigger value="diary" data-testid="tab-diary">Daily Log</TabsTrigger>
-              <TabsTrigger value="progress" data-testid="tab-progress">
-                <TrendingUp className="h-3.5 w-3.5 mr-1.5" />Progress
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          {activeTab === "diary" && (
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                className="flex items-center justify-center h-8 w-8 rounded-md border border-input bg-background hover:bg-accent text-sm"
-                onClick={prevDay}
-                data-testid="button-prev-day"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </button>
-              <span className="text-sm font-medium px-2 min-w-[130px] text-center" data-testid="text-diary-date">
-                {formatDisplayDate(date)}
-              </span>
-              <button
-                type="button"
-                className="flex items-center justify-center h-8 w-8 rounded-md border border-input bg-background hover:bg-accent text-sm"
-                onClick={nextDay}
-                data-testid="button-next-day"
-              >
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-              {!isToday && (
-                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={goToday} data-testid="button-today">
-                  <Calendar className="h-3 w-3 mr-1" />Today
-                </Button>
-              )}
-            </div>
-          )}
-
-          {activeTab === "diary" && (
-            <div className="flex items-center gap-1.5 ml-auto">
-              <Button
-                variant="outline" size="sm" className="h-8 text-xs"
-                onClick={() => setCopyModalOpen(true)}
-                data-testid="button-copy-from-planner"
-              >
-                <Copy className="h-3 w-3 mr-1" />Copy from Planner
-              </Button>
-            </div>
-          )}
-
-          {activeTab === "progress" && (
-            <div className="flex items-center gap-1.5 ml-auto">
-              <span className="text-xs text-muted-foreground">Show:</span>
-              {(["week", "month", "year"] as ProgressRange[]).map((r) => (
-                <Button
-                  key={r}
-                  variant={progressRange === r ? "default" : "outline"}
-                  size="sm"
-                  className="h-8 text-xs capitalize"
-                  onClick={() => setProgressRange(r)}
-                  data-testid={`button-range-${r}`}
-                >
-                  {r.charAt(0).toUpperCase() + r.slice(1)}
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
 
       {/* ── Daily Log ────────────────────────────────────────────── */}
       {activeTab === "diary" && (
@@ -1613,6 +1614,16 @@ export default function FoodDiaryPage() {
                     Better choices today, stronger health over time.
                   </p>
                 )}
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 text-xs"
+                  onClick={() => setCopyModalOpen(true)}
+                  data-testid="button-copy-from-planner"
+                >
+                  <Copy className="h-3 w-3 mr-1" />Copy from Planner
+                </Button>
 
                 <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
                   {SLOTS.map(({ key, label, icon: Icon }) => {

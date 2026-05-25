@@ -949,7 +949,89 @@ export default function ProductsPage() {
       realm="analyser"
       wide
       titleTestId="text-products-title"
-      context="Search packaged foods, detect ultra-processed ingredients, and find healthier alternatives"
+      meta={<span>Search packaged foods, detect ultra-processed ingredients, and find healthier alternatives.</span>}
+      center={
+        <div className="flex items-center gap-2 w-full max-w-xl">
+          <Input
+            placeholder="Search packaged foods (e.g. ketchup, cereal...)"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            data-testid="input-product-search"
+            className="h-9"
+          />
+          {intelligenceSettings?.barcodeScannerEnabled !== false && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 shrink-0 realm-banner-btn"
+              onClick={() => setShowBarcodeScanner(true)}
+              disabled={barcodeLoading}
+              aria-label="Scan barcode"
+              data-testid="button-barcode-scan"
+            >
+              {barcodeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className="h-9 shrink-0 gap-1.5 realm-banner-btn"
+            onClick={handleSearch}
+            disabled={isSearching || !searchQuery.trim()}
+            aria-label="Analyse"
+            data-testid="button-search-products"
+          >
+            {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            <span className="hidden sm:inline">Search</span>
+          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 shrink-0 gap-1.5 text-xs realm-banner-btn"
+                data-testid="button-shop-dropdown"
+              >
+                <Store className="h-3.5 w-3.5" />
+                {retailerFilter || "Shop"}
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-48 p-2" data-testid="panel-shop-dropdown">
+              <div className="space-y-0.5">
+                {["Tesco", "Sainsbury's", "Asda", "Morrisons", "Aldi", "Lidl", "Waitrose", "M&S", "Co-op"].map((shop) => (
+                  <button
+                    key={shop}
+                    onClick={() => setRetailerFilter(retailerFilter === shop ? "" : shop)}
+                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-colors ${
+                      retailerFilter === shop
+                        ? "bg-primary text-primary-foreground"
+                        : "hover:bg-muted text-foreground"
+                    }`}
+                    data-testid={`button-retailer-${shop.toLowerCase().replace(/['\s]+/g, "-")}`}
+                  >
+                    {retailerFilter === shop && <X className="h-3 w-3 shrink-0" />}
+                    {retailerFilter !== shop && <span className="h-3 w-3 shrink-0" />}
+                    {shop}
+                  </button>
+                ))}
+                {retailerFilter && (
+                  <>
+                    <div className="border-t border-border/40 my-1" />
+                    <button
+                      onClick={() => setRetailerFilter("")}
+                      className="w-full text-left px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-muted transition-colors"
+                      data-testid="button-retailer-clear"
+                    >
+                      Clear selection
+                    </button>
+                  </>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      }
       actions={
         <div className="flex items-center gap-2">
             {compareProducts.length >= 2 && (
@@ -1066,69 +1148,6 @@ export default function ProductsPage() {
           areaKey="analyser"
           message="Search any packaged food to see its ingredients, additives, and health rating. Spot ultra-processed products and find cleaner alternatives before you buy."
         />
-
-        <Card data-testid="card-product-search">
-          <CardContent className="pt-6">
-            <div className="flex gap-3">
-              <Input
-                placeholder="Search packaged foods (e.g. ketchup, mayonnaise, cereal...)"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                data-testid="input-product-search"
-              />
-              {intelligenceSettings?.barcodeScannerEnabled !== false && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setShowBarcodeScanner(true)}
-                  disabled={barcodeLoading}
-                  aria-label="Scan barcode"
-                  data-testid="button-barcode-scan"
-                >
-                  {barcodeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
-                </Button>
-              )}
-              <Button
-                size="icon"
-                onClick={handleSearch}
-                disabled={isSearching || !searchQuery.trim()}
-                aria-label="Analyse"
-                data-testid="button-search-products"
-              >
-                {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* ── Retailer filter ── */}
-        <div className="flex flex-wrap gap-1.5 items-center">
-          <span className="text-[11px] text-muted-foreground/70 shrink-0">Shop:</span>
-          {["Tesco", "Sainsbury's", "Asda", "Morrisons", "Aldi", "Lidl", "Waitrose", "M&S", "Co-op"].map((shop) => (
-            <button
-              key={shop}
-              onClick={() => setRetailerFilter(retailerFilter === shop ? "" : shop)}
-              className={`px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
-                retailerFilter === shop
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
-              }`}
-              data-testid={`button-retailer-${shop.toLowerCase().replace(/['\s]+/g, "-")}`}
-            >
-              {shop}
-            </button>
-          ))}
-          {retailerFilter && (
-            <button
-              onClick={() => setRetailerFilter("")}
-              className="px-2 py-1 rounded-full text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-              data-testid="button-retailer-clear"
-            >
-              Clear
-            </button>
-          )}
-        </div>
 
         {hasSearched && retailerFilter && filteredResults.length === 0 && searchResults.length > 0 && !isSearching && (
           <div className="text-center py-8 text-muted-foreground">
