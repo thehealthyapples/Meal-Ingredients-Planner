@@ -260,6 +260,18 @@
 .realm-header-bg     { background-color: var(--realm-bg); }
 .realm-header-border { border-color: var(--realm-border); }
 
+/* Realm-aware banner buttons — slightly darker than the banner at rest, darker still when pressed */
+.realm-banner-btn {
+  background-color: color-mix(in srgb, var(--realm-bg) 55%, var(--realm-border)) !important;
+  color: var(--realm-text) !important;
+}
+.realm-banner-btn:hover:not(:disabled) {
+  background-color: color-mix(in srgb, var(--realm-bg) 30%, var(--realm-border)) !important;
+}
+.realm-banner-btn:active:not(:disabled) {
+  background-color: color-mix(in srgb, var(--realm-bg) 5%, var(--realm-border)) !important;
+}
+
 /* ── Shared sticky page header ───────────────────────────────────────────── */
 
 .page-sticky-header {

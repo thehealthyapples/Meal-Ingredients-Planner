@@ -1551,12 +1551,12 @@ export default function WeeklyPlannerPage() {
           )}
           <div className="h-4 w-px bg-border" />
           {/* Banner action buttons — Plan + Send week to basket */}
-          <div className="flex items-center gap-1 rounded-md border border-border/60 bg-background/60 px-1 py-0.5">
+          <div className="flex items-center gap-1 rounded-md border border-[var(--realm-border)] px-1 py-0.5">
             {/* Mobile: Plan hub trigger */}
             <Button
               size="sm"
               variant="outline"
-              className="border-0 px-2.5 text-xs md:hidden"
+              className="border-0 px-2.5 text-xs md:hidden realm-banner-btn"
               onClick={() => setMobileAssistantOpen(true)}
               data-testid="button-mobile-assistant-hub"
             >
@@ -1567,7 +1567,7 @@ export default function WeeklyPlannerPage() {
             <Button
               size="sm"
               variant="outline"
-              className="border-0 hidden md:inline-flex px-2.5 text-xs"
+              className="border-0 hidden md:inline-flex px-2.5 text-xs realm-banner-btn"
               onClick={() => setAssistantMode("smart")}
               disabled={smartLoading}
               data-testid="button-plan-my-week"
@@ -1575,8 +1575,8 @@ export default function WeeklyPlannerPage() {
               {smartLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
               {smartLoading ? "Planning…" : "Plan"}
             </Button>
-            <div className="w-px h-4 bg-border/60" />
-            <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs" onClick={() => addAllToBasket(sortedDays)} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
+            <div className="w-px h-4 bg-[var(--realm-border)]" />
+            <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs realm-banner-btn" onClick={() => addAllToBasket(sortedDays)} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
               <ShoppingBasket className="h-3 w-3 mr-1" />
               {addToBasketMutation.isPending ? "…" : "Send week to basket"}
             </Button>

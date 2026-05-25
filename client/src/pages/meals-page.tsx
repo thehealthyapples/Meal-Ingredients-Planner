@@ -2799,10 +2799,9 @@ export default function MealsPage() {
               onClick={() => toggleGroup(id)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
                 activeGroups.has(id)
-                  ? "shadow-sm"
+                  ? "shadow-sm realm-banner-btn"
                   : "text-muted-foreground hover:text-foreground"
               }`}
-              style={activeGroups.has(id) ? { backgroundColor: "var(--realm-bg)", color: "var(--realm-text)" } : undefined}
               data-testid={`button-filter-${id}`}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -2831,7 +2830,7 @@ export default function MealsPage() {
           <Button
             variant="outline"
             size="sm"
-            className="px-2 sm:px-3"
+            className="px-2 sm:px-3 realm-banner-btn"
             onClick={() => setBarcodeScanOpen(true)}
             disabled={barcodeFetching}
             data-testid="button-scan-product"
@@ -2856,7 +2855,7 @@ export default function MealsPage() {
             <Button
               variant="outline"
               size="sm"
-              className="px-2 sm:px-3"
+              className="px-2 sm:px-3 realm-banner-btn"
               onClick={() => importLibraryMutation.mutate()}
               disabled={importLibraryMutation.isPending}
               data-testid="button-import-library"

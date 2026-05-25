@@ -193,12 +193,9 @@ function CategoryTabs<T extends string>({
           onClick={() => onChange(value)}
           className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all flex-1 min-w-0 ${
             active === value
-              ? "shadow-sm"
+              ? "shadow-sm realm-banner-btn"
               : "text-muted-foreground hover:text-foreground"
           }`}
-          style={active === value
-            ? { backgroundColor: "var(--realm-bg)", color: "var(--realm-text)" }
-            : undefined}
           data-testid={`button-pantry-cat-${value}`}
         >
           <Icon className="h-3.5 w-3.5 shrink-0" />
