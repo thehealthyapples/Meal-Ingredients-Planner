@@ -1680,15 +1680,17 @@ export class DatabaseStorage implements IStorage {
   }
 
   async snapshotWeekToTemplate(templateId: string, weekId: number): Promise<{ itemCount: number }> {
-    const week = await db.query.plannerWeeks.findFirst({ where: eq(plannerWeeks.id, weekId) });
-    if (!week) throw new Error("Week not found");
     const days = await this.getPlannerDays(weekId);
+    const seenSlots = new Set<string>();
     const newItems: { templateId: string; weekNumber: number; dayOfWeek: number; mealSlot: string; mealId: number }[] = [];
     for (const day of days) {
       const entries = await this.getPlannerEntriesForDay(day.id);
       for (const entry of entries) {
-        if (entry.isDrink || !entry.mealId) continue;
+        if (entry.isDrink || entry.audience !== "adult") continue;
         const templateDay = day.dayOfWeek === 0 ? 7 : day.dayOfWeek;
+        const slotKey = `${templateDay}:${entry.mealType}`;
+        if (seenSlots.has(slotKey)) continue;
+        seenSlots.add(slotKey);
         newItems.push({ templateId, weekNumber: 1, dayOfWeek: templateDay, mealSlot: entry.mealType, mealId: entry.mealId });
       }
     }
@@ -1709,9 +1711,9 @@ export class DatabaseStorage implements IStorage {
     for (const item of items) {
       const dayId = dayMap.get(item.dayOfWeek);
       if (!dayId) continue;
-      const existing = await db.query.plannerEntries.findFirst({
-        where: and(eq(plannerEntries.dayId, dayId), eq(plannerEntries.mealType, item.mealSlot), eq(plannerEntries.audience, "adult")),
-      });
+      const [existing] = await db.select().from(plannerEntries)
+        .where(and(eq(plannerEntries.dayId, dayId), eq(plannerEntries.mealType, item.mealSlot), eq(plannerEntries.audience, "adult")))
+        .limit(1);
       if (mode === "keep" && existing) continue;
       await this.upsertPlannerEntry(dayId, item.mealSlot, "adult", item.mealId);
       existing ? updatedCount++ : createdCount++;
