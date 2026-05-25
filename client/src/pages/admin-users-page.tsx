@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, ChevronLeft, ChevronRight, ShieldCheck, KeyRound, Eye, EyeOff, Loader2, RotateCcw } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ShieldCheck, KeyRound, Eye, EyeOff, Loader2, RotateCcw, Wrench } from "lucide-react";
 
 type SafeUser = {
   id: number;
@@ -167,6 +167,21 @@ export default function AdminUsersPage() {
     },
     onError: (err: any) => {
       toast({ title: "Couldn't reset onboarding", description: err.message || "Something went wrong - try again", variant: "destructive" });
+    },
+  });
+
+  const fixAccountMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await fetch(`/api/admin/users/${userId}/fix-account`, { method: "POST", credentials: "include" });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.message || "Fix failed");
+      return body;
+    },
+    onSuccess: (data) => {
+      toast({ title: "Account fixed", description: data.message });
+    },
+    onError: (err: any) => {
+      toast({ title: "Fix failed", description: err.message, variant: "destructive" });
     },
   });
 
@@ -373,6 +388,19 @@ export default function AdminUsersPage() {
                       >
                         <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
                         Onboarding
+                      </Button>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => fixAccountMutation.mutate(u.id)}
+                        disabled={fixAccountMutation.isPending}
+                        data-testid={`button-fix-account-${u.id}`}
+                        title="Fix missing household or incomplete onboarding"
+                      >
+                        <Wrench className="h-3.5 w-3.5 mr-1.5" />
+                        Fix
                       </Button>
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap" data-testid={`text-created-${u.id}`}>

@@ -26,7 +26,7 @@ import { parseIngredient as parseIngredientShared } from "@shared/parse-ingredie
 import { INGREDIENT_TAXONOMY } from "@shared/ingredient-taxonomy";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { lookupFoodConstruct, isLikelyFoodConstruct, logUnrecognisedConstruct, logConstructMappingFailure } from "@shared/food-constructs";
-import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreezerMealSchema, updateMealSchema } from "@shared/schema";
+import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreezerMealSchema, updateMealSchema, householdMembers, users } from "@shared/schema";
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
 import { sanitizeUser } from "./lib/sanitizeUser";
 import { classifyAndEnrich, lookupClassification, updateClassification, applyClassificationToItems } from "./lib/classification-store";
@@ -6986,6 +6986,76 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     } catch (err) {
       console.error("[AdminUsers] run-onboarding error:", err);
       res.status(500).json({ message: "Failed to reset onboarding" });
+    }
+  });
+
+  // ── Admin: account diagnostics + repair ─────────────────────────────────────
+  app.get("/api/admin/users/:id/diagnostics", assertAdmin, async (req, res) => {
+    try {
+      const targetId = parseInt(String(req.params.id), 10);
+      if (isNaN(targetId)) return res.status(400).json({ message: "Invalid user id" });
+
+      const user = await storage.getUser(targetId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const member = await db.query.householdMembers.findFirst({
+        where: and(eq(householdMembers.userId, targetId), eq(householdMembers.status, "active")),
+      });
+
+      res.json({
+        userId: user.id,
+        username: user.username,
+        subscriptionTier: user.subscriptionTier ?? "free",
+        onboardingCompleted: user.onboardingCompleted,
+        isDemo: user.isDemo,
+        role: user.role,
+        hasActiveHousehold: !!member,
+        householdId: member?.householdId ?? null,
+      });
+    } catch (err) {
+      console.error("[AdminUsers] diagnostics error:", err);
+      res.status(500).json({ message: "Failed to fetch diagnostics" });
+    }
+  });
+
+  app.post("/api/admin/users/:id/fix-account", assertAdmin, async (req, res) => {
+    try {
+      const targetId = parseInt(String(req.params.id), 10);
+      if (isNaN(targetId)) return res.status(400).json({ message: "Invalid user id" });
+
+      const user = await storage.getUser(targetId);
+      if (!user) return res.status(404).json({ message: "User not found" });
+
+      const fixes: string[] = [];
+
+      // Check household
+      const member = await db.query.householdMembers.findFirst({
+        where: and(eq(householdMembers.userId, targetId), eq(householdMembers.status, "active")),
+      });
+
+      if (!member) {
+        await storage.createHouseholdForUser(targetId, `${user.username}'s Household`);
+        fixes.push("created_household");
+      }
+
+      // Mark onboarding complete if not already
+      if (!user.onboardingCompleted) {
+        await db.update(users).set({ onboardingCompleted: true }).where(eq(users.id, targetId));
+        fixes.push("onboarding_completed");
+      }
+
+      await storage.createAuditLog({
+        adminUserId: req.user!.id,
+        action: "ADMIN_FIX_ACCOUNT",
+        targetUserId: targetId,
+        metadata: { fixes },
+      });
+
+      console.log(`[AdminUsers] fix-account: admin=${req.user!.id}, target=${targetId}, fixes=${fixes.join(",")}`);
+      res.json({ fixes, message: fixes.length ? `Fixed: ${fixes.join(", ")}` : "No issues found" });
+    } catch (err) {
+      console.error("[AdminUsers] fix-account error:", err);
+      res.status(500).json({ message: "Failed to fix account" });
     }
   });
 
