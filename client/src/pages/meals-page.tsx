@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, LayoutGrid, List, Globe, Save, Download, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Sliders, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown, Users, UserPlus, Shield, Eye, EyeOff } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, Globe, Save, Download, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown, Users, UserPlus, Shield, Eye, EyeOff } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateMealModal, type ImportedRecipeDraft } from "@/components/create-meal-modal";
@@ -43,6 +43,7 @@ import { useUser } from "@/hooks/use-user";
 import { scoreMealSearch } from "@shared/food-synonyms";
 import { writePendingIngredients, appendPendingIngredient } from "@/lib/quick-list";
 import { PageHeader } from "@/components/PageHeader";
+import { CookbookWorkspacePanel, type CookbookWorkspaceMode } from "@/components/CookbookWorkspacePanel";
 
 function parseIngredient(raw: string): { name: string; detail: string | null } {
   let text = raw.trim();
@@ -1957,7 +1958,6 @@ export default function MealsPage() {
   const [mealsDietPattern, setMealsDietPattern] = useState<string>("");
   const [mealsDietRestrictions, setMealsDietRestrictions] = useState<string[]>([]);
   const [mealsUpfFilter, setMealsUpfFilter] = useState<boolean>(false);
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [webDietPattern, setWebDietPattern] = useState<string>("");
   const [webDietRestrictions, setWebDietRestrictions] = useState<string[]>([]);
   const [webSearchResults, setWebSearchResults] = useState<WebSearchRecipe[]>([]);
@@ -1965,6 +1965,8 @@ export default function MealsPage() {
   const [webCurrentPage, setWebCurrentPage] = useState(1);
   const [webIsSearching, setWebIsSearching] = useState(false);
   const [webSearchQuery, setWebSearchQuery] = useState("");
+  const [cookbookMode, setCookbookMode] = useState<CookbookWorkspaceMode>(null);
+  const [cookbookAddRecipeOpen, setCookbookAddRecipeOpen] = useState(false);
   const [scanLoading, setScanLoading] = useState(false);
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
   const [scanData, setScanData] = useState<any | null>(null);
@@ -2780,8 +2782,40 @@ export default function MealsPage() {
       icon={<ChefHat className="h-5 w-5" />}
       realm="cookbook"
       wide
-      context="Create, search, import and organise your recipes and meals."
       titleTestId="text-meals-title"
+      meta={<span>Create, search, import and organise your recipes and meals.</span>}
+      center={
+        <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40" role="tablist">
+          {([
+            { id: "cookbook", label: "My Cookbook", Icon: ChefHat },
+            { id: "recipes", label: "Recipes", Icon: Globe },
+            { id: "freezer", label: "My Freezer", Icon: Snowflake },
+            { id: "packaged", label: "Packaged", Icon: Package },
+          ] as const).map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={activeGroups.has(id)}
+              onClick={() => toggleGroup(id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                activeGroups.has(id)
+                  ? "shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              style={activeGroups.has(id) ? { backgroundColor: "var(--realm-bg)", color: "var(--realm-text)" } : undefined}
+              data-testid={`button-filter-${id}`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+              {id === "freezer" && freezerMeals.length > 0 && (
+                <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">
+                  {freezerMeals.reduce((sum, f) => sum + f.remainingPortions, 0)}
+                </Badge>
+              )}
+            </button>
+          ))}
+        </div>
+      }
       actions={
         <div className="flex items-center gap-2 flex-wrap">
           <input
@@ -2793,16 +2827,7 @@ export default function MealsPage() {
             data-testid="input-scan-file"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleScanFile(f); }}
           />
-          <Button
-            variant="outline"
-            size="sm"
-            className="px-2 sm:px-3"
-            onClick={() => navigate("/quick-meal")}
-            data-testid="button-quick-meal"
-          >
-            <Zap className="h-4 w-4 mr-1.5" />
-            Build a Meal
-          </Button>
+          {/* Scan product (barcode) stays in header — it's a product flow, not recipe */}
           <Button
             variant="outline"
             size="sm"
@@ -2816,9 +2841,17 @@ export default function MealsPage() {
             ) : (
               <ScanLine className="h-4 w-4 sm:mr-1.5" />
             )}
-            <span className="hidden sm:inline">Scan</span>
+            <span className="hidden sm:inline">Scan Product</span>
           </Button>
-          <CreateMealDialog onScan={() => setCameraModalOpen(true)} onMealCreated={(_, hasSourceUrl) => { setActiveGroups(prev => { const n = new Set(prev); n.add(hasSourceUrl ? "recipes" : "cookbook"); return n; }); }} />
+          {/* Add Recipe: primary CTA; externalOpen allows workspace panel shortcut to trigger it */}
+          <CreateMealDialog
+            onScan={() => setCameraModalOpen(true)}
+            onMealCreated={(_, hasSourceUrl) => {
+              setActiveGroups(prev => { const n = new Set(prev); n.add(hasSourceUrl ? "recipes" : "cookbook"); return n; });
+            }}
+            externalOpen={cookbookAddRecipeOpen}
+            onExternalOpenChange={setCookbookAddRecipeOpen}
+          />
           {!importStatusLoading && (!importStatus || importStatus.totalImported === 0) && (
             <Button
               variant="outline"
@@ -2839,7 +2872,7 @@ export default function MealsPage() {
         </div>
       }
     />
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 overflow-x-hidden">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 overflow-x-hidden" data-realm="cookbook">
       {/* Planner import context banner */}
       {plannerImportCtx && (
         <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 mb-4">
@@ -2880,6 +2913,10 @@ export default function MealsPage() {
           </button>
         </div>
       )}
+
+      {/* ── Workspace layout: content (flex-1) + persistent panel (desktop only) ── */}
+      <div className="flex gap-3 items-start">
+      <div className="flex-1 min-w-0">
 
       {/* Row B: search + category */}
       <div className="flex w-full gap-3 items-center mb-3">
@@ -2962,185 +2999,6 @@ export default function MealsPage() {
         </div>
       )}
 
-      {/* Row C: filters + view toggle */}
-      <div className="flex items-center gap-2 mb-4 min-w-0">
-        <div className="flex border border-border rounded-md shrink-0">
-          {([
-            { id: "cookbook", label: "My Cookbook", Icon: ChefHat },
-            { id: "recipes", label: "Recipes", Icon: Globe },
-            { id: "freezer", label: "My Freezer", Icon: Snowflake },
-            { id: "packaged", label: "Packaged", Icon: Package },
-          ] as const).map(({ id, label, Icon }, idx) => (
-            <Button
-              key={id}
-              variant={activeGroups.has(id) ? "secondary" : "ghost"}
-              size="sm"
-              title={label}
-              className={`${idx > 0 ? "border-l border-border rounded-none" : "rounded-r-none"} px-2 sm:px-3`}
-              onClick={() => toggleGroup(id)}
-              data-testid={`button-filter-${id}`}
-            >
-              <Icon className="h-3.5 w-3.5 shrink-0 sm:mr-1.5" />
-              <span className="hidden sm:inline">{label}</span>
-              {id === "freezer" && freezerMeals.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">
-                  {freezerMeals.reduce((sum, f) => sum + f.remainingPortions, 0)}
-                </Badge>
-              )}
-            </Button>
-          ))}
-        </div>
-        <Button
-          variant={showAdvancedFilters ? "secondary" : "outline"}
-          size="sm"
-          title="Filters"
-          className="h-8 gap-1.5 shrink-0 px-2 sm:px-3"
-          onClick={() => setShowAdvancedFilters(v => !v)}
-          data-testid="button-toggle-advanced-filters"
-        >
-          <Sliders className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden sm:inline">Filters</span>
-          {advancedFilterCount > 0 && (
-            <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">{advancedFilterCount}</Badge>
-          )}
-        </Button>
-        <div className="flex border border-border rounded-md ml-auto shrink-0">
-          <Button
-            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-            size="icon"
-            className="rounded-r-none h-8 w-8"
-            onClick={() => setViewMode('grid')}
-            title="Grid view"
-            data-testid="button-view-grid"
-          >
-            <LayoutGrid className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-            size="icon"
-            className="rounded-l-none border-l border-border h-8 w-8"
-            onClick={() => setViewMode('list')}
-            title="List view"
-            data-testid="button-view-list"
-          >
-            <List className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      {showAdvancedFilters && (
-        <div className="flex flex-wrap items-center gap-2 mb-4 p-3 rounded-lg border border-border bg-card">
-          {/* Audience section */}
-          <div className="flex items-center gap-1.5 w-full mb-1">
-            <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Who is this for?</span>
-          </div>
-          {([
-            { id: "adult", label: "Adult", icon: null },
-            { id: "drinks", label: "Drinks", icon: Wine },
-            { id: "baby", label: "Baby", icon: Baby },
-            { id: "child", label: "Child", icon: PersonStanding },
-          ] as const).map(({ id, label, icon: Icon }) => (
-            <Button
-              key={id}
-              variant={activeAudiences.has(id) ? "secondary" : "outline"}
-              size="sm"
-              className="h-8 text-xs"
-              onClick={() => toggleAudience(id)}
-              data-testid={`button-audience-${id}`}
-            >
-              {Icon && <Icon className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />}
-              {label}
-            </Button>
-          ))}
-          <div className="w-full border-t border-border/50 my-1" />
-          <div className="flex items-center gap-2 mr-1">
-            <Switch
-              checked={matchMyProfile}
-              onCheckedChange={setMatchMyProfile}
-              data-testid="toggle-match-profile"
-            />
-            <span className="text-sm font-medium">Match my profile</span>
-          </div>
-          <Select
-            value={mealsDietPattern || "none"}
-            onValueChange={v => { setMatchMyProfile(false); const p = v === "none" ? "" : v; setMealsDietPattern(p); setWebDietPattern(p); }}
-          >
-            <SelectTrigger className="h-8 text-xs w-[150px]" data-testid="select-meals-diet-pattern">
-              <SelectValue placeholder="Any diet pattern" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Any diet pattern</SelectItem>
-              {["Mediterranean", "DASH", "MIND", "Flexitarian", "Vegetarian", "Vegan", "Keto", "Low-Carb", "Paleo", "Carnivore"].map(p => (
-                <SelectItem key={p} value={p}>{p}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            variant={mealsDietRestrictions.includes("Gluten-Free") ? "secondary" : "outline"}
-            size="sm"
-            className="h-8 text-xs"
-            onClick={() => {
-              setMatchMyProfile(false);
-              setMealsDietRestrictions(prev => {
-                const next = prev.includes("Gluten-Free") ? prev.filter(r => r !== "Gluten-Free") : [...prev, "Gluten-Free"];
-                setWebDietRestrictions(next);
-                return next;
-              });
-            }}
-            data-testid="toggle-meals-restriction-gluten"
-          >
-            <Wheat className="h-3.5 w-3.5 mr-1.5" />
-            Gluten-Free
-          </Button>
-          <Button
-            variant={mealsDietRestrictions.includes("Dairy-Free") ? "secondary" : "outline"}
-            size="sm"
-            className="h-8 text-xs"
-            onClick={() => {
-              setMatchMyProfile(false);
-              setMealsDietRestrictions(prev => {
-                const next = prev.includes("Dairy-Free") ? prev.filter(r => r !== "Dairy-Free") : [...prev, "Dairy-Free"];
-                setWebDietRestrictions(next);
-                return next;
-              });
-            }}
-            data-testid="toggle-meals-restriction-dairy"
-          >
-            <Droplet className="h-3.5 w-3.5 mr-1.5" />
-            Dairy-Free
-          </Button>
-          <Button
-            variant={mealsUpfFilter ? "secondary" : "outline"}
-            size="sm"
-            className="h-8 text-xs"
-            onClick={() => { setMatchMyProfile(false); setMealsUpfFilter(prev => !prev); }}
-            data-testid="toggle-meals-upf-filter"
-          >
-            <Leaf className={`h-3.5 w-3.5 mr-1.5 ${mealsUpfFilter ? "text-primary" : ""}`} />
-            Hide High-UPF
-          </Button>
-          {(mealsDietPattern || mealsDietRestrictions.length > 0 || mealsUpfFilter || matchMyProfile) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs text-muted-foreground"
-              onClick={() => {
-                setMatchMyProfile(false);
-                setMealsDietPattern("");
-                setMealsDietRestrictions([]);
-                setMealsUpfFilter(false);
-                setWebDietPattern("");
-                setWebDietRestrictions([]);
-              }}
-              data-testid="button-clear-diet-filters"
-            >
-              <X className="h-3 w-3 mr-1" />
-              Clear all
-            </Button>
-          )}
-        </div>
-      )}
-
       {/* Web results appear FIRST when searching - most relevant content for new/demo users */}
       {(webSearchResults.length > 0 || webIsSearching) && searchSource !== "products" && (
         <div className="mb-6" data-testid="section-web-results">
@@ -3201,7 +3059,7 @@ export default function MealsPage() {
 
           {webSearchResults.length > 0 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
                 <AnimatePresence mode="popLayout">
                   {webSearchResults.map((recipe) => {
                     const isImporting = webImportingIds.has(recipe.id);
@@ -3456,15 +3314,15 @@ export default function MealsPage() {
       )}
 
       {isLoading ? (
-        <div className={viewMode === 'grid' ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" : "flex flex-col gap-3"}>
+        <div className={viewMode === 'grid' ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2" : "flex flex-col gap-2"}>
           {[1, 2, 3, 4].map(i => (
-            <div key={i} className={`bg-muted animate-pulse rounded-md ${viewMode === 'grid' ? 'h-36' : 'h-20'}`} />
+            <div key={i} className={`bg-muted animate-pulse rounded-md ${viewMode === 'grid' ? 'h-28' : 'h-16'}`} />
           ))}
         </div>
       ) : (
         <AnimatePresence>
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
               {visibleMeals?.map((meal, index) => {
                 const cat = getMealDisplayCategory(meal);
                 const prevCat = index > 0 ? getMealDisplayCategory(visibleMeals[index - 1]) : null;
@@ -3488,7 +3346,7 @@ export default function MealsPage() {
                       transition={{ duration: 0.2, delay: index * 0.03 }}
                     >
                   <Card className="h-full flex flex-col group cursor-pointer overflow-hidden hover-elevate transition-all duration-200" onClick={(e) => { e.stopPropagation(); setExpandedMealId(expandedMealId === meal.id ? null : meal.id); setExpandedTab("ingredients"); }} data-testid={`card-meal-${meal.id}`}>
-                    <div className="relative w-full h-32 sm:h-44 overflow-hidden rounded-t-md">
+                    <div className="relative w-full h-24 sm:h-32 overflow-hidden rounded-t-md">
                       {meal.isReadyMeal && !meal.imageUrl ? (
                         <div className="w-full h-full flex flex-col items-center justify-center gap-2 px-4 relative bg-accent/30" data-testid={`placeholder-ready-meal-${meal.id}`}>
                           {meal.audience === 'baby' ? (
@@ -3670,9 +3528,9 @@ export default function MealsPage() {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                    <CardFooter className="py-2 px-3 flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                    <CardFooter className="py-1.5 px-3 flex flex-col gap-1.5" onClick={(e) => e.stopPropagation()}>
                       {!meal.isReadyMeal && (
-                        <div className="flex items-center gap-1.5 flex-wrap w-full">
+                        <div className="hidden group-hover:flex items-center gap-1.5 flex-wrap w-full">
                           <NutritionBadges mealId={meal.id} nutrition={nutritionMap.get(meal.id)} />
                         </div>
                       )}
@@ -3700,7 +3558,7 @@ export default function MealsPage() {
               })}
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
               {visibleMeals?.map((meal, index) => {
                 const cat = getMealDisplayCategory(meal);
                 const prevCat = index > 0 ? getMealDisplayCategory(visibleMeals[index - 1]) : null;
@@ -3726,7 +3584,7 @@ export default function MealsPage() {
                   <Card className="group cursor-pointer" onClick={() => { setExpandedMealId(expandedMealId === meal.id ? null : meal.id); setExpandedTab("ingredients"); }} data-testid={`card-meal-${meal.id}`}>
                     <div className="flex items-stretch relative">
                       {meal.isReadyMeal ? (
-                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center gap-1 px-2 relative bg-accent/30">
+                        <div className="w-24 sm:w-28 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center gap-1 px-2 relative bg-accent/30">
                           {meal.audience === 'baby' ? (
                             <MealWatermark type="baby" size="sm" className="inset-0 m-auto flex items-center justify-center" />
                           ) : meal.audience === 'child' ? (
@@ -3740,15 +3598,15 @@ export default function MealsPage() {
                           </span>
                         </div>
                       ) : meal.audience === 'baby' || meal.audience === 'child' ? (
-                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex items-center justify-center bg-accent/30">
+                        <div className="w-24 sm:w-28 shrink-0 overflow-hidden rounded-l-md flex items-center justify-center bg-accent/30">
                           <MealWatermark type={meal.audience === 'baby' ? 'baby' : 'child'} size="sm" className="relative" />
                         </div>
                       ) : meal.mealFormat === "grouped" && !meal.imageUrl ? (
-                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center bg-primary/5" data-testid={`placeholder-grouped-list-${meal.id}`}>
+                        <div className="w-24 sm:w-28 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center bg-primary/5" data-testid={`placeholder-grouped-list-${meal.id}`}>
                           <img src={thaAppleLogo} alt="THA" className="h-24 w-24 object-contain" />
                         </div>
                       ) : (
-                        <div className="w-28 sm:w-36 shrink-0 overflow-hidden rounded-l-md relative">
+                        <div className="w-24 sm:w-28 shrink-0 overflow-hidden rounded-l-md relative">
                           <MealImageWidget
                             mealId={meal.id}
                             imageUrl={meal.imageUrl}
@@ -3760,10 +3618,10 @@ export default function MealsPage() {
                           />
                         </div>
                       )}
-                      <div className="flex-1 min-w-0 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="flex-1 min-w-0 p-3 flex flex-col sm:flex-row sm:items-center gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <h3 className="text-base font-semibold text-foreground">{meal.name}</h3>
+                          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <h3 className="text-sm font-semibold text-foreground">{meal.name}</h3>
                             <CategoryBadge categoryId={meal.categoryId} categories={allCategories} />
                             {!meal.isReadyMeal && meal.mealSourceType && meal.mealSourceType !== 'scratch' && (
                               <Badge variant="secondary" className="text-[10px]" data-testid={`badge-source-list-${meal.id}`}>
@@ -3771,22 +3629,22 @@ export default function MealsPage() {
                               </Badge>
                             )}
                           </div>
-                          <div className="flex flex-wrap gap-1.5">
-                            {meal.ingredients.slice(0, 6).map((ing, i) => (
+                          <div className="flex flex-wrap gap-1">
+                            {meal.ingredients.slice(0, 4).map((ing, i) => (
                               <IngredientBadge key={i} ingredient={ing} mealId={meal.id} index={i} />
                             ))}
-                            {meal.ingredients.length > 6 && (
+                            {meal.ingredients.length > 4 && (
                               <Badge variant="outline" className="text-xs font-normal">
-                                +{meal.ingredients.length - 6} more
+                                +{meal.ingredients.length - 4} more
                               </Badge>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="hidden group-hover:flex items-center gap-2 flex-wrap">
                             <NutritionBadges mealId={meal.id} nutrition={nutritionMap.get(meal.id)} />
                             <DietBadges mealId={meal.id} />
                           </div>
                         </div>
-                        <div className="flex flex-col gap-2 shrink-0 min-w-[200px]" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-col gap-2 shrink-0 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
                           <MealActionBar
                             mealId={meal.id}
                             mealName={meal.name}
@@ -3925,7 +3783,7 @@ export default function MealsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
               {householdVariants.map(variant => {
                 const originalName = variant.householdSafeFor?.originalMealName ?? null;
                 return (
@@ -4044,7 +3902,7 @@ export default function MealsPage() {
               </div>
             </Card>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
               {freezerMeals.map((frozen, index) => {
                 const meal = meals?.find(m => m.id === frozen.mealId);
                 const portionPercent = frozen.totalPortions > 0 ? (frozen.remainingPortions / frozen.totalPortions) * 100 : 0;
@@ -4058,7 +3916,7 @@ export default function MealsPage() {
                     transition={{ duration: 0.2, delay: index * 0.03 }}
                   >
                     <Card className={`h-full flex flex-col overflow-hidden ${isExpired ? 'border-red-400/50' : 'border-border'}`} data-testid={`card-freezer-${frozen.id}`}>
-                      <div className="relative w-full h-36 overflow-hidden rounded-t-md bg-accent/30">
+                      <div className="relative w-full h-28 overflow-hidden rounded-t-md bg-accent/30">
                         {meal?.imageUrl ? (
                           <img src={meal.imageUrl} alt={meal.name} className="w-full h-full object-cover opacity-70" />
                         ) : (
@@ -4221,7 +4079,7 @@ export default function MealsPage() {
 
           {productResults.length > 0 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
                 <AnimatePresence mode="popLayout">
                   {productResults.map((product) => {
                     const productKey = product.barcode || product.product_name;
@@ -4786,6 +4644,135 @@ export default function MealsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      </div>{/* end flex-1 min-w-0 */}
+
+      {/* ── Cookbook Workspace Panel — desktop only ── */}
+      <div className="hidden lg:block shrink-0">
+        <CookbookWorkspacePanel
+          mode={cookbookMode}
+          onSetMode={setCookbookMode}
+          onCameraClick={() => setCameraModalOpen(true)}
+          onScanFile={handleScanFile}
+          scanLoading={scanLoading}
+          onBuildCreated={(mealId) => {
+            setActiveGroups(prev => { const n = new Set(prev); n.add("cookbook"); return n; });
+          }}
+          onAddRecipe={() => setCookbookAddRecipeOpen(true)}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          filterCount={advancedFilterCount}
+          filterContent={
+            <div className="space-y-3">
+              {/* Audience */}
+              <div>
+                <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Who is this for?</span>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {([
+                    { id: "adult", label: "Adult", icon: null },
+                    { id: "drinks", label: "Drinks", icon: Wine },
+                    { id: "baby", label: "Baby", icon: Baby },
+                    { id: "child", label: "Child", icon: PersonStanding },
+                  ] as const).map(({ id, label, icon: Icon }) => (
+                    <Button
+                      key={id}
+                      variant={activeAudiences.has(id) ? "secondary" : "outline"}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => toggleAudience(id)}
+                      data-testid={`button-audience-${id}`}
+                    >
+                      {Icon && <Icon className="h-3 w-3 mr-1 text-muted-foreground" />}
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="w-full h-px bg-border/50" />
+
+              {/* Diet */}
+              <div>
+                <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Diet</span>
+                <div className="mt-1.5 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={matchMyProfile}
+                      onCheckedChange={setMatchMyProfile}
+                      data-testid="toggle-match-profile"
+                    />
+                    <span className="text-xs font-medium">Match my profile</span>
+                  </div>
+                  <Select
+                    value={mealsDietPattern || "none"}
+                    onValueChange={v => { setMatchMyProfile(false); const p = v === "none" ? "" : v; setMealsDietPattern(p); setWebDietPattern(p); }}
+                  >
+                    <SelectTrigger className="h-7 text-xs w-full" data-testid="select-meals-diet-pattern">
+                      <SelectValue placeholder="Any diet pattern" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Any diet pattern</SelectItem>
+                      {["Mediterranean", "DASH", "MIND", "Flexitarian", "Vegetarian", "Vegan", "Keto", "Low-Carb", "Paleo", "Carnivore"].map(p => (
+                        <SelectItem key={p} value={p}>{p}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex flex-wrap gap-1.5">
+                    <Button
+                      variant={mealsDietRestrictions.includes("Gluten-Free") ? "secondary" : "outline"}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => { setMatchMyProfile(false); setMealsDietRestrictions(prev => { const next = prev.includes("Gluten-Free") ? prev.filter(r => r !== "Gluten-Free") : [...prev, "Gluten-Free"]; setWebDietRestrictions(next); return next; }); }}
+                      data-testid="toggle-meals-restriction-gluten"
+                    >
+                      <Wheat className="h-3 w-3 mr-1" />
+                      Gluten-Free
+                    </Button>
+                    <Button
+                      variant={mealsDietRestrictions.includes("Dairy-Free") ? "secondary" : "outline"}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => { setMatchMyProfile(false); setMealsDietRestrictions(prev => { const next = prev.includes("Dairy-Free") ? prev.filter(r => r !== "Dairy-Free") : [...prev, "Dairy-Free"]; setWebDietRestrictions(next); return next; }); }}
+                      data-testid="toggle-meals-restriction-dairy"
+                    >
+                      <Droplet className="h-3 w-3 mr-1" />
+                      Dairy-Free
+                    </Button>
+                    <Button
+                      variant={mealsUpfFilter ? "secondary" : "outline"}
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => { setMatchMyProfile(false); setMealsUpfFilter(prev => !prev); }}
+                      data-testid="toggle-meals-upf-filter"
+                    >
+                      <Leaf className={`h-3 w-3 mr-1 ${mealsUpfFilter ? "text-primary" : ""}`} />
+                      Hide High-UPF
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {(mealsDietPattern || mealsDietRestrictions.length > 0 || mealsUpfFilter || matchMyProfile) && (
+                <>
+                  <div className="w-full h-px bg-border/50" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-muted-foreground w-full"
+                    onClick={() => { setMatchMyProfile(false); setMealsDietPattern(""); setMealsDietRestrictions([]); setMealsUpfFilter(false); setWebDietPattern(""); setWebDietRestrictions([]); }}
+                    data-testid="button-clear-diet-filters"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Clear all filters
+                  </Button>
+                </>
+              )}
+            </div>
+          }
+        />
+      </div>
+
+      </div>{/* end flex gap-3 */}
 
       <CameraModal
         open={cameraModalOpen}

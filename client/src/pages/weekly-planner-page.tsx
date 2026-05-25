@@ -12,7 +12,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { X, Plus, Coffee, Sun, Moon, Cookie, Search, Loader2, ChefHat, ShoppingBasket, Copy, Calendar, CalendarDays, UtensilsCrossed, Snowflake, Baby, PersonStanding, Wine, LayoutGrid, Share2, LayoutList, Flame, Pencil, ExternalLink, AlertTriangle, ShoppingCart, ChevronLeft, ChevronRight, Trash2, Sparkles, Lock, DollarSign, Shield, Fish, Beef, Salad, HelpCircle, ChevronDown, ChevronUp, RefreshCw, Microscope, Wheat, Droplets, Droplet, Globe, Package, Store, Users, Wand2, Camera, BookOpen, MoreHorizontal, Check, GripVertical } from "lucide-react";
-import { CreateMealModal } from "@/components/create-meal-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
@@ -295,7 +294,6 @@ export default function WeeklyPlannerPage() {
   const [renameWeekId, setRenameWeekId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [clearWeekId, setClearWeekId] = useState<number | null>(null);
-  const [createMealOpen, setCreateMealOpen] = useState(false);
   const [mobileAssistantOpen, setMobileAssistantOpen] = useState(false);
   const [pickerTarget, setPickerTarget] = useState<EntryTarget | null>(null);
   const [sharePlanOpen, setSharePlanOpen] = useState(false);
@@ -1149,9 +1147,7 @@ export default function WeeklyPlannerPage() {
 
   const handleResolveAction = (action: "build" | "scan" | "later") => {
     if (action === "build") {
-      // resolveSession holds the context; just close resolve panel and open build modal
-      setAssistantMode(null);
-      setCreateMealOpen(true);
+      setAssistantMode("build");
     } else if (action === "scan") {
       if (resolveSession) {
         setAssistantMode(null);
@@ -1202,8 +1198,7 @@ export default function WeeklyPlannerPage() {
       returnMode: "placeholder-review",
       pendingRecipeLink: null,
     });
-    setAssistantMode(null);
-    setCreateMealOpen(true);
+    setAssistantMode("build");
   };
 
   const confirmRecipeLink = () => {
@@ -2513,7 +2508,7 @@ export default function WeeklyPlannerPage() {
         onCreateIntent={createPlannerIntent}
         selectedDayLabel={selectedDay ? DAY_NAMES[selectedDay.dayOfWeek] : null}
         onBrowseRecipes={() => setAssistantMode("manual")}
-        onBuildRecipe={() => setCreateMealOpen(true)}
+        onBuildRecipe={() => setAssistantMode("build")}
         onScanRecipe={() => { setResolveSession(null); setPlannerRecipeScanCameraOpen(true); }}
         mobileOpen={mobileAssistantOpen}
         onBackToHub={() => {
@@ -2525,6 +2520,36 @@ export default function WeeklyPlannerPage() {
         onSharePlan={() => setSharePlanOpen(true)}
         shoppingHandoff={shoppingHandoff}
         basketMealsCount={basketMealIds.length}
+        buildInitialTitle={resolveSession?.mealName ?? undefined}
+        onBuildCreated={(mealId) => {
+          qc.invalidateQueries({ queryKey: ["/api/meals"] });
+          if (resolveSession) {
+            const ctx = resolveSession;
+            setResolveSession(null);
+            toast({
+              title: "Recipe created",
+              description: `Link "${ctx.mealName}" to your planner?`,
+              action: (
+                <ToastAction
+                  altText="Link to planner"
+                  onClick={() => {
+                    replacePlaceholderMealMutation.mutate({ entryId: ctx.entryId, mealId }, {
+                      onSuccess: () => {
+                        if (ctx.returnMode) setAssistantMode(ctx.returnMode);
+                        toast({ title: "Linked to planner", description: `${ctx.mealName} resolved.` });
+                      },
+                      onError: () => {
+                        toast({ title: "Failed to link recipe", variant: "destructive" });
+                      },
+                    });
+                  }}
+                >
+                  Link
+                </ToastAction>
+              ),
+            });
+          }
+        }}
       />
       </div>{/* end flex gap-3 */}
       <DragOverlay dropAnimation={null} modifiers={[snapOverlayToCursor]}>
@@ -2707,45 +2732,6 @@ export default function WeeklyPlannerPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* ── Create Meal Modal (Epic 1) ── */}
-      <CreateMealModal
-        open={createMealOpen}
-        onOpenChange={(v) => {
-          setCreateMealOpen(v);
-          if (!v) setResolveSession(null);
-        }}
-        initialTitle={resolveSession?.mealName}
-        onCreated={(mealId) => {
-          qc.invalidateQueries({ queryKey: ["/api/meals"] });
-          if (resolveSession) {
-            const ctx = resolveSession;
-            setResolveSession(null);
-            toast({
-              title: "Recipe created",
-              description: `Link "${ctx.mealName}" to your planner?`,
-              action: (
-                <ToastAction
-                  altText="Link to planner"
-                  onClick={() => {
-                    replacePlaceholderMealMutation.mutate({ entryId: ctx.entryId, mealId }, {
-                      onSuccess: () => {
-                        if (ctx.returnMode) setAssistantMode(ctx.returnMode);
-                        toast({ title: "Linked to planner", description: `${ctx.mealName} resolved.` });
-                      },
-                      onError: () => {
-                        toast({ title: "Failed to link recipe", variant: "destructive" });
-                      },
-                    });
-                  }}
-                >
-                  Link
-                </ToastAction>
-              ),
-            });
-          }
-        }}
-      />
 
       {/* ── Meal Detail Modal ── */}
       <Dialog open={!!mealDetail} onOpenChange={(v) => { if (!v) { setMealDetail(null); setAdaptationOpen(false); setHouseholdSafeChoice(null); setVariantAccepted(false); setReviewSheetOpen(false); adaptMutation.reset(); setAddGuestOpen(false); setGuestName(""); setGuestDietTypes([]); setGuestRestrictions([]); } }}>

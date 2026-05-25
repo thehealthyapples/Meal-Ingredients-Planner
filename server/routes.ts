@@ -4738,6 +4738,14 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
       settings.plannerEnableDrinks = plannerEnableDrinks;
 
+      // Exclude operational template meals from recommendation candidate pool.
+      // Starter and planner-placeholder meals have 0–1 ingredients and dominate
+      // simplicityBonus scoring, blocking real recipes from appearing.
+      userMeals = userMeals.filter(meal =>
+        meal.mealSourceType !== "starter" &&
+        meal.mealSourceType !== "planner-placeholder"
+      );
+
       // Load household eaters and merge their hard restrictions into the candidate pool filter.
       // Hard restrictions (severe allergies / intolerances) are always applied regardless of diet.
       // Eater diet types influence scoring via the merged prefs object.

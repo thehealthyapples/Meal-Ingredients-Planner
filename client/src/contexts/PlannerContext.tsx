@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useEffect } from "rea
 import { hasPendingScanSession } from "@/components/PlannerScanReview";
 import { useQueryClient } from "@tanstack/react-query";
 
-export type AssistantMode = "scan" | "smart" | "templates" | "manual" | "bulk" | "day" | "smart-review" | "scan-review" | "settings" | "resolve" | "placeholder-review" | "analyser" | "shopping-ready" | null;
+export type AssistantMode = "scan" | "smart" | "templates" | "manual" | "bulk" | "day" | "smart-review" | "scan-review" | "settings" | "resolve" | "placeholder-review" | "analyser" | "shopping-ready" | "build" | null;
 
 // ── Phase 5C: session persistence ─────────────────────────────────────────────
 const WORKSPACE_MODE_KEY = "planner-workspace-mode";

@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import type { AssistantMode } from "@/contexts/PlannerContext";
+import { CreateMealContent } from "@/components/create-meal-modal";
 import { usePlannerWorkspaceContext } from "@/contexts/PlannerWorkspaceContext";
 import { TemplatesPanel } from "@/components/templates-panel";
 import type { User, Meal, FreezerMeal } from "@shared/schema";
@@ -105,6 +106,10 @@ interface PlannerAssistantPanelProps {
   shoppingHandoff?: ShoppingHandoffData | null;
   /** Phase 3: number of distinct meals currently in shopping list (from basketMealIds) */
   basketMealsCount?: number;
+  /** Embedded build-a-meal mode: prefill title (e.g. from placeholder resolve context) */
+  buildInitialTitle?: string;
+  /** Embedded build-a-meal mode: called after meal is successfully created */
+  onBuildCreated?: (mealId: number) => void;
 }
 
 function useIsMobile() {
@@ -1190,38 +1195,38 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
           <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${planWeekOpen ? "" : "-rotate-90"}`} />
         </button>
         {planWeekOpen && (
-          <div className="flex gap-1.5 pb-1.5" data-testid="section-plan-week-body">
+          <div className="flex gap-2 pb-2" data-testid="section-plan-week-body">
             <button
-              className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card/80 hover:bg-accent/50 px-2 py-2.5 text-foreground transition-colors"
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
               onClick={() => onSetMode("smart")}
               data-testid="button-idle-smart"
             >
-              <Sparkles className="h-4 w-4 text-primary/70" />
-              <span className="text-[11px] font-medium">Smart</span>
+              <Sparkles className="h-3.5 w-3.5 text-primary/70" />
+              <span className="text-[10px] font-medium leading-none">Smart</span>
             </button>
             <button
-              className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card/80 hover:bg-accent/50 px-2 py-2.5 text-foreground transition-colors"
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
               onClick={() => onSetMode("scan")}
               data-testid="button-idle-scan"
             >
-              <Camera className="h-4 w-4 text-primary/70" />
-              <span className="text-[11px] font-medium">Scan</span>
+              <Camera className="h-3.5 w-3.5 text-primary/70" />
+              <span className="text-[10px] font-medium leading-none">Scan</span>
             </button>
             <button
-              className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card/80 hover:bg-accent/50 px-2 py-2.5 text-foreground transition-colors"
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
               onClick={() => onSetMode("templates")}
               data-testid="button-idle-templates"
             >
-              <LayoutGrid className="h-4 w-4 text-primary/70" />
-              <span className="text-[11px] font-medium">Templates</span>
+              <LayoutGrid className="h-3.5 w-3.5 text-primary/70" />
+              <span className="text-[10px] font-medium leading-none">Templates</span>
             </button>
             <button
-              className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border bg-card/80 hover:bg-accent/50 px-2 py-2.5 text-foreground transition-colors"
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
               onClick={() => onSetMode("analyser")}
               data-testid="button-idle-analyser"
             >
-              <Microscope className="h-4 w-4 text-primary/70" />
-              <span className="text-[11px] font-medium">Analyse</span>
+              <Microscope className="h-3.5 w-3.5 text-primary/70" />
+              <span className="text-[10px] font-medium leading-none">Analyse</span>
             </button>
           </div>
         )}
@@ -1245,10 +1250,10 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
         {addMealsOpen && (
           <div className="pb-1.5" data-testid="section-add-meals-body">
             {/* Compact 4-across grid — mirrors the Plan section above */}
-            <div className="flex gap-1.5 mb-2" data-testid="section-add-meals-grid">
+            <div className="flex gap-2 mb-2" data-testid="section-add-meals-grid">
               {onCreateIntent && (
                 <button
-                  className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
                   onClick={() => setIntentOpen(v => !v)}
                   data-testid="button-idle-add-intent"
                 >
@@ -1258,7 +1263,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               )}
               {onBrowseRecipes && (
                 <button
-                  className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
                   onClick={onBrowseRecipes}
                   data-testid="button-idle-browse-recipes"
                 >
@@ -1268,7 +1273,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               )}
               {onBuildRecipe && (
                 <button
-                  className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
                   onClick={onBuildRecipe}
                   data-testid="button-idle-build-recipe"
                 >
@@ -1278,7 +1283,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               )}
               {onScanRecipe && (
                 <button
-                  className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
                   onClick={onScanRecipe}
                   data-testid="button-idle-scan-recipe"
                 >
@@ -1397,9 +1402,9 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
         {manageOpen && (
           <div className="pb-1.5" data-testid="section-manage-body">
             {/* Compact 3-across grid */}
-            <div className="flex gap-1.5">
+            <div className="flex gap-2">
               <button
-                className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
                 onClick={() => onSetMode("settings")}
                 data-testid="button-idle-settings"
               >
@@ -1407,7 +1412,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
                 <span className="text-[10px] font-medium leading-none">Options</span>
               </button>
               <button
-                className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
                 onClick={() => onSetMode("bulk")}
                 data-testid="button-idle-bulk-assign"
               >
@@ -1416,7 +1421,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               </button>
               {onSharePlan && (
                 <button
-                  className="flex-1 flex flex-col items-center gap-1.5 rounded-lg border border-border/60 bg-card/80 hover:bg-accent/50 px-1.5 py-2 text-foreground transition-colors"
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 bg-card hover:bg-accent/50 px-1.5 py-2.5 text-foreground transition-colors"
                   onClick={onSharePlan}
                   data-testid="button-idle-share-plan"
                 >
@@ -1674,6 +1679,7 @@ function getPanelIcon(mode: AssistantMode) {
   if (mode === "placeholder-review") return <ClipboardList className="h-4 w-4 text-primary" />;
   if (mode === "analyser") return <Microscope className="h-4 w-4 text-primary" />;
   if (mode === "shopping-ready") return <PackageCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />;
+  if (mode === "build") return <Wand2 className="h-4 w-4 text-primary" />;
   return <ScanLine className="h-4 w-4 text-primary" />;
 }
 
@@ -1691,6 +1697,7 @@ function getPanelTitle(mode: AssistantMode, dayLabel?: string) {
   if (mode === "placeholder-review") return "Unlinked Meals";
   if (mode === "analyser") return "Analyse Products";
   if (mode === "shopping-ready") return "Shopping Ready";
+  if (mode === "build") return "Build a Meal";
   return "Planner Assistant";
 }
 
@@ -1736,6 +1743,8 @@ export function PlannerAssistantPanel({
   onSharePlan,
   shoppingHandoff,
   basketMealsCount = 0,
+  buildInitialTitle,
+  onBuildCreated,
 }: PlannerAssistantPanelProps) {
   const isMobile = useIsMobile();
   const RESOLVE_SUBVIEW_KEY = "planner:resolve-subview";
@@ -1831,6 +1840,17 @@ export function PlannerAssistantPanel({
           meals={meals}
           plannerMealIdSet={plannerMealIdSet}
           onClose={onClose}
+        />
+      )}
+      {mode === "build" && (
+        <CreateMealContent
+          key={buildInitialTitle ?? "build-panel"}
+          initialTitle={buildInitialTitle}
+          onSaved={(mealId) => {
+            onBuildCreated?.(mealId);
+            (onBackToHub ?? onClose)();
+          }}
+          onCancel={onBackToHub ?? onClose}
         />
       )}
       {(mode === "smart-review" || mode === "scan-review") && reviewContent}
@@ -2005,7 +2025,7 @@ export function PlannerAssistantPanel({
   if (!mode) {
     return (
       <aside
-        className="shrink-0 w-64 sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+        className="shrink-0 w-[244px] sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
         data-testid="panel-planner-assistant-idle"
       >
         <div className="flex items-center px-3 pt-3 pb-2.5 shrink-0">
@@ -2040,7 +2060,7 @@ export function PlannerAssistantPanel({
   // ── Desktop: active assistant sidebar ────────────────────────────────────
   return (
     <aside
-      className="shrink-0 w-80 sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+      className="shrink-0 w-[244px] sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
       data-testid="panel-planner-assistant"
     >
       <div className="flex items-center justify-between px-3 pt-3 pb-2.5 shrink-0">

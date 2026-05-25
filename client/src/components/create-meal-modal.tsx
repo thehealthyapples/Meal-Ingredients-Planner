@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,56 +38,46 @@ export interface ImportedRecipeDraft {
   sourcePlatform: 'instagram' | 'tiktok' | 'website' | 'manual';
 }
 
-interface Props {
-  open: boolean;
-  onOpenChange: (v: boolean) => void;
-  /** Called with the new meal id after creation */
-  onCreated?: (mealId: number) => void;
-  /** Prefill from recipe import - optional, best-effort */
-  prefill?: ImportedRecipeDraft;
-  /** Phase 3F: prefill meal name from placeholder resolution context */
+// ── Shared form content — used by both modal and embedded panel ───────────────
+
+interface CreateMealContentProps {
   initialTitle?: string;
+  prefill?: ImportedRecipeDraft;
+  /** Called with the new meal id after successful creation */
+  onSaved: (mealId: number) => void;
+  /** Called when the user cancels / wants to dismiss */
+  onCancel: () => void;
 }
 
-export function CreateMealModal({ open, onOpenChange, onCreated, prefill, initialTitle }: Props) {
+export function CreateMealContent({ initialTitle, prefill, onSaved, onCancel }: CreateMealContentProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
 
-  const [mealName, setMealName] = useState("");
-  const [items, setItems] = useState<PendingItem[]>([]);
-  // Instructions managed as a single editable string (joined/split on save)
-  const [instructions, setInstructions] = useState("");
+  // Initialise directly from props — component always mounts fresh
+  const [mealName, setMealName] = useState(prefill?.title ?? initialTitle ?? "");
+  const [items, setItems] = useState<PendingItem[]>(
+    prefill ? prefill.ingredients.map(ing => ({ type: "manual" as const, name: ing })) : []
+  );
+  const [instructions, setInstructions] = useState(
+    prefill ? prefill.instructions.join("\n") : ""
+  );
   const [manualName, setManualName] = useState("");
   const [manualQty, setManualQty] = useState("");
   const [recipeSearch, setRecipeSearch] = useState("");
   const [productSearch, setProductSearch] = useState("");
 
-  // Seed state from prefill or initialTitle when modal opens
-  useEffect(() => {
-    if (!open) return;
-    if (prefill) {
-      setMealName(prefill.title || "");
-      setItems(prefill.ingredients.map(ing => ({ type: "manual" as const, name: ing })));
-      setInstructions(prefill.instructions.join("\n"));
-    } else if (initialTitle) {
-      setMealName(initialTitle);
-    }
-  }, [open, prefill, initialTitle]);
-
   const { data: meals = [] } = useQuery<Meal[]>({
     queryKey: ["/api/meals"],
-    enabled: open && !prefill, // don't fetch in import mode - not needed
+    enabled: !prefill,
   });
 
   const { data: productHistory = [] } = useQuery<ProductHistoryItem[]>({
     queryKey: ["/api/user/product-history"],
-    enabled: open && !prefill,
+    enabled: !prefill,
   });
 
   const createMealMut = useMutation({
     mutationFn: async () => {
-      // In import mode, split the instructions textarea back into an array.
-      // In non-import mode, instructions are not managed by this modal.
       const resolvedInstructions = prefill
         ? instructions.split("\n").map(s => s.trim()).filter(Boolean)
         : [];
@@ -131,22 +121,10 @@ export function CreateMealModal({ open, onOpenChange, onCreated, prefill, initia
       );
       qc.refetchQueries({ queryKey: ["/api/meals"] });
       toast({ title: "Meal created", description: meal.name });
-      onCreated?.(meal.id);
-      handleClose();
+      onSaved(meal.id);
     } catch {
       toast({ title: "Failed to create meal", variant: "destructive" });
     }
-  };
-
-  const handleClose = () => {
-    setMealName("");
-    setItems([]);
-    setInstructions("");
-    setManualName("");
-    setManualQty("");
-    setRecipeSearch("");
-    setProductSearch("");
-    onOpenChange(false);
   };
 
   const addManual = () => {
@@ -177,8 +155,6 @@ export function CreateMealModal({ open, onOpenChange, onCreated, prefill, initia
   );
 
   const isSaving = createMealMut.isPending || addItemMut.isPending;
-
-  // Import-mode derived state
   const isImport = !!prefill;
   const hasIngredients = items.length > 0;
   const hasMethod = instructions.trim().length > 0;
@@ -186,145 +162,74 @@ export function CreateMealModal({ open, onOpenChange, onCreated, prefill, initia
   const canSaveImport = mealName.trim() && hasIngredients;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{isImport ? "Review Imported Recipe" : "Create New Meal"}</DialogTitle>
-        </DialogHeader>
+    <>
+      <div className="flex flex-col gap-4 overflow-y-auto flex-1 py-1 min-h-0">
 
-        <div className="flex flex-col gap-4 overflow-y-auto flex-1 py-1">
-
-          {/* ── IMPORT MODE ─────────────────────────────────────────────────── */}
-          {isImport ? (
-            <>
-              {/* Attribution / partial-import banner */}
-              {isPartialImport ? (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-300/80 dark:border-amber-600/50 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2.5">
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[12px] font-medium text-amber-800 dark:text-amber-300 leading-snug">
-                      THA AI has partially imported this recipe. Some fields are missing - please complete before saving.
-                    </p>
-                    {prefill.sourceUrl && (
-                      <a
-                        href={prefill.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[11px] text-amber-600/70 dark:text-amber-400/60 underline underline-offset-2 truncate block mt-0.5"
-                      >
-                        {prefill.sourceUrl}
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex items-start gap-2 rounded-lg border border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5">
-                  <ExternalLink className="h-3.5 w-3.5 text-amber-600/80 dark:text-amber-400/70 shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[12px] text-amber-700/90 dark:text-amber-300/80 leading-snug">
-                      THA AI has imported this recipe. Please validate before saving.
-                    </p>
-                    {prefill.sourceUrl && (
-                      <a
-                        href={prefill.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[11px] text-amber-600/70 dark:text-amber-400/60 underline underline-offset-2 truncate block mt-0.5"
-                      >
-                        {prefill.sourceUrl}
-                      </a>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Title */}
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Title</p>
-                <Input
-                  placeholder="Recipe name"
-                  value={mealName}
-                  onChange={(e) => setMealName(e.target.value)}
-                  autoFocus
-                />
-              </div>
-
-              {/* Ingredients */}
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Ingredients
-                  {!hasIngredients && <span className="ml-1.5 text-amber-600 dark:text-amber-400 normal-case">(missing)</span>}
-                </p>
-                {items.length > 0 && (
-                  <div className="space-y-1">
-                    {items.map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2 rounded-md border px-2 py-1 text-sm">
-                        <span className="flex-1 truncate">{item.name}</span>
-                        {item.quantity && <span className="text-xs text-muted-foreground">{item.quantity}</span>}
-                        <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => removeItem(idx)}>
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {/* Add extra ingredient inline - no tabs noise during import */}
-                <div className="flex gap-2 pt-0.5">
-                  <Input
-                    placeholder="Add ingredient…"
-                    value={manualName}
-                    onChange={(e) => setManualName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addManual()}
-                    className="flex-1 h-8 text-sm"
-                  />
-                  <Input
-                    placeholder="Qty"
-                    value={manualQty}
-                    onChange={(e) => setManualQty(e.target.value)}
-                    className="w-16 h-8 text-sm"
-                  />
-                  <Button size="icon" variant="outline" className="h-8 w-8" onClick={addManual} disabled={!manualName.trim()}>
-                    <Plus className="h-3.5 w-3.5" />
-                  </Button>
+        {/* ── IMPORT MODE ─────────────────────────────────────────────────── */}
+        {isImport ? (
+          <>
+            {/* Attribution / partial-import banner */}
+            {isPartialImport ? (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-300/80 dark:border-amber-600/50 bg-amber-50/80 dark:bg-amber-950/30 px-3 py-2.5">
+                <AlertTriangle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] font-medium text-amber-800 dark:text-amber-300 leading-snug">
+                    THA AI has partially imported this recipe. Some fields are missing - please complete before saving.
+                  </p>
+                  {prefill.sourceUrl && (
+                    <a
+                      href={prefill.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-amber-600/70 dark:text-amber-400/60 underline underline-offset-2 truncate block mt-0.5"
+                    >
+                      {prefill.sourceUrl}
+                    </a>
+                  )}
                 </div>
               </div>
-
-              {/* Method / Instructions */}
-              <div className="space-y-1.5">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Method / Instructions
-                  {isPartialImport && <span className="ml-1.5 text-amber-600 dark:text-amber-400 normal-case">(missing)</span>}
-                </p>
-                <Textarea
-                  placeholder={"Enter the method steps, one per line.\n\nE.g.:\nHeat oil in a pan over medium heat.\nAdd onion and cook for 5 minutes.\nStir in remaining ingredients and simmer."}
-                  value={instructions}
-                  onChange={(e) => setInstructions(e.target.value)}
-                  className={[
-                    "min-h-[120px] text-sm resize-none",
-                    isPartialImport
-                      ? "border-amber-400 dark:border-amber-500 focus-visible:ring-amber-400 dark:focus-visible:ring-amber-500"
-                      : "",
-                  ].join(" ")}
-                />
-                <p className="text-[11px] text-muted-foreground">One step per line. Edit freely before saving.</p>
+            ) : (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-200/70 dark:border-amber-700/40 bg-amber-50/60 dark:bg-amber-950/20 px-3 py-2.5">
+                <ExternalLink className="h-3.5 w-3.5 text-amber-600/80 dark:text-amber-400/70 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[12px] text-amber-700/90 dark:text-amber-300/80 leading-snug">
+                    THA AI has imported this recipe. Please validate before saving.
+                  </p>
+                  {prefill.sourceUrl && (
+                    <a
+                      href={prefill.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-amber-600/70 dark:text-amber-400/60 underline underline-offset-2 truncate block mt-0.5"
+                    >
+                      {prefill.sourceUrl}
+                    </a>
+                  )}
+                </div>
               </div>
-            </>
-          ) : (
-            /* ── STANDARD (NON-IMPORT) MODE - unchanged ──────────────────── */
-            <>
+            )}
+
+            {/* Title */}
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Title</p>
               <Input
-                placeholder="Meal name"
+                placeholder="Recipe name"
                 value={mealName}
                 onChange={(e) => setMealName(e.target.value)}
                 autoFocus
               />
+            </div>
 
+            {/* Ingredients */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Ingredients
+                {!hasIngredients && <span className="ml-1.5 text-amber-600 dark:text-amber-400 normal-case">(missing)</span>}
+              </p>
               {items.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Items</p>
                   {items.map((item, idx) => (
                     <div key={idx} className="flex items-center gap-2 rounded-md border px-2 py-1 text-sm">
-                      <Badge variant="outline" className="shrink-0 text-[10px] capitalize">{item.type}</Badge>
                       <span className="flex-1 truncate">{item.name}</span>
                       {item.quantity && <span className="text-xs text-muted-foreground">{item.quantity}</span>}
                       <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => removeItem(idx)}>
@@ -334,112 +239,212 @@ export function CreateMealModal({ open, onOpenChange, onCreated, prefill, initia
                   ))}
                 </div>
               )}
+              <div className="flex gap-2 pt-0.5">
+                <Input
+                  placeholder="Add ingredient…"
+                  value={manualName}
+                  onChange={(e) => setManualName(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addManual()}
+                  className="flex-1 h-8 text-sm"
+                />
+                <Input
+                  placeholder="Qty"
+                  value={manualQty}
+                  onChange={(e) => setManualQty(e.target.value)}
+                  className="w-16 h-8 text-sm"
+                />
+                <Button size="icon" variant="outline" className="h-8 w-8" onClick={addManual} disabled={!manualName.trim()}>
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </div>
 
-              <Tabs defaultValue="manual">
-                <TabsList className="w-full">
-                  <TabsTrigger value="manual" className="flex-1">Manual</TabsTrigger>
-                  <TabsTrigger value="recipe" className="flex-1">Recipe</TabsTrigger>
-                  <TabsTrigger value="product" className="flex-1">Product</TabsTrigger>
-                </TabsList>
+            {/* Method / Instructions */}
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Method / Instructions
+                {isPartialImport && <span className="ml-1.5 text-amber-600 dark:text-amber-400 normal-case">(missing)</span>}
+              </p>
+              <Textarea
+                placeholder={"Enter the method steps, one per line.\n\nE.g.:\nHeat oil in a pan over medium heat.\nAdd onion and cook for 5 minutes.\nStir in remaining ingredients and simmer."}
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                className={[
+                  "min-h-[120px] text-sm resize-none",
+                  isPartialImport
+                    ? "border-amber-400 dark:border-amber-500 focus-visible:ring-amber-400 dark:focus-visible:ring-amber-500"
+                    : "",
+                ].join(" ")}
+              />
+              <p className="text-[11px] text-muted-foreground">One step per line. Edit freely before saving.</p>
+            </div>
+          </>
+        ) : (
+          /* ── STANDARD (NON-IMPORT) MODE ──────────────────────────────── */
+          <>
+            <Input
+              placeholder="Meal name"
+              value={mealName}
+              onChange={(e) => setMealName(e.target.value)}
+              autoFocus
+            />
 
-                <TabsContent value="manual" className="mt-3 space-y-2">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Item name"
-                      value={manualName}
-                      onChange={(e) => setManualName(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && addManual()}
-                      className="flex-1"
-                    />
-                    <Input
-                      placeholder="Qty"
-                      value={manualQty}
-                      onChange={(e) => setManualQty(e.target.value)}
-                      className="w-20"
-                    />
-                    <Button size="icon" variant="outline" onClick={addManual} disabled={!manualName.trim()}>
-                      <Plus className="h-4 w-4" />
+            {items.length > 0 && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Items</p>
+                {items.map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2 rounded-md border px-2 py-1 text-sm">
+                    <Badge variant="outline" className="shrink-0 text-[10px] capitalize">{item.type}</Badge>
+                    <span className="flex-1 truncate">{item.name}</span>
+                    {item.quantity && <span className="text-xs text-muted-foreground">{item.quantity}</span>}
+                    <Button size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => removeItem(idx)}>
+                      <X className="h-3 w-3" />
                     </Button>
                   </div>
-                </TabsContent>
+                ))}
+              </div>
+            )}
 
-                <TabsContent value="recipe" className="mt-3 space-y-2">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search your recipes…"
-                      value={recipeSearch}
-                      onChange={(e) => setRecipeSearch(e.target.value)}
-                      className="pl-8"
-                    />
-                  </div>
-                  <div className="max-h-40 overflow-y-auto space-y-1">
-                    {filteredMeals.slice(0, 30).map((m) => {
-                      const added = items.some((i) => i.type === "recipe" && i.referenceId === m.id);
-                      return (
-                        <div
-                          key={m.id}
-                          className={`flex items-center justify-between rounded px-2 py-1 text-sm cursor-pointer hover:bg-muted ${added ? "opacity-50" : ""}`}
-                          onClick={() => !added && addRecipe(m)}
-                        >
-                          <span className="truncate">{m.name}</span>
-                          {added ? <Badge variant="secondary" className="text-[10px]">Added</Badge> : <Plus className="h-3 w-3 text-muted-foreground" />}
+            <Tabs defaultValue="manual">
+              <TabsList className="w-full">
+                <TabsTrigger value="manual" className="flex-1">Manual</TabsTrigger>
+                <TabsTrigger value="recipe" className="flex-1">Recipe</TabsTrigger>
+                <TabsTrigger value="product" className="flex-1">Product</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="manual" className="mt-3 space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Item name"
+                    value={manualName}
+                    onChange={(e) => setManualName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addManual()}
+                    className="flex-1"
+                  />
+                  <Input
+                    placeholder="Qty"
+                    value={manualQty}
+                    onChange={(e) => setManualQty(e.target.value)}
+                    className="w-20"
+                  />
+                  <Button size="icon" variant="outline" onClick={addManual} disabled={!manualName.trim()}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="recipe" className="mt-3 space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search your recipes…"
+                    value={recipeSearch}
+                    onChange={(e) => setRecipeSearch(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {filteredMeals.slice(0, 30).map((m) => {
+                    const added = items.some((i) => i.type === "recipe" && i.referenceId === m.id);
+                    return (
+                      <div
+                        key={m.id}
+                        className={`flex items-center justify-between rounded px-2 py-1 text-sm cursor-pointer hover:bg-muted ${added ? "opacity-50" : ""}`}
+                        onClick={() => !added && addRecipe(m)}
+                      >
+                        <span className="truncate">{m.name}</span>
+                        {added ? <Badge variant="secondary" className="text-[10px]">Added</Badge> : <Plus className="h-3 w-3 text-muted-foreground" />}
+                      </div>
+                    );
+                  })}
+                  {filteredMeals.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No recipes found.</p>}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="product" className="mt-3 space-y-2">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search scanned products…"
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {filteredProducts.slice(0, 30).map((p) => {
+                    const added = items.some((i) => i.type === "product" && i.referenceId === p.id);
+                    return (
+                      <div
+                        key={p.id}
+                        className={`flex items-center justify-between rounded px-2 py-1 text-sm cursor-pointer hover:bg-muted ${added ? "opacity-50" : ""}`}
+                        onClick={() => !added && addProduct(p)}
+                      >
+                        <div className="min-w-0">
+                          <span className="truncate block">{p.productName}</span>
+                          {p.brand && <span className="text-xs text-muted-foreground">{p.brand}</span>}
                         </div>
-                      );
-                    })}
-                    {filteredMeals.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">No recipes found.</p>}
-                  </div>
-                </TabsContent>
+                        {added ? <Badge variant="secondary" className="text-[10px] shrink-0">Added</Badge> : <Plus className="h-3 w-3 text-muted-foreground shrink-0" />}
+                      </div>
+                    );
+                  })}
+                  {filteredProducts.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      {productHistory.length === 0 ? "No scanned products yet. Use the scanner to build your history." : "No products match."}
+                    </p>
+                  )}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
+      </div>
 
-                <TabsContent value="product" className="mt-3 space-y-2">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search scanned products…"
-                      value={productSearch}
-                      onChange={(e) => setProductSearch(e.target.value)}
-                      className="pl-8"
-                    />
-                  </div>
-                  <div className="max-h-40 overflow-y-auto space-y-1">
-                    {filteredProducts.slice(0, 30).map((p) => {
-                      const added = items.some((i) => i.type === "product" && i.referenceId === p.id);
-                      return (
-                        <div
-                          key={p.id}
-                          className={`flex items-center justify-between rounded px-2 py-1 text-sm cursor-pointer hover:bg-muted ${added ? "opacity-50" : ""}`}
-                          onClick={() => !added && addProduct(p)}
-                        >
-                          <div className="min-w-0">
-                            <span className="truncate block">{p.productName}</span>
-                            {p.brand && <span className="text-xs text-muted-foreground">{p.brand}</span>}
-                          </div>
-                          {added ? <Badge variant="secondary" className="text-[10px] shrink-0">Added</Badge> : <Plus className="h-3 w-3 text-muted-foreground shrink-0" />}
-                        </div>
-                      );
-                    })}
-                    {filteredProducts.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-4">
-                        {productHistory.length === 0 ? "No scanned products yet. Use the scanner to build your history." : "No products match."}
-                      </p>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </>
-          )}
-        </div>
+      {/* Footer actions */}
+      <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-border shrink-0">
+        <Button variant="outline" onClick={onCancel}>Cancel</Button>
+        <Button
+          onClick={handleSave}
+          disabled={isSaving || (isImport ? !canSaveImport : !mealName.trim())}
+        >
+          {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+          {isImport ? "Save Recipe" : "Create Meal"}
+        </Button>
+      </div>
+    </>
+  );
+}
 
-        <DialogFooter className="mt-2">
-          <Button variant="outline" onClick={handleClose}>Cancel</Button>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || (isImport ? !canSaveImport : !mealName.trim())}
-          >
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-            {isImport ? "Save Recipe" : "Create Meal"}
-          </Button>
-        </DialogFooter>
+// ── Modal wrapper (unchanged external API) ────────────────────────────────────
+
+interface Props {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  /** Called with the new meal id after creation */
+  onCreated?: (mealId: number) => void;
+  /** Prefill from recipe import - optional, best-effort */
+  prefill?: ImportedRecipeDraft;
+  /** Phase 3F: prefill meal name from placeholder resolution context */
+  initialTitle?: string;
+}
+
+export function CreateMealModal({ open, onOpenChange, onCreated, prefill, initialTitle }: Props) {
+  const isImport = !!prefill;
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) onOpenChange(false); }}>
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>{isImport ? "Review Imported Recipe" : "Create New Meal"}</DialogTitle>
+        </DialogHeader>
+        {open && (
+          <CreateMealContent
+            key={`modal-${open}-${initialTitle ?? ""}`}
+            initialTitle={initialTitle}
+            prefill={prefill}
+            onSaved={(id) => { onCreated?.(id); onOpenChange(false); }}
+            onCancel={() => onOpenChange(false)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

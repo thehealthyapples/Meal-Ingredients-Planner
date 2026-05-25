@@ -99,22 +99,29 @@ export function PageHeader({
           </div>
         ) : (
           /* ── Original single-row layout (all other pages) ── */
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="min-w-0">
-              <h1
-                className="realm-title text-2xl font-semibold tracking-tight flex items-center gap-2"
-                data-testid={titleTestId}
-              >
-                {icon}
-                {title}
-              </h1>
-              {context && (
-                <p className="text-sm mt-1 leading-snug realm-title opacity-60">
-                  {context}
-                </p>
-              )}
+          <div>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="min-w-0">
+                <h1
+                  className="realm-title text-2xl font-semibold tracking-tight flex items-center gap-2"
+                  data-testid={titleTestId}
+                >
+                  {icon}
+                  {title}
+                </h1>
+                {context && (
+                  <p className="text-sm mt-1 leading-snug realm-title opacity-60">
+                    {context}
+                  </p>
+                )}
+              </div>
+              {actions && <div className="shrink-0">{actions}</div>}
             </div>
-            {actions && <div className="shrink-0">{actions}</div>}
+            {controlBar && (
+              <div className="mt-2 pt-2 border-t border-border/30">
+                {controlBar}
+              </div>
+            )}
           </div>
         )}
       </div>
