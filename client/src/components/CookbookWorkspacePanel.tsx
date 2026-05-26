@@ -329,13 +329,14 @@ export function CookbookWorkspacePanel({
         <DrawerContent
           className="flex flex-col max-h-[75vh]"
           data-testid="drawer-cookbook-workspace"
+          data-realm="cookbook"
         >
-          <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0">
+          <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0 realm-header-bg">
             <div className="flex items-center gap-1.5">
               {mode && (
                 <button
                   onClick={goBack}
-                  className="rounded-md p-1 -ml-1 hover:bg-accent/40 text-muted-foreground transition-colors"
+                  className="rounded-md p-1 -ml-1 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
                   aria-label="Back to workspace"
                   data-testid="button-cookbook-workspace-back-mobile"
                 >
@@ -343,20 +344,20 @@ export function CookbookWorkspacePanel({
                 </button>
               )}
               <DrawerTitle className="text-sm font-semibold flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-primary" />
+                <BookOpen className="h-4 w-4" style={{ color: "var(--realm-accent)" }} />
                 {drawerTitle}
               </DrawerTitle>
             </div>
             <button
               onClick={() => { onSetMode(null); onMobileClose?.(); }}
-              className="rounded-md p-1 hover:bg-accent/40 text-muted-foreground transition-colors"
+              className="rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
               aria-label="Close workspace"
               data-testid="button-cookbook-workspace-close-mobile"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="w-full h-px bg-border shrink-0" />
+          <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
           <div
             className="flex-1 overflow-y-auto min-h-0 px-4 pt-3"
             style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}

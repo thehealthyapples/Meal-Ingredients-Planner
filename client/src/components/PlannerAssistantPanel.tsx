@@ -1956,7 +1956,7 @@ export function PlannerAssistantPanel({
     const drawerTitle = mode ? activeTitleLabel : "Planning Workspace";
     const drawerIcon = mode
       ? activeTitleIcon
-      : <Lightbulb className="h-4 w-4 text-primary" />;
+      : <Lightbulb className="h-4 w-4" style={{ color: "var(--realm-accent)" }} />;
 
     const hubContent = onSetMode ? (
       <IdlePanelContent
@@ -1984,14 +1984,15 @@ export function PlannerAssistantPanel({
         <DrawerContent
           className="flex flex-col max-h-[75vh]"
           data-testid="drawer-planner-assistant"
+          data-realm="planner"
         >
           {/* Header — drag handle is rendered inside DrawerContent automatically above this */}
-          <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0">
+          <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0 realm-header-bg">
             <div className="flex items-center gap-1.5">
               {mode && onBackToHub && (
                 <button
                   onClick={onBackToHub}
-                  className="rounded-md p-1 -ml-1 hover:bg-accent/40 text-muted-foreground transition-colors"
+                  className="rounded-md p-1 -ml-1 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
                   aria-label="Back to hub"
                   data-testid="button-assistant-back"
                 >
@@ -2005,14 +2006,14 @@ export function PlannerAssistantPanel({
             </div>
             <button
               onClick={onClose}
-              className="rounded-md p-1 hover:bg-accent/40 text-muted-foreground transition-colors"
+              className="rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
               data-testid="button-assistant-close-mobile"
               aria-label="Close assistant"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
-          <div className="w-full h-px bg-border shrink-0" />
+          <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
           <div
             className="flex-1 overflow-y-auto min-h-0 px-4 pt-3"
             style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}
