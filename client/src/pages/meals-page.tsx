@@ -3428,7 +3428,8 @@ export default function MealsPage() {
                         </motion.div>
                       )}
                     </AnimatePresence>
-                    <CardFooter className="py-2 px-3 flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
+                    {/* CardFooter: hidden on mobile — actions accessible via long-press sheet or meal detail page */}
+                    <CardFooter className="hidden sm:flex py-2 px-3 flex-col gap-2" onClick={(e) => e.stopPropagation()}>
                       {!meal.isReadyMeal && (
                         <div className="hidden group-hover:flex items-center gap-1.5 flex-wrap w-full">
                           <NutritionBadges mealId={meal.id} nutrition={nutritionMap.get(meal.id)} />
@@ -3529,7 +3530,8 @@ export default function MealsPage() {
                               </Badge>
                             )}
                           </div>
-                          <div className="flex flex-wrap gap-1">
+                          {/* Ingredient badges: desktop only — avoid clutter on mobile */}
+                          <div className="hidden sm:flex flex-wrap gap-1">
                             {meal.ingredients.slice(0, 4).map((ing, i) => (
                               <IngredientBadge key={i} ingredient={ing} mealId={meal.id} index={i} />
                             ))}
@@ -3544,7 +3546,8 @@ export default function MealsPage() {
                             <DietBadges mealId={meal.id} />
                           </div>
                         </div>
-                        <div className="flex flex-col gap-2 shrink-0 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
+                        {/* Action bar: desktop only — mobile uses long-press action sheet (Stage 4) */}
+                        <div className="hidden sm:flex flex-col gap-2 shrink-0 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
                           <MealActionBar
                             mealId={meal.id}
                             mealName={meal.name}
