@@ -44,6 +44,7 @@ import { scoreMealSearch } from "@shared/food-synonyms";
 import { writePendingIngredients, appendPendingIngredient } from "@/lib/quick-list";
 import { PageHeader } from "@/components/PageHeader";
 import { CookbookWorkspacePanel, type CookbookWorkspaceMode } from "@/components/CookbookWorkspacePanel";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 
 function parseIngredient(raw: string): { name: string; detail: string | null } {
   let text = raw.trim();
@@ -711,6 +712,206 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+// ── Mobile long-press action sheet for cookbook cards ────────────────────────
+// Triggered by long-press on mobile; single-tap still navigates to meal detail.
+
+function MobileMealActionSheet({
+  meal,
+  open,
+  onClose,
+  onAddToFreezer,
+}: {
+  meal: Meal | null;
+  open: boolean;
+  onClose: () => void;
+  onAddToFreezer: (mealId: number) => void;
+}) {
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { addToBasket } = useBasket();
+  const [plannerOpen, setPlannerOpen] = useState(false);
+  const [basketOpen, setBasketOpen] = useState(false);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+
+  const addToListMutation = useMutation({
+    mutationFn: async (ctx?: { eaterIds?: number[]; guestEaters?: GuestEater[] }) => {
+      const res = await apiRequest('POST', api.shoppingList.generateFromMeals.path, {
+        mealSelections: [{ mealId: meal!.id, count: 1, ...(ctx?.eaterIds?.length ? { eaterIds: ctx.eaterIds } : {}), ...(ctx?.guestEaters?.length ? { guestEaters: ctx.guestEaters } : {}) }],
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
+      toast({ title: "Added to shopping", description: meal?.name });
+      onClose();
+    },
+    onError: () => toast({ title: "Failed to add to shopping", variant: "destructive" }),
+  });
+
+  const addProductMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', api.shoppingList.add.path, { productName: meal!.name, quantity: 1 });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      toast({ title: "Added to shopping", description: meal?.name });
+      onClose();
+    },
+    onError: () => toast({ title: "Couldn't add product", variant: "destructive" }),
+  });
+
+  const analyzeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', api.analyze.meal.path, { mealId: meal!.id });
+      return res.json() as Promise<AnalysisResult>;
+    },
+    onSuccess: (data) => {
+      setAnalysisResult(data);
+      setAnalysisOpen(true);
+      queryClient.invalidateQueries({ queryKey: ['/api/meals', meal!.id, 'nutrition'] });
+    },
+    onError: () => toast({ title: "Analysis failed", variant: "destructive" }),
+  });
+
+  if (!meal) return null;
+
+  return (
+    <>
+      <Drawer open={open} onOpenChange={(v) => !v && onClose()} shouldScaleBackground={false}>
+        <DrawerContent className="flex flex-col max-h-[70vh]" data-testid="drawer-meal-action-sheet">
+          {/* Meal header */}
+          <div className="flex items-center gap-3 px-4 pt-1 pb-3 border-b border-border/50 shrink-0">
+            {meal.imageUrl ? (
+              <img src={meal.imageUrl} alt={meal.name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
+            ) : (
+              <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                <ChefHat className="h-5 w-5 text-muted-foreground/40" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <DrawerTitle className="text-sm font-semibold leading-snug">{meal.name}</DrawerTitle>
+              {!meal.isReadyMeal && meal.ingredients.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-0.5">{meal.ingredients.length} ingredients</p>
+              )}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div
+            className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5"
+            style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))" }}
+          >
+            <button
+              className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left"
+              onClick={() => { onClose(); navigate(`/meals/${meal.id}`); }}
+              data-testid={`sheet-action-view-${meal.id}`}
+            >
+              <Eye className="h-5 w-5 text-muted-foreground shrink-0" />
+              <span className="text-sm font-medium">Open recipe</span>
+            </button>
+
+            <button
+              className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left"
+              onClick={() => setPlannerOpen(true)}
+              data-testid={`sheet-action-planner-${meal.id}`}
+            >
+              <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0" />
+              <span className="text-sm font-medium">Add to planner</span>
+            </button>
+
+            {meal.isReadyMeal ? (
+              <button
+                className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left disabled:opacity-50"
+                onClick={() => addProductMutation.mutate()}
+                disabled={addProductMutation.isPending}
+                data-testid={`sheet-action-shopping-product-${meal.id}`}
+              >
+                {addProductMutation.isPending
+                  ? <Loader2 className="h-5 w-5 animate-spin shrink-0" />
+                  : <ShoppingBasket className="h-5 w-5 text-muted-foreground shrink-0" />}
+                <span className="text-sm font-medium">Add to shopping</span>
+              </button>
+            ) : (
+              <button
+                className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left"
+                onClick={() => setBasketOpen(true)}
+                data-testid={`sheet-action-shopping-${meal.id}`}
+              >
+                <ShoppingBasket className="h-5 w-5 text-muted-foreground shrink-0" />
+                <span className="text-sm font-medium">Add to shopping</span>
+              </button>
+            )}
+
+            {!meal.isReadyMeal && (
+              <button
+                className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left disabled:opacity-50"
+                onClick={() => analyzeMutation.mutate()}
+                disabled={analyzeMutation.isPending}
+                data-testid={`sheet-action-analyse-${meal.id}`}
+              >
+                {analyzeMutation.isPending
+                  ? <Loader2 className="h-5 w-5 animate-spin shrink-0" />
+                  : <Microscope className="h-5 w-5 text-muted-foreground shrink-0" />}
+                <span className="text-sm font-medium">Analyse nutrition</span>
+              </button>
+            )}
+
+            {meal.isFreezerEligible && (
+              <button
+                className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left"
+                onClick={() => { onClose(); onAddToFreezer(meal.id); }}
+                data-testid={`sheet-action-freeze-${meal.id}`}
+              >
+                <Snowflake className="h-5 w-5 text-blue-400 shrink-0" />
+                <span className="text-sm font-medium">Add to freezer</span>
+              </button>
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
+
+      <AddToPlannerDialog
+        mealId={meal.id}
+        mealName={meal.name}
+        isDrink={!!meal.isDrink}
+        audience={meal.audience || "adult"}
+        open={plannerOpen}
+        onOpenChange={(v) => { setPlannerOpen(v); if (!v) onClose(); }}
+      />
+
+      <AddToShoppingListDialog
+        mealName={meal.name}
+        open={basketOpen}
+        onOpenChange={setBasketOpen}
+        onAdd={(ctx) => {
+          setBasketOpen(false);
+          addToBasket({ mealId: meal.id, quantity: 1 });
+          addToListMutation.mutate(ctx);
+        }}
+      />
+
+      <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Meal Analysis
+            </DialogTitle>
+            <DialogDescription>Nutrition breakdown, allergen detection, and healthier suggestions</DialogDescription>
+          </DialogHeader>
+          {analysisResult && <AnalysisResultContent analysis={analysisResult} />}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
@@ -1941,6 +2142,34 @@ export default function MealsPage() {
   });
   const [addToFreezerMealId, setAddToFreezerMealId] = useState<number | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | string | null>(null);
+
+  // Long-press action sheet state (mobile cookbook cards)
+  const [actionSheetMeal, setActionSheetMeal] = useState<Meal | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressActiveId = useRef<number | null>(null);
+  const longPressStart = useRef<{ x: number; y: number } | null>(null);
+
+  const startLongPress = useCallback((meal: Meal, e: React.PointerEvent) => {
+    if (e.pointerType === "mouse") return; // desktop: no long-press
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    longPressActiveId.current = null;
+    longPressStart.current = { x: e.clientX, y: e.clientY };
+    longPressTimer.current = setTimeout(() => {
+      longPressActiveId.current = meal.id;
+      setActionSheetMeal(meal);
+    }, 500);
+  }, []);
+
+  const moveLongPress = useCallback((e: React.PointerEvent) => {
+    if (!longPressStart.current || !longPressTimer.current) return;
+    const d = Math.hypot(e.clientX - longPressStart.current.x, e.clientY - longPressStart.current.y);
+    if (d > 10) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+  }, []);
+
+  const endLongPress = useCallback(() => {
+    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+    longPressStart.current = null;
+  }, []);
   const [webPreviewCache, setWebPreviewCache] = useState<Record<string, { ingredients: string[]; instructions: string[]; loading?: boolean; error?: string }>>({});
 
   const [expandedTab, setExpandedTab] = useState<"ingredients" | "method">("ingredients");
@@ -3245,7 +3474,19 @@ export default function MealsPage() {
                       exit={{ opacity: 0, y: 12 }}
                       transition={{ duration: 0.2, delay: index * 0.03 }}
                     >
-                  <Card className="h-full flex flex-col group cursor-pointer overflow-hidden hover-elevate transition-all duration-200" onClick={(e) => { e.stopPropagation(); navigate(`/meals/${meal.id}`); }} data-testid={`card-meal-${meal.id}`}>
+                  <Card
+                    className="h-full flex flex-col group cursor-pointer overflow-hidden hover-elevate transition-all duration-200"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (longPressActiveId.current === meal.id) { longPressActiveId.current = null; return; }
+                      navigate(`/meals/${meal.id}`);
+                    }}
+                    onPointerDown={(e) => startLongPress(meal, e)}
+                    onPointerMove={moveLongPress}
+                    onPointerUp={endLongPress}
+                    onPointerCancel={endLongPress}
+                    data-testid={`card-meal-${meal.id}`}
+                  >
                     <div className="relative w-full h-24 sm:h-32 overflow-hidden rounded-t-md">
                       {meal.isReadyMeal && !meal.imageUrl ? (
                         <div className="w-full h-full flex flex-col items-center justify-center gap-2 px-4 relative bg-accent/30" data-testid={`placeholder-ready-meal-${meal.id}`}>
@@ -3482,7 +3723,18 @@ export default function MealsPage() {
                       exit={{ opacity: 0, x: -12 }}
                       transition={{ duration: 0.15, delay: index * 0.02 }}
                     >
-                  <Card className="group cursor-pointer" onClick={() => navigate(`/meals/${meal.id}`)} data-testid={`card-meal-${meal.id}`}>
+                  <Card
+                    className="group cursor-pointer"
+                    onClick={() => {
+                      if (longPressActiveId.current === meal.id) { longPressActiveId.current = null; return; }
+                      navigate(`/meals/${meal.id}`);
+                    }}
+                    onPointerDown={(e) => startLongPress(meal, e)}
+                    onPointerMove={moveLongPress}
+                    onPointerUp={endLongPress}
+                    onPointerCancel={endLongPress}
+                    data-testid={`card-meal-${meal.id}`}
+                  >
                     <div className="flex items-stretch relative">
                       {meal.isReadyMeal ? (
                         <div className="w-24 sm:w-28 shrink-0 overflow-hidden rounded-l-md flex flex-col items-center justify-center gap-1 px-2 relative bg-accent/30">
@@ -4831,6 +5083,13 @@ export default function MealsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+    <MobileMealActionSheet
+      meal={actionSheetMeal}
+      open={!!actionSheetMeal}
+      onClose={() => setActionSheetMeal(null)}
+      onAddToFreezer={(mealId) => setAddToFreezerMealId(mealId)}
+    />
     </div>
     </>
   );
