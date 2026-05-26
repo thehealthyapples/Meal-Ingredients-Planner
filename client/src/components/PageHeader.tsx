@@ -111,7 +111,7 @@ export function PageHeader({
   const chevronBtn = (
     <button
       onClick={toggleManual}
-      className="sm:hidden flex items-center justify-center h-7 w-7 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors shrink-0"
+      className="sm:hidden flex items-center justify-center h-8 w-8 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors shrink-0 touch-manipulation"
       aria-label={isCollapsed ? "Expand header" : "Collapse header"}
       aria-expanded={!isCollapsed}
     >

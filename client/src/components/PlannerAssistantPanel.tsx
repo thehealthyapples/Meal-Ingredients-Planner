@@ -1186,7 +1186,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
       {/* ── Section A: Plan ── */}
       <div data-testid="section-plan-week">
         <button
-          className="w-full flex items-center justify-between py-2 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+          className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
           onClick={() => setPlanWeekOpen(v => !v)}
           aria-expanded={planWeekOpen}
           data-testid="button-section-plan-week-toggle"
@@ -1239,7 +1239,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
       {/* ── Section B: Add & Import ── */}
       <div data-testid="section-add-meals">
         <button
-          className="w-full flex items-center justify-between py-2 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+          className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
           onClick={() => setAddMealsOpen(v => !v)}
           aria-expanded={addMealsOpen}
           data-testid="button-section-add-meals-toggle"
@@ -1391,7 +1391,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
       {/* ── Section C: Manage — hub entry for planner utilities ── */}
       <div data-testid="section-manage">
         <button
-          className="w-full flex items-center justify-between py-2 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+          className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
           onClick={() => setManageOpen(v => !v)}
           aria-expanded={manageOpen}
           data-testid="button-section-manage-toggle"
@@ -1442,7 +1442,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
           <div className="w-full h-px bg-border/50" />
           <div data-testid="section-shopping-summary">
             <button
-              className="w-full flex items-center justify-between py-2 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+              className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
               onClick={() => setShoppingOpen(v => !v)}
               aria-expanded={shoppingOpen}
               data-testid="button-section-shopping-toggle"
@@ -1482,7 +1482,7 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
           <div className="w-full h-px bg-border/50" />
           <div data-testid="section-continue-planning">
             <button
-              className="w-full flex items-center justify-between py-2 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+              className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
               onClick={() => setContinuePlanningOpen(v => !v)}
               aria-expanded={continuePlanningOpen}
               data-testid="button-section-continue-toggle"
