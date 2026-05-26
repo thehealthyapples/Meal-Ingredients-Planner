@@ -1619,13 +1619,13 @@ export default function ShoppingListView({
     return (
       <div
         key={item.id}
-        className={`flex items-center gap-2.5 px-4 ${state === "in_basket" ? "py-2" : "py-3.5"} transition-colors duration-100 ${rowBg}`}
+        className={`grid grid-cols-[1fr_auto] gap-x-3 items-start px-4 ${state === "in_basket" ? "py-2" : "py-3"} transition-colors duration-100 ${rowBg} sm:flex sm:items-center sm:gap-2.5`}
         data-print-item
       >
-        <div className={`flex-1 min-w-0 transition-opacity duration-150 ${contentOpacity}`}>
+        <div className={`min-w-0 transition-opacity duration-150 ${contentOpacity} sm:flex-1`}>
           <div className="flex items-baseline gap-2 flex-wrap">
             {qty && (
-              <span className={`font-semibold text-[15px] tabular-nums leading-tight flex-shrink-0 ${state !== "need" ? "text-muted-foreground/40" : "text-foreground/80"}`}>
+              <span className={`hidden sm:inline font-semibold text-[15px] tabular-nums leading-tight flex-shrink-0 ${state !== "need" ? "text-muted-foreground/40" : "text-foreground/80"}`}>
                 {qty}
               </span>
             )}
@@ -2022,13 +2022,35 @@ export default function ShoppingListView({
             </>
           )}
         </div>
-        {/* Centre column: apple rating - prominent, vertically centred, separate from product text */}
+        {/* Mobile: qty — top-right of row 1 */}
+        {qty && (
+          <div className="sm:hidden self-start pt-0.5">
+            <span className={`text-[13px] font-medium tabular-nums leading-tight ${state !== "need" ? "text-muted-foreground/40" : "text-foreground/60"}`}>
+              {qty}
+            </span>
+          </div>
+        )}
+        {/* Mobile: row 2 — Apple Score (left) + CTAs (right) */}
+        <div className="tha-print-hide sm:hidden col-span-2 flex items-center justify-between pt-1.5">
+          <div className="flex items-center">
+            {state === "need" && effectiveRating != null && (
+              <CompactRating rating={effectiveRating} />
+            )}
+          </div>
+          <ShoppingRowActions
+            state={state}
+            onChange={(s) => setItemState(item, s)}
+            testIdPrefix={`shopping-view-item-${item.id}`}
+          />
+        </div>
+        {/* Desktop: Apple Score */}
         {state === "need" && effectiveRating != null && (
-          <div className="tha-print-hide flex-shrink-0 flex items-center justify-center">
+          <div className="tha-print-hide hidden sm:flex flex-shrink-0 items-center justify-center">
             <CompactRating rating={effectiveRating} />
           </div>
         )}
-        <div className="tha-print-hide flex-shrink-0">
+        {/* Desktop: CTAs */}
+        <div className="tha-print-hide hidden sm:flex flex-shrink-0">
           <ShoppingRowActions
             state={state}
             onChange={(s) => setItemState(item, s)}
@@ -2061,10 +2083,10 @@ export default function ShoppingListView({
     return (
       <div
         key={`extra-${extra.id}`}
-        className={`flex items-center gap-2.5 px-4 py-3.5 transition-colors duration-100 ${rowBg}`}
+        className={`grid grid-cols-[1fr_auto] gap-x-3 items-start px-4 py-3 transition-colors duration-100 ${rowBg} sm:flex sm:items-center sm:gap-2.5`}
         data-print-item
       >
-        <div className={`flex-1 min-w-0 transition-opacity duration-150 ${extraContentOpacity}`}>
+        <div className={`min-w-0 transition-opacity duration-150 ${extraContentOpacity} sm:flex-1`}>
           <span className={`font-medium text-[14px] leading-snug ${nameCls}`}>
             {capWords(extra.name)}
           </span>
@@ -2072,7 +2094,16 @@ export default function ShoppingListView({
             <span className="tha-print-hide ml-2 text-[11px] text-muted-foreground/45">regular</span>
           )}
         </div>
-        <div className="tha-print-hide flex-shrink-0">
+        {/* Mobile: row 2 — CTAs right-aligned */}
+        <div className="tha-print-hide sm:hidden col-span-2 flex justify-end pt-1.5">
+          <ShoppingRowActions
+            state={state}
+            onChange={(s) => setExtraState(extra.id, s)}
+            testIdPrefix={`shopping-view-extra-${extra.id}`}
+          />
+        </div>
+        {/* Desktop: CTAs */}
+        <div className="tha-print-hide hidden sm:flex flex-shrink-0">
           <ShoppingRowActions
             state={state}
             onChange={(s) => setExtraState(extra.id, s)}
