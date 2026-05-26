@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState, useEffect, useRef, useCallback } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 export type PageRealm =
   | "cookbook"
@@ -34,6 +35,63 @@ interface PageHeaderProps {
   className?: string;
 }
 
+// ── Mobile scroll-collapse hook ───────────────────────────────────────────────
+// Auto-collapses on scroll down, expands on scroll up (mobile only).
+// Manual chevron click locks the state until user clicks chevron again.
+// Resets to expanded when scrolled back to top.
+function useScrollCollapse() {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const isMobileRef = useRef(false);
+  const manualRef = useRef<boolean | null>(null);
+  const lastY = useRef(0);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024;
+      isMobileRef.current = mobile;
+      if (!mobile) {
+        setIsCollapsed(false);
+        manualRef.current = null;
+      }
+    };
+    checkMobile();
+
+    const onScroll = () => {
+      if (!isMobileRef.current) return;
+      const y = window.scrollY;
+      if (y < 10) {
+        manualRef.current = null;
+        setIsCollapsed(false);
+        lastY.current = y;
+        return;
+      }
+      const delta = y - lastY.current;
+      if (manualRef.current === null) {
+        if (delta > 4) setIsCollapsed(true);
+        else if (delta < -4) setIsCollapsed(false);
+      }
+      lastY.current = y;
+    };
+
+    window.addEventListener("resize", checkMobile, { passive: true });
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+
+  const toggleManual = useCallback(() => {
+    setIsCollapsed(prev => {
+      const next = !prev;
+      manualRef.current = next;
+      return next;
+    });
+  }, []);
+
+  return { isCollapsed, toggleManual };
+}
+
 export function PageHeader({
   title,
   icon,
@@ -48,6 +106,21 @@ export function PageHeader({
   className,
 }: PageHeaderProps) {
   const maxW = wide ? "max-w-screen-2xl" : "max-w-screen-xl";
+  const { isCollapsed, toggleManual } = useScrollCollapse();
+
+  const chevronBtn = (
+    <button
+      onClick={toggleManual}
+      className="sm:hidden flex items-center justify-center h-7 w-7 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors shrink-0"
+      aria-label={isCollapsed ? "Expand header" : "Collapse header"}
+      aria-expanded={!isCollapsed}
+    >
+      {isCollapsed
+        ? <ChevronDown className="h-3.5 w-3.5 opacity-40" />
+        : <ChevronUp className="h-3.5 w-3.5 opacity-40" />
+      }
+    </button>
+  );
 
   return (
     <div
@@ -56,9 +129,9 @@ export function PageHeader({
     >
       <div className={`${maxW} mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4`}>
         {center ? (
-          /* ── 2-row operational layout (Basket workspace) ── */
+          /* ── 2-row operational layout (tabs, workspace) ── */
           <div>
-            {/* Row 1: Title | Center (desktop) | Actions — grid ensures true centering */}
+            {/* Row 1: always visible on all viewports */}
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
               <div className="min-w-0">
                 <h1
@@ -68,43 +141,59 @@ export function PageHeader({
                   {icon}
                   {title}
                 </h1>
+                {/* context: desktop only here — mobile version is in collapsible below */}
                 {context && (
-                  <p className="text-xs mt-0.5 leading-snug realm-title opacity-60">
+                  <p className="hidden sm:block text-xs mt-0.5 leading-snug realm-title opacity-60">
                     {context}
                   </p>
                 )}
               </div>
-              {/* Center: auto column, truly centred because left/right are equal 1fr */}
+              {/* Center: hidden on mobile (appears in collapsible below), visible + centred on sm+ */}
               <div className="hidden sm:block">
                 {center}
               </div>
-              {/* Actions: right-aligned in the right 1fr column */}
-              {actions && (
-                <div className="flex justify-end">
-                  {actions}
+              {/* Right column: actions (both viewports) + chevron (mobile only) */}
+              <div className="flex justify-end items-center gap-1.5">
+                {actions}
+                {chevronBtn}
+              </div>
+            </div>
+
+            {/* Collapsible: animates on mobile (grid-template-rows trick), always open on desktop */}
+            <div
+              className="grid transition-[grid-template-rows] duration-200 ease-out"
+              style={{ gridTemplateRows: isCollapsed ? "0fr" : "1fr" }}
+            >
+              <div className="overflow-hidden">
+                {/* context: mobile only (desktop has it in the title column above) */}
+                {context && (
+                  <p className="sm:hidden text-xs mt-0.5 leading-snug realm-title opacity-60">
+                    {context}
+                  </p>
+                )}
+                {/* Center on mobile: rendered below the title row */}
+                <div className="mt-2 sm:hidden">
+                  {center}
                 </div>
-              )}
-            </div>
-            {/* Center on mobile: renders below title row */}
-            <div className="mt-2 sm:hidden">
-              {center}
-            </div>
-            {/* Row 2: Operational status / context */}
-            {meta && (
-              <div className="mt-1.5 pt-1.5 border-t border-border/30 text-[11px] text-muted-foreground flex items-center gap-1.5 flex-wrap leading-none">
-                {meta}
+                {/* Meta row: both viewports */}
+                {meta && (
+                  <div className="mt-1.5 pt-1.5 border-t border-border/30 text-[11px] text-muted-foreground flex items-center gap-1.5 flex-wrap leading-none">
+                    {meta}
+                  </div>
+                )}
+                {/* Control bar: both viewports */}
+                {controlBar && (
+                  <div className="mt-2 pt-2 border-t border-border/30">
+                    {controlBar}
+                  </div>
+                )}
               </div>
-            )}
-            {/* Row 3: Control bar (filters, sort, stage controls) */}
-            {controlBar && (
-              <div className="mt-2 pt-2 border-t border-border/30">
-                {controlBar}
-              </div>
-            )}
+            </div>
           </div>
         ) : (
-          /* ── Original single-row layout (all other pages) ── */
+          /* ── Single-row layout (no center prop) ── */
           <div>
+            {/* Always visible row */}
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="min-w-0">
                 <h1
@@ -114,17 +203,46 @@ export function PageHeader({
                   {icon}
                   {title}
                 </h1>
+                {/* context: desktop only here — mobile version is in collapsible below */}
                 {context && (
-                  <p className="text-xs mt-0.5 leading-snug realm-title opacity-60">
+                  <p className="hidden sm:block text-xs mt-0.5 leading-snug realm-title opacity-60">
                     {context}
                   </p>
                 )}
               </div>
-              {actions && <div className="shrink-0">{actions}</div>}
+              {/* Desktop: actions only */}
+              {actions && <div className="hidden sm:block shrink-0">{actions}</div>}
+              {/* Mobile: actions + chevron (chevron only if there's something to collapse) */}
+              {(context || controlBar) && (
+                <div className="flex items-center gap-1.5 sm:hidden shrink-0">
+                  {actions}
+                  {chevronBtn}
+                </div>
+              )}
+              {/* Mobile: actions only, no collapse (nothing to collapse) */}
+              {!(context || controlBar) && actions && (
+                <div className="sm:hidden shrink-0">{actions}</div>
+              )}
             </div>
-            {controlBar && (
-              <div className="mt-2 pt-2 border-t border-border/30">
-                {controlBar}
+
+            {/* Collapsible: mobile animates, desktop always open */}
+            {(context || controlBar) && (
+              <div
+                className="grid transition-[grid-template-rows] duration-200 ease-out"
+                style={{ gridTemplateRows: isCollapsed ? "0fr" : "1fr" }}
+              >
+                <div className="overflow-hidden">
+                  {context && (
+                    <p className="sm:hidden text-xs mt-0.5 leading-snug realm-title opacity-60">
+                      {context}
+                    </p>
+                  )}
+                  {controlBar && (
+                    <div className="mt-2 pt-2 border-t border-border/30">
+                      {controlBar}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
