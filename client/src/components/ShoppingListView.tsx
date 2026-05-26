@@ -2177,8 +2177,8 @@ export default function ShoppingListView({
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center justify-center h-8 w-8 rounded-md transition-colors text-muted-foreground hover:bg-accent/60 hover:text-foreground">
-                  <img src={thaAppleUrl} alt="Menu" className="h-[32px] w-[32px] object-contain" />
+                <button className="flex items-center justify-center p-1 rounded-md transition-colors hover:bg-accent/40">
+                  <img src={thaAppleUrl} alt="Menu" className="h-9 w-9 object-contain" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">

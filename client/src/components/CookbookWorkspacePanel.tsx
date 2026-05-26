@@ -1,6 +1,7 @@
-import { type ReactNode, useRef } from "react";
-import { ChefHat, Wand2, Camera, X, ChevronLeft, Upload, ScanLine, Plus, LayoutGrid, List, Sliders } from "lucide-react";
+import { type ReactNode, useRef, useState, useEffect } from "react";
+import { Wand2, Camera, X, ChevronLeft, Upload, Plus, LayoutGrid, List, Sliders, BookOpen } from "lucide-react";
 import { CreateMealContent } from "@/components/create-meal-modal";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 
 export type CookbookWorkspaceMode = "build" | "scan" | "filter" | null;
 
@@ -22,6 +23,23 @@ interface Props {
   filterCount: number;
   /** Filter panel content — rendered when mode === "filter" */
   filterContent?: ReactNode;
+  /** Mobile drawer: true to open the workspace drawer */
+  mobileOpen?: boolean;
+  /** Mobile drawer: called when the drawer should close */
+  onMobileClose?: () => void;
+}
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" ? window.innerWidth < 1024 : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
 }
 
 // ── Idle hub ──────────────────────────────────────────────────────────────────
@@ -215,89 +233,142 @@ export function CookbookWorkspacePanel({
   onViewModeChange,
   filterCount,
   filterContent,
+  mobileOpen = false,
+  onMobileClose,
 }: Props) {
+  const isMobile = useIsMobile();
   const goBack = () => onSetMode(null);
 
-  const title =
-    mode === "build" ? "Build a Meal" :
-    mode === "scan" ? "Scan Recipe" :
-    mode === "filter" ? "Filter Recipes" :
-    "Cookbook Workspace";
+  const panelBody = (
+    <>
+      {!mode && (
+        <WorkspaceIdleContent
+          onSetMode={onSetMode}
+          onAddRecipe={onAddRecipe}
+          viewMode={viewMode}
+          onViewModeChange={onViewModeChange}
+          filterCount={filterCount}
+        />
+      )}
+      {mode === "build" && (
+        <CreateMealContent
+          key="cookbook-build-panel"
+          onSaved={(mealId) => {
+            onBuildCreated?.(mealId);
+            onSetMode(null);
+          }}
+          onCancel={goBack}
+        />
+      )}
+      {mode === "scan" && (
+        <WorkspaceScanContent
+          onCameraClick={() => { onSetMode(null); onCameraClick(); }}
+          onScanFile={(f) => { onSetMode(null); onScanFile(f); }}
+          scanLoading={scanLoading}
+        />
+      )}
+      {mode === "filter" && filterContent}
+    </>
+  );
 
-  const titleIcon =
-    mode === "build" ? <Wand2 className="h-4 w-4 text-primary" /> :
-    mode === "scan" ? <ScanLine className="h-4 w-4 text-primary" /> :
-    mode === "filter" ? <Sliders className="h-4 w-4 text-primary" /> :
-    <ChefHat className="h-4 w-4 text-primary" />;
+  // ── Mobile: Drawer ────────────────────────────────────────────────────────
+  if (isMobile) {
+    const drawerTitle = mode === "build" ? "Build Recipe"
+      : mode === "scan" ? "Scan Recipe"
+      : mode === "filter" ? "Filter"
+      : "Cookbook Workspace";
 
+    return (
+      <Drawer
+        open={mobileOpen || !!mode}
+        onOpenChange={(v) => {
+          if (!v) {
+            onSetMode(null);
+            onMobileClose?.();
+          }
+        }}
+        shouldScaleBackground={false}
+      >
+        <DrawerContent
+          className="flex flex-col max-h-[75vh]"
+          data-testid="drawer-cookbook-workspace"
+        >
+          <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0">
+            <div className="flex items-center gap-1.5">
+              {mode && (
+                <button
+                  onClick={goBack}
+                  className="rounded-md p-1 -ml-1 hover:bg-accent/40 text-muted-foreground transition-colors"
+                  aria-label="Back to workspace"
+                  data-testid="button-cookbook-workspace-back-mobile"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+              )}
+              <DrawerTitle className="text-sm font-semibold flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-primary" />
+                {drawerTitle}
+              </DrawerTitle>
+            </div>
+            <button
+              onClick={() => { onSetMode(null); onMobileClose?.(); }}
+              className="rounded-md p-1 hover:bg-accent/40 text-muted-foreground transition-colors"
+              aria-label="Close workspace"
+              data-testid="button-cookbook-workspace-close-mobile"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="w-full h-px bg-border shrink-0" />
+          <div
+            className="flex-1 overflow-y-auto min-h-0 px-4 pt-3"
+            style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}
+          >
+            {panelBody}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // ── Desktop: sidebar ──────────────────────────────────────────────────────
   return (
     <aside
-      className="shrink-0 w-[244px] sticky top-20 self-start rounded-xl flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+      className="shrink-0 w-[244px] sticky top-40 mt-4 self-start rounded-xl flex flex-col max-h-[calc(100vh-10rem)] overflow-hidden"
       style={{
         border: "1px solid var(--realm-border)",
         background: "var(--realm-bg)",
       }}
       data-testid="panel-cookbook-workspace"
     >
-      {/* Header */}
-      <div className="flex items-center justify-between px-3 pt-3 pb-2.5 shrink-0">
-        <h3 className="text-sm font-semibold flex items-center gap-2">
-          {mode && (
+      {/* Header — only shown in active sub-modes, idle has no header */}
+      {mode && (
+        <>
+          <div className="flex items-center justify-between px-2 pt-1.5 pb-1 shrink-0">
             <button
               onClick={goBack}
-              className="rounded-md p-1 -ml-1 hover:bg-accent/40 text-muted-foreground transition-colors"
+              className="rounded-md p-1 hover:bg-accent/40 text-muted-foreground transition-colors"
               aria-label="Back to workspace"
               data-testid="button-cookbook-workspace-back"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-          )}
-          {titleIcon}
-          {title}
-        </h3>
-        {mode && (
-          <button
-            onClick={goBack}
-            className="rounded-md p-1 hover:bg-accent/40 text-muted-foreground transition-colors"
-            aria-label="Close"
-            data-testid="button-cookbook-workspace-close"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-
-      <div className="w-full h-px bg-border shrink-0" />
+            <button
+              onClick={goBack}
+              className="rounded-md p-1 hover:bg-accent/40 text-muted-foreground transition-colors"
+              aria-label="Close"
+              data-testid="button-cookbook-workspace-close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="w-full h-px bg-border shrink-0" />
+        </>
+      )}
 
       {/* Body */}
       <div className="flex-1 overflow-y-auto min-h-0 px-2.5 pb-3 pt-2.5">
-        {!mode && (
-          <WorkspaceIdleContent
-            onSetMode={onSetMode}
-            onAddRecipe={onAddRecipe}
-            viewMode={viewMode}
-            onViewModeChange={onViewModeChange}
-            filterCount={filterCount}
-          />
-        )}
-        {mode === "build" && (
-          <CreateMealContent
-            key="cookbook-build-panel"
-            onSaved={(mealId) => {
-              onBuildCreated?.(mealId);
-              onSetMode(null);
-            }}
-            onCancel={goBack}
-          />
-        )}
-        {mode === "scan" && (
-          <WorkspaceScanContent
-            onCameraClick={() => { onSetMode(null); onCameraClick(); }}
-            onScanFile={(f) => { onSetMode(null); onScanFile(f); }}
-            scanLoading={scanLoading}
-          />
-        )}
-        {mode === "filter" && filterContent}
+        {panelBody}
       </div>
     </aside>
   );

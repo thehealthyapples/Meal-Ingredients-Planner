@@ -192,7 +192,7 @@ function CategoryTabs<T extends string>({
           role="tab"
           aria-selected={active === value}
           onClick={() => onChange(value)}
-          className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all flex-1 min-w-0 ${
+          className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
             active === value
               ? "shadow-sm realm-banner-btn"
               : "text-muted-foreground hover:text-foreground"
@@ -200,8 +200,8 @@ function CategoryTabs<T extends string>({
           data-testid={`button-pantry-cat-${value}`}
         >
           <Icon className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden sm:inline truncate">{label}</span>
-          <span className="sm:hidden truncate">{label.split(" ")[0]}</span>
+          <span className="hidden sm:inline">{label}</span>
+          <span className="sm:hidden">{label.split(" ")[0]}</span>
         </button>
       ))}
     </div>
@@ -916,14 +916,12 @@ export default function PantryPage() {
 
   // Food tabs go in the PageHeader center (2/3 of layout = the dominant area)
   const headerCenter = (
-    <div className="flex items-center gap-2 w-full" style={{ maxWidth: 480 }}>
-      <CategoryTabs
-        categories={FOOD_CATS}
-        active={activeFood}
-        onChange={setActiveFood}
-        className="flex items-center gap-1 rounded-lg bg-muted/40 p-1 flex-[2] min-w-0"
-      />
-    </div>
+    <CategoryTabs
+      categories={FOOD_CATS}
+      active={activeFood}
+      onChange={setActiveFood}
+      className="flex items-center gap-1 rounded-lg bg-muted/40 p-1"
+    />
   );
 
   // Home tabs go in the PageHeader actions (right side, narrower)
@@ -945,7 +943,7 @@ export default function PantryPage() {
         titleTestId="text-pantry-title"
         center={headerCenter}
         actions={headerActions}
-        meta={<span>Your everyday choices live here.</span>}
+        context={<span>Your everyday choices live here.</span>}
       />
 
       {/* data-realm propagates CSS custom properties so tabs use var(--realm-bg/text) */}

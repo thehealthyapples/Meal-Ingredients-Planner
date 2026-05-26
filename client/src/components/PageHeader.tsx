@@ -58,24 +58,29 @@ export function PageHeader({
         {center ? (
           /* ── 2-row operational layout (Basket workspace) ── */
           <div>
-            {/* Row 1: Title | Center (desktop) | Actions */}
-            <div className="flex items-center gap-3">
-              <div className="min-w-0 shrink-0">
+            {/* Row 1: Title | Center (desktop) | Actions — grid ensures true centering */}
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+              <div className="min-w-0">
                 <h1
-                  className="realm-title text-2xl font-semibold tracking-tight flex items-center gap-2"
+                  className="realm-title text-[22px] font-semibold tracking-tight flex items-center gap-2"
                   data-testid={titleTestId}
                 >
                   {icon}
                   {title}
                 </h1>
+                {context && (
+                  <p className="text-xs mt-0.5 leading-snug realm-title opacity-60">
+                    {context}
+                  </p>
+                )}
               </div>
-              {/* Center: hidden on mobile, visible + auto-centered on sm+ */}
-              <div className="hidden sm:flex flex-1 justify-center">
+              {/* Center: auto column, truly centred because left/right are equal 1fr */}
+              <div className="hidden sm:block">
                 {center}
               </div>
-              {/* Actions: pushed to far right */}
+              {/* Actions: right-aligned in the right 1fr column */}
               {actions && (
-                <div className="shrink-0 ml-auto sm:ml-0">
+                <div className="flex justify-end">
                   {actions}
                 </div>
               )}
@@ -103,14 +108,14 @@ export function PageHeader({
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div className="min-w-0">
                 <h1
-                  className="realm-title text-2xl font-semibold tracking-tight flex items-center gap-2"
+                  className="realm-title text-[22px] font-semibold tracking-tight flex items-center gap-2"
                   data-testid={titleTestId}
                 >
                   {icon}
                   {title}
                 </h1>
                 {context && (
-                  <p className="text-sm mt-1 leading-snug realm-title opacity-60">
+                  <p className="text-xs mt-0.5 leading-snug realm-title opacity-60">
                     {context}
                   </p>
                 )}

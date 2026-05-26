@@ -2028,16 +2028,10 @@ export function PlannerAssistantPanel({
   if (!mode) {
     return (
       <aside
-        className="shrink-0 w-[244px] sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+        className="shrink-0 w-[244px] sticky top-28 mt-4 self-start rounded-xl flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+        style={{ border: "1px solid var(--realm-border)", background: "var(--realm-bg)" }}
         data-testid="panel-planner-assistant-idle"
       >
-        <div className="flex items-center px-3 pt-3 pb-2.5 shrink-0">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            <Lightbulb className="h-4 w-4 text-primary" />
-            Planning Workspace
-          </h3>
-        </div>
-        <div className="w-full h-px bg-border shrink-0" />
         <div className="flex-1 overflow-y-auto min-h-0 px-2.5 pb-3 pt-2.5">
           {onSetMode ? (
             <IdlePanelContent
@@ -2063,14 +2057,11 @@ export function PlannerAssistantPanel({
   // ── Desktop: active assistant sidebar ────────────────────────────────────
   return (
     <aside
-      className="shrink-0 w-[244px] sticky top-20 self-start border border-sky-100 dark:border-sky-900/40 rounded-xl bg-sky-50/70 dark:bg-sky-950/25 flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+      className="shrink-0 w-[244px] sticky top-28 mt-4 self-start rounded-xl flex flex-col max-h-[calc(100vh-6rem)] overflow-hidden"
+      style={{ border: "1px solid var(--realm-border)", background: "var(--realm-bg)" }}
       data-testid="panel-planner-assistant"
     >
-      <div className="flex items-center justify-between px-3 pt-3 pb-2.5 shrink-0">
-        <h3 className="text-sm font-semibold flex items-center gap-2">
-          {activeTitleIcon}
-          {activeTitleLabel}
-        </h3>
+      <div className="flex items-center justify-end px-2 pt-1.5 pb-1 shrink-0">
         <button
           onClick={onClose}
           className="rounded-md p-1 hover:bg-accent/40 text-muted-foreground transition-colors"

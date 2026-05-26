@@ -1829,10 +1829,10 @@ export default function ShoppingWorkspacePage() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="inline-flex items-center justify-center h-8 w-8 rounded-md transition-colors hover:bg-accent/60"
+          className="inline-flex items-center justify-center p-1 rounded-md transition-colors hover:bg-accent/40"
           data-testid="button-workspace-menu"
         >
-          <img src={thaAppleSrc} alt="Menu" className="h-7 w-7 object-contain" />
+          <img src={thaAppleSrc} alt="Menu" className="h-9 w-9 object-contain" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">

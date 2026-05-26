@@ -1641,45 +1641,47 @@ export default function WeeklyPlannerPage() {
               <span className="font-medium">{placeholderItems.length}</span>
             </button>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="inline-flex items-center justify-center h-8 w-8 md:w-auto md:min-h-8 md:px-2 rounded-md md:border md:border-border/60 transition-colors hover:bg-accent/60 md:hover:bg-accent/40 shrink-0"
-                title="More options"
-                data-testid="button-planner-overflow-menu"
-              >
-                <img src={thaAppleSrc} alt="" className="h-7 w-7 object-contain" aria-hidden="true" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={() => { setSaveWeekName(activeWeekData?.weekName || ""); setSaveWeekOpen(true); }} data-testid="button-save-week">
-                <BookOpen className="h-4 w-4 mr-2" />
-                Save This Week
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setLoadWeekOpen(true)} data-testid="button-load-week" disabled={myWeekTemplates.length === 0}>
-                <Plus className="h-4 w-4 mr-2" />
-                Load Saved Week
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSharePlanOpen(true)} data-testid="button-share-plan">
-                <Share2 className="h-4 w-4 mr-2" />
-                Share Plan
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => activeWeekData && setClearWeekId(activeWeekData.id)}
-                className="text-destructive focus:text-destructive"
-                data-testid={`button-clear-week-${activeWeek}`}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Clear This Week
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       }
+      actions={
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="inline-flex items-center justify-center p-1 rounded-md hover:bg-accent/40 transition-colors"
+              title="More options"
+              data-testid="button-planner-overflow-menu"
+            >
+              <img src={thaAppleSrc} alt="" className="h-9 w-9 object-contain" aria-hidden="true" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem onClick={() => { setSaveWeekName(activeWeekData?.weekName || ""); setSaveWeekOpen(true); }} data-testid="button-save-week">
+              <BookOpen className="h-4 w-4 mr-2" />
+              Save This Week
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setLoadWeekOpen(true)} data-testid="button-load-week" disabled={myWeekTemplates.length === 0}>
+              <Plus className="h-4 w-4 mr-2" />
+              Load Saved Week
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setSharePlanOpen(true)} data-testid="button-share-plan">
+              <Share2 className="h-4 w-4 mr-2" />
+              Share Plan
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => activeWeekData && setClearWeekId(activeWeekData.id)}
+              className="text-destructive focus:text-destructive"
+              data-testid={`button-clear-week-${activeWeek}`}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Clear This Week
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      }
     />
-    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6" data-realm="planner">
+    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8" data-realm="planner">
       <DndContext
         sensors={dndSensors}
         collisionDetection={mobileFriendlyCollision}
@@ -3318,9 +3320,9 @@ export default function WeeklyPlannerPage() {
                                       <>
                                         <div className="flex flex-wrap gap-2">
                                           <Button
-                                            variant="default"
+                                            variant="outline"
                                             size="sm"
-                                            className="h-8 text-xs"
+                                            className="h-8 text-xs realm-banner-btn"
                                             disabled={!!preview.validationFailed}
                                             onClick={() => setReviewSheetOpen(true)}
                                           >
@@ -3328,9 +3330,9 @@ export default function WeeklyPlannerPage() {
                                             Review &amp; approve adaptation
                                           </Button>
                                           <Button
-                                            variant={householdSafeChoice === "separate" ? "default" : "outline"}
+                                            variant="ghost"
                                             size="sm"
-                                            className="h-8 text-xs"
+                                            className={householdSafeChoice === "separate" ? "h-8 text-xs realm-banner-btn" : "h-8 text-xs"}
                                             onClick={() => setHouseholdSafeChoice(c => c === "separate" ? null : "separate")}
                                           >
                                             {householdSafeChoice === "separate" && <Check className="h-3 w-3 mr-1.5" />}

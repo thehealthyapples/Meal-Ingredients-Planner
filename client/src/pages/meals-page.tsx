@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, Globe, Save, Download, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown, Users, UserPlus, Shield, Eye, EyeOff } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, Globe, Save, Download, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown, Users, UserPlus, Shield, Eye, EyeOff, Sliders } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateMealModal, type ImportedRecipeDraft } from "@/components/create-meal-modal";
@@ -611,8 +611,8 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                       <Button
                         key={n}
                         size="sm"
-                        variant={n === qty ? "default" : "ghost"}
-                        className="text-xs min-w-8"
+                        variant="ghost"
+                        className={n === qty ? "text-xs min-w-8 realm-banner-btn" : "text-xs min-w-8"}
                         onClick={(e) => { e.stopPropagation(); setQty(n); }}
                         data-testid={`button-qty-select-${mealId}-${n}`}
                       >
@@ -1871,6 +1871,7 @@ export default function MealsPage() {
   const [webIsSearching, setWebIsSearching] = useState(false);
   const [webSearchQuery, setWebSearchQuery] = useState("");
   const [cookbookMode, setCookbookMode] = useState<CookbookWorkspaceMode>(null);
+  const [mobileCookbookOpen, setMobileCookbookOpen] = useState(false);
   const [cookbookAddRecipeOpen, setCookbookAddRecipeOpen] = useState(false);
   const [scanLoading, setScanLoading] = useState(false);
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
@@ -2688,36 +2689,70 @@ export default function MealsPage() {
       realm="cookbook"
       wide
       titleTestId="text-meals-title"
-      meta={<span>Create, search, import and organise your recipes and meals.</span>}
+      context={<span>Create, search, import and organise your recipes.</span>}
       center={
-        <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40" role="tablist">
-          {([
-            { id: "cookbook", label: "My Cookbook", Icon: ChefHat },
-            { id: "recipes", label: "Recipes", Icon: Globe },
-            { id: "freezer", label: "My Freezer", Icon: Snowflake },
-            { id: "packaged", label: "Packaged", Icon: Package },
-          ] as const).map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              role="tab"
-              aria-selected={activeGroups.has(id)}
-              onClick={() => toggleGroup(id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                activeGroups.has(id)
-                  ? "shadow-sm realm-banner-btn"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              data-testid={`button-filter-${id}`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-              {id === "freezer" && freezerMeals.length > 0 && (
-                <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">
-                  {freezerMeals.reduce((sum, f) => sum + f.remainingPortions, 0)}
-                </Badge>
-              )}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40" role="tablist">
+            {([
+              { id: "cookbook", label: "My Cookbook", Icon: ChefHat },
+              { id: "recipes", label: "Recipes", Icon: Globe },
+              { id: "freezer", label: "My Freezer", Icon: Snowflake },
+              { id: "packaged", label: "Packaged", Icon: Package },
+            ] as const).map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                role="tab"
+                aria-selected={activeGroups.has(id)}
+                onClick={() => toggleGroup(id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
+                  activeGroups.has(id)
+                    ? "shadow-sm realm-banner-btn"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid={`button-filter-${id}`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+                {id === "freezer" && freezerMeals.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">
+                    {freezerMeals.reduce((sum, f) => sum + f.remainingPortions, 0)}
+                  </Badge>
+                )}
+              </button>
+            ))}
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Search..."
+              className="pl-8 pr-8 h-8 w-48"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              data-testid="input-search-meals"
+            />
+            {(webIsSearching || productIsSearching) && (
+              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[120px] h-8 shrink-0" data-testid="select-category-filter">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {[...allCategories].sort((a, b) => {
+                const ia = CATEGORY_DROPDOWN_ORDER.indexOf(a.name);
+                const ib = CATEGORY_DROPDOWN_ORDER.indexOf(b.name);
+                return (ia === -1 ? CATEGORY_DROPDOWN_ORDER.length : ia) - (ib === -1 ? CATEGORY_DROPDOWN_ORDER.length : ib);
+              }).map(cat => (
+                <SelectItem key={cat.id} value={cat.name} data-testid={`option-category-${cat.name}`}>
+                  {cat.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       }
       actions={
@@ -2731,6 +2766,17 @@ export default function MealsPage() {
             data-testid="input-scan-file"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleScanFile(f); }}
           />
+          {/* Mobile workspace trigger — hidden on lg+ where the sidebar is visible */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="px-2 sm:px-3 realm-banner-btn lg:hidden"
+            onClick={() => setMobileCookbookOpen(true)}
+            data-testid="button-mobile-cookbook-workspace"
+          >
+            <Sliders className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline">Workspace</span>
+          </Button>
           {/* Add Recipe: primary CTA; externalOpen allows workspace panel shortcut to trigger it */}
           <CreateMealDialog
             onScan={() => setCameraModalOpen(true)}
@@ -2760,7 +2806,7 @@ export default function MealsPage() {
         </div>
       }
     />
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 overflow-x-hidden" data-realm="cookbook">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 overflow-x-clip" data-realm="cookbook">
       {/* Planner import context banner */}
       {plannerImportCtx && (
         <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 mb-4">
@@ -2806,41 +2852,6 @@ export default function MealsPage() {
       <div className="flex gap-3 items-start">
       <div className="flex-1 min-w-0">
 
-      {/* Row B: search + category */}
-      <div className="flex w-full gap-3 items-center mb-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search your meals and the web..."
-            className="pl-9 pr-10"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            data-testid="input-search-meals"
-          />
-          {(webIsSearching || productIsSearching) && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          )}
-        </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-[130px] shrink-0" data-testid="select-category-filter">
-            <SelectValue placeholder="All Categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {[...allCategories].sort((a, b) => {
-              const ia = CATEGORY_DROPDOWN_ORDER.indexOf(a.name);
-              const ib = CATEGORY_DROPDOWN_ORDER.indexOf(b.name);
-              return (ia === -1 ? CATEGORY_DROPDOWN_ORDER.length : ia) - (ib === -1 ? CATEGORY_DROPDOWN_ORDER.length : ib);
-            }).map(cat => (
-              <SelectItem key={cat.id} value={cat.name} data-testid={`option-category-${cat.name}`}>
-                {cat.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
 
       {user?.isDemo && !searchTerm.trim() && (
         <div className="mb-3 p-3 rounded-lg bg-primary/5 border border-primary/15 flex items-start gap-3" data-testid="demo-cookbook-intro">
@@ -3028,18 +3039,18 @@ export default function MealsPage() {
                                   <div className="flex items-center justify-between mb-2">
                                     <div className="flex gap-1">
                                       <Button
-                                        variant={expandedTab === "ingredients" ? "default" : "ghost"}
+                                        variant="ghost"
                                         size="sm"
-                                        className="h-7 text-xs"
+                                        className={expandedTab === "ingredients" ? "h-7 text-xs realm-banner-btn" : "h-7 text-xs"}
                                         onClick={() => setExpandedTab("ingredients")}
                                         data-testid={`tab-ingredients-web-${recipe.id}`}
                                       >
                                         Ingredients
                                       </Button>
                                       <Button
-                                        variant={expandedTab === "method" ? "default" : "ghost"}
+                                        variant="ghost"
                                         size="sm"
-                                        className="h-7 text-xs"
+                                        className={expandedTab === "method" ? "h-7 text-xs realm-banner-btn" : "h-7 text-xs"}
                                         onClick={() => setExpandedTab("method")}
                                         data-testid={`tab-method-web-${recipe.id}`}
                                       >
@@ -3354,18 +3365,18 @@ export default function MealsPage() {
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex gap-1">
                                 <Button
-                                  variant={expandedTab === "ingredients" ? "default" : "ghost"}
+                                  variant="ghost"
                                   size="sm"
-                                  className="h-7 text-xs"
+                                  className={expandedTab === "ingredients" ? "h-7 text-xs realm-banner-btn" : "h-7 text-xs"}
                                   onClick={() => setExpandedTab("ingredients")}
                                   data-testid={`tab-ingredients-${meal.id}`}
                                 >
                                   Ingredients
                                 </Button>
                                 <Button
-                                  variant={expandedTab === "method" ? "default" : "ghost"}
+                                  variant="ghost"
                                   size="sm"
-                                  className="h-7 text-xs"
+                                  className={expandedTab === "method" ? "h-7 text-xs realm-banner-btn" : "h-7 text-xs"}
                                   onClick={() => setExpandedTab("method")}
                                   data-testid={`tab-method-${meal.id}`}
                                 >
@@ -3579,18 +3590,18 @@ export default function MealsPage() {
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex gap-1">
                                 <Button
-                                  variant={expandedTab === "ingredients" ? "default" : "ghost"}
+                                  variant="ghost"
                                   size="sm"
-                                  className="h-7 text-xs"
+                                  className={expandedTab === "ingredients" ? "h-7 text-xs realm-banner-btn" : "h-7 text-xs"}
                                   onClick={() => setExpandedTab("ingredients")}
                                   data-testid={`tab-ingredients-${meal.id}`}
                                 >
                                   Ingredients
                                 </Button>
                                 <Button
-                                  variant={expandedTab === "method" ? "default" : "ghost"}
+                                  variant="ghost"
                                   size="sm"
-                                  className="h-7 text-xs"
+                                  className={expandedTab === "method" ? "h-7 text-xs realm-banner-btn" : "h-7 text-xs"}
                                   onClick={() => setExpandedTab("method")}
                                   data-testid={`tab-method-${meal.id}`}
                                 >
@@ -4290,18 +4301,18 @@ export default function MealsPage() {
                                   <div className="flex items-center justify-between mb-2">
                                     <div className="flex gap-1">
                                       <Button
-                                        variant={expandedTab === "ingredients" ? "default" : "ghost"}
+                                        variant="ghost"
                                         size="sm"
-                                        className="h-7 text-xs"
+                                        className={expandedTab === "ingredients" ? "h-7 text-xs realm-banner-btn" : "h-7 text-xs"}
                                         onClick={() => setExpandedTab("ingredients")}
                                         data-testid={`tab-ingredients-web-${recipe.id}`}
                                       >
                                         Ingredients
                                       </Button>
                                       <Button
-                                        variant={expandedTab === "method" ? "default" : "ghost"}
+                                        variant="ghost"
                                         size="sm"
-                                        className="h-7 text-xs"
+                                        className={expandedTab === "method" ? "h-7 text-xs realm-banner-btn" : "h-7 text-xs"}
                                         onClick={() => setExpandedTab("method")}
                                         data-testid={`tab-method-web-${recipe.id}`}
                                       >
@@ -4539,21 +4550,22 @@ export default function MealsPage() {
 
       </div>{/* end flex-1 min-w-0 */}
 
-      {/* ── Cookbook Workspace Panel — desktop only ── */}
-      <div className="hidden lg:block shrink-0">
-        <CookbookWorkspacePanel
-          mode={cookbookMode}
-          onSetMode={setCookbookMode}
-          onCameraClick={() => setCameraModalOpen(true)}
-          onScanFile={handleScanFile}
-          scanLoading={scanLoading}
-          onBuildCreated={(mealId) => {
-            setActiveGroups(prev => { const n = new Set(prev); n.add("cookbook"); return n; });
-          }}
-          onAddRecipe={() => setCookbookAddRecipeOpen(true)}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-          filterCount={advancedFilterCount}
+      {/* ── Cookbook Workspace Panel — desktop sidebar + mobile drawer ── */}
+      <CookbookWorkspacePanel
+        mode={cookbookMode}
+        onSetMode={setCookbookMode}
+        mobileOpen={mobileCookbookOpen}
+        onMobileClose={() => setMobileCookbookOpen(false)}
+        onCameraClick={() => setCameraModalOpen(true)}
+        onScanFile={handleScanFile}
+        scanLoading={scanLoading}
+        onBuildCreated={(mealId) => {
+          setActiveGroups(prev => { const n = new Set(prev); n.add("cookbook"); return n; });
+        }}
+        onAddRecipe={() => setCookbookAddRecipeOpen(true)}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        filterCount={advancedFilterCount}
           filterContent={
             <div className="space-y-3">
               {/* Audience */}
@@ -4662,7 +4674,6 @@ export default function MealsPage() {
             </div>
           }
         />
-      </div>
 
       </div>{/* end flex gap-3 */}
 

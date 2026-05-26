@@ -1470,7 +1470,7 @@ export default function FoodDiaryPage() {
         title="My Diary"
         icon={<BookOpen className="h-5 w-5" />}
         realm="diary"
-        meta={<span>No pressure. Just clearer choices.</span>}
+        context={<span>No pressure. Just clearer choices.</span>}
         center={
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40" role="tablist">
@@ -1547,12 +1547,12 @@ export default function FoodDiaryPage() {
         actions={
           <button
             type="button"
-            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-muted/60 transition-colors"
+            className="flex items-center justify-center p-1 rounded-md hover:bg-accent/40 transition-colors"
             onClick={() => setDiarySettingsOpen(true)}
             aria-label="Diary settings"
             data-testid="button-diary-settings"
           >
-            <img src={thaAppleSrc} alt="" className="h-7 w-7 object-contain opacity-70 hover:opacity-100 transition-opacity" />
+            <img src={thaAppleSrc} alt="" className="h-9 w-9 object-contain opacity-70 hover:opacity-100 transition-opacity" />
           </button>
         }
       />

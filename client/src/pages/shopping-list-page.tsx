@@ -2955,8 +2955,8 @@ export default function ShoppingListPage() {
           /* ── Healthy Apples menu ── */
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center justify-center h-[52px] w-[52px] rounded-lg transition-colors hover:bg-accent/60" data-testid="button-more-actions">
-                <img src={thaAppleSrc} alt="Menu" className="h-[48px] w-[48px] object-contain" />
+              <button className="flex items-center justify-center p-1 rounded-md transition-colors hover:bg-accent/60" data-testid="button-more-actions">
+                <img src={thaAppleSrc} alt="Menu" className="h-9 w-9 object-contain" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
