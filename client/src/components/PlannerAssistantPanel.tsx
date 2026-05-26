@@ -1036,6 +1036,8 @@ interface IdlePanelContentProps {
   onSharePlan?: () => void;
   /** Phase 3: number of distinct meals in shopping list for summary section */
   basketMealsCount?: number;
+  /** Mobile drawer: start sections collapsed, hide chevrons on desktop */
+  isMobile?: boolean;
 }
 
 interface ProposalItem {
@@ -1098,29 +1100,41 @@ function loadTraySession(): ProposalItem[] | null {
 // banner re-appearing on every mode switch (which unmounts/remounts IdlePanelContent).
 let _traySessionRestored = false;
 
-function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeholderCount = 0, onBrowseRecipes, onBuildRecipe, onScanRecipe, consumedProposalId, onSharePlan, basketMealsCount = 0 }: IdlePanelContentProps) {
+function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeholderCount = 0, onBrowseRecipes, onBuildRecipe, onScanRecipe, consumedProposalId, onSharePlan, basketMealsCount = 0, isMobile = false }: IdlePanelContentProps) {
   const [, navigate] = useLocation();
   const [intentOpen, setIntentOpen] = useState(false);
   const [intentName, setIntentName] = useState("");
   const [intentMealType, setIntentMealType] = useState<string>("dinner");
   const [intentSaving, setIntentSaving] = useState(false);
-  const [shoppingOpen, setShoppingOpen] = useState(true);
+  const [shoppingOpen, setShoppingOpen] = useState(!isMobile);
 
   const [proposals, setProposals] = useState<ProposalItem[]>([]);
   const [proposalName, setProposalName] = useState("");
   const [proposalMealType, setProposalMealType] = useState<string>("dinner");
   const [trayRestored, setTrayRestored] = useState(false);
 
-  // Phase A+2: persist section open/close state across mode switches
-  const [planWeekOpen, setPlanWeekOpen] = useState(() => loadWorkspaceSections().plan);
-  const [addMealsOpen, setAddMealsOpen] = useState(() => loadWorkspaceSections().addMeals);
-  const [manageOpen, setManageOpen] = useState(() => loadWorkspaceSections().manage);
+  // Phase A+2: persist section open/close state across mode switches (desktop only)
+  const [planWeekOpen, setPlanWeekOpen] = useState(() => isMobile ? false : loadWorkspaceSections().plan);
+  const [addMealsOpen, setAddMealsOpen] = useState(() => isMobile ? false : loadWorkspaceSections().addMeals);
+  const [manageOpen, setManageOpen] = useState(() => isMobile ? false : loadWorkspaceSections().manage);
   const hasContinueItems = proposals.length > 0 || placeholderCount > 0;
-  const [continuePlanningOpen, setContinuePlanningOpen] = useState(() => loadWorkspaceSections().continuePlanning);
+  const [continuePlanningOpen, setContinuePlanningOpen] = useState(() => isMobile ? false : loadWorkspaceSections().continuePlanning);
 
+  // Persist section state on desktop only — don't pollute saved state with mobile collapsed state
   useEffect(() => {
-    saveWorkspaceSections({ plan: planWeekOpen, addMeals: addMealsOpen, manage: manageOpen, continuePlanning: continuePlanningOpen });
-  }, [planWeekOpen, addMealsOpen, manageOpen, continuePlanningOpen]);
+    if (!isMobile) saveWorkspaceSections({ plan: planWeekOpen, addMeals: addMealsOpen, manage: manageOpen, continuePlanning: continuePlanningOpen });
+  }, [planWeekOpen, addMealsOpen, manageOpen, continuePlanningOpen, isMobile]);
+
+  // Expand all sections when viewport crosses back to desktop
+  useEffect(() => {
+    if (!isMobile) {
+      setPlanWeekOpen(true);
+      setAddMealsOpen(true);
+      setManageOpen(true);
+      setContinuePlanningOpen(true);
+      setShoppingOpen(true);
+    }
+  }, [isMobile]);
 
   // Phase A: restore from session on mount. Banner only fires on first mount per
   // page load (_traySessionRestored flag) — silent on subsequent mode-switch remounts.
@@ -1196,42 +1210,44 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
           </span>
           <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${planWeekOpen ? "" : "-rotate-90"}`} />
         </button>
-        {planWeekOpen && (
-          <div className="flex gap-2 pb-2" data-testid="section-plan-week-body">
-            <button
-              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
-              onClick={() => onSetMode("smart")}
-              data-testid="button-idle-smart"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-primary/70" />
-              <span className="text-[10px] font-medium leading-none">Smart</span>
-            </button>
-            <button
-              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
-              onClick={() => onSetMode("scan")}
-              data-testid="button-idle-scan"
-            >
-              <Camera className="h-3.5 w-3.5 text-primary/70" />
-              <span className="text-[10px] font-medium leading-none">Scan</span>
-            </button>
-            <button
-              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
-              onClick={() => onSetMode("templates")}
-              data-testid="button-idle-templates"
-            >
-              <LayoutGrid className="h-3.5 w-3.5 text-primary/70" />
-              <span className="text-[10px] font-medium leading-none">Templates</span>
-            </button>
-            <button
-              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
-              onClick={() => onSetMode("analyser")}
-              data-testid="button-idle-analyser"
-            >
-              <Microscope className="h-3.5 w-3.5 text-primary/70" />
-              <span className="text-[10px] font-medium leading-none">Analyse</span>
-            </button>
+        <div className="grid transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: planWeekOpen ? "1fr" : "0fr" }}>
+          <div className="overflow-hidden">
+            <div className="flex gap-2 pb-2" data-testid="section-plan-week-body">
+              <button
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
+                onClick={() => onSetMode("smart")}
+                data-testid="button-idle-smart"
+              >
+                <Sparkles className="h-3.5 w-3.5 text-primary/70" />
+                <span className="text-[10px] font-medium leading-none">Smart</span>
+              </button>
+              <button
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
+                onClick={() => onSetMode("scan")}
+                data-testid="button-idle-scan"
+              >
+                <Camera className="h-3.5 w-3.5 text-primary/70" />
+                <span className="text-[10px] font-medium leading-none">Scan</span>
+              </button>
+              <button
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
+                onClick={() => onSetMode("templates")}
+                data-testid="button-idle-templates"
+              >
+                <LayoutGrid className="h-3.5 w-3.5 text-primary/70" />
+                <span className="text-[10px] font-medium leading-none">Templates</span>
+              </button>
+              <button
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
+                onClick={() => onSetMode("analyser")}
+                data-testid="button-idle-analyser"
+              >
+                <Microscope className="h-3.5 w-3.5 text-primary/70" />
+                <span className="text-[10px] font-medium leading-none">Analyse</span>
+              </button>
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       <div className="w-full h-px bg-border/50" />
@@ -1249,7 +1265,8 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
           </span>
           <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${addMealsOpen ? "" : "-rotate-90"}`} />
         </button>
-        {addMealsOpen && (
+        <div className="grid transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: addMealsOpen ? "1fr" : "0fr" }}>
+          <div className="overflow-hidden">
           <div className="pb-1.5" data-testid="section-add-meals-body">
             {/* Compact 4-across grid — mirrors the Plan section above */}
             <div className="flex gap-2 mb-2" data-testid="section-add-meals-grid">
@@ -1383,7 +1400,8 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               </div>
             </div>
           </div>
-        )}
+          </div>
+        </div>
       </div>
 
       <div className="w-full h-px bg-border/50" />
@@ -1401,39 +1419,41 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
           </span>
           <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${manageOpen ? "" : "-rotate-90"}`} />
         </button>
-        {manageOpen && (
-          <div className="pb-1.5" data-testid="section-manage-body">
-            {/* Compact 3-across grid */}
-            <div className="flex gap-2">
-              <button
-                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
-                onClick={() => onSetMode("settings")}
-                data-testid="button-idle-settings"
-              >
-                <Settings className="h-3.5 w-3.5 text-primary/70" />
-                <span className="text-[10px] font-medium leading-none">Options</span>
-              </button>
-              <button
-                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
-                onClick={() => onSetMode("bulk")}
-                data-testid="button-idle-bulk-assign"
-              >
-                <Copy className="h-3.5 w-3.5 text-primary/70" />
-                <span className="text-[10px] font-medium leading-none">Multi</span>
-              </button>
-              {onSharePlan && (
+        <div className="grid transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: manageOpen ? "1fr" : "0fr" }}>
+          <div className="overflow-hidden">
+            <div className="pb-1.5" data-testid="section-manage-body">
+              {/* Compact 3-across grid */}
+              <div className="flex gap-2">
                 <button
                   className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
-                  onClick={onSharePlan}
-                  data-testid="button-idle-share-plan"
+                  onClick={() => onSetMode("settings")}
+                  data-testid="button-idle-settings"
                 >
-                  <Share2 className="h-3.5 w-3.5 text-primary/70" />
-                  <span className="text-[10px] font-medium leading-none">Share</span>
+                  <Settings className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[10px] font-medium leading-none">Options</span>
                 </button>
-              )}
+                <button
+                  className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
+                  onClick={() => onSetMode("bulk")}
+                  data-testid="button-idle-bulk-assign"
+                >
+                  <Copy className="h-3.5 w-3.5 text-primary/70" />
+                  <span className="text-[10px] font-medium leading-none">Multi</span>
+                </button>
+                {onSharePlan && (
+                  <button
+                    className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border/60 realm-banner-btn px-1.5 py-2.5 transition-colors"
+                    onClick={onSharePlan}
+                    data-testid="button-idle-share-plan"
+                  >
+                    <Share2 className="h-3.5 w-3.5 text-primary/70" />
+                    <span className="text-[10px] font-medium leading-none">Share</span>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* ── Section D: Shopping — shown when meals have been sent to shopping ── */}
@@ -1457,21 +1477,23 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               </span>
               <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${shoppingOpen ? "" : "-rotate-90"}`} />
             </button>
-            {shoppingOpen && (
-              <div className="pb-1.5 space-y-1.5" data-testid="section-shopping-summary-body">
-                <p className="text-xs text-muted-foreground">
-                  Shopping generated for {basketMealsCount} meal{basketMealsCount !== 1 ? "s" : ""} this week.
-                </p>
-                <button
-                  onClick={() => navigate("/shopping-workspace?stage=shop&source=planned")}
-                  className="w-full flex items-center gap-2 rounded-lg border border-border realm-banner-btn px-3 py-2 text-sm transition-colors"
-                  data-testid="button-shopping-summary-view"
-                >
-                  <ShoppingCart className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <span className="flex-1">View shopping list</span>
-                </button>
+            <div className="grid transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: shoppingOpen ? "1fr" : "0fr" }}>
+              <div className="overflow-hidden">
+                <div className="pb-1.5 space-y-1.5" data-testid="section-shopping-summary-body">
+                  <p className="text-xs text-muted-foreground">
+                    Shopping generated for {basketMealsCount} meal{basketMealsCount !== 1 ? "s" : ""} this week.
+                  </p>
+                  <button
+                    onClick={() => navigate("/shopping-workspace?stage=shop&source=planned")}
+                    className="w-full flex items-center gap-2 rounded-lg border border-border realm-banner-btn px-3 py-2 text-sm transition-colors"
+                    data-testid="button-shopping-summary-view"
+                  >
+                    <ShoppingCart className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="flex-1">View shopping list</span>
+                  </button>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </>
       )}
@@ -1501,7 +1523,8 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
               </span>
               <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${continuePlanningOpen ? "" : "-rotate-90"}`} />
             </button>
-            {continuePlanningOpen && (
+            <div className="grid transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: continuePlanningOpen ? "1fr" : "0fr" }}>
+              <div className="overflow-hidden">
               <div className="space-y-2 pb-2" data-testid="section-continue-planning-body">
 
                 {/* Draggable staged meal cards — moved here from Section B for visibility */}
@@ -1583,7 +1606,8 @@ function IdlePanelContent({ onSetMode, onCreateIntent, selectedDayLabel, placeho
                   </button>
                 )}
               </div>
-            )}
+              </div>
+            </div>
           </div>
         </>
       )}
@@ -1970,6 +1994,7 @@ export function PlannerAssistantPanel({
         consumedProposalId={consumedProposalId}
         onSharePlan={onSharePlan}
         basketMealsCount={basketMealsCount}
+        isMobile={true}
       />
     ) : (
       <p className="text-xs text-muted-foreground">Select a mode to get started.</p>
