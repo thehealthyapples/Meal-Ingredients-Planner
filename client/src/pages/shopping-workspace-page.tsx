@@ -750,8 +750,8 @@ function WorkspaceRow({
       className={`border-b border-border/30 transition-colors ${rowOpacity} ${rowBg}`}
       data-testid={`workspace-row-${item.id}`}
     >
-      {/* ── Collapsed row — flex with pinned-right score and chevron ─────── */}
-      <div className="flex items-center gap-x-2 px-4 py-3 min-h-[52px]">
+      {/* ── Collapsed row — two-row on mobile, single-row flex on desktop ─── */}
+      <div className="grid grid-cols-[28px_1fr] items-start gap-x-2 gap-y-1.5 px-4 pt-3 pb-2.5 sm:flex sm:items-center sm:py-3 sm:min-h-[52px]">
 
         {/* Indicator — 28px fixed (circle for Shop, checkbox for Review/Prep) */}
         <div className="shrink-0 w-7 flex items-center justify-center">
@@ -860,8 +860,8 @@ function WorkspaceRow({
           )}
         </div>
 
-        {/* CTA slot */}
-        <div className="shrink-0 flex items-center min-w-[160px] sm:min-w-[200px]">
+        {/* CTA slot — row 2 col 2 on mobile, inline on desktop */}
+        <div className="col-start-2 row-start-2 flex items-center sm:shrink-0 sm:min-w-[200px]">
           {/* Shop: Found it / Next shop or status + undo */}
           {shopMode && effectiveShopState === "need" && (
             <div className="flex gap-1.5">
@@ -937,8 +937,8 @@ function WorkspaceRow({
           )}
         </div>
 
-        {/* Score */}
-        <div className="shrink-0 w-[78px] flex items-center justify-center">
+        {/* Score — row 2 col 1 on mobile, pinned right on desktop */}
+        <div className="col-start-1 row-start-2 flex items-center justify-center sm:shrink-0 sm:w-[78px]">
           {canShowScoreForItem(item) && item.thaRating != null && (shopMode || !item.checked) && (
             <ScoreBadge score={item.thaRating} size={22} />
           )}
