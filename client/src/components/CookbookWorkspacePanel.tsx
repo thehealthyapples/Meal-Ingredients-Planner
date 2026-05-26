@@ -1,5 +1,5 @@
 import { type ReactNode, useRef, useState, useEffect } from "react";
-import { Wand2, Camera, X, ChevronLeft, Upload, Plus, LayoutGrid, List, Sliders, BookOpen } from "lucide-react";
+import { Wand2, Camera, X, ChevronLeft, ChevronDown, Upload, Plus, LayoutGrid, List, Sliders, BookOpen } from "lucide-react";
 import { CreateMealContent } from "@/components/create-meal-modal";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 
@@ -50,107 +50,143 @@ function WorkspaceIdleContent({
   viewMode,
   onViewModeChange,
   filterCount,
+  isMobile = false,
 }: {
   onSetMode: (mode: CookbookWorkspaceMode) => void;
   onAddRecipe?: () => void;
   viewMode: 'grid' | 'list';
   onViewModeChange: (mode: 'grid' | 'list') => void;
   filterCount: number;
+  isMobile?: boolean;
 }) {
+  // On mobile: sections start collapsed. On desktop: always open.
+  const [createOpen, setCreateOpen] = useState(!isMobile);
+  const [displayOpen, setDisplayOpen] = useState(!isMobile);
+
+  // Sync open state if viewport crosses mobile breakpoint
+  useEffect(() => {
+    if (!isMobile) { setCreateOpen(true); setDisplayOpen(true); }
+  }, [isMobile]);
+
   return (
     <div data-testid="cookbook-workspace-idle">
       {/* Create section */}
       <button
-        className="w-full flex items-center justify-between py-2 text-left"
+        className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+        onClick={() => isMobile && setCreateOpen(v => !v)}
+        aria-expanded={createOpen}
         aria-label="Create"
+        data-testid="button-section-create-toggle"
+        style={{ cursor: isMobile ? "pointer" : "default" }}
       >
         <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
           Create
         </span>
-      </button>
-      <div className="flex gap-2 pb-2" data-testid="cookbook-workspace-create-buttons">
-        <button
-          className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
-          onClick={() => onSetMode("build")}
-          data-testid="button-cookbook-build"
-        >
-          <Wand2 className="h-3.5 w-3.5 text-primary/70" />
-          <span className="text-[10px] font-medium leading-none">Build</span>
-        </button>
-        <button
-          className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
-          onClick={() => onSetMode("scan")}
-          data-testid="button-cookbook-scan"
-        >
-          <Camera className="h-3.5 w-3.5 text-primary/70" />
-          <span className="text-[10px] font-medium leading-none">Scan</span>
-        </button>
-        {onAddRecipe && (
-          <button
-            className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-2.5 transition-colors"
-            onClick={onAddRecipe}
-            data-testid="button-cookbook-add-recipe"
-          >
-            <Plus className="h-3.5 w-3.5 text-primary/70" />
-            <span className="text-[10px] font-medium leading-none">Add</span>
-          </button>
+        {isMobile && (
+          <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${createOpen ? "" : "-rotate-90"}`} />
         )}
+      </button>
+
+      <div
+        className="grid transition-[grid-template-rows] duration-200 ease-out"
+        style={{ gridTemplateRows: createOpen ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden">
+          <div className="flex gap-2 pb-2" data-testid="cookbook-workspace-create-buttons">
+            <button
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-3 transition-colors"
+              onClick={() => onSetMode("build")}
+              data-testid="button-cookbook-build"
+            >
+              <Wand2 className="h-4 w-4 text-primary/70" />
+              <span className="text-[11px] font-medium leading-none">Build</span>
+            </button>
+            <button
+              className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-3 transition-colors"
+              onClick={() => onSetMode("scan")}
+              data-testid="button-cookbook-scan"
+            >
+              <Camera className="h-4 w-4 text-primary/70" />
+              <span className="text-[11px] font-medium leading-none">Scan</span>
+            </button>
+            {onAddRecipe && (
+              <button
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-3 transition-colors"
+                onClick={onAddRecipe}
+                data-testid="button-cookbook-add-recipe"
+              >
+                <Plus className="h-4 w-4 text-primary/70" />
+                <span className="text-[11px] font-medium leading-none">Add</span>
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="w-full h-px bg-border/50 my-1" />
 
       {/* Display section */}
       <button
-        className="w-full flex items-center justify-between py-2 text-left"
+        className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+        onClick={() => isMobile && setDisplayOpen(v => !v)}
+        aria-expanded={displayOpen}
         aria-label="Display"
+        data-testid="button-section-display-toggle"
+        style={{ cursor: isMobile ? "pointer" : "default" }}
       >
         <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
           Display
         </span>
+        {isMobile && (
+          <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${displayOpen ? "" : "-rotate-90"}`} />
+        )}
       </button>
-      <div className="flex gap-2 pb-2">
-        <button
-          className={`flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border px-1.5 py-2.5 transition-colors realm-banner-btn ${viewMode === 'grid' ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
-          onClick={() => onViewModeChange('grid')}
-          data-testid="button-view-grid"
-        >
-          <LayoutGrid className="h-3.5 w-3.5 text-primary/70" />
-          <span className="text-[10px] font-medium leading-none">Grid</span>
-        </button>
-        <button
-          className={`flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border px-1.5 py-2.5 transition-colors realm-banner-btn ${viewMode === 'list' ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
-          onClick={() => onViewModeChange('list')}
-          data-testid="button-view-list"
-        >
-          <List className="h-3.5 w-3.5 text-primary/70" />
-          <span className="text-[10px] font-medium leading-none">List</span>
-        </button>
-        <button
-          className={`flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border px-1.5 py-2.5 transition-colors relative realm-banner-btn ${filterCount > 0 ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
-          onClick={() => onSetMode("filter")}
-          data-testid="button-toggle-advanced-filters"
-        >
-          <Sliders className="h-3.5 w-3.5 text-primary/70" />
-          <span className="text-[10px] font-medium leading-none">Filter</span>
-          {filterCount > 0 && (
-            <span className="absolute top-1 right-1.5 text-[9px] font-bold text-primary leading-none">
-              {filterCount}
-            </span>
-          )}
-        </button>
+
+      <div
+        className="grid transition-[grid-template-rows] duration-200 ease-out"
+        style={{ gridTemplateRows: displayOpen ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden">
+          <div className="flex gap-2 pb-2">
+            <button
+              className={`flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border px-1.5 py-3 transition-colors realm-banner-btn ${viewMode === 'grid' ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
+              onClick={() => onViewModeChange('grid')}
+              data-testid="button-view-grid"
+            >
+              <LayoutGrid className="h-4 w-4 text-primary/70" />
+              <span className="text-[11px] font-medium leading-none">Grid</span>
+            </button>
+            <button
+              className={`flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border px-1.5 py-3 transition-colors realm-banner-btn ${viewMode === 'list' ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
+              onClick={() => onViewModeChange('list')}
+              data-testid="button-view-list"
+            >
+              <List className="h-4 w-4 text-primary/70" />
+              <span className="text-[11px] font-medium leading-none">List</span>
+            </button>
+            <button
+              className={`flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border px-1.5 py-3 transition-colors relative realm-banner-btn ${filterCount > 0 ? 'opacity-100' : 'opacity-60 hover:opacity-100'}`}
+              onClick={() => onSetMode("filter")}
+              data-testid="button-toggle-advanced-filters"
+            >
+              <Sliders className="h-4 w-4 text-primary/70" />
+              <span className="text-[11px] font-medium leading-none">Filter</span>
+              {filterCount > 0 && (
+                <span className="absolute top-1 right-1.5 text-[9px] font-bold text-primary leading-none">
+                  {filterCount}
+                </span>
+              )}
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="w-full h-px bg-border/50 my-1" />
 
-      {/* Discover section */}
-      <button
-        className="w-full flex items-center justify-between py-2 text-left"
-        aria-label="Discover"
-      >
-        <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
-          Discover
-        </span>
-      </button>
+      {/* Discover — static hint, no collapse needed */}
+      <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider py-2">
+        Discover
+      </p>
       <p className="text-[11px] text-muted-foreground/60 pb-2 leading-snug">
         Search the web or scan a recipe to grow your cookbook.
       </p>
@@ -248,6 +284,7 @@ export function CookbookWorkspacePanel({
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}
           filterCount={filterCount}
+          isMobile={isMobile}
         />
       )}
       {mode === "build" && (
