@@ -9,6 +9,7 @@ import {
   Sparkles, Loader2,
   Clock, X, RotateCcw, Mic, Camera, ImageUp, ChefHat, NotepadText,
 } from "lucide-react";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { CameraModal } from "@/components/camera-modal";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
@@ -89,6 +90,13 @@ export default function ListPage() {
   const [cameraOpen, setCameraOpen] = useState(false);
   const [history, setHistory] = useState<QuickListBasket[]>(() => loadHistory());
   const [aiCleaned, setAiCleaned] = useState(false);
+  const [recentDrawerOpen, setRecentDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setRecentDrawerOpen(true);
+    window.addEventListener("tha:open-workspace", handler);
+    return () => window.removeEventListener("tha:open-workspace", handler);
+  }, []);
 
   useEffect(() => {
     document.title = "Quick List – The Healthy Apples";
@@ -683,6 +691,73 @@ export default function ListPage() {
       />
 
       </div>
+
+      {/* ── Recent Lists Workspace Drawer ─────────────────────────────────── */}
+      <Drawer open={recentDrawerOpen} onOpenChange={setRecentDrawerOpen} shouldScaleBackground={false}>
+        <DrawerContent
+          className="flex flex-col max-h-[75vh]"
+          data-testid="drawer-quick-list-recent"
+          data-realm="list"
+        >
+          <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0 realm-header-bg">
+            <DrawerTitle className="text-sm font-semibold flex items-center gap-2">
+              <Clock className="h-4 w-4" style={{ color: "var(--realm-accent)" }} />
+              Recent Lists
+            </DrawerTitle>
+            <button
+              onClick={() => setRecentDrawerOpen(false)}
+              className="rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+              aria-label="Close recent lists"
+              data-testid="button-recent-drawer-close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
+          <div
+            className="flex-1 overflow-y-auto min-h-0 px-4 pt-3"
+            style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}
+          >
+            {history.length === 0 ? (
+              <p className="text-sm text-muted-foreground/60 py-6 text-center">
+                No recent lists yet. Your last 4 lists will appear here.
+              </p>
+            ) : (
+              <>
+                <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider pb-2">
+                  Tap a list to reopen it
+                </p>
+                <div className="space-y-1">
+                  {history.map((basket) => (
+                    <button
+                      key={basket.id}
+                      onClick={() => {
+                        restoreFromHistory(basket);
+                        setRecentDrawerOpen(false);
+                      }}
+                      className="w-full flex items-start justify-between gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left"
+                      data-testid={`button-recent-list-${basket.id}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate text-foreground">
+                          {basket.parsedItems.slice(0, 4).join(", ")}
+                          {basket.parsedItems.length > 4 && ` +${basket.parsedItems.length - 4} more`}
+                        </p>
+                        <p className="text-xs text-muted-foreground/60 mt-0.5">
+                          {basket.parsedItems.length} item{basket.parsedItems.length !== 1 ? "s" : ""}
+                          {basket.selectedShop ? ` · ${basket.selectedShop}` : " · Best shop"}
+                          {" · "}{formatRelativeTime(basket.createdAt)}
+                        </p>
+                      </div>
+                      <RotateCcw className="h-4 w-4 shrink-0 text-muted-foreground/40 mt-0.5" />
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }
