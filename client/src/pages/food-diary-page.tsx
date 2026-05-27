@@ -14,8 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
-import {
-} from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -24,7 +23,7 @@ import {
   Copy, Loader2, TrendingUp, Weight, Moon, Zap, BookOpen,
   Sun, Coffee, UtensilsCrossed, Droplets, Sparkles, ChefHat,
   ChevronDown, Heart, Flame, Target, Activity, Droplet,
-  Gift, ClipboardCheck, PiggyBank, Search,
+  Gift, ClipboardCheck, PiggyBank, Search, FileDown, Settings,
 } from "lucide-react";
 import { computeMealVariety } from "@/lib/nutrition-variety";
 import { DayVarietySummary } from "@/components/nutrition-variety-chips";
@@ -1186,6 +1185,15 @@ export default function FoodDiaryPage() {
   const [upfDismissed, setUpfDismissed] = useState(false);
   const [diarySettingsOpen, setDiarySettingsOpen] = useState(false);
 
+  // Mobile workspace drawer
+  const [mobileWorkspaceOpen, setMobileWorkspaceOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setMobileWorkspaceOpen(true);
+    window.addEventListener("tha:open-workspace", handler);
+    return () => window.removeEventListener("tha:open-workspace", handler);
+  }, []);
+
   // Diary settings (localStorage-backed)
   const [showHealthSnapshot, setShowHealthSnapshot] = useState<boolean>(() => {
     try { return localStorage.getItem("tha_diary_show_health_snapshot") !== "false"; }
@@ -1615,16 +1623,6 @@ export default function FoodDiaryPage() {
                   </p>
                 )}
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full h-8 text-xs realm-banner-btn"
-                  onClick={() => setCopyModalOpen(true)}
-                  data-testid="button-copy-from-planner"
-                >
-                  <Copy className="h-3 w-3 mr-1" />Copy from Planner
-                </Button>
-
                 <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
                   {SLOTS.map(({ key, label, icon: Icon }) => {
                     const slotEntries = entriesBySlot[key];
@@ -1905,6 +1903,71 @@ export default function FoodDiaryPage() {
         profile={profile}
         onSaveProfile={(data) => updateProfileMutation.mutate(data)}
       />
+
+      {/* ── Mobile Diary Workspace Drawer ─────────────────────────────────── */}
+      <Drawer open={mobileWorkspaceOpen} onOpenChange={setMobileWorkspaceOpen} shouldScaleBackground={false}>
+        <DrawerContent
+          className="flex flex-col max-h-[75vh]"
+          data-testid="drawer-diary-workspace"
+          data-realm="diary"
+        >
+          <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0 realm-header-bg">
+            <DrawerTitle className="text-sm font-semibold flex items-center gap-2">
+              <BookOpen className="h-4 w-4" style={{ color: "var(--realm-accent)" }} />
+              Diary Workspace
+            </DrawerTitle>
+            <button
+              onClick={() => setMobileWorkspaceOpen(false)}
+              className="rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+              aria-label="Close workspace"
+              data-testid="button-diary-workspace-close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
+          <div
+            className="flex-1 overflow-y-auto min-h-0 px-4 pt-3"
+            style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}
+          >
+            {/* Import section */}
+            <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider py-2">Import</p>
+            <div className="flex gap-2 pb-3">
+              <button
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-3 transition-colors"
+                onClick={() => { setMobileWorkspaceOpen(false); setCopyModalOpen(true); }}
+                data-testid="button-workspace-copy-planner"
+              >
+                <Copy className="h-4 w-4 text-primary/70" />
+                <span className="text-[11px] font-medium leading-none">From Planner</span>
+              </button>
+              <button
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-3 transition-colors"
+                onClick={() => { setMobileWorkspaceOpen(false); setImportModalOpen(true); }}
+                data-testid="button-workspace-import-csv"
+              >
+                <FileDown className="h-4 w-4 text-primary/70" />
+                <span className="text-[11px] font-medium leading-none">Import CSV</span>
+              </button>
+            </div>
+
+            <div className="w-full h-px bg-border/50 my-1" />
+
+            {/* Options section */}
+            <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider py-2">Options</p>
+            <div className="flex gap-2 pb-2">
+              <button
+                className="flex-1 flex flex-col items-center gap-1.5 rounded-md border border-border realm-banner-btn px-1.5 py-3 transition-colors"
+                onClick={() => { setMobileWorkspaceOpen(false); setDiarySettingsOpen(true); }}
+                data-testid="button-workspace-diary-settings"
+              >
+                <Settings className="h-4 w-4 text-primary/70" />
+                <span className="text-[11px] font-medium leading-none">Settings</span>
+              </button>
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
     </>
   );
