@@ -36,7 +36,6 @@ import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@/lib/nutrition-variety
 import { getMealNutrients } from "@/lib/nutrition-insights";
 import { NutritionVarietyDots, PlannerVarietyLegend, MealVarietyNudge } from "@/components/nutrition-variety-chips";
 import { MealNutrientTags } from "@/components/nutrition-insights-panel";
-import { DayViewDrawer } from "@/components/day-view-drawer";
 import { useUser } from "@/hooks/use-user";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";

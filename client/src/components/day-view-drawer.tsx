@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -8,9 +9,22 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import {
   Coffee, Sun, Moon, Cookie, Wine,
-  ChevronUp, ChevronDown, X, Plus, Search, Loader2, ChefHat, UtensilsCrossed, Sparkles,
+  ChevronUp, ChevronDown, X, Plus, Search, Loader2, ChefHat, UtensilsCrossed, Sparkles, CalendarDays,
 } from "lucide-react";
 import type { PlannerEntry, Meal } from "@shared/schema";
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
 
 interface FullDay {
   id: number;
@@ -404,6 +418,8 @@ export function DayViewDrawer({
     </>
   );
 
+  const isMobile = useIsMobile();
+
   if (inline) {
     return (
       <div className="space-y-4" data-testid="panel-day-view">
@@ -412,6 +428,42 @@ export function DayViewDrawer({
     );
   }
 
+  // ── Mobile: bottom-sheet Drawer ───────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={(v) => !v && onClose()} shouldScaleBackground={false}>
+        <DrawerContent
+          className="flex flex-col max-h-[85vh]"
+          data-testid="drawer-day-view"
+          data-realm="planner"
+        >
+          <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0 realm-header-bg">
+            <DrawerTitle className="text-sm font-semibold flex items-center gap-2" data-testid="text-day-view-label">
+              <CalendarDays className="h-4 w-4" style={{ color: "var(--realm-accent)" }} />
+              {dayLabel}
+            </DrawerTitle>
+            <button
+              onClick={onClose}
+              className="rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+              aria-label="Close day view"
+              data-testid="button-day-view-close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
+          <div
+            className="flex-1 overflow-y-auto min-h-0 px-4 pt-4 space-y-6"
+            style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}
+          >
+            {slotList}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
+  // ── Desktop: centred Dialog ───────────────────────────────────────────────
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
