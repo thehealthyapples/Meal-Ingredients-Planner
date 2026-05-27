@@ -986,7 +986,7 @@ export default function PantryPage() {
       </div>
 
       <Drawer open={mobileHomeOpen} onOpenChange={setMobileHomeOpen} shouldScaleBackground={false}>
-        <DrawerContent className="flex flex-col" data-testid="drawer-household" data-realm="pantry">
+        <DrawerContent className="flex flex-col max-h-[85vh]" data-testid="drawer-household" data-realm="pantry">
           <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0 realm-header-bg">
             <DrawerTitle className="text-sm font-semibold flex items-center gap-2">
               <Home className="h-4 w-4" style={{ color: "var(--realm-accent)" }} />
@@ -1003,8 +1003,8 @@ export default function PantryPage() {
           </div>
           <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
           <div
-            className="px-4 py-4"
-            style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom, 0px))" }}
+            className="flex-1 overflow-y-auto min-h-0 px-4 pt-3"
+            style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}
           >
             <CategoryTabs
               categories={HOME_CATS}

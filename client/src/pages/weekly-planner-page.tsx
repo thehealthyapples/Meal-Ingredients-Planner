@@ -2655,7 +2655,7 @@ export default function WeeklyPlannerPage() {
 
       {/* ── Mobile long-press contextual action sheet ── */}
       <Sheet open={!!contextEntry} onOpenChange={(v) => { if (!v) setContextEntry(null); }}>
-        <SheetContent side="bottom" className="rounded-t-2xl px-0 pb-8 pt-0" data-testid="sheet-mobile-entry-actions">
+        <SheetContent side="bottom" className="rounded-t-2xl px-0 pb-8 pt-0" data-testid="sheet-mobile-entry-actions" data-realm="planner">
           {contextEntry && (() => {
             const isPlaceholder = contextEntry.meal.mealSourceType === "planner-placeholder";
             const isCooked = cookedEntryIds.has(contextEntry.entry.id);
@@ -2746,7 +2746,7 @@ export default function WeeklyPlannerPage() {
 
       {/* ── Phase 1B: Mobile move-to-day picker sheet ── */}
       <Sheet open={!!moveEntryTarget} onOpenChange={(v) => { if (!v) setMoveEntryTarget(null); }}>
-        <SheetContent side="bottom" className="rounded-t-2xl px-0 pb-8 pt-0" data-testid="sheet-mobile-move-day">
+        <SheetContent side="bottom" className="rounded-t-2xl px-0 pb-8 pt-0" data-testid="sheet-mobile-move-day" data-realm="planner">
           <div className="px-4 pt-5 pb-3 border-b border-border">
             <p className="text-sm font-semibold text-foreground">Move to another day</p>
             <p className="text-xs text-muted-foreground mt-0.5">Same slot on the chosen day</p>

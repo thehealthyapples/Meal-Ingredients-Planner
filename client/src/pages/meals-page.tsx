@@ -787,9 +787,9 @@ function MobileMealActionSheet({
   return (
     <>
       <Drawer open={open} onOpenChange={(v) => !v && onClose()} shouldScaleBackground={false}>
-        <DrawerContent className="flex flex-col max-h-[70vh]" data-testid="drawer-meal-action-sheet">
+        <DrawerContent className="flex flex-col max-h-[70vh]" data-testid="drawer-meal-action-sheet" data-realm="cookbook">
           {/* Meal header */}
-          <div className="flex items-center gap-3 px-4 pt-1 pb-3 border-b border-border/50 shrink-0">
+          <div className="flex items-center gap-3 px-4 pt-1 pb-3 shrink-0 realm-header-bg">
             {meal.imageUrl ? (
               <img src={meal.imageUrl} alt={meal.name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
             ) : (
@@ -804,11 +804,12 @@ function MobileMealActionSheet({
               )}
             </div>
           </div>
+          <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
 
           {/* Actions */}
           <div
-            className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5"
-            style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom, 0px))" }}
+            className="flex-1 overflow-y-auto px-3 pt-2 pb-2 space-y-0.5"
+            style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))" }}
           >
             <button
               className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left"

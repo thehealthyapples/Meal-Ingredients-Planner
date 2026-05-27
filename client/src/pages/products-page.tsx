@@ -1699,7 +1699,7 @@ export default function ProductsPage() {
         </div>
         <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
         <div
-          className="flex-1 overflow-y-auto min-h-0 px-4 pt-4 space-y-4"
+          className="flex-1 overflow-y-auto min-h-0 px-4 pt-3 space-y-4"
           style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}
         >
           {/* Search + scan */}
