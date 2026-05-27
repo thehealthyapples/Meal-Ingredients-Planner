@@ -750,11 +750,13 @@ function WorkspaceRow({
       className={`border-b border-border/30 transition-colors ${rowOpacity} ${rowBg}`}
       data-testid={`workspace-row-${item.id}`}
     >
-      {/* ── Collapsed row — two-row on mobile, single-row flex on desktop ─── */}
-      <div className="grid grid-cols-[28px_1fr] items-start gap-x-2 gap-y-1.5 px-4 pt-3 pb-2.5 sm:flex sm:items-center sm:py-3 sm:min-h-[52px]">
+      {/* ── Collapsed row — 3-row mobile grid, single-row flex on desktop ─── */}
+      {/* Mobile grid rows: [1] indicator+name+qty  [2] score+hint  [3] CTAs  */}
+      {/* Desktop sm:flex: indicator → name → CTAs → score (all inline)       */}
+      <div className="grid grid-cols-[28px_1fr] items-start gap-x-2 gap-y-1 px-4 pt-3 pb-2.5 sm:flex sm:items-center sm:py-3 sm:min-h-[52px]">
 
-        {/* Indicator — 28px fixed (circle for Shop, checkbox for Review/Prep) */}
-        <div className="shrink-0 w-7 flex items-center justify-center">
+        {/* ── Row 1, Col 1: Indicator (circle for Shop, checkbox for Review/Prep) ── */}
+        <div className="shrink-0 w-7 flex items-center justify-center mt-0.5">
           {shopMode ? (
             <button
               onClick={() => onShopStateChange?.(effectiveShopState === "found" ? null : "found")}
@@ -775,17 +777,16 @@ function WorkspaceRow({
           )}
         </div>
 
-        {/* Item name + qty */}
+        {/* ── Row 1, Col 2: Item name + qty chip ── */}
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-1.5 min-w-0 flex-wrap">
-            <span className={`text-sm font-medium leading-snug truncate ${
+            <span className={`text-sm font-semibold leading-snug ${
               shopMode
                 ? effectiveShopState !== "need" ? "text-muted-foreground" : "text-foreground"
                 : item.checked ? "line-through text-muted-foreground" : "text-foreground"
             }`}>
               {capitalizeWords(item.productName)}
             </span>
-            {/* Qty chip — editable when unchecked; read-only when checked */}
             {/* Qty — edit controls inline when editing, chip when not */}
             {qtyEditMode && !item.checked ? (
               <>
@@ -850,19 +851,31 @@ function WorkspaceRow({
               </span>
             ) : null}
           </div>
-          {/* Hint — Review and Prep */}
-          {hint && !item.checked && !shopMode && (
-            <div className="flex items-center gap-0.5 mt-0.5">
-              {hint.tone === "amber" && <AlertTriangle className="h-3 w-3 shrink-0 text-amber-600 dark:text-amber-400" />}
-              {hint.tone === "green" && <CheckCircle2 className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400" />}
-              <span className={`text-xs ${hintToneClass}`}>{hint.text}</span>
-            </div>
-          )}
         </div>
 
-        {/* CTA slot — row 2 col 2 on mobile, inline on desktop */}
-        <div className="col-start-2 row-start-2 flex items-center sm:shrink-0 sm:min-w-[200px]">
-          {/* Shop: Found it / Next shop or status + undo */}
+        {/* ── Row 2, Col 2: Score + hint metadata (mobile only; auto-places to row 2) ── */}
+        {/* Only rendered when there is something to display, avoiding empty row gaps.   */}
+        {(canShowScoreForItem(item) && item.thaRating != null && (shopMode || !item.checked)) ||
+         (hint && !item.checked && !shopMode) ? (
+          <div className="col-start-2 flex items-center gap-2 min-w-0 sm:hidden">
+            {canShowScoreForItem(item) && item.thaRating != null && (shopMode || !item.checked) && (
+              <ScoreBadge score={item.thaRating} size={20} />
+            )}
+            {hint && !item.checked && !shopMode && (
+              <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+                {hint.tone === "amber" && <AlertTriangle className="h-2.5 w-2.5 shrink-0 text-amber-500/70 dark:text-amber-400/70" />}
+                {hint.tone === "green" && <CheckCircle2 className="h-2.5 w-2.5 shrink-0 text-emerald-500/70 dark:text-emerald-400/70" />}
+                <span className={`text-[11px] leading-none ${hintToneClass} opacity-75 truncate`}>{hint.text}</span>
+              </div>
+            )}
+          </div>
+        ) : null}
+
+        {/* ── Row 3 (or 2 if meta row absent), Col 2: CTAs ─────────────────── */}
+        {/* col-start-2 auto-places after the meta row (or row 1 if meta absent).  */}
+        {/* Mobile: justify-end (right-aligned).  Desktop sm:flex: left-aligned.   */}
+        <div className="col-start-2 flex items-center justify-end gap-1.5 sm:justify-start sm:shrink-0 sm:min-w-[200px]">
+          {/* Shop: Found it / Next shop */}
           {shopMode && effectiveShopState === "need" && (
             <div className="flex gap-1.5">
               <button
@@ -879,6 +892,7 @@ function WorkspaceRow({
               </button>
             </div>
           )}
+          {/* Shop: status + undo */}
           {shopMode && effectiveShopState !== "need" && (
             <div className="flex items-center gap-1.5">
               <span className={`text-xs font-medium whitespace-nowrap ${shopConfig.labelClass}`}>
@@ -892,7 +906,7 @@ function WorkspaceRow({
               </button>
             </div>
           )}
-          {/* Prep: chips (or Analyse fallback for attention-only items) */}
+          {/* Prep: action panel chips */}
           {prepMode && !item.checked && onPrepAction && (
             <PrepActionPanel
               item={item}
@@ -901,6 +915,7 @@ function WorkspaceRow({
               onPrepAction={onPrepAction}
             />
           )}
+          {/* Prep: Analyse fallback for attention-only items */}
           {prepMode && !item.checked && prepPanelEmpty && onOpenAnalyser && (
             <button
               onClick={onOpenAnalyser}
@@ -911,7 +926,7 @@ function WorkspaceRow({
               Analyse
             </button>
           )}
-          {/* Review: ambiguous → pills strip handles it; non-ambiguous → Review; normal → Analyse */}
+          {/* Review: ambiguous → pills strip below handles it; non-ambiguous → Review; normal → Analyse */}
           {!shopMode && !prepMode && !item.checked && (
             item.needsReview ? (
               isAmbiguousReview ? null : (
@@ -937,8 +952,8 @@ function WorkspaceRow({
           )}
         </div>
 
-        {/* Score — row 2 col 1 on mobile, pinned right on desktop */}
-        <div className="col-start-1 row-start-2 flex items-center justify-center sm:shrink-0 sm:w-[78px]">
+        {/* ── Desktop only: Score pinned right (hidden on mobile) ── */}
+        <div className="hidden sm:flex sm:items-center sm:justify-center sm:shrink-0 sm:w-[78px]">
           {canShowScoreForItem(item) && item.thaRating != null && (shopMode || !item.checked) && (
             <ScoreBadge score={item.thaRating} size={22} />
           )}
