@@ -1,7 +1,8 @@
 import { type ReactNode, useRef, useState, useEffect } from "react";
-import { Wand2, Camera, X, ChevronLeft, ChevronDown, Upload, Plus, LayoutGrid, List, Sliders, BookOpen } from "lucide-react";
+import { Wand2, Camera, X, ChevronLeft, ChevronDown, Upload, Plus, LayoutGrid, List, Sliders, BookOpen, Search, Loader2 } from "lucide-react";
 import { CreateMealContent } from "@/components/create-meal-modal";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { Input } from "@/components/ui/input";
 
 export type CookbookWorkspaceMode = "build" | "scan" | "filter" | null;
 
@@ -17,6 +18,10 @@ interface Props {
   onBuildCreated?: (mealId: number) => void;
   /** Add Recipe shortcut: trigger the existing CreateMealDialog */
   onAddRecipe?: () => void;
+  /** Search */
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  isSearching?: boolean;
   /** Display controls */
   viewMode: 'grid' | 'list';
   onViewModeChange: (mode: 'grid' | 'list') => void;
@@ -50,6 +55,9 @@ function WorkspaceIdleContent({
   viewMode,
   onViewModeChange,
   filterCount,
+  searchTerm,
+  onSearchChange,
+  isSearching,
   isMobile = false,
 }: {
   onSetMode: (mode: CookbookWorkspaceMode) => void;
@@ -57,6 +65,9 @@ function WorkspaceIdleContent({
   viewMode: 'grid' | 'list';
   onViewModeChange: (mode: 'grid' | 'list') => void;
   filterCount: number;
+  searchTerm: string;
+  onSearchChange: (value: string) => void;
+  isSearching?: boolean;
   isMobile?: boolean;
 }) {
   // On mobile: sections start collapsed. On desktop: always open.
@@ -70,6 +81,33 @@ function WorkspaceIdleContent({
 
   return (
     <div data-testid="cookbook-workspace-idle">
+      <p className="text-[11px] text-muted-foreground/60 pb-2 leading-snug">
+        Search the web or scan a recipe to grow your cookbook.
+      </p>
+      {/* Search */}
+      <div className="pb-3">
+        <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider py-2">
+          Search
+        </p>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Search cookbook..."
+            className="pl-8 pr-8 h-9 w-full text-sm"
+            value={searchTerm}
+            onChange={(e) => onSearchChange(e.target.value)}
+            data-testid="input-search-meals"
+          />
+          {isSearching && (
+            <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="w-full h-px bg-border/50 mb-1" />
+
       {/* Create section */}
       <button
         className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
@@ -181,15 +219,6 @@ function WorkspaceIdleContent({
         </div>
       </div>
 
-      <div className="w-full h-px bg-border/50 my-1" />
-
-      {/* Discover — static hint, no collapse needed */}
-      <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider py-2">
-        Discover
-      </p>
-      <p className="text-[11px] text-muted-foreground/60 pb-2 leading-snug">
-        Search the web or scan a recipe to grow your cookbook.
-      </p>
     </div>
   );
 }
@@ -269,6 +298,9 @@ export function CookbookWorkspacePanel({
   onViewModeChange,
   filterCount,
   filterContent,
+  searchTerm,
+  onSearchChange,
+  isSearching,
   mobileOpen = false,
   onMobileClose,
 }: Props) {
@@ -284,6 +316,9 @@ export function CookbookWorkspacePanel({
           viewMode={viewMode}
           onViewModeChange={onViewModeChange}
           filterCount={filterCount}
+          searchTerm={searchTerm}
+          onSearchChange={onSearchChange}
+          isSearching={isSearching}
           isMobile={isMobile}
         />
       )}

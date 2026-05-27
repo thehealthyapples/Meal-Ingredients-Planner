@@ -44,12 +44,13 @@ const NAV_ITEMS_MAIN = [
 ];
 
 // Mobile bottom nav - 7 items; Quick List leads on the left
+// hasWorkspace: true → long-press opens that page's workspace drawer
 const MOBILE_BOTTOM_ITEMS = [
   { href: "/shopping-list", label: "List", icon: ListPlus },
-  { href: "/cookbook", label: "Cookbook", icon: ChefHat },
-  { href: "/planner", label: "Planner", icon: CalendarDays },
-  { href: "/pantry", label: "Pantry", icon: PantryIcon },
-  { href: "/analyser", label: "Analyser", icon: Microscope },
+  { href: "/cookbook", label: "Cookbook", icon: ChefHat, hasWorkspace: true },
+  { href: "/planner", label: "Planner", icon: CalendarDays, hasWorkspace: true },
+  { href: "/pantry", label: "Pantry", icon: PantryIcon, hasWorkspace: true },
+  { href: "/analyser", label: "Analyser", icon: Microscope, hasWorkspace: true },
   { href: "/my-diary", label: "Diary", icon: BookOpen },
   { href: "/shopping-workspace?stage=shop", label: "Shop", icon: ShoppingCart },
 ];
@@ -614,6 +615,52 @@ export function DesktopSidebar() {
   );
 }
 
+/* ── Mobile Nav Item — tap navigates; repeat-tap on active page opens workspace ── */
+function MobileNavItem({
+  href,
+  label,
+  icon: Icon,
+  isActive,
+  realm,
+  hasWorkspace = false,
+}: {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  isActive: boolean;
+  realm: (typeof REALM_STYLES)[string] | undefined;
+  hasWorkspace?: boolean;
+}) {
+  const [, navigate] = useLocation();
+  const basePath = href.split("?")[0];
+
+  const handleClick = () => {
+    if (hasWorkspace && isActive) {
+      // Repeat-tap on the active page → open that page's workspace drawer
+      try { if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10); } catch {}
+      window.dispatchEvent(new CustomEvent("tha:open-workspace", { detail: { href: basePath } }));
+      return;
+    }
+    navigate(href);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={`flex flex-col items-center gap-0.5 px-1.5 py-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] justify-center select-none ${
+        isActive
+          ? realm ? realm.mobileActive : "bg-accent text-primary"
+          : realm ? realm.mobileInactive : "text-muted-foreground"
+      }`}
+      data-testid={`mobile-nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
+    >
+      <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
+      <span className="text-[9px] font-medium leading-tight">{label}</span>
+    </button>
+  );
+}
+
 /* ── Mobile Bottom Nav ── */
 export function MobileNav() {
   const [location] = useLocation();
@@ -630,22 +677,17 @@ export function MobileNav() {
       <div className="flex items-center justify-around px-1 py-1 max-w-lg mx-auto">
         {MOBILE_BOTTOM_ITEMS.map((item) => {
           const isActive = location === item.href.split("?")[0] || (item.href === "/my-diary" && location === "/diary");
-          const Icon = item.icon;
           const realm = REALM_STYLES[item.href.split("?")[0]];
           return (
-            <Link
+            <MobileNavItem
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 px-1.5 py-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] justify-center ${
-                isActive
-                  ? realm ? realm.mobileActive : "bg-accent text-primary"
-                  : realm ? realm.mobileInactive : "text-muted-foreground"
-              }`}
-              data-testid={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-            >
-              <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
-              <span className="text-[9px] font-medium leading-tight">{item.label}</span>
-            </Link>
+              label={item.label}
+              icon={item.icon}
+              isActive={isActive}
+              realm={realm}
+              hasWorkspace={!!(item as any).hasWorkspace}
+            />
           );
         })}
       </div>

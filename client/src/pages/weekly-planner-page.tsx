@@ -350,6 +350,17 @@ export default function WeeklyPlannerPage() {
   const { user } = useUser();
   const [, navigate] = useLocation();
 
+  // Repeat-tap nav: open workspace drawer when mobile nav fires tha:open-workspace for this page
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if ((e as CustomEvent<{ href: string }>).detail?.href === "/planner") {
+        setMobileAssistantOpen(true);
+      }
+    };
+    window.addEventListener("tha:open-workspace", handler);
+    return () => window.removeEventListener("tha:open-workspace", handler);
+  }, []);
+
   // Phase 1: cooked state (localStorage-backed, reversible, no schema change)
   const [cookedEntryIds, setCookedEntryIds] = useState<Set<number>>(() => loadCookedEntries());
   // Phase 1: mobile move-to-day sheet target
@@ -1590,7 +1601,7 @@ export default function WeeklyPlannerPage() {
           )}
           {!renameWeekId && activeWeekData && (
             <button
-              className="p-1.5 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent/40 transition-colors"
+              className="hidden sm:inline-flex p-1.5 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent/40 transition-colors"
               onClick={() => { setRenameWeekId(activeWeekData.id); setRenameValue(activeWeekData.weekName); }}
               title="Rename week"
               data-testid={`button-rename-week-${activeWeek}`}
@@ -1624,8 +1635,8 @@ export default function WeeklyPlannerPage() {
               {smartLoading ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Sparkles className="mr-1 h-3 w-3" />}
               {smartLoading ? "Planning…" : "Plan"}
             </Button>
-            <div className="w-px h-4 bg-[var(--realm-border)]" />
-            <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs realm-banner-btn" onClick={() => addAllToBasket(sortedDays)} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
+            <div className="hidden md:block w-px h-4 bg-[var(--realm-border)]" />
+            <Button size="sm" variant="outline" className="border-0 hidden md:inline-flex px-2.5 text-xs realm-banner-btn" onClick={() => addAllToBasket(sortedDays)} disabled={addToBasketMutation.isPending} data-testid="button-add-all-basket">
               <ShoppingBasket className="h-3 w-3 mr-1" />
               {addToBasketMutation.isPending ? "…" : "Send week to basket"}
             </Button>
@@ -1644,6 +1655,19 @@ export default function WeeklyPlannerPage() {
         </div>
       }
       actions={
+        <div className="flex items-center gap-0.5">
+          {/* Mobile: send week to basket — always visible on mobile, hidden on desktop where it's in center */}
+          <Button
+            size="sm"
+            variant="outline"
+            className="md:hidden border-0 px-2 realm-banner-btn"
+            onClick={() => addAllToBasket(sortedDays)}
+            disabled={addToBasketMutation.isPending}
+            aria-label="Send week to basket"
+            data-testid="button-add-all-basket-mobile"
+          >
+            {addToBasketMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingBasket className="h-3.5 w-3.5" />}
+          </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -1679,6 +1703,7 @@ export default function WeeklyPlannerPage() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       }
     />
     <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8" data-realm="planner">

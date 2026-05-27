@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,6 +14,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import { getPantryKnowledge, pantryItemMatchesQuery, MICRO_INSIGHTS } from "@/lib/pantry-knowledge";
 import { PageHeader } from "@/components/PageHeader";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 
 interface PantryItem {
   id: number;
@@ -752,6 +753,12 @@ function HomePantrySection({
         <div className="flex items-center gap-2">
           <Home className="h-4 w-4 text-primary" />
           <h2 className="text-base font-semibold">Home</h2>
+          <CategoryTabs
+            categories={HOME_CATS}
+            active={activeCategory}
+            onChange={handleCategoryChange}
+            className="flex items-center gap-1 rounded-lg bg-muted/40 p-0.5 ml-1"
+          />
         </div>
         {selected.size > 0 && (
           <div className="flex items-center gap-1.5">
@@ -908,31 +915,22 @@ export default function PantryPage() {
     queryKey: ["/api/pantry"],
   });
 
-  // Tab state lifted to page level so tabs can live in the banner
   const [activeFood, setActiveFood] = useState<FoodCat>("larder");
   const [activeHome, setActiveHome] = useState<HomeCat>("household");
+  const [mobileHomeOpen, setMobileHomeOpen] = useState(false);
+
+  // Repeat-tap nav: open Home drawer when mobile nav fires tha:open-workspace for this page
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if ((e as CustomEvent<{ href: string }>).detail?.href === "/pantry") {
+        setMobileHomeOpen(true);
+      }
+    };
+    window.addEventListener("tha:open-workspace", handler);
+    return () => window.removeEventListener("tha:open-workspace", handler);
+  }, []);
 
   const microInsight = MICRO_INSIGHTS[new Date().getDate() % MICRO_INSIGHTS.length];
-
-  // Food tabs go in the PageHeader center (2/3 of layout = the dominant area)
-  const headerCenter = (
-    <CategoryTabs
-      categories={FOOD_CATS}
-      active={activeFood}
-      onChange={setActiveFood}
-      className="flex items-center gap-1 rounded-lg bg-muted/40 p-1"
-    />
-  );
-
-  // Home tabs go in the PageHeader actions (right side, narrower)
-  const headerActions = (
-    <CategoryTabs
-      categories={HOME_CATS}
-      active={activeHome}
-      onChange={setActiveHome}
-      className="flex items-center gap-1 rounded-lg bg-muted/40 p-1"
-    />
-  );
 
   return (
     <>
@@ -941,8 +939,14 @@ export default function PantryPage() {
         icon={<PantryIcon className="h-5 w-5" />}
         realm="pantry"
         titleTestId="text-pantry-title"
-        center={headerCenter}
-        actions={headerActions}
+        center={
+          <CategoryTabs
+            categories={FOOD_CATS}
+            active={activeFood}
+            onChange={setActiveFood}
+            className="flex items-center gap-1 rounded-lg bg-muted/40 p-1"
+          />
+        }
         context={<span>Your everyday choices live here.</span>}
       />
 
@@ -980,6 +984,36 @@ export default function PantryPage() {
           </div>
         </div>
       </div>
+
+      <Drawer open={mobileHomeOpen} onOpenChange={setMobileHomeOpen} shouldScaleBackground={false}>
+        <DrawerContent className="flex flex-col" data-testid="drawer-household" data-realm="pantry">
+          <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0 realm-header-bg">
+            <DrawerTitle className="text-sm font-semibold flex items-center gap-2">
+              <Home className="h-4 w-4" style={{ color: "var(--realm-accent)" }} />
+              Home
+            </DrawerTitle>
+            <button
+              onClick={() => setMobileHomeOpen(false)}
+              className="rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+              aria-label="Close"
+              data-testid="button-household-drawer-close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
+          <div
+            className="px-4 py-4"
+            style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom, 0px))" }}
+          >
+            <CategoryTabs
+              categories={HOME_CATS}
+              active={activeHome}
+              onChange={(v) => { setActiveHome(v); setMobileHomeOpen(false); }}
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

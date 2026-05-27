@@ -38,6 +38,7 @@ import { FirstVisitHint } from "@/components/first-visit-hint";
 import AnalyserDetailV2 from "@/components/analyser/AnalyserDetailV2";
 import { AddToWeekModal } from "@/components/AddToWeekModal";
 import { PageHeader } from "@/components/PageHeader";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 
 interface ParsedIngredient {
   name: string;
@@ -429,6 +430,17 @@ export default function ProductsPage() {
   const [lastBarcode, setLastBarcode] = useState<string | null>(null);
   // Ref to detect genuine toggle changes vs. the setting loading for the first time.
   const prevRegulatoryRef = useRef<boolean | undefined>(undefined);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if ((e as CustomEvent<{ href: string }>).detail?.href === "/analyser") {
+        setMobileFiltersOpen(true);
+      }
+    };
+    window.addEventListener("tha:open-workspace", handler);
+    return () => window.removeEventListener("tha:open-workspace", handler);
+  }, []);
 
   const { data: userProfile } = useQuery<{
     dietPattern: string | null;
@@ -938,7 +950,7 @@ export default function ProductsPage() {
   const activeFilterCount = [
     hideUltraProcessed, hideHighRiskAdditives, hideEmulsifiers, hideAcidityRegulators,
     hidePreservatives, hideFlavourings, hideStabilisers, hideModifiedStarches, hideSeedOils,
-    hideBovaer, minRating > 0, excludedAdditives.size > 0,
+    hideBovaer, minRating > 0, excludedAdditives.size > 0, !!retailerFilter,
   ].filter(Boolean).length;
 
   return (
@@ -984,52 +996,6 @@ export default function ProductsPage() {
             {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
             <span className="hidden sm:inline">Search</span>
           </Button>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 shrink-0 gap-1.5 text-xs realm-banner-btn"
-                data-testid="button-shop-dropdown"
-              >
-                <Store className="h-3.5 w-3.5" />
-                {retailerFilter || "Shop"}
-                <ChevronDown className="h-3 w-3 opacity-60" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-48 p-2" data-testid="panel-shop-dropdown">
-              <div className="space-y-0.5">
-                {["Tesco", "Sainsbury's", "Asda", "Morrisons", "Aldi", "Lidl", "Waitrose", "M&S", "Co-op"].map((shop) => (
-                  <button
-                    key={shop}
-                    onClick={() => setRetailerFilter(retailerFilter === shop ? "" : shop)}
-                    className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-colors ${
-                      retailerFilter === shop
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-muted text-foreground"
-                    }`}
-                    data-testid={`button-retailer-${shop.toLowerCase().replace(/['\s]+/g, "-")}`}
-                  >
-                    {retailerFilter === shop && <X className="h-3 w-3 shrink-0" />}
-                    {retailerFilter !== shop && <span className="h-3 w-3 shrink-0" />}
-                    {shop}
-                  </button>
-                ))}
-                {retailerFilter && (
-                  <>
-                    <div className="border-t border-border/40 my-1" />
-                    <button
-                      onClick={() => setRetailerFilter("")}
-                      className="w-full text-left px-2.5 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-muted transition-colors"
-                      data-testid="button-retailer-clear"
-                    >
-                      Clear selection
-                    </button>
-                  </>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
         </div>
       }
       actions={
@@ -1044,101 +1010,48 @@ export default function ProductsPage() {
                 Compare ({compareProducts.length})
               </Button>
             )}
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  className="relative flex items-center justify-center p-1 rounded-md hover:bg-accent/40 transition-colors"
-                  aria-label="Filters"
-                  data-testid="button-filters-menu"
-                >
-                  <img src={thaAppleSrc} alt="Healthy Apples" className="h-9 w-9 object-contain" />
-                  {activeFilterCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center leading-none">
-                      {activeFilterCount}
-                    </span>
-                  )}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-80 p-0" data-testid="panel-filters-menu">
-                <div className="max-h-[70vh] overflow-y-auto p-5 space-y-5">
-                  <div className="space-y-3">
-                    <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Filters</p>
-                    {([
-                      { id: 'hide-upf', label: 'Hide ultra-processed foods', checked: hideUltraProcessed, set: setHideUltraProcessed, testId: 'switch-hide-upf' },
-                      { id: 'hide-additives', label: 'Hide high-risk additives', checked: hideHighRiskAdditives, set: setHideHighRiskAdditives, testId: 'switch-hide-additives' },
-                      { id: 'hide-emulsifiers', label: 'Hide emulsifiers', checked: hideEmulsifiers, set: setHideEmulsifiers, testId: 'switch-hide-emulsifiers' },
-                      { id: 'hide-acidity', label: 'Hide acidity regulators', checked: hideAcidityRegulators, set: setHideAcidityRegulators, testId: 'switch-hide-acidity-regulators' },
-                      { id: 'hide-preservatives', label: 'Hide preservatives', checked: hidePreservatives, set: setHidePreservatives, testId: 'switch-hide-preservatives' },
-                      { id: 'hide-flavourings', label: 'Hide flavourings', checked: hideFlavourings, set: setHideFlavourings, testId: 'switch-hide-flavourings' },
-                      { id: 'hide-stabilisers', label: 'Hide stabilisers', checked: hideStabilisers, set: setHideStabilisers, testId: 'switch-hide-stabilisers' },
-                      { id: 'hide-modified-starches', label: 'Hide modified starches', checked: hideModifiedStarches, set: setHideModifiedStarches, testId: 'switch-hide-modified-starches' },
-                      { id: 'hide-seed-oils', label: 'Hide seed oils', checked: hideSeedOils, set: setHideSeedOils, testId: 'switch-hide-seed-oils' },
-                      { id: 'hide-bovaer', label: 'Hide Bovaer-risk products', checked: hideBovaer, set: setHideBovaer, testId: 'switch-hide-bovaer' },
-                    ] as const).map(f => (
-                      <div key={f.id} className="flex items-center justify-between gap-3">
-                        <Label htmlFor={f.id} className="text-sm font-normal cursor-pointer text-foreground/80">{f.label}</Label>
-                        <Switch id={f.id} checked={f.checked} onCheckedChange={f.set} data-testid={f.testId} />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="pt-4 border-t border-border/40 space-y-3">
-                    <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Minimum Apple Rating</p>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {[0, 1, 2, 3, 4, 5].map(r => (
-                        <Button
-                          key={r}
-                          size="sm"
-                          variant={minRating === r ? 'default' : 'outline'}
-                          onClick={() => setMinRating(r)}
-                          className="h-8 px-3 text-xs"
-                          data-testid={`button-min-rating-${r}`}
-                        >
-                          {r === 0 ? 'All' : `${r}★`}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="pt-4 border-t border-border/40 space-y-3">
-                    <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Settings</p>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <Label htmlFor="menu-regulatory-scoring" className="text-sm font-normal cursor-pointer text-foreground/80">Include mandatory fortification in scoring</Label>
-                        <p className="text-[11px] text-muted-foreground/60 mt-0.5 leading-snug">Some products contain nutrients added as part of mandatory fortification (e.g. iron, folic acid). You can choose whether these affect your score.</p>
-                      </div>
-                      <Switch
-                        id="menu-regulatory-scoring"
-                        checked={intelligenceSettings?.includeRegulatoryAdditivesInScoring !== false}
-                        onCheckedChange={(v) => updateSettingsMutation.mutate({ includeRegulatoryAdditivesInScoring: v })}
-                        data-testid="switch-regulatory-scoring"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <Label htmlFor="menu-sound" className="text-sm font-normal cursor-pointer text-foreground/80">Sound effects</Label>
-                      <Switch
-                        id="menu-sound"
-                        checked={intelligenceSettings?.soundEnabled !== false}
-                        onCheckedChange={(v) => updateSettingsMutation.mutate({ soundEnabled: v })}
-                        data-testid="switch-sound-enabled"
-                      />
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <Label htmlFor="menu-barcode" className="text-sm font-normal cursor-pointer text-foreground/80">Barcode scanner</Label>
-                      <Switch
-                        id="menu-barcode"
-                        checked={intelligenceSettings?.barcodeScannerEnabled !== false}
-                        onCheckedChange={(v) => updateSettingsMutation.mutate({ barcodeScannerEnabled: v })}
-                        data-testid="switch-barcode-enabled"
-                      />
-                    </div>
-                  </div>
-                  {activeFilterCount > 0 && searchResults.length > 0 && (
-                    <p className="text-xs text-muted-foreground pt-1">
-                      Showing {canonicalGroups.length} of {deduplicatedResults.length} products
-                    </p>
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
+            {/* Desktop-only filter popover — mobile uses the workspace drawer */}
+            <div className="hidden md:block">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    className="relative flex items-center justify-center p-1 rounded-md hover:bg-accent/40 transition-colors"
+                    aria-label="Filters"
+                    data-testid="button-filters-menu"
+                  >
+                    <img src={thaAppleSrc} alt="Healthy Apples" className="h-9 w-9 object-contain" />
+                    {activeFilterCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center leading-none">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-0" data-testid="panel-filters-menu">
+                  <FilterPanelContent
+                    retailerFilter={retailerFilter}
+                    setRetailerFilter={setRetailerFilter}
+                    hideUltraProcessed={hideUltraProcessed} setHideUltraProcessed={setHideUltraProcessed}
+                    hideHighRiskAdditives={hideHighRiskAdditives} setHideHighRiskAdditives={setHideHighRiskAdditives}
+                    hideEmulsifiers={hideEmulsifiers} setHideEmulsifiers={setHideEmulsifiers}
+                    hideAcidityRegulators={hideAcidityRegulators} setHideAcidityRegulators={setHideAcidityRegulators}
+                    hidePreservatives={hidePreservatives} setHidePreservatives={setHidePreservatives}
+                    hideFlavourings={hideFlavourings} setHideFlavourings={setHideFlavourings}
+                    hideStabilisers={hideStabilisers} setHideStabilisers={setHideStabilisers}
+                    hideModifiedStarches={hideModifiedStarches} setHideModifiedStarches={setHideModifiedStarches}
+                    hideSeedOils={hideSeedOils} setHideSeedOils={setHideSeedOils}
+                    hideBovaer={hideBovaer} setHideBovaer={setHideBovaer}
+                    minRating={minRating} setMinRating={setMinRating}
+                    intelligenceSettings={intelligenceSettings}
+                    updateSettingsMutation={updateSettingsMutation}
+                    activeFilterCount={activeFilterCount}
+                    canonicalGroupsLength={canonicalGroups.length}
+                    deduplicatedResultsLength={deduplicatedResults.length}
+                    searchResultsLength={searchResults.length}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
         </div>
       }
     />
@@ -1766,7 +1679,346 @@ export default function ProductsPage() {
         onClose={() => setShowBarcodeScanner(false)}
       />
     </div>
+
+    {/* Mobile search + filters workspace drawer */}
+    <Drawer open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen} shouldScaleBackground={false}>
+      <DrawerContent className="flex flex-col max-h-[85vh]" data-testid="drawer-analyser-filters" data-realm="analyser">
+        <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0 realm-header-bg">
+          <DrawerTitle className="text-sm font-semibold flex items-center gap-2">
+            <Microscope className="h-4 w-4" style={{ color: "var(--realm-accent)" }} />
+            Analyser
+          </DrawerTitle>
+          <button
+            onClick={() => setMobileFiltersOpen(false)}
+            className="rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+            aria-label="Close"
+            data-testid="button-analyser-filters-drawer-close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
+        <div
+          className="flex-1 overflow-y-auto min-h-0 px-4 pt-4 space-y-4"
+          style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}
+        >
+          {/* Search + scan */}
+          <div className="flex gap-2">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/40 pointer-events-none" />
+              <Input
+                placeholder="Search packaged foods…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { handleSearch(); setMobileFiltersOpen(false); }
+                }}
+                className="pl-9 h-10"
+                data-testid="input-drawer-product-search"
+                autoFocus
+              />
+            </div>
+            {intelligenceSettings?.barcodeScannerEnabled !== false && (
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 shrink-0 realm-banner-btn"
+                onClick={() => { setShowBarcodeScanner(true); setMobileFiltersOpen(false); }}
+                disabled={barcodeLoading}
+                aria-label="Scan barcode"
+                data-testid="button-drawer-barcode-scan"
+              >
+                {barcodeLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
+              </Button>
+            )}
+            <Button
+              className="h-10 shrink-0 realm-banner-btn"
+              onClick={() => { handleSearch(); setMobileFiltersOpen(false); }}
+              disabled={isSearching || !searchQuery.trim()}
+              data-testid="button-drawer-search-products"
+            >
+              {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+            </Button>
+          </div>
+
+          {/* Shop — collapsible */}
+          <AnalyserDrawerSection
+            label="Shop"
+            badge={retailerFilter ? 1 : 0}
+          >
+            <div className="pt-2 space-y-2">
+              <div className="flex items-center justify-between">
+                {retailerFilter && (
+                  <button
+                    className="text-[10px] text-muted-foreground/70 hover:text-foreground underline underline-offset-2 ml-auto"
+                    onClick={() => setRetailerFilter("")}
+                    data-testid="button-clear-retailer"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {["Tesco", "Sainsbury's", "Asda", "Morrisons", "Aldi", "Lidl", "Waitrose", "M&S", "Co-op"].map((shop) => (
+                  <Button
+                    key={shop}
+                    size="sm"
+                    variant={retailerFilter === shop ? "default" : "outline"}
+                    className="h-7 px-2.5 text-xs"
+                    onClick={() => setRetailerFilter(retailerFilter === shop ? "" : shop)}
+                    data-testid={`button-retailer-${shop.toLowerCase().replace(/[^a-z0-9]/g, "-")}`}
+                  >
+                    {shop}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </AnalyserDrawerSection>
+
+          {/* Filters — collapsible */}
+          <AnalyserDrawerSection
+            label="Filters"
+            badge={activeFilterCount - (retailerFilter ? 1 : 0)}
+          >
+            <div className="pt-2 space-y-3">
+              {([
+                { id: 'hide-upf-d', label: 'Hide ultra-processed foods', checked: hideUltraProcessed, set: setHideUltraProcessed, testId: 'switch-hide-upf' },
+                { id: 'hide-additives-d', label: 'Hide high-risk additives', checked: hideHighRiskAdditives, set: setHideHighRiskAdditives, testId: 'switch-hide-additives' },
+                { id: 'hide-emulsifiers-d', label: 'Hide emulsifiers', checked: hideEmulsifiers, set: setHideEmulsifiers, testId: 'switch-hide-emulsifiers' },
+                { id: 'hide-acidity-d', label: 'Hide acidity regulators', checked: hideAcidityRegulators, set: setHideAcidityRegulators, testId: 'switch-hide-acidity-regulators' },
+                { id: 'hide-preservatives-d', label: 'Hide preservatives', checked: hidePreservatives, set: setHidePreservatives, testId: 'switch-hide-preservatives' },
+                { id: 'hide-flavourings-d', label: 'Hide flavourings', checked: hideFlavourings, set: setHideFlavourings, testId: 'switch-hide-flavourings' },
+                { id: 'hide-stabilisers-d', label: 'Hide stabilisers', checked: hideStabilisers, set: setHideStabilisers, testId: 'switch-hide-stabilisers' },
+                { id: 'hide-modified-starches-d', label: 'Hide modified starches', checked: hideModifiedStarches, set: setHideModifiedStarches, testId: 'switch-hide-modified-starches' },
+                { id: 'hide-seed-oils-d', label: 'Hide seed oils', checked: hideSeedOils, set: setHideSeedOils, testId: 'switch-hide-seed-oils' },
+                { id: 'hide-bovaer-d', label: 'Hide Bovaer-risk products', checked: hideBovaer, set: setHideBovaer, testId: 'switch-hide-bovaer' },
+              ] as const).map(f => (
+                <div key={f.id} className="flex items-center justify-between gap-3">
+                  <Label htmlFor={f.id} className="text-sm font-normal cursor-pointer text-foreground/80">{f.label}</Label>
+                  <Switch id={f.id} checked={f.checked} onCheckedChange={f.set} data-testid={f.testId} />
+                </div>
+              ))}
+              <div className="pt-2 border-t border-border/40 space-y-2">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Min Apple Rating</p>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {[0, 1, 2, 3, 4, 5].map(r => (
+                    <Button key={r} size="sm" variant={minRating === r ? 'default' : 'outline'} onClick={() => setMinRating(r)} className="h-8 px-3 text-xs" data-testid={`button-min-rating-${r}`}>
+                      {r === 0 ? 'All' : `${r}★`}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              <div className="pt-2 border-t border-border/40 space-y-3">
+                <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Settings</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="d-regulatory-scoring" className="text-sm font-normal cursor-pointer text-foreground/80">Include mandatory fortification in scoring</Label>
+                    <p className="text-[11px] text-muted-foreground/60 mt-0.5 leading-snug">Whether nutrients added as mandatory fortification affect your score.</p>
+                  </div>
+                  <Switch id="d-regulatory-scoring" checked={intelligenceSettings?.includeRegulatoryAdditivesInScoring !== false} onCheckedChange={(v) => updateSettingsMutation.mutate({ includeRegulatoryAdditivesInScoring: v })} data-testid="switch-regulatory-scoring" />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="d-sound" className="text-sm font-normal cursor-pointer text-foreground/80">Sound effects</Label>
+                  <Switch id="d-sound" checked={intelligenceSettings?.soundEnabled !== false} onCheckedChange={(v) => updateSettingsMutation.mutate({ soundEnabled: v })} data-testid="switch-sound-enabled" />
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="d-barcode" className="text-sm font-normal cursor-pointer text-foreground/80">Barcode scanner</Label>
+                  <Switch id="d-barcode" checked={intelligenceSettings?.barcodeScannerEnabled !== false} onCheckedChange={(v) => updateSettingsMutation.mutate({ barcodeScannerEnabled: v })} data-testid="switch-barcode-enabled" />
+                </div>
+              </div>
+              {activeFilterCount > 0 && searchResults.length > 0 && (
+                <p className="text-xs text-muted-foreground">Showing {canonicalGroups.length} of {deduplicatedResults.length} products</p>
+              )}
+            </div>
+          </AnalyserDrawerSection>
+        </div>
+      </DrawerContent>
+    </Drawer>
     </>
+  );
+}
+
+function AnalyserDrawerSection({
+  label,
+  badge = 0,
+  children,
+}: {
+  label: string;
+  badge?: number;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border border-border/50 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted/30 transition-colors"
+        onClick={() => setOpen(v => !v)}
+      >
+        <span className="flex items-center gap-2">
+          {label}
+          {badge > 0 && (
+            <span className="h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center leading-none">
+              {badge}
+            </span>
+          )}
+        </span>
+        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="px-4 pb-4 border-t border-border/40">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FilterPanelContent({
+  retailerFilter, setRetailerFilter,
+  hideUltraProcessed, setHideUltraProcessed,
+  hideHighRiskAdditives, setHideHighRiskAdditives,
+  hideEmulsifiers, setHideEmulsifiers,
+  hideAcidityRegulators, setHideAcidityRegulators,
+  hidePreservatives, setHidePreservatives,
+  hideFlavourings, setHideFlavourings,
+  hideStabilisers, setHideStabilisers,
+  hideModifiedStarches, setHideModifiedStarches,
+  hideSeedOils, setHideSeedOils,
+  hideBovaer, setHideBovaer,
+  minRating, setMinRating,
+  intelligenceSettings,
+  updateSettingsMutation,
+  activeFilterCount,
+  canonicalGroupsLength,
+  deduplicatedResultsLength,
+  searchResultsLength,
+}: {
+  retailerFilter: string; setRetailerFilter: (v: string) => void;
+  hideUltraProcessed: boolean; setHideUltraProcessed: (v: boolean) => void;
+  hideHighRiskAdditives: boolean; setHideHighRiskAdditives: (v: boolean) => void;
+  hideEmulsifiers: boolean; setHideEmulsifiers: (v: boolean) => void;
+  hideAcidityRegulators: boolean; setHideAcidityRegulators: (v: boolean) => void;
+  hidePreservatives: boolean; setHidePreservatives: (v: boolean) => void;
+  hideFlavourings: boolean; setHideFlavourings: (v: boolean) => void;
+  hideStabilisers: boolean; setHideStabilisers: (v: boolean) => void;
+  hideModifiedStarches: boolean; setHideModifiedStarches: (v: boolean) => void;
+  hideSeedOils: boolean; setHideSeedOils: (v: boolean) => void;
+  hideBovaer: boolean; setHideBovaer: (v: boolean) => void;
+  minRating: number; setMinRating: (v: number) => void;
+  intelligenceSettings: any;
+  updateSettingsMutation: any;
+  activeFilterCount: number;
+  canonicalGroupsLength: number;
+  deduplicatedResultsLength: number;
+  searchResultsLength: number;
+}) {
+  return (
+    <div className="space-y-5">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Retailer</p>
+          {retailerFilter && (
+            <button
+              className="text-[10px] text-muted-foreground/70 hover:text-foreground underline underline-offset-2"
+              onClick={() => setRetailerFilter("")}
+              data-testid="button-clear-retailer"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {["Tesco", "Sainsbury's", "Asda", "Morrisons", "Aldi", "Lidl", "Waitrose", "M&S", "Co-op"].map((shop) => (
+            <Button
+              key={shop}
+              size="sm"
+              variant={retailerFilter === shop ? "default" : "outline"}
+              className="h-7 px-2.5 text-xs"
+              onClick={() => setRetailerFilter(retailerFilter === shop ? "" : shop)}
+              data-testid={`button-retailer-${shop.toLowerCase().replace(/[^a-z0-9]/g, "-")}`}
+            >
+              {shop}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div className="pt-4 border-t border-border/40 space-y-3">
+        <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Filters</p>
+        {([
+          { id: 'hide-upf', label: 'Hide ultra-processed foods', checked: hideUltraProcessed, set: setHideUltraProcessed, testId: 'switch-hide-upf' },
+          { id: 'hide-additives', label: 'Hide high-risk additives', checked: hideHighRiskAdditives, set: setHideHighRiskAdditives, testId: 'switch-hide-additives' },
+          { id: 'hide-emulsifiers', label: 'Hide emulsifiers', checked: hideEmulsifiers, set: setHideEmulsifiers, testId: 'switch-hide-emulsifiers' },
+          { id: 'hide-acidity', label: 'Hide acidity regulators', checked: hideAcidityRegulators, set: setHideAcidityRegulators, testId: 'switch-hide-acidity-regulators' },
+          { id: 'hide-preservatives', label: 'Hide preservatives', checked: hidePreservatives, set: setHidePreservatives, testId: 'switch-hide-preservatives' },
+          { id: 'hide-flavourings', label: 'Hide flavourings', checked: hideFlavourings, set: setHideFlavourings, testId: 'switch-hide-flavourings' },
+          { id: 'hide-stabilisers', label: 'Hide stabilisers', checked: hideStabilisers, set: setHideStabilisers, testId: 'switch-hide-stabilisers' },
+          { id: 'hide-modified-starches', label: 'Hide modified starches', checked: hideModifiedStarches, set: setHideModifiedStarches, testId: 'switch-hide-modified-starches' },
+          { id: 'hide-seed-oils', label: 'Hide seed oils', checked: hideSeedOils, set: setHideSeedOils, testId: 'switch-hide-seed-oils' },
+          { id: 'hide-bovaer', label: 'Hide Bovaer-risk products', checked: hideBovaer, set: setHideBovaer, testId: 'switch-hide-bovaer' },
+        ] as const).map(f => (
+          <div key={f.id} className="flex items-center justify-between gap-3">
+            <Label htmlFor={f.id} className="text-sm font-normal cursor-pointer text-foreground/80">{f.label}</Label>
+            <Switch id={f.id} checked={f.checked} onCheckedChange={f.set} data-testid={f.testId} />
+          </div>
+        ))}
+      </div>
+      <div className="pt-4 border-t border-border/40 space-y-3">
+        <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Minimum Apple Rating</p>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {[0, 1, 2, 3, 4, 5].map(r => (
+            <Button
+              key={r}
+              size="sm"
+              variant={minRating === r ? 'default' : 'outline'}
+              onClick={() => setMinRating(r)}
+              className="h-8 px-3 text-xs"
+              data-testid={`button-min-rating-${r}`}
+            >
+              {r === 0 ? 'All' : `${r}★`}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div className="pt-4 border-t border-border/40 space-y-3">
+        <p className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground/70">Settings</p>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <Label htmlFor="menu-regulatory-scoring" className="text-sm font-normal cursor-pointer text-foreground/80">Include mandatory fortification in scoring</Label>
+            <p className="text-[11px] text-muted-foreground/60 mt-0.5 leading-snug">Some products contain nutrients added as part of mandatory fortification (e.g. iron, folic acid). You can choose whether these affect your score.</p>
+          </div>
+          <Switch
+            id="menu-regulatory-scoring"
+            checked={intelligenceSettings?.includeRegulatoryAdditivesInScoring !== false}
+            onCheckedChange={(v) => updateSettingsMutation.mutate({ includeRegulatoryAdditivesInScoring: v })}
+            data-testid="switch-regulatory-scoring"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="menu-sound" className="text-sm font-normal cursor-pointer text-foreground/80">Sound effects</Label>
+          <Switch
+            id="menu-sound"
+            checked={intelligenceSettings?.soundEnabled !== false}
+            onCheckedChange={(v) => updateSettingsMutation.mutate({ soundEnabled: v })}
+            data-testid="switch-sound-enabled"
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="menu-barcode" className="text-sm font-normal cursor-pointer text-foreground/80">Barcode scanner</Label>
+          <Switch
+            id="menu-barcode"
+            checked={intelligenceSettings?.barcodeScannerEnabled !== false}
+            onCheckedChange={(v) => updateSettingsMutation.mutate({ barcodeScannerEnabled: v })}
+            data-testid="switch-barcode-enabled"
+          />
+        </div>
+      </div>
+      {activeFilterCount > 0 && searchResultsLength > 0 && (
+        <p className="text-xs text-muted-foreground pt-1">
+          Showing {canonicalGroupsLength} of {deduplicatedResultsLength} products
+        </p>
+      )}
+    </div>
   );
 }
 

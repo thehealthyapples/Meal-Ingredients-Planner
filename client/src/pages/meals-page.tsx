@@ -2216,6 +2216,17 @@ export default function MealsPage() {
     if (q) setSearchTerm(q);
   }, [searchStr]);
 
+  // Repeat-tap nav: open workspace drawer when mobile nav fires tha:open-workspace for this page
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if ((e as CustomEvent<{ href: string }>).detail?.href === "/cookbook") {
+        setMobileCookbookOpen(true);
+      }
+    };
+    window.addEventListener("tha:open-workspace", handler);
+    return () => window.removeEventListener("tha:open-workspace", handler);
+  }, []);
+
   // Detect planner import context from URL params (fires once on mount)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -2908,7 +2919,8 @@ export default function MealsPage() {
     (mealsDietPattern ? 1 : 0) +
     mealsDietRestrictions.length +
     (mealsUpfFilter ? 1 : 0) +
-    (audienceChanged ? 1 : 0);
+    (audienceChanged ? 1 : 0) +
+    (categoryFilter !== "all" ? 1 : 0);
 
   return (
     <>
@@ -2950,38 +2962,6 @@ export default function MealsPage() {
               </button>
             ))}
           </div>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input
-              placeholder="Search..."
-              className="pl-8 pr-8 h-8 w-48"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              data-testid="input-search-meals"
-            />
-            {(webIsSearching || productIsSearching) && (
-              <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
-              </div>
-            )}
-          </div>
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[120px] h-8 shrink-0" data-testid="select-category-filter">
-              <SelectValue placeholder="All Categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              {[...allCategories].sort((a, b) => {
-                const ia = CATEGORY_DROPDOWN_ORDER.indexOf(a.name);
-                const ib = CATEGORY_DROPDOWN_ORDER.indexOf(b.name);
-                return (ia === -1 ? CATEGORY_DROPDOWN_ORDER.length : ia) - (ib === -1 ? CATEGORY_DROPDOWN_ORDER.length : ib);
-              }).map(cat => (
-                <SelectItem key={cat.id} value={cat.name} data-testid={`option-category-${cat.name}`}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
       }
       actions={
@@ -2995,17 +2975,6 @@ export default function MealsPage() {
             data-testid="input-scan-file"
             onChange={e => { const f = e.target.files?.[0]; if (f) handleScanFile(f); }}
           />
-          {/* Mobile workspace trigger — hidden on lg+ where the sidebar is visible */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="px-2 sm:px-3 realm-banner-btn lg:hidden"
-            onClick={() => setMobileCookbookOpen(true)}
-            data-testid="button-mobile-cookbook-workspace"
-          >
-            <Sliders className="h-4 w-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">Workspace</span>
-          </Button>
           {/* Add Recipe: primary CTA; externalOpen allows workspace panel shortcut to trigger it */}
           <CreateMealDialog
             onScan={() => setCameraModalOpen(true)}
@@ -3019,7 +2988,7 @@ export default function MealsPage() {
             <Button
               variant="outline"
               size="sm"
-              className="px-2 sm:px-3 realm-banner-btn"
+              className="hidden sm:inline-flex px-2 sm:px-3 realm-banner-btn"
               onClick={() => importLibraryMutation.mutate()}
               disabled={importLibraryMutation.isPending}
               data-testid="button-import-library"
@@ -4821,8 +4790,35 @@ export default function MealsPage() {
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         filterCount={advancedFilterCount}
+        searchTerm={searchTerm}
+        onSearchChange={setSearchTerm}
+        isSearching={webIsSearching || productIsSearching}
           filterContent={
             <div className="space-y-3">
+              {/* Category */}
+              <div>
+                <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Category</span>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="h-8 text-xs w-full mt-1.5" data-testid="select-category-filter">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {[...allCategories].sort((a, b) => {
+                      const ia = CATEGORY_DROPDOWN_ORDER.indexOf(a.name);
+                      const ib = CATEGORY_DROPDOWN_ORDER.indexOf(b.name);
+                      return (ia === -1 ? CATEGORY_DROPDOWN_ORDER.length : ia) - (ib === -1 ? CATEGORY_DROPDOWN_ORDER.length : ib);
+                    }).map(cat => (
+                      <SelectItem key={cat.id} value={cat.name} data-testid={`option-category-${cat.name}`}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="w-full h-px bg-border/50" />
+
               {/* Audience */}
               <div>
                 <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">Who is this for?</span>
@@ -4911,14 +4907,14 @@ export default function MealsPage() {
                 </div>
               </div>
 
-              {(mealsDietPattern || mealsDietRestrictions.length > 0 || mealsUpfFilter || matchMyProfile) && (
+              {(mealsDietPattern || mealsDietRestrictions.length > 0 || mealsUpfFilter || matchMyProfile || categoryFilter !== "all") && (
                 <>
                   <div className="w-full h-px bg-border/50" />
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-7 text-xs text-muted-foreground w-full"
-                    onClick={() => { setMatchMyProfile(false); setMealsDietPattern(""); setMealsDietRestrictions([]); setMealsUpfFilter(false); setWebDietPattern(""); setWebDietRestrictions([]); }}
+                    onClick={() => { setMatchMyProfile(false); setMealsDietPattern(""); setMealsDietRestrictions([]); setMealsUpfFilter(false); setWebDietPattern(""); setWebDietRestrictions([]); setCategoryFilter("all"); }}
                     data-testid="button-clear-diet-filters"
                   >
                     <X className="h-3 w-3 mr-1" />

@@ -2004,7 +2004,22 @@ export default function ShoppingWorkspacePage() {
           realm="basket"
           center={<ModeSwitcher mode={mode} onChange={(m) => { setMode(m); }} />}
           controlBar={workspaceControlBar}
-          actions={menuDropdown}
+          actions={
+            <div className="flex items-center gap-0.5">
+              <Button
+                size="sm"
+                variant="outline"
+                className="md:hidden border-0 px-2 realm-banner-btn"
+                onClick={() => setBasketDialogOpen(true)}
+                disabled={items.length === 0}
+                aria-label="Send to Supermarket"
+                data-testid="button-send-to-supermarket-mobile"
+              >
+                <ShoppingCart className="h-3.5 w-3.5" />
+              </Button>
+              {menuDropdown}
+            </div>
+          }
         />
       )}
       <div className={isFullscreen
