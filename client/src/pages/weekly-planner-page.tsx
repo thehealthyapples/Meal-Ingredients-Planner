@@ -1608,20 +1608,9 @@ export default function WeeklyPlannerPage() {
               <Pencil className="h-3 w-3" />
             </button>
           )}
-          <div className="h-4 w-px bg-border" />
-          {/* Banner action buttons — Plan + Send week to basket */}
-          <div className="flex items-center gap-1 rounded-md border border-[var(--realm-border)] px-1 py-0.5">
-            {/* Mobile: Plan hub trigger */}
-            <Button
-              size="sm"
-              variant="outline"
-              className="border-0 px-2.5 text-xs md:hidden realm-banner-btn"
-              onClick={() => setMobileAssistantOpen(true)}
-              data-testid="button-mobile-assistant-hub"
-            >
-              <Sparkles className="mr-1 h-3 w-3" />
-              Plan
-            </Button>
+          <div className="hidden md:block h-4 w-px bg-border" />
+          {/* Banner action buttons — Plan + Send week to basket (desktop only; mobile access via workspace drawer) */}
+          <div className="hidden md:flex items-center gap-1 rounded-md border border-[var(--realm-border)] px-1 py-0.5">
             {/* Desktop: Smart planner trigger */}
             <Button
               size="sm"

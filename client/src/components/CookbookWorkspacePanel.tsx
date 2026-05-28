@@ -1,5 +1,5 @@
 import { type ReactNode, useRef, useState, useEffect } from "react";
-import { Wand2, Camera, X, ChevronLeft, ChevronDown, Upload, Plus, LayoutGrid, List, Sliders, BookOpen, Search, Loader2 } from "lucide-react";
+import { Wand2, Camera, X, ChevronLeft, ChevronDown, Upload, Plus, LayoutGrid, List, Sliders, BookOpen, Search, Loader2, ChefHat, Globe, Snowflake, Package } from "lucide-react";
 import { CreateMealContent } from "@/components/create-meal-modal";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,9 @@ interface Props {
   mobileOpen?: boolean;
   /** Mobile drawer: called when the drawer should close */
   onMobileClose?: () => void;
+  /** Group filter state — passed from meals-page for mobile drawer Browse section */
+  activeGroups?: Set<string>;
+  onToggleGroup?: (group: string) => void;
 }
 
 function useIsMobile() {
@@ -49,6 +52,13 @@ function useIsMobile() {
 
 // ── Idle hub ──────────────────────────────────────────────────────────────────
 
+const GROUP_FILTERS = [
+  { id: "cookbook", label: "My Cookbook", Icon: ChefHat },
+  { id: "recipes", label: "Recipes", Icon: Globe },
+  { id: "freezer", label: "My Freezer", Icon: Snowflake },
+  { id: "packaged", label: "Packaged", Icon: Package },
+] as const;
+
 function WorkspaceIdleContent({
   onSetMode,
   onAddRecipe,
@@ -59,6 +69,8 @@ function WorkspaceIdleContent({
   onSearchChange,
   isSearching,
   isMobile = false,
+  activeGroups,
+  onToggleGroup,
 }: {
   onSetMode: (mode: CookbookWorkspaceMode) => void;
   onAddRecipe?: () => void;
@@ -69,10 +81,13 @@ function WorkspaceIdleContent({
   onSearchChange: (value: string) => void;
   isSearching?: boolean;
   isMobile?: boolean;
+  activeGroups?: Set<string>;
+  onToggleGroup?: (group: string) => void;
 }) {
   // On mobile: sections start collapsed. On desktop: always open.
   const [createOpen, setCreateOpen] = useState(!isMobile);
   const [displayOpen, setDisplayOpen] = useState(!isMobile);
+  const [browseOpen, setBrowseOpen] = useState(true);
 
   // Sync open state if viewport crosses mobile breakpoint
   useEffect(() => {
@@ -219,6 +234,49 @@ function WorkspaceIdleContent({
         </div>
       </div>
 
+      {/* Browse section — only shown on mobile (group tabs are hidden from banner on mobile) */}
+      {isMobile && activeGroups && onToggleGroup && (
+        <>
+          <div className="w-full h-px bg-border/50 my-1" />
+          <button
+            className="w-full flex items-center justify-between py-2.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+            onClick={() => setBrowseOpen(v => !v)}
+            aria-expanded={browseOpen}
+            aria-label="Browse"
+            data-testid="button-section-browse-toggle"
+          >
+            <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+              Browse
+            </span>
+            <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 transition-transform duration-150 ${browseOpen ? "" : "-rotate-90"}`} />
+          </button>
+          <div
+            className="grid transition-[grid-template-rows] duration-200 ease-out"
+            style={{ gridTemplateRows: browseOpen ? "1fr" : "0fr" }}
+          >
+            <div className="overflow-hidden">
+              <div className="flex flex-wrap gap-1.5 pb-3" data-testid="cookbook-workspace-browse-buttons">
+                {GROUP_FILTERS.map(({ id, label, Icon }) => (
+                  <button
+                    key={id}
+                    onClick={() => onToggleGroup(id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-all ${
+                      activeGroups.has(id)
+                        ? "realm-banner-btn shadow-sm border-primary/30"
+                        : "border-border/50 text-muted-foreground hover:text-foreground hover:border-border"
+                    }`}
+                    data-testid={`button-workspace-group-${id}`}
+                  >
+                    <Icon className="h-3 w-3" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
     </div>
   );
 }
@@ -303,6 +361,8 @@ export function CookbookWorkspacePanel({
   isSearching,
   mobileOpen = false,
   onMobileClose,
+  activeGroups,
+  onToggleGroup,
 }: Props) {
   const isMobile = useIsMobile();
   const goBack = () => onSetMode(null);
@@ -320,6 +380,8 @@ export function CookbookWorkspacePanel({
           onSearchChange={onSearchChange}
           isSearching={isSearching}
           isMobile={isMobile}
+          activeGroups={activeGroups}
+          onToggleGroup={onToggleGroup}
         />
       )}
       {mode === "build" && (

@@ -2934,7 +2934,8 @@ export default function MealsPage() {
       context={<span>Create, search, import and organise your recipes.</span>}
       center={
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40" role="tablist">
+          {/* Group tabs: desktop always visible; mobile access via workspace drawer Browse section */}
+          <div className="hidden sm:flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40" role="tablist">
             {([
               { id: "cookbook", label: "My Cookbook", Icon: ChefHat },
               { id: "recipes", label: "Recipes", Icon: Globe },
@@ -4794,6 +4795,8 @@ export default function MealsPage() {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         isSearching={webIsSearching || productIsSearching}
+        activeGroups={activeGroups}
+        onToggleGroup={toggleGroup}
           filterContent={
             <div className="space-y-3">
               {/* Category */}

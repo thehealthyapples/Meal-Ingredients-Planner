@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
-import { Loader2, Camera, Wand2, ImageOff, MoreHorizontal } from "lucide-react";
+import { Loader2, Camera, Wand2, ImageOff, MoreHorizontal, Images, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { useToast } from "@/hooks/use-toast";
 import { MealWatermark } from "@/components/meal-watermark";
 import { buildUrl, api } from "@shared/routes";
@@ -90,8 +91,11 @@ export function MealImageWidget({
 }: MealImageWidgetProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState<LoadingAction>(null);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [photoSheetOpen, setPhotoSheetOpen] = useState(false);
 
   const busy = loading !== null;
 
@@ -102,6 +106,26 @@ export function MealImageWidget({
     setPopoverOpen(false);
     // Small delay so the popover closes before the file picker opens (iOS needs this)
     setTimeout(() => fileInputRef.current?.click(), 50);
+  };
+
+  const triggerCamera = () => {
+    setPhotoSheetOpen(false);
+    setTimeout(() => cameraInputRef.current?.click(), 50);
+  };
+
+  const triggerGallery = () => {
+    setPhotoSheetOpen(false);
+    setTimeout(() => galleryInputRef.current?.click(), 50);
+  };
+
+  const triggerFileFromSheet = () => {
+    setPhotoSheetOpen(false);
+    setTimeout(() => fileInputRef.current?.click(), 50);
+  };
+
+  const triggerGenerateFromSheet = () => {
+    setPhotoSheetOpen(false);
+    handleGenerate();
   };
 
   const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -290,6 +314,7 @@ export function MealImageWidget({
   // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
+    <>
     <div className="relative w-full h-full">
       <input
         ref={fileInputRef}
@@ -299,6 +324,8 @@ export function MealImageWidget({
         onChange={handleFileSelected}
         data-testid={`input-meal-photo-${mealId}`}
       />
+      <input ref={galleryInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelected} />
+      <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelected} />
 
       {imageUrl ? (
         <>
@@ -365,34 +392,51 @@ export function MealImageWidget({
             {mealName}
           </span>
           {canEdit && (
-            <div className="flex gap-1.5 relative z-10" onClick={(e) => e.stopPropagation()}>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs gap-1 bg-background/80"
-                onClick={triggerFileInput}
-                disabled={busy}
-                data-testid={`button-upload-photo-${mealId}`}
-              >
-                <Camera className="h-3 w-3" />
-                Add photo
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs gap-1 bg-background/50"
-                onClick={handleGenerate}
-                disabled={busy}
-                data-testid={`button-generate-image-${mealId}`}
-              >
-                {loading === "generate" ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Wand2 className="h-3 w-3" />
-                )}
-                {loading === "generate" ? "Generating…" : "Generate"}
-              </Button>
-            </div>
+            <>
+              {/* Mobile: single Add photo button → opens action sheet */}
+              <div className="sm:hidden flex relative z-10" onClick={(e) => e.stopPropagation()}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1 bg-background/80"
+                  onClick={() => setPhotoSheetOpen(true)}
+                  disabled={busy}
+                  data-testid={`button-upload-photo-${mealId}`}
+                >
+                  <Camera className="h-3 w-3" />
+                  Add photo
+                </Button>
+              </div>
+              {/* Desktop: original two-button layout unchanged */}
+              <div className="hidden sm:flex gap-1.5 relative z-10" onClick={(e) => e.stopPropagation()}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1 bg-background/80"
+                  onClick={triggerFileInput}
+                  disabled={busy}
+                  data-testid={`button-upload-photo-${mealId}-desktop`}
+                >
+                  <Camera className="h-3 w-3" />
+                  Add photo
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs gap-1 bg-background/50"
+                  onClick={handleGenerate}
+                  disabled={busy}
+                  data-testid={`button-generate-image-${mealId}`}
+                >
+                  {loading === "generate" ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-3 w-3" />
+                  )}
+                  {loading === "generate" ? "Generating…" : "Generate"}
+                </Button>
+              </div>
+            </>
           )}
         </div>
       )}
@@ -411,5 +455,60 @@ export function MealImageWidget({
         </div>
       )}
     </div>
+
+    {/* Mobile photo action sheet — opened by Add photo on placeholder cards */}
+    <Drawer open={photoSheetOpen} onOpenChange={setPhotoSheetOpen} shouldScaleBackground={false}>
+      <DrawerContent
+        className="flex flex-col"
+        data-testid={`drawer-photo-actions-${mealId}`}
+      >
+        <div className="px-4 pt-1 pb-3 shrink-0">
+          <DrawerTitle className="text-sm font-semibold">Add image</DrawerTitle>
+        </div>
+        <div className="w-full h-px bg-border/50" />
+        <div
+          className="flex flex-col gap-0 pb-2"
+          style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom, 0px))" }}
+        >
+          <button
+            className="flex items-center gap-3 px-4 py-3.5 text-sm text-left hover:bg-accent/40 active:bg-accent/60 transition-colors"
+            onClick={triggerGenerateFromSheet}
+            disabled={busy}
+            data-testid={`button-sheet-generate-${mealId}`}
+          >
+            <Wand2 className="h-4 w-4 text-primary/70 shrink-0" />
+            Generate image
+          </button>
+          <button
+            className="flex items-center gap-3 px-4 py-3.5 text-sm text-left hover:bg-accent/40 active:bg-accent/60 transition-colors"
+            onClick={triggerGallery}
+            disabled={busy}
+            data-testid={`button-sheet-gallery-${mealId}`}
+          >
+            <Images className="h-4 w-4 text-primary/70 shrink-0" />
+            Photo library
+          </button>
+          <button
+            className="flex items-center gap-3 px-4 py-3.5 text-sm text-left hover:bg-accent/40 active:bg-accent/60 transition-colors"
+            onClick={triggerCamera}
+            disabled={busy}
+            data-testid={`button-sheet-camera-${mealId}`}
+          >
+            <Camera className="h-4 w-4 text-primary/70 shrink-0" />
+            Take photo
+          </button>
+          <button
+            className="flex items-center gap-3 px-4 py-3.5 text-sm text-left hover:bg-accent/40 active:bg-accent/60 transition-colors"
+            onClick={triggerFileFromSheet}
+            disabled={busy}
+            data-testid={`button-sheet-file-${mealId}`}
+          >
+            <Upload className="h-4 w-4 text-primary/70 shrink-0" />
+            Choose file
+          </button>
+        </div>
+      </DrawerContent>
+    </Drawer>
+    </>
   );
 }

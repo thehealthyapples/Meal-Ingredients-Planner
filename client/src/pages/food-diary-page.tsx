@@ -1553,9 +1553,10 @@ export default function FoodDiaryPage() {
           ) : undefined
         }
         actions={
+          /* Desktop only — mobile access via Diary workspace drawer → Settings */
           <button
             type="button"
-            className="flex items-center justify-center p-1 rounded-md hover:bg-accent/40 transition-colors"
+            className="hidden md:flex items-center justify-center p-1 rounded-md hover:bg-accent/40 transition-colors"
             onClick={() => setDiarySettingsOpen(true)}
             aria-label="Diary settings"
             data-testid="button-diary-settings"

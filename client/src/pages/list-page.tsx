@@ -630,9 +630,9 @@ export default function ListPage() {
         </div>{/* end inner z-10 content */}
       </div>{/* end writing surface card */}
 
-      {/* ── Recent lists ─────────────────────────────────────────────────── */}
+      {/* ── Recent lists — desktop only; mobile access via workspace drawer ─── */}
       {history.length > 0 && (
-        <div>
+        <div className="hidden md:block">
           <div className="flex items-center gap-1.5 mb-3 px-1">
             <Clock className="h-3 w-3 text-muted-foreground/40" />
             <span className="text-[10px] tracking-widest uppercase font-medium text-muted-foreground/40 select-none">
