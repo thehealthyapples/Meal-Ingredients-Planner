@@ -403,7 +403,7 @@ export default function ListPage() {
         titleTestId="text-list-title"
         context="Popping to the shop? Type, paste or import from Cookbook for a quick list - with all the benefits of The Healthy Apples flow."
       />
-      <div className="sm:max-w-screen-xl sm:mx-auto px-3 sm:px-6 lg:px-8 pt-1 sm:pt-6 sm:space-y-5 flex flex-col sm:block min-h-[calc(100svh-72px)] sm:min-h-0">
+      <div className="sm:max-w-screen-xl sm:mx-auto px-3 sm:px-6 lg:px-8 pt-1 sm:pt-6 sm:space-y-5 flex flex-col sm:block min-h-[calc(100svh-128px)] sm:min-h-0">
 
       {/* ── First-visit hint ─────────────────────────────────────────────── */}
       <FirstVisitHint
