@@ -93,7 +93,11 @@ export default function ListPage() {
   const [recentDrawerOpen, setRecentDrawerOpen] = useState(false);
 
   useEffect(() => {
-    const handler = () => setRecentDrawerOpen(true);
+    const handler = (e: Event) => {
+      if ((e as CustomEvent<{ href: string }>).detail?.href === "/shopping-list") {
+        setRecentDrawerOpen(true);
+      }
+    };
     window.addEventListener("tha:open-workspace", handler);
     return () => window.removeEventListener("tha:open-workspace", handler);
   }, []);

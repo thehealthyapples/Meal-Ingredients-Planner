@@ -46,7 +46,7 @@ const NAV_ITEMS_MAIN = [
 // Mobile bottom nav - 7 items; Quick List leads on the left
 // hasWorkspace: true → long-press opens that page's workspace drawer
 const MOBILE_BOTTOM_ITEMS = [
-  { href: "/shopping-list", label: "List", icon: ListPlus },
+  { href: "/shopping-list", label: "List", icon: ListPlus, hasWorkspace: true },
   { href: "/cookbook", label: "Cookbook", icon: ChefHat, hasWorkspace: true },
   { href: "/planner", label: "Planner", icon: CalendarDays, hasWorkspace: true },
   { href: "/pantry", label: "Pantry", icon: PantryIcon, hasWorkspace: true },

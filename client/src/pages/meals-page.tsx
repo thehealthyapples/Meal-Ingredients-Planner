@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, Globe, Save, Download, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown, Users, UserPlus, Shield, Eye, EyeOff, Sliders } from "lucide-react";
+import { Trash2, Plus, X, Search, ChefHat, ImageOff, Flame, Beef, Wheat, Droplets, Activity, AlertTriangle, ArrowRight, Loader2, Sparkles, Cookie, Droplet, Leaf, Globe, Save, Download, Minus, ShoppingBasket, Check, Package, CalendarPlus, CalendarDays, Coffee, Sun, Moon, UtensilsCrossed, Snowflake, Microscope, Baby, PersonStanding, Wine, ExternalLink, Pencil, Camera, Mic, Share2, Zap, Layers, ScanLine, ListPlus, Info, ClipboardList, Image as ImageIcon, Wand2, ChevronDown, Users, UserPlus, Shield, Eye, EyeOff, Sliders, MoreVertical } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { CreateMealModal, type ImportedRecipeDraft } from "@/components/create-meal-modal";
@@ -45,6 +45,7 @@ import { writePendingIngredients, appendPendingIngredient } from "@/lib/quick-li
 import { PageHeader } from "@/components/PageHeader";
 import { CookbookWorkspacePanel, type CookbookWorkspaceMode } from "@/components/CookbookWorkspacePanel";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { compressImage, inferMimeFromFilename } from "@/lib/image-utils";
 
 function parseIngredient(raw: string): { name: string; detail: string | null } {
   let text = raw.trim();
@@ -723,11 +724,17 @@ function MobileMealActionSheet({
   open,
   onClose,
   onAddToFreezer,
+  isSystemMeal,
+  onImageChange,
+  onDelete,
 }: {
   meal: Meal | null;
   open: boolean;
   onClose: () => void;
   onAddToFreezer: (mealId: number) => void;
+  isSystemMeal?: boolean;
+  onImageChange?: (mealId: number, url: string | null) => void;
+  onDelete?: () => void;
 }) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
@@ -737,6 +744,8 @@ function MobileMealActionSheet({
   const [basketOpen, setBasketOpen] = useState(false);
   const [analysisOpen, setAnalysisOpen] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const imageFileRef = useRef<HTMLInputElement>(null);
+  const [imageLoading, setImageLoading] = useState<"upload" | "generate" | "remove" | null>(null);
 
   const addToListMutation = useMutation({
     mutationFn: async (ctx?: { eaterIds?: number[]; guestEaters?: GuestEater[] }) => {
@@ -781,6 +790,84 @@ function MobileMealActionSheet({
     },
     onError: () => toast({ title: "Analysis failed", variant: "destructive" }),
   });
+
+  const CLIENT_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", ""]);
+
+  const handleSheetFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!meal || !onImageChange) return;
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!CLIENT_PHOTO_TYPES.has(file.type)) {
+      toast({ variant: "destructive", title: "Invalid file type", description: "Please upload a JPEG, PNG, or WebP image." });
+      return;
+    }
+    setImageLoading("upload");
+    try {
+      let uploadFile: File;
+      try {
+        const blob = await compressImage(file, 800, 0.85);
+        uploadFile = new File([blob], "meal-photo.jpg", { type: "image/jpeg" });
+      } catch {
+        const effectiveType = file.type || inferMimeFromFilename(file.name) || "image/jpeg";
+        uploadFile = new File([file], file.name || "upload.jpg", { type: effectiveType });
+      }
+      const fd = new FormData();
+      fd.append("image", uploadFile);
+      const uploadRes = await fetch("/api/media/upload", { method: "POST", body: fd, credentials: "include" });
+      if (!uploadRes.ok) { const e = await uploadRes.json().catch(() => ({})); throw new Error((e as any).message || "Upload failed"); }
+      const { url } = await uploadRes.json();
+      const patchRes = await fetch(buildUrl(api.meals.updateImage.path, { id: meal.id }), {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ imageUrl: url }),
+      });
+      if (!patchRes.ok) throw new Error("Could not save image to recipe.");
+      const updated = await patchRes.json();
+      onImageChange(meal.id, updated.imageUrl ?? url);
+      toast({ title: "Photo saved" });
+      onClose();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Upload failed", description: err?.message || "Please try again." });
+    } finally {
+      setImageLoading(null);
+    }
+  };
+
+  const handleSheetGenerate = async () => {
+    if (!meal || !onImageChange) return;
+    setImageLoading("generate");
+    try {
+      const res = await fetch(buildUrl(api.meals.generateImage.path, { id: meal.id }), { method: "POST", credentials: "include" });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).message || "Generation failed"); }
+      const updated = await res.json();
+      onImageChange(meal.id, updated.imageUrl ?? null);
+      toast({ title: "AI image generated" });
+      onClose();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Image generation failed", description: err?.message || "Please try again." });
+    } finally {
+      setImageLoading(null);
+    }
+  };
+
+  const handleSheetRemove = async () => {
+    if (!meal || !onImageChange) return;
+    setImageLoading("remove");
+    try {
+      const res = await fetch(buildUrl(api.meals.updateImage.path, { id: meal.id }), {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ imageUrl: null }),
+      });
+      if (!res.ok) throw new Error("Could not remove image.");
+      onImageChange(meal.id, null);
+      toast({ title: "Image removed" });
+      onClose();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Remove failed", description: err?.message || "Please try again." });
+    } finally {
+      setImageLoading(null);
+    }
+  };
 
   if (!meal) return null;
 
@@ -875,6 +962,58 @@ function MobileMealActionSheet({
                 <Snowflake className="h-5 w-5 text-blue-400 shrink-0" />
                 <span className="text-sm font-medium">Add to freezer</span>
               </button>
+            )}
+
+            {/* Photo actions — non-system meals only */}
+            {!isSystemMeal && onImageChange && (
+              <>
+                <div className="w-full h-px bg-[var(--realm-border)] my-1" />
+                <input ref={imageFileRef} type="file" accept="image/*" className="hidden" onChange={handleSheetFileSelected} />
+                <button
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left disabled:opacity-50"
+                  onClick={() => { setTimeout(() => imageFileRef.current?.click(), 50); }}
+                  disabled={!!imageLoading}
+                  data-testid={`sheet-action-photo-replace-${meal.id}`}
+                >
+                  {imageLoading === "upload" ? <Loader2 className="h-5 w-5 animate-spin shrink-0" /> : <Camera className="h-5 w-5 text-muted-foreground shrink-0" />}
+                  <span className="text-sm font-medium">{meal.imageUrl ? "Replace photo" : "Add photo"}</span>
+                </button>
+                <button
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left disabled:opacity-50"
+                  onClick={handleSheetGenerate}
+                  disabled={!!imageLoading}
+                  data-testid={`sheet-action-photo-generate-${meal.id}`}
+                >
+                  {imageLoading === "generate" ? <Loader2 className="h-5 w-5 animate-spin shrink-0" /> : <Wand2 className="h-5 w-5 text-muted-foreground shrink-0" />}
+                  <span className="text-sm font-medium">{meal.imageUrl ? "Regenerate AI image" : "Generate AI image"}</span>
+                </button>
+                {meal.imageUrl && (
+                  <button
+                    className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left disabled:opacity-50"
+                    onClick={handleSheetRemove}
+                    disabled={!!imageLoading}
+                    data-testid={`sheet-action-photo-remove-${meal.id}`}
+                  >
+                    {imageLoading === "remove" ? <Loader2 className="h-5 w-5 animate-spin shrink-0" /> : <ImageOff className="h-5 w-5 text-muted-foreground shrink-0" />}
+                    <span className="text-sm font-medium">Remove photo</span>
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Delete — non-system meals only, at the bottom */}
+            {!isSystemMeal && onDelete && (
+              <>
+                <div className="w-full h-px bg-[var(--realm-border)] my-1" />
+                <button
+                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-destructive/10 active:bg-destructive/20 transition-colors text-left text-destructive"
+                  onClick={onDelete}
+                  data-testid={`sheet-action-delete-${meal.id}`}
+                >
+                  <Trash2 className="h-5 w-5 shrink-0" />
+                  <span className="text-sm font-medium">Delete recipe</span>
+                </button>
+              </>
             )}
           </div>
         </DrawerContent>
@@ -2144,33 +2283,8 @@ export default function MealsPage() {
   const [addToFreezerMealId, setAddToFreezerMealId] = useState<number | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | string | null>(null);
 
-  // Long-press action sheet state (mobile cookbook cards)
+  // Three-dot action sheet state (mobile cookbook cards)
   const [actionSheetMeal, setActionSheetMeal] = useState<Meal | null>(null);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressActiveId = useRef<number | null>(null);
-  const longPressStart = useRef<{ x: number; y: number } | null>(null);
-
-  const startLongPress = useCallback((meal: Meal, e: React.PointerEvent) => {
-    if (e.pointerType === "mouse") return; // desktop: no long-press
-    if (longPressTimer.current) clearTimeout(longPressTimer.current);
-    longPressActiveId.current = null;
-    longPressStart.current = { x: e.clientX, y: e.clientY };
-    longPressTimer.current = setTimeout(() => {
-      longPressActiveId.current = meal.id;
-      setActionSheetMeal(meal);
-    }, 500);
-  }, []);
-
-  const moveLongPress = useCallback((e: React.PointerEvent) => {
-    if (!longPressStart.current || !longPressTimer.current) return;
-    const d = Math.hypot(e.clientX - longPressStart.current.x, e.clientY - longPressStart.current.y);
-    if (d > 10) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
-  }, []);
-
-  const endLongPress = useCallback(() => {
-    if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
-    longPressStart.current = null;
-  }, []);
   const [webPreviewCache, setWebPreviewCache] = useState<Record<string, { ingredients: string[]; instructions: string[]; loading?: boolean; error?: string }>>({});
 
   const [expandedTab, setExpandedTab] = useState<"ingredients" | "method">("ingredients");
@@ -3449,13 +3563,8 @@ export default function MealsPage() {
                     className="h-full flex flex-col group cursor-pointer overflow-hidden hover-elevate transition-all duration-200"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (longPressActiveId.current === meal.id) { longPressActiveId.current = null; return; }
                       navigate(`/meals/${meal.id}`);
                     }}
-                    onPointerDown={(e) => startLongPress(meal, e)}
-                    onPointerMove={moveLongPress}
-                    onPointerUp={endLongPress}
-                    onPointerCancel={endLongPress}
                     data-testid={`card-meal-${meal.id}`}
                   >
                     <div className="relative w-full h-24 sm:h-32 overflow-hidden rounded-t-md">
@@ -3548,8 +3657,9 @@ export default function MealsPage() {
                           })}
                         </div>
                       </div>
+                      {/* Desktop: delete button on hover */}
                       {!meal.isSystemMeal && (
-                        <div className="absolute top-1.5 right-1.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="hidden sm:block absolute top-1.5 right-1.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                           <Button
                             variant="ghost"
                             size="icon"
@@ -3561,6 +3671,14 @@ export default function MealsPage() {
                           </Button>
                         </div>
                       )}
+                      {/* Mobile: three-dot button — always visible, opens action sheet */}
+                      <button
+                        className="sm:hidden absolute top-1.5 right-1.5 z-20 h-7 w-7 bg-black/45 rounded-md flex items-center justify-center text-white"
+                        onClick={(e) => { e.stopPropagation(); setActionSheetMeal(meal); }}
+                        data-testid={`button-card-actions-${meal.id}`}
+                      >
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </button>
                     </div>
                     <AnimatePresence>
                       {expandedMealId === meal.id && (
@@ -3696,14 +3814,7 @@ export default function MealsPage() {
                     >
                   <Card
                     className="group cursor-pointer"
-                    onClick={() => {
-                      if (longPressActiveId.current === meal.id) { longPressActiveId.current = null; return; }
-                      navigate(`/meals/${meal.id}`);
-                    }}
-                    onPointerDown={(e) => startLongPress(meal, e)}
-                    onPointerMove={moveLongPress}
-                    onPointerUp={endLongPress}
-                    onPointerCancel={endLongPress}
+                    onClick={() => navigate(`/meals/${meal.id}`)}
                     data-testid={`card-meal-${meal.id}`}
                   >
                     <div className="flex items-stretch relative">
@@ -3769,7 +3880,7 @@ export default function MealsPage() {
                             <DietBadges mealId={meal.id} />
                           </div>
                         </div>
-                        {/* Action bar: desktop only — mobile uses long-press action sheet (Stage 4) */}
+                        {/* Action bar: desktop only */}
                         <div className="hidden sm:flex flex-col gap-2 shrink-0 min-w-[180px]" onClick={(e) => e.stopPropagation()}>
                           <MealActionBar
                             mealId={meal.id}
@@ -3799,6 +3910,14 @@ export default function MealsPage() {
                             </Button>
                           )}
                         </div>
+                        {/* Mobile: three-dot button — opens action sheet */}
+                        <button
+                          className="sm:hidden absolute top-2 right-2 z-10 h-7 w-7 bg-muted/80 rounded-md flex items-center justify-center text-muted-foreground"
+                          onClick={(e) => { e.stopPropagation(); setActionSheetMeal(meal); }}
+                          data-testid={`button-card-actions-${meal.id}`}
+                        >
+                          <MoreVertical className="h-3.5 w-3.5" />
+                        </button>
                       </div>
                     </div>
                     <AnimatePresence>
@@ -5089,6 +5208,9 @@ export default function MealsPage() {
       open={!!actionSheetMeal}
       onClose={() => setActionSheetMeal(null)}
       onAddToFreezer={(mealId) => setAddToFreezerMealId(mealId)}
+      isSystemMeal={!!actionSheetMeal?.isSystemMeal}
+      onImageChange={handleMealImageChange}
+      onDelete={actionSheetMeal && !actionSheetMeal.isSystemMeal ? () => { setActionSheetMeal(null); deleteMeal.mutate(actionSheetMeal.id); } : undefined}
     />
     </div>
     </>

@@ -1644,18 +1644,6 @@ export default function WeeklyPlannerPage() {
       }
       actions={
         <div className="flex items-center gap-0.5">
-          {/* Mobile: send week to basket — always visible on mobile, hidden on desktop where it's in center */}
-          <Button
-            size="sm"
-            variant="outline"
-            className="md:hidden border-0 px-2 realm-banner-btn"
-            onClick={() => addAllToBasket(sortedDays)}
-            disabled={addToBasketMutation.isPending}
-            aria-label="Send week to basket"
-            data-testid="button-add-all-basket-mobile"
-          >
-            {addToBasketMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingBasket className="h-3.5 w-3.5" />}
-          </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -1667,6 +1655,15 @@ export default function WeeklyPlannerPage() {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
+            <DropdownMenuItem
+              onClick={() => addAllToBasket(sortedDays)}
+              disabled={addToBasketMutation.isPending}
+              data-testid="button-add-all-basket-overflow"
+            >
+              <ShoppingBasket className="h-4 w-4 mr-2" />
+              Send week to basket
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => { setSaveWeekName(activeWeekData?.weekName || ""); setSaveWeekOpen(true); }} data-testid="button-save-week">
               <BookOpen className="h-4 w-4 mr-2" />
               Save This Week

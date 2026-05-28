@@ -345,30 +345,33 @@ export function MealImageWidget({
               open photo actions (no hover required). The ⋯ badge at bottom-right
               hints that the area is interactive. stopPropagation prevents the
               parent card's onClick from firing when the image is tapped. */}
+          {/* Desktop only: tap-anywhere popover for photo management */}
           {canEdit && (
-            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-              <PopoverTrigger asChild>
-                <button
-                  className="absolute inset-0 z-20 w-full h-full bg-transparent border-0 p-0 cursor-pointer"
+            <div className="hidden sm:block">
+              <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    className="absolute inset-0 z-20 w-full h-full bg-transparent border-0 p-0 cursor-pointer"
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label="Manage photo"
+                    data-testid={`button-image-manage-${mealId}`}
+                  >
+                    {/* Always-visible ⋯ indicator */}
+                    <div className="absolute bottom-1.5 right-1.5 h-7 w-7 bg-black/45 hover:bg-black/70 rounded-md flex items-center justify-center text-white transition-colors pointer-events-none">
+                      <MoreHorizontal className="h-3.5 w-3.5" />
+                    </div>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-44 p-1"
+                  side="top"
+                  align="end"
                   onClick={(e) => e.stopPropagation()}
-                  aria-label="Manage photo"
-                  data-testid={`button-image-manage-${mealId}`}
                 >
-                  {/* Always-visible ⋯ indicator */}
-                  <div className="absolute bottom-1.5 right-1.5 h-7 w-7 bg-black/45 hover:bg-black/70 rounded-md flex items-center justify-center text-white transition-colors pointer-events-none">
-                    <MoreHorizontal className="h-3.5 w-3.5" />
-                  </div>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="w-44 p-1"
-                side="top"
-                align="end"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {actionMenu}
-              </PopoverContent>
-            </Popover>
+                  {actionMenu}
+                </PopoverContent>
+              </Popover>
+            </div>
           )}
         </>
       ) : (
