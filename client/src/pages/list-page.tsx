@@ -435,10 +435,10 @@ export default function ListPage() {
         />
 
         {/* Content sits above the overlay */}
-        <div className="relative z-10 flex flex-col">
+        <div className="relative z-10 flex flex-col flex-1 min-h-0">
 
           {/* Seamless textarea */}
-          <div className="relative px-6 pt-6 pb-3">
+          <div className="relative px-6 pt-6 pb-3 flex-1">
             <textarea
               ref={textareaRef}
               value={rawText}
