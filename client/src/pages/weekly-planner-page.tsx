@@ -30,7 +30,6 @@ import type { EntryTarget, PlannerProductResult } from "@/components/PlannerMeal
 import { SharePlanDialog } from "@/components/share-plan-dialog";
 import { PlannerScanReview, type PlannerScanData, type PlannerDayEntry } from "@/components/PlannerScanReview";
 import { RecipeScanReview, type RecipeScanData } from "@/components/RecipeScanReview";
-import { CameraModal } from "@/components/camera-modal";
 import { emitStageProposal } from "@/lib/planner-staging-bus";
 import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@/lib/nutrition-variety";
 import { getMealNutrients } from "@/lib/nutrition-insights";
@@ -537,11 +536,11 @@ export default function WeeklyPlannerPage() {
   const pageUploadRef = useRef<HTMLInputElement>(null);
 
   // Planner-native recipe scan — keeps user on the planner page instead of navigating to /meals
-  const [plannerRecipeScanCameraOpen, setPlannerRecipeScanCameraOpen] = useState(false);
   const [plannerRecipeScanData, setPlannerRecipeScanData] = useState<RecipeScanData | null>(null);
   const [plannerRecipeScanLoading, setPlannerRecipeScanLoading] = useState(false);
   const [plannerRecipeScanError, setPlannerRecipeScanError] = useState<string | undefined>(undefined);
   const plannerRecipeScanFileRef = useRef<HTMLInputElement>(null);
+  const plannerRecipeScanCameraRef = useRef<HTMLInputElement>(null);
 
   const { data: categories = [] } = useQuery<MealCategory[]>({
     queryKey: ['/api/categories'],
@@ -1210,7 +1209,7 @@ export default function WeeklyPlannerPage() {
     } else if (action === "scan") {
       if (resolveSession) {
         setAssistantMode(null);
-        setPlannerRecipeScanCameraOpen(true);
+        plannerRecipeScanCameraRef.current?.click();
       } else {
         setAssistantMode("scan");
       }
@@ -1310,7 +1309,7 @@ export default function WeeklyPlannerPage() {
       pendingRecipeLink: null,
     });
     setAssistantMode(null);
-    setPlannerRecipeScanCameraOpen(true);
+    plannerRecipeScanCameraRef.current?.click();
   };
 
   // Workspace Phase A: recipe scan handler — POSTs to /api/scan, stays on planner page
@@ -2579,7 +2578,7 @@ export default function WeeklyPlannerPage() {
         selectedDayLabel={selectedDay ? DAY_NAMES[selectedDay.dayOfWeek] : null}
         onBrowseRecipes={() => setAssistantMode("manual")}
         onBuildRecipe={() => setAssistantMode("build")}
-        onScanRecipe={() => { setResolveSession(null); setPlannerRecipeScanCameraOpen(true); }}
+        onScanRecipe={() => { setResolveSession(null); plannerRecipeScanCameraRef.current?.click(); }}
         mobileOpen={mobileAssistantOpen}
         onBackToHub={() => {
           if (plannerScanOpen) handlePlannerScanOpenChange(false);
@@ -3766,18 +3765,19 @@ export default function WeeklyPlannerPage() {
         data-testid="input-planner-scan-file"
       />
 
-      {/* ── Planner-native recipe scan — stays within planner context ── */}
-      <CameraModal
-        open={plannerRecipeScanCameraOpen}
-        onOpenChange={setPlannerRecipeScanCameraOpen}
-        onCapture={(file) => {
-          setPlannerRecipeScanCameraOpen(false);
-          handlePlannerRecipeScanFile(file);
+      {/* Native camera capture for planner recipe scan */}
+      <input
+        ref={plannerRecipeScanCameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={e => {
+          const f = e.target.files?.[0];
+          if (f) handlePlannerRecipeScanFile(f);
+          e.target.value = "";
         }}
-        onUploadInstead={() => {
-          setPlannerRecipeScanCameraOpen(false);
-          plannerRecipeScanFileRef.current?.click();
-        }}
+        data-testid="input-planner-recipe-scan-camera"
       />
       <RecipeScanReview
         open={plannerRecipeScanLoading || plannerRecipeScanData !== null || plannerRecipeScanError !== undefined}

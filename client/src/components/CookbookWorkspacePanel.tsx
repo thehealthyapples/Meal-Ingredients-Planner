@@ -9,8 +9,8 @@ export type CookbookWorkspaceMode = "build" | "scan" | "filter" | null;
 interface Props {
   mode: CookbookWorkspaceMode;
   onSetMode: (mode: CookbookWorkspaceMode) => void;
-  /** Scan: trigger camera capture */
-  onCameraClick: () => void;
+  /** Scan: legacy camera trigger — no longer used (scan section handles native capture internally) */
+  onCameraClick?: () => void;
   /** Scan: called when a file is selected for upload */
   onScanFile: (file: File) => void;
   scanLoading: boolean;
@@ -284,14 +284,13 @@ function WorkspaceIdleContent({
 // ── Scan mode ─────────────────────────────────────────────────────────────────
 
 function WorkspaceScanContent({
-  onCameraClick,
   onScanFile,
   scanLoading,
 }: {
-  onCameraClick: () => void;
   onScanFile: (file: File) => void;
   scanLoading: boolean;
 }) {
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   return (
@@ -300,6 +299,16 @@ function WorkspaceScanContent({
         Take a photo or upload an image of a recipe. THA AI will extract the ingredients and method for you.
       </p>
 
+      {/* Native camera capture — opens device camera directly */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) onScanFile(f); e.currentTarget.value = ""; }}
+        data-testid="input-workspace-camera"
+      />
       <input
         ref={fileInputRef}
         type="file"
@@ -310,7 +319,7 @@ function WorkspaceScanContent({
 
       <button
         className="w-full flex items-center gap-3 rounded-md border border-border realm-banner-btn px-3 py-3 text-sm font-medium transition-colors disabled:opacity-50"
-        onClick={onCameraClick}
+        onClick={() => cameraInputRef.current?.click()}
         disabled={scanLoading}
         data-testid="button-workspace-camera"
       >
@@ -396,7 +405,6 @@ export function CookbookWorkspacePanel({
       )}
       {mode === "scan" && (
         <WorkspaceScanContent
-          onCameraClick={() => { onSetMode(null); onCameraClick(); }}
           onScanFile={(f) => { onSetMode(null); onScanFile(f); }}
           scanLoading={scanLoading}
         />

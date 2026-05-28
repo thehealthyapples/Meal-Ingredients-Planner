@@ -17,7 +17,6 @@ import { MealImageWidget } from "@/components/MealImageWidget";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { MealCompletionDialog, type CompletionMeal } from "@/components/meal-completion-dialog";
 import { IngredientRow, buildIngredientString, parseIngredientString } from "@/components/ingredient-input";
-import { CameraModal } from "@/components/camera-modal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -2218,7 +2217,6 @@ export default function MealsPage() {
   const [scanDialogOpen, setScanDialogOpen] = useState(false);
   const [scanData, setScanData] = useState<any | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
-  const [cameraModalOpen, setCameraModalOpen] = useState(false);
   const scanFileRef = useRef<HTMLInputElement>(null);
   const scanCancelledRef = useRef(false);
   const [visibleCount, setVisibleCount] = useState(48);
@@ -2358,7 +2356,7 @@ export default function MealsPage() {
     };
     setPlannerImportCtx(ctx);
     if (ctx.openScan) {
-      setCameraModalOpen(true);
+      scanFileRef.current?.click();
     } else {
       setPlannerImportDialogOpen(true);
     }
@@ -3093,7 +3091,7 @@ export default function MealsPage() {
           />
           {/* Add Recipe: primary CTA; externalOpen allows workspace panel shortcut to trigger it */}
           <CreateMealDialog
-            onScan={() => setCameraModalOpen(true)}
+            onScan={() => scanFileRef.current?.click()}
             onMealCreated={(_, hasSourceUrl) => {
               setActiveGroups(prev => { const n = new Set(prev); n.add(hasSourceUrl ? "recipes" : "cookbook"); return n; });
             }}
@@ -4901,7 +4899,7 @@ export default function MealsPage() {
         onSetMode={setCookbookMode}
         mobileOpen={mobileCookbookOpen}
         onMobileClose={() => setMobileCookbookOpen(false)}
-        onCameraClick={() => setCameraModalOpen(true)}
+        onCameraClick={() => scanFileRef.current?.click()}
         onScanFile={handleScanFile}
         scanLoading={scanLoading}
         onBuildCreated={(mealId) => {
@@ -5051,13 +5049,6 @@ export default function MealsPage() {
 
       </div>{/* end flex gap-3 */}
 
-      <CameraModal
-        open={cameraModalOpen}
-        onOpenChange={setCameraModalOpen}
-        onCapture={handleScanFile}
-        onUploadInstead={() => scanFileRef.current?.click()}
-      />
-
       <RecipeScanReview
         open={scanDialogOpen}
         onOpenChange={handleScanDialogChange}
@@ -5076,7 +5067,7 @@ export default function MealsPage() {
             if (!open) setPlannerImportCtx(null);
           }}
           initialName={plannerImportCtx.mealName}
-          onScan={() => { setPlannerImportDialogOpen(false); setCameraModalOpen(true); }}
+          onScan={() => { setPlannerImportDialogOpen(false); scanFileRef.current?.click(); }}
           onMealCreated={handlePlannerImportMealCreated}
         />
       )}

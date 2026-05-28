@@ -10,7 +10,6 @@ import {
   Clock, X, RotateCcw, Mic, Camera, ImageUp, ChefHat, NotepadText,
 } from "lucide-react";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
-import { CameraModal } from "@/components/camera-modal";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 import RetailerLogo from "@/components/RetailerLogo";
@@ -81,13 +80,13 @@ export default function ListPage() {
   const queryClient = useQueryClient();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
   const [rawText, setRawText] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
-  const [cameraOpen, setCameraOpen] = useState(false);
   const [history, setHistory] = useState<QuickListBasket[]>(() => loadHistory());
   const [aiCleaned, setAiCleaned] = useState(false);
   const [recentDrawerOpen, setRecentDrawerOpen] = useState(false);
@@ -404,7 +403,7 @@ export default function ListPage() {
         titleTestId="text-list-title"
         context="Popping to the shop? Type, paste or import from Cookbook for a quick list - with all the benefits of The Healthy Apples flow."
       />
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-5">
+      <div className="sm:max-w-screen-xl sm:mx-auto px-3 sm:px-6 lg:px-8 pt-1 sm:pt-6 sm:space-y-5">
 
       {/* ── First-visit hint ─────────────────────────────────────────────── */}
       <FirstVisitHint
@@ -414,7 +413,7 @@ export default function ListPage() {
 
       {/* ── Writing surface ──────────────────────────────────────────────── */}
       <div
-        className="w-full flex flex-col relative overflow-hidden"
+        className="w-full flex flex-col relative overflow-hidden min-h-[calc(100dvh-176px)] sm:min-h-0"
         style={{
           backgroundImage: "url('/orchard-bg.png')",
           backgroundSize: "cover",
@@ -528,9 +527,9 @@ export default function ListPage() {
               <Mic className={`h-4 w-4 ${isListening ? "animate-pulse" : ""}`} />
             </button>
 
-            {/* Camera scan */}
+            {/* Camera scan — native capture */}
             <button
-              onClick={() => setCameraOpen(true)}
+              onClick={() => cameraInputRef.current?.click()}
               disabled={isScanning}
               className="p-2 rounded-full text-muted-foreground/45 hover:text-foreground hover:bg-black/[0.05] transition-colors disabled:opacity-30"
               title="Scan a handwritten list"
@@ -561,6 +560,18 @@ export default function ListPage() {
                 data-testid="input-image-upload"
               />
             </label>
+            {/* Hidden native camera capture input */}
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              aria-hidden="true"
+              tabIndex={-1}
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImageCapture(f); e.target.value = ""; }}
+              data-testid="input-camera-capture"
+            />
 
             {/* Cookbook */}
             <button
@@ -683,16 +694,6 @@ export default function ListPage() {
         </div>
       )}
 
-      {/* ── Camera modal ─────────────────────────────────────────────────── */}
-      <CameraModal
-        open={cameraOpen}
-        onOpenChange={setCameraOpen}
-        onCapture={(file) => {
-          setCameraOpen(false);
-          handleImageCapture(file);
-        }}
-        onUploadInstead={() => fileInputRef.current?.click()}
-      />
 
       </div>
 

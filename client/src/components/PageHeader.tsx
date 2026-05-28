@@ -36,14 +36,28 @@ interface PageHeaderProps {
 }
 
 // ── Mobile scroll-collapse hook ───────────────────────────────────────────────
-// Auto-collapses on scroll down, expands on scroll up (mobile only).
-// Manual chevron click locks the state until user clicks chevron again.
+// Auto-collapses after 4 s on mobile (once per mount), then collapses further
+// on scroll-down and expands on scroll-up.
+// Manual chevron click locks the state until the user clicks chevron again.
 // Resets to expanded when scrolled back to top.
 function useScrollCollapse() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const isMobileRef = useRef(false);
   const manualRef = useRef<boolean | null>(null);
   const lastY = useRef(0);
+
+  // Auto-collapse after 4 s on mobile (fires once; respects manual interaction)
+  useEffect(() => {
+    const isMobile = () => window.innerWidth < 1024;
+    if (!isMobile()) return;
+    const timer = setTimeout(() => {
+      if (!isMobile()) return;           // window may have been resized
+      if (manualRef.current === null) {  // skip if user already acted
+        setIsCollapsed(true);
+      }
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const checkMobile = () => {

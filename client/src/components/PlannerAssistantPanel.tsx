@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { subscribeStagingBus } from "@/lib/planner-staging-bus";
-import { AlertTriangle, Camera, Upload, X, Loader2, RefreshCw, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, Globe, Copy, Share2, Microscope, ShoppingCart, Snowflake, PackageCheck } from "lucide-react";
+import { AlertTriangle, Camera, Upload, X, Loader2, ScanLine, Sparkles, DollarSign, Shield, Fish, Beef, Salad, LayoutGrid, Plus, Calendar, CalendarDays, ScanSearch, Settings, Baby, PersonStanding, Wine, Search, Wand2, BookOpen, ChevronLeft, ChevronDown, ChefHat, CheckCircle2, ClipboardList, Lightbulb, Coffee, Sun, Moon, Cookie, GripVertical, Globe, Copy, Share2, Microscope, ShoppingCart, Snowflake, PackageCheck } from "lucide-react";
 import type { ShoppingHandoffData, FreezerDeduction } from "@/hooks/use-planner-operations";
 import { PlannerAnalyserContent } from "@/components/PlannerAnalyserContent";
 import { useToast } from "@/hooks/use-toast";
@@ -126,9 +126,6 @@ function useIsMobile() {
   return isMobile;
 }
 
-type CameraStatus = "loading" | "live" | "captured" | "error";
-
-
 interface ScanContentProps {
   onScanFile: (file: File) => void;
   scanLoading: boolean;
@@ -136,200 +133,7 @@ interface ScanContentProps {
 }
 
 function ScanContent({ onScanFile, scanLoading, onUploadClick }: ScanContentProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const [cameraOpen, setCameraOpen] = useState(false);
-  const [cameraStatus, setCameraStatus] = useState<CameraStatus>("loading");
-  const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
-  const [capturedFile, setCapturedFile] = useState<File | null>(null);
-  const [cameraError, setCameraError] = useState("");
-  const [idleCameraMsg, setIdleCameraMsg] = useState("");
-  const [facingMode, setFacingMode] = useState<"environment" | "user">("environment");
-
-  const stopStream = useCallback(() => {
-    streamRef.current?.getTracks().forEach(t => t.stop());
-    streamRef.current = null;
-  }, []);
-
-  useEffect(() => {
-    return () => { stopStream(); };
-  }, [stopStream]);
-
-  const startCamera = useCallback(async (facing: "environment" | "user") => {
-    stopStream();
-    setCameraStatus("loading");
-    setCameraError("");
-    setCapturedUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
-    setCapturedFile(null);
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        const e = new Error("getUserMedia not available");
-        (e as any).name = "NotSupportedError";
-        throw e;
-      }
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing } });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(() => {});
-      }
-    } catch (err: any) {
-      stopStream();
-      setCameraError(
-        err.name === "NotAllowedError" || err.name === "PermissionDeniedError"
-          ? "Camera access denied — use Upload Image instead."
-          : err.name === "NotFoundError" || err.name === "DevicesNotFoundError"
-          ? "No camera found — use Upload Image instead."
-          : "Camera unavailable here — use Upload Image instead."
-      );
-      setCameraStatus("error");
-    }
-  }, [stopStream]);
-
-  const openCamera = () => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setIdleCameraMsg("Camera unavailable here — use Upload Image instead.");
-      return;
-    }
-    setIdleCameraMsg("");
-    setCameraOpen(true);
-    startCamera(facingMode);
-  };
-
-  const closeCamera = () => {
-    stopStream();
-    setCapturedUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
-    setCapturedFile(null);
-    setCameraOpen(false);
-    setCameraStatus("loading");
-  };
-
-  const takePhoto = () => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    if (!video || !canvas || video.readyState < 2 || !video.videoWidth) return;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d")?.drawImage(video, 0, 0);
-    canvas.toBlob(blob => {
-      if (!blob) return;
-      const file = new File([blob], "scan-capture.jpg", { type: "image/jpeg" });
-      const url = URL.createObjectURL(blob);
-      setCapturedUrl(url);
-      setCapturedFile(file);
-      setCameraStatus("captured");
-      stopStream();
-    }, "image/jpeg", 0.92);
-  };
-
-  const retake = () => {
-    setCapturedUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
-    setCapturedFile(null);
-    startCamera(facingMode);
-  };
-
-  const flipCamera = () => {
-    const next: "environment" | "user" = facingMode === "environment" ? "user" : "environment";
-    setFacingMode(next);
-    startCamera(next);
-  };
-
-  const usePhoto = () => {
-    if (!capturedFile) return;
-    const file = capturedFile;
-    setCapturedUrl(prev => { if (prev) URL.revokeObjectURL(prev); return null; });
-    onScanFile(file);
-  };
-
-  const uploadButton = (
-    <Button
-      variant="outline"
-      className="w-full realm-banner-btn"
-      disabled={scanLoading}
-      onClick={onUploadClick}
-      data-testid="button-assistant-upload"
-    >
-      <Upload className="h-4 w-4 mr-2" />Upload Image
-    </Button>
-  );
-
-  if (cameraOpen) {
-    return (
-      <div className="space-y-3" data-testid="panel-scan-camera">
-        <div className="relative bg-black rounded-lg overflow-hidden aspect-[4/3]">
-          {cameraStatus !== "captured" && (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              onLoadedMetadata={() => { if (streamRef.current) setCameraStatus("live"); }}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity ${cameraStatus === "live" ? "opacity-100" : "opacity-0"}`}
-              data-testid="video-panel-camera-feed"
-            />
-          )}
-          {cameraStatus === "captured" && capturedUrl && (
-            <img src={capturedUrl} alt="Captured" className="absolute inset-0 w-full h-full object-contain" data-testid="img-panel-capture" />
-          )}
-          {cameraStatus === "loading" && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-white/60" />
-            </div>
-          )}
-          {cameraStatus === "error" && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
-              <AlertTriangle className="h-5 w-5 text-yellow-400" />
-              <p className="text-xs text-white/80">{cameraError}</p>
-            </div>
-          )}
-          {cameraStatus === "live" && (
-            <button
-              onClick={flipCamera}
-              className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/40 hover:bg-black/60 flex items-center justify-center text-white transition-colors"
-              title="Flip camera"
-              data-testid="button-panel-camera-flip"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-        <canvas ref={canvasRef} className="hidden" />
-
-        {cameraStatus === "live" && (
-          <div className="flex gap-2">
-            <Button className="flex-1 realm-banner-btn" onClick={takePhoto} data-testid="button-panel-camera-capture">
-              <Camera className="h-4 w-4 mr-2" />Capture
-            </Button>
-            <Button variant="ghost" size="icon" className="realm-banner-btn" onClick={closeCamera} title="Cancel" data-testid="button-panel-camera-cancel">
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
-
-        {cameraStatus === "captured" && (
-          <div className="flex gap-2">
-            <Button className="flex-1 realm-banner-btn" onClick={usePhoto} disabled={scanLoading} data-testid="button-panel-camera-use">
-              {scanLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Scan this photo
-            </Button>
-            <Button variant="outline" className="realm-banner-btn" onClick={retake} disabled={scanLoading} data-testid="button-panel-camera-retake">
-              Retake
-            </Button>
-          </div>
-        )}
-
-        {(cameraStatus === "error" || cameraStatus === "loading") && (
-          <div className="space-y-2">
-            {uploadButton}
-            <Button variant="ghost" className="w-full realm-banner-btn" onClick={closeCamera} data-testid="button-panel-camera-cancel-error">
-              Cancel
-            </Button>
-          </div>
-        )}
-      </div>
-    );
-  }
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   return (
     <div className="space-y-4" data-testid="panel-scan-idle">
@@ -339,23 +143,39 @@ function ScanContent({ onScanFile, scanLoading, onUploadClick }: ScanContentProp
           Photograph your handwritten or printed meal plan and we'll extract the meals into your planner.
         </p>
       </div>
+
+      {/* Native camera capture — opens device camera directly */}
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="sr-only"
+        aria-hidden="true"
+        tabIndex={-1}
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onScanFile(f); e.target.value = ""; }}
+        data-testid="input-panel-camera-capture"
+      />
+
       <div className="space-y-2">
         <Button
           className="w-full realm-banner-btn"
-          onClick={openCamera}
+          onClick={() => cameraInputRef.current?.click()}
           disabled={scanLoading}
           data-testid="button-assistant-take-photo"
         >
           {scanLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Camera className="h-4 w-4 mr-2" />}
           Take Photo
         </Button>
-        {idleCameraMsg && (
-          <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 dark:border-yellow-900 dark:bg-yellow-950/20 px-3 py-2.5" data-testid="panel-scan-camera-unavailable">
-            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-yellow-600 dark:text-yellow-400" />
-            <p className="text-xs text-yellow-800 dark:text-yellow-200">{idleCameraMsg}</p>
-          </div>
-        )}
-        {uploadButton}
+        <Button
+          variant="outline"
+          className="w-full realm-banner-btn"
+          disabled={scanLoading}
+          onClick={onUploadClick}
+          data-testid="button-assistant-upload"
+        >
+          <Upload className="h-4 w-4 mr-2" />Upload Image
+        </Button>
       </div>
       {scanLoading && (
         <p className="text-xs text-center text-muted-foreground animate-pulse pt-1">
@@ -364,6 +184,7 @@ function ScanContent({ onScanFile, scanLoading, onUploadClick }: ScanContentProp
       )}
     </div>
   );
+
 }
 
 // SmartContent now reads all controls from PlannerWorkspaceContext
