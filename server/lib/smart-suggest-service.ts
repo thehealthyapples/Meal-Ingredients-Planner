@@ -2,6 +2,8 @@ import type { Meal, UserPreferences } from "@shared/schema";
 import { fetchExternalCandidates, type ExternalMealCandidate } from "./external-meal-service";
 import { scoreMeal, convertMealToCandidate, convertExternalToCandidate, type ScoredCandidate } from "./meal-scoring-service";
 import { generateMealExplanation, type MealExplanation } from "./explainability-service";
+import { resolveActiveRestrictions, resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
+import type { RestrictionDefinition } from "@shared/restrictions/restriction-types.js";
 
 export interface LockedEntry {
   dayOfWeek: number;
@@ -61,10 +63,82 @@ const DEBUG = process.env.NODE_ENV === 'development';
 
 // Returns true if a candidate contains any hard-excluded ingredient.
 // Hard exclusions bypass scoring — the meal is always removed from the pool.
-function isHardExcluded(candidate: ScoredCandidate, hardExcluded: string[]): boolean {
+//
+// Phase 5A: matching now uses the canonical restriction resolver instead of the
+// previous raw `allText.includes(exc)` substring check. The old check missed
+// derived and hidden ingredients that don't contain the restriction keyword —
+// e.g. sesame→tahini, soy→tofu/miso/tamari, peanut→satay sauce, coconut→coconut
+// milk, and legacy nut_free→peanut + tree_nut. Since Smart Planner actively
+// recommends meals, those false negatives were the highest-priority safety gap.
+//
+// The resolver is run per field (the meal name and each ingredient individually)
+// rather than over one joined string. This is important for derived/hidden
+// matching, which is forward-substring: joining all ingredients with spaces could
+// otherwise let a hidden-ingredient entry match accidentally across the boundary
+// between two unrelated ingredients.
+//
+// Custom restrictions not recognised by the canonical library (e.g. "kiwi",
+// "banana", "red meat") keep their previous conservative substring behaviour via
+// customRestrictionMatches() so user-entered strings continue to work. Avoiding
+// unsafe false negatives is favoured over avoiding rare false positives here.
+//
+// activeRestrictionDefs is pre-resolved once by the caller for efficiency; it is
+// resolveActiveRestrictions(hardExcluded).
+function isHardExcluded(
+  candidate: ScoredCandidate,
+  hardExcluded: string[],
+  activeRestrictionDefs: RestrictionDefinition[],
+): boolean {
   if (hardExcluded.length === 0) return false;
+
+  // Primary: canonical resolver, checked per field (name + each ingredient).
+  const fields = [candidate.name, ...candidate.ingredients];
+  for (const field of fields) {
+    if (!field) continue;
+    if (resolveIngredientRestrictions(field, activeRestrictionDefs).length > 0) return true;
+  }
+
+  // Fallback: conservative substring match for restrictions the canonical library
+  // does not recognise. Preserves pre-Phase-5A behaviour for custom user strings.
+  return customRestrictionMatches(candidate, hardExcluded, activeRestrictionDefs);
+}
+
+// Conservative fallback for custom hard restrictions that are NOT in the canonical
+// restriction library. Mirrors the pre-Phase-5A joined-text substring behaviour so
+// user-entered strings such as "kiwi" or "red meat" keep filtering exactly as before.
+//
+// Restrictions already covered by the resolver (their definition is present in
+// activeRestrictionDefs) are skipped, so canonical word-boundary protection is not
+// undermined by a looser substring check (e.g. "soy" never re-matches "savoy" here).
+function customRestrictionMatches(
+  candidate: ScoredCandidate,
+  hardExcluded: string[],
+  activeRestrictionDefs: RestrictionDefinition[],
+): boolean {
   const allText = [candidate.name, ...candidate.ingredients].join(' ').toLowerCase();
-  return hardExcluded.some(exc => allText.includes(exc.toLowerCase()));
+  for (const restriction of hardExcluded) {
+    const normR = restriction.toLowerCase().trim().replace(/[-_]/g, ' ');
+    if (!normR) continue;
+    // Skip restrictions the canonical resolver already handles.
+    if (activeRestrictionDefs.some(d =>
+      d.id.replace(/_/g, ' ') === normR ||
+      d.aliases.some(a => a.toLowerCase() === normR)
+    )) continue;
+    if (allText.includes(normR)) return true;
+  }
+  return false;
+}
+
+// Exported for unit testing of the hard restriction filter in isolation.
+// Builds a minimal candidate from a name + ingredient list and resolves the
+// active canonical restrictions internally, so tests don't need the full pipeline.
+export function candidateHardExcluded(
+  name: string,
+  ingredients: string[],
+  hardExcluded: string[],
+): boolean {
+  const candidate = { name, ingredients } as ScoredCandidate;
+  return isHardExcluded(candidate, hardExcluded, resolveActiveRestrictions(hardExcluded));
 }
 
 // P0: "drink" removed from breakfast — generic drinks must not appear as breakfast meals.
@@ -160,6 +234,9 @@ export async function generateSmartSuggestion(
 
   const plannerEnableDrinks = settings.plannerEnableDrinks ?? false;
   const hardExcluded = settings.hardExcludedIngredients ?? [];
+  // Pre-resolve household hard restrictions to canonical definitions once, so the
+  // per-candidate hard exclusion filter doesn't re-resolve the same strings.
+  const activeRestrictionDefs = resolveActiveRestrictions(hardExcluded);
   const allCandidates: ScoredCandidate[] = [];
 
   for (const meal of userMeals) {
@@ -190,7 +267,7 @@ export async function generateSmartSuggestion(
       continue;
     }
     // Household hard restriction filter — always applied, bypasses scoring.
-    if (isHardExcluded(candidate, hardExcluded)) {
+    if (isHardExcluded(candidate, hardExcluded, activeRestrictionDefs)) {
       if (DEBUG) console.debug(`[SmartSuggest] Hard-excluded user meal (household restriction): "${candidate.name}"`);
       continue;
     }
@@ -214,7 +291,7 @@ export async function generateSmartSuggestion(
       continue;
     }
     // Household hard restriction filter — always applied.
-    if (isHardExcluded(candidate, hardExcluded)) {
+    if (isHardExcluded(candidate, hardExcluded, activeRestrictionDefs)) {
       if (DEBUG) console.debug(`[SmartSuggest] Hard-excluded external meal (household restriction): "${candidate.name}"`);
       continue;
     }

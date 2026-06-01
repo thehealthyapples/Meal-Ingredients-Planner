@@ -403,7 +403,7 @@ export default function ListPage() {
         titleTestId="text-list-title"
         context="Popping to the shop? Type, paste or import from Cookbook for a quick list - with all the benefits of The Healthy Apples flow."
       />
-      <div className="sm:max-w-screen-xl sm:mx-auto px-3 sm:px-6 lg:px-8 pt-1 sm:pt-6 sm:space-y-5 flex flex-col sm:block min-h-[calc(100svh-128px)] sm:min-h-0">
+      <div className="sm:max-w-screen-xl sm:mx-auto px-3 sm:px-6 lg:px-8 pt-1 sm:pt-6 sm:space-y-5 flex flex-col flex-1 min-h-0 sm:flex-none">
 
       {/* ── First-visit hint ─────────────────────────────────────────────── */}
       <FirstVisitHint
@@ -437,68 +437,73 @@ export default function ListPage() {
         {/* Content sits above the overlay */}
         <div className="relative z-10 flex flex-col flex-1 min-h-0">
 
-          {/* Seamless textarea */}
-          <div className="relative px-6 pt-6 pb-3 flex-1">
-            <textarea
-              ref={textareaRef}
-              value={rawText}
-              onChange={(e) => {
-                setRawText(e.target.value);
-                resizeTextarea();
-                if (aiCleaned) setAiCleaned(false);
-              }}
-              placeholder={"milk, eggs\noven chips\nbananas, yoghurt"}
-              rows={8}
-              className="w-full resize-none bg-transparent text-[15px] leading-loose placeholder:text-foreground/25 placeholder:italic focus:outline-none text-foreground font-medium"
-              style={{ minHeight: 180 }}
-              data-testid="textarea-quick-list"
-            />
-            {rawText.length > 0 && (
-              <button
-                onClick={() => {
-                  setRawText("");
-                  if (textareaRef.current) {
-                    textareaRef.current.style.height = "auto";
-                  }
-                  setTimeout(() => textareaRef.current?.focus(), 50);
-                }}
-                className="absolute top-6 right-6 p-1 rounded-md text-muted-foreground/35 hover:text-muted-foreground transition-colors"
-                aria-label="Clear list"
-                data-testid="button-clear-list"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
+          {/* Scrollable upper area: textarea + chips */}
+          <div className="flex-1 min-h-0 overflow-y-auto">
 
-          {/* Parsed item chips */}
-          {parsedItems.length > 0 && (
-            <div
-              className="px-6 pb-3 flex flex-wrap gap-1.5"
-              data-testid="parsed-items-preview"
-            >
-              {parsedItems.map((item, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium"
-                  style={{
-                    background: "rgba(0,0,0,0.055)",
-                    color: "hsl(var(--foreground))",
+            {/* Seamless textarea */}
+            <div className="relative px-6 pt-6 pb-3">
+              <textarea
+                ref={textareaRef}
+                value={rawText}
+                onChange={(e) => {
+                  setRawText(e.target.value);
+                  resizeTextarea();
+                  if (aiCleaned) setAiCleaned(false);
+                }}
+                placeholder={"milk, eggs\noven chips\nbananas, yoghurt"}
+                rows={8}
+                className="w-full resize-none bg-transparent text-[15px] leading-loose placeholder:text-foreground/25 placeholder:italic focus:outline-none text-foreground font-medium"
+                style={{ minHeight: 180 }}
+                data-testid="textarea-quick-list"
+              />
+              {rawText.length > 0 && (
+                <button
+                  onClick={() => {
+                    setRawText("");
+                    if (textareaRef.current) {
+                      textareaRef.current.style.height = "auto";
+                    }
+                    setTimeout(() => textareaRef.current?.focus(), 50);
                   }}
+                  className="absolute top-6 right-6 p-1 rounded-md text-muted-foreground/35 hover:text-muted-foreground transition-colors"
+                  aria-label="Clear list"
+                  data-testid="button-clear-list"
                 >
-                  {parseIngredient(item).productName}
-                </span>
-              ))}
-              {aiCleaned && (
-                <span
-                  className="w-full mt-1 text-[11px]"
-                  style={{ color: "hsl(var(--muted-foreground))", opacity: 0.7 }}
-                >
-                  We cleaned up a few items for you
-                </span>
+                  <X className="h-3.5 w-3.5" />
+                </button>
               )}
             </div>
-          )}
+
+            {/* Parsed item chips */}
+            {parsedItems.length > 0 && (
+              <div
+                className="px-6 pb-3 flex flex-wrap gap-1.5"
+                data-testid="parsed-items-preview"
+              >
+                {parsedItems.map((item, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium"
+                    style={{
+                      background: "rgba(0,0,0,0.055)",
+                      color: "hsl(var(--foreground))",
+                    }}
+                  >
+                    {parseIngredient(item).productName}
+                  </span>
+                ))}
+                {aiCleaned && (
+                  <span
+                    className="w-full mt-1 text-[11px]"
+                    style={{ color: "hsl(var(--muted-foreground))", opacity: 0.7 }}
+                  >
+                    We cleaned up a few items for you
+                  </span>
+                )}
+              </div>
+            )}
+
+          </div>{/* end scrollable upper area */}
 
           {/* Divider above toolbar */}
           <div

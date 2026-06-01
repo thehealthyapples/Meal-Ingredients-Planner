@@ -56,9 +56,61 @@ import { buildRuleIndex, batchMatchUplift } from "./lib/uplift-engine.js";
 import UPLIFT_RULES from "./lib/uplift-rules.js";
 import type { BatchUpliftInput } from "./lib/uplift-types.js";
 import { mergeUpliftIngredients, removeUpliftIngredient, buildForkName, type AcceptedSuggestion } from "./lib/uplift-persistence.js";
+import { resolveActiveRestrictions, resolveIngredientRestrictions } from "../shared/restrictions/restriction-resolver.js";
 
 // Singleton index built once at startup — all rules are stateless
 const UPLIFT_INDEX = buildRuleIndex(UPLIFT_RULES);
+
+// ─── Household hard restriction helpers ───────────────────────────────────────
+
+/**
+ * Collects the union of hardRestrictions across all household eaters for a user.
+ * Returns an empty array (safe default) on any error — callers must log and handle.
+ */
+async function collectHouseholdHardRestrictions(userId: number): Promise<string[]> {
+  const householdId = await getHouseholdForUser(userId);
+  const eaters = await storage.getHouseholdEaters(householdId);
+  return Array.from(new Set(eaters.flatMap(e => e.hardRestrictions ?? []).filter(Boolean)));
+}
+
+/**
+ * Returns true if an uplift suggestion ingredient conflicts with any household hard restriction.
+ *
+ * Uses the canonical restriction resolver (Phase 3) as the primary check:
+ * - Resolves raw hardRestriction strings to canonical definitions (with legacy expansion,
+ *   so "nut_free" → peanut + tree_nut, "coeliac" → gluten, etc.)
+ * - Checks the ingredient against those definitions using word-boundary alias matching
+ *   and forward-substring derived/hidden ingredient matching.
+ *
+ * Fallback: for restriction strings not covered by the canonical library (e.g. future
+ * allergens not yet added), performs a direct case-insensitive substring check to
+ * preserve Phase 1 conservative behaviour. This fallback will shrink as the library grows.
+ *
+ * Conservative: suppresses when uncertain rather than risk surfacing restricted food.
+ */
+function upliftIngredientConflictsWithRestrictions(
+  ingredient: string,
+  hardRestrictions: string[],
+  activeRestrictionDefs: ReturnType<typeof resolveActiveRestrictions>,
+): boolean {
+  // Primary: canonical resolver (word-boundary + derived/hidden matching)
+  if (resolveIngredientRestrictions(ingredient, activeRestrictionDefs).length > 0) return true;
+
+  // Fallback: direct substring for restrictions not yet in the canonical library.
+  // Intentionally simple — catches "fish oil" for restriction "fish" even before
+  // a fish definition is added in Phase 4.
+  const normIng = ingredient.toLowerCase().trim();
+  for (const restriction of hardRestrictions) {
+    const normR = restriction.toLowerCase().trim().replace(/[-_]/g, ' ');
+    // Skip if the resolver already handled this restriction (avoid double-counting)
+    if (activeRestrictionDefs.some(d =>
+      d.id.replace(/_/g, ' ') === normR ||
+      d.aliases.some(a => a.toLowerCase() === normR)
+    )) continue;
+    if (normIng.includes(normR)) return true;
+  }
+  return false;
+}
 
 // ---------------------------------------------------------------------------
 
@@ -9236,6 +9288,30 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const { ingredients } = z.object({ ingredients: z.string().min(1).max(2000) }).parse(req.body);
     if (!process.env.OPENAI_API_KEY) return res.status(503).json({ message: "AI not configured" });
+
+    // Load household safety context — must be resolved before AI prompt is built
+    let hardRestrictions: string[] = [];
+    let excludedIngredients: string[] = [];
+    try {
+      const [restrictions, prefs] = await Promise.all([
+        collectHouseholdHardRestrictions(req.user!.id),
+        storage.getUserPreferences(req.user!.id),
+      ]);
+      hardRestrictions = restrictions;
+      excludedIngredients = prefs?.excludedIngredients ?? [];
+    } catch (err) {
+      console.warn('[suggest-from-ingredients] Could not load household restrictions — AI prompt will have no safety context', err);
+    }
+
+    // Build restriction block — only included when there are actual restrictions
+    const restrictionBlock = hardRestrictions.length > 0
+      ? `\n\nHOUSEHOLD HARD RESTRICTIONS — These must never be violated.\nThe household cannot consume: ${hardRestrictions.join(', ')}.\nIf a meal concept normally contains a restricted ingredient, suggest only a clearly adapted version that completely omits the restricted ingredient, or do not suggest it at all. Do not suggest any meal where the restricted ingredient is essential to the dish and cannot be reasonably omitted.`
+      : '';
+
+    const preferenceBlock = excludedIngredients.length > 0
+      ? `\n\nHousehold preference — try to avoid: ${excludedIngredients.join(', ')}.`
+      : '';
+
     try {
       const { default: OpenAI } = await import("openai");
       const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -9257,7 +9333,7 @@ Rules:
 - "effort" must be exactly one of: "easy", "medium", "involved"
 - "extraIngredients" is an array of key additional ingredients not in the user's list (empty array if none needed)
 - Return exactly 3 suggestions, no duplicates
-- No markdown, no explanation, no extra keys`;
+- No markdown, no explanation, no extra keys${restrictionBlock}${preferenceBlock}`;
       const completion = await client.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
@@ -9286,6 +9362,29 @@ Rules:
       description: z.string().max(500).optional(),
     }).parse(req.body);
     if (!process.env.OPENAI_API_KEY) return res.status(503).json({ message: "AI not configured" });
+
+    // Load household safety context — must be resolved before recipe generation
+    let hardRestrictions: string[] = [];
+    let excludedIngredients: string[] = [];
+    try {
+      const [restrictions, prefs] = await Promise.all([
+        collectHouseholdHardRestrictions(req.user!.id),
+        storage.getUserPreferences(req.user!.id),
+      ]);
+      hardRestrictions = restrictions;
+      excludedIngredients = prefs?.excludedIngredients ?? [];
+    } catch (err) {
+      console.warn('[generate-recipe-from-suggestion] Could not load household restrictions — recipe will be generated without safety context', err);
+    }
+
+    const restrictionBlock = hardRestrictions.length > 0
+      ? `\n\nHOUSEHOLD HARD RESTRICTIONS — These must never be violated.\nThe household cannot consume: ${hardRestrictions.join(', ')}.\n- The generated ingredients list must not include any restricted ingredient, directly or as a component of another ingredient.\n- The instructions must not reintroduce any restricted ingredient at any step.\n- If adapting a recipe concept to remove a restricted ingredient, make the adaptation explicit in the title or as a note.`
+      : '';
+
+    const preferenceBlock = excludedIngredients.length > 0
+      ? `\n\nHousehold preference — avoid these ingredients where possible: ${excludedIngredients.join(', ')}.`
+      : '';
+
     try {
       const { default: OpenAI } = await import("openai");
       const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -9303,7 +9402,7 @@ Rules:
 - "servings": positive integer
 - Use the provided base ingredients as the foundation, add only necessary extras
 - Keep it practical and home-cook friendly
-- No markdown, no extra keys`;
+- No markdown, no extra keys${restrictionBlock}${preferenceBlock}`;
       const userMsg = `Recipe: "${title}"${description ? ` — ${description}` : ''}
 Base ingredients the user has: ${ingredients}
 Generate a complete recipe using these as the foundation.`;
@@ -9544,7 +9643,46 @@ Generate a complete recipe using these as the foundation.`;
         return res.status(400).json({ message: 'meals array exceeds limit of 200' });
       }
 
+      // Load household hard restrictions when authenticated — server-authoritative safety filtering
+      let hardRestrictions: string[] = [];
+      if (req.isAuthenticated()) {
+        try {
+          hardRestrictions = await collectHouseholdHardRestrictions(req.user!.id);
+        } catch (err) {
+          console.warn('[uplift/batch] Could not load household restrictions — uplift suggestions will not be restriction-filtered', err);
+        }
+      }
+
       const output = batchMatchUplift(body, UPLIFT_INDEX);
+
+      // Post-filter: suppress uplift suggestions that conflict with household hard restrictions.
+      // Pre-resolve restrictions once via the canonical library (Phase 3) for efficiency.
+      if (hardRestrictions.length > 0) {
+        const activeRestrictionDefs = resolveActiveRestrictions(hardRestrictions);
+
+        const filteredResults = output.results.map(result => {
+          const filteredMatches = result.matches
+            .map(match => ({
+              ...match,
+              suggestions: match.suggestions.filter(s => {
+                if (upliftIngredientConflictsWithRestrictions(s.ingredient, hardRestrictions, activeRestrictionDefs)) {
+                  console.log(`[uplift/batch] Suppressed "${s.ingredient}" — conflicts with household hard restriction`);
+                  return false;
+                }
+                return true;
+              }),
+            }))
+            .filter(m => m.suggestions.length > 0);
+          return { ...result, matches: filteredMatches };
+        });
+
+        return res.json({
+          ...output,
+          results: filteredResults,
+          totalMatches: filteredResults.reduce((sum, r) => sum + r.matches.length, 0),
+        });
+      }
+
       return res.json(output);
     } catch (err) {
       console.error('[Uplift] Batch error:', err);

@@ -37,6 +37,7 @@ import { useSoundEffects } from "@/hooks/use-sound-effects";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import AnalyserDetailV2 from "@/components/analyser/AnalyserDetailV2";
 import { AddToWeekModal } from "@/components/AddToWeekModal";
+import type { HouseholdEater } from "@shared/household-eater";
 import { PageHeader } from "@/components/PageHeader";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 
@@ -449,6 +450,19 @@ export default function ProductsPage() {
     queryKey: ["/api/profile"],
     select: (d: any) => ({ dietPattern: d.dietPattern ?? null, dietRestrictions: d.dietRestrictions ?? [] }),
   });
+
+  // Household eaters — used by the restriction safety panel in the analyser.
+  // Stale time is generous: eater profiles change infrequently.
+  const { data: householdEaters = [] } = useQuery<HouseholdEater[]>({
+    queryKey: ["/api/household/eaters"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Build eater profiles for the restriction safety computation.
+  // Only eaters with hard restrictions contribute; others are omitted.
+  const householdEaterProfiles = householdEaters
+    .filter(e => (e.hardRestrictions ?? []).length > 0)
+    .map(e => ({ displayName: e.displayName, hardRestrictions: e.hardRestrictions ?? [] }));
 
   const { data: intelligenceSettings } = useQuery<{
     soundEnabled: boolean;
@@ -1524,6 +1538,7 @@ export default function ProductsPage() {
                 addToBasketPending={addToList.isPending}
                 linkToTemplatePending={linkToTemplate.isPending}
                 dietProfile={userProfile ?? null}
+                householdEaterProfiles={householdEaterProfiles.length > 0 ? householdEaterProfiles : undefined}
               />
               );
             })()}

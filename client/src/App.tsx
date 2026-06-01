@@ -145,7 +145,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
         <SiteBanner />
         <div className="flex flex-1 overflow-hidden">
           <DesktopSidebar />
-          <main className="flex-1 overflow-y-auto overflow-x-hidden main-safe bg-background/25">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden main-safe bg-background/25 flex flex-col">
             {isLoading ? (
               <div className="flex h-full items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary/50" />

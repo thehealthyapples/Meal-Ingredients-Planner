@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,9 @@ import type { InputProduct, PackagedSwap, WholeFoodSwap } from "@/lib/analyser-v
 import { effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
 import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
+import RestrictionSafetyPanel from "@/components/analyser/RestrictionSafetyPanel";
+import { computeRestrictionSafety, parseIngredientText } from "@shared/restrictions/restriction-safety";
+import type { EaterProfile } from "@shared/restrictions/restriction-safety";
 
 type DietProfile = {
   dietPattern: string | null;
@@ -28,6 +31,12 @@ interface Props {
   addToBasketPending?: boolean;
   linkToTemplatePending?: boolean;
   dietProfile?: DietProfile | null;
+  /**
+   * Household eater profiles with hard restrictions.
+   * Passed from the products page after querying /api/household/eaters.
+   * When absent, the restriction safety panel is not shown.
+   */
+  householdEaterProfiles?: EaterProfile[];
 }
 
 const RISK_TEXT: Record<string, string> = {
@@ -110,6 +119,7 @@ export default function AnalyserDetailV2({
   addToBasketPending,
   linkToTemplatePending,
   dietProfile = null,
+  householdEaterProfiles,
 }: Props) {
   const vm = buildAnalyserViewModel(product, otherProducts);
 
@@ -140,6 +150,27 @@ export default function AnalyserDetailV2({
 
   const dietConcerns = checkDietConcerns(product.ingredients_text ?? null, dietProfile);
   const showDietBanner = hasDietPreferences(dietProfile);
+
+  // ── Restriction safety (Phase 4) ─────────────────────────────────────────
+  // Compute deterministically from household eater profiles + product ingredients.
+  // Only runs when household eaters are passed; never runs on empty data.
+  const restrictionSafetyResults = useMemo(() => {
+    const profiles = householdEaterProfiles ?? [];
+    const hasAnyRestrictions = profiles.some(p => (p.hardRestrictions ?? []).length > 0);
+    if (!hasAnyRestrictions) return [];
+
+    // Prefer parsed ingredient names from analysis; fall back to text parsing
+    const ingredientNames: string[] = product.analysis?.ingredients.map(i => i.name) ??
+      (product.ingredients_text ? parseIngredientText(product.ingredients_text) : []);
+
+    if (!ingredientNames.length) return [];
+
+    return computeRestrictionSafety(ingredientNames, profiles);
+  }, [product.analysis, product.ingredients_text, householdEaterProfiles]);
+
+  const hasRestrictionsConfigured = (householdEaterProfiles ?? []).some(
+    p => (p.hardRestrictions ?? []).length > 0
+  );
 
   return (
     <div className="space-y-6" data-testid="analyser-detail-v2">
@@ -206,6 +237,14 @@ export default function AnalyserDetailV2({
                 </p>
               )}
             </div>
+          )}
+
+          {/* Restriction Safety Panel (Phase 4) */}
+          {hasRestrictionsConfigured && (
+            <RestrictionSafetyPanel
+              results={restrictionSafetyResults}
+              hasRestrictionsConfigured={hasRestrictionsConfigured}
+            />
           )}
 
           {/* THA score block */}
