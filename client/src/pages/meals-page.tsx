@@ -3597,14 +3597,6 @@ export default function MealsPage() {
                           </Badge>
                         </div>
                       )}
-                      {/* Actions button — opens action sheet on all screen sizes */}
-                      <button
-                        className="absolute top-1.5 right-1.5 z-20 h-7 w-7 bg-black/45 rounded-md flex items-center justify-center text-white"
-                        onClick={(e) => { e.stopPropagation(); setActionSheetMeal(meal); }}
-                        data-testid={`button-card-actions-${meal.id}`}
-                      >
-                        <MoreVertical className="h-3.5 w-3.5" />
-                      </button>
                     </div>
                     {/* Permanent info strip — ingredients/nutrition always visible, no hover required */}
                     <div className="border-t border-border/50 px-2 pt-1.5 pb-2" onClick={(e) => e.stopPropagation()}>
