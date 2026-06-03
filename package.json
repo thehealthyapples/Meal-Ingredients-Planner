@@ -22,6 +22,7 @@
     "test:uplift-persistence": "tsx server/tests/test-uplift-persistence.ts",
     "test:smart-suggest-tailoring": "tsx server/tests/test-smart-suggest-tailoring.ts",
     "test:smart-suggest-restrictions": "tsx server/tests/test-smart-suggest-restrictions.ts",
+    "test:smart-suggest-product-filter": "tsx server/tests/test-smart-suggest-product-filter.ts",
     "test:household-eater": "tsx server/tests/test-household-eater.ts",
     "test:guest-eater": "tsx server/tests/test-guest-eater.ts",
     "test:restriction-resolver": "tsx server/tests/test-restriction-resolver.ts",

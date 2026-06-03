@@ -129,6 +129,14 @@ function customRestrictionMatches(
   return false;
 }
 
+// Exported for unit testing of the product-source filter in isolation.
+// Returns true when a meal's mealSourceType indicates it is a barcode-scanned
+// grocery product rather than a recipe or meal intent. Such rows must never
+// enter the Smart Planner candidate pool.
+export function candidateIsProduct(mealSourceType: string): boolean {
+  return mealSourceType === "openfoodfacts";
+}
+
 // Exported for unit testing of the hard restriction filter in isolation.
 // Builds a minimal candidate from a name + ingredient list and resolves the
 // active canonical restrictions internally, so tests don't need the full pipeline.
@@ -240,6 +248,18 @@ export async function generateSmartSuggestion(
   const allCandidates: ScoredCandidate[] = [];
 
   for (const meal of userMeals) {
+    // Defense in depth: exclude barcode-scanned grocery products even if the
+    // route-level source-type gate was bypassed. Products stored via OpenFoodFacts
+    // have no ingredients and no meal intent — they must never become recommendations.
+    // Zero-ingredient guard note: a broader guard on ingredients.length === 0 is
+    // intentionally deferred. After this source-gate, remaining zero-ingredient user
+    // meals are manually created intention-meals (valid for planning). Blocking all
+    // zero-ingredient rows would remove those legitimate entries and is higher-risk
+    // than the targeted source-type gate.
+    if (candidateIsProduct(meal.mealSourceType)) {
+      console.debug(`[SmartSuggest] Excluded OpenFoodFacts product: "${meal.name}"`);
+      continue;
+    }
     // P0: enforce drink/alcohol rules directly on the Meal record before conversion.
     // This catches isDrink/kind="drink" meals that carry no category and no alcohol name keyword.
     if (meal.drinkType === "alcohol") {

@@ -4798,12 +4798,15 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
 
       settings.plannerEnableDrinks = plannerEnableDrinks;
 
-      // Exclude operational template meals from recommendation candidate pool.
-      // Starter and planner-placeholder meals have 0–1 ingredients and dominate
-      // simplicityBonus scoring, blocking real recipes from appearing.
+      // Exclude operational template meals and barcode-scanned grocery products
+      // from the recommendation candidate pool. Products (mealSourceType='openfoodfacts')
+      // are grocery items without meal intent — they must never appear as Smart Planner
+      // suggestions. This is the primary source-type gate; smart-suggest-service also
+      // applies a defense-in-depth check on the same field.
       userMeals = userMeals.filter(meal =>
         meal.mealSourceType !== "starter" &&
-        meal.mealSourceType !== "planner-placeholder"
+        meal.mealSourceType !== "planner-placeholder" &&
+        meal.mealSourceType !== "openfoodfacts"
       );
 
       // Load household eaters and merge their hard restrictions into the candidate pool filter.
