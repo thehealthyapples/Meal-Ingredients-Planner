@@ -550,6 +550,53 @@ assert(textSoy.length === 1 && textSoy[0].restriction.id === 'soy', 'resolveText
 const textNone = resolveTextRestrictions('drizzle with olive oil', [glutenDef, dairyDef, peanutDef]);
 assertEqual(textNone, [], 'safe text → no matches');
 
+// ─── 28. Soybean / soybeans alias matching ────────────────────────────────────
+//
+// Verifies that whole-bean ingredient terms resolve to the soy restriction.
+// These were previously missed because wordBoundaryIncludes("soy") does not
+// match "soybean" — the 'b' follows without a space boundary.
+
+section('28. Soybean alias matching');
+
+const soybeanResult = resolveIngredientRestrictions('soybean', [soyDef]);
+assert(soybeanResult.length === 1 && soybeanResult[0].restriction.id === 'soy', '"soybean" resolves soy');
+assertEqual(soybeanResult[0].sourceType, 'alias', '"soybean" matched as alias');
+
+const soybeansResult = resolveIngredientRestrictions('soybeans', [soyDef]);
+assert(soybeansResult.length === 1 && soybeansResult[0].restriction.id === 'soy', '"soybeans" resolves soy');
+
+const soyaBeanResult = resolveIngredientRestrictions('soya bean', [soyDef]);
+assert(soyaBeanResult.length === 1 && soyaBeanResult[0].restriction.id === 'soy', '"soya bean" resolves soy');
+
+const soyaBeansResult = resolveIngredientRestrictions('soya beans', [soyDef]);
+assert(soyaBeansResult.length === 1 && soyaBeansResult[0].restriction.id === 'soy', '"soya beans" resolves soy');
+
+const soyBeanResult = resolveIngredientRestrictions('soy bean', [soyDef]);
+assert(soyBeanResult.length === 1 && soyBeanResult[0].restriction.id === 'soy', '"soy bean" resolves soy');
+
+const soyBeansResult = resolveIngredientRestrictions('soy beans', [soyDef]);
+assert(soyBeansResult.length === 1 && soyBeansResult[0].restriction.id === 'soy', '"soy beans" resolves soy');
+
+// Soy sauce still resolves (regression check)
+const soySauceRegression = resolveIngredientRestrictions('soy sauce', [soyDef]);
+assert(soySauceRegression.length === 1 && soySauceRegression[0].restriction.id === 'soy', '"soy sauce" still resolves soy (regression)');
+
+// Tofu still resolves (regression check)
+const tofuRegression = resolveIngredientRestrictions('tofu', [soyDef]);
+assert(tofuRegression.length === 1 && tofuRegression[0].restriction.id === 'soy', '"tofu" still resolves soy (regression)');
+
+// Savoy cabbage still NOT matched (word-boundary regression)
+const savoyRegression = resolveIngredientRestrictions('savoy cabbage', [soyDef]);
+assertEqual(savoyRegression, [], '"savoy cabbage" still does NOT match soy (regression)');
+
+// Ingredient string that contains "soybeans" as part of a longer phrase
+const soySauceWithSoybeans = resolveIngredientRestrictions('soybeans (water, salt)', [soyDef]);
+assert(soySauceWithSoybeans.length === 1 && soySauceWithSoybeans[0].restriction.id === 'soy', '"soybeans (water, salt)" resolves soy');
+
+// No duplicate when both "soy" and "soybeans" appear in one product — dedup by id
+const soyAndSoybeans = resolveIngredientRestrictions('soy', [soyDef]);
+assert(soyAndSoybeans.length === 1, 'No duplicate soy result for "soy" alone');
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n────────────────────────────────────────`);

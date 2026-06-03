@@ -325,6 +325,15 @@ export const RESTRICTION_DEFINITIONS: RestrictionDefinition[] = [
     aliases: [
       'soy',
       'soya',
+      // Whole bean forms — wordBoundaryIncludes("soy") does not match "soybean"
+      // because 'b' follows 'soy' without a word boundary. These must be listed
+      // explicitly so "soybeans" in an ingredient list is caught.
+      'soybean',
+      'soybeans',
+      'soya bean',
+      'soya beans',
+      'soy bean',
+      'soy beans',
       'soy free',
       'soy-free',
       'soya free',

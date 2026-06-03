@@ -91,6 +91,14 @@ assert(
   !candidateHardExcluded('Braised savoy cabbage', ['savoy cabbage', 'butter', 'pepper'], ['soy']),
   'Soy does NOT block savoy cabbage (word-boundary protection)',
 );
+assert(
+  candidateHardExcluded('Edamame stir fry', ['soybeans', 'sesame oil', 'garlic'], ['soy']),
+  'Soy blocks soybeans (alias match)',
+);
+assert(
+  candidateHardExcluded('Soya bean stew', ['soya beans', 'tomato', 'onion'], ['soy']),
+  'Soy blocks soya beans (alias match)',
+);
 
 // ─── 3. Peanut — derived + hidden ingredients ─────────────────────────────────
 
