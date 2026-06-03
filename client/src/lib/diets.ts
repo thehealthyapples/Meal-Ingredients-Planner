@@ -44,6 +44,7 @@ export const ALLERGY_INTOLERANCE_OPTIONS = [
   { value: "Eggs",        label: "Eggs" },
   { value: "Shellfish",   label: "Shellfish" },
   { value: "Soy",         label: "Soy" },
+  { value: "Sesame",      label: "Sesame" },
 ] as const;
 
 export const EATING_SCHEDULES = [
@@ -94,6 +95,7 @@ export const ALLERGY_OPTIONS: AllergyOption[] = [
   { value: "eggs",      label: "Eggs" },
   { value: "shellfish", label: "Shellfish" },
   { value: "soy",       label: "Soy" },
+  { value: "sesame",    label: "Sesame" },
   { value: "other",     label: "Other" },
 ];
 
