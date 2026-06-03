@@ -24,6 +24,9 @@ import { useToast } from "@/hooks/use-toast";
 import type { ShoppingListItem } from "@shared/schema";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { canShowScoreForItem } from "@/lib/basket-item-classifier";
+import RestrictionSafetyPanel from "@/components/analyser/RestrictionSafetyPanel";
+import { computeRestrictionSafety, parseIngredientText } from "@shared/restrictions/restriction-safety";
+import type { EaterProfile } from "@shared/restrictions/restriction-safety";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -267,9 +270,10 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   item: ShoppingListItem | null;
   preferredStore?: string;
+  householdEaterProfiles?: EaterProfile[];
 }
 
-export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStore }: Props) {
+export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStore, householdEaterProfiles }: Props) {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -482,6 +486,33 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
     [item?.productName],
   );
 
+  // ── Restriction safety ────────────────────────────────────────────────────
+  // Collect ingredient strings: item name + top product ingredients when available.
+  const restrictionIngredients = useMemo(() => {
+    const names: string[] = [];
+    if (item?.productName) names.push(item.productName);
+    if (products.length > 0) {
+      const top = products[0];
+      if (top.analysis?.ingredients) {
+        names.push(...top.analysis.ingredients.map((i: any) => String(i.name)));
+      } else if (top.ingredients_text) {
+        names.push(...parseIngredientText(top.ingredients_text));
+      }
+    }
+    return names;
+  }, [item?.productName, products]);
+
+  const restrictionSafetyResults = useMemo(() => {
+    const profiles = householdEaterProfiles ?? [];
+    if (!profiles.some(p => (p.hardRestrictions ?? []).length > 0)) return [];
+    if (!restrictionIngredients.length) return [];
+    return computeRestrictionSafety(restrictionIngredients, profiles);
+  }, [restrictionIngredients, householdEaterProfiles]);
+
+  const hasRestrictionsConfigured = (householdEaterProfiles ?? []).some(
+    p => (p.hardRestrictions ?? []).length > 0
+  );
+
   if (!item) return null;
 
   const insight = getCurrentProductInsight(item);
@@ -595,6 +626,14 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
               </CardContent>
             </Card>
           </div>
+
+          {/* ── Restriction Safety Panel ─────────────────────────────────── */}
+          {hasRestrictionsConfigured && (
+            <RestrictionSafetyPanel
+              results={restrictionSafetyResults}
+              hasRestrictionsConfigured={hasRestrictionsConfigured}
+            />
+          )}
 
           {/* ── Previous fulfilments ──────────────────────────────────────── */}
           {previousChoices.length > 0 && (

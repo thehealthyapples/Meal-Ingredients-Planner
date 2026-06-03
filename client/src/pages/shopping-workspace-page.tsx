@@ -24,6 +24,7 @@ import { deriveQuantityConfidence } from "@/lib/quantity-confidence";
 import ScoreBadge from "@/components/ui/score-badge";
 import { canShowScoreForItem } from "@/lib/basket-item-classifier";
 import type { ShoppingListItem, IngredientSource } from "@shared/schema";
+import type { HouseholdEater } from "@shared/household-eater";
 import { WorkspaceAnalyserSheet } from "@/components/WorkspaceAnalyserSheet";
 import { PageHeader } from "@/components/PageHeader";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -1229,6 +1230,16 @@ export default function ShoppingWorkspacePage() {
     queryKey: ["/api/pantry"],
   });
 
+  // Household eaters — used by the restriction safety panel in the analyser.
+  const { data: householdEaters = [] } = useQuery<HouseholdEater[]>({
+    queryKey: ["/api/household/eaters"],
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const householdEaterProfiles = householdEaters
+    .filter(e => (e.hardRestrictions ?? []).length > 0)
+    .map(e => ({ displayName: e.displayName, hardRestrictions: e.hardRestrictions ?? [] }));
+
   const pantryKeySet = useMemo(
     () => new Set(pantryItems.map((p) => p.ingredientKey)),
     [pantryItems],
@@ -2286,6 +2297,7 @@ export default function ShoppingWorkspacePage() {
         open={analyserItem !== null}
         onOpenChange={(v) => { if (!v) setAnalyserItem(null); }}
         item={analyserItem}
+        householdEaterProfiles={householdEaterProfiles.length > 0 ? householdEaterProfiles : undefined}
       />
 
       </div>{/* /inner content div */}
