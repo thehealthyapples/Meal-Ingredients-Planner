@@ -114,5 +114,10 @@
   "raw tiger prawns":    { "canonicalName": "raw tiger prawns",   "category": "fish",          "subcategory": null },
   "cooked tiger prawns": { "canonicalName": "cooked tiger prawns","category": "fish",          "subcategory": null },
 
-  "duck eggs":           { "canonicalName": "duck eggs",          "category": "eggs",          "subcategory": null }
+  "duck eggs":           { "canonicalName": "duck eggs",          "category": "eggs",          "subcategory": null },
+
+  "potato":              { "canonicalName": "potatoes",           "category": "produce",       "subcategory": "root_vegetable" },
+  "potatoes":            { "canonicalName": "potatoes",           "category": "produce",       "subcategory": "root_vegetable" },
+  "sweet potato":        { "canonicalName": "sweet potatoes",     "category": "produce",       "subcategory": "root_vegetable" },
+  "sweet potatoes":      { "canonicalName": "sweet potatoes",     "category": "produce",       "subcategory": "root_vegetable" }
 }
