@@ -481,27 +481,8 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
 
   return (
     <div className="w-full flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
-      {/* Row 1: View recipe | Add to basket | Analyse | Add to planner */}
-      <div className="grid grid-cols-4 gap-1">
-        <div className="flex items-center justify-center">
-          {!hideEdit ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 realm-banner-btn"
-                  onClick={(e) => { e.stopPropagation(); navigate(`/meals/${mealId}`); }}
-                  data-testid={`button-view-recipe-${mealId}`}
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">View recipe</p></TooltipContent>
-            </Tooltip>
-          ) : null}
-        </div>
-
+      {/* Row 1: Add to basket | Analyse | Add to planner */}
+      <div className="grid grid-cols-3 gap-1">
         <div className="flex items-center justify-center">
           {!hideBasket ? (
             <Tooltip>
@@ -3616,23 +3597,9 @@ export default function MealsPage() {
                           </Badge>
                         </div>
                       )}
-                      {/* Desktop: delete button on hover */}
-                      {!meal.isSystemMeal && (
-                        <div className="hidden sm:block absolute top-1.5 right-1.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-white bg-black/40 backdrop-blur-sm"
-                            onClick={(e) => { e.stopPropagation(); deleteMeal.mutate(meal.id); }}
-                            data-testid={`button-delete-meal-${meal.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                      {/* Mobile: three-dot button — always visible, opens action sheet */}
+                      {/* Actions button — opens action sheet on all screen sizes */}
                       <button
-                        className="sm:hidden absolute top-1.5 right-1.5 z-20 h-7 w-7 bg-black/45 rounded-md flex items-center justify-center text-white"
+                        className="absolute top-1.5 right-1.5 z-20 h-7 w-7 bg-black/45 rounded-md flex items-center justify-center text-white"
                         onClick={(e) => { e.stopPropagation(); setActionSheetMeal(meal); }}
                         data-testid={`button-card-actions-${meal.id}`}
                       >
@@ -3641,7 +3608,7 @@ export default function MealsPage() {
                     </div>
                     {/* Permanent info strip — ingredients/nutrition always visible, no hover required */}
                     <div className="border-t border-border/50 px-2 pt-1.5 pb-2" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex gap-0.5 mb-1">
+                      <div className="flex justify-center gap-0.5 mb-1">
                         <button
                           className={`text-[11px] font-medium px-2 py-0.5 rounded transition-colors ${infoTab === 'ingredients' ? 'text-foreground bg-muted' : 'text-muted-foreground hover:text-foreground'}`}
                           onClick={() => setCardInfoTabs(prev => new Map(prev).set(meal.id, 'ingredients'))}
