@@ -18,6 +18,7 @@ import BarcodeScanner from "@/components/BarcodeScanner";
 import { MealCompletionDialog, type CompletionMeal } from "@/components/meal-completion-dialog";
 import { IngredientRow, buildIngredientString, parseIngredientString } from "@/components/ingredient-input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -698,6 +699,261 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
 
 // ── Mobile long-press action sheet for cookbook cards ────────────────────────
 // Triggered by long-press on mobile; single-tap still navigates to meal detail.
+
+// Desktop-only compact dropdown menu for cookbook grid cards.
+// Mobile uses MobileMealActionSheet (bottom drawer) instead.
+function CardActionsMenu({
+  meal,
+  onFreezeClick,
+  onDelete,
+  onImageChange,
+  onMobileClick,
+}: {
+  meal: Meal;
+  onFreezeClick: () => void;
+  onDelete: () => void;
+  onImageChange: (mealId: number, url: string | null) => void;
+  onMobileClick: () => void;
+}) {
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { addToBasket } = useBasket();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [plannerOpen, setPlannerOpen] = useState(false);
+  const [basketOpen, setBasketOpen] = useState(false);
+  const [analysisOpen, setAnalysisOpen] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
+  const [imageLoading, setImageLoading] = useState<"upload" | "generate" | "remove" | null>(null);
+
+  const addToListMutation = useMutation({
+    mutationFn: async (ctx?: { eaterIds?: number[]; guestEaters?: GuestEater[] }) => {
+      const res = await apiRequest('POST', api.shoppingList.generateFromMeals.path, {
+        mealSelections: [{ mealId: meal.id, count: 1, ...(ctx?.eaterIds?.length ? { eaterIds: ctx.eaterIds } : {}), ...(ctx?.guestEaters?.length ? { guestEaters: ctx.guestEaters } : {}) }],
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
+      toast({ title: "Added to shopping", description: meal.name });
+    },
+    onError: () => toast({ title: "Failed to add to shopping", variant: "destructive" }),
+  });
+
+  const addProductMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', api.shoppingList.add.path, { productName: meal.name, quantity: 1 });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+      toast({ title: "Added to shopping", description: meal.name });
+    },
+    onError: () => toast({ title: "Couldn't add product", variant: "destructive" }),
+  });
+
+  const analyzeMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', api.analyze.meal.path, { mealId: meal.id });
+      return res.json() as Promise<AnalysisResult>;
+    },
+    onSuccess: (data) => {
+      setAnalysisResult(data);
+      setAnalysisOpen(true);
+      queryClient.invalidateQueries({ queryKey: ['/api/meals', meal.id, 'nutrition'] });
+      toast({ title: "Analysis complete", description: "Nutrition data calculated." });
+    },
+    onError: () => toast({ title: "Analysis failed", variant: "destructive" }),
+  });
+
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const allowed = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", ""]);
+    if (!allowed.has(file.type)) {
+      toast({ variant: "destructive", title: "Invalid file type", description: "Please upload a JPEG, PNG, or WebP image." });
+      return;
+    }
+    setImageLoading("upload");
+    try {
+      let uploadFile: File;
+      try {
+        const blob = await compressImage(file, 800, 0.85);
+        uploadFile = new File([blob], "meal-photo.jpg", { type: "image/jpeg" });
+      } catch {
+        const effectiveType = file.type || inferMimeFromFilename(file.name) || "image/jpeg";
+        uploadFile = new File([file], file.name || "upload.jpg", { type: effectiveType });
+      }
+      const fd = new FormData();
+      fd.append("image", uploadFile);
+      const uploadRes = await fetch("/api/media/upload", { method: "POST", body: fd, credentials: "include" });
+      if (!uploadRes.ok) { const e = await uploadRes.json().catch(() => ({})); throw new Error((e as any).message || "Upload failed"); }
+      const { url } = await uploadRes.json();
+      const patchRes = await fetch(buildUrl(api.meals.updateImage.path, { id: meal.id }), {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ imageUrl: url }),
+      });
+      if (!patchRes.ok) throw new Error("Could not save image to recipe.");
+      const updated = await patchRes.json();
+      onImageChange(meal.id, updated.imageUrl ?? url);
+      toast({ title: "Photo saved" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Upload failed", description: err?.message || "Please try again." });
+    } finally {
+      setImageLoading(null);
+    }
+  };
+
+  const handleGenerate = async () => {
+    setImageLoading("generate");
+    try {
+      const res = await fetch(buildUrl(api.meals.generateImage.path, { id: meal.id }), { method: "POST", credentials: "include" });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error((e as any).message || "Generation failed"); }
+      const updated = await res.json();
+      onImageChange(meal.id, updated.imageUrl ?? null);
+      toast({ title: "AI image generated" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Image generation failed", description: err?.message || "Please try again." });
+    } finally {
+      setImageLoading(null);
+    }
+  };
+
+  const handleRemove = async () => {
+    setImageLoading("remove");
+    try {
+      const res = await fetch(buildUrl(api.meals.updateImage.path, { id: meal.id }), {
+        method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ imageUrl: null }),
+      });
+      if (!res.ok) throw new Error("Could not remove image.");
+      onImageChange(meal.id, null);
+      toast({ title: "Image removed" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Remove failed", description: err?.message || "Please try again." });
+    } finally {
+      setImageLoading(null);
+    }
+  };
+
+  const btnClass = "h-7 w-7 bg-black/45 hover:bg-black/70 rounded-md flex items-center justify-center text-white transition-colors";
+
+  return (
+    <>
+      {/* Mobile: bottom action sheet */}
+      <button
+        className={`sm:hidden absolute bottom-1.5 right-1.5 z-20 ${btnClass}`}
+        onClick={(e) => { e.stopPropagation(); onMobileClick(); }}
+        aria-label="Recipe actions"
+        data-testid={`button-card-actions-${meal.id}`}
+      >
+        <MoreVertical className="h-3.5 w-3.5" />
+      </button>
+
+      {/* Desktop: compact anchored dropdown */}
+      <div className="hidden sm:block absolute bottom-1.5 right-1.5 z-20" onClick={(e) => e.stopPropagation()}>
+        <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/*" className="hidden" onChange={handleFileSelected} />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className={btnClass} aria-label="Recipe actions" data-testid={`button-card-actions-${meal.id}`}>
+              <MoreVertical className="h-3.5 w-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="top" className="w-52">
+            <DropdownMenuItem onSelect={() => navigate(`/meals/${meal.id}`)}>
+              <Eye className="h-4 w-4 shrink-0" />
+              Open recipe
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => setPlannerOpen(true)}>
+              <CalendarDays className="h-4 w-4 shrink-0" />
+              Add to planner
+            </DropdownMenuItem>
+            {meal.isReadyMeal ? (
+              <DropdownMenuItem onSelect={() => addProductMutation.mutate()} disabled={addProductMutation.isPending}>
+                <ShoppingBasket className="h-4 w-4 shrink-0" />
+                Add to shopping
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem onSelect={() => setBasketOpen(true)}>
+                <ShoppingBasket className="h-4 w-4 shrink-0" />
+                Add to shopping
+              </DropdownMenuItem>
+            )}
+            {!meal.isReadyMeal && (
+              <DropdownMenuItem onSelect={() => analyzeMutation.mutate()} disabled={analyzeMutation.isPending}>
+                <Microscope className="h-4 w-4 shrink-0" />
+                Analyse nutrition
+              </DropdownMenuItem>
+            )}
+            {!!meal.isFreezerEligible && (
+              <DropdownMenuItem onSelect={onFreezeClick}>
+                <Snowflake className="h-4 w-4 shrink-0" />
+                Add to freezer
+              </DropdownMenuItem>
+            )}
+            {!meal.isSystemMeal && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setTimeout(() => fileInputRef.current?.click(), 50)} disabled={imageLoading !== null}>
+                  <Camera className="h-4 w-4 shrink-0" />
+                  {meal.imageUrl ? "Replace photo" : "Add photo"}
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={handleGenerate} disabled={imageLoading !== null}>
+                  <Wand2 className="h-4 w-4 shrink-0" />
+                  {meal.imageUrl ? "Regenerate AI image" : "Generate AI image"}
+                </DropdownMenuItem>
+                {meal.imageUrl && (
+                  <DropdownMenuItem onSelect={handleRemove} disabled={imageLoading !== null} className="text-destructive focus:text-destructive">
+                    <ImageOff className="h-4 w-4 shrink-0" />
+                    Remove photo
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
+                  <Trash2 className="h-4 w-4 shrink-0" />
+                  Delete recipe
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <AddToPlannerDialog
+        mealId={meal.id}
+        mealName={meal.name}
+        isDrink={!!meal.isDrink}
+        audience={meal.audience || "adult"}
+        open={plannerOpen}
+        onOpenChange={setPlannerOpen}
+      />
+      <AddToShoppingListDialog
+        mealName={meal.name}
+        open={basketOpen}
+        onOpenChange={setBasketOpen}
+        onAdd={(ctx) => {
+          setBasketOpen(false);
+          addToBasket({ mealId: meal.id, quantity: 1 });
+          addToListMutation.mutate(ctx);
+        }}
+      />
+      <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{meal.name} – Nutrition Analysis</DialogTitle>
+          </DialogHeader>
+          {analysisResult && <AnalysisResultContent analysis={analysisResult} />}
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
 
 function MobileMealActionSheet({
   meal,
@@ -3597,15 +3853,14 @@ export default function MealsPage() {
                           </Badge>
                         </div>
                       )}
-                      {/* Recipe actions menu — bottom-right of image, opens action sheet */}
-                      <button
-                        className="absolute bottom-1.5 right-1.5 z-20 h-7 w-7 bg-black/45 hover:bg-black/70 rounded-md flex items-center justify-center text-white transition-colors"
-                        onClick={(e) => { e.stopPropagation(); setActionSheetMeal(meal); }}
-                        aria-label="Recipe actions"
-                        data-testid={`button-card-actions-${meal.id}`}
-                      >
-                        <MoreVertical className="h-3.5 w-3.5" />
-                      </button>
+                      {/* Recipe actions: desktop → compact dropdown, mobile → bottom sheet */}
+                      <CardActionsMenu
+                        meal={meal}
+                        onFreezeClick={() => setAddToFreezerMealId(meal.id)}
+                        onDelete={() => deleteMeal.mutate(meal.id)}
+                        onImageChange={handleMealImageChange}
+                        onMobileClick={() => setActionSheetMeal(meal)}
+                      />
                     </div>
                     {/* Permanent info strip — ingredients/nutrition always visible, no hover required */}
                     <div className="border-t border-border/50 px-2 pt-1.5 pb-2" onClick={(e) => e.stopPropagation()}>
