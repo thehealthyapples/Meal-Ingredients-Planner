@@ -482,98 +482,9 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
 
   return (
     <div className="w-full flex flex-col gap-2" onClick={(e) => e.stopPropagation()}>
-      {/* Row 1: Add to basket | Analyse | Add to planner */}
-      <div className="grid grid-cols-3 gap-1">
-        <div className="flex items-center justify-center">
-          {!hideBasket ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 realm-banner-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (isReadyMeal) {
-                      addProductToBasketMutation.mutate();
-                    } else {
-                      setListDialogMode('basket');
-                      setListContextOpen(true);
-                    }
-                  }}
-                  disabled={isReadyMeal ? addProductToBasketMutation.isPending : addToListMutation.isPending}
-                  data-testid={`button-add-basket-${mealId}`}
-                >
-                  {(isReadyMeal ? addProductToBasketMutation.isPending : addToListMutation.isPending) ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <ShoppingBasket className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">Add to basket</p></TooltipContent>
-            </Tooltip>
-          ) : null}
-        </div>
-
-        <div className="flex items-center justify-center">
-          {!isReadyMeal ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 realm-banner-btn"
-                  onClick={(e) => { e.stopPropagation(); analyzeMutation.mutate(); }}
-                  disabled={analyzeMutation.isPending}
-                  data-testid={`button-analyze-meal-${mealId}`}
-                >
-                  {analyzeMutation.isPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Microscope className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">Analyse</p></TooltipContent>
-            </Tooltip>
-          ) : null}
-        </div>
-
-        <div className="flex items-center justify-center">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7 realm-banner-btn"
-                onClick={(e) => { e.stopPropagation(); setPlannerOpen(true); }}
-                data-testid={`button-add-planner-${mealId}`}
-              >
-                <CalendarDays className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent><p className="text-xs">Add to planner</p></TooltipContent>
-          </Tooltip>
-        </div>
-      </div>
-
-      {/* Row 2: Servings per recipe | Qty picker | Add to freezer | Add to quick list */}
-      <div className="grid grid-cols-4 gap-1">
-        <div className="flex items-center justify-center">
-          {servings != null && servings >= 1 ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span className="inline-flex items-center justify-center gap-0.5 h-7 w-7 text-xs text-muted-foreground" data-testid={`text-servings-${mealId}`}>
-                  <UtensilsCrossed className="h-3 w-3 shrink-0" />
-                  <span className="font-medium">{servings}</span>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">{servings === 1 ? '1 serving per recipe' : `${servings} servings per recipe`}</p></TooltipContent>
-            </Tooltip>
-          ) : null}
-        </div>
-
+      {/* Single action row: Qty | Quick List | Freeze | Planner | Analyse | Basket */}
+      {/* Serving metadata moved to image overlay badge — see badge-serves-* testid */}
+      <div className="grid grid-cols-6 gap-1">
         <div className="flex items-center justify-center">
           <Tooltip>
             <TooltipTrigger asChild>
@@ -611,25 +522,6 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
         </div>
 
         <div className="flex items-center justify-center">
-          {isFreezerEligible ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 text-blue-400 realm-banner-btn"
-                  onClick={(e) => { e.stopPropagation(); onFreezeClick(); }}
-                  data-testid={`button-freeze-${mealId}`}
-                >
-                  <Snowflake className="h-3.5 w-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent><p className="text-xs">Add to freezer</p></TooltipContent>
-            </Tooltip>
-          ) : null}
-        </div>
-
-        <div className="flex items-center justify-center">
           {(onAddToList || (showListButton && onAddToQuickList)) ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -655,6 +547,98 @@ function MealActionBar({ mealId, mealName, ingredients, isReadyMeal, isDrink, au
                 </Button>
               </TooltipTrigger>
               <TooltipContent><p className="text-xs">Add to quick list</p></TooltipContent>
+            </Tooltip>
+          ) : null}
+        </div>
+
+        <div className="flex items-center justify-center">
+          {isFreezerEligible ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 text-blue-400 realm-banner-btn"
+                  onClick={(e) => { e.stopPropagation(); onFreezeClick(); }}
+                  data-testid={`button-freeze-${mealId}`}
+                >
+                  <Snowflake className="h-3.5 w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">Add to freezer</p></TooltipContent>
+            </Tooltip>
+          ) : null}
+        </div>
+
+        <div className="flex items-center justify-center">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 realm-banner-btn"
+                onClick={(e) => { e.stopPropagation(); setPlannerOpen(true); }}
+                data-testid={`button-add-planner-${mealId}`}
+              >
+                <CalendarDays className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent><p className="text-xs">Add to planner</p></TooltipContent>
+          </Tooltip>
+        </div>
+
+        <div className="flex items-center justify-center">
+          {!isReadyMeal ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 realm-banner-btn"
+                  onClick={(e) => { e.stopPropagation(); analyzeMutation.mutate(); }}
+                  disabled={analyzeMutation.isPending}
+                  data-testid={`button-analyze-meal-${mealId}`}
+                >
+                  {analyzeMutation.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Microscope className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">Analyse</p></TooltipContent>
+            </Tooltip>
+          ) : null}
+        </div>
+
+        <div className="flex items-center justify-center">
+          {!hideBasket ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7 realm-banner-btn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (isReadyMeal) {
+                      addProductToBasketMutation.mutate();
+                    } else {
+                      setListDialogMode('basket');
+                      setListContextOpen(true);
+                    }
+                  }}
+                  disabled={isReadyMeal ? addProductToBasketMutation.isPending : addToListMutation.isPending}
+                  data-testid={`button-add-basket-${mealId}`}
+                >
+                  {(isReadyMeal ? addProductToBasketMutation.isPending : addToListMutation.isPending) ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <ShoppingBasket className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent><p className="text-xs">Add to basket</p></TooltipContent>
             </Tooltip>
           ) : null}
         </div>
@@ -3853,6 +3837,16 @@ export default function MealsPage() {
                           </Badge>
                         </div>
                       )}
+                      {/* Serves badge — recipe metadata, non-interactive, top-right of image */}
+                      {meal.servings != null && meal.servings >= 1 && (
+                        <div
+                          className="absolute top-1.5 right-1.5 z-10 flex items-center gap-0.5 bg-black/45 backdrop-blur-sm text-white text-[10px] px-1.5 py-0.5 rounded-md leading-none"
+                          data-testid={`badge-serves-${meal.id}`}
+                        >
+                          <UtensilsCrossed className="h-2.5 w-2.5 shrink-0" />
+                          <span>{meal.servings}</span>
+                        </div>
+                      )}
                       {/* Recipe actions: desktop → compact dropdown, mobile → bottom sheet */}
                       <CardActionsMenu
                         meal={meal}
@@ -3880,17 +3874,17 @@ export default function MealsPage() {
                           Nutrition
                         </button>
                       </div>
-                      <div className="min-h-[52px]">
+                      <div className="min-h-[70px]">
                         {infoTab === 'ingredients' ? (
                           meal.ingredients.length > 0 ? (
                             <>
-                              {/* Desktop: 2-column, 5 names + overflow in 6th slot */}
+                              {/* Desktop: 2-column, 4 rows (8 slots) — 7 names + "+N more" in slot 8 */}
                               <div className="hidden sm:grid grid-cols-2 gap-x-2 gap-y-0.5" data-testid={`strip-ingredients-desktop-${meal.id}`}>
-                                {meal.ingredients.slice(0, 5).map((ing, i) => (
+                                {meal.ingredients.slice(0, meal.ingredients.length > 8 ? 7 : meal.ingredients.length).map((ing, i) => (
                                   <span key={i} className="text-[11px] text-foreground truncate leading-4">{parseIngredient(ing).name}</span>
                                 ))}
-                                {meal.ingredients.length > 5 && (
-                                  <span className="text-[11px] text-muted-foreground leading-4">+{meal.ingredients.length - 5} more</span>
+                                {meal.ingredients.length > 8 && (
+                                  <span className="text-[11px] text-muted-foreground leading-4">+{meal.ingredients.length - 7} more</span>
                                 )}
                               </div>
                               {/* Mobile: single column, 3 names + overflow */}
@@ -3909,7 +3903,7 @@ export default function MealsPage() {
                         ) : (
                           cardNutrition && (cardNutrition.calories || cardNutrition.protein || cardNutrition.fat || cardNutrition.carbs) ? (
                             <>
-                              {/* Desktop: 2-column */}
+                              {/* Desktop: 2-column, consistent height with ingredient view */}
                               <div className="hidden sm:grid grid-cols-2 gap-x-2 gap-y-0.5" data-testid={`strip-nutrition-desktop-${meal.id}`}>
                                 {cardNutrition.calories && <span className="text-[11px] text-foreground leading-4">{cardNutrition.calories} kcal</span>}
                                 {cardNutrition.protein && <span className="text-[11px] text-foreground leading-4">{cardNutrition.protein} protein</span>}
