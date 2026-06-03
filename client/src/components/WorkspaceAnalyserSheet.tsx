@@ -525,7 +525,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent
-        className="max-h-[90vh] flex flex-col"
+        className="h-[90dvh] flex flex-col"
         data-testid="workspace-analyser-sheet"
       >
         {/* ── Handle + Header ────────────────────────────────────────── */}
