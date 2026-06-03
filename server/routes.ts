@@ -2299,7 +2299,15 @@ export async function registerRoutes(
         hits.forEach((p: any) => _logFinalStores('BENJERRY', p));
       }
 
-      res.json({ products: pagedProducts, hasMore });
+      // Whole food analysis — detected from the search query itself, not from
+      // any product record. Returned as a separate field so the client can
+      // render a clearly-labelled Whole Food Analysis mode without fabricating
+      // a product search result.
+      const wholeFoodAnalysis = isWholeFoodIngredient(q)
+        ? { isWholeFood: true as const, query: q, thaRating: 5 }
+        : null;
+
+      res.json({ products: pagedProducts, hasMore, wholeFoodAnalysis });
 
       // Track search performed — no query text stored
       if (pagedProducts.length > 0) {

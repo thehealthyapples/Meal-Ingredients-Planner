@@ -36,6 +36,7 @@ import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
 import { useSoundEffects } from "@/hooks/use-sound-effects";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import AnalyserDetailV2 from "@/components/analyser/AnalyserDetailV2";
+import { WholeFoodAnalysisCard } from "@/components/analyser/WholeFoodAnalysisCard";
 import { AddToWeekModal } from "@/components/AddToWeekModal";
 import type { HouseholdEater } from "@shared/household-eater";
 import { PageHeader } from "@/components/PageHeader";
@@ -403,6 +404,10 @@ export default function ProductsPage() {
 
   const [searchQuery, setSearchQuery] = useState(urlParams.q);
   const [searchResults, setSearchResults] = useState<ProductResult[]>([]);
+  // wholeFoodAnalysis is populated when the search query is recognised as a whole
+  // food by THA's classification logic. It is distinct from product search results
+  // and must be rendered with explicit "Whole Food Analysis" labelling.
+  const [wholeFoodAnalysis, setWholeFoodAnalysis] = useState<{ isWholeFood: true; query: string; thaRating: number } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductResult | null>(null);
@@ -620,6 +625,7 @@ export default function ProductsPage() {
       .then(r => r.ok ? r.json() : { products: [] })
       .then(data => {
         setSearchResults(data.products || []);
+        setWholeFoodAnalysis(data.wholeFoodAnalysis ?? null);
         setHasSearched(true);
       })
       .catch(() => {})
@@ -919,6 +925,7 @@ export default function ProductsPage() {
       const data = await res.json();
       const products: ProductResult[] = data.products || [];
       setSearchResults(products);
+      setWholeFoodAnalysis(data.wholeFoodAnalysis ?? null);
       setHasSearched(true);
 
       // DEBUG: log store fields for key test products
@@ -1084,11 +1091,24 @@ export default function ProductsPage() {
           </div>
         )}
 
-        {hasSearched && searchResults.length === 0 && !isSearching && (
+        {/* Whole Food Analysis — shown when the search query is recognised as a whole
+            food. Rendered above packaged-product results (or alone when there are none).
+            Distinct from product search: "Recognised" not "Found". */}
+        {hasSearched && wholeFoodAnalysis && !isSearching && (
+          <WholeFoodAnalysisCard
+            foodName={wholeFoodAnalysis.query}
+            thaRating={wholeFoodAnalysis.thaRating}
+            householdEaterProfiles={householdEaterProfiles.length > 0 ? householdEaterProfiles : undefined}
+          />
+        )}
+
+        {/* Suppress the "no products found" empty state when a whole food analysis
+            is already shown — the WF card is the analysis for that query. */}
+        {hasSearched && searchResults.length === 0 && !isSearching && !wholeFoodAnalysis && (
           <div className="text-center py-12 text-muted-foreground">
             <Package className="h-16 w-16 mx-auto mb-4 opacity-30" />
-            <p className="text-lg">No products found for "{searchQuery}"</p>
-            <p className="text-sm mt-1">Try a different search term like "ketchup" or "cereal"</p>
+            <p className="text-lg">No products found for &ldquo;{searchQuery}&rdquo;</p>
+            <p className="text-sm mt-1">Try a different search term like &ldquo;ketchup&rdquo; or &ldquo;cereal&rdquo;</p>
           </div>
         )}
 
@@ -1135,6 +1155,7 @@ export default function ProductsPage() {
                           .then(r => r.json())
                           .then(data => {
                             setSearchResults(data.products || []);
+                            setWholeFoodAnalysis(data.wholeFoodAnalysis ?? null);
                             const match = (data.products || []).find((p: ProductResult) => p.barcode === item.barcode);
                             if (match) setSelectedProduct(match);
                           })

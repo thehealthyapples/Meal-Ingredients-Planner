@@ -25,6 +25,7 @@ import type { ShoppingListItem } from "@shared/schema";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import { canShowScoreForItem } from "@/lib/basket-item-classifier";
 import RestrictionSafetyPanel from "@/components/analyser/RestrictionSafetyPanel";
+import { WholeFoodAnalysisCard } from "@/components/analyser/WholeFoodAnalysisCard";
 import { computeRestrictionSafety, parseIngredientText } from "@shared/restrictions/restriction-safety";
 import type { EaterProfile } from "@shared/restrictions/restriction-safety";
 
@@ -543,9 +544,13 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0 pt-0.5">
-              {canShowScoreForItem(item) && item.thaRating != null && (
+              {/* Whole foods always score 5 by classification — show the badge
+                  even when thaRating has not been persisted by auto-SMP. */}
+              {isWF ? (
+                <ScoreBadge score={5} size={36} />
+              ) : canShowScoreForItem(item) && item.thaRating != null ? (
                 <ScoreBadge score={item.thaRating} size={36} />
-              )}
+              ) : null}
               <DrawerClose asChild>
                 <button
                   className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
@@ -593,7 +598,11 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {canShowScoreForItem(item) && item.thaRating != null && <ScoreBadge score={item.thaRating} size={28} />}
+                    {isWF ? (
+                      <ScoreBadge score={5} size={28} />
+                    ) : canShowScoreForItem(item) && item.thaRating != null ? (
+                      <ScoreBadge score={item.thaRating} size={28} />
+                    ) : null}
                     <button
                       className="text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setShowCurrentDetail((v) => !v)}
@@ -657,7 +666,20 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
             </div>
           )}
 
-          {/* ── Cleaner shop option ────────────────────────────────────── */}
+          {/* ── Whole Food Analysis (shown for whole food items) ─────────── */}
+          {isWF && (
+            <div data-testid="analyser-whole-food-analysis">
+              {/* Restriction panel is already rendered above this section; omit
+                  householdEaterProfiles here to avoid a duplicate panel. */}
+              <WholeFoodAnalysisCard
+                foodName={item.productName}
+                thaRating={5}
+              />
+            </div>
+          )}
+
+          {/* ── Cleaner shop option (packaged items only) ──────────────── */}
+          {!isWF && (
           <div data-testid="analyser-cleaner-options">
             <div className="flex items-center justify-between mb-2">
               <p className={`${SECTION_LABEL} flex items-center gap-1.5`}>
@@ -676,14 +698,6 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
                 <CardContent className="p-4 flex items-center gap-2 text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin shrink-0" />
                   <span className="text-xs">Searching for alternatives…</span>
-                </CardContent>
-              </Card>
-            ) : isWF ? (
-              <Card className="border-border/60 bg-muted/30">
-                <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground">
-                    This is already a whole food — any packaged version would be a step down, not up.
-                  </p>
                 </CardContent>
               </Card>
             ) : rankedChoices.length > 0 ? (
@@ -779,8 +793,12 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
               </Card>
             )}
           </div>
+          )}
 
-          {/* ── Whole-food / from-scratch option ──────────────────────── */}
+          {/* ── Whole-food / from-scratch option (packaged items only) ─── */}
+          {/* For items already classified as whole foods this section is
+              redundant — they don't need a "make it from scratch" recipe. */}
+          {!isWF && (
           <div data-testid="analyser-wholefood-option">
             <p className={`${SECTION_LABEL} mb-2 flex items-center gap-1.5`}>
               <ChefHat className="h-3 w-3 text-green-600 dark:text-green-400" />
@@ -798,6 +816,7 @@ export function WorkspaceAnalyserSheet({ open, onOpenChange, item, preferredStor
               </Card>
             )}
           </div>
+          )}
 
           {/* ── Scan in store ─────────────────────────────────────────── */}
           <div data-testid="analyser-scan-section">
