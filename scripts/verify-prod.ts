@@ -41,7 +41,7 @@ async function run() {
       `SELECT id FROM schema_migrations ORDER BY applied_at DESC, id DESC LIMIT 1`
     );
     const latestMig = migRows[0]?.id ?? "(none)";
-    const expectedHead = "2026-05-22_add_shopping_fulfilment_memory";
+    const expectedHead = "2026-05-23_add_pantry_need_quantity";
     if (latestMig === expectedHead) {
       pass("Schema at head", latestMig);
     } else {
