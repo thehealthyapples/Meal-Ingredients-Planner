@@ -1318,8 +1318,21 @@ export async function registerRoutes(
       updateData.kind = (parsed.data.kind === 'component' && req.user!.role !== 'admin') ? 'meal' : parsed.data.kind;
     }
 
+    // Delete stale nutrition before responding so the client never fetches old values.
+    const servingsChanged = updateData.servings !== undefined && updateData.servings !== meal.servings;
+    const ingredientsChanged = updateData.ingredients !== undefined;
+    if (servingsChanged || ingredientsChanged) {
+      await storage.deleteNutrition(meal.id);
+      analyzedMealIds.delete(meal.id);
+    }
+
     const updated = await storage.updateMeal(meal.id, updateData);
     res.json(updated);
+
+    // Re-run analysis after responding (fire-and-forget).
+    if (servingsChanged || ingredientsChanged) {
+      autoAnalyzeMeal(meal.id).catch(() => {});
+    }
   });
 
   app.get(api.meals.getEditedCopy.path, async (req, res) => {

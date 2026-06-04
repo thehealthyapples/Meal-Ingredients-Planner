@@ -10,13 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingBasket, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, AlarmClock, ListPlus, Wand2, Check } from "lucide-react";
+import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingBasket, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, AlarmClock, ListPlus, Wand2, Check, ChevronDown } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { appendPendingIngredient } from "@/lib/quick-list";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { scaleIngredient } from "@/lib/scaleIngredient";
 
 type SwapGoal = "vegetarian" | "keto" | "lower-cost" | "less-processed" | "under-time" | "household";
@@ -90,7 +90,14 @@ export default function MealDetailPage() {
   const [adaptResults, setAdaptResults] = useState<AdaptGoalResult[]>([]);
   const [selectedGoals, setSelectedGoals] = useState<Set<SwapGoal>>(new Set());
   const [adaptOpen, setAdaptOpen] = useState(false);
+  const adaptOpenTimeRef = useRef<number>(0);
   const [adaptBusy, setAdaptBusy] = useState(false);
+
+  // Edit mode: false by default; auto-enabled when URL contains ?edit=1 (set on copy creation).
+  // Exiting edit mode (after save) hides inline controls until the user clicks Edit again.
+  const [isEditing, setIsEditing] = useState(false);
+  const [saveMenuOpen, setSaveMenuOpen] = useState(false);
+  const saveMenuTimeRef = useRef<number>(0);
 
   const [editName, setEditName] = useState("");
   const [editIngredients, setEditIngredients] = useState<string[]>([]);
@@ -132,12 +139,19 @@ export default function MealDetailPage() {
   }, [meal, isEditedCopy, initEditState]);
 
   useEffect(() => {
-    if (meal && !isEditedCopy) {
+    if (meal) {
       const s = meal.servings || 1;
       setViewServings(s);
       setViewServingsRaw(String(s));
     }
   }, [meal?.id, isEditedCopy]);
+
+  // Auto-enter edit mode when navigated here via the "Edit" copy flow (?edit=1).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('edit') === '1') {
+      setIsEditing(true);
+    }
+  }, []);
 
   const { data: nutritionData } = useQuery<Nutrition | null>({
     queryKey: [api.nutrition.get.path, mealId],
@@ -147,6 +161,12 @@ export default function MealDetailPage() {
       return res.json();
     },
     enabled: !!mealId,
+    // Poll every 4 s while nutrition is absent so the UI updates automatically
+    // once the background analysis completes after a servings/ingredient change.
+    refetchInterval: (query) => {
+      const d = query.state.data as Nutrition | null | undefined;
+      return (!d || !d.calories) ? 4000 : false;
+    },
   });
 
   const { data: allergens = [] } = useQuery<MealAllergen[]>({
@@ -230,7 +250,7 @@ export default function MealDetailPage() {
     onSuccess: (newMeal) => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
       toast({ title: "Editable copy created", description: newMeal.name });
-      navigate(`/meals/${newMeal.id}`);
+      navigate(`/meals/${newMeal.id}?edit=1`);
     },
     onError: () => {
       toast({ title: "Failed to create copy", variant: "destructive" });
@@ -250,11 +270,33 @@ export default function MealDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path, mealId] });
       queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      queryClient.invalidateQueries({ queryKey: [api.nutrition.get.path, mealId] });
       setHasChanges(false);
+      setIsEditing(false);
       toast({ title: "Recipe saved" });
     },
     onError: () => {
       toast({ title: "Failed to save", variant: "destructive" });
+    },
+  });
+
+  const saveAsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', api.meals.list.path, {
+        name: editName,
+        ingredients: editIngredients.filter(i => i.trim() !== ""),
+        instructions: editInstructions.filter(i => i.trim() !== ""),
+        servings: editServings,
+      });
+      return res.json() as Promise<Meal>;
+    },
+    onSuccess: (newMeal) => {
+      queryClient.invalidateQueries({ queryKey: [api.meals.list.path] });
+      toast({ title: "Saved as new recipe", description: newMeal.name });
+      navigate(`/meals/${newMeal.id}`);
+    },
+    onError: () => {
+      toast({ title: "Failed to save as new recipe", variant: "destructive" });
     },
   });
 
@@ -427,8 +469,17 @@ export default function MealDetailPage() {
     <>
     <PageHeader
       realm="cookbook"
-      title={isEditedCopy ? editName : meal.name}
+      title={isEditedCopy && isEditing ? editName : meal.name}
       icon={<ChefHat className="h-5 w-5" />}
+      fullCollapseOnMobile
+      collapseDisabled={adaptOpen}
+      context={[
+        category?.name ?? null,
+        meal.servings != null && meal.servings >= 1 ? `Serves ${meal.servings}` : null,
+        !isPackagedProduct && meal.ingredients.length > 0
+          ? `${meal.ingredients.length} ingredient${meal.ingredients.length !== 1 ? 's' : ''}`
+          : null,
+      ].filter(Boolean).join(' · ') || (isPackagedProduct ? 'Ready meal' : 'Recipe')}
       actions={
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="ghost" size="sm" onClick={() => navigate("/cookbook")} data-testid="button-back">
@@ -437,10 +488,40 @@ export default function MealDetailPage() {
           </Button>
           <div className="h-4 w-px bg-[var(--realm-border)]" />
           <div className="flex items-center gap-1 rounded-md border border-[var(--realm-border)] px-1 py-0.5">
-            {isEditedCopy && (
-              <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs realm-banner-btn" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !hasChanges} data-testid="button-save-recipe">
-                {saveMutation.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-                Save
+            {/* Save split button: shown only when editing a copy */}
+            {isEditedCopy && isEditing && (
+              <div className="flex items-center">
+                <Button size="sm" variant="outline" className="border-0 pl-2.5 pr-1.5 text-xs realm-banner-btn rounded-r-none border-r border-[var(--realm-border)]" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || saveAsMutation.isPending || !hasChanges} data-testid="button-save-recipe">
+                  {saveMutation.isPending ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+                  Save
+                </Button>
+                <Popover open={saveMenuOpen} onOpenChange={(open) => { if (open) saveMenuTimeRef.current = Date.now(); setSaveMenuOpen(open); }}>
+                  <PopoverTrigger asChild>
+                    <Button size="sm" variant="outline" className="border-0 px-1.5 text-xs realm-banner-btn rounded-l-none" disabled={saveMutation.isPending || saveAsMutation.isPending} data-testid="button-save-menu-trigger">
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-44 p-1" align="end" data-testid="popover-save-menu"
+                    onPointerDownOutside={(e) => { if (Date.now() - saveMenuTimeRef.current < 300) e.preventDefault(); }}
+                    onFocusOutside={(e) => { if (Date.now() - saveMenuTimeRef.current < 300) e.preventDefault(); }}
+                  >
+                    <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-accent transition-colors text-left" onClick={() => { setSaveMenuOpen(false); saveMutation.mutate(); }} data-testid="button-save-overwrite" disabled={!hasChanges}>
+                      <Save className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      Save
+                    </button>
+                    <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-accent transition-colors text-left" onClick={() => { setSaveMenuOpen(false); saveAsMutation.mutate(); }} data-testid="button-save-as" disabled={saveAsMutation.isPending}>
+                      {saveAsMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin shrink-0" /> : <Save className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
+                      Save as new recipe
+                    </button>
+                  </PopoverContent>
+                </Popover>
+              </div>
+            )}
+            {/* Edit button: shown on a saved copy in view mode */}
+            {isEditedCopy && !isEditing && (
+              <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs realm-banner-btn" onClick={() => setIsEditing(true)} data-testid="button-enter-edit">
+                <Pencil className="h-3.5 w-3.5 mr-1" />
+                Edit
               </Button>
             )}
             <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs realm-banner-btn" onClick={() => isPackagedProduct ? addProductToBasketMutation.mutate() : addToListMutation.mutate()} disabled={isPackagedProduct ? addProductToBasketMutation.isPending : addToListMutation.isPending} data-testid="button-add-to-list">
@@ -459,14 +540,35 @@ export default function MealDetailPage() {
                 Edit
               </Button>
             )}
-            <Popover open={adaptOpen} onOpenChange={setAdaptOpen}>
+            <Popover
+              open={adaptOpen}
+              onOpenChange={(open) => {
+                if (open) adaptOpenTimeRef.current = Date.now();
+                setAdaptOpen(open);
+              }}
+            >
               <PopoverTrigger asChild>
                 <Button size="sm" variant="outline" className="border-0 px-2.5 text-xs realm-banner-btn" disabled={adaptBusy} data-testid="button-adapt-trigger">
                   {adaptBusy ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Wand2 className="h-3.5 w-3.5 mr-1" />}
                   Adapt{selectedGoals.size > 0 ? ` (${selectedGoals.size})` : ""}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-56 p-2" align="end" data-testid="popover-adapt">
+              <PopoverContent
+                className="w-56 p-2"
+                align="end"
+                data-testid="popover-adapt"
+                onPointerDownOutside={(e) => {
+                  // iOS generates a synthetic pointerdown+click on document.body within
+                  // ~300ms of tapping inside a position:sticky element. The Radix
+                  // DismissableLayer converts this into an outside-click dismiss.
+                  // Guard 300ms after open to absorb all synthetic events.
+                  if (Date.now() - adaptOpenTimeRef.current < 300) e.preventDefault();
+                }}
+                onFocusOutside={(e) => {
+                  // Guard the same window for focus-outside (second Radix dismiss path).
+                  if (Date.now() - adaptOpenTimeRef.current < 300) e.preventDefault();
+                }}
+              >
                 <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider px-1 mb-1.5">Adapt recipe</p>
                 <div className="space-y-0.5">
                   {ADAPT_ACTIONS.map(({ goal, icon, label }) => {
@@ -509,7 +611,7 @@ export default function MealDetailPage() {
       animate={{ opacity: 1, y: 0 }}
       className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe"
     >
-      {isEditedCopy && (
+      {isEditedCopy && isEditing && (
         <div className="mb-4 flex items-center gap-2">
           <Input
             value={editName}
@@ -593,7 +695,7 @@ export default function MealDetailPage() {
                 {category.name}
               </Badge>
             )}
-            {isEditedCopy ? (
+            {isEditedCopy && isEditing ? (
               <div className="flex items-center gap-2">
                 <Badge variant="outline" data-testid="badge-servings-edit" className="gap-1">
                   <Button
@@ -716,7 +818,7 @@ export default function MealDetailPage() {
             <CardContent className="p-5">
               <div className="flex items-center justify-between gap-2 mb-4">
                 <h2 className="text-lg font-semibold" data-testid="text-ingredients-heading">Ingredients</h2>
-                {isEditedCopy && (
+                {isEditedCopy && isEditing && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -728,7 +830,7 @@ export default function MealDetailPage() {
                   </Button>
                 )}
               </div>
-              {isEditedCopy ? (
+              {isEditedCopy && isEditing ? (
                 <div className="space-y-2">
                   {editIngredients.map((ing, idx) => (
                     <div key={idx} className="flex items-center gap-2" data-testid={`edit-ingredient-${idx}`}>
@@ -801,7 +903,7 @@ export default function MealDetailPage() {
               <div className="flex items-center justify-between gap-2 mb-4">
                 <h2 className="text-lg font-semibold" data-testid="text-instructions-heading">Instructions</h2>
                 <div className="flex items-center gap-1">
-                  {isEditedCopy && (
+                  {isEditedCopy && isEditing && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -820,12 +922,12 @@ export default function MealDetailPage() {
                       data-testid="button-reimport-instructions"
                     >
                       <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                      {hasNoInstructions && !isEditedCopy ? "Import" : "Re-import"}
+                      {hasNoInstructions && !(isEditedCopy && isEditing) ? "Import" : "Re-import"}
                     </Button>
                   )}
                 </div>
               </div>
-              {isEditedCopy ? (
+              {isEditedCopy && isEditing ? (
                 editInstructions.length > 0 ? (
                   <div className="space-y-3">
                     {editInstructions.map((step, idx) => (
@@ -1047,7 +1149,7 @@ export default function MealDetailPage() {
         </div>
       </div>
 
-      {isEditedCopy && hasChanges && (
+      {isEditedCopy && isEditing && hasChanges && (
         <div className="fixed bottom-6 right-6 z-50">
           <Button
             onClick={() => saveMutation.mutate()}

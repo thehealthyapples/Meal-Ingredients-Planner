@@ -947,6 +947,7 @@ function MobileMealActionSheet({
   isSystemMeal,
   onImageChange,
   onDelete,
+  onAddToQuickList,
 }: {
   meal: Meal | null;
   open: boolean;
@@ -955,11 +956,13 @@ function MobileMealActionSheet({
   isSystemMeal?: boolean;
   onImageChange?: (mealId: number, url: string | null) => void;
   onDelete?: () => void;
+  onAddToQuickList?: (ingredients: string[]) => void;
 }) {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { addToBasket } = useBasket();
+  const [qty, setQty] = useState(1);
   const [plannerOpen, setPlannerOpen] = useState(false);
   const [basketOpen, setBasketOpen] = useState(false);
   const [analysisOpen, setAnalysisOpen] = useState(false);
@@ -970,7 +973,7 @@ function MobileMealActionSheet({
   const addToListMutation = useMutation({
     mutationFn: async (ctx?: { eaterIds?: number[]; guestEaters?: GuestEater[] }) => {
       const res = await apiRequest('POST', api.shoppingList.generateFromMeals.path, {
-        mealSelections: [{ mealId: meal!.id, count: 1, ...(ctx?.eaterIds?.length ? { eaterIds: ctx.eaterIds } : {}), ...(ctx?.guestEaters?.length ? { guestEaters: ctx.guestEaters } : {}) }],
+        mealSelections: [{ mealId: meal!.id, count: qty, ...(ctx?.eaterIds?.length ? { eaterIds: ctx.eaterIds } : {}), ...(ctx?.guestEaters?.length ? { guestEaters: ctx.guestEaters } : {}) }],
       });
       return res.json();
     },
@@ -979,7 +982,7 @@ function MobileMealActionSheet({
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.sources.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.prices.path] });
       queryClient.invalidateQueries({ queryKey: [api.shoppingList.totalCost.path] });
-      toast({ title: "Added to shopping", description: meal?.name });
+      toast({ title: "Added to shopping", description: qty > 1 ? `${qty} × ${meal?.name}` : meal?.name });
       onClose();
     },
     onError: () => toast({ title: "Failed to add to shopping", variant: "destructive" }),
@@ -987,7 +990,7 @@ function MobileMealActionSheet({
 
   const addProductMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('POST', api.shoppingList.add.path, { productName: meal!.name, quantity: 1 });
+      const res = await apiRequest('POST', api.shoppingList.add.path, { productName: meal!.name, quantity: qty });
       return res.json();
     },
     onSuccess: () => {
@@ -1089,150 +1092,209 @@ function MobileMealActionSheet({
     }
   };
 
+  const handleQuickList = () => {
+    if (!meal) return;
+    if (meal.isReadyMeal) {
+      appendPendingIngredient(meal.name);
+      toast({ title: "Added to quick list", description: meal.name });
+    } else {
+      onAddToQuickList?.(meal.ingredients);
+    }
+    onClose();
+  };
+
   if (!meal) return null;
+
+  const metaParts: string[] = [];
+  if (meal.servings != null && meal.servings >= 1) metaParts.push(`Serves ${meal.servings}`);
+  if (!meal.isReadyMeal && meal.ingredients.length > 0) metaParts.push(`${meal.ingredients.length} ingredients`);
 
   return (
     <>
       <Drawer open={open} onOpenChange={(v) => !v && onClose()} shouldScaleBackground={false}>
-        <DrawerContent className="flex flex-col max-h-[70vh]" data-testid="drawer-meal-action-sheet" data-realm="cookbook">
-          {/* Meal header */}
+        <DrawerContent className="flex flex-col max-h-[85vh]" data-testid="drawer-meal-action-sheet" data-realm="cookbook">
+
+          {/* ── Recipe context header ── */}
           <div className="flex items-center gap-3 px-4 pt-1 pb-3 shrink-0 realm-header-bg">
             {meal.imageUrl ? (
-              <img src={meal.imageUrl} alt={meal.name} className="h-12 w-12 rounded-lg object-cover shrink-0" />
+              <img src={meal.imageUrl} alt={meal.name} className="h-14 w-14 rounded-xl object-cover shrink-0" />
             ) : (
-              <div className="h-12 w-12 rounded-lg bg-muted flex items-center justify-center shrink-0">
-                <ChefHat className="h-5 w-5 text-muted-foreground/40" />
+              <div className="h-14 w-14 rounded-xl bg-muted flex items-center justify-center shrink-0">
+                <ChefHat className="h-6 w-6 text-muted-foreground/40" />
               </div>
             )}
             <div className="min-w-0">
               <DrawerTitle className="text-sm font-semibold leading-snug">{meal.name}</DrawerTitle>
-              {!meal.isReadyMeal && meal.ingredients.length > 0 && (
-                <p className="text-xs text-muted-foreground mt-0.5">{meal.ingredients.length} ingredients</p>
+              {metaParts.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-0.5">{metaParts.join(" · ")}</p>
               )}
             </div>
           </div>
           <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
 
-          {/* Actions */}
+          {/* ── Scrollable workspace body ── */}
           <div
-            className="flex-1 overflow-y-auto px-3 pt-2 pb-2 space-y-0.5"
+            className="flex-1 overflow-y-auto px-3 pt-3 pb-2 space-y-4"
             style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom, 0px))" }}
           >
-            <button
-              className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left"
-              onClick={() => { onClose(); navigate(`/meals/${meal.id}`); }}
-              data-testid={`sheet-action-view-${meal.id}`}
-            >
-              <Eye className="h-5 w-5 text-muted-foreground shrink-0" />
-              <span className="text-sm font-medium">Open recipe</span>
-            </button>
 
-            <button
-              className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left"
-              onClick={() => setPlannerOpen(true)}
-              data-testid={`sheet-action-planner-${meal.id}`}
-            >
-              <CalendarDays className="h-5 w-5 text-muted-foreground shrink-0" />
-              <span className="text-sm font-medium">Add to planner</span>
-            </button>
+            {/* ── Quantity ── */}
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider px-1 mb-2">Quantity</p>
+              <div className="flex items-center gap-3 px-1">
+                <button
+                  className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 active:bg-muted/60 transition-colors disabled:opacity-40"
+                  onClick={() => setQty(q => Math.max(1, q - 1))}
+                  disabled={qty <= 1}
+                  data-testid="workspace-qty-minus"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="text-base font-semibold w-6 text-center tabular-nums" data-testid="workspace-qty-value">{qty}</span>
+                <button
+                  className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center hover:bg-muted/80 active:bg-muted/60 transition-colors"
+                  onClick={() => setQty(q => Math.min(10, q + 1))}
+                  disabled={qty >= 10}
+                  data-testid="workspace-qty-plus"
+                  aria-label="Increase quantity"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
 
-            {meal.isReadyMeal ? (
-              <button
-                className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left disabled:opacity-50"
-                onClick={() => addProductMutation.mutate()}
-                disabled={addProductMutation.isPending}
-                data-testid={`sheet-action-shopping-product-${meal.id}`}
-              >
-                {addProductMutation.isPending
-                  ? <Loader2 className="h-5 w-5 animate-spin shrink-0" />
-                  : <ShoppingBasket className="h-5 w-5 text-muted-foreground shrink-0" />}
-                <span className="text-sm font-medium">Add to shopping</span>
-              </button>
-            ) : (
-              <button
-                className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left"
-                onClick={() => setBasketOpen(true)}
-                data-testid={`sheet-action-shopping-${meal.id}`}
-              >
-                <ShoppingBasket className="h-5 w-5 text-muted-foreground shrink-0" />
-                <span className="text-sm font-medium">Add to shopping</span>
-              </button>
-            )}
+            {/* ── Quick Actions ── */}
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider px-1 mb-2">Quick Actions</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  className="flex flex-col items-center justify-center gap-1.5 py-3.5 px-2 rounded-xl bg-muted/40 hover:bg-muted/60 active:bg-muted/80 transition-colors"
+                  onClick={() => setPlannerOpen(true)}
+                  data-testid={`sheet-action-planner-${meal.id}`}
+                >
+                  <CalendarDays className="h-5 w-5 text-primary shrink-0" />
+                  <span className="text-xs font-medium text-center leading-tight">Add to Planner</span>
+                </button>
 
+                <button
+                  className="flex flex-col items-center justify-center gap-1.5 py-3.5 px-2 rounded-xl bg-muted/40 hover:bg-muted/60 active:bg-muted/80 transition-colors disabled:opacity-50"
+                  onClick={() => meal.isReadyMeal ? addProductMutation.mutate() : setBasketOpen(true)}
+                  disabled={meal.isReadyMeal ? addProductMutation.isPending : addToListMutation.isPending}
+                  data-testid={`sheet-action-shopping-${meal.id}`}
+                >
+                  {(meal.isReadyMeal ? addProductMutation.isPending : addToListMutation.isPending)
+                    ? <Loader2 className="h-5 w-5 animate-spin shrink-0" />
+                    : <ShoppingBasket className="h-5 w-5 text-primary shrink-0" />}
+                  <span className="text-xs font-medium text-center leading-tight">Add to Shopping</span>
+                </button>
+
+                {onAddToQuickList && (
+                  <button
+                    className="flex flex-col items-center justify-center gap-1.5 py-3.5 px-2 rounded-xl bg-muted/40 hover:bg-muted/60 active:bg-muted/80 transition-colors"
+                    onClick={handleQuickList}
+                    data-testid={`sheet-action-quicklist-${meal.id}`}
+                  >
+                    <ListPlus className="h-5 w-5 text-primary shrink-0" />
+                    <span className="text-xs font-medium text-center leading-tight">Quick List</span>
+                  </button>
+                )}
+
+                {meal.isFreezerEligible && (
+                  <button
+                    className="flex flex-col items-center justify-center gap-1.5 py-3.5 px-2 rounded-xl bg-muted/40 hover:bg-muted/60 active:bg-muted/80 transition-colors"
+                    onClick={() => { onClose(); onAddToFreezer(meal.id); }}
+                    data-testid={`sheet-action-freeze-${meal.id}`}
+                  >
+                    <Snowflake className="h-5 w-5 text-blue-400 shrink-0" />
+                    <span className="text-xs font-medium text-center leading-tight">Add to Freezer</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* ── Tools ── */}
             {!meal.isReadyMeal && (
-              <button
-                className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left disabled:opacity-50"
-                onClick={() => analyzeMutation.mutate()}
-                disabled={analyzeMutation.isPending}
-                data-testid={`sheet-action-analyse-${meal.id}`}
-              >
-                {analyzeMutation.isPending
-                  ? <Loader2 className="h-5 w-5 animate-spin shrink-0" />
-                  : <Microscope className="h-5 w-5 text-muted-foreground shrink-0" />}
-                <span className="text-sm font-medium">Analyse nutrition</span>
-              </button>
-            )}
-
-            {meal.isFreezerEligible && (
-              <button
-                className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left"
-                onClick={() => { onClose(); onAddToFreezer(meal.id); }}
-                data-testid={`sheet-action-freeze-${meal.id}`}
-              >
-                <Snowflake className="h-5 w-5 text-blue-400 shrink-0" />
-                <span className="text-sm font-medium">Add to freezer</span>
-              </button>
-            )}
-
-            {/* Photo actions — non-system meals only */}
-            {!isSystemMeal && onImageChange && (
-              <>
-                <div className="w-full h-px bg-[var(--realm-border)] my-1" />
-                <input ref={imageFileRef} type="file" accept="image/*" className="hidden" onChange={handleSheetFileSelected} />
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider px-1 mb-1">Tools</p>
                 <button
                   className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left disabled:opacity-50"
+                  onClick={() => analyzeMutation.mutate()}
+                  disabled={analyzeMutation.isPending}
+                  data-testid={`sheet-action-analyse-${meal.id}`}
+                >
+                  {analyzeMutation.isPending
+                    ? <Loader2 className="h-5 w-5 animate-spin shrink-0" />
+                    : <Microscope className="h-5 w-5 text-muted-foreground shrink-0" />}
+                  <span className="text-sm font-medium">Analyse Nutrition</span>
+                </button>
+              </div>
+            )}
+
+            {/* ── Recipe ── */}
+            <div>
+              <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider px-1 mb-1">Recipe</p>
+              <button
+                className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left"
+                onClick={() => { onClose(); navigate(`/meals/${meal.id}`); }}
+                data-testid={`sheet-action-view-${meal.id}`}
+              >
+                <Eye className="h-5 w-5 text-muted-foreground shrink-0" />
+                <span className="text-sm font-medium">Open Full Recipe</span>
+              </button>
+            </div>
+
+            {/* ── Manage Recipe ── */}
+            {!isSystemMeal && onImageChange && (
+              <div>
+                <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider px-1 mb-1">Manage Recipe</p>
+                <input ref={imageFileRef} type="file" accept="image/*" className="hidden" onChange={handleSheetFileSelected} />
+                <button
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left disabled:opacity-50"
                   onClick={() => { setTimeout(() => imageFileRef.current?.click(), 50); }}
                   disabled={!!imageLoading}
                   data-testid={`sheet-action-photo-replace-${meal.id}`}
                 >
-                  {imageLoading === "upload" ? <Loader2 className="h-5 w-5 animate-spin shrink-0" /> : <Camera className="h-5 w-5 text-muted-foreground shrink-0" />}
-                  <span className="text-sm font-medium">{meal.imageUrl ? "Replace photo" : "Add photo"}</span>
+                  {imageLoading === "upload" ? <Loader2 className="h-4 w-4 animate-spin shrink-0 text-muted-foreground" /> : <Camera className="h-4 w-4 text-muted-foreground shrink-0" />}
+                  <span className="text-sm text-muted-foreground">{meal.imageUrl ? "Replace Photo" : "Add Photo"}</span>
                 </button>
                 <button
-                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left disabled:opacity-50"
+                  className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left disabled:opacity-50"
                   onClick={handleSheetGenerate}
                   disabled={!!imageLoading}
                   data-testid={`sheet-action-photo-generate-${meal.id}`}
                 >
-                  {imageLoading === "generate" ? <Loader2 className="h-5 w-5 animate-spin shrink-0" /> : <Wand2 className="h-5 w-5 text-muted-foreground shrink-0" />}
-                  <span className="text-sm font-medium">{meal.imageUrl ? "Regenerate AI image" : "Generate AI image"}</span>
+                  {imageLoading === "generate" ? <Loader2 className="h-4 w-4 animate-spin shrink-0 text-muted-foreground" /> : <Wand2 className="h-4 w-4 text-muted-foreground shrink-0" />}
+                  <span className="text-sm text-muted-foreground">{meal.imageUrl ? "Regenerate AI Image" : "Generate AI Image"}</span>
                 </button>
                 {meal.imageUrl && (
                   <button
-                    className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left disabled:opacity-50"
+                    className="w-full flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-accent/50 active:bg-accent/70 transition-colors text-left disabled:opacity-50"
                     onClick={handleSheetRemove}
                     disabled={!!imageLoading}
                     data-testid={`sheet-action-photo-remove-${meal.id}`}
                   >
-                    {imageLoading === "remove" ? <Loader2 className="h-5 w-5 animate-spin shrink-0" /> : <ImageOff className="h-5 w-5 text-muted-foreground shrink-0" />}
-                    <span className="text-sm font-medium">Remove photo</span>
+                    {imageLoading === "remove" ? <Loader2 className="h-4 w-4 animate-spin shrink-0 text-muted-foreground" /> : <ImageOff className="h-4 w-4 text-muted-foreground shrink-0" />}
+                    <span className="text-sm text-muted-foreground">Remove Photo</span>
                   </button>
                 )}
-              </>
+              </div>
             )}
 
-            {/* Delete — non-system meals only, at the bottom */}
+            {/* ── Delete ── */}
             {!isSystemMeal && onDelete && (
               <>
-                <div className="w-full h-px bg-[var(--realm-border)] my-1" />
-                <button
-                  className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-destructive/10 active:bg-destructive/20 transition-colors text-left text-destructive"
-                  onClick={onDelete}
-                  data-testid={`sheet-action-delete-${meal.id}`}
-                >
-                  <Trash2 className="h-5 w-5 shrink-0" />
-                  <span className="text-sm font-medium">Delete recipe</span>
-                </button>
+                <div className="w-full h-px bg-[var(--realm-border)]" />
+                <div>
+                  <button
+                    className="w-full flex items-center gap-3 px-3 py-3.5 rounded-xl hover:bg-destructive/10 active:bg-destructive/20 transition-colors text-left text-destructive"
+                    onClick={onDelete}
+                    data-testid={`sheet-action-delete-${meal.id}`}
+                  >
+                    <Trash2 className="h-5 w-5 shrink-0" />
+                    <span className="text-sm font-medium">Delete Recipe</span>
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -1254,7 +1316,7 @@ function MobileMealActionSheet({
         onOpenChange={setBasketOpen}
         onAdd={(ctx) => {
           setBasketOpen(false);
-          addToBasket({ mealId: meal.id, quantity: 1 });
+          addToBasket({ mealId: meal.id, quantity: qty });
           addToListMutation.mutate(ctx);
         }}
       />
@@ -5287,6 +5349,7 @@ export default function MealsPage() {
       isSystemMeal={!!actionSheetMeal?.isSystemMeal}
       onImageChange={handleMealImageChange}
       onDelete={actionSheetMeal && !actionSheetMeal.isSystemMeal ? () => { setActionSheetMeal(null); deleteMeal.mutate(actionSheetMeal.id); } : undefined}
+      onAddToQuickList={handleAddToListFromCookbook}
     />
     </div>
     </>
