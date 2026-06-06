@@ -82,7 +82,7 @@ export function useMealPreview() {
 
 // ── Shared preview content ────────────────────────────────────────────────────
 
-function PreviewCardContent({ item }: { item: PreviewItem }) {
+function PreviewCardContent({ item, showAllIngredients = false }: { item: PreviewItem; showAllIngredients?: boolean }) {
   const name = item.kind === "meal" ? item.meal.name : item.recipe.name;
   const image = item.kind === "meal" ? (item.meal.imageUrl ?? null) : item.recipe.image;
   const ingredients = item.kind === "meal" ? item.meal.ingredients : item.recipe.ingredients;
@@ -143,10 +143,21 @@ function PreviewCardContent({ item }: { item: PreviewItem }) {
             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide mb-0.5">
               Ingredients
             </p>
-            <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">
-              {ingredients.slice(0, 6).join(", ")}
-              {ingredients.length > 6 ? "…" : ""}
-            </p>
+            {showAllIngredients ? (
+              <ul className="max-h-36 overflow-y-auto space-y-0.5">
+                {ingredients.map((ing, i) => (
+                  <li key={i} className="flex items-start gap-1 text-[11px] text-muted-foreground leading-snug">
+                    <span className="shrink-0 mt-px text-muted-foreground/40">·</span>
+                    <span>{ing}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-3">
+                {ingredients.slice(0, 6).join(", ")}
+                {ingredients.length > 6 ? "…" : ""}
+              </p>
+            )}
           </div>
         )}
 
@@ -165,6 +176,7 @@ interface MealPreviewBubbleProps {
   anchor: { top: number; left: number };
   onMouseEnter: () => void;
   onMouseLeave: () => void;
+  showAllIngredients?: boolean;
 }
 
 export function MealPreviewBubble({
@@ -172,6 +184,7 @@ export function MealPreviewBubble({
   anchor,
   onMouseEnter,
   onMouseLeave,
+  showAllIngredients,
 }: MealPreviewBubbleProps) {
   return createPortal(
     <div
@@ -188,7 +201,7 @@ export function MealPreviewBubble({
       role="tooltip"
       aria-label={`Meal preview: ${item.kind === "meal" ? item.meal.name : item.recipe.name}`}
     >
-      <PreviewCardContent item={item} />
+      <PreviewCardContent item={item} showAllIngredients={showAllIngredients} />
     </div>,
     document.body,
   );
@@ -198,10 +211,11 @@ export function MealPreviewBubble({
 
 interface MealPreviewInlineProps {
   item: PreviewItem;
-  onAction: () => void;
-  actionLabel: string;
+  onAction?: () => void;
+  actionLabel?: string;
   actionDisabled?: boolean;
   onDismiss: () => void;
+  showAllIngredients?: boolean;
 }
 
 export function MealPreviewInline({
@@ -210,6 +224,7 @@ export function MealPreviewInline({
   actionLabel,
   actionDisabled,
   onDismiss,
+  showAllIngredients,
 }: MealPreviewInlineProps) {
   return (
     <div
@@ -217,18 +232,20 @@ export function MealPreviewInline({
       role="region"
       aria-label={`Preview: ${item.kind === "meal" ? item.meal.name : item.recipe.name}`}
     >
-      <PreviewCardContent item={item} />
+      <PreviewCardContent item={item} showAllIngredients={showAllIngredients} />
       <div className="flex gap-2 px-2.5 pb-2.5 pt-1 border-t border-border/40">
-        <button
-          onClick={onAction}
-          disabled={actionDisabled}
-          className="flex-1 text-xs font-medium py-1.5 px-3 bg-primary text-primary-foreground rounded-md disabled:opacity-50 hover:bg-primary/90 transition-colors"
-        >
-          {actionLabel}
-        </button>
+        {onAction && actionLabel && (
+          <button
+            onClick={onAction}
+            disabled={actionDisabled}
+            className="flex-1 text-xs font-medium py-1.5 px-3 bg-primary text-primary-foreground rounded-md disabled:opacity-50 hover:bg-primary/90 transition-colors"
+          >
+            {actionLabel}
+          </button>
+        )}
         <button
           onClick={onDismiss}
-          className="text-xs py-1.5 px-3 border border-border rounded-md text-muted-foreground hover:text-foreground transition-colors"
+          className="flex-1 text-xs py-1.5 px-3 border border-border rounded-md text-muted-foreground hover:text-foreground transition-colors"
         >
           Close
         </button>

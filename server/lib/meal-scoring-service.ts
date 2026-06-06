@@ -40,6 +40,14 @@ const DIET_EXCLUDED_KEYWORDS: Record<string, string[]> = {
   "gluten-free": ["flour", "bread", "pasta", "noodle", "wheat", "barley", "rye", "couscous"],
   keto: ["rice", "bread", "pasta", "flour", "sugar", "potato", "noodle", "oat"],
   "dairy-free": DAIRY_KEYWORDS,
+  // Scoring-only entries (no hard exclusion — these reduce score when keywords found)
+  paleo: ["bread", "pasta", "rice", "flour", "oat", "wheat", "barley", "beans", "lentils", "chickpeas", "milk", "cheese", "cream", "butter", "yogurt", "peanut"],
+  "low-carb": ["bread", "pasta", "rice", "flour", "sugar", "potato", "noodle", "oat"],
+  carnivore: ["beans", "lentils", "chickpeas", "tofu", "pasta", "bread", "rice", "oat"],
+  flexitarian: ["beef", "lamb", "pork", "bacon", "steak", "mince"],
+  mediterranean: ["bacon", "salami", "pepperoni", "ham", "processed", "instant", "ready-made"],
+  dash: ["bacon", "ham", "salami", "pepperoni", "soy sauce", "instant", "processed"],
+  mind: ["beef", "lamb", "pork", "steak", "butter", "cream", "sugar", "chocolate"],
 };
 
 const HIGH_PROTEIN_KEYWORDS = ["chicken", "beef", "turkey", "salmon", "tuna", "egg", "tofu", "lentil", "bean", "pork", "prawn", "shrimp", "cod", "lamb"];
@@ -94,7 +102,7 @@ export function scoreMeal(
   if (prefs) {
     if (prefs.dietTypes && prefs.dietTypes.length > 0) {
       for (const diet of prefs.dietTypes) {
-        const excluded = DIET_EXCLUDED_KEYWORDS[diet] || [];
+        const excluded = DIET_EXCLUDED_KEYWORDS[diet.toLowerCase()] || [];
         const hasExcluded = excluded.some(kw => allText.includes(kw));
         if (hasExcluded) {
           dietMatch = -10;

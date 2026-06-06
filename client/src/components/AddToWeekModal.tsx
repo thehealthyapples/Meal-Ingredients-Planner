@@ -130,6 +130,7 @@ export function AddToWeekModal({ open, onClose, product }: Props) {
         servings: 1,
         kind: "meal",
         isReadyMeal: true,
+        mealSourceType: "openfoodfacts",
         brand: product.brand ?? undefined,
         barcode: product.barcode ?? undefined,
       });

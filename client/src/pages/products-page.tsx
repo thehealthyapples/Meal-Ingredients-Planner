@@ -437,6 +437,7 @@ export default function ProductsPage() {
   // Ref to detect genuine toggle changes vs. the setting loading for the first time.
   const prevRegulatoryRef = useRef<boolean | undefined>(undefined);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [searchInputFocused, setSearchInputFocused] = useState(false);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -982,6 +983,7 @@ export default function ProductsPage() {
       realm="analyser"
       wide
       titleTestId="text-products-title"
+      collapseDisabled={searchInputFocused}
       meta={<span>Search packaged foods, detect ultra-processed ingredients, and find healthier alternatives.</span>}
       center={
         <div className="flex items-center gap-2 w-full max-w-xl">
@@ -990,6 +992,8 @@ export default function ProductsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            onFocus={() => setSearchInputFocused(true)}
+            onBlur={() => setSearchInputFocused(false)}
             data-testid="input-product-search"
             className="h-9"
           />

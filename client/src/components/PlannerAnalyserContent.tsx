@@ -123,6 +123,7 @@ export function PlannerAnalyserContent() {
           instructions: [],
           servings: 1,
           isReadyMeal: true,
+          mealSourceType: "openfoodfacts",
           brand: product.brand ?? undefined,
           barcode: product.barcode ?? undefined,
         }),

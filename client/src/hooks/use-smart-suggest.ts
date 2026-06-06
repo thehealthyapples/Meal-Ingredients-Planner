@@ -61,9 +61,9 @@ export function useSmartSuggest({
   const [smartCuisine, setSmartCuisine] = useState("");
   const [smartBudget, setSmartBudget] = useState("");
   const [smartMaxUPF, setSmartMaxUPF] = useState("");
-  const [smartFishPerWeek, setSmartFishPerWeek] = useState("2");
-  const [smartRedMeatPerWeek, setSmartRedMeatPerWeek] = useState("3");
-  const [smartVegDays, setSmartVegDays] = useState(false);
+  const [smartFishPerWeek, setSmartFishPerWeek] = useState<string | null>(null);
+  const [smartRedMeatPerWeek, setSmartRedMeatPerWeek] = useState<string | null>(null);
+  const [smartVegDays, setSmartVegDays] = useState<string | null>(null);
   const [smartLeftovers, setSmartLeftovers] = useState(false);
   const [lockedEntries, setLockedEntries] = useState<Set<string>>(new Set());
   const [expandedExplanation, setExpandedExplanation] = useState<string | null>(null);
@@ -176,9 +176,9 @@ export function useSmartSuggest({
         maxWeeklyBudget: smartBudget ? Number(smartBudget) : undefined,
         maxWeeklyUPF: smartMaxUPF ? Number(smartMaxUPF) : undefined,
         preferredCuisine: smartCuisine || undefined,
-        fishPerWeek: Number(smartFishPerWeek),
-        redMeatPerWeek: Number(smartRedMeatPerWeek),
-        vegetarianDays: smartVegDays,
+        ...(smartFishPerWeek !== null ? { fishPerWeek: Number(smartFishPerWeek) } : {}),
+        ...(smartRedMeatPerWeek !== null ? { redMeatPerWeek: Number(smartRedMeatPerWeek) } : {}),
+        ...(smartVegDays !== null ? { vegetarianDays: Number(smartVegDays) > 0 } : {}),
         lockedEntries: locked.length > 0 ? locked : undefined,
       });
       const data = await res.json() as SmartSuggestResult;
@@ -261,9 +261,9 @@ export function useSmartSuggest({
         maxWeeklyBudget: smartBudget ? Number(smartBudget) : undefined,
         maxWeeklyUPF: smartMaxUPF ? Number(smartMaxUPF) : undefined,
         preferredCuisine: smartCuisine || undefined,
-        fishPerWeek: Number(smartFishPerWeek),
-        redMeatPerWeek: Number(smartRedMeatPerWeek),
-        vegetarianDays: smartVegDays,
+        ...(smartFishPerWeek !== null ? { fishPerWeek: Number(smartFishPerWeek) } : {}),
+        ...(smartRedMeatPerWeek !== null ? { redMeatPerWeek: Number(smartRedMeatPerWeek) } : {}),
+        ...(smartVegDays !== null ? { vegetarianDays: Number(smartVegDays) > 0 } : {}),
         lockedEntries: locked,
       });
       const data = await res.json() as SmartSuggestResult;

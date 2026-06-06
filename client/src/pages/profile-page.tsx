@@ -22,7 +22,8 @@ import {
   Baby, PersonStanding, Users, Apple,
   Volume2, Scan, Loader2, ArrowLeft, Check, Store,
   Sparkles, Mail, Trash2,
-  Copy, LogOut, UserMinus, Pencil, X, RefreshCw
+  Copy, LogOut, UserMinus, Pencil, X, RefreshCw,
+  ChevronDown,
 } from "lucide-react";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { normalizeIngredientKey } from "@shared/normalize";
@@ -75,9 +76,117 @@ const ACTIVITY_LEVELS: { value: ActivityLevel; label: string }[] = [
   { value: "high", label: "High" },
 ];
 
+function SectionGroup({
+  icon,
+  title,
+  defaultExpanded,
+  children,
+  testId,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  defaultExpanded: boolean;
+  children: React.ReactNode;
+  testId?: string;
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+  return (
+    <div data-testid={testId}>
+      <button
+        type="button"
+        className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-muted/35 hover:bg-muted/55 transition-colors group"
+        onClick={() => setExpanded(v => !v)}
+        aria-expanded={expanded}
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">{icon}</span>
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            {title}
+          </span>
+        </div>
+        <ChevronDown
+          className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+        />
+      </button>
+      {expanded && <div className="space-y-3 sm:space-y-4 mt-2">{children}</div>}
+    </div>
+  );
+}
+
+function SettingRow({
+  label,
+  summary,
+  children,
+  testId,
+}: {
+  label: string;
+  summary: string;
+  children: React.ReactNode;
+  testId?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div data-testid={testId}>
+      <button
+        type="button"
+        className="w-full flex items-center justify-between py-3 gap-3 group min-w-0"
+        onClick={() => setOpen(v => !v)}
+        aria-expanded={open}
+      >
+        <span className="flex-1 text-sm text-left">{label}</span>
+        <span className="text-sm text-muted-foreground shrink-0 truncate max-w-[45%] text-right">{summary || "Not set"}</span>
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground/40 shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+      {open && <div className="pb-3 pt-0.5">{children}</div>}
+    </div>
+  );
+}
+
+function ProfileSummary({ profile }: { profile: ProfileData }) {
+  const prefs = profile.preferences || {};
+  const primaryName = profile.firstName || profile.displayName || profile.username;
+
+  const cuisine = profile.dietPattern
+    ? (DIET_PATTERNS.find(d => d.value === profile.dietPattern)?.label ?? profile.dietPattern)
+    : null;
+
+  const allergies = profile.dietRestrictions.length > 0
+    ? profile.dietRestrictions.join(" & ") + " aware"
+    : null;
+
+  const { adultsCount, childrenCount, babiesCount } = profile.household;
+  const hParts: string[] = [];
+  if (adultsCount > 0) hParts.push(`${adultsCount} ${adultsCount === 1 ? "Adult" : "Adults"}`);
+  if (childrenCount > 0) hParts.push(`${childrenCount} ${childrenCount === 1 ? "Child" : "Children"}`);
+  if (babiesCount > 0) hParts.push(`${babiesCount} ${babiesCount === 1 ? "Baby" : "Babies"}`);
+  const householdLine = hParts.length > 0 ? hParts.join(" • ") : null;
+
+  const activityLevel = prefs.activityLevel || profile.health.activityLevel;
+  const activityLabel = activityLevel === "high" ? "Highly Active"
+    : activityLevel === "low" ? "Low Activity"
+    : "Moderately Active";
+
+  const lines = [cuisine, allergies, householdLine, activityLabel].filter(Boolean) as string[];
+
+  if (lines.length === 0) return null;
+
+  return (
+    <div className="px-1 flex flex-wrap gap-1.5" data-testid="profile-summary">
+      {lines.map((line, i) => (
+        <span key={i} className="text-xs bg-muted/60 text-muted-foreground px-2.5 py-1 rounded-full border border-border/30">
+          {line}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [showHouseholdManagement, setShowHouseholdManagement] = useState(false);
 
   const { data: profile, isLoading } = useQuery<ProfileData>({
     queryKey: ["/api/profile"],
@@ -188,43 +297,87 @@ export default function ProfilePage() {
         </Button>
       }
     />
-    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe space-y-4" data-testid="page-profile">
+    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-6 main-safe space-y-4 sm:space-y-6" data-testid="page-profile">
 
       <ProfileHeader
         profile={profile}
         onSave={(field, value) => saveField(field, value, false)}
       />
 
-      <HouseholdSettings
-        household={profile.household}
-        onSave={(prefs) => savePreferences(prefs)}
-      />
+      <ProfileSummary profile={profile} />
 
-      <HouseholdManagementSection currentUserId={profile.id} />
+      {/* ─── PERSONAL ─────────────────────────────────────────── */}
+      <SectionGroup
+        icon={<Target className="h-4 w-4" />}
+        title="Personal"
+        defaultExpanded={true}
+        testId="section-personal"
+      >
+        <GoalsPreferences
+          profile={profile}
+          onSave={(data) => updateMutation.mutate(data)}
+          showDiet={true}
+        />
+        <ShoppingPreferences
+          prefs={prefs}
+          onSave={(prefs) => savePreferences(prefs)}
+        />
+        <MealPlanSection />
+        <FeatureToggles
+          prefs={prefs}
+          onToggle={(field, value) => saveField(field, value)}
+        />
+      </SectionGroup>
 
-      <HouseholdEatersSection />
+      {/* ─── HOUSEHOLD ────────────────────────────────────────── */}
+      <SectionGroup
+        icon={<Home className="h-4 w-4" />}
+        title="Household"
+        defaultExpanded={true}
+        testId="section-household"
+      >
+        <HouseholdSettings
+          household={profile.household}
+          onSave={(prefs) => savePreferences(prefs)}
+        />
+        <HouseholdEatersSection />
 
-      <GoalsPreferences
-        profile={profile}
-        onSave={(data) => updateMutation.mutate(data)}
-        showDiet={true}
-      />
+        {/* Manage Household — secondary, collapsed by default */}
+        <div>
+          <button
+            type="button"
+            className="w-full flex items-center justify-between py-2 px-3 rounded-lg bg-muted/40 hover:bg-muted/60 transition-colors"
+            onClick={() => setShowHouseholdManagement(v => !v)}
+            aria-expanded={showHouseholdManagement}
+            data-testid="button-toggle-household-management"
+          >
+            <div className="flex items-center gap-2">
+              <Users className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Manage Household</span>
+            </div>
+            <ChevronDown
+              className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${showHouseholdManagement ? "rotate-180" : ""}`}
+            />
+          </button>
+          {showHouseholdManagement && (
+            <div className="mt-3">
+              <HouseholdManagementSection currentUserId={profile.id} />
+            </div>
+          )}
+        </div>
+      </SectionGroup>
 
-      <ShoppingPreferences
-        prefs={prefs}
-        onSave={(prefs) => savePreferences(prefs)}
-      />
+      {/* ─── SETTINGS & SUPPORT ───────────────────────────────── */}
+      <SectionGroup
+        icon={<Shield className="h-4 w-4" />}
+        title="Settings & Support"
+        defaultExpanded={false}
+        testId="section-account"
+      >
+        <AccountSettings profile={profile} />
+        <ContactSection />
+      </SectionGroup>
 
-      <ContactSection />
-
-      <MealPlanSection />
-
-      <FeatureToggles
-        prefs={prefs}
-        onToggle={(field, value) => saveField(field, value)}
-      />
-
-      <AccountSettings profile={profile} />
     </div>
     </>
   );
@@ -250,7 +403,7 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
   };
 
   return (
-    <Card className="p-5" data-testid="card-profile-header">
+    <Card className="p-4 sm:p-5" data-testid="card-profile-header">
       <div className="flex items-center gap-4">
         {/* Avatar */}
         <Avatar className="h-14 w-14 shrink-0" data-testid="avatar-profile">
@@ -267,7 +420,7 @@ function ProfileHeader({ profile, onSave }: { profile: ProfileData; onSave: (fie
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Your first name"
-                className="h-8 text-sm max-w-[180px]"
+                className="h-8 text-sm max-w-[180px] min-w-0"
                 autoFocus
                 data-testid="input-first-name"
                 onKeyDown={(e) => {
@@ -331,13 +484,13 @@ export function HealthSnapshot({ profile }: { profile: ProfileData }) {
     : "text-amber-600 dark:text-amber-400";
 
   return (
-    <Card className="p-5" data-testid="card-health-snapshot">
-      <div className="flex items-center gap-2 mb-4">
+    <Card className="p-4 sm:p-5" data-testid="card-health-snapshot">
+      <div className="flex items-center gap-2 mb-3">
         <Heart className="h-4 w-4 text-muted-foreground" />
         <h3 className="text-sm font-medium">Health Snapshot</h3>
       </div>
 
-      <div className="grid grid-cols-3 gap-4 text-center">
+      <div className="grid grid-cols-3 gap-3 text-center">
         <div data-testid="metric-bmi">
           <p className={`text-2xl font-semibold ${bmiColor}`}>{bmi ?? "-"}</p>
           <p className="text-xs text-muted-foreground mt-0.5">BMI</p>
@@ -373,6 +526,7 @@ function HouseholdSettings({ household, onSave }: { household: ProfileData["hous
   const [maxCookTime, setMaxCookTime] = useState<string>(household.maxTotalCookTime != null ? String(household.maxTotalCookTime) : "");
   const [preferLessProcessed, setPreferLessProcessed] = useState(household.preferLessProcessed ?? false);
   const [dirty, setDirty] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     setAdults(household.adultsCount);
@@ -404,86 +558,107 @@ function HouseholdSettings({ household, onSave }: { household: ProfileData["hous
     setDirty(false);
   };
 
+  const hParts: string[] = [];
+  if (adults > 0) hParts.push(`${adults} ${adults === 1 ? "Adult" : "Adults"}`);
+  if (children > 0) hParts.push(`${children} ${children === 1 ? "Child" : "Children"}`);
+  if (babies > 0) hParts.push(`${babies} ${babies === 1 ? "Baby" : "Babies"}`);
+  const mealModeLabel = mealMode === "exact" ? "Same Recipe" : "Shared + Swaps";
+
   return (
-    <Card className="p-5" data-testid="card-household">
-      <div className="flex items-center justify-between gap-2 mb-4">
-        <div className="flex items-center gap-2">
-          <Home className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">Household</h3>
-        </div>
-        {dirty && (
-          <Button size="sm" onClick={save} data-testid="button-save-household">
-            <Save className="h-3.5 w-3.5 mr-1" /> Save
-          </Button>
-        )}
-      </div>
-
-      <div className="space-y-3">
-        <CounterRow icon={<Users className="h-4 w-4 text-muted-foreground" />} label="Adults" value={adults} onMinus={() => adjust(setAdults, adults, -1, 1)} onPlus={() => adjust(setAdults, adults, 1)} testId="counter-adults" />
-        <CounterRow icon={<PersonStanding className="h-4 w-4 text-sky-500" />} label="Children" value={children} onMinus={() => adjust(setChildren, children, -1)} onPlus={() => adjust(setChildren, children, 1)} testId="counter-children" />
-        <CounterRow icon={<Baby className="h-4 w-4 text-pink-500" />} label="Babies" value={babies} onMinus={() => adjust(setBabies, babies, -1)} onPlus={() => adjust(setBabies, babies, 1)} testId="counter-babies" />
-
-        <Separator className="my-1" />
-
-        <div>
-          <p className="text-xs text-muted-foreground mb-2">Shared meal style</p>
-          <div className="flex gap-2">
-            {[
-              { value: "exact", label: "Same recipe" },
-              { value: "shared-with-swaps", label: "Shared + swaps" },
-            ].map((opt) => (
-              <Button
-                key={opt.value}
-                size="sm"
-                variant={mealMode === opt.value ? "default" : "outline"}
-                className="text-xs flex-1"
-                onClick={() => { setMealMode(opt.value); setDirty(true); }}
-                data-testid={`button-meal-mode-${opt.value}`}
-              >
-                {mealMode === opt.value && <Check className="h-3 w-3 mr-1" />}
-                {opt.label}
-              </Button>
-            ))}
+    <Card className="p-4 sm:p-5" data-testid="card-household">
+      {/* Summary row — tap to expand editing controls */}
+      <button
+        type="button"
+        className="w-full flex items-center justify-between py-2.5 gap-3 group min-w-0"
+        onClick={() => setSettingsOpen(v => !v)}
+        aria-expanded={settingsOpen}
+        data-testid="button-toggle-household-settings"
+      >
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <Home className="h-4 w-4 text-muted-foreground shrink-0" />
+          <div className="text-left min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">{hParts.join(" · ") || "No members set"}</p>
+            <p className="text-xs text-muted-foreground">{mealModeLabel}</p>
           </div>
         </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {dirty && (
+            <Button size="sm" onClick={e => { e.stopPropagation(); save(); }} data-testid="button-save-household" className="h-7 px-2 text-xs">
+              <Save className="h-3 w-3 mr-1" /> Save
+            </Button>
+          )}
+          <ChevronDown className={`h-4 w-4 text-muted-foreground/40 transition-transform duration-200 ${settingsOpen ? "rotate-180" : ""}`} />
+        </div>
+      </button>
 
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <Label className="text-xs text-muted-foreground">Max extra prep (min)</Label>
-            <Input
-              type="number"
-              min={0}
-              placeholder="-"
-              value={maxExtraPrep}
-              onChange={(e) => { setMaxExtraPrep(e.target.value); setDirty(true); }}
-              className="mt-1 h-8 text-sm"
-              data-testid="input-max-extra-prep"
+      {settingsOpen && (
+        <div className="space-y-3 pt-3 mt-2 border-t border-border/40">
+          <CounterRow icon={<Users className="h-4 w-4 text-muted-foreground" />} label="Adults" value={adults} onMinus={() => adjust(setAdults, adults, -1, 1)} onPlus={() => adjust(setAdults, adults, 1)} testId="counter-adults" />
+          <CounterRow icon={<PersonStanding className="h-4 w-4 text-sky-500" />} label="Children" value={children} onMinus={() => adjust(setChildren, children, -1)} onPlus={() => adjust(setChildren, children, 1)} testId="counter-children" />
+          <CounterRow icon={<Baby className="h-4 w-4 text-pink-500" />} label="Babies" value={babies} onMinus={() => adjust(setBabies, babies, -1)} onPlus={() => adjust(setBabies, babies, 1)} testId="counter-babies" />
+
+          <Separator className="my-1" />
+
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">Shared meal style</p>
+            <div className="flex gap-2">
+              {[
+                { value: "exact", label: "Same recipe" },
+                { value: "shared-with-swaps", label: "Shared + swaps" },
+              ].map((opt) => (
+                <Button
+                  key={opt.value}
+                  size="sm"
+                  variant={mealMode === opt.value ? "default" : "outline"}
+                  className="text-xs flex-1"
+                  onClick={() => { setMealMode(opt.value); setDirty(true); }}
+                  data-testid={`button-meal-mode-${opt.value}`}
+                >
+                  {mealMode === opt.value && <Check className="h-3 w-3 mr-1" />}
+                  {opt.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Label className="text-xs text-muted-foreground">Max extra prep (min)</Label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="-"
+                value={maxExtraPrep}
+                onChange={(e) => { setMaxExtraPrep(e.target.value); setDirty(true); }}
+                className="mt-1 h-8 text-sm"
+                data-testid="input-max-extra-prep"
+              />
+            </div>
+            <div className="flex-1">
+              <Label className="text-xs text-muted-foreground">Max cook time (min)</Label>
+              <Input
+                type="number"
+                min={0}
+                placeholder="-"
+                value={maxCookTime}
+                onChange={(e) => { setMaxCookTime(e.target.value); setDirty(true); }}
+                className="mt-1 h-8 text-sm"
+                data-testid="input-max-cook-time"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label htmlFor="prefer-less-processed" className="text-sm cursor-pointer">Prefer less processed foods</Label>
+            <Switch
+              id="prefer-less-processed"
+              checked={preferLessProcessed}
+              onCheckedChange={(v) => { setPreferLessProcessed(v); setDirty(true); }}
+              data-testid="switch-prefer-less-processed"
             />
           </div>
-          <div className="flex-1">
-            <Label className="text-xs text-muted-foreground">Max cook time (min)</Label>
-            <Input
-              type="number"
-              min={0}
-              placeholder="-"
-              value={maxCookTime}
-              onChange={(e) => { setMaxCookTime(e.target.value); setDirty(true); }}
-              className="mt-1 h-8 text-sm"
-              data-testid="input-max-cook-time"
-            />
-          </div>
         </div>
-
-        <div className="flex items-center justify-between">
-          <Label htmlFor="prefer-less-processed" className="text-sm cursor-pointer">Prefer less processed foods</Label>
-          <Switch
-            id="prefer-less-processed"
-            checked={preferLessProcessed}
-            onCheckedChange={(v) => { setPreferLessProcessed(v); setDirty(true); }}
-            data-testid="switch-prefer-less-processed"
-          />
-        </div>
-      </div>
+      )}
     </Card>
   );
 }
@@ -569,8 +744,8 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
 
   if (isLoading) {
     return (
-      <Card className="p-5">
-        <Skeleton className="h-4 w-40 mb-4" />
+      <Card className="p-4 sm:p-5">
+        <Skeleton className="h-4 w-40 mb-3" />
         <Skeleton className="h-4 w-full mb-2" />
         <Skeleton className="h-4 w-3/4" />
       </Card>
@@ -580,7 +755,7 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
   if (!household) return null;
 
   return (
-    <Card className="p-5 space-y-5" data-testid="card-household-management">
+    <Card className="p-4 sm:p-5 space-y-4 sm:space-y-5" data-testid="card-household-management">
       {/* Header */}
       <div className="flex items-center gap-2">
         <Users className="h-4 w-4 text-muted-foreground" />
@@ -625,8 +800,8 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
       <div className="space-y-1">
         <p className="text-xs text-muted-foreground">Invite code - share this to invite someone to your household</p>
         <div className="flex items-center gap-2">
-          <code className="bg-muted px-3 py-1.5 rounded text-sm font-mono tracking-wider" data-testid="text-invite-code">{household.inviteCode}</code>
-          <Button size="sm" variant="outline" onClick={copyInviteCode} data-testid="button-copy-invite-code">
+          <code className="bg-muted px-3 py-1.5 rounded text-sm font-mono tracking-wider min-w-0 flex-1 break-all" data-testid="text-invite-code">{household.inviteCode}</code>
+          <Button size="sm" variant="outline" onClick={copyInviteCode} data-testid="button-copy-invite-code" className="shrink-0">
             <Copy className="h-3.5 w-3.5 mr-1" /> Copy
           </Button>
         </div>
@@ -849,11 +1024,11 @@ function HouseholdEatersSection() {
 
   return (
     <>
-      <Card className="p-5 space-y-4" data-testid="card-household-eaters">
-        <div className="flex items-center gap-2">
-          <Baby className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">Household Eaters</h3>
-          <span className="text-xs text-muted-foreground ml-1">— who gets meals planned for them</span>
+      <Card className="p-4 sm:p-5 space-y-3 sm:space-y-4" data-testid="card-household-eaters">
+        <div className="flex items-center gap-2 min-w-0">
+          <Baby className="h-4 w-4 text-muted-foreground shrink-0" />
+          <h3 className="text-sm font-medium shrink-0">Household Eaters</h3>
+          <span className="text-xs text-muted-foreground min-w-0 truncate">— who gets meals planned for them</span>
         </div>
 
         {eaters.length === 0 ? (
@@ -991,8 +1166,8 @@ export function CalorieSettings({ profile, onSave }: { profile: ProfileData; onS
   };
 
   return (
-    <Card className="p-5" data-testid="card-calorie-settings">
-      <div className="flex items-center justify-between gap-2 mb-4">
+    <Card className="p-4 sm:p-5" data-testid="card-calorie-settings">
+      <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-2">
           <Flame className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">Nutrition Targets</h3>
@@ -1125,12 +1300,25 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
     setDirty(false);
   };
 
+  // Summary text for each setting row
+  const cuisineSummary = dietPattern
+    ? (DIET_PATTERNS.find(d => d.value === dietPattern)?.label ?? dietPattern)
+    : "No preference";
+  const allergiesSummary = dietRestrictions.length > 0 ? dietRestrictions.join(", ") : "None";
+  const scheduleSummary = (eatingSchedule && eatingSchedule !== "None")
+    ? (EATING_SCHEDULES.find(s => s.value === eatingSchedule)?.label ?? eatingSchedule)
+    : "No preference";
+  const activitySummary = activity === "high" ? "High" : activity === "low" ? "Low" : "Moderate";
+  const goalsSummary = healthGoals.length > 0
+    ? healthGoals.map(id => GOAL_OPTIONS.find(g => g.id === id)?.label).filter(Boolean).join(", ")
+    : "None set";
+
   return (
-    <Card className="p-5" data-testid="card-goals">
-      <div className="flex items-center justify-between gap-2 mb-4">
+    <Card className="p-4 sm:p-5" data-testid="card-goals">
+      <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           <Target className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">{showDiet ? "Goals & Diet" : "Goals"}</h3>
+          <h3 className="text-sm font-medium">{showDiet ? "Cuisine" : "Goals"}</h3>
         </div>
         {dirty && (
           <Button size="sm" onClick={save} data-testid="button-save-goals">
@@ -1139,37 +1327,11 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
         )}
       </div>
 
-      <div className="space-y-4">
-        <div>
-          <Label className="text-xs text-muted-foreground mb-2 block">Goals</Label>
-          <div className="flex flex-wrap gap-2">
-            {GOAL_OPTIONS.map((g) => {
-              const Icon = g.icon;
-              const selected = healthGoals.includes(g.id);
-              return (
-                <Badge
-                  key={g.id}
-                  variant={selected ? "default" : "outline"}
-                  className="cursor-pointer flex items-center gap-1"
-                  onClick={() => toggleGoal(g.id)}
-                  data-testid={`badge-goal-${g.id}`}
-                >
-                  <Icon className="h-3 w-3" />
-                  {g.label}
-                  {selected && <Check className="h-3 w-3 ml-0.5" />}
-                </Badge>
-              );
-            })}
-          </div>
-        </div>
-
+      <div className="divide-y divide-border/40">
         {showDiet && (
           <>
-            <Separator />
-
-            <div>
-              <Label className="text-xs text-muted-foreground mb-2 block">Diet pattern</Label>
-              <div className="flex flex-wrap gap-2">
+            <SettingRow label="Cuisine" summary={cuisineSummary} testId="row-cuisine">
+              <div className="flex flex-wrap gap-2 pt-1">
                 <Badge
                   variant={!dietPattern ? "default" : "outline"}
                   className="cursor-pointer"
@@ -1192,11 +1354,10 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
                   </Badge>
                 ))}
               </div>
-            </div>
+            </SettingRow>
 
-            <div>
-              <Label className="text-xs text-muted-foreground mb-2 block">Allergies &amp; intolerances</Label>
-              <div className="flex flex-wrap gap-2">
+            <SettingRow label="Allergies & Intolerances" summary={allergiesSummary} testId="row-allergies">
+              <div className="flex flex-wrap gap-2 pt-1">
                 {ALLERGY_INTOLERANCE_OPTIONS.map((r) => (
                   <Badge
                     key={r.value}
@@ -1210,11 +1371,10 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
                   </Badge>
                 ))}
               </div>
-            </div>
+            </SettingRow>
 
-            <div>
-              <Label className="text-xs text-muted-foreground mb-2 block">Eating schedule</Label>
-              <div className="flex flex-wrap gap-2">
+            <SettingRow label="Eating Schedule" summary={scheduleSummary} testId="row-eating-schedule">
+              <div className="flex flex-wrap gap-2 pt-1">
                 {EATING_SCHEDULES.map((s) => (
                   <Badge
                     key={s.value}
@@ -1228,15 +1388,12 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
                   </Badge>
                 ))}
               </div>
-            </div>
-
-            <Separator />
+            </SettingRow>
           </>
         )}
 
-        <div>
-          <Label className="text-xs text-muted-foreground mb-2 block">Activity level</Label>
-          <div className="flex gap-2">
+        <SettingRow label="Activity Level" summary={activitySummary} testId="row-activity">
+          <div className="flex gap-2 pt-1">
             {ACTIVITY_LEVELS.map((a) => (
               <Button
                 key={a.value}
@@ -1251,7 +1408,29 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
               </Button>
             ))}
           </div>
-        </div>
+        </SettingRow>
+
+        <SettingRow label="Goals" summary={goalsSummary} testId="row-goals">
+          <div className="flex flex-wrap gap-2 pt-1" data-testid="goals-content">
+            {GOAL_OPTIONS.map((g) => {
+              const Icon = g.icon;
+              const selected = healthGoals.includes(g.id);
+              return (
+                <Badge
+                  key={g.id}
+                  variant={selected ? "default" : "outline"}
+                  className="cursor-pointer flex items-center gap-1"
+                  onClick={() => toggleGoal(g.id)}
+                  data-testid={`badge-goal-${g.id}`}
+                >
+                  <Icon className="h-3 w-3" />
+                  {g.label}
+                  {selected && <Check className="h-3 w-3 ml-0.5" />}
+                </Badge>
+              );
+            })}
+          </div>
+        </SettingRow>
       </div>
     </Card>
   );
@@ -1280,9 +1459,15 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
     setDirty(false);
   };
 
+  const budgetSummary = BUDGET_OPTIONS.find(b => b.id === budget)?.label ?? "Balanced";
+  const storesSummary = stores.length > 0
+    ? stores.map(id => STORE_OPTIONS.find(s => s.id === id)?.label).filter(Boolean).join(", ")
+    : "No preference";
+  const upfSummary = UPF_OPTIONS.find(u => u.id === upf)?.label ?? "Moderate";
+
   return (
-    <Card className="p-5" data-testid="card-shopping-prefs">
-      <div className="flex items-center justify-between gap-2 mb-4">
+    <Card className="p-4 sm:p-5" data-testid="card-shopping-prefs">
+      <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           <Store className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-medium">Shopping & UPF</h3>
@@ -1294,10 +1479,9 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
         )}
       </div>
 
-      <div className="space-y-4">
-        <div>
-          <Label className="text-xs text-muted-foreground mb-2 block">Budget level</Label>
-          <div className="grid grid-cols-2 gap-2">
+      <div className="divide-y divide-border/40">
+        <SettingRow label="Budget" summary={budgetSummary} testId="row-budget">
+          <div className="pt-2 grid grid-cols-2 gap-2">
             {BUDGET_OPTIONS.map((b) => (
               <Button
                 key={b.id}
@@ -1315,13 +1499,10 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
               </Button>
             ))}
           </div>
-        </div>
+        </SettingRow>
 
-        <Separator />
-
-        <div>
-          <Label className="text-xs text-muted-foreground mb-2 block">Preferred stores</Label>
-          <div className="flex flex-wrap gap-2">
+        <SettingRow label="Preferred Stores" summary={storesSummary} testId="row-stores">
+          <div className="pt-2 flex flex-wrap gap-2">
             {STORE_OPTIONS.map((s) => (
               <Badge
                 key={s.id}
@@ -1335,13 +1516,10 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
               </Badge>
             ))}
           </div>
-        </div>
+        </SettingRow>
 
-        <Separator />
-
-        <div>
-          <Label className="text-xs text-muted-foreground mb-2 block">UPF strictness</Label>
-          <div className="grid grid-cols-3 gap-2">
+        <SettingRow label="UPF Preference" summary={upfSummary} testId="row-upf">
+          <div className="pt-2 grid grid-cols-3 gap-2">
             {UPF_OPTIONS.map((u) => {
               const Icon = u.icon;
               return (
@@ -1360,7 +1538,7 @@ function ShoppingPreferences({ prefs, onSave }: { prefs: any; onSave: (prefs: an
               );
             })}
           </div>
-        </div>
+        </SettingRow>
       </div>
     </Card>
   );
@@ -1374,28 +1552,28 @@ function ContactSection() {
   const suggestions = config?.suggestionsEmail || "suggestions@thehealthyapples.com";
 
   return (
-    <Card className="p-5" data-testid="card-contact">
-      <div className="flex items-center gap-2 mb-4">
+    <Card className="p-4 sm:p-5" data-testid="card-contact">
+      <div className="flex items-center gap-2 mb-3">
         <Mail className="h-4 w-4 text-muted-foreground" />
         <h3 className="text-sm font-medium">Contact</h3>
       </div>
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Support</span>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <span className="text-sm text-muted-foreground shrink-0">Support</span>
           <a
             href={`mailto:${support}`}
-            className="text-sm text-primary hover:underline font-medium"
+            className="text-sm text-primary hover:underline font-medium break-all"
             data-testid="link-support-email"
           >
             {support}
           </a>
         </div>
         <Separator />
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Suggestions</span>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <span className="text-sm text-muted-foreground shrink-0">Suggestions</span>
           <a
             href={`mailto:${suggestions}`}
-            className="text-sm text-primary hover:underline font-medium"
+            className="text-sm text-primary hover:underline font-medium break-all"
             data-testid="link-suggestions-email"
           >
             {suggestions}
@@ -1431,8 +1609,8 @@ function MealPlanSection() {
   };
 
   return (
-    <Card className="p-5" data-testid="card-meal-plan">
-      <div className="flex items-center gap-2 mb-4">
+    <Card className="p-4 sm:p-5" data-testid="card-meal-plan">
+      <div className="flex items-center gap-2 mb-3">
         <Sparkles className="h-4 w-4 text-muted-foreground" />
         <h3 className="text-sm font-medium">Meal Plan</h3>
       </div>
@@ -1443,7 +1621,7 @@ function MealPlanSection() {
         <Button
           onClick={handleLoad}
           disabled={loading}
-          className="w-full"
+          className="w-full whitespace-normal h-auto py-3"
           data-testid="button-load-family-plan-profile"
         >
           {loading
@@ -1464,8 +1642,8 @@ function FeatureToggles({ prefs, onToggle }: { prefs: any; onToggle: (field: str
   ];
 
   return (
-    <Card className="p-5" data-testid="card-feature-toggles">
-      <div className="flex items-center gap-2 mb-4">
+    <Card className="p-4 sm:p-5" data-testid="card-feature-toggles">
+      <div className="flex items-center gap-2 mb-3">
         <Settings className="h-4 w-4 text-muted-foreground" />
         <h3 className="text-sm font-medium">Features</h3>
       </div>
@@ -1475,15 +1653,16 @@ function FeatureToggles({ prefs, onToggle }: { prefs: any; onToggle: (field: str
           const Icon = t.icon;
           const isOn = prefs[t.key] !== undefined ? prefs[t.key] : t.default;
           return (
-            <div key={t.key} className="flex items-center justify-between" data-testid={`toggle-${t.key}`}>
-              <div className="flex items-center gap-2.5">
-                <Icon className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{t.label}</span>
+            <div key={t.key} className="flex items-center justify-between gap-3" data-testid={`toggle-${t.key}`}>
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-sm leading-snug">{t.label}</span>
               </div>
               <Switch
                 checked={isOn}
                 onCheckedChange={(v) => onToggle(t.key, v)}
                 data-testid={`switch-${t.key}`}
+                className="shrink-0"
               />
             </div>
           );
@@ -1542,17 +1721,17 @@ function AccountSettings({ profile }: { profile: ProfileData }) {
   };
 
   return (
-    <Card className="p-5" data-testid="card-account">
-      <div className="flex items-center gap-2 mb-4">
+    <Card className="p-4 sm:p-5" data-testid="card-account">
+      <div className="flex items-center gap-2 mb-3">
         <Shield className="h-4 w-4 text-muted-foreground" />
         <h3 className="text-sm font-medium">Account</h3>
       </div>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between min-w-0">
+          <div className="min-w-0">
             <p className="text-sm font-medium">Email / Username</p>
-            <p className="text-xs text-muted-foreground">{profile.username}</p>
+            <p className="text-xs text-muted-foreground break-all">{profile.username}</p>
           </div>
         </div>
 

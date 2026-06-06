@@ -61,6 +61,28 @@ const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"
 
 const DEBUG = process.env.NODE_ENV === 'development';
 
+// Priority-ordered mapping from stored diet type values to external search prefix strings.
+// DASH, MIND, Flexitarian, and Carnivore are intentionally omitted — candidate pools become
+// too sparse and unreliable for those terms, so generic search is preferred.
+const DIETARY_SEARCH_PREFIXES: [string, string][] = [
+  ["Vegan", "vegan"],
+  ["Vegetarian", "vegetarian"],
+  ["Keto", "keto"],
+  ["Paleo", "paleo"],
+  ["Gluten-Free", "gluten-free"],
+  ["Dairy-Free", "dairy-free"],
+  ["Low-Carb", "low-carb"],
+  ["Mediterranean", "mediterranean"],
+];
+
+function getDietarySearchPrefix(dietTypes: string[]): string | undefined {
+  const lower = dietTypes.map(d => d.toLowerCase().trim());
+  for (const [dietType, prefix] of DIETARY_SEARCH_PREFIXES) {
+    if (lower.includes(dietType.toLowerCase())) return prefix;
+  }
+  return undefined;
+}
+
 // Returns true if a candidate contains any hard-excluded ingredient.
 // Hard exclusions bypass scoring — the meal is always removed from the pool.
 //
@@ -235,9 +257,16 @@ export async function generateSmartSuggestion(
         ? ["lunch", "dinner"]
         : ["dinner"];
 
+  const dietaryPrefix = prefs ? getDietarySearchPrefix(prefs.dietTypes) : undefined;
+
+  if (dietaryPrefix) {
+    console.log(`[SmartSuggest] Dietary external search — prefix: "${dietaryPrefix}" (dietTypes: [${prefs?.dietTypes.join(', ')}])`);
+  }
+
   const externalCandidates = await fetchExternalCandidates({
     cuisine: settings.preferredCuisine,
     query: settings.preferredCuisine || undefined,
+    dietaryPrefix,
   });
 
   const plannerEnableDrinks = settings.plannerEnableDrinks ?? false;
@@ -251,13 +280,18 @@ export async function generateSmartSuggestion(
     // Defense in depth: exclude barcode-scanned grocery products even if the
     // route-level source-type gate was bypassed. Products stored via OpenFoodFacts
     // have no ingredients and no meal intent — they must never become recommendations.
-    // Zero-ingredient guard note: a broader guard on ingredients.length === 0 is
-    // intentionally deferred. After this source-gate, remaining zero-ingredient user
-    // meals are manually created intention-meals (valid for planning). Blocking all
-    // zero-ingredient rows would remove those legitimate entries and is higher-risk
-    // than the targeted source-type gate.
     if (candidateIsProduct(meal.mealSourceType)) {
       console.debug(`[SmartSuggest] Excluded OpenFoodFacts product: "${meal.name}"`);
+      continue;
+    }
+    // Safety gate for historical product records saved through planner-side flows
+    // (AddToWeekModal, PlannerAnalyserContent, addProductToPlanner) before the
+    // mealSourceType fix. Those paths defaulted to "scratch", which passes the
+    // source-type gate above. The composite signature — isReadyMeal=true,
+    // ingredients=[], barcode set — uniquely identifies grocery product records and
+    // cannot match legitimate user-created intention-meals (which have no barcode).
+    if (meal.isReadyMeal && meal.ingredients.length === 0 && meal.barcode) {
+      console.debug(`[SmartSuggest] Excluded ready-meal product (no ingredients + barcode): "${meal.name}"`);
       continue;
     }
     // P0: enforce drink/alcohol rules directly on the Meal record before conversion.

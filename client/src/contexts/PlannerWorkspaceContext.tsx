@@ -10,12 +10,12 @@ export interface PlannerWorkspaceContextValue {
   setSmartBudget: (v: string) => void;
   smartMaxUPF: string;
   setSmartMaxUPF: (v: string) => void;
-  smartFishPerWeek: string;
-  setSmartFishPerWeek: (v: string) => void;
-  smartRedMeatPerWeek: string;
-  setSmartRedMeatPerWeek: (v: string) => void;
-  smartVegDays: boolean;
-  setSmartVegDays: (v: boolean) => void;
+  smartFishPerWeek: string | null;
+  setSmartFishPerWeek: (v: string | null) => void;
+  smartRedMeatPerWeek: string | null;
+  setSmartRedMeatPerWeek: (v: string | null) => void;
+  smartVegDays: string | null;
+  setSmartVegDays: (v: string | null) => void;
   smartLeftovers: boolean;
   setSmartLeftovers: (v: boolean) => void;
   smartLoading: boolean;

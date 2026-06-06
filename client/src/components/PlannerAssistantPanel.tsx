@@ -202,12 +202,14 @@ function SmartContent() {
     onRunSmartSuggest,
   } = usePlannerWorkspaceContext();
 
+  const [advancedOverridesOpen, setAdvancedOverridesOpen] = useState(false);
+
   return (
     <div className="space-y-4" data-testid="panel-smart-content">
       <div className="flex items-start gap-2.5 bg-muted/40 rounded-lg px-3 py-3">
         <Sparkles className="h-6 w-6 shrink-0 text-primary/60 mt-0.5" />
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Set your preferences and we'll propose a week of meals tailored to your household.
+          Set preferences, we'll propose tailored household meals for this week.
         </p>
       </div>
 
@@ -271,52 +273,75 @@ function SmartContent() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <Fish className="h-3 w-3" />Fish/week
-            </label>
-            <Select value={smartFishPerWeek} onValueChange={setSmartFishPerWeek}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {[0,1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <Beef className="h-3 w-3" />Red meat/wk
-            </label>
-            <Select value={smartRedMeatPerWeek} onValueChange={setSmartRedMeatPerWeek}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {[0,1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-              </SelectContent>
-            </Select>
+        <div data-testid="section-advanced-overrides">
+          <button
+            className="w-full flex items-start justify-between py-2 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+            onClick={() => setAdvancedOverridesOpen(v => !v)}
+            aria-expanded={advancedOverridesOpen}
+            data-testid="button-advanced-overrides-toggle"
+          >
+            <span className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider">
+              Smart Plan Overrides
+            </span>
+            <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground/40 mt-0.5 transition-transform duration-150 ${advancedOverridesOpen ? "" : "-rotate-90"}`} />
+          </button>
+          <div className="grid transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: advancedOverridesOpen ? "1fr" : "0fr" }}>
+            <div className="overflow-hidden">
+              <div className="space-y-3 pb-2">
+                <p className="text-[10px] text-muted-foreground/60 leading-relaxed">
+                  Temporary Smart Plan override of your Profile.
+                </p>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <Fish className="h-3 w-3" />Fish meals per week
+                    </label>
+                    <Select value={smartFishPerWeek ?? "use-profile"} onValueChange={v => setSmartFishPerWeek(v === "use-profile" ? null : v)}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="use-profile">Use Profile</SelectItem>
+                        {[0,1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <Beef className="h-3 w-3" />Red meat meals per week
+                    </label>
+                    <Select value={smartRedMeatPerWeek ?? "use-profile"} onValueChange={v => setSmartRedMeatPerWeek(v === "use-profile" ? null : v)}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="use-profile">Use Profile</SelectItem>
+                        {[0,1,2,3,4,5].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <Salad className="h-3 w-3 text-green-500" />Vegetarian days
+                    </label>
+                    <Select value={smartVegDays ?? "use-profile"} onValueChange={v => setSmartVegDays(v === "use-profile" ? null : v)} data-testid="select-smart-veg">
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="use-profile">Use Profile</SelectItem>
+                        {[0,1,2,3,4,5,6,7].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-2 pt-1">
-          <div className="flex items-center gap-2">
-            <Switch
-              id="panel-smart-veg-days"
-              checked={smartVegDays}
-              onCheckedChange={c => setSmartVegDays(!!c)}
-              data-testid="toggle-smart-veg"
-            />
-            <label htmlFor="panel-smart-veg-days" className="text-xs flex items-center gap-1 cursor-pointer">
-              <Salad className="h-3.5 w-3.5 text-green-500" />Vegetarian days
-            </label>
-          </div>
-          <div className="flex items-center gap-2">
-            <Switch
-              id="panel-smart-leftovers"
-              checked={smartLeftovers}
-              onCheckedChange={c => setSmartLeftovers(!!c)}
-              data-testid="toggle-smart-leftovers"
-            />
-            <label htmlFor="panel-smart-leftovers" className="text-xs cursor-pointer">Include leftovers</label>
-          </div>
+        <div className="flex items-center gap-2 pt-1">
+          <Switch
+            id="panel-smart-leftovers"
+            checked={smartLeftovers}
+            onCheckedChange={c => setSmartLeftovers(!!c)}
+            data-testid="toggle-smart-leftovers"
+          />
+          <label htmlFor="panel-smart-leftovers" className="text-xs cursor-pointer">Include leftovers</label>
         </div>
       </div>
 

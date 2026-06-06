@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,20 @@ import { NutritionVarietyDots } from "@/components/nutrition-variety-chips";
 import { MealNutrientTags } from "@/components/nutrition-insights-panel";
 import type { Meal, Nutrition } from "@shared/schema";
 import type { SmartSuggestEntry, SmartSuggestResult } from "@/lib/planner-types";
+import { MealPreviewBubble, MealPreviewInline, useMealPreview, type PreviewItem } from "@/components/MealPreviewBubble";
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" ? window.innerWidth < 768 : false,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+  return isMobile;
+}
 
 // ── UPF helpers ───────────────────────────────────────────────────────────────
 
@@ -49,13 +63,17 @@ interface SmartMealEntryCardProps {
   onRefresh: () => void;
   onExpandExplain: () => void;
   onNutritionRefresh: () => void;
+  onOpenPreview: (item: PreviewItem, el: HTMLElement) => void;
+  onScheduleClose: () => void;
+  isMobile: boolean;
 }
 
-function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, expanded, smartLoading, onLock, onRefresh, onExpandExplain, onNutritionRefresh }: SmartMealEntryCardProps) {
+function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, expanded, smartLoading, onLock, onRefresh, onExpandExplain, onNutritionRefresh, onOpenPreview, onScheduleClose, isMobile }: SmartMealEntryCardProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [, navigate] = useLocation();
   const [qty, setQty] = useState(1);
+  const [showMobilePreview, setShowMobilePreview] = useState(false);
   const mealId = !entry.candidate.isExternal ? Number(entry.candidate.id) : null;
   const key = `${entry.dayOfWeek}-${entry.slot}`;
 
@@ -91,6 +109,26 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
   const ingredientCount = ingredientList.length || null;
   const varietyScore = useMemo(() => computeMealVariety(ingredientList), [ingredientList]);
   const nutrientTags = useMemo(() => getMealNutrients(ingredientList), [ingredientList]);
+  const previewItem: PreviewItem = useMemo(
+    () =>
+      meal
+        ? { kind: "meal", meal }
+        : {
+            kind: "web",
+            recipe: {
+              id: String(entry.candidate.id),
+              name: entry.candidate.name,
+              image: entry.candidate.image ?? "",
+              url: entry.candidate.sourceUrl ?? null,
+              category: entry.candidate.category ?? null,
+              cuisine: entry.candidate.cuisine ?? null,
+              ingredients: entry.candidate.ingredients ?? [],
+              source: entry.candidate.source ?? undefined,
+            },
+          },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [meal, entry.candidate],
+  );
   const servings = entry.candidate.servings || meal?.servings || null;
   const primaryProtein = entry.candidate.primaryProtein || null;
   const upfScore = entry.candidate.estimatedUPFScore ?? null;
@@ -108,29 +146,44 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
 
   return (
     <div className="flex flex-col">
-      <div className="flex items-start gap-2.5 px-3 py-2.5">
-        <div className="h-14 w-14 rounded-lg overflow-hidden bg-muted shrink-0 border flex items-center justify-center">
-          {mealImg
-            ? <img src={mealImg} alt={entry.candidate.name} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-            : <UtensilsCrossed className="h-6 w-6 text-muted-foreground/40" />}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap mb-1">
-            <span className="text-xs font-medium text-muted-foreground capitalize">{entry.slot}</span>
-            <span className="text-muted-foreground/40">·</span>
-            <span className="text-xs text-muted-foreground">{sourceName}</span>
-            {dietTypes.includes('vegetarian') && <Badge variant="outline" className="text-[10px] h-4 px-1 border-green-500/50 text-green-600 dark:text-green-400">Vegetarian</Badge>}
-            {dietTypes.includes('vegan') && <Badge variant="outline" className="text-[10px] h-4 px-1 border-green-500/50 text-green-600 dark:text-green-400">Vegan</Badge>}
-            {dietTypes.includes('gluten-free') && <Badge variant="outline" className="text-[10px] h-4 px-1 border-amber-500/50 text-amber-600 dark:text-amber-400">GF</Badge>}
+      <div className="flex items-start gap-2 px-3 py-2.5">
+        {/* Interactive area: image + info — hover/tap to preview */}
+        <div
+          role="button"
+          tabIndex={0}
+          className="flex items-start gap-2.5 flex-1 min-w-0 rounded-md cursor-pointer"
+          onClick={() => { if (isMobile) setShowMobilePreview(v => !v); }}
+          onMouseEnter={(e) => { if (!isMobile) onOpenPreview(previewItem, e.currentTarget); }}
+          onMouseLeave={() => { if (!isMobile) onScheduleClose(); }}
+          onFocus={(e) => { if (!isMobile) onOpenPreview(previewItem, e.currentTarget); }}
+          onBlur={() => { if (!isMobile) onScheduleClose(); }}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setShowMobilePreview(v => !v); } }}
+          aria-label={`Preview ${entry.candidate.name}`}
+          aria-expanded={isMobile ? showMobilePreview : undefined}
+        >
+          <div className="h-14 w-14 rounded-lg overflow-hidden bg-muted shrink-0 border flex items-center justify-center">
+            {mealImg
+              ? <img src={mealImg} alt={entry.candidate.name} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              : <UtensilsCrossed className="h-6 w-6 text-muted-foreground/40" />}
           </div>
-          <p className="text-sm font-semibold leading-snug mb-1">{entry.candidate.name}</p>
-          <NutritionVarietyDots score={varietyScore} />
-          <MealNutrientTags nutrients={nutrientTags} />
-          <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
-            {cuisine && <span className="capitalize">{cuisine}</span>}
-            {primaryProtein && <span className="capitalize">{primaryProtein}</span>}
-            {ingredientCount ? <span>{ingredientCount} ingredients</span> : null}
-            {servings ? <span>{servings} servings</span> : null}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 flex-wrap mb-1">
+              <span className="text-xs font-medium text-muted-foreground capitalize">{entry.slot}</span>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="text-xs text-muted-foreground">{sourceName}</span>
+              {dietTypes.includes('vegetarian') && <Badge variant="outline" className="text-[10px] h-4 px-1 border-green-500/50 text-green-600 dark:text-green-400">Vegetarian</Badge>}
+              {dietTypes.includes('vegan') && <Badge variant="outline" className="text-[10px] h-4 px-1 border-green-500/50 text-green-600 dark:text-green-400">Vegan</Badge>}
+              {dietTypes.includes('gluten-free') && <Badge variant="outline" className="text-[10px] h-4 px-1 border-amber-500/50 text-amber-600 dark:text-amber-400">GF</Badge>}
+            </div>
+            <p className="text-sm font-semibold leading-snug mb-1">{entry.candidate.name}</p>
+            <NutritionVarietyDots score={varietyScore} />
+            <MealNutrientTags nutrients={nutrientTags} />
+            <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+              {cuisine && <span className="capitalize">{cuisine}</span>}
+              {primaryProtein && <span className="capitalize">{primaryProtein}</span>}
+              {ingredientCount ? <span>{ingredientCount} ingredients</span> : null}
+              {servings ? <span>{servings} servings</span> : null}
+            </div>
           </div>
         </div>
         <div className="flex flex-col gap-1 shrink-0">
@@ -274,6 +327,16 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
           {entry.explanation.reasons.map((r, i) => <p key={i}>• {r}</p>)}
         </div>
       )}
+
+      {isMobile && showMobilePreview && (
+        <MealPreviewInline
+          item={previewItem}
+          onAction={mealId ? () => { setShowMobilePreview(false); navigate(`/meals/${mealId}`); } : undefined}
+          actionLabel={mealId ? "View recipe" : undefined}
+          onDismiss={() => setShowMobilePreview(false)}
+          showAllIngredients
+        />
+      )}
     </div>
   );
 }
@@ -321,6 +384,16 @@ export function SmartReviewPanelContent({
   restoredFromSession,
   onDismissRestoreBanner,
 }: SmartReviewPanelContentProps) {
+  const isMobile = useIsMobile();
+  const { previewItem, previewAnchor, openPreview, scheduleClose, cancelClose, closePreview } = useMealPreview();
+
+  useEffect(() => {
+    if (!previewItem) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === "Escape") closePreview(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [previewItem, closePreview]);
+
   if (!smartResult) return null;
 
   const dayNames = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -389,6 +462,9 @@ export function SmartReviewPanelContent({
                     onRefresh={() => regenerateSingleEntry(entry)}
                     onExpandExplain={() => setExpandedExplanation(expandedExplanation === exKey ? null : exKey)}
                     onNutritionRefresh={() => setNutritionFetchTick(t => t + 1)}
+                    onOpenPreview={openPreview}
+                    onScheduleClose={scheduleClose}
+                    isMobile={isMobile}
                   />
                 );
               })}
@@ -435,6 +511,16 @@ export function SmartReviewPanelContent({
           Cancel
         </Button>
       </div>
+
+      {!isMobile && previewItem && previewAnchor && (
+        <MealPreviewBubble
+          item={previewItem}
+          anchor={previewAnchor}
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
+          showAllIngredients
+        />
+      )}
     </div>
   );
 }

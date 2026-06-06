@@ -1363,6 +1363,7 @@ export default function WeeklyPlannerPage() {
         servings: 1,
         kind: "meal",
         isReadyMeal: true,
+        mealSourceType: "openfoodfacts",
         brand: product.brand ?? undefined,
         barcode: product.barcode ?? undefined,
       });

@@ -954,6 +954,44 @@ export async function registerRoutes(
         await storage.upsertUserPreferences(req.user!.id, parsed.preferences as any);
       }
 
+      // Bridge: sync users.diet_pattern → user_preferences.diet_types.
+      // Runs after any explicit preference update so the canonical mapping is authoritative.
+      // Preserves non-canonical values (halal, kosher, pescatarian, style:* etc).
+      if (parsed.dietPattern !== undefined) {
+        const CANONICAL_DIET_VALUES = new Set([
+          "vegan", "vegetarian", "flexitarian", "keto", "low-carb",
+          "paleo", "carnivore", "mediterranean", "dash", "mind",
+        ]);
+        const DIET_PATTERN_TO_DIET_TYPE: Record<string, string> = {
+          Vegan: "vegan",
+          Vegetarian: "vegetarian",
+          Flexitarian: "flexitarian",
+          Keto: "keto",
+          "Low-Carb": "low-carb",
+          Paleo: "paleo",
+          Carnivore: "carnivore",
+          Mediterranean: "mediterranean",
+          DASH: "dash",
+          MIND: "mind",
+        };
+        try {
+          const currentPrefs = await storage.getUserPreferences(req.user!.id);
+          const currentDietTypes = currentPrefs?.dietTypes ?? [];
+          // Remove all canonical values; preserve everything else (halal, kosher, style:*, etc.)
+          const preserved = currentDietTypes.filter(
+            dt => !CANONICAL_DIET_VALUES.has(dt.toLowerCase()),
+          );
+          const newDietType = parsed.dietPattern
+            ? DIET_PATTERN_TO_DIET_TYPE[parsed.dietPattern] ?? null
+            : null;
+          const newDietTypes = newDietType ? [...preserved, newDietType] : preserved;
+          await storage.upsertUserPreferences(req.user!.id, { dietTypes: newDietTypes } as any);
+        } catch (bridgeErr) {
+          // Non-fatal: profile save succeeds even if the bridge write fails
+          console.warn("[profile/bridge] Failed to sync diet_pattern → diet_types:", bridgeErr);
+        }
+      }
+
       const user = await storage.getUser(req.user!.id);
       const prefs = await storage.getUserPreferences(req.user!.id);
 

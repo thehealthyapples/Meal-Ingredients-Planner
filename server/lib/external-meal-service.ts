@@ -176,24 +176,29 @@ export async function searchMealDB(filters: {
   cuisine?: string;
   category?: string;
   query?: string;
+  dietaryPrefix?: string;
 }): Promise<ExternalMealCandidate[]> {
   const results: ExternalMealCandidate[] = [];
 
   try {
-    const queries: string[] = [];
+    const rawQueries: string[] = [];
 
     if (filters.query) {
-      queries.push(filters.query);
+      rawQueries.push(filters.query);
     }
     if (filters.cuisine && CUISINE_QUERIES[filters.cuisine.toLowerCase()]) {
-      queries.push(...CUISINE_QUERIES[filters.cuisine.toLowerCase()]);
+      rawQueries.push(...CUISINE_QUERIES[filters.cuisine.toLowerCase()]);
     }
-    if (queries.length === 0) {
-      queries.push("chicken", "pasta", "salad", "curry", "soup", "fish", "steak", "vegetable");
+    if (rawQueries.length === 0) {
+      rawQueries.push("chicken", "pasta", "salad", "curry", "soup", "fish", "steak", "vegetable");
     }
 
+    const queries = filters.dietaryPrefix
+      ? rawQueries.slice(0, 5).map(q => `${filters.dietaryPrefix} ${q}`)
+      : rawQueries.slice(0, 5);
+
     const seen = new Set<string>();
-    const searchTerms = queries.slice(0, 5);
+    const searchTerms = queries;
 
     for (const term of searchTerms) {
       try {
@@ -244,6 +249,7 @@ export async function searchMealDB(filters: {
 export async function searchBBCGoodFoodEnhanced(filters: {
   query?: string;
   cuisine?: string;
+  dietaryPrefix?: string;
 }): Promise<ExternalMealCandidate[]> {
   const results: ExternalMealCandidate[] = [];
   const queries: string[] = [];
@@ -327,7 +333,7 @@ const browserHeaders: Record<string, string> = {
   'Cache-Control': 'no-cache',
 };
 
-function buildSearchQueries(filters: { query?: string; cuisine?: string }): string[] {
+function buildSearchQueries(filters: { query?: string; cuisine?: string; dietaryPrefix?: string }): string[] {
   const queries: string[] = [];
   if (filters.query) queries.push(filters.query);
   if (filters.cuisine && CUISINE_QUERIES[filters.cuisine.toLowerCase()]) {
@@ -336,7 +342,11 @@ function buildSearchQueries(filters: { query?: string; cuisine?: string }): stri
   if (queries.length === 0) {
     queries.push("healthy dinner", "quick lunch", "easy breakfast");
   }
-  return queries.slice(0, 3);
+  const terms = queries.slice(0, 3);
+  if (filters.dietaryPrefix) {
+    return terms.map(q => `${filters.dietaryPrefix} ${q}`);
+  }
+  return terms;
 }
 
 function scrapeRecipeLinks(
@@ -374,6 +384,7 @@ function scrapeRecipeLinks(
 export async function searchAllRecipes(filters: {
   query?: string;
   cuisine?: string;
+  dietaryPrefix?: string;
 }): Promise<ExternalMealCandidate[]> {
   const results: ExternalMealCandidate[] = [];
   const queries = buildSearchQueries(filters);
@@ -426,6 +437,7 @@ export async function searchAllRecipes(filters: {
 export async function searchJamieOliver(filters: {
   query?: string;
   cuisine?: string;
+  dietaryPrefix?: string;
 }): Promise<ExternalMealCandidate[]> {
   const results: ExternalMealCandidate[] = [];
   const queries = buildSearchQueries(filters);
@@ -478,6 +490,7 @@ export async function searchJamieOliver(filters: {
 export async function searchSeriousEats(filters: {
   query?: string;
   cuisine?: string;
+  dietaryPrefix?: string;
 }): Promise<ExternalMealCandidate[]> {
   const results: ExternalMealCandidate[] = [];
   const queries = buildSearchQueries(filters);
@@ -700,6 +713,7 @@ export async function fetchExternalCandidates(filters: {
   query?: string;
   cuisine?: string;
   category?: string;
+  dietaryPrefix?: string;
 }): Promise<ExternalMealCandidate[]> {
   const [mealDbResults, bbcResults, allRecipesResults, jamieOliverResults, seriousEatsResults] = await Promise.all([
     searchMealDB(filters),
@@ -712,12 +726,30 @@ export async function fetchExternalCandidates(filters: {
   const seen = new Set<string>();
   const combined: ExternalMealCandidate[] = [];
 
-  const interleave = [...mealDbResults, ...bbcResults, ...allRecipesResults, ...jamieOliverResults, ...seriousEatsResults];
-  for (const result of interleave) {
+  for (const result of [...mealDbResults, ...bbcResults, ...allRecipesResults, ...jamieOliverResults, ...seriousEatsResults]) {
     const key = result.name.toLowerCase().replace(/[^a-z0-9]/g, "");
     if (seen.has(key)) continue;
     seen.add(key);
     combined.push(result);
+  }
+
+  // Fallback: if dietary search returned too few candidates, also run generic search and merge
+  if (filters.dietaryPrefix && combined.length < 10) {
+    console.log(`[ExternalSearch] Dietary prefix "${filters.dietaryPrefix}" returned ${combined.length} candidates — running generic fallback search`);
+    const genericFilters = { ...filters, dietaryPrefix: undefined };
+    const [gmdb, gbbc, gar, gjo, gse] = await Promise.all([
+      searchMealDB(genericFilters),
+      searchBBCGoodFoodEnhanced(genericFilters),
+      searchAllRecipes(genericFilters),
+      searchJamieOliver(genericFilters),
+      searchSeriousEats(genericFilters),
+    ]);
+    for (const result of [...gmdb, ...gbbc, ...gar, ...gjo, ...gse]) {
+      const key = result.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (seen.has(key)) continue;
+      seen.add(key);
+      combined.push(result);
+    }
   }
 
   return combined;
