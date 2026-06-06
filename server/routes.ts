@@ -4820,6 +4820,10 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         calorieTarget: body.calorieTarget ? Number(body.calorieTarget) : undefined,
         peopleCount: body.peopleCount ? Number(body.peopleCount) : 1,
         lockedEntries: parsedLocked,
+        // Profile dietary requirements — enforced as a hard filter by the shared
+        // dietRules engine inside the planner (same source of truth as recipe search).
+        dietPattern: req.user?.dietPattern ?? null,
+        dietRestrictions: req.user?.dietRestrictions?.filter(Boolean) ?? [],
       };
 
       let userMeals = await storage.getMeals(req.user!.id);

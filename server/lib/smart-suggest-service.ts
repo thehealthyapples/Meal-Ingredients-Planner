@@ -4,6 +4,7 @@ import { scoreMeal, convertMealToCandidate, convertExternalToCandidate, type Sco
 import { generateMealExplanation, type MealExplanation } from "./explainability-service";
 import { resolveActiveRestrictions, resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
 import type { RestrictionDefinition } from "@shared/restrictions/restriction-types.js";
+import { shouldExcludeRecipe } from "./dietRules";
 
 export interface LockedEntry {
   dayOfWeek: number;
@@ -31,6 +32,11 @@ export interface SmartSuggestSettings {
   // Household hard restrictions — ingredients that must never appear in any planned meal.
   // These are hard exclusions (unlike dietTypes which influence scoring).
   hardExcludedIngredients?: string[];
+  // Profile dietary requirements — enforced as a HARD exclusion via the shared
+  // dietRules engine (the same single source of truth used by recipe search).
+  // A Vegan/Vegetarian profile, for example, excludes meat/fish/etc. before scoring.
+  dietPattern?: string | null;
+  dietRestrictions?: string[];
 }
 
 export interface SmartSuggestEntry {
@@ -171,6 +177,30 @@ export function candidateHardExcluded(
   return isHardExcluded(candidate, hardExcluded, resolveActiveRestrictions(hardExcluded));
 }
 
+// Profile dietary hard filter — the SINGLE source of truth shared with recipe
+// search. Delegates entirely to dietRules.shouldExcludeRecipe (no second engine,
+// no duplicated keyword lists). Returns true when the candidate must be removed
+// from the planner pool for the given diet pattern / restrictions, BEFORE any
+// scoring, ranking, or selection. Inactive (returns false) when no pattern and
+// no restrictions are set, so non-restricted users see no change.
+export function candidateDietExcluded(
+  candidate: Pick<ScoredCandidate, "name" | "ingredients"> & {
+    category?: string | null;
+    cuisine?: string | null;
+  },
+  dietPattern: string | null,
+  dietRestrictions: string[],
+): boolean {
+  if (!dietPattern && dietRestrictions.length === 0) return false;
+  const text = [
+    candidate.name,
+    candidate.category || "",
+    candidate.cuisine || "",
+    ...candidate.ingredients,
+  ].join(" ").toLowerCase();
+  return shouldExcludeRecipe(text, { dietPattern, dietRestrictions });
+}
+
 // P0: "drink" removed from breakfast — generic drinks must not appear as breakfast meals.
 // Breakfast slot only accepts explicit breakfast and smoothie categories.
 const SLOT_CATEGORY_MAPPING: Record<string, string[]> = {
@@ -274,6 +304,17 @@ export async function generateSmartSuggestion(
   // Pre-resolve household hard restrictions to canonical definitions once, so the
   // per-candidate hard exclusion filter doesn't re-resolve the same strings.
   const activeRestrictionDefs = resolveActiveRestrictions(hardExcluded);
+
+  // Profile dietary requirements — enforced as a HARD exclusion using the shared
+  // dietRules engine, the same single source of truth recipe search uses. This is
+  // the gate that excludes e.g. anchovy/fish/meat/dairy/egg recipes for a Vegan
+  // profile before scoring, ranking, or selection. Only active when a pattern or a
+  // restriction is set, so non-restricted users see no pool change.
+  const dietPattern = settings.dietPattern ?? null;
+  const dietRestrictions = settings.dietRestrictions ?? [];
+  const isDietExcluded = (candidate: ScoredCandidate): boolean =>
+    candidateDietExcluded(candidate, dietPattern, dietRestrictions);
+
   const allCandidates: ScoredCandidate[] = [];
 
   for (const meal of userMeals) {
@@ -325,6 +366,11 @@ export async function generateSmartSuggestion(
       if (DEBUG) console.debug(`[SmartSuggest] Hard-excluded user meal (household restriction): "${candidate.name}"`);
       continue;
     }
+    // Profile dietary hard filter — shared dietRules engine (single source of truth).
+    if (isDietExcluded(candidate)) {
+      if (DEBUG) console.debug(`[SmartSuggest] Diet-excluded user meal (${dietPattern ?? dietRestrictions.join('/')}): "${candidate.name}"`);
+      continue;
+    }
     allCandidates.push(candidate);
   }
 
@@ -347,6 +393,11 @@ export async function generateSmartSuggestion(
     // Household hard restriction filter — always applied.
     if (isHardExcluded(candidate, hardExcluded, activeRestrictionDefs)) {
       if (DEBUG) console.debug(`[SmartSuggest] Hard-excluded external meal (household restriction): "${candidate.name}"`);
+      continue;
+    }
+    // Profile dietary hard filter — shared dietRules engine (single source of truth).
+    if (isDietExcluded(candidate)) {
+      if (DEBUG) console.debug(`[SmartSuggest] Diet-excluded external meal (${dietPattern ?? dietRestrictions.join('/')}): "${candidate.name}"`);
       continue;
     }
     allCandidates.push(candidate);
