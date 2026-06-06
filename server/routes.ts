@@ -21,6 +21,7 @@ import { rankMealsByIngredients } from "./lib/smart-meal-creation-engine";
 import { searchAllRecipes, searchJamieOliver, searchSeriousEats, searchEdamam, searchApiNinjas, searchBigOven, searchFatSecret, type ExternalMealCandidate } from "./lib/external-meal-service";
 import { seedSourceSettings, isSourceCallable, getSourceKeyForUrl, logAuditEvent, getAllSourceSettings, updateSourceSettings, getAuditLogs } from "./lib/recipe-source-gate";
 import { shouldExcludeRecipe, scoreRecipeForDiet } from "./lib/dietRules";
+import { resolvePlannerComplianceContext, isComplianceActive, isMealCompliantForUser } from "./lib/planner-compliance";
 import { expandSearchQuery, correctFoodSpelling, conservativeSpellCorrect, suggestSpellings } from "@shared/food-synonyms";
 import { parseIngredient as parseIngredientShared } from "@shared/parse-ingredient";
 import { INGREDIENT_TAXONOMY } from "@shared/ingredient-taxonomy";
@@ -4974,6 +4975,28 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         primaryProtein: candidate.primaryProtein || null,
       };
 
+      // SYSTEM-PATH PROFILE COMPLIANCE GATE: this endpoint exists solely to persist
+      // accepted Smart Suggest results (smart-apply). Generation already filters the
+      // pool with the same rules, so this is defense-in-depth for a compromised pool.
+      // Non-compliant candidates are skipped (not imported); the client skips the
+      // planner add when no mealId is returned. Inactive for unrestricted users.
+      const complianceCtx = await resolvePlannerComplianceContext(storage, req.user!.id);
+      if (isComplianceActive(complianceCtx)) {
+        const result = isMealCompliantForUser(
+          {
+            name: externalCandidate.name,
+            ingredients: externalCandidate.ingredients,
+            categoryName: externalCandidate.category,
+            cuisine: externalCandidate.cuisine,
+          },
+          complianceCtx,
+        );
+        if (!result.compliant) {
+          console.log(`[SmartApply] skipped non-compliant candidate "${externalCandidate.name}" (${result.reason})`);
+          return res.json({ skipped: true, reason: result.reason });
+        }
+      }
+
       const result = await autoImportExternalMeal(externalCandidate, req.user!.id);
       if (!result) {
         return res.status(500).json({ message: "Failed to auto-import meal" });
@@ -5460,8 +5483,8 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       const template = await storage.getTemplateWithItems(req.params.id);
       if (!template) return res.status(404).json({ message: "Template not found" });
       const mode = req.query.mode === "keep" ? "keep" : "replace";
-      const { createdCount, updatedCount } = await storage.applyWeekTemplate(template.id, weekId, mode);
-      res.json({ createdCount, updatedCount });
+      const { createdCount, updatedCount, skippedCount } = await storage.applyWeekTemplate(template.id, weekId, mode, req.user!.id);
+      res.json({ createdCount, updatedCount, skippedCount });
     } catch (err) {
       console.error("[Planner] apply-to-week error:", err);
       res.status(500).json({ message: "Failed to apply week template" });
@@ -6934,9 +6957,16 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         existingEntries.map(e => `${e.dayId}:${e.mealType}:${e.audience}`)
       );
 
+      // SYSTEM-PATH PROFILE COMPLIANCE GATE: template apply places THA-chosen meals,
+      // so each meal must respect the user's Profile diet + household hard restrictions.
+      // Resolved once; inactive (skipped) for unrestricted users so behaviour is unchanged.
+      const complianceCtx = await resolvePlannerComplianceContext(storage, userId);
+      const complianceActive = isComplianceActive(complianceCtx);
+
       let createdCount = 0;
       let updatedCount = 0;
       let skippedCount = 0;
+      let skippedNonCompliant = 0;
 
       for (const item of template.items) {
         const plannerDayOfWeek = item.dayOfWeek % 7;
@@ -6956,6 +6986,20 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
           continue;
         }
 
+        // Skip non-compliant meals; preserve existing compliant imports.
+        if (complianceActive) {
+          const meal = await storage.getMeal(item.mealId);
+          const result = meal
+            ? isMealCompliantForUser(meal, complianceCtx)
+            : { compliant: false, reason: "meal-not-found" };
+          if (!result.compliant) {
+            console.log(`[PlanTemplates] skipped non-compliant meal id=${item.mealId} (${result.reason})`);
+            skippedCount++;
+            skippedNonCompliant++;
+            continue;
+          }
+        }
+
         await storage.upsertPlannerEntry(dayId, item.mealSlot, "adult", item.mealId);
 
         if (hasExisting) {
@@ -6966,8 +7010,8 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         }
       }
 
-      console.log(`[PlanTemplates] apply done: created=${createdCount}, updated=${updatedCount}, skipped=${skippedCount}`);
-      res.json({ templateName: template.name, createdCount, updatedCount, skippedCount });
+      console.log(`[PlanTemplates] apply done: created=${createdCount}, updated=${updatedCount}, skipped=${skippedCount} (nonCompliant=${skippedNonCompliant})`);
+      res.json({ templateName: template.name, createdCount, updatedCount, skippedCount, skippedNonCompliant });
     } catch (err) {
       console.error("[PlanTemplates] apply error:", err);
       res.status(500).json({ message: "Failed to apply template" });

@@ -3,6 +3,7 @@ import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
 import { eq, and, ilike, or, sql, inArray, isNull, isNotNull } from "drizzle-orm";
 import { getHouseholdForUser } from "./lib/household";
+import { resolvePlannerComplianceContext, isComplianceActive, isMealCompliantForUser } from "./lib/planner-compliance";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -187,7 +188,7 @@ export interface IStorage {
   deletePrivateTemplate(id: string, userId: number): Promise<void>;
   snapshotPlannerToTemplate(templateId: string, userId: number): Promise<{ itemCount: number }>;
   snapshotWeekToTemplate(templateId: string, weekId: number): Promise<{ itemCount: number }>;
-  applyWeekTemplate(templateId: string, targetWeekId: number, mode: "replace" | "keep"): Promise<{ createdCount: number; updatedCount: number }>;
+  applyWeekTemplate(templateId: string, targetWeekId: number, mode: "replace" | "keep", userId?: number): Promise<{ createdCount: number; updatedCount: number; skippedCount: number }>;
   importTemplateItems(userId: number, templateId: string, scope: { type: "all" | "week" | "day" | "meal"; weekNumber?: number; dayOfWeek?: number; mealSlot?: string }, mode: "replace" | "keep"): Promise<{ createdCount: number; updatedCount: number; skippedCount: number }>;
   getMealsExport(source?: "web" | "custom" | "all"): Promise<{ id: number; name: string; mealSourceType: string; sourceUrl: string | null; userId: number; createdAt: Date }[]>;
 
@@ -1702,15 +1703,27 @@ export class DatabaseStorage implements IStorage {
     return { itemCount: newItems.length };
   }
 
-  async applyWeekTemplate(templateId: string, targetWeekId: number, mode: "replace" | "keep"): Promise<{ createdCount: number; updatedCount: number }> {
+  async applyWeekTemplate(templateId: string, targetWeekId: number, mode: "replace" | "keep", userId?: number): Promise<{ createdCount: number; updatedCount: number; skippedCount: number }> {
     const items = await db.select().from(mealPlanTemplateItems)
       .where(and(eq(mealPlanTemplateItems.templateId, templateId), eq(mealPlanTemplateItems.weekNumber, 1)));
     const days = await this.getPlannerDays(targetWeekId);
     const dayMap = new Map(days.map(d => [d.dayOfWeek === 0 ? 7 : d.dayOfWeek, d.id]));
-    let createdCount = 0; let updatedCount = 0;
+
+    // SYSTEM-PATH PROFILE COMPLIANCE GATE: week-template apply places THA-chosen meals.
+    // Resolved once; inactive (skipped) for unrestricted users so behaviour is unchanged.
+    const complianceCtx = userId != null ? await resolvePlannerComplianceContext(this, userId) : null;
+    const complianceActive = complianceCtx != null && isComplianceActive(complianceCtx);
+
+    let createdCount = 0; let updatedCount = 0; let skippedCount = 0;
     for (const item of items) {
       const dayId = dayMap.get(item.dayOfWeek);
       if (!dayId) continue;
+      // Skip non-compliant meals; preserve existing compliant imports.
+      if (complianceActive && complianceCtx) {
+        const meal = await this.getMeal(item.mealId);
+        const result = meal ? isMealCompliantForUser(meal, complianceCtx) : { compliant: false, reason: "meal-not-found" };
+        if (!result.compliant) { skippedCount++; continue; }
+      }
       const [existing] = await db.select().from(plannerEntries)
         .where(and(eq(plannerEntries.dayId, dayId), eq(plannerEntries.mealType, item.mealSlot), eq(plannerEntries.audience, "adult")))
         .limit(1);
@@ -1718,7 +1731,7 @@ export class DatabaseStorage implements IStorage {
       await this.upsertPlannerEntry(dayId, item.mealSlot, "adult", item.mealId);
       existing ? updatedCount++ : createdCount++;
     }
-    return { createdCount, updatedCount };
+    return { createdCount, updatedCount, skippedCount };
   }
 
   async importTemplateItems(
@@ -1757,6 +1770,11 @@ export class DatabaseStorage implements IStorage {
     const existingEntries = await this.getPlannerEntriesByDayIds(allDayIds);
     const occupiedSlots = new Set(existingEntries.map(e => `${e.dayId}:${e.mealType}:${e.audience}`));
 
+    // SYSTEM-PATH PROFILE COMPLIANCE GATE: template import places THA-chosen meals.
+    // Resolved once; inactive (skipped) for unrestricted users so behaviour is unchanged.
+    const complianceCtx = await resolvePlannerComplianceContext(this, userId);
+    const complianceActive = isComplianceActive(complianceCtx);
+
     let createdCount = 0;
     let updatedCount = 0;
     let skippedCount = 0;
@@ -1770,6 +1788,13 @@ export class DatabaseStorage implements IStorage {
       const hasExisting = occupiedSlots.has(slotKey);
 
       if (mode === "keep" && hasExisting) { skippedCount++; continue; }
+
+      // Skip non-compliant meals; preserve existing compliant imports.
+      if (complianceActive) {
+        const meal = await this.getMeal(item.mealId);
+        const result = meal ? isMealCompliantForUser(meal, complianceCtx) : { compliant: false, reason: "meal-not-found" };
+        if (!result.compliant) { skippedCount++; continue; }
+      }
 
       await this.upsertPlannerEntry(dayId, item.mealSlot, "adult", item.mealId);
 
@@ -3135,8 +3160,19 @@ export class DatabaseStorage implements IStorage {
       [thursday?.id ?? 0,  "dinner",    salmon.id],
     ];
 
+    // SYSTEM-PATH PROFILE COMPLIANCE GATE: demo seed places THA-chosen meals.
+    // Resolved once; inactive (skipped) for unrestricted users — a brand-new demo
+    // account has no dietPattern/restrictions, so seeding is unchanged in practice.
+    const complianceCtx = await resolvePlannerComplianceContext(this, userId);
+    const complianceActive = isComplianceActive(complianceCtx);
+
     for (const [dayId, mealType, mealId] of entries) {
       if (!dayId) continue;
+      if (complianceActive) {
+        const meal = await this.getMeal(mealId);
+        const result = meal ? isMealCompliantForUser(meal, complianceCtx) : { compliant: false, reason: "meal-not-found" };
+        if (!result.compliant) continue;
+      }
       await this.addPlannerEntry(dayId, mealType, "adult", mealId);
     }
 

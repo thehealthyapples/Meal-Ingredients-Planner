@@ -215,6 +215,12 @@ export function useSmartSuggest({
           if (entry.candidate.isExternal) {
             const importRes = await apiRequest('POST', '/api/smart-suggest/auto-import', { candidate: entry.candidate });
             const importData = await importRes.json();
+            // Server compliance gate may skip a non-compliant candidate (no mealId).
+            // Skip the planner add for that entry rather than posting an invalid id.
+            if (importData.skipped || !importData.mealId) {
+              failedCount++;
+              continue;
+            }
             mealId = importData.mealId;
             importedCount++;
           } else {
