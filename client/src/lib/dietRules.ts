@@ -51,26 +51,93 @@ const FISH_SEAFOOD_KEYWORDS = [
   "seabream", "sea bream", "smoked salmon", "caviar",
 ];
 
-const HIGH_CARB_KEYWORDS = [
-  "bread", "pasta", "rice", "noodle", "noodles", "potato", "potatoes",
-  "flour", "sugar", "oats", "oat", "cereal", "corn", "wheat", "couscous",
-  "barley", "rye", "tortilla", "pita", "pitta", "cracker", "crackers",
+// ─── Keto / Low-Carb Exclusion Dictionary ────────────────────────────────────
+// Organised by food category. Both KETO_EXCLUDE and LOW_CARB_EXCLUDE are built
+// from these lists so changes stay in sync.
+
+// 1. Sugars and sweeteners
+const DICT_SUGARS = [
+  "sugar", "brown sugar", "cane sugar", "icing sugar", "powdered sugar",
+  "honey", "maple syrup", "agave", "molasses", "caramel",
+  "corn syrup", "glucose syrup",
+];
+
+// 2. Breads and bakery products
+const DICT_BAKERY = [
+  "bread", "sandwich bread", "sourdough", "bagel", "muffin",
+  "doughnut", "crumpet", "english muffin", "pancake", "waffle", "croissant",
+];
+
+// 3. Doughs and pastry (composite carb ingredients — catches "pizza dough", etc.)
+const DICT_DOUGHS = [
+  "dough", "pizza dough", "pizza base", "pastry", "puff pastry",
+  "shortcrust pastry", "filo pastry", "phyllo pastry", "pie crust",
+];
+
+// 4. Grain products
+const DICT_GRAINS = [
+  "wheat", "flour", "rice", "pasta", "noodle", "noodles",
+  "couscous", "bulgur", "barley", "oats", "oat", "oatmeal",
+  "quinoa", "polenta", "cornmeal", "corn", "cereal", "granola", "muesli",
+  "rye", "spelt", "semolina",
+];
+
+// 5. Snack carbohydrates
+const DICT_SNACK_CARBS = [
+  "cracker", "crackers", "pretzel", "pretzels", "popcorn",
+  "tortilla chips", "corn chips", "breadcrumbs", "breadcrumb", "panko",
+];
+
+// 6. Starchy vegetables
+const DICT_STARCHY_VEG = [
+  "potato", "potatoes", "sweet potato", "sweet potatoes", "yam", "cassava", "parsnip",
+];
+
+// 7. Legumes and beans
+const DICT_LEGUMES = [
+  "beans", "lentils", "legumes", "chickpeas", "hummus",
+  "kidney beans", "black beans", "pinto beans", "split peas",
+  "navy beans", "cannellini beans", "lima beans",
+];
+
+// 8. High-sugar fruits
+const DICT_HIGH_SUGAR_FRUITS = [
+  "banana", "grape", "grapes", "raisin", "raisins",
+  "dates", "mango", "pineapple", "fruit juice",
+];
+
+// 9. Sweetened sauces
+const DICT_SWEETENED_SAUCES = [
+  "ketchup", "barbecue sauce", "bbq sauce", "teriyaki sauce",
+  "sweet chilli sauce", "sweet chili sauce", "hoisin sauce", "sweet and sour sauce",
+];
+
+// 10. Composite wrappers and carb-based products
+// Bare "wrap"/"wraps" intentionally omitted — "tortilla" already catches flour
+// wraps and bare "wrap" would create false positives on keto-friendly lettuce wrap dishes.
+const DICT_WRAPPERS = [
+  "tortilla", "tortillas", "pita", "pitta",
+  "dumpling wrapper", "wonton wrapper", "gyoza wrapper", "spring roll wrapper",
 ];
 
 const KETO_EXCLUDE = [
-  ...HIGH_CARB_KEYWORDS,
-  "beans", "lentils", "legumes", "chickpeas", "hummus", "honey",
-  "maple syrup", "agave", "fruit juice", "banana", "grape", "mango",
+  ...DICT_SUGARS,
+  ...DICT_BAKERY,
+  ...DICT_DOUGHS,
+  ...DICT_GRAINS,
+  ...DICT_SNACK_CARBS,
+  ...DICT_STARCHY_VEG,
+  ...DICT_LEGUMES,
+  ...DICT_HIGH_SUGAR_FRUITS,
+  ...DICT_SWEETENED_SAUCES,
+  ...DICT_WRAPPERS,
 ];
 
-const LOW_CARB_EXCLUDE = [
-  "bread", "pasta", "white rice", "noodles", "flour", "sugar",
-  "oats", "cereal", "tortilla", "pita", "pitta",
-];
+// Low-Carb shares Keto's exclusion boundary for Smart Planner recommendations.
+const LOW_CARB_EXCLUDE = [...KETO_EXCLUDE];
 
 // Paleo excludes grains, dairy, legumes - but NOT sweet potato (a Paleo staple).
-// We list grains explicitly here rather than spreading HIGH_CARB_KEYWORDS so we
-// can omit "potato"/"potatoes" which would incorrectly catch "sweet potato".
+// "potato"/"potatoes" are intentionally omitted to avoid incorrectly catching "sweet potato".
 const PALEO_EXCLUDE = [
   "bread", "pasta", "rice", "noodle", "noodles", "flour",
   "oats", "oat", "cereal", "corn", "wheat", "couscous",
