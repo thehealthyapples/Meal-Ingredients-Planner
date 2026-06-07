@@ -40,12 +40,26 @@ const MEAT_KEYWORDS = [
 ];
 
 const FISH_SEAFOOD_KEYWORDS = [
-  "fish", "salmon", "tuna", "cod", "haddock", "halibut", "sea bass", "trout",
+  "fish", "seafood",
+  "salmon", "tuna", "cod", "haddock", "halibut", "sea bass", "trout",
   "mackerel", "sardine", "sardines", "anchovy", "anchovies", "prawn", "prawns",
   "shrimp", "lobster", "crab", "oyster", "oysters", "mussel", "mussels",
   "clam", "clams", "scallop", "scallops", "squid", "octopus", "crayfish",
   "langoustine", "langoustines", "monkfish", "tilapia", "pollock", "plaice",
   "seabream", "sea bream", "smoked salmon", "caviar",
+];
+
+// Dish names that imply non-vegan or non-vegetarian content even when no
+// ingredient list is available (title-only external candidates). Applied as an
+// extra check under Vegan and Vegetarian so obvious non-compliant recipe names
+// are blocked before scoring rather than slipping through as ingredient-less
+// unknowns. "ragu" also catches "ragù" via diacritic normalisation.
+const DISH_NAME_MEAT_OR_SEAFOOD = [
+  "carbonara",  // implies bacon/pancetta + eggs + parmesan
+  "ragu",       // Italian meat sauce (normalisation catches ragù)
+  "bolognese",  // implies ground beef/pork
+  "birria",     // implies braised beef or goat
+  "ossobuco",   // implies braised veal shank
 ];
 
 const HIGH_CARB_KEYWORDS = [
@@ -134,19 +148,31 @@ const FLEXITARIAN_PENALTY = [
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+// Strips diacritical marks so keywords match regardless of accent variant.
+// "ragù" → "ragu", "crème fraîche" → "creme fraiche", etc.
+// Applied to both the search text and each keyword so both sides normalise
+// consistently — no separate accent-stripped duplicate entries are required.
+function normalizeForSearch(text: string): string {
+  return text.normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+
 function containsAny(text: string, keywords: string[]): boolean {
+  const normText = normalizeForSearch(text);
   for (const kw of keywords) {
-    const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    if (new RegExp(`\\b${escaped}\\b`).test(text)) return true;
+    const normKw = normalizeForSearch(kw);
+    const escaped = normKw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp(`\\b${escaped}\\b`).test(normText)) return true;
   }
   return false;
 }
 
 function countMatches(text: string, keywords: string[]): number {
+  const normText = normalizeForSearch(text);
   let count = 0;
   for (const kw of keywords) {
-    const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    if (new RegExp(`\\b${escaped}\\b`).test(text)) count++;
+    const normKw = normalizeForSearch(kw);
+    const escaped = normKw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    if (new RegExp(`\\b${escaped}\\b`).test(normText)) count++;
   }
   return count;
 }
@@ -182,14 +208,16 @@ export function shouldExcludeRecipe(
         containsAny(lower, MEAT_KEYWORDS) ||
         containsAny(lower, FISH_SEAFOOD_KEYWORDS) ||
         containsAny(lower, DAIRY_KEYWORDS) ||
-        containsAny(lower, ["egg", "eggs", "honey", "gelatin", "gelatine"])
+        containsAny(lower, ["egg", "eggs", "honey", "gelatin", "gelatine"]) ||
+        containsAny(lower, DISH_NAME_MEAT_OR_SEAFOOD)
       );
 
     case "Vegetarian":
       return (
         containsAny(lower, MEAT_KEYWORDS) ||
         containsAny(lower, FISH_SEAFOOD_KEYWORDS) ||
-        containsAny(lower, ["gelatin", "gelatine", "lard", "suet", "rennet"])
+        containsAny(lower, ["gelatin", "gelatine", "lard", "suet", "rennet"]) ||
+        containsAny(lower, DISH_NAME_MEAT_OR_SEAFOOD)
       );
 
     case "Keto":

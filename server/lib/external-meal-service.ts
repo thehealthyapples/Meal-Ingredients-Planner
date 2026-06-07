@@ -262,9 +262,13 @@ export async function searchBBCGoodFoodEnhanced(filters: {
     queries.push("healthy dinner", "quick lunch", "easy breakfast");
   }
 
+  const prefixedQueries = filters.dietaryPrefix
+    ? queries.map(q => `${filters.dietaryPrefix} ${q}`)
+    : queries;
+
   const seen = new Set<string>();
 
-  for (const query of queries.slice(0, 3)) {
+  for (const query of prefixedQueries.slice(0, 3)) {
     try {
       const response = await fetch(
         `https://www.bbcgoodfood.com/search?q=${encodeURIComponent(query)}`,
