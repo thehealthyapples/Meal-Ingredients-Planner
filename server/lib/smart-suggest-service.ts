@@ -372,6 +372,19 @@ export async function generateSmartSuggestion(
       if (DEBUG) console.debug(`[SmartSuggest] Hard-excluded user meal (household restriction): "${candidate.name}"`);
       continue;
     }
+    // Ingredient gate for restricted profiles: when a dietary pattern, dietary
+    // restriction, or household hard restriction is active, a user meal with no
+    // ingredients cannot be verified as compliant — exclude it.  This mirrors the
+    // external-candidate gate added in commit 0644578.  Unrestricted profiles are
+    // unaffected so existing behaviour is preserved for those users.
+    const profileRestricted =
+      (dietPattern !== null && dietPattern !== "") ||
+      dietRestrictions.length > 0 ||
+      hardExcluded.length > 0;
+    if (profileRestricted && meal.ingredients.length === 0) {
+      console.debug(`[SmartSuggest] Excluded user meal (no ingredients, restricted profile): "${meal.name}"`);
+      continue;
+    }
     // Profile dietary hard filter — shared dietRules engine (single source of truth).
     if (isDietExcluded(candidate)) {
       if (DEBUG) console.debug(`[SmartSuggest] Diet-excluded user meal (${dietPattern ?? dietRestrictions.join('/')}): "${candidate.name}"`);

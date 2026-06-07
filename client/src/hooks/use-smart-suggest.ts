@@ -7,24 +7,42 @@ import type { FullWeek, SmartSuggestEntry, SmartSuggestResult } from "@/lib/plan
 
 // ── Session persistence (mirrors scan-review pattern) ────────────────────────
 const SMART_SESSION_KEY = "planner-smart-review-session";
+// Increment when the session shape changes in a way that makes old data unsafe
+// to restore (e.g. missing ingredient-verification, pre-dietary-gate plans).
+// Sessions below this version are rejected and cleared on load.
+const SMART_SESSION_VERSION = 2;
 
 interface SmartSessionData {
+  version: number;
   smartResult: SmartSuggestResult;
   lockedEntries: string[];
 }
 
-function saveSmartSession(data: SmartSessionData): void {
-  try { sessionStorage.setItem(SMART_SESSION_KEY, JSON.stringify(data)); } catch {}
+function saveSmartSession(data: Omit<SmartSessionData, 'version'>): void {
+  try {
+    sessionStorage.setItem(SMART_SESSION_KEY, JSON.stringify({ ...data, version: SMART_SESSION_VERSION }));
+  } catch {}
 }
 
-function loadSmartSession(): SmartSessionData | null {
+function loadSmartSession(): Omit<SmartSessionData, 'version'> | null {
   try {
     const raw = sessionStorage.getItem(SMART_SESSION_KEY);
     if (!raw) return null;
-    const data = JSON.parse(raw) as SmartSessionData;
-    if (!data?.smartResult?.entries) return null;
-    return data;
-  } catch { return null; }
+    const data = JSON.parse(raw) as Partial<SmartSessionData>;
+    // Reject and clear sessions that predate ingredient verification or are malformed.
+    if (!data.version || data.version < SMART_SESSION_VERSION) {
+      sessionStorage.removeItem(SMART_SESSION_KEY);
+      return null;
+    }
+    if (!Array.isArray(data.smartResult?.entries)) {
+      sessionStorage.removeItem(SMART_SESSION_KEY);
+      return null;
+    }
+    return { smartResult: data.smartResult, lockedEntries: data.lockedEntries ?? [] };
+  } catch {
+    try { sessionStorage.removeItem(SMART_SESSION_KEY); } catch {}
+    return null;
+  }
 }
 
 function clearSmartSession(): void {
