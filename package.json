@@ -30,6 +30,7 @@
     "test:restriction-resolver": "tsx server/tests/test-restriction-resolver.ts",
     "test:substitution-rules": "tsx server/tests/test-substitution-rules.ts",
     "test:restriction-safety": "tsx server/tests/test-restriction-safety.ts",
+    "test:ingredient-verification": "tsx server/tests/test-ingredient-verification.ts",
     "eval:vision": "tsx server/scripts/eval-vision-comparison.ts"
   },
   "dependencies": {

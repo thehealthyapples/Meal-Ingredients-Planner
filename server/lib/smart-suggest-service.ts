@@ -1,5 +1,5 @@
 import type { Meal, UserPreferences } from "@shared/schema";
-import { fetchExternalCandidates, type ExternalMealCandidate } from "./external-meal-service";
+import { fetchExternalCandidates, enrichExternalCandidates, type ExternalMealCandidate } from "./external-meal-service";
 import { scoreMeal, convertMealToCandidate, convertExternalToCandidate, type ScoredCandidate } from "./meal-scoring-service";
 import { generateMealExplanation, type MealExplanation } from "./explainability-service";
 import { resolveActiveRestrictions, resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
@@ -293,11 +293,17 @@ export async function generateSmartSuggestion(
     console.log(`[SmartSuggest] Dietary external search — prefix: "${dietaryPrefix}" (dietTypes: [${prefs?.dietTypes.join(', ')}])`);
   }
 
-  const externalCandidates = await fetchExternalCandidates({
+  const rawExternalCandidates = await fetchExternalCandidates({
     cuisine: settings.preferredCuisine,
     query: settings.preferredCuisine || undefined,
     dietaryPrefix,
   });
+
+  // Enrich each external candidate with real ingredients from its detail page.
+  // Sources that already return ingredients (TheMealDB) pass through immediately.
+  // Candidates where ingredient extraction fails are excluded — the planner must
+  // not recommend meals whose dietary suitability cannot be verified from ingredients.
+  const externalCandidates = await enrichExternalCandidates(rawExternalCandidates);
 
   const plannerEnableDrinks = settings.plannerEnableDrinks ?? false;
   const hardExcluded = settings.hardExcludedIngredients ?? [];
@@ -395,7 +401,17 @@ export async function generateSmartSuggestion(
       if (DEBUG) console.debug(`[SmartSuggest] Hard-excluded external meal (household restriction): "${candidate.name}"`);
       continue;
     }
+    // Ingredient presence gate — every recommended external meal must have verified
+    // ingredients. enrichExternalCandidates() already excluded failed extractions;
+    // this is a defense-in-depth check that guarantees the dietary filter below runs
+    // on real ingredient data, not guessed from the title alone.
+    if (ext.ingredients.length === 0) {
+      console.debug(`[SmartSuggest] Excluded external meal (no ingredients after detail fetch): "${ext.name}"`);
+      continue;
+    }
     // Profile dietary hard filter — shared dietRules engine (single source of truth).
+    // At this point ingredients are guaranteed to be present, so the filter operates
+    // on actual ingredient data rather than falling back to title-only heuristics.
     if (isDietExcluded(candidate)) {
       if (DEBUG) console.debug(`[SmartSuggest] Diet-excluded external meal (${dietPattern ?? dietRestrictions.join('/')}): "${candidate.name}"`);
       continue;

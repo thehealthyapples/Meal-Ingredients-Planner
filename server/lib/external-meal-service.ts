@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { scrapeRecipeFromUrl } from "./recipe-scraper";
 
 export interface ExternalMealCandidate {
   externalId: string;
@@ -757,4 +758,62 @@ export async function fetchExternalCandidates(filters: {
   }
 
   return combined;
+}
+
+// ─── Ingredient Enrichment ────────────────────────────────────────────────────
+
+/**
+ * Fetches and extracts ingredients for a single external candidate.
+ *
+ * - Candidates that already have ingredients (TheMealDB, Edamam) return immediately.
+ * - Candidates with a sourceUrl have their detail page fetched and parsed for
+ *   JSON-LD schema.org/Recipe data first, with a DOM fallback.
+ * - Returns null when ingredients cannot be obtained — the caller must exclude
+ *   the candidate from Smart Planner recommendation.
+ *
+ * Timeout is shorter than the import path (8 s vs 15 s) to limit planner latency.
+ */
+export async function enrichCandidateIngredients(
+  candidate: ExternalMealCandidate,
+): Promise<ExternalMealCandidate | null> {
+  if (candidate.ingredients.length > 0) return candidate;
+  if (!candidate.sourceUrl) return null;
+
+  const scraped = await scrapeRecipeFromUrl(candidate.sourceUrl, 8000);
+  if (!scraped || scraped.ingredients.length === 0) return null;
+
+  return {
+    ...candidate,
+    ingredients: scraped.ingredients,
+    instructions: scraped.instructions.length > 0 ? scraped.instructions : candidate.instructions,
+  };
+}
+
+/**
+ * Enriches a batch of external candidates with ingredient data, fetching detail
+ * pages in parallel (capped at `concurrency` simultaneous requests).
+ *
+ * Candidates where ingredient extraction fails are dropped from the result —
+ * they are ineligible for Smart Planner recommendation per the unknown-ingredient
+ * policy.
+ */
+export async function enrichExternalCandidates(
+  candidates: ExternalMealCandidate[],
+  concurrency = 5,
+): Promise<ExternalMealCandidate[]> {
+  if (candidates.length === 0) return [];
+
+  const enriched: ExternalMealCandidate[] = [];
+  for (let i = 0; i < candidates.length; i += concurrency) {
+    const batch = candidates.slice(i, i + concurrency);
+    const results = await Promise.all(batch.map(c => enrichCandidateIngredients(c)));
+    for (const r of results) {
+      if (r !== null) enriched.push(r);
+    }
+  }
+
+  console.log(
+    `[ExternalSearch] Ingredient enrichment: ${enriched.length}/${candidates.length} candidates retained`,
+  );
+  return enriched;
 }
