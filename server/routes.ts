@@ -4865,6 +4865,11 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         meal.mealSourceType !== "openfoodfacts"
       );
 
+      // Exclude component recipes (sauces, bases, condiments, stuffings) — these are
+      // cooking sub-components, not standalone meals. kind='component' is the shared
+      // classification used by the UI's meal search filter and this pool gate.
+      userMeals = userMeals.filter(meal => meal.kind !== "component");
+
       // Premium/subscriber-only content gate: remove saved meals whose name or
       // instructions contain paywall notices (e.g. BBC GoodFood premium recipes
       // seeded or imported before the import-path check existed). These meals
