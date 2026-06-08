@@ -165,6 +165,34 @@ export function candidateIsProduct(mealSourceType: string): boolean {
   return mealSourceType === "openfoodfacts";
 }
 
+// Premium / subscriber-only content markers. BBC GoodFood embeds the notice in
+// the recipe title — the name field is the primary (and historically only)
+// location. The full set below covers all observed and anticipated variations.
+const PREMIUM_MARKERS = [
+  "premium piece of content",
+  "available to subscribed users",
+  "subscribed users",
+  "subscriber-only",
+  "subscribers only",
+  "premium content",
+  "subscription required",
+];
+
+// Exported for unit testing. Returns true when any text field of a saved meal
+// contains a premium/subscriber-only marker, indicating inaccessible gated
+// content that must never be presented as a usable Smart Planner suggestion.
+export function candidateIsPremium(meal: {
+  name: string;
+  instructions?: string[] | null;
+}): boolean {
+  const nameLower = meal.name.toLowerCase();
+  const instructionsText = (meal.instructions ?? []).join("\0").toLowerCase();
+  for (const marker of PREMIUM_MARKERS) {
+    if (nameLower.includes(marker) || instructionsText.includes(marker)) return true;
+  }
+  return false;
+}
+
 // Exported for unit testing of the hard restriction filter in isolation.
 // Builds a minimal candidate from a name + ingredient list and resolves the
 // active canonical restrictions internally, so tests don't need the full pipeline.
@@ -329,6 +357,14 @@ export async function generateSmartSuggestion(
     // have no ingredients and no meal intent — they must never become recommendations.
     if (candidateIsProduct(meal.mealSourceType)) {
       console.debug(`[SmartSuggest] Excluded OpenFoodFacts product: "${meal.name}"`);
+      continue;
+    }
+    // Defense in depth: exclude premium/subscriber-only meals even if they
+    // bypassed the route-level gate (e.g. stale seeded data). BBC GoodFood
+    // embeds the paywall notice in the recipe title; check both name and
+    // instructions to cover all observed locations.
+    if (candidateIsPremium(meal)) {
+      console.debug(`[SmartSuggest] Excluded premium/subscriber-only meal: "${meal.name}"`);
       continue;
     }
     // Safety gate for historical product records saved through planner-side flows

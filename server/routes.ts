@@ -2792,7 +2792,7 @@ export async function registerRoutes(
         const imageUrl = extractJsonLdImage(jsonLdRecipe) || $('meta[property="og:image"]').attr('content') || null;
         const nutrition = extractJsonLdNutrition(jsonLdRecipe.nutrition);
 
-        const importAllText = [...ingredients, ...finalInstructions].join("\0");
+        const importAllText = [title, ...ingredients, ...finalInstructions].join("\0");
         if (importAllText.includes(IMPORT_PREMIUM_MARKER)) {
           return res.status(403).json({ message: "This recipe is behind a paywall and cannot be imported." });
         }
@@ -2925,7 +2925,7 @@ export async function registerRoutes(
         }
       }
 
-      const fallbackAllText = [...ingredients, ...finalInstructions].join("\0");
+      const fallbackAllText = [title, ...ingredients, ...finalInstructions].join("\0");
       if (fallbackAllText.includes(IMPORT_PREMIUM_MARKER)) {
         return res.status(403).json({ message: "This recipe is behind a paywall and cannot be imported." });
       }
@@ -4864,6 +4864,28 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         meal.mealSourceType !== "planner-placeholder" &&
         meal.mealSourceType !== "openfoodfacts"
       );
+
+      // Premium/subscriber-only content gate: remove saved meals whose name or
+      // instructions contain paywall notices (e.g. BBC GoodFood premium recipes
+      // seeded or imported before the import-path check existed). These meals
+      // cannot be cooked or verified by the user and must not appear as
+      // Smart Planner suggestions.
+      const SMART_SUGGEST_PREMIUM_MARKERS = [
+        "premium piece of content",
+        "available to subscribed users",
+        "subscribed users",
+        "subscriber-only",
+        "subscribers only",
+        "premium content",
+        "subscription required",
+      ];
+      userMeals = userMeals.filter(meal => {
+        const nameLower = meal.name.toLowerCase();
+        const instructionsText = (meal.instructions ?? []).join("\0").toLowerCase();
+        return !SMART_SUGGEST_PREMIUM_MARKERS.some(
+          m => nameLower.includes(m) || instructionsText.includes(m)
+        );
+      });
 
       // Load household eaters and merge their hard restrictions into the candidate pool filter.
       // Hard restrictions (severe allergies / intolerances) are always applied regardless of diet.
