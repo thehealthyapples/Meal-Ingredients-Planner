@@ -292,6 +292,19 @@ function getSafeFallbackCandidates(
   });
 }
 
+// Tier-3 repeat fallback: slot-compliant candidates regardless of usedIds.
+// Called only after Tier-1 (unused slot-fit) and Tier-2 (unused safe fallback) are
+// both exhausted. All dietary, hard-exclusion, premium, and component gates are
+// enforced at pool-construction time, so every candidate in allCandidates is already
+// fully compliant — this function only relaxes the "not yet used" constraint.
+// Breakfast boundary is strict: only breakfast/smoothie returned for breakfast slot.
+function getRepeatCandidates(
+  allCandidates: ScoredCandidate[],
+  slot: string,
+): ScoredCandidate[] {
+  return allCandidates.filter(c => getCandidateSlotFit(c, slot));
+}
+
 // P0: removed universal `|| slot === "dinner"` bypass — dinner now filters via SLOT_CATEGORY_MAPPING.
 function getCandidateSlotFit(candidate: ScoredCandidate, slot: string): boolean {
   if (!candidate.category) return slot === "dinner";
@@ -533,14 +546,26 @@ export async function generateSmartSuggestion(
         return getCandidateSlotFit(c, slot);
       });
 
-      // P0: safe fallback — category-adjacent meals only, never promotes dinner to breakfast.
+      // Tier 2: safe fallback — category-adjacent unused meals, never promotes dinner to breakfast.
       if (slotCandidates.length === 0) {
         slotCandidates = getSafeFallbackCandidates(allCandidates, slot, usedIds);
         if (slotCandidates.length > 0) {
-          console.debug(`[SmartSuggest] Using safe fallback candidates for slot "${slot}" (${slotCandidates.length} options)`);
+          console.debug(`[SmartSuggest] Tier-2 fallback for slot "${slot}" (${slotCandidates.length} unused category-adjacent options)`);
+        }
+      }
+
+      // Tier 3: controlled repeat — allow reuse of any compliant slot-appropriate meal
+      // when the unique pool is exhausted. All safety gates (diet, hard exclusions, premium,
+      // component) remain active — they were enforced at pool-construction time.
+      // A repeated compliant meal is always preferable to an empty slot.
+      // Breakfast boundary is maintained: only breakfast/smoothie meals reused in breakfast.
+      if (slotCandidates.length === 0) {
+        slotCandidates = getRepeatCandidates(allCandidates, slot);
+        if (slotCandidates.length > 0) {
+          console.debug(`[SmartSuggest] Tier-3 repeat fallback for slot "${slot}" — ${slotCandidates.length} compliant meals available for reuse`);
         } else {
-          // No safe fallback available — skip this slot rather than suggest an inappropriate meal.
-          console.debug(`[SmartSuggest] No suitable candidates for slot "${slot}" — skipping (thin library)`);
+          // Genuinely zero compliant meals for this slot — leave empty.
+          console.debug(`[SmartSuggest] No suitable candidates for slot "${slot}" — 0 compliant meals exist`);
         }
       }
 
