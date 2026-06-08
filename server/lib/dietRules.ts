@@ -213,6 +213,31 @@ const FLEXITARIAN_PENALTY = [
   "red meat", "beef", "lamb", "pork", "steak", "brisket", "mince",
 ];
 
+// ─── Plant-milk whitelist ─────────────────────────────────────────────────────
+// Plant-based milk alternatives are vegan and dairy-free by definition.
+// The standalone word "milk" they contain would otherwise match DAIRY_KEYWORDS
+// via the word-boundary regex. These compound phrases are stripped from the text
+// before dairy keyword scanning so the residual "milk" does not false-positive.
+//
+// Scope: applied only when checking dairy compliance (Vegan case, Dairy-Free
+// restriction). Not applied to Paleo, where all milks (including coconut) are
+// excluded by that diet's own rules.
+const PLANT_MILK_PHRASES = [
+  "almond milk", "oat milk", "soy milk", "soya milk", "coconut milk",
+  "plant milk", "plant-based milk", "rice milk", "hemp milk", "cashew milk",
+  "hazelnut milk", "pea milk", "macadamia milk", "oat mylk",
+];
+
+// Replaces all PLANT_MILK_PHRASES with a space so surrounding keyword boundaries
+// are preserved for other checks. "coconut milk" → "coconut " (not "coconutmilk").
+function removePlantMilkPhrases(text: string): string {
+  let result = text;
+  for (const phrase of PLANT_MILK_PHRASES) {
+    result = result.split(phrase).join(" ");
+  }
+  return result;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 // Strips diacritical marks so keywords match regardless of accent variant.
@@ -262,22 +287,29 @@ export function shouldExcludeRecipe(
     return true;
   }
 
-  if (dietRestrictions.includes("Dairy-Free") && containsAny(lower, DAIRY_KEYWORDS)) {
-    return true;
+  if (dietRestrictions.includes("Dairy-Free")) {
+    // Strip plant-based milk phrases before dairy scan — almond/oat/soy/coconut
+    // milk are dairy-free by definition and must not trigger this restriction.
+    if (containsAny(removePlantMilkPhrases(lower), DAIRY_KEYWORDS)) return true;
   }
 
   // ── Pattern-based hard filters ────────────────────────────────────────────
   if (!dietPattern) return false;
 
   switch (dietPattern) {
-    case "Vegan":
+    case "Vegan": {
+      // Strip plant-based milk phrases before dairy scan — almond/oat/soy/coconut
+      // milk are vegan by definition. The word "milk" they contain must not match
+      // DAIRY_KEYWORDS. All other exclusion checks run on the unmodified text.
+      const dairyCheckText = removePlantMilkPhrases(lower);
       return (
         containsAny(lower, MEAT_KEYWORDS) ||
         containsAny(lower, FISH_SEAFOOD_KEYWORDS) ||
-        containsAny(lower, DAIRY_KEYWORDS) ||
+        containsAny(dairyCheckText, DAIRY_KEYWORDS) ||
         containsAny(lower, ["egg", "eggs", "honey", "gelatin", "gelatine"]) ||
         containsAny(lower, DISH_NAME_MEAT_OR_SEAFOOD)
       );
+    }
 
     case "Vegetarian":
       return (

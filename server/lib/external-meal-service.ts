@@ -155,7 +155,20 @@ function inferCategoryFromCuisineAndName(name: string, category: string | null):
     if (DRINK_CATEGORY_TERMS.some(t => lc.includes(t))) return null;
   }
 
-  if (lower.includes("breakfast") || lower.includes("pancake") || lower.includes("omelette") || lower.includes("porridge") || lower.includes("granola") || lower.includes("smoothie")) {
+  if (
+    lower.includes("breakfast") ||
+    lower.includes("pancake") ||
+    lower.includes("omelette") ||
+    lower.includes("porridge") ||
+    lower.includes("granola") ||
+    lower.includes("smoothie") ||
+    // Extended breakfast terms — common breakfast dishes not previously classified:
+    lower.includes("frittata") ||         // Italian baked egg dish
+    lower.includes("shakshuka") ||        // Eggs poached in spiced tomato sauce
+    lower.includes("scrambled") ||        // Scrambled eggs variants
+    lower.includes("overnight oats") ||   // Cold-prepared oat breakfast
+    lower.includes("acai")                // Acai bowl / breakfast bowl
+  ) {
     return "breakfast";
   }
   if (lower.includes("salad") || lower.includes("sandwich") || lower.includes("wrap") || lower.includes("soup")) {
@@ -194,9 +207,21 @@ export async function searchMealDB(filters: {
       rawQueries.push("chicken", "pasta", "salad", "curry", "soup", "fish", "steak", "vegetable");
     }
 
-    const queries = filters.dietaryPrefix
-      ? rawQueries.slice(0, 5).map(q => `${filters.dietaryPrefix} ${q}`)
+    // When a dietary prefix is active, also queue breakfast concept queries WITHOUT
+    // the prefix. TheMealDB is a name-indexed database with no diet-labelled recipes
+    // ("keto omelette" returns 0 results), but "omelette" returns real recipes that
+    // dietRules then validates as compliant post-enrichment. Concept queries run
+    // alongside the prefixed queries in the same iteration — deduplication in
+    // fetchExternalCandidates removes any overlaps before enrichment.
+    const BREAKFAST_CONCEPT_QUERIES = ["omelette", "frittata", "smoothie", "porridge", "shakshuka"];
+
+    const labelledQueries = filters.dietaryPrefix
+      ? rawQueries.slice(0, 3).map(q => `${filters.dietaryPrefix} ${q}`)
       : rawQueries.slice(0, 5);
+
+    const queries = filters.dietaryPrefix
+      ? [...labelledQueries, ...BREAKFAST_CONCEPT_QUERIES]
+      : labelledQueries;
 
     const seen = new Set<string>();
     const searchTerms = queries;
@@ -348,8 +373,14 @@ function buildSearchQueries(filters: { query?: string; cuisine?: string; dietary
     queries.push("healthy dinner", "quick lunch", "easy breakfast");
   }
   const terms = queries.slice(0, 3);
+
   if (filters.dietaryPrefix) {
-    return terms.map(q => `${filters.dietaryPrefix} ${q}`);
+    const labelledTerms = terms.map(q => `${filters.dietaryPrefix} ${q}`);
+    // Supplement labelled queries with breakfast concept terms. Scraping sites
+    // (BBC GoodFood, AllRecipes) carry these as real recipes and return compliant
+    // content — dietRules validates compliance after ingredient enrichment.
+    const conceptTerms = ["omelette", "overnight oats", "smoothie bowl"];
+    return [...labelledTerms, ...conceptTerms].slice(0, 5);
   }
   return terms;
 }
