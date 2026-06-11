@@ -13,10 +13,12 @@
 
 import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, Check, X, Loader2, Leaf, HelpCircle } from "lucide-react";
+import { ChevronDown, ChevronUp, Check, X, Loader2, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import type { MealUpliftApplication } from "@shared/schema";
+import { normaliseForReuse, getReuseLabel } from "@/lib/ingredient-reuse";
+import { getNutritionBenefit } from "@/lib/nutrition-benefit-library";
 
 // ─── Client-side type mirrors (server/lib/uplift-types.ts) ───────────────────
 
@@ -59,6 +61,10 @@ interface MealUpliftPanelProps {
   plannerEntryId: number;
   mealSlot?: string;
   upliftMatches: UpliftMatchResult[];
+  /** Name of the meal being enhanced — used to filter self-references in reuse labels */
+  currentMealName?: string;
+  /** Ingredient → meal names map for the active planner week, built by weekly-planner-page */
+  weeklyReuseMap?: Map<string, string[]>;
   /** Called when a system meal was forked — provides the new mealId to parent */
   onMealForked?: (newMealId: number) => void;
   /** Called when uplift is successfully accepted — provides effective mealId */
@@ -73,21 +79,43 @@ export function MealUpliftPanel({
   mealId,
   plannerEntryId,
   upliftMatches,
+  currentMealName,
+  weeklyReuseMap,
   onMealForked,
   onUpliftAccepted,
   onUpliftRemoved,
 }: MealUpliftPanelProps) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [expandedWhy, setExpandedWhy] = useState<string | null>(null);
+  const [expandedIngredient, setExpandedIngredient] = useState<string | null>(null);
   const [effectiveMealId, setEffectiveMealId] = useState(mealId);
   const [justAdded, setJustAdded] = useState<Set<string>>(new Set());
 
-  // Flatten suggestions across all matches, keeping max 2
+  // Flatten suggestions across all matches
   const allSuggestions: FlatSuggestion[] = upliftMatches.flatMap((m) =>
     m.suggestions.map((s) => ({ ...s, ruleId: m.ruleId, ruleName: m.ruleName }))
   );
-  const visibleSuggestions = allSuggestions.slice(0, 2);
+
+  // Reuse-aware ranking:
+  //   P1 (reuse) — already used elsewhere this week, max 1 slot
+  //   P2 (discovery) — not yet used this week, fills remaining slots
+  // Priority order: Safety → Meal Fit (already enforced by uplift engine) →
+  //   Weekly Reuse → Nutrition Value → Discovery / Variety
+  const reuseSuggestions = weeklyReuseMap && currentMealName
+    ? allSuggestions.filter((s) => {
+        const mealNames = weeklyReuseMap.get(normaliseForReuse(s.ingredient))?.filter(n => n !== currentMealName);
+        return !!mealNames?.length;
+      })
+    : [];
+  const discoverySuggestions = weeklyReuseMap && currentMealName
+    ? allSuggestions.filter((s) => {
+        const mealNames = weeklyReuseMap.get(normaliseForReuse(s.ingredient))?.filter(n => n !== currentMealName);
+        return !mealNames?.length;
+      })
+    : allSuggestions;
+  const selectedReuse = reuseSuggestions.slice(0, 1);
+  const selectedDiscovery = discoverySuggestions.slice(0, 5 - selectedReuse.length);
+  const visibleSuggestions = [...selectedReuse, ...selectedDiscovery];
 
   // Load provenance (accepted uplift applications for this meal)
   const { data: applications = [] } = useQuery<MealUpliftApplication[]>({
@@ -233,60 +261,41 @@ export function MealUpliftPanel({
       {/* Expanded content */}
       {open && (
         <div className="divide-y divide-border/40">
-          {/* Pending suggestions */}
+          {/* Pending suggestions — accordion: one row expanded at a time */}
           {pendingSuggestions.map((suggestion) => {
+            const isExpanded = expandedIngredient === suggestion.ingredient;
             const isAdding =
               acceptMutation.isPending &&
               acceptMutation.variables?.ingredient === suggestion.ingredient;
             const wasJustAdded = justAdded.has(suggestion.ingredient);
+            const benefit = getNutritionBenefit(suggestion.ingredient);
 
             return (
               <div
                 key={suggestion.ingredient}
-                className="px-3 py-2.5 space-y-1"
                 data-testid={`uplift-suggestion-${suggestion.ingredient}`}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground leading-snug">
-                      {suggestion.action === "swap" ? "Swap to" : "Add"}{" "}
-                      {suggestion.ingredient}
-                      {suggestion.quantity && (
-                        <span className="text-muted-foreground font-normal">
-                          {" "}
-                          — {suggestion.quantity}
-                        </span>
-                      )}
-                    </p>
-                    <p className="text-xs text-muted-foreground leading-snug mt-0.5">
-                      {suggestion.why}
-                    </p>
-                    {expandedWhy === suggestion.ingredient && (
-                      <p className="text-xs text-muted-foreground/70 mt-1 italic leading-snug">
-                        This adds nutritional variety to this meal in a simple,
-                        practical way.
-                      </p>
+                {/* Collapsed row — always visible */}
+                <button
+                  className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-muted/20 transition-colors"
+                  onClick={() =>
+                    setExpandedIngredient((prev) =>
+                      prev === suggestion.ingredient ? null : suggestion.ingredient
+                    )
+                  }
+                  aria-expanded={isExpanded}
+                >
+                  <span className="text-sm font-medium text-foreground leading-snug">
+                    {suggestion.action === "swap" ? "Swap to " : ""}
+                    {suggestion.ingredient}
+                    {suggestion.quantity && (
+                      <span className="text-muted-foreground font-normal">
+                        {" "}— {suggestion.quantity}
+                      </span>
                     )}
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      className="text-muted-foreground/50 hover:text-muted-foreground transition-colors p-0.5 rounded"
-                      onClick={() =>
-                        setExpandedWhy((prev) =>
-                          prev === suggestion.ingredient
-                            ? null
-                            : suggestion.ingredient
-                        )
-                      }
-                      aria-label="Why?"
-                      title="Why this suggestion?"
-                      data-testid={`uplift-why-${suggestion.ingredient}`}
-                    >
-                      <HelpCircle className="h-3 w-3" />
-                    </button>
-
-                    {wasJustAdded ? (
+                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {wasJustAdded && (
                       <div
                         className="flex items-center gap-1 text-xs text-emerald-600 font-medium"
                         data-testid={`uplift-added-${suggestion.ingredient}`}
@@ -294,7 +303,42 @@ export function MealUpliftPanel({
                         <Check className="h-3.5 w-3.5" />
                         Added
                       </div>
+                    )}
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 text-muted-foreground transition-transform${isExpanded ? " rotate-180" : ""}`}
+                    />
+                  </div>
+                </button>
+
+                {/* Expanded content */}
+                {isExpanded && (
+                  <div className="px-3 pb-3 space-y-2 border-t border-border/30">
+                    {benefit ? (
+                      <>
+                        <p className="text-[10px] text-emerald-700/60 dark:text-emerald-400/60 leading-snug mt-1.5 font-medium tracking-wide">
+                          {benefit.keyNutrients.join(" · ")}
+                        </p>
+                        <p className="text-xs text-muted-foreground leading-snug">
+                          {benefit.summary}
+                        </p>
+                      </>
                     ) : (
+                      <p className="text-xs text-muted-foreground leading-snug mt-1.5">
+                        {suggestion.why}
+                      </p>
+                    )}
+
+                    {weeklyReuseMap && currentMealName && (() => {
+                      const label = getReuseLabel(suggestion.ingredient, weeklyReuseMap, currentMealName);
+                      if (!label) return null;
+                      return (
+                        <p className="text-[10px] text-emerald-600/55 dark:text-emerald-400/55 leading-snug">
+                          Already used this week: {label}
+                        </p>
+                      );
+                    })()}
+
+                    {!wasJustAdded && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -310,7 +354,7 @@ export function MealUpliftPanel({
                       </Button>
                     )}
                   </div>
-                </div>
+                )}
               </div>
             );
           })}
