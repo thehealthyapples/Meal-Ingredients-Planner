@@ -5,6 +5,7 @@ import { generateMealExplanation, type MealExplanation } from "./explainability-
 import { resolveActiveRestrictions, resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
 import type { RestrictionDefinition } from "@shared/restrictions/restriction-types.js";
 import { shouldExcludeRecipe } from "./dietRules";
+import { matchMealsForHousehold, type MealMatch } from "./household-meal-matcher";
 
 export interface LockedEntry {
   dayOfWeek: number;
@@ -37,6 +38,11 @@ export interface SmartSuggestSettings {
   // A Vegan/Vegetarian profile, for example, excludes meat/fish/etc. before scoring.
   dietPattern?: string | null;
   dietRestrictions?: string[];
+  // Tier-4 meal shell recovery — the generating user's id (required for the
+  // household meal matcher) and the optional planner week id so weekly eater
+  // diet overrides are honoured. When userId is absent Tier-4 is skipped.
+  userId?: number;
+  weekId?: number;
 }
 
 export interface SmartSuggestEntry {
@@ -312,6 +318,80 @@ function getCandidateSlotFit(candidate: ScoredCandidate, slot: string): boolean 
   return allowed.includes(candidate.category.toLowerCase());
 }
 
+// Tier-4 meal shell recovery: pick the highest-scoring household shell match that
+// fits the slot and can be assembled into a fully compliant candidate. Matches
+// arrive pre-sorted by the matcher's own fitScore (scoring unchanged here). The
+// matcher scores but never hard-filters, so this layer enforces the planner's
+// hard gates before a shell may fill a slot:
+//   1. slot fit via SLOT_CATEGORY_MAPPING — same boundary as Tiers 1–3;
+//   2. full member diet compatibility (compatibility === 1 ⇔ zero diet conflicts
+//      across household eaters, including weekly overrides the matcher applied);
+//   3. hard restrictions + profile diet pattern applied per slot ingredient —
+//      dropping a non-compliant slot option is the shell architecture's documented
+//      adaptation mechanism (the matcher's "remove X" member changes);
+//   4. the assembled candidate must pass the same whole-candidate gates the
+//      smart-apply compliance check runs, so a suggested shell can never be
+//      silently skipped at apply time.
+export function selectShellRecoveryCandidate(
+  matches: MealMatch[],
+  slot: string,
+  hardExcluded: string[],
+  dietPattern: string | null,
+  dietRestrictions: string[],
+): ScoredCandidate | null {
+  const allowedCategories = SLOT_CATEGORY_MAPPING[slot] || [slot];
+
+  for (const match of matches) {
+    const template = match.template;
+    const category = (template.category || "").toLowerCase();
+    if (!allowedCategories.includes(category)) continue;
+    if (match.scoreBreakdown.compatibility < 1) continue;
+
+    const allSlotIngredients = [
+      ...(template.sharedBaseComponents ?? []),
+      ...(template.proteinSlots ?? []),
+      ...(template.carbSlots ?? []),
+      ...(template.vegSlots ?? []),
+      ...(template.toppingSlots ?? []),
+      ...(template.sauceSlots ?? []),
+    ];
+    const compliantIngredients = allSlotIngredients.filter(ing =>
+      !candidateHardExcluded(ing, [ing], hardExcluded) &&
+      !candidateDietExcluded({ name: ing, ingredients: [ing] }, dietPattern, dietRestrictions)
+    );
+    if (compliantIngredients.length === 0) continue;
+
+    if (candidateHardExcluded(template.name, compliantIngredients, hardExcluded)) continue;
+    if (candidateDietExcluded(
+      { name: template.name, ingredients: compliantIngredients, category: template.category, cuisine: template.cuisine },
+      dietPattern,
+      dietRestrictions,
+    )) continue;
+
+    return {
+      id: `shell-${template.id}`,
+      name: template.name,
+      image: template.imageUrl ?? null,
+      ingredients: compliantIngredients,
+      instructions: template.description ? [template.description] : [],
+      source: "Meal Shell",
+      sourceUrl: null,
+      category,
+      cuisine: template.cuisine ?? null,
+      primaryProtein: null,
+      dietTypes: template.compatibleDiets ?? [],
+      estimatedCost: null,
+      estimatedUPFScore: null,
+      score: 0,
+      scoreBreakdown: { dietMatch: 0, goalAlignment: 0, budgetAlignment: 0, upfScore: 0, varietyScore: 0, overlapScore: 0, cuisineBonus: 0, simplicityBonus: 0 },
+      // A shell has no saved meal id — route the apply flow through the existing
+      // auto-import path, whose compliance gate re-checks the same rules above.
+      isExternal: true,
+    };
+  }
+  return null;
+}
+
 export async function generateSmartSuggestion(
   userMeals: Meal[],
   prefs: UserPreferences | null,
@@ -361,6 +441,22 @@ export async function generateSmartSuggestion(
   const dietRestrictions = settings.dietRestrictions ?? [];
   const isDietExcluded = (candidate: ScoredCandidate): boolean =>
     candidateDietExcluded(candidate, dietPattern, dietRestrictions);
+
+  // Tier-4 meal shell recovery: lazy, once-per-generation household matcher call.
+  // Only attempted when a slot exhausts Tiers 1–3. Any matcher failure degrades to
+  // the existing empty-slot behaviour — the planner must never crash on Tier-4.
+  let shellMatchesPromise: Promise<MealMatch[]> | null = null;
+  const getShellMatches = (): Promise<MealMatch[]> => {
+    if (!shellMatchesPromise) {
+      shellMatchesPromise = settings.userId == null
+        ? Promise.resolve([])
+        : matchMealsForHousehold(settings.userId, settings.weekId).catch(err => {
+            console.error("[SmartSuggest] Tier-4 shell matcher failed:", err);
+            return [] as MealMatch[];
+          });
+    }
+    return shellMatchesPromise;
+  };
 
   const allCandidates: ScoredCandidate[] = [];
 
@@ -564,8 +660,21 @@ export async function generateSmartSuggestion(
         if (slotCandidates.length > 0) {
           console.debug(`[SmartSuggest] Tier-3 repeat fallback for slot "${slot}" — ${slotCandidates.length} compliant meals available for reuse`);
         } else {
-          // Genuinely zero compliant meals for this slot — leave empty.
-          console.debug(`[SmartSuggest] No suitable candidates for slot "${slot}" — 0 compliant meals exist`);
+          // Tier 4: meal shell recovery — the candidate pool is genuinely exhausted
+          // for this slot, so ask the household meal matcher for a compliant shell
+          // template. Matcher scoring is used as-is; selectShellRecoveryCandidate
+          // only enforces the planner's hard gates (slot fit, member diet
+          // compatibility, hard restrictions, profile diet pattern).
+          const shellCandidate = selectShellRecoveryCandidate(
+            await getShellMatches(), slot, hardExcluded, dietPattern, dietRestrictions,
+          );
+          if (shellCandidate) {
+            slotCandidates = [shellCandidate];
+            console.debug(`[SmartSuggest] Tier-4 shell recovery for slot "${slot}" — template "${shellCandidate.name}"`);
+          } else {
+            // Genuinely zero compliant meals for this slot — leave empty.
+            console.debug(`[SmartSuggest] No suitable candidates for slot "${slot}" — 0 compliant meals exist`);
+          }
         }
       }
 

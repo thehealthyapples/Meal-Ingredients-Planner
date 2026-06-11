@@ -4825,6 +4825,11 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
         // dietRules engine inside the planner (same source of truth as recipe search).
         dietPattern: req.user?.dietPattern ?? null,
         dietRestrictions: req.user?.dietRestrictions?.filter(Boolean) ?? [],
+        // Tier-4 meal shell recovery — the matcher needs the generating user to
+        // resolve the household; weekId (when supplied) applies weekly eater
+        // diet overrides.
+        userId: req.user!.id,
+        weekId: body.weekId ? Number(body.weekId) : undefined,
       };
 
       let userMeals = await storage.getMeals(req.user!.id);
