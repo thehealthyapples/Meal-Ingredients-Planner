@@ -87,7 +87,7 @@ export function MealUpliftPanel({
 }: MealUpliftPanelProps) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [expandedIngredient, setExpandedIngredient] = useState<string | null>(null);
+  const [expandedIngredients, setExpandedIngredients] = useState<Set<string>>(new Set());
   const [effectiveMealId, setEffectiveMealId] = useState(mealId);
   const [justAdded, setJustAdded] = useState<Set<string>>(new Set());
 
@@ -261,9 +261,9 @@ export function MealUpliftPanel({
       {/* Expanded content */}
       {open && (
         <div className="divide-y divide-border/40">
-          {/* Pending suggestions — accordion: one row expanded at a time */}
+          {/* Pending suggestions — compact rows, multi-expand, Add always visible */}
           {pendingSuggestions.map((suggestion) => {
-            const isExpanded = expandedIngredient === suggestion.ingredient;
+            const isExpanded = expandedIngredients.has(suggestion.ingredient);
             const isAdding =
               acceptMutation.isPending &&
               acceptMutation.variables?.ingredient === suggestion.ingredient;
@@ -275,27 +275,36 @@ export function MealUpliftPanel({
                 key={suggestion.ingredient}
                 data-testid={`uplift-suggestion-${suggestion.ingredient}`}
               >
-                {/* Collapsed row — always visible */}
-                <button
-                  className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-muted/20 transition-colors"
-                  onClick={() =>
-                    setExpandedIngredient((prev) =>
-                      prev === suggestion.ingredient ? null : suggestion.ingredient
-                    )
-                  }
-                  aria-expanded={isExpanded}
-                >
-                  <span className="text-sm font-medium text-foreground leading-snug">
-                    {suggestion.action === "swap" ? "Swap to " : ""}
-                    {suggestion.ingredient}
-                    {suggestion.quantity && (
-                      <span className="text-muted-foreground font-normal">
-                        {" "}— {suggestion.quantity}
-                      </span>
-                    )}
-                  </span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {wasJustAdded && (
+                {/* Row header — expand toggle on left, Add action on right */}
+                <div className="flex items-center">
+                  <button
+                    className="flex-1 flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/20 transition-colors min-w-0"
+                    onClick={() =>
+                      setExpandedIngredients((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(suggestion.ingredient)) next.delete(suggestion.ingredient);
+                        else next.add(suggestion.ingredient);
+                        return next;
+                      })
+                    }
+                    aria-expanded={isExpanded}
+                  >
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 text-muted-foreground shrink-0 transition-transform${isExpanded ? " rotate-180" : ""}`}
+                    />
+                    <span className="text-sm font-medium text-foreground truncate">
+                      {suggestion.action === "swap" ? "Swap to " : ""}
+                      {suggestion.ingredient}
+                      {suggestion.quantity && (
+                        <span className="text-muted-foreground font-normal">
+                          {" "}— {suggestion.quantity}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+
+                  <div className="px-2 shrink-0">
+                    {wasJustAdded ? (
                       <div
                         className="flex items-center gap-1 text-xs text-emerald-600 font-medium"
                         data-testid={`uplift-added-${suggestion.ingredient}`}
@@ -303,16 +312,27 @@ export function MealUpliftPanel({
                         <Check className="h-3.5 w-3.5" />
                         Added
                       </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs px-2.5 border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-600/50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
+                        onClick={() => acceptMutation.mutate(suggestion)}
+                        disabled={isAdding || acceptMutation.isPending}
+                        data-testid={`uplift-add-${suggestion.ingredient}`}
+                      >
+                        {isAdding ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : null}
+                        Add
+                      </Button>
                     )}
-                    <ChevronDown
-                      className={`h-3.5 w-3.5 text-muted-foreground transition-transform${isExpanded ? " rotate-180" : ""}`}
-                    />
                   </div>
-                </button>
+                </div>
 
-                {/* Expanded content */}
+                {/* Expanded content — nutrients, summary, reuse label */}
                 {isExpanded && (
-                  <div className="px-3 pb-3 space-y-2 border-t border-border/30">
+                  <div className="px-3 pb-3 space-y-1.5 border-t border-border/30">
                     {benefit ? (
                       <>
                         <p className="text-[10px] text-emerald-700/60 dark:text-emerald-400/60 leading-snug mt-1.5 font-medium tracking-wide">
@@ -332,27 +352,11 @@ export function MealUpliftPanel({
                       const label = getReuseLabel(suggestion.ingredient, weeklyReuseMap, currentMealName);
                       if (!label) return null;
                       return (
-                        <p className="text-[10px] text-emerald-600/55 dark:text-emerald-400/55 leading-snug">
+                        <p className="text-[10px] text-emerald-600/55 dark:text-emerald-400/55 leading-snug mt-0.5">
                           Already used this week: {label}
                         </p>
                       );
                     })()}
-
-                    {!wasJustAdded && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs px-2.5 border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 hover:border-emerald-600/50 dark:text-emerald-400 dark:hover:bg-emerald-950/30"
-                        onClick={() => acceptMutation.mutate(suggestion)}
-                        disabled={isAdding || acceptMutation.isPending}
-                        data-testid={`uplift-add-${suggestion.ingredient}`}
-                      >
-                        {isAdding ? (
-                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                        ) : null}
-                        Add to meal
-                      </Button>
-                    )}
                   </div>
                 )}
               </div>

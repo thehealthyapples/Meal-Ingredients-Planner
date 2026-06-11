@@ -33,19 +33,25 @@ import { RecipeScanReview, type RecipeScanData } from "@/components/RecipeScanRe
 import { emitStageProposal } from "@/lib/planner-staging-bus";
 import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@/lib/nutrition-variety";
 import { getMealNutrients } from "@/lib/nutrition-insights";
-import { NutritionVarietyDots, PlannerVarietyLegend, MealVarietyNudge } from "@/components/nutrition-variety-chips";
+import { NutritionVarietyDots, PlannerVarietyLegend, WeeklyPlantDiversityCounter } from "@/components/nutrition-variety-chips";
+import { PlantDiversityExplorer } from "@/components/PlantDiversityExplorer";
+import type { WeekMealEntry } from "@/components/PlantDiversityExplorer";
+import { getMealBoosts } from "@/lib/nutrition-boosts";
 import { MealNutrientTags } from "@/components/nutrition-insights-panel";
 import { useUser } from "@/hooks/use-user";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import { MealUpliftPanel, UpliftCardIndicator } from "@/components/MealUpliftPanel";
 import type { UpliftMatchResult } from "@/components/MealUpliftPanel";
+import { buildWeeklyReuseMap, normaliseForReuse } from "@/lib/ingredient-reuse";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { api } from "@shared/routes";
 import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutrition, MealCategory, WeekEaterOverride } from "@shared/schema";
 import type { HouseholdEater, GuestEater } from "@shared/household-eater";
 import type { AdaptationResult, HouseholdSafePreview } from "@shared/meal-adaptation";
+import { computeRestrictionSafety, type EaterProfile } from "@shared/restrictions/restriction-safety";
+import { shouldExcludeRecipe } from "@/lib/dietRules";
 import { ONBOARDING_DIET_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
 import { PageHeader } from "@/components/PageHeader";
 import { AdaptationReviewSheet } from "@/components/AdaptationReviewSheet";
@@ -285,6 +291,57 @@ function saveCookedEntries(ids: Set<number>): void {
   } catch {}
 }
 
+// ─── Fallback uplift helper ───────────────────────────────────────────────────
+// Converts deterministic boost suggestions from nutrition-boosts.ts into the
+// UpliftMatchResult shape consumed by MealUpliftPanel, applying household
+// filtering and deduplication against server-backed suggestions.
+
+function buildFallbackUpliftMatch(
+  mealName: string,
+  ingredients: string[],
+  householdEaters: HouseholdEater[],
+  serverKeys: Set<string>,
+): UpliftMatchResult | null {
+  const candidates = getMealBoosts(mealName, ingredients);
+
+  const eaterProfiles: EaterProfile[] = householdEaters.map((e) => ({
+    displayName: e.displayName,
+    hardRestrictions: e.hardRestrictions,
+  }));
+  const allDietTypes = householdEaters.flatMap((e) => e.defaultDietTypes);
+
+  const filtered = candidates.filter((boost) => {
+    if (eaterProfiles.length > 0) {
+      const safety = computeRestrictionSafety([boost.name], eaterProfiles);
+      if (safety.some((r) => r.status === "unsafe" || r.status === "warning")) return false;
+    }
+    for (const diet of allDietTypes) {
+      if (shouldExcludeRecipe(boost.name, { dietPattern: diet, dietRestrictions: [] })) return false;
+    }
+    return true;
+  });
+
+  // Suppress items already covered by server uplift (normalised key comparison)
+  const deduplicated = filtered.filter(
+    (boost) => !serverKeys.has(normaliseForReuse(boost.name)),
+  );
+
+  if (deduplicated.length === 0) return null;
+
+  return {
+    ruleId: "fallback-deterministic-boosts",
+    ruleName: "Nutrition Boost",
+    suggestions: deduplicated.map((boost) => ({
+      ingredient: boost.name,
+      action: "add" as const,
+      why: `A nutritious ${boost.category.replace("-", " ")} suggestion for this meal.`,
+    })),
+    nutritionTags: [],
+    confidence: "medium" as const,
+    priority: 0,
+  };
+}
+
 export default function WeeklyPlannerPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -371,8 +428,15 @@ export default function WeeklyPlannerPage() {
 
   // Track mealIds that received accepted uplift in this session (for immediate card feedback).
   const [boostedMealIds, setBoostedMealIds] = useState<Set<number>>(new Set());
-  const handleUpliftAccepted = (mealId: number) =>
+  const handleUpliftAccepted = (mealId: number) => {
     setBoostedMealIds(prev => new Set(Array.from(prev).concat(mealId)));
+    // Fork case: if the system meal was forked, update mealDetail so the dialog
+    // resolves the live meal by the new fork ID rather than the original meal ID.
+    setMealDetail(prev => {
+      if (!prev || prev.meal.id === mealId) return prev;
+      return { ...prev, meal: { ...prev.meal, id: mealId } };
+    });
+  };
   const handleUpliftRemoved = (mealId: number) =>
     setBoostedMealIds(prev => { const next = new Set(Array.from(prev)); next.delete(mealId); return next; });
 
@@ -463,6 +527,50 @@ export default function WeeklyPlannerPage() {
 
   // ── Active week data (needed by domain hooks before other queries) ─────────
   const activeWeekData = fullPlanner.find((w) => w.weekNumber === Number(activeWeek));
+
+  // ── Plant diversity: collect all ingredient arrays from meals in the active week ──
+  const weekIngredients = useMemo<string[][]>(() => {
+    if (!activeWeekData) return [];
+    return activeWeekData.days.flatMap((d) =>
+      d.entries
+        .map((e) => mealById.get(e.mealId))
+        .filter((m): m is Meal => !!m && !!(m.ingredients?.length))
+        .map((m) => m.ingredients ?? []),
+    );
+  }, [activeWeekData, mealById]);
+
+  // ── Plant Diversity Explorer: enriched meal data with names and day labels ──
+  const weekMealsData = useMemo<WeekMealEntry[]>(() => {
+    if (!activeWeekData) return [];
+    const result: WeekMealEntry[] = [];
+    for (const day of activeWeekData.days) {
+      const dayName = DAY_SHORT[day.dayOfWeek];
+      for (const entry of day.entries) {
+        const meal = mealById.get(entry.mealId);
+        if (meal?.ingredients?.length) {
+          result.push({ mealName: meal.name, dayName, ingredients: meal.ingredients });
+        }
+      }
+    }
+    return result;
+  }, [activeWeekData, mealById]);
+
+  // ── Weekly reuse map: ingredient → meal names using it this week ──────────────
+  // Used by MealUpliftPanel to surface "Already used this week" labels and to
+  // rank reuse suggestions (P1) above discovery suggestions (P2).
+  const weeklyReuseMap = useMemo<Map<string, string[]>>(() => {
+    if (!activeWeekData) return new Map();
+    const mealsThisWeek: { name: string; ingredients: string[] }[] = [];
+    for (const day of activeWeekData.days) {
+      for (const entry of day.entries) {
+        const meal = mealById.get(entry.mealId);
+        if (meal?.ingredients?.length) {
+          mealsThisWeek.push({ name: meal.name, ingredients: meal.ingredients });
+        }
+      }
+    }
+    return buildWeeklyReuseMap(mealsThisWeek);
+  }, [activeWeekData, mealById]);
 
   // ── Planner context (Phase 1A + 5B: assistant panel routing + selected day) ─
   const { assistantMode, setAssistantMode, selectedDayId, setSelectedDayId } = usePlannerContext();
@@ -654,6 +762,7 @@ export default function WeeklyPlannerPage() {
 
   // ── Week eater overrides (Phase 4) ───────────────────────────────────────────
   const [weekDietsOpen, setWeekDietsOpen] = useState(false);
+  const [plantExplorerOpen, setPlantExplorerOpen] = useState(false);
 
   const activeWeekId = fullPlanner.find((w) => w.weekNumber === Number(activeWeek))?.id;
 
@@ -757,6 +866,7 @@ export default function WeeklyPlannerPage() {
 
   // ── Entry guests (Phase 5) ────────────────────────────────────────────────────
   const [addGuestOpen, setAddGuestOpen] = useState(false);
+  const [eatersOpen, setEatersOpen] = useState(false);
   const [guestName, setGuestName] = useState("");
   const [guestDietTypes, setGuestDietTypes] = useState<string[]>([]);
   const [guestRestrictions, setGuestRestrictions] = useState<string[]>([]);
@@ -1728,14 +1838,20 @@ export default function WeeklyPlannerPage() {
               {weekDietsOpen ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
             </button>
           ) : <span />}
-          <PlannerVarietyLegend compact />
+          <div className="flex items-center gap-4 flex-wrap">
+            <WeeklyPlantDiversityCounter
+              weekIngredients={weekIngredients}
+              onExplore={() => setPlantExplorerOpen(true)}
+            />
+            <PlannerVarietyLegend compact />
+          </div>
         </div>
 
         {/* Diets dropdown — expands below the combined row; variety stays above */}
         {householdEaters.length > 0 && activeWeekId && weekDietsOpen && (
           <Card className="p-4 space-y-3 mb-4" data-testid="card-week-diets">
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Override a member's default diet for this week only. Hard restrictions are always kept.
+              Override a member's household adaptations for this week only. Hard restrictions are always kept.
             </p>
             {householdEaters.map(eater => {
               const eaterId = Number(eater.id);
@@ -2811,7 +2927,10 @@ export default function WeeklyPlannerPage() {
           data-testid="dialog-meal-detail"
         >
           {mealDetail && (() => {
-            const { meal, entry, dayId, mealType, audience, isDrink, dayName, slotLabel } = mealDetail;
+            const { meal: mealSnapshot, entry, dayId, mealType, audience, isDrink, dayName, slotLabel } = mealDetail;
+            // Resolve meal from the live query so ingredient list reflects accepted boosts
+            // without requiring the dialog to be closed and reopened.
+            const meal = meals.find(m => m.id === mealSnapshot.id) ?? mealSnapshot;
             const calories = nutritionMap.get(meal.id);
             const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
             const instructions = meal.instructions || [];
@@ -2889,162 +3008,176 @@ export default function WeeklyPlannerPage() {
                     )}
                   </div>
 
-                  {/* Eater selector */}
+                  {/* Eater selector + Guests (collapsible) */}
                   {householdEaters.length > 0 && (
                     <div>
-                      <h3 className="text-sm font-semibold mb-2 text-foreground">Who's eating this?</h3>
-                      <div className="flex flex-col gap-1.5">
-                        {householdEaters.map((eater) => {
-                          const checked = entryEaters.some(e => e.id === eater.id);
-                          return (
-                            <label
-                              key={eater.id}
-                              className="flex items-center gap-2 text-sm cursor-pointer select-none"
-                            >
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(next) => {
-                                  const currentIds = entryEaters.map(e => Number(e.id));
-                                  const eaterId = Number(eater.id);
-                                  const newIds = next
-                                    ? [...currentIds, eaterId]
-                                    : currentIds.filter(id => id !== eaterId);
-                                  setEntryEatersMutation.mutate({ entryId: entry.id, eaterIds: newIds });
-                                }}
-                              />
-                              <span className="text-foreground/90">{eater.displayName}</span>
-                              {eater.kind === "child" && (
-                                <span className="text-[10px] text-muted-foreground">(child)</span>
-                              )}
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
+                      <button
+                        type="button"
+                        className="flex items-center gap-1.5 w-full text-left"
+                        onClick={() => setEatersOpen(o => !o)}
+                        aria-expanded={eatersOpen}
+                      >
+                        <h3 className="text-sm font-semibold text-foreground">Who's eating this?</h3>
+                        <span className="text-xs text-muted-foreground/60">({householdEaters.length})</span>
+                        {eatersOpen
+                          ? <ChevronUp className="h-3.5 w-3.5 ml-auto text-muted-foreground/50" />
+                          : <ChevronDown className="h-3.5 w-3.5 ml-auto text-muted-foreground/50" />}
+                      </button>
 
-                  {/* ── Guest eaters (Phase 5) ── */}
-                  {householdEaters.length > 0 && (
-                    <div data-testid="section-guests">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Guests</span>
-                        <button
-                          className="text-xs text-primary hover:underline flex items-center gap-1"
-                          onClick={() => setAddGuestOpen(o => !o)}
-                          data-testid="button-add-guest"
-                        >
-                          <Plus className="h-3 w-3" />
-                          Add guest
-                        </button>
-                      </div>
-
-                      {/* Inline add-guest form */}
-                      {addGuestOpen && (
-                        <div className="border border-border rounded-md p-2.5 space-y-2 mb-2 bg-muted/20" data-testid="form-add-guest">
-                          <Input
-                            placeholder="Guest name"
-                            value={guestName}
-                            onChange={e => setGuestName(e.target.value)}
-                            className="h-7 text-xs"
-                            data-testid="input-guest-name"
-                          />
-                          {/* Diet pattern chips */}
-                          <div>
-                            <p className="text-[10px] text-muted-foreground mb-1">Diet pattern (optional)</p>
-                            <div className="flex flex-wrap gap-1">
-                              {DIET_PATTERN_OPTIONS.map(opt => (
-                                <button
-                                  key={opt.value}
-                                  type="button"
-                                  onClick={() => setGuestDietTypes(prev => prev.includes(opt.value) ? prev.filter(d => d !== opt.value) : [...prev, opt.value])}
-                                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
-                                    guestDietTypes.includes(opt.value)
-                                      ? "bg-primary text-primary-foreground border-primary"
-                                      : "border-border text-muted-foreground hover:border-foreground/40"
-                                  }`}
-                                  data-testid={`chip-guest-diet-${opt.value}`}
+                      {eatersOpen && (
+                        <div className="mt-2 space-y-3">
+                          <div className="flex flex-col gap-1.5">
+                            {householdEaters.map((eater) => {
+                              const checked = entryEaters.some(e => e.id === eater.id);
+                              return (
+                                <label
+                                  key={eater.id}
+                                  className="flex items-center gap-2 text-sm cursor-pointer select-none"
                                 >
-                                  {opt.label}
-                                </button>
-                              ))}
-                            </div>
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={(next) => {
+                                      const currentIds = entryEaters.map(e => Number(e.id));
+                                      const eaterId = Number(eater.id);
+                                      const newIds = next
+                                        ? [...currentIds, eaterId]
+                                        : currentIds.filter(id => id !== eaterId);
+                                      setEntryEatersMutation.mutate({ entryId: entry.id, eaterIds: newIds });
+                                    }}
+                                  />
+                                  <span className="text-foreground/90">{eater.displayName}</span>
+                                  {eater.kind === "child" && (
+                                    <span className="text-[10px] text-muted-foreground">(child)</span>
+                                  )}
+                                </label>
+                              );
+                            })}
                           </div>
-                          {/* Allergy & intolerance chips */}
-                          <div>
-                            <p className="text-[10px] text-muted-foreground mb-1">Allergies &amp; intolerances (optional)</p>
-                            <div className="flex flex-wrap gap-1">
-                              {ALLERGY_INTOLERANCE_OPTIONS.map(opt => (
-                                <button
-                                  key={opt.value}
-                                  type="button"
-                                  onClick={() => setGuestRestrictions(prev => prev.includes(opt.value) ? prev.filter(r => r !== opt.value) : [...prev, opt.value])}
-                                  className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
-                                    guestRestrictions.includes(opt.value)
-                                      ? "bg-destructive text-destructive-foreground border-destructive"
-                                      : "border-border text-muted-foreground hover:border-foreground/40"
-                                  }`}
-                                  data-testid={`chip-guest-restriction-${opt.value}`}
-                                >
-                                  {opt.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="flex gap-2 justify-end">
-                            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setAddGuestOpen(false); setGuestName(""); setGuestDietTypes([]); setGuestRestrictions([]); }}>
-                              Cancel
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="h-7 text-xs"
-                              disabled={!guestName.trim() || addGuestMutation.isPending}
-                              onClick={() => {
-                                if (!guestName.trim()) return;
-                                addGuestMutation.mutate({
-                                  id: crypto.randomUUID(),
-                                  displayName: guestName.trim(),
-                                  dietTypes: guestDietTypes,
-                                  hardRestrictions: guestRestrictions,
-                                });
-                              }}
-                              data-testid="button-save-guest"
-                            >
-                              {addGuestMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Add"}
-                            </Button>
-                          </div>
-                        </div>
-                      )}
 
-                      {/* Guest list */}
-                      {entryGuests.length > 0 && (
-                        <div className="space-y-1" data-testid="guest-list">
-                          {entryGuests.map(guest => (
-                            <div key={guest.id} className="flex items-center justify-between text-sm" data-testid={`guest-row-${guest.id}`}>
-                              <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="text-foreground/90 truncate">{guest.displayName}</span>
-                                <span className="text-[10px] text-muted-foreground shrink-0">(guest)</span>
-                                {guest.hardRestrictions.length > 0 && (
-                                  <span className="text-[10px] text-destructive/70 truncate">
-                                    ⚠ {guest.hardRestrictions.join(", ")}
-                                  </span>
-                                )}
-                              </div>
+                          {/* ── Guest eaters (Phase 5) ── */}
+                          <div data-testid="section-guests">
+                            <div className="flex items-center justify-between mb-1.5">
+                              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Guests</span>
                               <button
-                                className="text-muted-foreground hover:text-destructive ml-2 shrink-0 transition-colors"
-                                onClick={() => removeGuestMutation.mutate(guest.id)}
-                                disabled={removeGuestMutation.isPending}
-                                data-testid={`button-remove-guest-${guest.id}`}
-                                aria-label={`Remove ${guest.displayName}`}
+                                className="text-xs text-primary hover:underline flex items-center gap-1"
+                                onClick={() => setAddGuestOpen(o => !o)}
+                                data-testid="button-add-guest"
                               >
-                                <X className="h-3.5 w-3.5" />
+                                <Plus className="h-3 w-3" />
+                                Add guest
                               </button>
                             </div>
-                          ))}
-                        </div>
-                      )}
 
-                      {entryGuests.length === 0 && !addGuestOpen && (
-                        <p className="text-xs text-muted-foreground">No guests for this meal.</p>
+                            {/* Inline add-guest form */}
+                            {addGuestOpen && (
+                              <div className="border border-border rounded-md p-2.5 space-y-2 mb-2 bg-muted/20" data-testid="form-add-guest">
+                                <Input
+                                  placeholder="Guest name"
+                                  value={guestName}
+                                  onChange={e => setGuestName(e.target.value)}
+                                  className="h-7 text-xs"
+                                  data-testid="input-guest-name"
+                                />
+                                {/* Diet pattern chips */}
+                                <div>
+                                  <p className="text-[10px] text-muted-foreground mb-1">Diet pattern (optional)</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {DIET_PATTERN_OPTIONS.map(opt => (
+                                      <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => setGuestDietTypes(prev => prev.includes(opt.value) ? prev.filter(d => d !== opt.value) : [...prev, opt.value])}
+                                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                                          guestDietTypes.includes(opt.value)
+                                            ? "bg-primary text-primary-foreground border-primary"
+                                            : "border-border text-muted-foreground hover:border-foreground/40"
+                                        }`}
+                                        data-testid={`chip-guest-diet-${opt.value}`}
+                                      >
+                                        {opt.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                {/* Allergy & intolerance chips */}
+                                <div>
+                                  <p className="text-[10px] text-muted-foreground mb-1">Allergies &amp; intolerances (optional)</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {ALLERGY_INTOLERANCE_OPTIONS.map(opt => (
+                                      <button
+                                        key={opt.value}
+                                        type="button"
+                                        onClick={() => setGuestRestrictions(prev => prev.includes(opt.value) ? prev.filter(r => r !== opt.value) : [...prev, opt.value])}
+                                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+                                          guestRestrictions.includes(opt.value)
+                                            ? "bg-destructive text-destructive-foreground border-destructive"
+                                            : "border-border text-muted-foreground hover:border-foreground/40"
+                                        }`}
+                                        data-testid={`chip-guest-restriction-${opt.value}`}
+                                      >
+                                        {opt.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="flex gap-2 justify-end">
+                                  <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setAddGuestOpen(false); setGuestName(""); setGuestDietTypes([]); setGuestRestrictions([]); }}>
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    disabled={!guestName.trim() || addGuestMutation.isPending}
+                                    onClick={() => {
+                                      if (!guestName.trim()) return;
+                                      addGuestMutation.mutate({
+                                        id: crypto.randomUUID(),
+                                        displayName: guestName.trim(),
+                                        dietTypes: guestDietTypes,
+                                        hardRestrictions: guestRestrictions,
+                                      });
+                                    }}
+                                    data-testid="button-save-guest"
+                                  >
+                                    {addGuestMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Add"}
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Guest list */}
+                            {entryGuests.length > 0 && (
+                              <div className="space-y-1" data-testid="guest-list">
+                                {entryGuests.map(guest => (
+                                  <div key={guest.id} className="flex items-center justify-between text-sm" data-testid={`guest-row-${guest.id}`}>
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <span className="text-foreground/90 truncate">{guest.displayName}</span>
+                                      <span className="text-[10px] text-muted-foreground shrink-0">(guest)</span>
+                                      {guest.hardRestrictions.length > 0 && (
+                                        <span className="text-[10px] text-destructive/70 truncate">
+                                          ⚠ {guest.hardRestrictions.join(", ")}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <button
+                                      className="text-muted-foreground hover:text-destructive ml-2 shrink-0 transition-colors"
+                                      onClick={() => removeGuestMutation.mutate(guest.id)}
+                                      disabled={removeGuestMutation.isPending}
+                                      data-testid={`button-remove-guest-${guest.id}`}
+                                      aria-label={`Remove ${guest.displayName}`}
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {entryGuests.length === 0 && !addGuestOpen && (
+                              <p className="text-xs text-muted-foreground">No guests for this meal.</p>
+                            )}
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}
@@ -3056,11 +3189,10 @@ export default function WeeklyPlannerPage() {
                       <div className="flex items-center justify-between px-3 py-2 bg-muted/30">
                         <div className="flex items-center gap-2">
                           <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-sm font-medium text-foreground">Tailor for household</span>
-                          {meal.isHouseholdSafeVariant ? (
-                            <span className="text-[10px] font-medium text-teal-700 dark:text-teal-400 bg-teal-100 dark:bg-teal-900/30 px-1.5 py-0.5 rounded">household-safe variant active</span>
-                          ) : (
-                            <span className="text-[10px] text-muted-foreground/60 italic">Evaluating full household</span>
+                          <span className="text-sm font-medium text-foreground">Household Adaptation</span>
+                          <span className="text-[10px] text-muted-foreground/60">({householdEaters.length + entryGuests.length})</span>
+                          {meal.isHouseholdSafeVariant && (
+                            <span className="text-[10px] font-medium text-teal-700 dark:text-teal-400 bg-teal-100 dark:bg-teal-900/30 px-1.5 py-0.5 rounded">household-safe</span>
                           )}
                           {(() => {
                             const result: AdaptationResult | null | undefined =
@@ -3109,22 +3241,6 @@ export default function WeeklyPlannerPage() {
                         </div>
                       </div>
 
-                      {/* Pre-tailor info — shown when no result yet */}
-                      {(() => {
-                        const result: AdaptationResult | null | undefined =
-                          adaptMutation.data ?? (entry.adaptationResult as AdaptationResult | null);
-                        if (result || adaptMutation.isPending) return null;
-                        const totalEaters = householdEaters.length + entryGuests.length;
-                        return (
-                          <div className="px-3 py-2 border-t border-border/50 bg-background/60">
-                            <p className="text-[11px] text-muted-foreground">
-                              Will evaluate {householdEaters.length} household member{householdEaters.length !== 1 ? "s" : ""}
-                              {entryGuests.length > 0 && ` + ${entryGuests.length} guest${entryGuests.length !== 1 ? "s" : ""}`}
-                              {" "}({totalEaters} total)
-                            </p>
-                          </div>
-                        );
-                      })()}
 
                       {/* Result body */}
                       {(() => {
@@ -3366,24 +3482,83 @@ export default function WeeklyPlannerPage() {
                     </div>
                   )}
 
-                  {/* Variety nudge */}
-                  <MealVarietyNudge
-                    score={computeMealVariety(meal.ingredients ?? [])}
-                    pantryItems={pantryNames}
-                  />
+                  {/*
+                   * MealVarietyNudge was intentionally removed from this render site.
+                   *
+                   * WHY IT WAS BUILT:
+                   * MealVarietyNudge detects which nutrition category (fruits, vegetables,
+                   * whole grains, herbs/spices, olive oil) is absent from a meal's ingredient
+                   * list, then surfaces one pantry-sourced item from that missing category as
+                   * a plain-text suggestion.
+                   *
+                   * WHY IT WAS REMOVED FROM THE MEAL DIALOG:
+                   * The engine is pantry-aware and category-gap aware, but it has no knowledge
+                   * of the meal type being displayed. This causes culinarily inappropriate
+                   * suggestions. The canonical example:
+                   *
+                   *   Meal: Matambre a la Pizza
+                   *   Pantry contains: oats
+                   *   Nudge output: "Oats would add a whole grain element."
+                   *
+                   * The suggestion is nutritionally correct (pizza lacks whole grains) but
+                   * culinarily wrong (oats do not belong on pizza). The engine cannot
+                   * distinguish between appropriate and inappropriate pairings because it
+                   * operates on category gaps alone, not on meal context.
+                   *
+                   * WHY IT SHOULD NOT BE AUTOMATICALLY REINTRODUCED:
+                   * Reintroducing MealVarietyNudge would restore the same problem. Before
+                   * bringing it back, the engine would need meal-type awareness — i.e. the
+                   * ability to suppress whole-grain suggestions for pizza, curry, etc., and
+                   * only fire when the suggested item is culinarily compatible.
+                   *
+                   * DIFFERENCE FROM MEAL ENHANCEMENTS AND NUTRITION BOOSTS:
+                   * MealVarietyNudge: identifies what category is nutritionally absent.
+                   *   → "What's missing?"
+                   * MealUpliftPanel (Meal Enhancements): merges server uplift rules with
+                   *   deterministic meal-type boosts. All visible suggestions are actionable.
+                   *   → "Here is a specific addition you can add with one click."
+                   *
+                   * THA philosophy direction: enhancement opportunities should be relevant
+                   * to the actual meal and household, not derived from category-gap analysis
+                   * alone. MealUpliftPanel (with deterministic fallback) serves this goal.
+                   *
+                   * The component and underlying engine (nutrition-variety-chips.tsx,
+                   * nutrition-variety.ts) are preserved for the 30 Plants This Week counter,
+                   * day-level variety chips, and planner legend — none of which are affected
+                   * by this removal.
+                   */}
 
-                  {/* Nutrition Boost — async uplift panel, shown only when matches exist */}
+                  {/* Single Nutrition Boost panel — merges server uplift with deterministic
+                      fallback boosts from nutrition-boosts.ts. All visible suggestions are
+                      actionable (Add to meal). Fallback boosts are deduplicated against
+                      server suggestions using normalised ingredient keys. */}
                   {(() => {
-                    const matches = upliftByMealId.get(meal.id) ?? [];
-                    if (matches.length === 0) return null;
+                    const serverMatches = upliftByMealId.get(meal.id) ?? [];
+                    // Build a set of normalised ingredient keys already covered by server uplift
+                    const serverKeys = new Set(
+                      serverMatches.flatMap((m) =>
+                        m.suggestions.map((s) => normaliseForReuse(s.ingredient)),
+                      ),
+                    );
+                    const fallbackMatch = buildFallbackUpliftMatch(
+                      meal.name,
+                      meal.ingredients ?? [],
+                      householdEaters,
+                      serverKeys,
+                    );
+                    const mergedMatches = fallbackMatch
+                      ? [...serverMatches, fallbackMatch]
+                      : serverMatches;
+                    if (mergedMatches.length === 0) return null;
                     return (
                       <MealUpliftPanel
                         mealId={meal.id}
                         plannerEntryId={entry.id}
                         mealSlot={mealType}
-                        upliftMatches={matches}
-                        onMealForked={(newMealId) => {
-                          // After a system meal fork, refresh planner so entry points to fork
+                        upliftMatches={mergedMatches}
+                        currentMealName={meal.name}
+                        weeklyReuseMap={weeklyReuseMap}
+                        onMealForked={() => {
                           qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
                           qc.invalidateQueries({ queryKey: ["/api/meals"] });
                         }}
@@ -3616,6 +3791,13 @@ export default function WeeklyPlannerPage() {
       </Dialog>
 
       <SharePlanDialog open={sharePlanOpen} onOpenChange={setSharePlanOpen} />
+
+      {/* ── Plant Diversity Explorer ── */}
+      <PlantDiversityExplorer
+        open={plantExplorerOpen}
+        onClose={() => setPlantExplorerOpen(false)}
+        weekMeals={weekMealsData}
+      />
 
       {/* ── Save Week Dialog ── */}
       <Dialog open={saveWeekOpen} onOpenChange={(v) => { if (!v) setSaveWeekOpen(false); }}>
