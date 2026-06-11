@@ -16,7 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Check, X, Loader2, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
-import type { MealUpliftApplication } from "@shared/schema";
+import type { MealUpliftApplication, Meal } from "@shared/schema";
 import { normaliseForReuse, getReuseLabel } from "@/lib/ingredient-reuse";
 import { getNutritionBenefit } from "@/lib/nutrition-benefit-library";
 
@@ -128,16 +128,33 @@ export function MealUpliftPanel({
       const body = await res.json();
       return body.applications ?? [];
     },
-    enabled: open,
+    enabled: true,
     staleTime: 30_000,
   });
 
   // Active (non-removed) applications
   const activeApplications = applications.filter((a) => a.status !== "removed");
 
+  // PROOF STEP 7 — log activeApplications whenever they change
+  React.useEffect(() => {
+    console.log("[BOOST-PROOF] STEP7 activeApplications changed:", {
+      effectiveMealId,
+      open,
+      applicationsCount: applications.length,
+      activeCount: activeApplications.length,
+      activeIngredients: activeApplications.map(a => a.ingredient),
+    });
+  }, [activeApplications.length, effectiveMealId, open]);
+
   // Accept a single suggestion
   const acceptMutation = useMutation({
     mutationFn: async (suggestion: FlatSuggestion) => {
+      // PROOF STEP 1 — request payload
+      console.log("[BOOST-PROOF] STEP1 request:", {
+        mealId: effectiveMealId,
+        plannerEntryId,
+        ingredient: suggestion.ingredient,
+      });
       const res = await apiRequest("POST", "/api/uplift/accept", {
         mealId: effectiveMealId,
         plannerEntryId,
@@ -163,6 +180,14 @@ export function MealUpliftPanel({
       }>;
     },
     onSuccess: (data, suggestion) => {
+      // PROOF STEP 2 — server response
+      console.log("[BOOST-PROOF] STEP2 response:", {
+        mealId: data.mealId,
+        forkedFromMealId: data.forkedFromMealId,
+        added: data.added,
+        effectiveMealIdBeforeUpdate: effectiveMealId,
+      });
+
       // Handle system meal fork — update effective mealId
       if (data.forkedFromMealId && data.mealId !== effectiveMealId) {
         setEffectiveMealId(data.mealId);
@@ -173,6 +198,58 @@ export function MealUpliftPanel({
         const next = new Set(prev);
         next.add(suggestion.ingredient);
         return next;
+      });
+
+      // Synchronously update meals cache for fork case — prevents close/reopen race
+      // where the modal would reopen against the original system meal instead of the fork
+      if (data.forkedFromMealId) {
+        qc.setQueryData<Meal[]>(["/api/meals"], (prev) => {
+          if (!prev) {
+            console.log("[BOOST-PROOF] STEP3 setQueryData: prev is null/undefined — fork NOT added");
+            return prev;
+          }
+          const forkExists = prev.some((m) => m.id === data.mealId);
+          if (forkExists) {
+            console.log("[BOOST-PROOF] STEP3 setQueryData: fork already exists, updating ingredients");
+            return prev.map((m) => {
+              if (m.id !== data.mealId) return m;
+              const existing = m.ingredients ?? [];
+              return {
+                ...m,
+                ingredients: [
+                  ...existing,
+                  ...data.added.filter((i) => !existing.includes(i)),
+                ],
+              };
+            });
+          }
+          const original = prev.find((m) => m.id === data.forkedFromMealId!);
+          if (!original) {
+            console.log("[BOOST-PROOF] STEP3 setQueryData: original meal NOT found in meals cache — fork NOT added. forkedFromMealId:", data.forkedFromMealId, "meals count:", prev.length, "meal ids:", prev.slice(0, 10).map(m => m.id));
+            return prev;
+          }
+          console.log("[BOOST-PROOF] STEP3 setQueryData: adding fork to meals cache. forkId:", data.mealId, "originalId:", data.forkedFromMealId, "added:", data.added);
+          return [
+            ...prev,
+            {
+              ...original,
+              id: data.mealId,
+              isSystemMeal: false,
+              ingredients: [...(original.ingredients ?? []), ...data.added],
+            },
+          ];
+        });
+      } else {
+        console.log("[BOOST-PROOF] STEP3 setQueryData: skipped (no fork — user meal update, async refetch will carry ingredient)");
+      }
+
+      // PROOF STEP 3 — meals cache after setQueryData
+      const mealsAfter = qc.getQueryData<Meal[]>(["/api/meals"]);
+      const forkInCache = mealsAfter?.find(m => m.id === data.mealId);
+      console.log("[BOOST-PROOF] STEP3 meals cache AFTER setQueryData:", {
+        forkId: data.mealId,
+        forkFoundInCache: !!forkInCache,
+        forkIngredients: forkInCache?.ingredients ?? "NOT IN CACHE",
       });
 
       // Refresh meals + provenance
@@ -210,9 +287,6 @@ export function MealUpliftPanel({
       onUpliftRemoved?.(effectiveMealId);
     },
   });
-
-  // Don't render if uplift has no data at all (parent already guards matches.length > 0)
-  if (upliftMatches.length === 0) return null;
 
   // Hide suggestions already persisted in provenance
   const acceptedIngredientKeys = new Set(

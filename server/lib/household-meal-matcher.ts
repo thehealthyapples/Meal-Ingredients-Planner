@@ -1,19 +1,20 @@
 import { db } from "../db";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import {
-  householdMembers,
-  users,
+  householdEaters,
+  plannerWeekEaterOverrides,
   userPreferences,
   mealTemplates,
   ingredientSwaps,
 } from "@shared/schema";
 import type { MealTemplate } from "@shared/schema";
 import { getHouseholdForUser } from "./household";
+import { dbEaterToHouseholdEater, getEffectiveDietProfile } from "@shared/household-eater.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface MemberProfile {
-  userId: number;
+  userId: number | null;
   displayName: string;
   dietTypes: string[];
   excludedIngredients: string[];
@@ -32,7 +33,7 @@ interface HouseholdSettings {
 }
 
 interface MemberChange {
-  userId: number;
+  userId: number | null;
   displayName: string;
   swaps: string[];
 }
@@ -155,34 +156,46 @@ function computeFitScore(breakdown: ScoreBreakdown): number {
 
 // ─── Main entry point ─────────────────────────────────────────────────────────
 
-export async function matchMealsForHousehold(userId: number): Promise<MealMatch[]> {
+export async function matchMealsForHousehold(
+  userId: number,
+  weekId?: number,
+): Promise<MealMatch[]> {
   const householdId = await getHouseholdForUser(userId);
 
-  const memberRows = await db
-    .select({
-      member: householdMembers,
-      user: { id: users.id, displayName: users.displayName, username: users.username },
-    })
-    .from(householdMembers)
-    .innerJoin(users, eq(householdMembers.userId, users.id))
-    .where(
-      and(
-        eq(householdMembers.householdId, householdId),
-        eq(householdMembers.status, "active")
-      )
-    );
+  // Load weekly diet overrides for this planner week (optional — no-op when weekId not provided).
+  let overrideMap = new Map<number, { dietTypes: string[] }>();
+  if (weekId != null) {
+    const overrides = await db
+      .select()
+      .from(plannerWeekEaterOverrides)
+      .where(eq(plannerWeekEaterOverrides.weekId, weekId));
+    overrideMap = new Map(overrides.map(o => [o.eaterId, { dietTypes: o.dietTypes }]));
+  }
+
+  const eaterRows = await db
+    .select()
+    .from(householdEaters)
+    .where(eq(householdEaters.householdId, householdId))
+    .orderBy(householdEaters.id);
 
   const members: MemberProfile[] = [];
-  for (const { member, user } of memberRows) {
-    const [prefs] = await db
-      .select()
-      .from(userPreferences)
-      .where(eq(userPreferences.userId, member.userId));
+  for (const row of eaterRows) {
+    const eater = dbEaterToHouseholdEater(row);
+    const profile = getEffectiveDietProfile(eater, overrideMap.get(Number(eater.id)));
+
+    let prefs: typeof userPreferences.$inferSelect | undefined;
+    if (eater.userId != null) {
+      [prefs] = await db
+        .select()
+        .from(userPreferences)
+        .where(eq(userPreferences.userId, eater.userId));
+    }
+
     members.push({
-      userId: member.userId,
-      displayName: user.displayName || user.username,
-      dietTypes: prefs?.dietTypes ?? [],
-      excludedIngredients: prefs?.excludedIngredients ?? [],
+      userId: eater.userId ?? null,
+      displayName: eater.displayName,
+      dietTypes: profile.dietTypes,
+      excludedIngredients: profile.hardRestrictions.map(r => r.toLowerCase()),
       preferredIngredients: prefs?.preferredIngredients ?? [],
       maxPrepTolerance: prefs?.maxPrepTolerance ?? null,
       upfSensitivity: prefs?.upfSensitivity ?? "moderate",

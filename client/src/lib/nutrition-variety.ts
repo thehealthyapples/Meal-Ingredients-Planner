@@ -147,6 +147,129 @@ export function computeMealVariety(ingredients: string[]): VarietyScore {
   return { fruits, vegetables, wholeGrains, herbsSpices, oliveOil, total };
 }
 
+// ── Extended plant categories for cross-week counting ────────────────────────
+// These supplement the five existing categories (fruits, vegetables, whole
+// grains, herbs/spices, olive oil) for the WeeklyPlantDiversityCounter.
+// They are intentionally NOT added to computeMealVariety / VarietyScore — that
+// would add category chips to NutritionVarietyDots and DayVarietySummary, which
+// is out of scope for this accuracy fix.
+
+const LEGUMES_PULSES = [
+  // Chickpeas
+  "chickpea", "chickpeas",
+  // Lentils
+  "lentil", "lentils",
+  "red lentil", "red lentils", "green lentil", "green lentils",
+  "puy lentil", "puy lentils", "beluga lentil", "beluga lentils",
+  // Beans
+  "black bean", "black beans",
+  "kidney bean", "kidney beans", "red kidney bean", "red kidney beans",
+  "butter bean", "butter beans",
+  "cannellini bean", "cannellini beans", "cannellini",
+  "haricot bean", "haricot beans",
+  "borlotti bean", "borlotti beans",
+  "mixed beans", "five bean mix", "bean mix",
+  "baked beans",
+  "split pea", "split peas",
+  // Soy-based
+  "tofu", "silken tofu", "firm tofu",
+  "tempeh",
+];
+
+const SEEDS_LIST = [
+  "pumpkin seed", "pumpkin seeds",
+  "chia seed", "chia seeds",
+  "flax seed", "flax seeds", "flaxseed", "linseed",
+  "sesame seed", "sesame seeds",
+  "sunflower seed", "sunflower seeds",
+  "hemp seed", "hemp seeds",
+  "poppy seed", "poppy seeds",
+  "mixed seeds",
+];
+
+const NUTS_LIST = [
+  "walnut", "walnuts",
+  "almond", "almonds",
+  "cashew", "cashews", "cashew nut", "cashew nuts",
+  "pecan", "pecans",
+  "pistachio", "pistachios",
+  "hazelnut", "hazelnuts",
+  "pine nut", "pine nuts",
+  "brazil nut", "brazil nuts",
+  "macadamia", "macadamia nut", "macadamia nuts",
+  "peanut", "peanuts",
+  "chestnut", "chestnuts",
+  "mixed nuts",
+];
+
+const FERMENTED_FOODS = [
+  "sauerkraut",
+  "kimchi",
+  "miso",
+  "tempeh",
+  "kombucha",
+  "kefir",
+];
+
+/**
+ * Returns true if an ingredient string counts as a plant food for the purpose
+ * of the 30 Plants This Week counter.
+ *
+ * Covers all plant categories: fruits, vegetables, whole grains, herbs & spices,
+ * olive oil, legumes, seeds, nuts, and fermented plant foods.
+ *
+ * Used only by WeeklyPlantDiversityCounter — not by computeMealVariety, which
+ * intentionally limits itself to 5 categories for the meal variety dots/chips.
+ */
+export function isPlantIngredient(ingredient: string): boolean {
+  const norm = normalizeIngredientKey(ingredient);
+  if (!norm) return false;
+  if (norm.includes("olive oil")) return true;
+  return (
+    matchesAny(norm, FRUITS) ||
+    matchesAny(norm, VEGETABLES) ||
+    matchesAny(norm, WHOLE_GRAINS) ||
+    matchesAny(norm, HERBS_SPICES) ||
+    matchesAny(norm, LEGUMES_PULSES) ||
+    matchesAny(norm, SEEDS_LIST) ||
+    matchesAny(norm, NUTS_LIST) ||
+    matchesAny(norm, FERMENTED_FOODS)
+  );
+}
+
+export type PlantCategory =
+  | "Vegetables"
+  | "Fruits"
+  | "Whole Grains"
+  | "Herbs & Spices"
+  | "Olive Oil"
+  | "Legumes"
+  | "Seeds"
+  | "Nuts"
+  | "Fermented Foods";
+
+/**
+ * Returns the plant category for an ingredient, or null if not a plant.
+ * Uses the same priority order as isPlantIngredient — herbs before vegetables
+ * to prevent e.g. "chilli powder" matching "chilli" in the vegetables list.
+ *
+ * Used by PlantDiversityExplorer to group plants by category.
+ */
+export function getPlantCategory(ingredient: string): PlantCategory | null {
+  const norm = normalizeIngredientKey(ingredient);
+  if (!norm) return null;
+  if (norm.includes("olive oil")) return "Olive Oil";
+  if (matchesAny(norm, HERBS_SPICES)) return "Herbs & Spices";
+  if (matchesAny(norm, FRUITS)) return "Fruits";
+  if (matchesAny(norm, VEGETABLES)) return "Vegetables";
+  if (matchesAny(norm, WHOLE_GRAINS)) return "Whole Grains";
+  if (matchesAny(norm, LEGUMES_PULSES)) return "Legumes";
+  if (matchesAny(norm, SEEDS_LIST)) return "Seeds";
+  if (matchesAny(norm, NUTS_LIST)) return "Nuts";
+  if (matchesAny(norm, FERMENTED_FOODS)) return "Fermented Foods";
+  return null;
+}
+
 export function sumVarietyScores(scores: VarietyScore[]): VarietyScore {
   return scores.reduce(
     (acc, s) => ({

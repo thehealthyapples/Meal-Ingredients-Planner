@@ -1100,6 +1100,32 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    id: "2026-06-11_add_meal_uplift_applications",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS meal_uplift_applications (
+        id SERIAL PRIMARY KEY,
+        meal_id INTEGER NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        rule_id TEXT NOT NULL,
+        rule_name TEXT NOT NULL,
+        ingredient TEXT NOT NULL,
+        action TEXT NOT NULL,
+        quantity TEXT,
+        explanation TEXT NOT NULL,
+        added_by TEXT NOT NULL DEFAULT 'tha_uplift',
+        planner_entry_id INTEGER,
+        forked_from_meal_id INTEGER,
+        status TEXT NOT NULL DEFAULT 'accepted',
+        accepted_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        removed_at TIMESTAMP WITH TIME ZONE
+      )`,
+      `CREATE INDEX IF NOT EXISTS mua_meal_id_idx ON meal_uplift_applications (meal_id)`,
+      `CREATE INDEX IF NOT EXISTS mua_user_id_idx ON meal_uplift_applications (user_id)`,
+      `CREATE INDEX IF NOT EXISTS mua_meal_status_idx ON meal_uplift_applications (meal_id, status)`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

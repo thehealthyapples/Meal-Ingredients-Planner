@@ -13,6 +13,7 @@
     "release:check": "npm run typecheck && npm run test && npm run build",
     "db:push": "drizzle-kit push",
     "seed:additives": "tsx server/seeds/run-additives-seed.ts",
+    "seed:meal-shells": "tsx server/seeds/seed-meal-shell-templates.ts",
     "test:additives": "tsx server/tests/test-additive-detection.ts",
     "test:extracts": "tsx server/tests/test-extract-detection.ts",
     "test:scoring": "tsx server/tests/test-tha-scoring.ts",

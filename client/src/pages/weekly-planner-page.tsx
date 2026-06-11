@@ -433,6 +433,12 @@ export default function WeeklyPlannerPage() {
     // Fork case: if the system meal was forked, update mealDetail so the dialog
     // resolves the live meal by the new fork ID rather than the original meal ID.
     setMealDetail(prev => {
+      // PROOF STEP 4 — handleUpliftAccepted logic
+      console.log("[BOOST-PROOF] STEP4 handleUpliftAccepted:", {
+        incomingMealId: mealId,
+        currentMealDetailMealId: prev?.meal.id,
+        willUpdate: !(!prev || prev.meal.id === mealId),
+      });
       if (!prev || prev.meal.id === mealId) return prev;
       return { ...prev, meal: { ...prev.meal, id: mealId } };
     });
@@ -2931,6 +2937,15 @@ export default function WeeklyPlannerPage() {
             // Resolve meal from the live query so ingredient list reflects accepted boosts
             // without requiring the dialog to be closed and reopened.
             const meal = meals.find(m => m.id === mealSnapshot.id) ?? mealSnapshot;
+            // PROOF STEP 5 — meal resolution in dialog
+            console.log("[BOOST-PROOF] STEP5 dialog meal resolution:", {
+              mealSnapshotId: mealSnapshot.id,
+              resolvedFromCache: meals.some(m => m.id === mealSnapshot.id),
+              resolvedMealId: meal.id,
+              ingredientsCount: meal.ingredients?.length ?? 0,
+              ingredients: meal.ingredients ?? [],
+              plannerEntryMealId: entry.mealId,
+            });
             const calories = nutritionMap.get(meal.id);
             const isFrozen = freezerMeals.some(f => f.mealId === meal.id && f.remainingPortions > 0);
             const instructions = meal.instructions || [];
@@ -3549,7 +3564,18 @@ export default function WeeklyPlannerPage() {
                     const mergedMatches = fallbackMatch
                       ? [...serverMatches, fallbackMatch]
                       : serverMatches;
-                    if (mergedMatches.length === 0) return null;
+                    // PROOF STEP 6 — uplift panel render decision
+                    const hasBoostedThisSession = boostedMealIds.has(meal.id);
+                    console.log("[BOOST-PROOF] STEP6 MealUpliftPanel render gate:", {
+                      mealId: meal.id,
+                      serverMatchesCount: serverMatches.length,
+                      hasFallbackMatch: !!fallbackMatch,
+                      fallbackSuggestions: fallbackMatch?.suggestions.map(s => s.ingredient) ?? [],
+                      mergedMatchesCount: mergedMatches.length,
+                      hasBoostedThisSession,
+                      willRender: mergedMatches.length > 0 || hasBoostedThisSession,
+                    });
+                    if (mergedMatches.length === 0 && !hasBoostedThisSession) return null;
                     return (
                       <MealUpliftPanel
                         mealId={meal.id}
@@ -3558,7 +3584,21 @@ export default function WeeklyPlannerPage() {
                         upliftMatches={mergedMatches}
                         currentMealName={meal.name}
                         weeklyReuseMap={weeklyReuseMap}
-                        onMealForked={() => {
+                        onMealForked={(newMealId) => {
+                          // Synchronously update planner cache so entry.mealId points to
+                          // the fork — prevents close/reopen from re-targeting the original
+                          qc.setQueryData<FullWeek[]>(["/api/planner/full"], (prev) => {
+                            if (!prev) return prev;
+                            return prev.map((week) => ({
+                              ...week,
+                              days: week.days.map((day) => ({
+                                ...day,
+                                entries: day.entries.map((e) =>
+                                  e.id === entry.id ? { ...e, mealId: newMealId } : e
+                                ),
+                              })),
+                            }));
+                          });
                           qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
                           qc.invalidateQueries({ queryKey: ["/api/meals"] });
                         }}

@@ -1,11 +1,12 @@
 import type { VarietyScore } from "@/lib/nutrition-variety";
-import { computeMealVariety } from "@/lib/nutrition-variety";
+import { computeMealVariety, isPlantIngredient } from "@/lib/nutrition-variety";
+import { normaliseForReuse } from "@/lib/ingredient-reuse";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, Leaf, ChevronRight } from "lucide-react";
 
 interface CategoryDef {
   key: keyof Omit<VarietyScore, "total">;
@@ -128,7 +129,33 @@ export function PlannerVarietyLegend({ compact = false }: { compact?: boolean })
   );
 }
 
-// ── Meal-level variety nudge - one soft line per meal ────────────────────────
+// ── Meal-level variety nudge ──────────────────────────────────────────────────
+//
+// ARCHITECTURAL NOTE — RETIRED FROM MEAL DIALOG (2026-06-10)
+//
+// MealVarietyNudge and its supporting helpers (findPantryItemForCategory,
+// FALLBACKS) are preserved here intentionally. The engine is still used
+// indirectly by the 30 Plants This Week counter and is a building block for
+// future meal-type-aware enhancements.
+//
+// The component was removed from the meal detail dialog render path because
+// its recommendation logic is category-gap aware but not meal-type aware.
+// It identifies which of five nutrition categories (fruits, vegetables, whole
+// grains, herbs/spices, olive oil) is absent from a meal, then names a
+// pantry item from that missing category. This produces suggestions that are
+// nutritionally correct but culinarily inappropriate:
+//
+//   Meal: Matambre a la Pizza → "Oats would add a whole grain element."
+//
+// The THA philosophy has shifted toward enhancement opportunities that are
+// relevant to the actual meal and household (NutritionBoostPanel,
+// MealUpliftPanel) rather than category-gap alerts. MealVarietyNudge belongs
+// to the earlier "What's missing?" approach; the current direction is
+// "Here are things that enrich this specific meal."
+//
+// DO NOT re-add MealVarietyNudge to the meal dialog without first adding
+// meal-type awareness to suppress inappropriate pairings (e.g. oats on pizza,
+// quinoa in a curry when the boost panel already handles that meal type).
 
 const FALLBACKS: Record<string, string[]> = {
   vegetables: ["spinach", "cherry tomatoes", "courgette", "cucumber", "sweet potato"],
@@ -246,6 +273,119 @@ export function DayVarietySummary({
           </p>
         </TooltipContent>
       </Tooltip>
+    </div>
+  );
+}
+
+// ── Weekly Plant Diversity Counter ────────────────────────────────────────────
+// Counts unique plant foods across all meals in the active planner week.
+// Target of 30 plants/week is a widely-cited nutritional guideline.
+// Approximation is intentional — the goal is visibility, not scientific precision.
+
+const WEEKLY_PLANT_TARGET = 30;
+
+interface WeeklyPlantDiversityCounterProps {
+  /** All ingredient arrays from meals in the active week */
+  weekIngredients: string[][];
+  className?: string;
+  /** If provided, the counter becomes interactive and triggers the Plant Diversity Explorer */
+  onExplore?: () => void;
+}
+
+export function WeeklyPlantDiversityCounter({
+  weekIngredients,
+  className,
+  onExplore,
+}: WeeklyPlantDiversityCounterProps) {
+  // Count unique plant items across all meals in the active week.
+  // Dedup key uses normaliseForReuse so "cherry tomatoes", "vine tomatoes", and
+  // "400g tinned tomatoes" all collapse to the same canonical key ("tomatoes").
+  // Plant classification uses isPlantIngredient which covers all plant food groups
+  // including legumes, seeds, nuts, and fermented foods.
+  const uniqueCount = (() => {
+    const seen = new Set<string>();
+    for (const ingredients of weekIngredients) {
+      for (const raw of ingredients) {
+        if (!raw.trim()) continue;
+        if (isPlantIngredient(raw)) seen.add(normaliseForReuse(raw));
+      }
+    }
+    return seen.size;
+  })();
+
+  const pct = Math.min((uniqueCount / WEEKLY_PLANT_TARGET) * 100, 100);
+  const isOnTrack = uniqueCount >= Math.round(WEEKLY_PLANT_TARGET * 0.6);
+  const isComplete = uniqueCount >= WEEKLY_PLANT_TARGET;
+
+  const barColor = isComplete
+    ? "bg-emerald-500"
+    : isOnTrack
+      ? "bg-teal-500"
+      : "bg-amber-400";
+
+  const counterContent = (
+    <>
+      <div className="flex items-center gap-1.5">
+        <Leaf className="h-3 w-3 text-emerald-600/70 dark:text-emerald-400/70 flex-shrink-0" />
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="text-[10px] text-muted-foreground/60 font-medium cursor-default leading-none">
+              30 Plants This Week
+            </span>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-[240px] text-xs leading-relaxed">
+            <p className="font-medium mb-1">30 Plants This Week</p>
+            <p className="text-muted-foreground">
+              5 a day is the minimum. Build towards 30 different plants a week —
+              fruit, veg, legumes, seeds, nuts, whole grains, herbs, spices, and
+              olive oil all count. This is an approximation based on ingredient names.
+            </p>
+          </TooltipContent>
+        </Tooltip>
+        <span
+          className={`text-[10px] font-semibold leading-none ${isComplete ? "text-emerald-600 dark:text-emerald-400" : "text-foreground/70"}`}
+          data-testid="plant-diversity-count"
+        >
+          {uniqueCount}
+          <span className="font-normal text-muted-foreground/50"> / {WEEKLY_PLANT_TARGET}</span>
+        </span>
+        {onExplore && (
+          <ChevronRight className="h-3 w-3 text-muted-foreground/30 group-hover:text-muted-foreground/60 transition-colors flex-shrink-0" />
+        )}
+      </div>
+      {/* Progress bar */}
+      <div className="h-1 w-full bg-muted/40 rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+          style={{ width: `${pct}%` }}
+          data-testid="plant-diversity-bar"
+          aria-valuenow={uniqueCount}
+          aria-valuemax={WEEKLY_PLANT_TARGET}
+          role="progressbar"
+        />
+      </div>
+    </>
+  );
+
+  if (onExplore) {
+    return (
+      <button
+        type="button"
+        onClick={onExplore}
+        className={`flex flex-col gap-1 min-w-[140px] text-left group hover:opacity-80 transition-opacity ${className ?? ""}`}
+        data-testid="weekly-plant-diversity-counter"
+      >
+        {counterContent}
+      </button>
+    );
+  }
+
+  return (
+    <div
+      className={`flex flex-col gap-1 min-w-[140px] ${className ?? ""}`}
+      data-testid="weekly-plant-diversity-counter"
+    >
+      {counterContent}
     </div>
   );
 }
