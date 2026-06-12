@@ -226,6 +226,9 @@ const PLANT_MILK_PHRASES = [
   "almond milk", "oat milk", "soy milk", "soya milk", "coconut milk",
   "plant milk", "plant-based milk", "rice milk", "hemp milk", "cashew milk",
   "hazelnut milk", "pea milk", "macadamia milk", "oat mylk",
+  // Plant creams — contain "cream" keyword but are dairy-free by definition
+  "coconut cream", "oat cream", "soya cream", "soy cream",
+  "almond cream", "cashew cream", "rice cream",
 ];
 
 // Replaces all PLANT_MILK_PHRASES with a space so surrounding keyword boundaries

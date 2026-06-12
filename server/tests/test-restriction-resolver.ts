@@ -597,6 +597,114 @@ assert(soySauceWithSoybeans.length === 1 && soySauceWithSoybeans[0].restriction.
 const soyAndSoybeans = resolveIngredientRestrictions('soy', [soyDef]);
 assert(soyAndSoybeans.length === 1, 'No duplicate soy result for "soy" alone');
 
+// ─── 29. Dairy excludedCompounds — plant milk false positives fixed ────────────
+
+section('29. Dairy excludedCompounds — plant milks must NOT match dairy');
+
+// Plant milks contain "milk" alias but must be excluded
+assertEqual(resolveIngredientRestrictions('coconut milk',  [dairyDef]), [], '"coconut milk" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('oat milk',      [dairyDef]), [], '"oat milk" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('rice milk',     [dairyDef]), [], '"rice milk" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('almond milk',   [dairyDef]), [], '"almond milk" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('cashew milk',   [dairyDef]), [], '"cashew milk" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('hemp milk',     [dairyDef]), [], '"hemp milk" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('pea milk',      [dairyDef]), [], '"pea milk" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('soy milk',      [dairyDef]), [], '"soy milk" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('soya milk',     [dairyDef]), [], '"soya milk" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('hazelnut milk', [dairyDef]), [], '"hazelnut milk" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('macadamia milk',[dairyDef]), [], '"macadamia milk" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('plant milk',    [dairyDef]), [], '"plant milk" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('plant-based milk',[dairyDef]),[], '"plant-based milk" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('oat mylk',      [dairyDef]), [], '"oat mylk" does NOT match dairy (excludedCompound)');
+
+// ─── 30. Dairy excludedCompounds — plant cream false positives fixed ───────────
+
+section('30. Dairy excludedCompounds — plant creams must NOT match dairy');
+
+assertEqual(resolveIngredientRestrictions('coconut cream', [dairyDef]), [], '"coconut cream" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('oat cream',     [dairyDef]), [], '"oat cream" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('soya cream',    [dairyDef]), [], '"soya cream" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('soy cream',     [dairyDef]), [], '"soy cream" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('almond cream',  [dairyDef]), [], '"almond cream" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('cashew cream',  [dairyDef]), [], '"cashew cream" does NOT match dairy (excludedCompound)');
+assertEqual(resolveIngredientRestrictions('rice cream',    [dairyDef]), [], '"rice cream" does NOT match dairy (excludedCompound)');
+
+// ─── 31. Genuine dairy ingredients still match after excludedCompounds ─────────
+
+section('31. Genuine dairy ingredients still match dairy (regression)');
+
+const milkResult = resolveIngredientRestrictions('milk', [dairyDef]);
+assert(milkResult.length === 1 && milkResult[0].restriction.id === 'dairy', '"milk" still resolves dairy');
+
+const butterResult = resolveIngredientRestrictions('butter', [dairyDef]);
+assert(butterResult.length === 1 && butterResult[0].restriction.id === 'dairy', '"butter" still resolves dairy');
+
+const creamResult = resolveIngredientRestrictions('cream', [dairyDef]);
+assert(creamResult.length === 1 && creamResult[0].restriction.id === 'dairy', '"cream" still resolves dairy');
+
+const cheeseResult = resolveIngredientRestrictions('cheese', [dairyDef]);
+assert(cheeseResult.length === 1 && cheeseResult[0].restriction.id === 'dairy', '"cheese" still resolves dairy');
+
+const yoghurtResult2 = resolveIngredientRestrictions('yoghurt', [dairyDef]);
+assert(yoghurtResult2.length === 1 && yoghurtResult2[0].restriction.id === 'dairy', '"yoghurt" still resolves dairy');
+
+const yogurtResult = resolveIngredientRestrictions('yogurt', [dairyDef]);
+assert(yogurtResult.length === 1 && yogurtResult[0].restriction.id === 'dairy', '"yogurt" still resolves dairy');
+
+const gheeResult2 = resolveIngredientRestrictions('ghee', [dairyDef]);
+assert(gheeResult2.length === 1 && gheeResult2[0].restriction.id === 'dairy', '"ghee" still resolves dairy');
+
+const cowsMilkResult = resolveIngredientRestrictions("cow's milk", [dairyDef]);
+assert(cowsMilkResult.length === 1 && cowsMilkResult[0].restriction.id === 'dairy', '"cow\'s milk" still resolves dairy');
+
+const doubleCreamResult = resolveIngredientRestrictions('double cream', [dairyDef]);
+assert(doubleCreamResult.length === 1 && doubleCreamResult[0].restriction.id === 'dairy', '"double cream" still resolves dairy');
+
+const whippedCreamResult = resolveIngredientRestrictions('whipped cream', [dairyDef]);
+assert(whippedCreamResult.length === 1 && whippedCreamResult[0].restriction.id === 'dairy', '"whipped cream" still resolves dairy');
+
+const condensedMilkResult = resolveIngredientRestrictions('condensed milk', [dairyDef]);
+assert(condensedMilkResult.length === 1 && condensedMilkResult[0].restriction.id === 'dairy', '"condensed milk" still resolves dairy');
+
+const evaporatedMilkResult = resolveIngredientRestrictions('evaporated milk', [dairyDef]);
+assert(evaporatedMilkResult.length === 1 && evaporatedMilkResult[0].restriction.id === 'dairy', '"evaporated milk" still resolves dairy');
+
+const sourCreamResult = resolveIngredientRestrictions('sour cream', [dairyDef]);
+assert(sourCreamResult.length === 1 && sourCreamResult[0].restriction.id === 'dairy', '"sour cream" still resolves dairy');
+
+const clottedCreamResult = resolveIngredientRestrictions('clotted cream', [dairyDef]);
+assert(clottedCreamResult.length === 1 && clottedCreamResult[0].restriction.id === 'dairy', '"clotted cream" still resolves dairy');
+
+const milkChocolateResult = resolveIngredientRestrictions('milk chocolate', [dairyDef]);
+assert(milkChocolateResult.length === 1 && milkChocolateResult[0].restriction.id === 'dairy', '"milk chocolate" still resolves dairy');
+
+// ─── 32. Tree nut still detects almond milk / cashew cream — no suppression ────
+
+section('32. Tree nut restriction not suppressed by dairy excludedCompounds');
+
+// almond milk must still match tree_nut (excludedCompounds are per-definition)
+const almondMilkTreeNut = resolveIngredientRestrictions('almond milk', [treeNutDef]);
+assert(almondMilkTreeNut.length === 1 && almondMilkTreeNut[0].restriction.id === 'tree_nut', '"almond milk" still resolves tree_nut');
+
+const cashewCreamTreeNut = resolveIngredientRestrictions('cashew cream', [treeNutDef]);
+assert(cashewCreamTreeNut.length === 1 && cashewCreamTreeNut[0].restriction.id === 'tree_nut', '"cashew cream" still resolves tree_nut');
+
+const cashewMilkTreeNut = resolveIngredientRestrictions('cashew milk', [treeNutDef]);
+assert(cashewMilkTreeNut.length === 1 && cashewMilkTreeNut[0].restriction.id === 'tree_nut', '"cashew milk" still resolves tree_nut');
+
+const almondCreamTreeNut = resolveIngredientRestrictions('almond cream', [treeNutDef]);
+assert(almondCreamTreeNut.length === 1 && almondCreamTreeNut[0].restriction.id === 'tree_nut', '"almond cream" still resolves tree_nut');
+
+// Multi-restriction: almond milk triggers tree_nut but NOT dairy
+const almondMilkMulti = resolveIngredientRestrictions('almond milk', [dairyDef, treeNutDef]);
+assert(almondMilkMulti.length === 1, '"almond milk" matches exactly 1 restriction (tree_nut only)');
+assert(almondMilkMulti[0].restriction.id === 'tree_nut', '"almond milk" multi-restriction: only tree_nut, not dairy');
+
+// Multi-restriction: cashew cream triggers tree_nut but NOT dairy
+const cashewCreamMulti = resolveIngredientRestrictions('cashew cream', [dairyDef, treeNutDef]);
+assert(cashewCreamMulti.length === 1, '"cashew cream" matches exactly 1 restriction (tree_nut only)');
+assert(cashewCreamMulti[0].restriction.id === 'tree_nut', '"cashew cream" multi-restriction: only tree_nut, not dairy');
+
 // ─── Summary ──────────────────────────────────────────────────────────────────
 
 console.log(`\n────────────────────────────────────────`);

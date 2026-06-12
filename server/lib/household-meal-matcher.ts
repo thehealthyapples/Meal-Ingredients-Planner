@@ -4,16 +4,31 @@ import {
   householdEaters,
   plannerWeekEaterOverrides,
   userPreferences,
+  users,
   mealTemplates,
   ingredientSwaps,
 } from "@shared/schema";
-import type { MealTemplate } from "@shared/schema";
+import type { MealTemplate, Meal } from "@shared/schema";
 import { getHouseholdForUser } from "./household";
 import { dbEaterToHouseholdEater, getEffectiveDietProfile } from "@shared/household-eater.js";
+import { resolveActiveRestrictions, resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
+
+const DIET_PATTERN_TO_DIET_TYPE: Record<string, string> = {
+  Vegan: "vegan",
+  Vegetarian: "vegetarian",
+  Flexitarian: "flexitarian",
+  Keto: "keto",
+  "Low-Carb": "low-carb",
+  Paleo: "paleo",
+  Carnivore: "carnivore",
+  Mediterranean: "mediterranean",
+  DASH: "dash",
+  MIND: "mind",
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface MemberProfile {
+export interface MemberProfile {
   userId: number | null;
   displayName: string;
   dietTypes: string[];
@@ -24,7 +39,7 @@ interface MemberProfile {
   healthGoals: string[];
 }
 
-interface HouseholdSettings {
+export interface HouseholdSettings {
   mealMode: string;
   maxExtraPrepMinutes: number | null;
   maxTotalCookTime: number | null;
@@ -32,10 +47,17 @@ interface HouseholdSettings {
   budgetLevel: string;
 }
 
-interface MemberChange {
+export interface MemberChange {
   userId: number | null;
   displayName: string;
   swaps: string[];
+}
+
+// Fields present on MealTemplate but absent from Meal — used to decouple scoring from template type
+interface TimingCostMeta {
+  estimatedTotalTime?: number | null;
+  estimatedExtraTimePerVariant?: number | null;
+  costBand?: string | null;
 }
 
 export interface ScoreBreakdown {
@@ -57,6 +79,24 @@ export interface MealMatch {
   fitScore: number;
   scoreBreakdown: ScoreBreakdown;
   explanation: string;
+}
+
+// Compatibility result for normal meals — identical shape to MealMatch minus template
+export interface MealCompatibilityResult {
+  sharedIngredients: string[];
+  memberChanges: MemberChange[];
+  swapsNeeded: string[];
+  extraPrepMinutes: number;
+  fitScore: number;
+  scoreBreakdown: ScoreBreakdown;
+  explanation: string;
+}
+
+// Pre-built household context — loaded once per planning run, reused per candidate
+export interface HouseholdContext {
+  members: MemberProfile[];
+  settings: HouseholdSettings;
+  swapMap: Map<string, string>;
 }
 
 // ─── Weights ──────────────────────────────────────────────────────────────────
@@ -98,14 +138,14 @@ function scoreSwapSimplicity(memberChanges: MemberChange[], memberCount: number)
 }
 
 function scoreTimeFit(
-  template: MealTemplate,
+  meta: TimingCostMeta,
   extraPrepMinutes: number,
   settings: HouseholdSettings
 ): number {
   let score = 1;
-  if (settings.maxTotalCookTime != null && template.estimatedTotalTime != null) {
-    if (template.estimatedTotalTime > settings.maxTotalCookTime) {
-      score *= settings.maxTotalCookTime / template.estimatedTotalTime;
+  if (settings.maxTotalCookTime != null && meta.estimatedTotalTime != null) {
+    if (meta.estimatedTotalTime > settings.maxTotalCookTime) {
+      score *= settings.maxTotalCookTime / meta.estimatedTotalTime;
     }
   }
   if (settings.maxExtraPrepMinutes != null && extraPrepMinutes > settings.maxExtraPrepMinutes) {
@@ -114,9 +154,9 @@ function scoreTimeFit(
   return Math.max(0, Math.min(1, score));
 }
 
-function scoreCostFit(template: MealTemplate, settings: HouseholdSettings): number {
-  if (!template.costBand) return 1;
-  const templateTier = COST_TIER[template.costBand] ?? 1;
+function scoreCostFit(meta: TimingCostMeta, settings: HouseholdSettings): number {
+  if (!meta.costBand) return 1;
+  const templateTier = COST_TIER[meta.costBand] ?? 1;
   const budgetTier = COST_TIER[settings.budgetLevel] ?? 1;
   const diff = Math.abs(templateTier - budgetTier);
   return diff === 0 ? 1 : diff === 1 ? 0.7 : 0.3;
@@ -156,11 +196,19 @@ function computeFitScore(breakdown: ScoreBreakdown): number {
 
 // ─── Main entry point ─────────────────────────────────────────────────────────
 
-export async function matchMealsForHousehold(
+// Loads all household context needed for compatibility scoring — members, settings,
+// swapMap — without running the template loop. Returns null when the user has no
+// active household, so callers degrade gracefully to no-compatibility behaviour.
+export async function buildHouseholdContext(
   userId: number,
   weekId?: number,
-): Promise<MealMatch[]> {
-  const householdId = await getHouseholdForUser(userId);
+): Promise<HouseholdContext | null> {
+  let householdId: number;
+  try {
+    householdId = await getHouseholdForUser(userId);
+  } catch {
+    return null;
+  }
 
   // Load weekly diet overrides for this planner week (optional — no-op when weekId not provided).
   let overrideMap = new Map<number, { dietTypes: string[] }>();
@@ -184,18 +232,44 @@ export async function matchMealsForHousehold(
     const profile = getEffectiveDietProfile(eater, overrideMap.get(Number(eater.id)));
 
     let prefs: typeof userPreferences.$inferSelect | undefined;
+    let userRow: typeof users.$inferSelect | undefined;
     if (eater.userId != null) {
-      [prefs] = await db
-        .select()
-        .from(userPreferences)
-        .where(eq(userPreferences.userId, eater.userId));
+      [[prefs], [userRow]] = await Promise.all([
+        db.select().from(userPreferences).where(eq(userPreferences.userId, eater.userId)),
+        db.select().from(users).where(eq(users.id, eater.userId)),
+      ]);
+    }
+
+    let dietTypes: string[];
+    let excludedIngredients: string[];
+    if (eater.userId != null) {
+      // Adult: derive dietary data from profile, respecting week diet overrides
+      const override = overrideMap.get(Number(eater.id));
+      if (override) {
+        dietTypes = override.dietTypes;
+      } else {
+        const prefDietTypes = prefs?.dietTypes ?? [];
+        if (prefDietTypes.length > 0) {
+          dietTypes = prefDietTypes;
+        } else if (userRow?.dietPattern) {
+          const mapped = DIET_PATTERN_TO_DIET_TYPE[userRow.dietPattern];
+          dietTypes = mapped ? [mapped] : [userRow.dietPattern];
+        } else {
+          dietTypes = [];
+        }
+      }
+      excludedIngredients = (userRow?.dietRestrictions ?? []).map(r => r.toLowerCase());
+    } else {
+      // Child: use stored household_eaters values via getEffectiveDietProfile
+      dietTypes = profile.dietTypes;
+      excludedIngredients = profile.hardRestrictions.map(r => r.toLowerCase());
     }
 
     members.push({
       userId: eater.userId ?? null,
       displayName: eater.displayName,
-      dietTypes: profile.dietTypes,
-      excludedIngredients: profile.hardRestrictions.map(r => r.toLowerCase()),
+      dietTypes,
+      excludedIngredients,
       preferredIngredients: prefs?.preferredIngredients ?? [],
       maxPrepTolerance: prefs?.maxPrepTolerance ?? null,
       upfSensitivity: prefs?.upfSensitivity ?? "moderate",
@@ -209,7 +283,7 @@ export async function matchMealsForHousehold(
     .from(userPreferences)
     .where(eq(userPreferences.userId, userId));
 
-  const householdSettings: HouseholdSettings = {
+  const settings: HouseholdSettings = {
     mealMode:             callerPrefs?.mealMode            ?? "exact",
     maxExtraPrepMinutes:  callerPrefs?.maxExtraPrepMinutes ?? null,
     maxTotalCookTime:     callerPrefs?.maxTotalCookTime    ?? null,
@@ -217,16 +291,29 @@ export async function matchMealsForHousehold(
     budgetLevel:          callerPrefs?.budgetLevel         ?? "standard",
   };
 
-  const templates = await db
-    .select()
-    .from(mealTemplates)
-    .where(eq(mealTemplates.isActive, true));
-
   const swapRules = await db.select().from(ingredientSwaps);
   const swapMap = new Map<string, string>();
   for (const s of swapRules) {
     swapMap.set(s.original.toLowerCase(), s.healthier);
   }
+
+  return { members, settings, swapMap };
+}
+
+export async function matchMealsForHousehold(
+  userId: number,
+  weekId?: number,
+  context?: HouseholdContext,
+): Promise<MealMatch[]> {
+  const ctx = context ?? await buildHouseholdContext(userId, weekId);
+  if (ctx == null) return [];
+
+  const { members, settings: householdSettings, swapMap } = ctx;
+
+  const templates = await db
+    .select()
+    .from(mealTemplates)
+    .where(eq(mealTemplates.isActive, true));
 
   const results: MealMatch[] = [];
   for (const template of templates) {
@@ -236,6 +323,120 @@ export async function matchMealsForHousehold(
 
   results.sort((a, b) => b.fitScore - a.fitScore);
   return results;
+}
+
+// ─── Shared compatibility engine ──────────────────────────────────────────────
+//
+// Single source of truth for all household compatibility scoring.
+// Both scoreTemplate() (shell meals) and scoreMealCompatibility() (normal meals)
+// delegate here after assembling their respective ingredient lists.
+
+function computeIngredientCompatibility(
+  ingredientList: string[],
+  compatibleDiets: string[],
+  base: string[],
+  meta: TimingCostMeta,
+  members: MemberProfile[],
+  settings: HouseholdSettings,
+  swapMap: Map<string, string>
+): MealCompatibilityResult {
+  const memberChanges: MemberChange[] = [];
+  let membersNeedingVariant = 0;
+  let totalDietConflicts = 0;
+  const resolvedMemberDefs: Array<ReturnType<typeof resolveActiveRestrictions>> = [];
+
+  for (const member of members) {
+    const swaps: string[] = [];
+
+    // Path A: diet type check
+    if (compatibleDiets.length > 0 && member.dietTypes.length > 0) {
+      for (const diet of member.dietTypes) {
+        if (!compatibleDiets.includes(diet)) {
+          totalDietConflicts++;
+          swaps.push(`${diet} diet not covered`);
+        }
+      }
+    }
+
+    // Path B: ingredient exclusion check via canonical restriction resolver
+    const memberDefs = resolveActiveRestrictions(member.excludedIngredients);
+    resolvedMemberDefs.push(memberDefs);
+    for (const ingredient of ingredientList) {
+      if (resolveIngredientRestrictions(ingredient, memberDefs).length > 0) {
+        const key = ingredient.toLowerCase();
+        const healthier = swapMap.get(key);
+        swaps.push(healthier ? `${ingredient} → ${healthier}` : `remove ${ingredient}`);
+      }
+    }
+
+    if (swaps.length > 0) {
+      membersNeedingVariant++;
+      memberChanges.push({ userId: member.userId, displayName: member.displayName, swaps });
+    }
+  }
+
+  const allActiveDefs = Array.from(
+    new Map(resolvedMemberDefs.flat().map(def => [def.id, def])).values()
+  );
+  const sharedIngredients = base.filter((ing) =>
+    resolveIngredientRestrictions(ing, allActiveDefs).length === 0
+  );
+
+  const swapsNeeded = Array.from(
+    new Set(memberChanges.flatMap((c) => c.swaps).filter((s) => s.includes("→")))
+  );
+
+  const extraPrepMinutes = (meta.estimatedExtraTimePerVariant ?? 0) * membersNeedingVariant;
+
+  const breakdown: ScoreBreakdown = {
+    compatibility:        scoreCompatibility(totalDietConflicts, members.length),
+    sharedBase:           scoreSharedBase(sharedIngredients, base),
+    swapSimplicity:       scoreSwapSimplicity(memberChanges, members.length),
+    timeFit:              scoreTimeFit(meta, extraPrepMinutes, settings),
+    costFit:              scoreCostFit(meta, settings),
+    healthAlignment:      scoreHealthAlignment(members, settings),
+    preferenceConfidence: scorePreferenceConfidence(members),
+  };
+
+  return {
+    sharedIngredients,
+    memberChanges,
+    swapsNeeded,
+    extraPrepMinutes,
+    fitScore: computeFitScore(breakdown),
+    scoreBreakdown: breakdown,
+    explanation: buildExplanation(
+      members,
+      memberChanges,
+      sharedIngredients,
+      base,
+      swapsNeeded,
+      extraPrepMinutes,
+      breakdown,
+      settings
+    ),
+  };
+}
+
+// ─── Score normal meals ───────────────────────────────────────────────────────
+
+export function scoreMealCompatibility(
+  meal: Meal,
+  members: MemberProfile[],
+  settings: HouseholdSettings,
+  swapMap: Map<string, string>
+): MealCompatibilityResult | null {
+  if (!meal.ingredients || meal.ingredients.length === 0) return null;
+
+  return computeIngredientCompatibility(
+    meal.ingredients,
+    meal.dietTypes ?? [],
+    meal.ingredients,  // whole recipe is the shared base for a normal meal
+    {},                // no time/cost metadata — timeFit and costFit default to 1.0
+    members,
+    settings,
+    swapMap
+  );
 }
 
 // ─── Per-template logic ───────────────────────────────────────────────────────
@@ -259,80 +460,22 @@ function scoreTemplate(
 
   const base = template.sharedBaseComponents ?? [];
 
-  const memberChanges: MemberChange[] = [];
-  let membersNeedingVariant = 0;
-  let totalDietConflicts = 0;
-
-  for (const member of members) {
-    const swaps: string[] = [];
-
-    const templateDiets = template.compatibleDiets ?? [];
-    if (templateDiets.length > 0 && member.dietTypes.length > 0) {
-      for (const diet of member.dietTypes) {
-        if (!templateDiets.includes(diet)) {
-          totalDietConflicts++;
-          swaps.push(`${diet} diet not covered`);
-        }
-      }
-    }
-
-    const excluded = member.excludedIngredients.map((e) => e.toLowerCase());
-    for (const ingredient of allSlotIngredients) {
-      const key = ingredient.toLowerCase();
-      const isExcluded = excluded.some((ex) => key.includes(ex) || ex.includes(key));
-      if (isExcluded) {
-        const healthier = swapMap.get(key);
-        swaps.push(healthier ? `${ingredient} → ${healthier}` : `remove ${ingredient}`);
-      }
-    }
-
-    if (swaps.length > 0) {
-      membersNeedingVariant++;
-      memberChanges.push({ userId: member.userId, displayName: member.displayName, swaps });
-    }
-  }
-
-  const allExclusionsArr = Array.from(
-    new Set(members.flatMap((m) => m.excludedIngredients.map((e) => e.toLowerCase())))
-  );
-  const sharedIngredients = base.filter((ing) => {
-    const key = ing.toLowerCase();
-    return !allExclusionsArr.some((ex) => key.includes(ex) || ex.includes(key));
-  });
-
-  const swapsNeeded = Array.from(
-    new Set(memberChanges.flatMap((c) => c.swaps).filter((s) => s.includes("→")))
-  );
-
-  const extraPrepMinutes = (template.estimatedExtraTimePerVariant ?? 0) * membersNeedingVariant;
-
-  const breakdown: ScoreBreakdown = {
-    compatibility:        scoreCompatibility(totalDietConflicts, members.length),
-    sharedBase:           scoreSharedBase(sharedIngredients, base),
-    swapSimplicity:       scoreSwapSimplicity(memberChanges, members.length),
-    timeFit:              scoreTimeFit(template, extraPrepMinutes, settings),
-    costFit:              scoreCostFit(template, settings),
-    healthAlignment:      scoreHealthAlignment(members, settings),
-    preferenceConfidence: scorePreferenceConfidence(members),
+  const meta: TimingCostMeta = {
+    estimatedTotalTime:           template.estimatedTotalTime,
+    estimatedExtraTimePerVariant: template.estimatedExtraTimePerVariant,
+    costBand:                     template.costBand,
   };
 
   return {
     template,
-    sharedIngredients,
-    memberChanges,
-    swapsNeeded,
-    extraPrepMinutes,
-    fitScore: computeFitScore(breakdown),
-    scoreBreakdown: breakdown,
-    explanation: buildExplanation(
-      members,
-      memberChanges,
-      sharedIngredients,
+    ...computeIngredientCompatibility(
+      allSlotIngredients,
+      template.compatibleDiets ?? [],
       base,
-      swapsNeeded,
-      extraPrepMinutes,
-      breakdown,
-      settings
+      meta,
+      members,
+      settings,
+      swapMap
     ),
   };
 }

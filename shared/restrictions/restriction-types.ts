@@ -98,6 +98,22 @@ export interface RestrictionDefinition {
    * Not used in matching.
    */
   prohibitedPhrases: string[];
+
+  /**
+   * Compound ingredient phrases that must NOT trigger a match, even when
+   * a matching alias or derivedIngredient is present as a substring.
+   *
+   * Used to prevent false positives where a plant-based alternative shares
+   * a keyword with a genuine restricted ingredient.
+   * Example: dairy.excludedCompounds includes "oat milk" and "coconut cream"
+   * so those phrases are never flagged as dairy, even though "milk" is a
+   * dairy alias and "cream" is a dairy derivedIngredient.
+   *
+   * Checked before all alias / derived / hidden matching — an excluded
+   * compound is an unconditional early exit.
+   * Optional: definitions without this field behave unchanged.
+   */
+  excludedCompounds?: string[];
 }
 
 // ─── Match result ─────────────────────────────────────────────────────────────

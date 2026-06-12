@@ -41,13 +41,13 @@ import { MealNutrientTags } from "@/components/nutrition-insights-panel";
 import { useUser } from "@/hooks/use-user";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";
-import { MealUpliftPanel, UpliftCardIndicator } from "@/components/MealUpliftPanel";
+import { MealUpliftPanel, UpliftCardIndicator, SHOPPING_LIST_KEYS } from "@/components/MealUpliftPanel";
 import type { UpliftMatchResult } from "@/components/MealUpliftPanel";
 import { buildWeeklyReuseMap, normaliseForReuse } from "@/lib/ingredient-reuse";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { api } from "@shared/routes";
-import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutrition, MealCategory, WeekEaterOverride } from "@shared/schema";
+import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutrition, MealCategory, WeekEaterOverride, MealUpliftApplication } from "@shared/schema";
 import type { HouseholdEater, GuestEater } from "@shared/household-eater";
 import type { AdaptationResult, HouseholdSafePreview } from "@shared/meal-adaptation";
 import { computeRestrictionSafety, type EaterProfile } from "@shared/restrictions/restriction-safety";
@@ -763,6 +763,46 @@ export default function WeeklyPlannerPage() {
     },
     onError: () => {
       toast({ title: "Failed to update eaters", variant: "destructive" });
+    },
+  });
+
+  // ── Nutrition Boost provenance (dialog-level) ────────────────────────────────
+  // Accepted uplift applications for the meal shown in the detail dialog.
+  // Shares the cache key with MealUpliftPanel, so the POST-accept cache write
+  // makes provenance appear immediately. mealDetail.meal.id is updated to the
+  // fork id by handleUpliftAccepted, so the key always targets the effective
+  // (user-owned) meal. System meals are skipped — the endpoint 403s for them
+  // and they can never have application rows.
+  const mealDetailMealId = mealDetail?.meal.id;
+  const mealDetailMealIsSystem =
+    (meals.find((m) => m.id === mealDetailMealId) ?? mealDetail?.meal)?.isSystemMeal ?? false;
+  const { data: mealDetailApplications = [] } = useQuery<MealUpliftApplication[]>({
+    queryKey: ["/api/meals", mealDetailMealId, "uplift-applications"],
+    queryFn: async () => {
+      const res = await apiRequest("GET", `/api/meals/${mealDetailMealId}/uplift-applications`);
+      const body = await res.json();
+      return body.applications ?? [];
+    },
+    enabled: !!mealDetail && !mealDetailMealIsSystem,
+    staleTime: 30_000,
+  });
+
+  const removeBoostFromDialogMutation = useMutation({
+    mutationFn: async (applicationId: number) => {
+      const res = await apiRequest("DELETE", `/api/uplift/applications/${applicationId}`);
+      if (!res.ok) throw new Error("Failed to remove");
+      return res.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["/api/meals", mealDetail?.meal.id, "uplift-applications"] });
+      qc.invalidateQueries({ queryKey: ["/api/meals"] });
+      qc.invalidateQueries({ queryKey: ["/api/planner/full"] });
+      for (const key of SHOPPING_LIST_KEYS) {
+        qc.invalidateQueries({ queryKey: key });
+      }
+    },
+    onError: () => {
+      toast({ title: "Failed to remove boost", variant: "destructive" });
     },
   });
 
@@ -3623,6 +3663,15 @@ export default function WeeklyPlannerPage() {
                           {(() => {
                             const changes = householdSafePreview?.ingredientChanges ?? [];
                             const matchedIdx = new Set<number>();
+                            // Provenance: persisted accepted Nutrition Boost applications,
+                            // keyed by normalised ingredient. Label/Remove render only when
+                            // a matching accepted row exists — never inferred from name alone.
+                            const boostByIngredient = new Map<string, MealUpliftApplication>();
+                            for (const app of mealDetailApplications) {
+                              if (app.status === "accepted") {
+                                boostByIngredient.set(app.ingredient.toLowerCase().trim(), app);
+                              }
+                            }
                             const rows = meal.ingredients!.map((ing, idx) => {
                               const ci = changes.findIndex((c, i) =>
                                 !matchedIdx.has(i) && ing.toLowerCase().includes(c.original.toLowerCase())
@@ -3648,6 +3697,41 @@ export default function WeeklyPlannerPage() {
                                       <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
                                       {c.replacement}
                                     </div>
+                                  </li>
+                                );
+                              }
+                              const boostApp = boostByIngredient.get(ing.toLowerCase().trim());
+                              if (boostApp) {
+                                const isRemovingBoost =
+                                  removeBoostFromDialogMutation.isPending &&
+                                  removeBoostFromDialogMutation.variables === boostApp.id;
+                                return (
+                                  <li key={idx} className="text-sm flex items-start gap-2 text-foreground/80">
+                                    <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                    <span className="min-w-0">
+                                      {ing}
+                                      <span className="flex items-center gap-2 mt-0.5">
+                                        <span
+                                          className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70"
+                                          data-testid={`ingredient-boost-label-${boostApp.id}`}
+                                        >
+                                          Added via Nutrition Boost
+                                        </span>
+                                        <button
+                                          className="text-[10px] text-muted-foreground/60 hover:text-destructive underline underline-offset-2 transition-colors disabled:opacity-50"
+                                          onClick={() => removeBoostFromDialogMutation.mutate(boostApp.id)}
+                                          disabled={removeBoostFromDialogMutation.isPending}
+                                          aria-label={`Remove ${boostApp.ingredient}`}
+                                          data-testid={`ingredient-boost-remove-${boostApp.id}`}
+                                        >
+                                          {isRemovingBoost ? (
+                                            <Loader2 className="h-2.5 w-2.5 animate-spin inline" />
+                                          ) : (
+                                            "Remove"
+                                          )}
+                                        </button>
+                                      </span>
+                                    </span>
                                   </li>
                                 );
                               }

@@ -74,6 +74,7 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
   const [, navigate] = useLocation();
   const [qty, setQty] = useState(1);
   const [showMobilePreview, setShowMobilePreview] = useState(false);
+  const [hfExpanded, setHfExpanded] = useState(false);
   const mealId = !entry.candidate.isExternal ? Number(entry.candidate.id) : null;
   const key = `${entry.dayOfWeek}-${entry.slot}`;
 
@@ -178,6 +179,34 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
             <p className="text-sm font-semibold leading-snug mb-1">{entry.candidate.name}</p>
             <NutritionVarietyDots score={varietyScore} />
             <MealNutrientTags nutrients={nutrientTags} />
+            {entry.candidate.householdFit && (() => {
+              const { compatibleCount, totalCount, memberChanges } = entry.candidate.householdFit;
+              const allFit = compatibleCount === totalCount;
+              const hasAdaptations = memberChanges.length > 0;
+              return (
+                <div className="mt-0.5">
+                  <div className="flex items-center gap-1 text-xs">
+                    {allFit ? (
+                      <span className="text-green-600 dark:text-green-400">✓ Fits all household members</span>
+                    ) : (
+                      <span className="text-muted-foreground">⚠ Fits {compatibleCount} of {totalCount} household members</span>
+                    )}
+                    {hasAdaptations && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setHfExpanded(v => !v); }}
+                        className="text-muted-foreground hover:text-foreground transition-colors leading-none"
+                        aria-label="Toggle household fit details"
+                      >
+                        {hfExpanded ? "▴" : "▾"}
+                      </button>
+                    )}
+                  </div>
+                  {hasAdaptations && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400">Needs household adaptations</p>
+                  )}
+                </div>
+              );
+            })()}
             <div className="flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
               {cuisine && <span className="capitalize">{cuisine}</span>}
               {primaryProtein && <span className="capitalize">{primaryProtein}</span>}
@@ -325,6 +354,17 @@ function SmartMealEntryCard({ entry, meal, nutrition, nutritionLoading, locked, 
       {expanded && entry.explanation && (
         <div className="px-3 pb-3 text-xs text-muted-foreground space-y-0.5 bg-muted/20 border-t pt-2">
           {entry.explanation.reasons.map((r, i) => <p key={i}>• {r}</p>)}
+        </div>
+      )}
+
+      {hfExpanded && entry.candidate.householdFit && entry.candidate.householdFit.memberChanges.length > 0 && (
+        <div className="px-3 pb-3 text-xs text-muted-foreground space-y-1.5 bg-muted/20 border-t pt-2">
+          {entry.candidate.householdFit.memberChanges.map((mc, i) => (
+            <div key={i}>
+              <p className="font-medium text-foreground">{mc.displayName}:</p>
+              {mc.swaps.map((s, j) => <p key={j} className="pl-2">• {s}</p>)}
+            </div>
+          ))}
         </div>
       )}
 

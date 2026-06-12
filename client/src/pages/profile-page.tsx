@@ -29,7 +29,7 @@ import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { PageHeader } from "@/components/PageHeader";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
-import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES, ONBOARDING_DIET_OPTIONS, ALLERGY_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
+import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES, ONBOARDING_DIET_OPTIONS, ALLERGY_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS, formatDietLabel } from "@/lib/diets";
 import { GOAL_OPTIONS, STORE_OPTIONS, UPF_OPTIONS, BUDGET_OPTIONS, deriveGoalType } from "@/lib/shared-options";
 import type { HouseholdEater } from "@shared/household-eater";
 
@@ -1036,35 +1036,46 @@ function HouseholdEatersSection() {
         ) : (
           <div className="space-y-2">
             {eaters.map(eater => (
-              <div key={eater.id} className="flex items-center gap-3" data-testid={`row-eater-${eater.id}`}>
-                <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0">
+              <div key={eater.id} className="flex items-start gap-3" data-testid={`row-eater-${eater.id}`}>
+                <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center shrink-0 mt-0.5">
                   {eater.kind === "child"
                     ? <Baby className="h-3.5 w-3.5 text-muted-foreground" />
                     : <PersonStanding className="h-3.5 w-3.5 text-muted-foreground" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" data-testid={`text-eater-name-${eater.id}`}>{eater.displayName}</p>
+                  <p className="text-sm font-medium" data-testid={`text-eater-name-${eater.id}`}>{eater.displayName}</p>
                   {(eater.defaultDietTypes.length > 0 || eater.hardRestrictions.length > 0) && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {[...eater.defaultDietTypes, ...eater.hardRestrictions].join(", ")}
-                    </p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {eater.defaultDietTypes.map(diet => (
+                        <span key={diet} className="text-xs px-2 py-0.5 rounded-full bg-muted border border-border text-muted-foreground">
+                          {formatDietLabel(diet)}
+                        </span>
+                      ))}
+                      {eater.hardRestrictions.map(r => (
+                        <span key={r} className="text-xs px-2 py-0.5 rounded-full bg-destructive/10 border border-destructive/20 text-destructive">
+                          {formatDietLabel(r)}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
-                <Badge variant={eater.kind === "child" ? "secondary" : "outline"} className="text-xs shrink-0 capitalize">
-                  {eater.kind}
-                </Badge>
-                {eater.kind === "child" && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 shrink-0"
-                    onClick={() => openEdit(eater)}
-                    data-testid={`button-edit-eater-${eater.id}`}
-                    aria-label={`Edit ${eater.displayName}`}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                )}
+                <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                  <Badge variant={eater.kind === "child" ? "secondary" : "outline"} className="text-xs capitalize">
+                    {eater.kind}
+                  </Badge>
+                  {eater.kind === "child" && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      onClick={() => openEdit(eater)}
+                      data-testid={`button-edit-eater-${eater.id}`}
+                      aria-label={`Edit ${eater.displayName}`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -1318,7 +1329,7 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2">
           <Target className="h-4 w-4 text-muted-foreground" />
-          <h3 className="text-sm font-medium">{showDiet ? "Cuisine" : "Goals"}</h3>
+          <h3 className="text-sm font-medium">{showDiet ? "Dietary Pattern" : "Goals"}</h3>
         </div>
         {dirty && (
           <Button size="sm" onClick={save} data-testid="button-save-goals">
@@ -1330,7 +1341,7 @@ export function GoalsPreferences({ profile, onSave, showDiet = true }: { profile
       <div className="divide-y divide-border/40">
         {showDiet && (
           <>
-            <SettingRow label="Cuisine" summary={cuisineSummary} testId="row-cuisine">
+            <SettingRow label="Dietary Pattern" summary={cuisineSummary} testId="row-cuisine">
               <div className="flex flex-wrap gap-2 pt-1">
                 <Badge
                   variant={!dietPattern ? "default" : "outline"}

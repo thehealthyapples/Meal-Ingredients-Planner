@@ -115,3 +115,44 @@ export const EATING_STYLE_OPTIONS: EatingStyleOption[] = [
   { value: "quick-convenient", label: "Quick & convenient",  def: "Fast options for busy routines." },
   { value: "whole-foods",      label: "Whole foods focused",  def: "Less processed, closer to natural ingredients." },
 ];
+
+// ─── Display label formatter ──────────────────────────────────────────────────
+// Maps raw stored diet/restriction values to human-readable display labels.
+// Adult eater defaultDietTypes are stored lowercase by the server
+// (via DIET_PATTERN_TO_DIET_TYPE), so "keto" must map to "Keto".
+// Used only for display — stored values and matching logic are unchanged.
+
+const DIET_LABEL_LOOKUP: Record<string, string> = {
+  // Diet patterns (stored as lowercase for adult eaters)
+  mediterranean: "Mediterranean",
+  dash:          "DASH",
+  mind:          "MIND",
+  flexitarian:   "Flexitarian",
+  vegetarian:    "Vegetarian",
+  vegan:         "Vegan",
+  keto:          "Keto",
+  "low-carb":    "Low-Carb",
+  paleo:         "Paleo",
+  carnivore:     "Carnivore",
+  pescatarian:   "Pescatarian",
+  halal:         "Halal",
+  kosher:        "Kosher",
+  // Allergies & intolerances
+  "gluten-free": "Gluten-Free",
+  "dairy-free":  "Dairy-Free",
+  nuts:          "Nuts",
+  eggs:          "Eggs",
+  shellfish:     "Shellfish",
+  soy:           "Soy",
+  sesame:        "Sesame",
+  "upf-free":    "UPF-Free",
+};
+
+/** Format a raw stored diet/restriction value for user-visible display.
+ *  "keto" → "Keto", "gluten-free" → "Gluten-Free", "low-carb" → "Low-Carb".
+ *  Falls back to capitalising each hyphen-separated segment for unknown values.
+ *  Does NOT modify stored values, API shapes, or matching logic. */
+export function formatDietLabel(value: string): string {
+  return DIET_LABEL_LOOKUP[value.toLowerCase()]
+    ?? value.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join("-");
+}

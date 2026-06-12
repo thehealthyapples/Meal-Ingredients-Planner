@@ -5,7 +5,7 @@ import { generateMealExplanation, type MealExplanation } from "./explainability-
 import { resolveActiveRestrictions, resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
 import type { RestrictionDefinition } from "@shared/restrictions/restriction-types.js";
 import { shouldExcludeRecipe } from "./dietRules";
-import { matchMealsForHousehold, type MealMatch } from "./household-meal-matcher";
+import { matchMealsForHousehold, buildHouseholdContext, scoreMealCompatibility, type MealMatch, type HouseholdContext } from "./household-meal-matcher";
 
 export interface LockedEntry {
   dayOfWeek: number;
@@ -72,6 +72,10 @@ export interface SmartSuggestResult {
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 const DEBUG = process.env.NODE_ENV === 'development';
+
+// Phase 6: modest ranking bonus for household-compatible meals (MAX = 10).
+// Solo users and external candidates have no householdFit → bonus resolves to 0 → no behaviour change.
+const COMPATIBILITY_RANKING_BONUS = 10;
 
 // Priority-ordered mapping from stored diet type values to external search prefix strings.
 // DASH, MIND, Flexitarian, and Carnivore are intentionally omitted — candidate pools become
@@ -414,6 +418,17 @@ export async function generateSmartSuggestion(
     console.log(`[SmartSuggest] Dietary external search — prefix: "${dietaryPrefix}" (dietTypes: [${prefs?.dietTypes.join(', ')}])`);
   }
 
+  // Initiate household context fetch eagerly so it runs concurrently with external
+  // candidate fetching. Resolves to null when userId is absent or user has no household —
+  // in either case per-candidate scoring is skipped and Tier-4 returns empty.
+  const householdContextPromise: Promise<HouseholdContext | null> =
+    settings.userId == null
+      ? Promise.resolve(null)
+      : buildHouseholdContext(settings.userId, settings.weekId).catch(err => {
+          console.error("[SmartSuggest] Household context build failed:", err);
+          return null;
+        });
+
   const rawExternalCandidates = await fetchExternalCandidates({
     cuisine: settings.preferredCuisine,
     query: settings.preferredCuisine || undefined,
@@ -443,17 +458,19 @@ export async function generateSmartSuggestion(
     candidateDietExcluded(candidate, dietPattern, dietRestrictions);
 
   // Tier-4 meal shell recovery: lazy, once-per-generation household matcher call.
-  // Only attempted when a slot exhausts Tiers 1–3. Any matcher failure degrades to
-  // the existing empty-slot behaviour — the planner must never crash on Tier-4.
+  // Only attempted when a slot exhausts Tiers 1–3. Chains off householdContextPromise
+  // so the context is loaded only once for both per-candidate scoring and Tier-4.
+  // Any matcher failure degrades to the existing empty-slot behaviour.
   let shellMatchesPromise: Promise<MealMatch[]> | null = null;
   const getShellMatches = (): Promise<MealMatch[]> => {
     if (!shellMatchesPromise) {
-      shellMatchesPromise = settings.userId == null
-        ? Promise.resolve([])
-        : matchMealsForHousehold(settings.userId, settings.weekId).catch(err => {
-            console.error("[SmartSuggest] Tier-4 shell matcher failed:", err);
-            return [] as MealMatch[];
-          });
+      shellMatchesPromise = householdContextPromise.then(ctx => {
+        if (ctx == null || settings.userId == null) return [] as MealMatch[];
+        return matchMealsForHousehold(settings.userId, settings.weekId, ctx).catch(err => {
+          console.error("[SmartSuggest] Tier-4 shell matcher failed:", err);
+          return [] as MealMatch[];
+        });
+      });
     }
     return shellMatchesPromise;
   };
@@ -535,6 +552,26 @@ export async function generateSmartSuggestion(
       if (DEBUG) console.debug(`[SmartSuggest] Diet-excluded user meal (${dietPattern ?? dietRestrictions.join('/')}): "${candidate.name}"`);
       continue;
     }
+
+    // Household compatibility scoring — computed once per passing candidate using the
+    // pre-built context. Attached as householdFit; no-op when context is absent.
+    const hCtx = await householdContextPromise;
+    if (hCtx != null) {
+      const fit = scoreMealCompatibility(meal, hCtx.members, hCtx.settings, hCtx.swapMap);
+      if (fit != null) {
+        candidate.householdFit = {
+          compatibleCount: hCtx.members.length - fit.memberChanges.length,
+          totalCount: hCtx.members.length,
+          memberChanges: fit.memberChanges,
+          swapsNeeded: fit.swapsNeeded,
+          sharedIngredients: fit.sharedIngredients,
+          extraPrepMinutes: fit.extraPrepMinutes,
+          fitScore: fit.fitScore,
+          explanation: fit.explanation,
+        };
+      }
+    }
+
     allCandidates.push(candidate);
   }
 
@@ -747,10 +784,14 @@ export async function generateSmartSuggestion(
             preferredCuisine: settings.preferredCuisine,
           }
         );
+        const compatBonus = c.householdFit
+          ? (c.householdFit.fitScore / 100) * COMPATIBILITY_RANKING_BONUS
+          : 0;
+        const adjustedScore = score + compatBonus;
         if (DEBUG && score < 10) {
           console.debug(`[SmartSuggest] Low score ${score} for "${c.name}" — breakdown:`, breakdown);
         }
-        return { ...c, score, scoreBreakdown: breakdown };
+        return { ...c, score: Math.min(100, adjustedScore), scoreBreakdown: breakdown };
       });
 
       scored.sort((a, b) => b.score - a.score);

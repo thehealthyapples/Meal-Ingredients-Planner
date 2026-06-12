@@ -47,7 +47,7 @@ interface FlatSuggestion extends UpliftSuggestion {
 
 // ─── Shopping list query keys — invalidated after any uplift mutation ─────────
 
-const SHOPPING_LIST_KEYS = [
+export const SHOPPING_LIST_KEYS = [
   ["/api/shopping-list"],
   ["/api/shopping-list/sources"],
   ["/api/shopping-list/prices"],
@@ -177,6 +177,7 @@ export function MealUpliftPanel({
         mealId: number;
         forkedFromMealId: number | null;
         added: string[];
+        applications: MealUpliftApplication[];
       }>;
     },
     onSuccess: (data, suggestion) => {
@@ -251,6 +252,25 @@ export function MealUpliftPanel({
         forkFoundInCache: !!forkInCache,
         forkIngredients: forkInCache?.ingredients ?? "NOT IN CACHE",
       });
+
+      // Immediately seed the applications cache from the POST response so
+      // provenance renders without waiting for the GET round-trip. Only
+      // 'accepted' rows are written — the GET endpoint returns accepted only,
+      // so the cache must keep the same shape.
+      const acceptedApplications = (data.applications ?? []).filter(
+        (a) => a.status === "accepted"
+      );
+      if (acceptedApplications.length) {
+        qc.setQueryData<MealUpliftApplication[]>(
+          ["/api/meals", data.mealId, "uplift-applications"],
+          (old = []) => [
+            ...old.filter(
+              (a) => !acceptedApplications.some((n) => n.id === a.id)
+            ),
+            ...acceptedApplications,
+          ]
+        );
+      }
 
       // Refresh meals + provenance
       qc.invalidateQueries({ queryKey: ["/api/meals"] });

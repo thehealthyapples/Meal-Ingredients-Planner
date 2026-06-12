@@ -28,6 +28,20 @@ export interface ScoredCandidate {
   };
   isExternal: boolean;
   mealId?: number;
+  householdFit?: {
+    compatibleCount: number;
+    totalCount: number;
+    memberChanges: Array<{
+      userId: number | null;
+      displayName: string;
+      swaps: string[];
+    }>;
+    swapsNeeded: string[];
+    sharedIngredients: string[];
+    extraPrepMinutes: number;
+    fitScore: number;
+    explanation: string;
+  };
 }
 
 const MEAT_KEYWORDS = ["chicken", "beef", "pork", "lamb", "turkey", "duck", "bacon", "steak", "ham", "mince", "sausage", "veal", "venison"];

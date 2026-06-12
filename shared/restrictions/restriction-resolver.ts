@@ -130,6 +130,18 @@ function matchIngredientAgainstDefinition(
     return { restriction: definition, matchedTerm: normIngredient, sourceType, sourceValue };
   }
 
+  // 0. Check excludedCompounds — plant-based alternatives that share a keyword
+  //    with a genuine restricted ingredient must never match this definition.
+  //    This is an unconditional early exit: if any excluded compound is found
+  //    as a substring of the normalised ingredient, return null immediately.
+  if (definition.excludedCompounds && definition.excludedCompounds.length > 0) {
+    for (const compound of definition.excludedCompounds) {
+      if (substringIncludes(normIngredient, norm(compound))) {
+        return null;
+      }
+    }
+  }
+
   // 1. Check definition id (whole-word)
   const normId = norm(definition.id);
   if (wordBoundaryIncludes(normIngredient, normId)) {

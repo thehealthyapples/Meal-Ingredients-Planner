@@ -803,6 +803,21 @@ async function autoAnalyzeMeal(mealId: number) {
 
 import { APP_VERSION } from "./app-version";
 
+const DIET_PATTERN_TO_DIET_TYPE: Record<string, string> = {
+  Vegan: "vegan",
+  Vegetarian: "vegetarian",
+  Flexitarian: "flexitarian",
+  Keto: "keto",
+  "Low-Carb": "low-carb",
+  Paleo: "paleo",
+  Carnivore: "carnivore",
+  Mediterranean: "mediterranean",
+  DASH: "dash",
+  MIND: "mind",
+};
+
+const CANONICAL_DIET_VALUES = new Set(Object.values(DIET_PATTERN_TO_DIET_TYPE));
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -894,7 +909,7 @@ export async function registerRoutes(
   });
 
   const ALLOWED_DIET_PATTERNS = ["Mediterranean", "DASH", "MIND", "Flexitarian", "Vegetarian", "Vegan", "Keto", "Low-Carb", "Paleo", "Carnivore"] as const;
-  const ALLOWED_DIET_RESTRICTIONS = ["Gluten-Free", "Dairy-Free"] as const;
+  const ALLOWED_DIET_RESTRICTIONS = ["Gluten-Free", "Dairy-Free", "Nuts", "Eggs", "Shellfish", "Soy", "Sesame"] as const;
   const ALLOWED_EATING_SCHEDULES = ["None", "Intermittent Fasting"] as const;
 
   const profileUpdateSchema = z.object({
@@ -959,22 +974,6 @@ export async function registerRoutes(
       // Runs after any explicit preference update so the canonical mapping is authoritative.
       // Preserves non-canonical values (halal, kosher, pescatarian, style:* etc).
       if (parsed.dietPattern !== undefined) {
-        const CANONICAL_DIET_VALUES = new Set([
-          "vegan", "vegetarian", "flexitarian", "keto", "low-carb",
-          "paleo", "carnivore", "mediterranean", "dash", "mind",
-        ]);
-        const DIET_PATTERN_TO_DIET_TYPE: Record<string, string> = {
-          Vegan: "vegan",
-          Vegetarian: "vegetarian",
-          Flexitarian: "flexitarian",
-          Keto: "keto",
-          "Low-Carb": "low-carb",
-          Paleo: "paleo",
-          Carnivore: "carnivore",
-          Mediterranean: "mediterranean",
-          DASH: "dash",
-          MIND: "mind",
-        };
         try {
           const currentPrefs = await storage.getUserPreferences(req.user!.id);
           const currentDietTypes = currentPrefs?.dietTypes ?? [];
@@ -4915,8 +4914,30 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
             for (const restriction of eater.hardRestrictions ?? []) {
               hardRestrictedSet.add(restriction.toLowerCase());
             }
+
+            // Determine diet types for this eater.
+            // Child eaters: use stored defaultDietTypes directly.
+            // Adult eaters (userId != null): defaultDietTypes is always [] in the DB
+            // by design — the authoritative source is the user's profile. Derive using
+            // the same approach as household-meal-matcher.ts: user_preferences.dietTypes
+            // first, fall back to users.dietPattern via DIET_PATTERN_TO_DIET_TYPE.
+            let eaterDietTypes: string[] = eater.defaultDietTypes ?? [];
+            if (eater.userId != null) {
+              const [memberPrefs, memberUser] = await Promise.all([
+                storage.getUserPreferences(eater.userId),
+                storage.getUser(eater.userId),
+              ]);
+              const prefDietTypes = memberPrefs?.dietTypes ?? [];
+              if (prefDietTypes.length > 0) {
+                eaterDietTypes = prefDietTypes;
+              } else if (memberUser?.dietPattern) {
+                const mapped = DIET_PATTERN_TO_DIET_TYPE[memberUser.dietPattern];
+                eaterDietTypes = mapped ? [mapped] : [memberUser.dietPattern];
+              }
+            }
+
             // Union eater diet types into the merged set for scoring influence
-            for (const diet of eater.defaultDietTypes ?? []) {
+            for (const diet of eaterDietTypes) {
               if (!mergedDietTypes.includes(diet)) mergedDietTypes = [...mergedDietTypes, diet];
             }
           }
@@ -7941,7 +7962,32 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       await storage.syncMembersAsEaters(householdId);
       const rows = await storage.getHouseholdEaters(householdId);
       const { dbEaterToHouseholdEater } = await import("@shared/household-eater.js");
-      res.json(rows.map(dbEaterToHouseholdEater));
+      const eaters = rows.map(dbEaterToHouseholdEater);
+
+      // Enrich adult rows with profile-derived dietary data at read time.
+      // Adult rows in household_eaters store empty arrays by design; the authoritative
+      // source is the user's profile (users table only). Nothing is written.
+      // defaultDietTypes ← users.diet_pattern only (no user_preferences lookup)
+      // hardRestrictions ← users.diet_restrictions only
+      const enriched = await Promise.all(eaters.map(async (eater) => {
+        if (eater.userId == null) return eater; // child — use stored values unchanged
+
+        const userRow = await storage.getUser(eater.userId);
+
+        let defaultDietTypes: string[];
+        if (userRow?.dietPattern) {
+          const mapped = DIET_PATTERN_TO_DIET_TYPE[userRow.dietPattern];
+          defaultDietTypes = mapped ? [mapped] : [userRow.dietPattern];
+        } else {
+          defaultDietTypes = [];
+        }
+
+        const hardRestrictions: string[] = userRow?.dietRestrictions ?? [];
+
+        return { ...eater, defaultDietTypes, hardRestrictions };
+      }));
+
+      res.json(enriched);
     } catch (err) {
       console.error("[HouseholdEaters] GET error:", err);
       res.status(500).json({ message: "Failed to fetch household eaters" });

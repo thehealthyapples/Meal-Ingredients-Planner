@@ -25,6 +25,20 @@ export interface SmartCandidate {
   dietTypes?: string[];
   ingredients?: string[];
   servings?: number | null;
+  householdFit?: {
+    compatibleCount: number;
+    totalCount: number;
+    memberChanges: Array<{
+      userId: number | null;
+      displayName: string;
+      swaps: string[];
+    }>;
+    swapsNeeded: string[];
+    sharedIngredients: string[];
+    extraPrepMinutes: number;
+    fitScore: number;
+    explanation: string;
+  };
 }
 
 export interface MealExplanation {
