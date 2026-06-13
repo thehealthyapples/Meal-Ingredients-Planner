@@ -38,6 +38,12 @@ export interface SmartSuggestSettings {
   // A Vegan/Vegetarian profile, for example, excludes meat/fish/etc. before scoring.
   dietPattern?: string | null;
   dietRestrictions?: string[];
+  // Household strict diet enforcement — Vegetarian/Vegan diet patterns
+  // contributed by household eaters (non-request-user adults and children).
+  // Applied as additional hard exclusions AFTER the request-user dietPattern
+  // check. Only populated for the two lifestyle diets that carry food-group
+  // hard bans. Does not include Mediterranean/DASH/MIND/Flexitarian etc.
+  householdStrictDiets?: string[];
   // Tier-4 meal shell recovery — the generating user's id (required for the
   // household meal matcher) and the optional planner week id so weekly eater
   // diet overrides are honoured. When userId is absent Tier-4 is skipped.
@@ -342,8 +348,10 @@ export function selectShellRecoveryCandidate(
   hardExcluded: string[],
   dietPattern: string | null,
   dietRestrictions: string[],
+  householdStrictDiets?: string[],
 ): ScoredCandidate | null {
   const allowedCategories = SLOT_CATEGORY_MAPPING[slot] || [slot];
+  const hsd = householdStrictDiets ?? [];
 
   for (const match of matches) {
     const template = match.template;
@@ -361,7 +369,8 @@ export function selectShellRecoveryCandidate(
     ];
     const compliantIngredients = allSlotIngredients.filter(ing =>
       !candidateHardExcluded(ing, [ing], hardExcluded) &&
-      !candidateDietExcluded({ name: ing, ingredients: [ing] }, dietPattern, dietRestrictions)
+      !candidateDietExcluded({ name: ing, ingredients: [ing] }, dietPattern, dietRestrictions) &&
+      !hsd.some(diet => candidateDietExcluded({ name: ing, ingredients: [ing] }, diet, []))
     );
     if (compliantIngredients.length === 0) continue;
 
@@ -371,6 +380,12 @@ export function selectShellRecoveryCandidate(
       dietPattern,
       dietRestrictions,
     )) continue;
+    // Household strict diet check (Vegetarian/Vegan) for the assembled shell
+    if (hsd.some(diet => candidateDietExcluded(
+      { name: template.name, ingredients: compliantIngredients, category: template.category, cuisine: template.cuisine },
+      diet,
+      [],
+    ))) continue;
 
     return {
       id: `shell-${template.id}`,
@@ -456,6 +471,15 @@ export async function generateSmartSuggestion(
   const dietRestrictions = settings.dietRestrictions ?? [];
   const isDietExcluded = (candidate: ScoredCandidate): boolean =>
     candidateDietExcluded(candidate, dietPattern, dietRestrictions);
+
+  // Household strict diet hard filter — Vegetarian/Vegan contributed by household
+  // eaters. Applied as an independent additional exclusion gate after the request-user
+  // diet check. No-op when no household eater carries a strict diet.
+  const householdStrictDiets = settings.householdStrictDiets ?? [];
+  const isHouseholdStrictDietExcluded = (candidate: ScoredCandidate): boolean => {
+    if (householdStrictDiets.length === 0) return false;
+    return householdStrictDiets.some(diet => candidateDietExcluded(candidate, diet, []));
+  };
 
   // Tier-4 meal shell recovery: lazy, once-per-generation household matcher call.
   // Only attempted when a slot exhausts Tiers 1–3. Chains off householdContextPromise
@@ -552,6 +576,11 @@ export async function generateSmartSuggestion(
       if (DEBUG) console.debug(`[SmartSuggest] Diet-excluded user meal (${dietPattern ?? dietRestrictions.join('/')}): "${candidate.name}"`);
       continue;
     }
+    // Household strict diet hard filter (Vegetarian/Vegan from household eaters)
+    if (isHouseholdStrictDietExcluded(candidate)) {
+      if (DEBUG) console.debug(`[SmartSuggest] Household-strict-diet-excluded user meal (${householdStrictDiets.join('/')}): "${candidate.name}"`);
+      continue;
+    }
 
     // Household compatibility scoring — computed once per passing candidate using the
     // pre-built context. Attached as householdFit; no-op when context is absent.
@@ -609,6 +638,11 @@ export async function generateSmartSuggestion(
     // on actual ingredient data rather than falling back to title-only heuristics.
     if (isDietExcluded(candidate)) {
       if (DEBUG) console.debug(`[SmartSuggest] Diet-excluded external meal (${dietPattern ?? dietRestrictions.join('/')}): "${candidate.name}"`);
+      continue;
+    }
+    // Household strict diet hard filter (Vegetarian/Vegan from household eaters)
+    if (isHouseholdStrictDietExcluded(candidate)) {
+      if (DEBUG) console.debug(`[SmartSuggest] Household-strict-diet-excluded external meal (${householdStrictDiets.join('/')}): "${candidate.name}"`);
       continue;
     }
     allCandidates.push(candidate);
@@ -703,7 +737,7 @@ export async function generateSmartSuggestion(
           // only enforces the planner's hard gates (slot fit, member diet
           // compatibility, hard restrictions, profile diet pattern).
           const shellCandidate = selectShellRecoveryCandidate(
-            await getShellMatches(), slot, hardExcluded, dietPattern, dietRestrictions,
+            await getShellMatches(), slot, hardExcluded, dietPattern, dietRestrictions, householdStrictDiets,
           );
           if (shellCandidate) {
             slotCandidates = [shellCandidate];

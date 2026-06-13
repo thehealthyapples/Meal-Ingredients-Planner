@@ -4904,6 +4904,9 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       );
       let mergedExcludedIngredients: string[] = prefs?.excludedIngredients ?? [];
       let mergedDietTypes: string[] = prefs?.dietTypes ?? [];
+      // Collects Vegetarian/Vegan strict diets from household eaters for hard enforcement.
+      // Populated inside the eater loop; deduplicated against the request-user's dietPattern after.
+      const householdEaterStrictDiets = new Set<string>();
 
       try {
         const householdId = await getHouseholdForUser(req.user!.id);
@@ -4940,6 +4943,14 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
             for (const diet of eaterDietTypes) {
               if (!mergedDietTypes.includes(diet)) mergedDietTypes = [...mergedDietTypes, diet];
             }
+
+            // Collect Vegetarian/Vegan strict diets for hard enforcement in the candidate pool.
+            // These two diet patterns carry genuine food-group bans (meat, fish, dairy, eggs, honey).
+            for (const diet of eaterDietTypes) {
+              const norm = diet.toLowerCase().trim();
+              if (norm === "vegan") householdEaterStrictDiets.add("Vegan");
+              else if (norm === "vegetarian") householdEaterStrictDiets.add("Vegetarian");
+            }
           }
           mergedExcludedIngredients = Array.from(hardRestrictedSet);
 
@@ -4963,6 +4974,24 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
       } : null;
 
       settings.hardExcludedIngredients = mergedExcludedIngredients;
+
+      // Household strict diet enforcement — remove any diet already covered by the
+      // request user's own dietPattern (isDietExcluded already handles those), then
+      // pass the remainder to the generator so it applies them as additional hard gates.
+      // Vegan subsumes Vegetarian, so a Vegan request-user removes both from the set.
+      const userDietNorm = (settings.dietPattern ?? "").toLowerCase();
+      if (userDietNorm === "vegan") {
+        householdEaterStrictDiets.delete("Vegan");
+        householdEaterStrictDiets.delete("Vegetarian");
+      } else if (userDietNorm === "vegetarian") {
+        householdEaterStrictDiets.delete("Vegetarian");
+      }
+      if (householdEaterStrictDiets.size > 0) {
+        settings.householdStrictDiets = Array.from(householdEaterStrictDiets);
+        if (process.env.NODE_ENV === 'development') {
+          console.debug(`[SmartSuggest] Household strict diets (hard enforced): [${settings.householdStrictDiets.join(', ')}]`);
+        }
+      }
 
       const mealNutrition = new Map<number, { calories?: string | null }>();
       for (const meal of userMeals) {
