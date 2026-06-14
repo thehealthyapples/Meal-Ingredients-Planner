@@ -69,6 +69,11 @@ export const mealTemplates = pgTable("meal_templates", {
   estimatedExtraTimePerVariant: integer("estimated_extra_time_per_variant"),
   costBand: text("cost_band"),
   isActive: boolean("is_active").notNull().default(true),
+  // ── Hybrid Meal Occasion (additive; display/metadata only) ──
+  primarySlot: text("primary_slot"),
+  suitableSlots: text("suitable_slots").array().notNull().default([]),
+  energyBand: text("energy_band"),
+  styleTags: text("style_tags").array().notNull().default([]),
 });
 
 export const mealTemplateProducts = pgTable("meal_template_products", {
@@ -118,6 +123,11 @@ export const meals = pgTable("meals", {
   variantKind: text("variant_kind"),
   /** Controls whether this variant appears in the cookbook tab. False for all originals; toggled by user in Phase 2. */
   showInCookbook: boolean("show_in_cookbook").notNull().default(false),
+  // ── Hybrid Meal Occasion (additive; display/metadata only) ──
+  primarySlot: text("primary_slot"),
+  suitableSlots: text("suitable_slots").array().notNull().default([]),
+  energyBand: text("energy_band"),
+  styleTags: text("style_tags").array().notNull().default([]),
 });
 
 export const nutrition = pgTable("nutrition", {
@@ -824,6 +834,10 @@ export const insertMealTemplateSchema = createInsertSchema(mealTemplates).pick({
   estimatedExtraTimePerVariant: true,
   costBand: true,
   isActive: true,
+  primarySlot: true,
+  suitableSlots: true,
+  energyBand: true,
+  styleTags: true,
 });
 
 export const insertMealTemplateProductSchema = createInsertSchema(mealTemplateProducts).pick({

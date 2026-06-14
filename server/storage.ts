@@ -1010,6 +1010,10 @@ export class DatabaseStorage implements IStorage {
       householdSafeFor: meals.householdSafeFor,
       variantKind: meals.variantKind,
       showInCookbook: meals.showInCookbook,
+      primarySlot: meals.primarySlot,
+      suitableSlots: meals.suitableSlots,
+      energyBand: meals.energyBand,
+      styleTags: meals.styleTags,
       ingredientCount: sql<number>`coalesce(array_length(${meals.ingredients}, 1), 0)`.mapWith(Number),
     };
   }

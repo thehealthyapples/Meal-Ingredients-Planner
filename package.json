@@ -20,6 +20,7 @@
     "test:ingredient-language": "tsx server/tests/test-ingredient-language.ts",
     "test:product-dedup": "tsx server/tests/test-product-dedup.ts",
     "test:planner-compliance": "tsx server/tests/test-planner-compliance-gate.ts",
+    "test:hybrid-meal-occasion": "tsx server/tests/test-hybrid-meal-occasion.ts",
     "test:uplift": "tsx server/tests/test-uplift-engine.ts",
     "test:uplift-persistence": "tsx server/tests/test-uplift-persistence.ts",
     "test:smart-suggest-tailoring": "tsx server/tests/test-smart-suggest-tailoring.ts",

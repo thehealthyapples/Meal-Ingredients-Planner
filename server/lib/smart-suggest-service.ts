@@ -322,7 +322,14 @@ function getRepeatCandidates(
 }
 
 // P0: removed universal `|| slot === "dinner"` bypass — dinner now filters via SLOT_CATEGORY_MAPPING.
-function getCandidateSlotFit(candidate: ScoredCandidate, slot: string): boolean {
+// Hybrid Meal Occasion: when a candidate carries an explicit, non-empty suitableSlots
+// list (curated data), it is authoritative for slot fit. Existing candidate builders do
+// not populate suitableSlots, so legacy candidates take the unchanged category path below
+// — planner output is identical for all existing meals.
+export function getCandidateSlotFit(candidate: ScoredCandidate, slot: string): boolean {
+  if (candidate.suitableSlots && candidate.suitableSlots.length > 0) {
+    return candidate.suitableSlots.includes(slot);
+  }
   if (!candidate.category) return slot === "dinner";
   const allowed = SLOT_CATEGORY_MAPPING[slot] || [slot];
   return allowed.includes(candidate.category.toLowerCase());

@@ -11,6 +11,12 @@ export interface ScoredCandidate {
   sourceUrl: string | null;
   category: string | null;
   cuisine: string | null;
+  // Hybrid Meal Occasion (optional; only populated for curated candidates).
+  // When suitableSlots is present and non-empty the planner prefers it for slot
+  // fit (see getCandidateSlotFit); otherwise it falls back to category mapping.
+  primarySlot?: string | null;
+  suitableSlots?: string[] | null;
+  energyBand?: string | null;
   primaryProtein: string | null;
   dietTypes: string[];
   estimatedCost: number | null;

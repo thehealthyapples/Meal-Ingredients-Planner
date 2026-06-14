@@ -1126,6 +1126,84 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // Hybrid Meal Occasion — additive only. Adds primary_slot / suitable_slots /
+    // energy_band / style_tags to meal_templates and meals, then backfills from
+    // existing category data. Backfill is derived strictly from the live planner
+    // SLOT_CATEGORY_MAPPING (its exact inverse), so suitable_slots reproduces
+    // today's slot eligibility byte-for-byte and planner output is unchanged.
+    // No column is altered, no row deleted. Every UPDATE is guarded so re-runs
+    // are no-ops. energy_band / style_tags keep their column defaults.
+    id: "2026-06-14_add_hybrid_meal_occasion",
+    statements: [
+      // ── meal_templates columns ──
+      `ALTER TABLE meal_templates
+        ADD COLUMN IF NOT EXISTS primary_slot TEXT,
+        ADD COLUMN IF NOT EXISTS suitable_slots TEXT[] NOT NULL DEFAULT '{}',
+        ADD COLUMN IF NOT EXISTS energy_band TEXT,
+        ADD COLUMN IF NOT EXISTS style_tags TEXT[] NOT NULL DEFAULT '{}'`,
+
+      // ── meals columns ──
+      `ALTER TABLE meals
+        ADD COLUMN IF NOT EXISTS primary_slot TEXT,
+        ADD COLUMN IF NOT EXISTS suitable_slots TEXT[] NOT NULL DEFAULT '{}',
+        ADD COLUMN IF NOT EXISTS energy_band TEXT,
+        ADD COLUMN IF NOT EXISTS style_tags TEXT[] NOT NULL DEFAULT '{}'`,
+
+      // ── Backfill meal_templates.primary_slot from text category (4 canonical slots only) ──
+      `UPDATE meal_templates
+         SET primary_slot = lower(category)
+       WHERE primary_slot IS NULL
+         AND lower(category) IN ('breakfast','lunch','dinner','snack')`,
+
+      // ── Backfill meal_templates.suitable_slots = inverse of SLOT_CATEGORY_MAPPING ──
+      `UPDATE meal_templates
+         SET suitable_slots = CASE lower(category)
+           WHEN 'breakfast' THEN ARRAY['breakfast']
+           WHEN 'smoothie'  THEN ARRAY['breakfast','snack']
+           WHEN 'lunch'     THEN ARRAY['lunch']
+           WHEN 'snack'     THEN ARRAY['lunch','snack']
+           WHEN 'salad'     THEN ARRAY['lunch']
+           WHEN 'dinner'    THEN ARRAY['dinner']
+           WHEN 'main'      THEN ARRAY['dinner']
+           WHEN 'dessert'   THEN ARRAY['snack']
+           WHEN 'drink'     THEN ARRAY['snack']
+           ELSE suitable_slots
+         END
+       WHERE (suitable_slots IS NULL OR cardinality(suitable_slots) = 0)
+         AND lower(category) IN
+           ('breakfast','smoothie','lunch','snack','salad','dinner','main','dessert','drink')`,
+
+      // ── Backfill meals.primary_slot via category_id -> meal_categories.name ──
+      `UPDATE meals m
+         SET primary_slot = lower(mc.name)
+        FROM meal_categories mc
+       WHERE m.category_id = mc.id
+         AND m.primary_slot IS NULL
+         AND lower(mc.name) IN ('breakfast','lunch','dinner','snack')`,
+
+      // ── Backfill meals.suitable_slots via category_id -> meal_categories.name ──
+      `UPDATE meals m
+         SET suitable_slots = CASE lower(mc.name)
+           WHEN 'breakfast' THEN ARRAY['breakfast']
+           WHEN 'smoothie'  THEN ARRAY['breakfast','snack']
+           WHEN 'lunch'     THEN ARRAY['lunch']
+           WHEN 'snack'     THEN ARRAY['lunch','snack']
+           WHEN 'salad'     THEN ARRAY['lunch']
+           WHEN 'dinner'    THEN ARRAY['dinner']
+           WHEN 'main'      THEN ARRAY['dinner']
+           WHEN 'dessert'   THEN ARRAY['snack']
+           WHEN 'drink'     THEN ARRAY['snack']
+           ELSE m.suitable_slots
+         END
+        FROM meal_categories mc
+       WHERE m.category_id = mc.id
+         AND (m.suitable_slots IS NULL OR cardinality(m.suitable_slots) = 0)
+         AND lower(mc.name) IN
+           ('breakfast','smoothie','lunch','snack','salad','dinner','main','dessert','drink')`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
