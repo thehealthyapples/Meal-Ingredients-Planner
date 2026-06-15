@@ -1451,32 +1451,36 @@ async function validate(insertedNames: string[], skippedNames: string[]) {
       const r = (rows as any).rows ?? rows;
       if (r.length >= 1) {
         const t = r[0];
-        ok(`"${name}" — pre-existing (id=${t.id}) untouched; curated shell metadata not applied (style_tags=[${(t.style_tags ?? []).join(",")}])`);
+        ok(`"${name}" — pre-existing (id=${t.id}) exists; shell metadata applied via migration 2026-06-15_enrich_six_pre_existing_shells (style_tags=[${(t.style_tags ?? []).join(",")}])`);
       } else {
         bad(`"${name}" — expected to still exist, found ${r.length} rows`);
       }
     }
   }
 
-  // 2. Cooked Breakfast must remain UNCHANGED (id 633, slot fields as backfilled).
+  // 2. Cooked Breakfast (id 633) — enriched by migration 2026-06-15_enrich_six_pre_existing_shells.
+  //    Verify it exists and has the canonical enriched values; the seed skips it, never writes it.
   log("─".repeat(50));
-  log("Confirming existing Cooked Breakfast row is unchanged...");
+  log("Confirming Cooked Breakfast row is canonical (enriched via migration)...");
   const cb = await db.execute(sql`
     SELECT id, name, category, primary_slot, suitable_slots, energy_band, style_tags,
-           shared_base_components, protein_slots, carb_slots, sauce_slots, compatible_diets
+           shared_base_components, protein_slots, carb_slots, sauce_slots, compatible_diets,
+           nutrition_opportunities
     FROM meal_templates WHERE LOWER(TRIM(name)) = 'cooked breakfast'
   `);
   const cbr = ((cb as any).rows ?? cb);
   if (cbr.length === 1) {
     const t = cbr[0];
-    // The pre-existing live row was backfilled to breakfast/[breakfast] with
-    // energy_band NULL and style_tags []. The seed SKIPS it, so it must be intact.
-    const intact =
+    // Post-migration canonical values: primarySlot=breakfast, suitableSlots includes dinner,
+    // energyBand=hearty, styleTags includes adaptable, proteinSlots includes eggs.
+    const canonical =
       t.primary_slot === "breakfast" &&
-      Array.isArray(t.suitable_slots) && t.suitable_slots.length === 1 && t.suitable_slots[0] === "breakfast" &&
+      Array.isArray(t.suitable_slots) && t.suitable_slots.includes("dinner") &&
+      t.energy_band === "hearty" &&
+      Array.isArray(t.style_tags) && t.style_tags.includes("adaptable") &&
       Array.isArray(t.protein_slots) && t.protein_slots.includes("eggs");
-    if (intact) ok(`Cooked Breakfast unchanged (id=${t.id}, primarySlot=${t.primary_slot}, protein_slots intact)`);
-    else bad(`Cooked Breakfast row looks modified: ${JSON.stringify(t)}`);
+    if (canonical) ok(`Cooked Breakfast canonical (id=${t.id}, primarySlot=${t.primary_slot}, suitableSlots=[${t.suitable_slots.join(",")}], energyBand=${t.energy_band})`);
+    else bad(`Cooked Breakfast missing enrichment — check migration 2026-06-15_enrich_six_pre_existing_shells: ${JSON.stringify(t)}`);
   } else {
     bad(`Cooked Breakfast — expected 1 row, found ${cbr.length}`);
   }

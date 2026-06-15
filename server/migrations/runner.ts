@@ -1217,6 +1217,118 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // Promote 6 pre-existing templates to canonical starter-shell status.
+    // These templates were skipped by the seed (they already existed) but were
+    // missing energyBand, styleTags, nutritionOpportunities, compatible_diets,
+    // and all component-slot fields. Each UPDATE targets its row by exact id so
+    // no other row is touched. Idempotent: re-running overwrites with same values.
+    //
+    // Canonical metadata source:
+    //   docs/investigations/STARTER_SHELL_EXISTING_TEMPLATE_ENRICHMENT.md
+    //
+    // IDs: 633 Cooked Breakfast, 287 Overnight Oats, 291 Breakfast Wrap,
+    //      166 Pasta Salad, 109 Sausage & Mash, 78 Shepherd's Pie
+    id: "2026-06-15_enrich_six_pre_existing_shells",
+    statements: [
+      // ── Cooked Breakfast (id 633) ─────────────────────────────────────────────
+      `UPDATE meal_templates SET
+         primary_slot            = 'breakfast',
+         suitable_slots          = ARRAY['breakfast','lunch','dinner'],
+         energy_band             = 'hearty',
+         style_tags              = ARRAY['shared-meal','adaptable','family-pleaser','comfort'],
+         shared_base_components  = ARRAY['cooked sides'],
+         protein_slots           = ARRAY['eggs','sausages','vegetarian sausages','beans'],
+         carb_slots              = ARRAY['toast','gf toast','hash browns'],
+         veg_slots               = ARRAY['tomatoes','mushrooms','greens','avocado'],
+         topping_slots           = ARRAY[]::TEXT[],
+         sauce_slots             = ARRAY[]::TEXT[],
+         compatible_diets        = ARRAY['Vegetarian','Gluten-Free','Dairy-Free','Keto'],
+         nutrition_opportunities = ARRAY['extra greens','beans','mushrooms','seeds','avocado']
+       WHERE id = 633`,
+
+      // ── Overnight Oats (id 287) ───────────────────────────────────────────────
+      `UPDATE meal_templates SET
+         primary_slot            = 'breakfast',
+         suitable_slots          = ARRAY['breakfast','snack'],
+         energy_band             = 'medium',
+         style_tags              = ARRAY['fresh','quick'],
+         shared_base_components  = ARRAY['soaked oats base'],
+         protein_slots           = ARRAY['yogurt','milk or plant milk','protein powder'],
+         carb_slots              = ARRAY['rolled oats'],
+         veg_slots               = ARRAY[]::TEXT[],
+         topping_slots           = ARRAY['fruit','seeds','nut butter'],
+         sauce_slots             = ARRAY[]::TEXT[],
+         compatible_diets        = ARRAY['Vegetarian','Vegan','Dairy-Free','Gluten-Free'],
+         nutrition_opportunities = ARRAY['berries','nuts','seeds','chia','fruit variety']
+       WHERE id = 287`,
+
+      // ── Breakfast Wrap (id 291) ───────────────────────────────────────────────
+      `UPDATE meal_templates SET
+         primary_slot            = 'breakfast',
+         suitable_slots          = ARRAY['breakfast','lunch'],
+         energy_band             = 'medium',
+         style_tags              = ARRAY['adaptable','family-pleaser','quick'],
+         shared_base_components  = ARRAY['wrap'],
+         protein_slots           = ARRAY['eggs','beans','plant protein'],
+         carb_slots              = ARRAY['tortilla wrap'],
+         veg_slots               = ARRAY['peppers','tomatoes','greens'],
+         topping_slots           = ARRAY['cheese or alternative'],
+         sauce_slots             = ARRAY['salsa or sauce'],
+         compatible_diets        = ARRAY['Vegetarian','Vegan','Dairy-Free','Gluten-Free'],
+         nutrition_opportunities = ARRAY['greens','tomatoes','avocado','beans','peppers']
+       WHERE id = 291`,
+
+      // ── Pasta Salad (id 166) ──────────────────────────────────────────────────
+      `UPDATE meal_templates SET
+         primary_slot            = 'lunch',
+         suitable_slots          = ARRAY['lunch','dinner'],
+         energy_band             = 'medium',
+         style_tags              = ARRAY['fresh','adaptable'],
+         shared_base_components  = ARRAY['pasta base','vegetables'],
+         protein_slots           = ARRAY['chicken','beans','cheese or alternative','tuna'],
+         carb_slots              = ARRAY['pasta'],
+         veg_slots               = ARRAY['peppers','greens','tomatoes'],
+         topping_slots           = ARRAY['seeds','herbs'],
+         sauce_slots             = ARRAY['dressing'],
+         compatible_diets        = ARRAY['Vegetarian','Vegan','Dairy-Free','Gluten-Free'],
+         nutrition_opportunities = ARRAY['greens','beans','seeds','peppers','herbs']
+       WHERE id = 166`,
+
+      // ── Sausage & Mash (id 109) ───────────────────────────────────────────────
+      `UPDATE meal_templates SET
+         primary_slot            = 'dinner',
+         suitable_slots          = ARRAY['lunch','dinner'],
+         energy_band             = 'hearty',
+         style_tags              = ARRAY['comfort','family-pleaser'],
+         shared_base_components  = ARRAY['mash','gravy'],
+         protein_slots           = ARRAY['sausages','plant-based sausages'],
+         carb_slots              = ARRAY['mashed potato'],
+         veg_slots               = ARRAY['peas','greens','root vegetables'],
+         topping_slots           = ARRAY['herbs'],
+         sauce_slots             = ARRAY['gravy'],
+         compatible_diets        = ARRAY['Vegetarian','Vegan','Gluten-Free','Dairy-Free'],
+         nutrition_opportunities = ARRAY['greens','peas','root veg','beans','herbs']
+       WHERE id = 109`,
+
+      // ── Shepherd's Pie (id 78) ────────────────────────────────────────────────
+      `UPDATE meal_templates SET
+         primary_slot            = 'dinner',
+         suitable_slots          = ARRAY['dinner'],
+         energy_band             = 'hearty',
+         style_tags              = ARRAY['comfort','family-pleaser'],
+         shared_base_components  = ARRAY['mince base','mash topping'],
+         protein_slots           = ARRAY['mince','lentils','plant protein'],
+         carb_slots              = ARRAY['mashed potato'],
+         veg_slots               = ARRAY['peas','root vegetables','greens'],
+         topping_slots           = ARRAY['herbs'],
+         sauce_slots             = ARRAY['gravy'],
+         compatible_diets        = ARRAY['Vegetarian','Vegan','Gluten-Free','Dairy-Free'],
+         nutrition_opportunities = ARRAY['extra vegetables','lentils','beans','greens']
+       WHERE id = 78`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
