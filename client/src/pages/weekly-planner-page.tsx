@@ -41,7 +41,7 @@ import { MealNutrientTags } from "@/components/nutrition-insights-panel";
 import { useUser } from "@/hooks/use-user";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";
-import { MealUpliftPanel, UpliftCardIndicator, SHOPPING_LIST_KEYS } from "@/components/MealUpliftPanel";
+import { MealUpliftPanel, UpliftCardIndicator, SHOPPING_LIST_KEYS, selectVisibleBoosts } from "@/components/MealUpliftPanel";
 import type { UpliftMatchResult } from "@/components/MealUpliftPanel";
 import { buildWeeklyReuseMap, normaliseForReuse } from "@/lib/ingredient-reuse";
 import { useToast } from "@/hooks/use-toast";
@@ -341,6 +341,23 @@ function buildFallbackUpliftMatch(
     confidence: "medium" as const,
     priority: 0,
   };
+}
+
+// Builds the merged uplift match list (server rules + deterministic fallback
+// boosts) shown for a meal. Used by both the planner card indicator and the
+// detail-dialog panel so they operate on identical data — the card previously
+// counted server matches only and omitted the fallback, undercounting the panel.
+function buildMergedMatches(
+  mealName: string,
+  ingredients: string[],
+  serverMatches: UpliftMatchResult[],
+  householdEaters: HouseholdEater[],
+): UpliftMatchResult[] {
+  const serverKeys = new Set(
+    serverMatches.flatMap((m) => m.suggestions.map((s) => normaliseForReuse(s.ingredient))),
+  );
+  const fallbackMatch = buildFallbackUpliftMatch(mealName, ingredients, householdEaters, serverKeys);
+  return fallbackMatch ? [...serverMatches, fallbackMatch] : serverMatches;
 }
 
 export default function WeeklyPlannerPage() {
@@ -2106,8 +2123,9 @@ export default function WeeklyPlannerPage() {
                                     {/* Mobile boost indicator */}
                                     {!isPlaceholder && !isCooked && (() => {
                                       const isBoosted = boostedMealIds.has(meal.id);
-                                      const matches = upliftByMealId.get(meal.id) ?? [];
-                                      const suggestionCount = matches.flatMap(m => m.suggestions).length;
+                                      const serverMatches = upliftByMealId.get(meal.id) ?? [];
+                                      const mergedMatches = buildMergedMatches(meal.name, meal.ingredients ?? [], serverMatches, householdEaters);
+                                      const suggestionCount = selectVisibleBoosts(mergedMatches, weeklyReuseMap, meal.name).length;
                                       if (isBoosted) {
                                         return (
                                           <button
@@ -2123,7 +2141,7 @@ export default function WeeklyPlannerPage() {
                                       if (suggestionCount === 0) return null;
                                       return (
                                         <UpliftCardIndicator
-                                          suggestionCount={Math.min(suggestionCount, 2)}
+                                          suggestionCount={suggestionCount}
                                           onClick={() => setMealDetail({ entry, meal, dayId: mobileDay.id, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[mobileDay.dayOfWeek], slotLabel: row.label })}
                                         />
                                       );
@@ -2391,8 +2409,9 @@ export default function WeeklyPlannerPage() {
                                         {/* Nutrition Boost indicator — subtle, async, non-blocking */}
                                         {!isPlaceholder && (() => {
                                           const isBoosted = boostedMealIds.has(meal.id);
-                                          const matches = upliftByMealId.get(meal.id) ?? [];
-                                          const suggestionCount = matches.flatMap(m => m.suggestions).length;
+                                          const serverMatches = upliftByMealId.get(meal.id) ?? [];
+                                          const mergedMatches = buildMergedMatches(meal.name, meal.ingredients ?? [], serverMatches, householdEaters);
+                                          const suggestionCount = selectVisibleBoosts(mergedMatches, weeklyReuseMap, meal.name).length;
                                           if (isBoosted) {
                                             return (
                                               <button
@@ -2409,7 +2428,7 @@ export default function WeeklyPlannerPage() {
                                           if (suggestionCount === 0) return null;
                                           return (
                                             <UpliftCardIndicator
-                                              suggestionCount={Math.min(suggestionCount, 2)}
+                                              suggestionCount={suggestionCount}
                                               onClick={() => setMealDetail({
                                                 entry,
                                                 meal,
@@ -3612,32 +3631,13 @@ export default function WeeklyPlannerPage() {
                       server suggestions using normalised ingredient keys. */}
                   {(() => {
                     const serverMatches = upliftByMealId.get(meal.id) ?? [];
-                    // Build a set of normalised ingredient keys already covered by server uplift
-                    const serverKeys = new Set(
-                      serverMatches.flatMap((m) =>
-                        m.suggestions.map((s) => normaliseForReuse(s.ingredient)),
-                      ),
-                    );
-                    const fallbackMatch = buildFallbackUpliftMatch(
+                    const mergedMatches = buildMergedMatches(
                       meal.name,
                       meal.ingredients ?? [],
+                      serverMatches,
                       householdEaters,
-                      serverKeys,
                     );
-                    const mergedMatches = fallbackMatch
-                      ? [...serverMatches, fallbackMatch]
-                      : serverMatches;
-                    // PROOF STEP 6 — uplift panel render decision
                     const hasBoostedThisSession = boostedMealIds.has(meal.id);
-                    console.log("[BOOST-PROOF] STEP6 MealUpliftPanel render gate:", {
-                      mealId: meal.id,
-                      serverMatchesCount: serverMatches.length,
-                      hasFallbackMatch: !!fallbackMatch,
-                      fallbackSuggestions: fallbackMatch?.suggestions.map(s => s.ingredient) ?? [],
-                      mergedMatchesCount: mergedMatches.length,
-                      hasBoostedThisSession,
-                      willRender: mergedMatches.length > 0 || hasBoostedThisSession,
-                    });
                     if (mergedMatches.length === 0 && !hasBoostedThisSession) return null;
                     return (
                       <MealUpliftPanel

@@ -45,6 +45,40 @@ interface FlatSuggestion extends UpliftSuggestion {
   ruleName: string;
 }
 
+/**
+ * Selects the boost suggestions shown for a meal: the reuse-aware ranking
+ * (≤1 reuse slot + discovery) capped at 5. Exported so the planner card
+ * indicator can show the SAME count this panel will render — the two must never
+ * drift (the card previously used a raw `Math.min(count, 2)` over server matches
+ * only, which is why a card said "2" while the panel showed "5"). This does NOT
+ * subtract already-accepted items; the panel removes those separately via
+ * provenance (see `pendingSuggestions`).
+ */
+export function selectVisibleBoosts(
+  upliftMatches: UpliftMatchResult[],
+  weeklyReuseMap: Map<string, string[]> | undefined,
+  currentMealName: string | undefined,
+): FlatSuggestion[] {
+  const allSuggestions: FlatSuggestion[] = upliftMatches.flatMap((m) =>
+    m.suggestions.map((s) => ({ ...s, ruleId: m.ruleId, ruleName: m.ruleName }))
+  );
+  const reuseSuggestions = weeklyReuseMap && currentMealName
+    ? allSuggestions.filter((s) => {
+        const mealNames = weeklyReuseMap.get(normaliseForReuse(s.ingredient))?.filter(n => n !== currentMealName);
+        return !!mealNames?.length;
+      })
+    : [];
+  const discoverySuggestions = weeklyReuseMap && currentMealName
+    ? allSuggestions.filter((s) => {
+        const mealNames = weeklyReuseMap.get(normaliseForReuse(s.ingredient))?.filter(n => n !== currentMealName);
+        return !mealNames?.length;
+      })
+    : allSuggestions;
+  const selectedReuse = reuseSuggestions.slice(0, 1);
+  const selectedDiscovery = discoverySuggestions.slice(0, 5 - selectedReuse.length);
+  return [...selectedReuse, ...selectedDiscovery];
+}
+
 // ─── Shopping list query keys — invalidated after any uplift mutation ─────────
 
 export const SHOPPING_LIST_KEYS = [
@@ -91,31 +125,11 @@ export function MealUpliftPanel({
   const [effectiveMealId, setEffectiveMealId] = useState(mealId);
   const [justAdded, setJustAdded] = useState<Set<string>>(new Set());
 
-  // Flatten suggestions across all matches
-  const allSuggestions: FlatSuggestion[] = upliftMatches.flatMap((m) =>
-    m.suggestions.map((s) => ({ ...s, ruleId: m.ruleId, ruleName: m.ruleName }))
-  );
-
-  // Reuse-aware ranking:
-  //   P1 (reuse) — already used elsewhere this week, max 1 slot
-  //   P2 (discovery) — not yet used this week, fills remaining slots
+  // Reuse-aware ranking + 5-item cap. Shared with the planner card indicator
+  // via selectVisibleBoosts so the card's count always matches what renders here.
   // Priority order: Safety → Meal Fit (already enforced by uplift engine) →
   //   Weekly Reuse → Nutrition Value → Discovery / Variety
-  const reuseSuggestions = weeklyReuseMap && currentMealName
-    ? allSuggestions.filter((s) => {
-        const mealNames = weeklyReuseMap.get(normaliseForReuse(s.ingredient))?.filter(n => n !== currentMealName);
-        return !!mealNames?.length;
-      })
-    : [];
-  const discoverySuggestions = weeklyReuseMap && currentMealName
-    ? allSuggestions.filter((s) => {
-        const mealNames = weeklyReuseMap.get(normaliseForReuse(s.ingredient))?.filter(n => n !== currentMealName);
-        return !mealNames?.length;
-      })
-    : allSuggestions;
-  const selectedReuse = reuseSuggestions.slice(0, 1);
-  const selectedDiscovery = discoverySuggestions.slice(0, 5 - selectedReuse.length);
-  const visibleSuggestions = [...selectedReuse, ...selectedDiscovery];
+  const visibleSuggestions = selectVisibleBoosts(upliftMatches, weeklyReuseMap, currentMealName);
 
   // Load provenance (accepted uplift applications for this meal)
   const { data: applications = [] } = useQuery<MealUpliftApplication[]>({
