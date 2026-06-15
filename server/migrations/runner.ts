@@ -1329,6 +1329,37 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // Backfill display metadata from meal_templates onto their linked meals rows.
+    // The hybrid-meal-occasion columns (style_tags, suitable_slots) were added to the
+    // meals table in 2026-06-14_add_hybrid_meal_occasion but were never populated for
+    // existing meal rows — only the meal_templates rows were enriched by the seed and
+    // enrichment migrations. The auto-import path also creates meals without copying
+    // template tags. This migration fixes all existing rows in one pass.
+    //
+    // Scope: display-only. Does not affect planner scoring, ranking, slot eligibility
+    // or any restriction logic. Additive only: only updates rows with currently-empty
+    // arrays where the linked template has non-empty values.
+    id: "2026-06-15_backfill_meals_from_templates",
+    statements: [
+      // ── Copy style_tags from the linked template ──────────────────────────────
+      `UPDATE meals m
+         SET style_tags = t.style_tags
+        FROM meal_templates t
+       WHERE m.meal_template_id = t.id
+         AND (m.style_tags IS NULL OR cardinality(m.style_tags) = 0)
+         AND cardinality(t.style_tags) > 0`,
+
+      // ── Copy suitable_slots from the linked template (supplements category backfill) ──
+      `UPDATE meals m
+         SET suitable_slots = t.suitable_slots
+        FROM meal_templates t
+       WHERE m.meal_template_id = t.id
+         AND (m.suitable_slots IS NULL OR cardinality(m.suitable_slots) = 0)
+         AND cardinality(t.suitable_slots) > 0`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

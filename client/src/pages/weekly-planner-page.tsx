@@ -73,6 +73,7 @@ import {
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { DroppablePlannerCell, SortablePlannerEntry, MobileSortableMealEntry, MobileDayDropTarget, DroppableProvisioning, type DragItemData, type DropZoneData } from "@/components/PlannerDragDrop";
+import { PlannerMealCardContent } from "@/components/PlannerMealCard";
 
 interface MatrixRow {
   id: string;
@@ -2043,67 +2044,91 @@ export default function WeeklyPlannerPage() {
                                   audience={row.audience}
                                   isDrink={row.isDrink}
                                 >
-                                  <button
-                                    className={`w-full text-left text-sm transition-colors flex items-start gap-1.5 select-none ${isCooked ? "opacity-50" : ""} ${isPlaceholder ? "text-muted-foreground/70" : "text-foreground hover:text-primary"}`}
-                                    onClick={() => {
-                                      if (isPlaceholder) {
-                                        setResolveSession({
-                                          mealName: meal.name,
-                                          dayName: DAY_NAMES[mobileDay.dayOfWeek],
-                                          slotLabel: row.label,
-                                          entryId: entry.id,
-                                          dayId: mobileDay.id,
-                                          mealType: row.mealType ?? row.addMealType,
-                                          audience: row.audience,
-                                          isDrink: row.isDrink,
-                                          position: entry.position,
-                                          returnMode: null,
-                                          pendingRecipeLink: null,
-                                        });
-                                        setAssistantMode("resolve");
-                                      } else {
-                                        setMealDetail({
-                                          entry,
-                                          meal,
-                                          dayId: mobileDay.id,
-                                          mealType: row.mealType ?? row.addMealType,
-                                          audience: row.audience,
-                                          isDrink: row.isDrink,
-                                          dayName: DAY_NAMES[mobileDay.dayOfWeek],
-                                          slotLabel: row.label,
-                                        });
-                                      }
-                                    }}
-                                    onTouchStart={() => {
-                                      longPressMovedRef.current = false;
-                                      longPressTimerRef.current = setTimeout(() => {
-                                        if (!longPressMovedRef.current) {
-                                          setContextEntry({ entry, meal, dayId: mobileDay.id, dayName: DAY_NAMES[mobileDay.dayOfWeek], slotLabel: row.label, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink });
+                                  <>
+                                    <button
+                                      className={`w-full text-left text-sm transition-colors flex items-start gap-1.5 select-none ${isCooked ? "opacity-50" : ""} ${isPlaceholder ? "text-muted-foreground/70" : "text-foreground hover:text-primary"}`}
+                                      onClick={() => {
+                                        if (isPlaceholder) {
+                                          setResolveSession({
+                                            mealName: meal.name,
+                                            dayName: DAY_NAMES[mobileDay.dayOfWeek],
+                                            slotLabel: row.label,
+                                            entryId: entry.id,
+                                            dayId: mobileDay.id,
+                                            mealType: row.mealType ?? row.addMealType,
+                                            audience: row.audience,
+                                            isDrink: row.isDrink,
+                                            position: entry.position,
+                                            returnMode: null,
+                                            pendingRecipeLink: null,
+                                          });
+                                          setAssistantMode("resolve");
+                                        } else {
+                                          setMealDetail({
+                                            entry,
+                                            meal,
+                                            dayId: mobileDay.id,
+                                            mealType: row.mealType ?? row.addMealType,
+                                            audience: row.audience,
+                                            isDrink: row.isDrink,
+                                            dayName: DAY_NAMES[mobileDay.dayOfWeek],
+                                            slotLabel: row.label,
+                                          });
                                         }
-                                      }, 500);
-                                    }}
-                                    onTouchMove={() => {
-                                      longPressMovedRef.current = true;
-                                      if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
-                                    }}
-                                    onTouchEnd={() => {
-                                      if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
-                                    }}
-                                    data-testid={`button-mobile-meal-${row.id}-${entry.id}`}
-                                  >
-                                    <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1.5 py-0.5" : ""}`}>
-                                      <span className={`leading-snug ${isCooked ? "line-through" : ""}`}>{meal.name}</span>
-                                      {isPlaceholder
-                                        ? <span className="text-[10px] text-muted-foreground/60 italic" data-testid={`label-placeholder-mobile-${entry.id}`}>Needs recipe</span>
-                                        : isCooked
-                                          ? <span className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70">Cooked</span>
-                                          : <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />
+                                      }}
+                                      onTouchStart={() => {
+                                        longPressMovedRef.current = false;
+                                        longPressTimerRef.current = setTimeout(() => {
+                                          if (!longPressMovedRef.current) {
+                                            setContextEntry({ entry, meal, dayId: mobileDay.id, dayName: DAY_NAMES[mobileDay.dayOfWeek], slotLabel: row.label, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink });
+                                          }
+                                        }, 500);
+                                      }}
+                                      onTouchMove={() => {
+                                        longPressMovedRef.current = true;
+                                        if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+                                      }}
+                                      onTouchEnd={() => {
+                                        if (longPressTimerRef.current) { clearTimeout(longPressTimerRef.current); longPressTimerRef.current = null; }
+                                      }}
+                                      data-testid={`button-mobile-meal-${row.id}-${entry.id}`}
+                                    >
+                                      <PlannerMealCardContent
+                                        meal={meal}
+                                        entryId={entry.id}
+                                        isPlaceholder={isPlaceholder}
+                                        isCooked={isCooked}
+                                      />
+                                      {isFrozen && !isCooked && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
+                                      {basketMealIdSet.has(meal.id) && !isCooked && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
+                                      {isCooked && <Check className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
+                                    </button>
+                                    {/* Mobile boost indicator */}
+                                    {!isPlaceholder && !isCooked && (() => {
+                                      const isBoosted = boostedMealIds.has(meal.id);
+                                      const matches = upliftByMealId.get(meal.id) ?? [];
+                                      const suggestionCount = matches.flatMap(m => m.suggestions).length;
+                                      if (isBoosted) {
+                                        return (
+                                          <button
+                                            className="flex items-center gap-0.5 text-[10px] text-emerald-600/70 leading-none mt-0.5"
+                                            onClick={(e) => { e.stopPropagation(); setMealDetail({ entry, meal, dayId: mobileDay.id, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[mobileDay.dayOfWeek], slotLabel: row.label }); }}
+                                            title="Nutrition boost applied"
+                                          >
+                                            <Check className="h-2.5 w-2.5 shrink-0" />
+                                            <span>Boosted</span>
+                                          </button>
+                                        );
                                       }
-                                    </div>
-                                    {isFrozen && !isCooked && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
-                                    {basketMealIdSet.has(meal.id) && !isCooked && <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
-                                    {isCooked && <Check className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
-                                  </button>
+                                      if (suggestionCount === 0) return null;
+                                      return (
+                                        <UpliftCardIndicator
+                                          suggestionCount={Math.min(suggestionCount, 2)}
+                                          onClick={() => setMealDetail({ entry, meal, dayId: mobileDay.id, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[mobileDay.dayOfWeek], slotLabel: row.label })}
+                                        />
+                                      );
+                                    })()}
+                                  </>
                                 </MobileSortableMealEntry>
                               );
                             })}
@@ -2351,14 +2376,12 @@ export default function WeeklyPlannerPage() {
                                           }}
                                           data-testid={`button-meal-${row.id}-${day.dayOfWeek}-${entry.id}`}
                                         >
-                                          <div className={`flex-1 min-w-0 flex flex-col gap-0.5 ${isPlaceholder ? "border border-dashed border-muted-foreground/30 rounded px-1 py-0.5" : ""}`}>
-                                            <span className={`break-words leading-tight pr-3 ${isCooked ? "line-through" : ""}`}>{meal.name}</span>
-                                            {isPlaceholder && (
-                                              <span className="text-[9px] text-muted-foreground/60 italic" data-testid={`label-placeholder-${entry.id}`}>Needs recipe</span>
-                                            )}
-                                            {!isPlaceholder && !isCooked && <NutritionVarietyDots score={computeMealVariety(meal.ingredients ?? [])} />}
-                                            {isCooked && <span className="text-[9px] text-emerald-600/70 dark:text-emerald-400/70">Cooked</span>}
-                                          </div>
+                                          <PlannerMealCardContent
+                                            meal={meal}
+                                            entryId={entry.id}
+                                            isPlaceholder={isPlaceholder}
+                                            isCooked={isCooked}
+                                          />
                                           {isFrozen && !isCooked && <Snowflake className="h-2.5 w-2.5 text-blue-400 flex-shrink-0 mt-0.5" />}
                                           {basketMealIdSet.has(meal.id) && !isCooked && (
                                             <ShoppingCart className="h-2.5 w-2.5 text-emerald-500/70 flex-shrink-0 mt-0.5" data-testid={`icon-in-basket-${meal.id}`} />
