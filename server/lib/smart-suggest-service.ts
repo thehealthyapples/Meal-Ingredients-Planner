@@ -1,4 +1,4 @@
-import type { Meal, UserPreferences } from "@shared/schema";
+import type { Meal, MealTemplate, UserPreferences } from "@shared/schema";
 import { fetchExternalCandidates, enrichExternalCandidates, type ExternalMealCandidate } from "./external-meal-service";
 import { scoreMeal, convertMealToCandidate, convertExternalToCandidate, type ScoredCandidate } from "./meal-scoring-service";
 import { generateMealExplanation, type MealExplanation } from "./explainability-service";
@@ -335,20 +335,44 @@ export function getCandidateSlotFit(candidate: ScoredCandidate, slot: string): b
   return allowed.includes(candidate.category.toLowerCase());
 }
 
-// Tier-4 meal shell recovery: pick the highest-scoring household shell match that
-// fits the slot and can be assembled into a fully compliant candidate. Matches
-// arrive pre-sorted by the matcher's own fitScore (scoring unchanged here). The
-// matcher scores but never hard-filters, so this layer enforces the planner's
-// hard gates before a shell may fill a slot:
-//   1. slot fit via SLOT_CATEGORY_MAPPING — same boundary as Tiers 1–3;
-//   2. full member diet compatibility (compatibility === 1 ⇔ zero diet conflicts
-//      across household eaters, including weekly overrides the matcher applied);
-//   3. hard restrictions + profile diet pattern applied per slot ingredient —
-//      dropping a non-compliant slot option is the shell architecture's documented
-//      adaptation mechanism (the matcher's "remove X" member changes);
-//   4. the assembled candidate must pass the same whole-candidate gates the
-//      smart-apply compliance check runs, so a suggested shell can never be
-//      silently skipped at apply time.
+// Shell slot eligibility: primarySlot or suitableSlots (Hybrid Meal Occasion fields)
+// take precedence over category when present. Falls back to SLOT_CATEGORY_MAPPING
+// for legacy templates that predate these fields (primarySlot null, suitableSlots []).
+function shellFitsSlot(template: MealTemplate, slot: string): boolean {
+  const hasPrimary = template.primarySlot != null;
+  const hasSuitable = Array.isArray(template.suitableSlots) && template.suitableSlots.length > 0;
+  if (hasPrimary || hasSuitable) {
+    return template.primarySlot === slot || (template.suitableSlots ?? []).includes(slot);
+  }
+  const category = (template.category || "").toLowerCase();
+  return (SLOT_CATEGORY_MAPPING[slot] || [slot]).includes(category);
+}
+
+// Tie-breaking energy-band preference per planner slot (B-rank in A/B/C/D ordering).
+// Lower index in the array = preferred energyBand for that slot.
+// Only applied after primarySlot exact-match (A-rank); never affects eligibility.
+const SLOT_ENERGY_PREFERENCE: Record<string, string[]> = {
+  breakfast: ["light", "medium", "hearty"],
+  lunch:     ["medium", "light", "hearty"],
+  dinner:    ["hearty", "medium", "light"],
+  snack:     ["light", "medium", "hearty"],
+};
+
+// Tier-4 meal shell recovery: select the best household shell that fits the slot
+// and passes all planner hard gates. Matches arrive pre-sorted by the matcher's
+// fitScore (scoring unchanged). All eligible shells are collected, then ranked by
+// the A/B/C/D tie-breakers before the winner is returned:
+//
+//   A. primarySlot exact match (slot-primary shells preferred over suitable-only)
+//   B. energyBand preference per slot (SLOT_ENERGY_PREFERENCE ordering)
+//   C. styleTags count (more curated tags preferred)
+//   D. original fitScore order (stable sort preserves this for truly equal shells)
+//
+// Hard gates enforced here (matcher scoring is never modified):
+//   1. slot fit via primarySlot / suitableSlots (with category fallback for legacy);
+//   2. full member diet compatibility (compatibility === 1 ⇔ zero diet conflicts);
+//   3. hard restrictions + profile diet + household strict diets per slot ingredient;
+//   4. assembled candidate passes whole-candidate gates (same as apply-time check).
 export function selectShellRecoveryCandidate(
   matches: MealMatch[],
   slot: string,
@@ -357,15 +381,22 @@ export function selectShellRecoveryCandidate(
   dietRestrictions: string[],
   householdStrictDiets?: string[],
 ): ScoredCandidate | null {
-  const allowedCategories = SLOT_CATEGORY_MAPPING[slot] || [slot];
   const hsd = householdStrictDiets ?? [];
+  const energyPreference = SLOT_ENERGY_PREFERENCE[slot] ?? [];
+
+  type Eligible = { candidate: ScoredCandidate; template: MealTemplate };
+  const eligible: Eligible[] = [];
 
   for (const match of matches) {
     const template = match.template;
-    const category = (template.category || "").toLowerCase();
-    if (!allowedCategories.includes(category)) continue;
+
+    // Gate 1: slot eligibility via primarySlot/suitableSlots (category fallback for legacy).
+    if (!shellFitsSlot(template, slot)) continue;
+
+    // Gate 2: full member diet compatibility required.
     if (match.scoreBreakdown.compatibility < 1) continue;
 
+    // Gate 3: filter slot ingredients through all hard gates; keep compliant subset.
     const allSlotIngredients = [
       ...(template.sharedBaseComponents ?? []),
       ...(template.proteinSlots ?? []),
@@ -381,41 +412,69 @@ export function selectShellRecoveryCandidate(
     );
     if (compliantIngredients.length === 0) continue;
 
+    // Gate 4: assembled shell must pass whole-candidate gates (matches apply-time compliance).
     if (candidateHardExcluded(template.name, compliantIngredients, hardExcluded)) continue;
     if (candidateDietExcluded(
       { name: template.name, ingredients: compliantIngredients, category: template.category, cuisine: template.cuisine },
       dietPattern,
       dietRestrictions,
     )) continue;
-    // Household strict diet check (Vegetarian/Vegan) for the assembled shell
     if (hsd.some(diet => candidateDietExcluded(
       { name: template.name, ingredients: compliantIngredients, category: template.category, cuisine: template.cuisine },
       diet,
       [],
     ))) continue;
 
-    return {
-      id: `shell-${template.id}`,
-      name: template.name,
-      image: template.imageUrl ?? null,
-      ingredients: compliantIngredients,
-      instructions: template.description ? [template.description] : [],
-      source: "Meal Shell",
-      sourceUrl: null,
-      category,
-      cuisine: template.cuisine ?? null,
-      primaryProtein: null,
-      dietTypes: template.compatibleDiets ?? [],
-      estimatedCost: null,
-      estimatedUPFScore: null,
-      score: 0,
-      scoreBreakdown: { dietMatch: 0, goalAlignment: 0, budgetAlignment: 0, upfScore: 0, varietyScore: 0, overlapScore: 0, cuisineBonus: 0, simplicityBonus: 0 },
-      // A shell has no saved meal id — route the apply flow through the existing
-      // auto-import path, whose compliance gate re-checks the same rules above.
-      isExternal: true,
-    };
+    const category = (template.category || "").toLowerCase();
+    eligible.push({
+      candidate: {
+        id: `shell-${template.id}`,
+        name: template.name,
+        image: template.imageUrl ?? null,
+        ingredients: compliantIngredients,
+        instructions: template.description ? [template.description] : [],
+        source: "Meal Shell",
+        sourceUrl: null,
+        category,
+        cuisine: template.cuisine ?? null,
+        primarySlot: template.primarySlot ?? null,
+        suitableSlots: template.suitableSlots ?? [],
+        energyBand: template.energyBand ?? null,
+        primaryProtein: null,
+        dietTypes: template.compatibleDiets ?? [],
+        estimatedCost: null,
+        estimatedUPFScore: null,
+        score: 0,
+        scoreBreakdown: { dietMatch: 0, goalAlignment: 0, budgetAlignment: 0, upfScore: 0, varietyScore: 0, overlapScore: 0, cuisineBonus: 0, simplicityBonus: 0 },
+        // A shell has no saved meal id — route the apply flow through the existing
+        // auto-import path, whose compliance gate re-checks the same rules above.
+        isExternal: true,
+      },
+      template,
+    });
   }
-  return null;
+
+  if (eligible.length === 0) return null;
+
+  // A/B/C/D tie-breaking — stable sort preserves fitScore order (D) for equals.
+  eligible.sort((a, b) => {
+    // A: primarySlot exact match preferred over suitableSlots-only match.
+    const aExact = a.template.primarySlot === slot ? 1 : 0;
+    const bExact = b.template.primarySlot === slot ? 1 : 0;
+    if (aExact !== bExact) return bExact - aExact;
+
+    // B: energyBand preference for this slot (lower index = preferred).
+    const aIdx = a.template.energyBand != null ? energyPreference.indexOf(a.template.energyBand) : -1;
+    const bIdx = b.template.energyBand != null ? energyPreference.indexOf(b.template.energyBand) : -1;
+    const aEnergy = aIdx === -1 ? energyPreference.length : aIdx;
+    const bEnergy = bIdx === -1 ? energyPreference.length : bIdx;
+    if (aEnergy !== bEnergy) return aEnergy - bEnergy;
+
+    // C: more styleTags preferred.
+    return (b.template.styleTags?.length ?? 0) - (a.template.styleTags?.length ?? 0);
+  });
+
+  return eligible[0].candidate;
 }
 
 export async function generateSmartSuggestion(
