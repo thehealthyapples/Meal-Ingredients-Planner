@@ -74,6 +74,8 @@ export const mealTemplates = pgTable("meal_templates", {
   suitableSlots: text("suitable_slots").array().notNull().default([]),
   energyBand: text("energy_band"),
   styleTags: text("style_tags").array().notNull().default([]),
+  // Editorial "nutrition opportunity" metadata for meal shells (display only).
+  nutritionOpportunities: text("nutrition_opportunities").array().notNull().default([]),
 });
 
 export const mealTemplateProducts = pgTable("meal_template_products", {
@@ -838,6 +840,7 @@ export const insertMealTemplateSchema = createInsertSchema(mealTemplates).pick({
   suitableSlots: true,
   energyBand: true,
   styleTags: true,
+  nutritionOpportunities: true,
 });
 
 export const insertMealTemplateProductSchema = createInsertSchema(mealTemplateProducts).pick({

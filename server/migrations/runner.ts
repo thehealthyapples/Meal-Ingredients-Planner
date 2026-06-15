@@ -1204,6 +1204,19 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // Starter shell catalogue — additive only. Adds nutrition_opportunities to
+    // meal_templates so meal shells can carry editorial "nutrition opportunity"
+    // metadata (e.g. extra greens, lentils, seeds). Display/metadata only — never
+    // read by planner scoring, filtering or slot eligibility. No column altered,
+    // no row touched; existing rows keep the column default ('{}'). No backfill.
+    id: "2026-06-14_add_shell_nutrition_opportunities",
+    statements: [
+      `ALTER TABLE meal_templates
+        ADD COLUMN IF NOT EXISTS nutrition_opportunities TEXT[] NOT NULL DEFAULT '{}'`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
