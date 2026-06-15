@@ -1,29 +1,33 @@
 /**
- * PlannerMealCard — V2 card content component.
+ * PlannerMealCard — V2 card content component (compact refinement).
  *
  * Renders the information rows inside a planner meal card button.
  * Does NOT include the outer button wrapper, status icons (frozen/basket/cooked),
  * the boost indicator, or the dropdown menu — those remain in the parent.
  *
- * Layout (desktop):
- *   Line 1 — Meal title
- *   Line 2 — Meal intelligence chips (max 2, then +N)
- *   Line 3 — Nutrition contribution text (max 3 categories, then +N)
- *   Optional — "Suitable for: Slot • Slot" (shell meals with >1 slot only)
+ * Design goal: a calm, low-text repurpose of the original planner card. The card
+ * leads with compact variety dots (matching the planner's top legend) and pairs
+ * them with at most two short nutrition labels only when there is room. It is
+ * deliberately NOT a heavy multi-line text layout.
  *
- * Layout (mobile):
- *   Line 1 — Meal title
- *   Line 2 — Single chip (first-priority only)
- *   (Nutrition and suitable lines hidden)
+ *   Meal title
+ *   [Family Table] [Comfort]          ← max 2 chips
+ *   ● ● ●  Veg • Herbs                ← max 3 dots + up to 2 short labels
  *
- * Boost indicator (↳ N boost ideas / Boosted) is rendered by the parent as a
- * sibling button below the card content, exactly as before.
+ * Responsive (single compact line for dots+labels; height never grows):
+ *   Mobile  — title, 1 chip, dots only
+ *   Tablet  — title, up to 2 chips, dots + 1 short label
+ *   Desktop — title, 2 chips, dots + 2 short labels
+ *
+ * The suitable-for line is intentionally hidden for now (kept off to avoid extra
+ * card height). The boost indicator (↳ N boost ideas / Boosted) is rendered by
+ * the parent as a sibling below this content, exactly as before.
  */
 
 import type { Meal } from "@shared/schema";
 import { getStyleTagDisplayLabel } from "@shared/style-tags";
-import { getPlantCategory } from "@/lib/nutrition-variety";
-import type { PlantCategory } from "@/lib/nutrition-variety";
+import { computeMealVariety } from "@/lib/nutrition-variety";
+import type { VarietyScore } from "@/lib/nutrition-variety";
 
 // ── Chip priority: lower index → shown first ──────────────────────────────────
 const CHIP_PRIORITY_ORDER = [
@@ -62,30 +66,18 @@ const CHIP_COLOR: Record<string, string> = {
     "bg-yellow-50 text-yellow-700 border-yellow-200 dark:bg-yellow-950/40 dark:text-yellow-400 dark:border-yellow-800/60",
 };
 
-// ── Nutrition category short labels ──────────────────────────────────────────
-const CATEGORY_LABEL: Partial<Record<PlantCategory, string>> = {
-  Vegetables: "Veg",
-  Fruits: "Fruit",
-  Legumes: "Protein",
-  "Whole Grains": "Whole grains",
-  "Herbs & Spices": "Herbs",
-  Seeds: "Seeds",
-  Nuts: "Nuts",
-  "Olive Oil": "Healthy fats",
-  "Fermented Foods": "Fermented",
-};
+// ── Variety dots — colours + short labels mirror the planner top legend ───────
+// (nutrition-variety-chips.tsx CATEGORIES). Same five-category VarietyScore model
+// so a dot on a card maps directly to the legend above the grid. Short labels are
+// kept terse on purpose ("Fats" not "Healthy fats") to avoid card text wrapping.
+type VarietyKey = keyof Omit<VarietyScore, "total">;
 
-// Priority order for nutrition categories in the display line.
-const CATEGORY_PRIORITY: PlantCategory[] = [
-  "Vegetables",
-  "Fruits",
-  "Legumes",
-  "Whole Grains",
-  "Herbs & Spices",
-  "Seeds",
-  "Nuts",
-  "Olive Oil",
-  "Fermented Foods",
+const VARIETY_DOTS: Array<{ key: VarietyKey; short: string; dot: string }> = [
+  { key: "fruits", short: "Fruit", dot: "bg-rose-400" },
+  { key: "vegetables", short: "Veg", dot: "bg-green-500" },
+  { key: "wholeGrains", short: "Grains", dot: "bg-amber-500" },
+  { key: "herbsSpices", short: "Herbs", dot: "bg-violet-400" },
+  { key: "oliveOil", short: "Fats", dot: "bg-teal-400" },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -98,15 +90,14 @@ function buildChips(styleTags: string[]): Array<{ slug: string; label: string; c
   }));
 }
 
-function buildNutritionCategories(ingredients: string[]): string[] {
-  const found = new Set<PlantCategory>();
-  for (const ing of ingredients) {
-    const cat = getPlantCategory(ing);
-    if (cat) found.add(cat);
-  }
-  return CATEGORY_PRIORITY.filter((cat) => found.has(cat)).map(
-    (cat) => CATEGORY_LABEL[cat] ?? cat,
-  );
+// Present variety categories (legend order), each with its dot colour + short
+// label. Used to render up to 3 dots and up to 2 labels on the compact line.
+function buildVarietyCategories(
+  ingredients: string[],
+): Array<{ key: VarietyKey; short: string; dot: string }> {
+  const score = computeMealVariety(ingredients);
+  if (score.total === 0) return [];
+  return VARIETY_DOTS.filter((c) => score[c.key] > 0);
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -127,17 +118,11 @@ export function PlannerMealCardContent({
   const chips = buildChips(meal.styleTags ?? []);
   const chipOverflow = Math.max(0, chips.length - 2);
 
-  const nutritionCategories =
-    isPlaceholder || isCooked ? [] : buildNutritionCategories(meal.ingredients ?? []);
-  const nutritionOverflow = Math.max(0, nutritionCategories.length - 3);
-
-  // Suitable-for line: only for shell meals with more than one eligible slot.
-  const isShell = (meal.styleTags ?? []).includes("shared-meal");
-  const suitableSlots = meal.suitableSlots ?? [];
-  const showSuitable = isShell && !isPlaceholder && !isCooked && suitableSlots.length > 1;
-  const suitableLabel = suitableSlots
-    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-    .join(" • ");
+  // Compact variety line: max 3 dots, max 2 short labels. Dots match the legend.
+  const varietyCategories =
+    isPlaceholder || isCooked ? [] : buildVarietyCategories(meal.ingredients ?? []);
+  const dots = varietyCategories.slice(0, 3);
+  const labels = varietyCategories.slice(0, 2);
 
   return (
     <div
@@ -153,19 +138,11 @@ export function PlannerMealCardContent({
       {/* Intelligence rows — only for real, un-cooked meals */}
       {!isPlaceholder && !isCooked && (
         <>
-          {/* Line 2: Meal intelligence chips */}
+          {/* Line 2: Meal intelligence chips — 1 on mobile, up to 2 from tablet up */}
           {chips.length > 0 && (
             <div className="flex items-center gap-0.5">
-              {/* Mobile: single highest-priority chip */}
               <span
-                className={`sm:hidden inline-flex items-center px-1.5 rounded-full text-[10px] font-medium border leading-none h-[18px] ${chips[0].color}`}
-              >
-                {chips[0].label}
-              </span>
-
-              {/* Desktop: up to 2 chips */}
-              <span
-                className={`hidden sm:inline-flex items-center px-1.5 rounded-full text-[10px] font-medium border leading-none h-[18px] ${chips[0].color}`}
+                className={`inline-flex items-center px-1.5 rounded-full text-[10px] font-medium border leading-none h-[18px] ${chips[0].color}`}
               >
                 {chips[0].label}
               </span>
@@ -184,25 +161,31 @@ export function PlannerMealCardContent({
             </div>
           )}
 
-          {/* Line 3: Nutrition contribution (desktop only) */}
-          {nutritionCategories.length > 0 && (
-            <div className="hidden sm:flex items-center text-[11px] text-muted-foreground/50 leading-none">
-              {nutritionCategories.slice(0, 3).join(" • ")}
-              {nutritionOverflow > 0 && (
-                <span className="ml-0.5 text-[9px] text-muted-foreground/35">
-                  +{nutritionOverflow}
+          {/* Line 3: variety dots + short labels (single calm line, fixed height).
+              Mobile: dots only · Tablet: dots + 1 label · Desktop: dots + 2 labels */}
+          {dots.length > 0 && (
+            <div
+              className="flex items-center gap-1 leading-none"
+              data-testid={`variety-dots-${entryId}`}
+            >
+              <span className="flex items-center gap-0.5 shrink-0">
+                {dots.map((c) => (
+                  <span
+                    key={c.key}
+                    className={`w-1.5 h-1.5 rounded-full ${c.dot} opacity-70`}
+                  />
+                ))}
+              </span>
+              {labels[0] && (
+                <span className="hidden sm:inline text-[10px] text-muted-foreground/50 truncate">
+                  {labels[0].short}
                 </span>
               )}
-            </div>
-          )}
-
-          {/* Optional: Suitable-for line (desktop only, shell meals >1 slot) */}
-          {showSuitable && (
-            <div
-              className="hidden sm:flex items-center text-[10px] text-muted-foreground/35 leading-none"
-              data-testid={`suitable-slots-${entryId}`}
-            >
-              {suitableLabel}
+              {labels[1] && (
+                <span className="hidden lg:inline text-[10px] text-muted-foreground/50 truncate">
+                  • {labels[1].short}
+                </span>
+              )}
             </div>
           )}
         </>

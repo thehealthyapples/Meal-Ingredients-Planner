@@ -1,4 +1,4 @@
-import { storage } from "../storage";
+import { storage as defaultStorage } from "../storage";
 import type { ExternalMealCandidate } from "./external-meal-service";
 import { scrapeRecipeFromUrl } from "./recipe-scraper";
 
@@ -9,9 +9,22 @@ export interface AutoImportResult {
   source: string;
 }
 
+// Subset of the storage surface autoImportExternalMeal depends on. Declared so the
+// shell-to-meal metadata write-path can be unit-tested with a fake (no DB needed).
+type AutoImportStorage = Pick<
+  typeof defaultStorage,
+  | "getMeals"
+  | "getMealTemplateByName"
+  | "createMealTemplate"
+  | "updateMealTemplateId"
+  | "createMeal"
+  | "applyTemplateMetadataToMeal"
+>;
+
 export async function autoImportExternalMeal(
   candidate: ExternalMealCandidate,
   userId: number,
+  storage: AutoImportStorage = defaultStorage,
 ): Promise<AutoImportResult | null> {
   try {
     const existingMeals = await storage.getMeals(userId);
@@ -70,8 +83,15 @@ export async function autoImportExternalMeal(
 
     await storage.updateMealTemplateId(meal.id, template.id);
 
+    // Copy template metadata (styleTags / suitableSlots / primarySlot / energyBand)
+    // onto the new meal row. For shell-recovery applies the resolved template is the
+    // shell template carrying full Hybrid Meal Occasion metadata, so the created meal
+    // renders chips and slot info in Planner Meal Card V2. External candidates resolve
+    // to a bare template (empty metadata) and harmlessly write empty defaults.
+    const persisted = await storage.applyTemplateMetadataToMeal(meal.id, template);
+
     return {
-      mealId: meal.id,
+      mealId: persisted?.id ?? meal.id,
       mealTemplateId: template.id,
       name: meal.name,
       source: candidate.source,

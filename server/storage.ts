@@ -123,6 +123,7 @@ export interface IStorage {
   removeMealTemplateProduct(id: number): Promise<void>;
   getMealsForTemplate(mealTemplateId: number): Promise<Meal[]>;
   updateMealTemplateId(mealId: number, mealTemplateId: number): Promise<Meal | undefined>;
+  applyTemplateMetadataToMeal(mealId: number, template: MealTemplate): Promise<Meal | undefined>;
   updateMealSourceType(mealId: number, sourceType: string): Promise<Meal | undefined>;
   getPlannerWeeks(userId: number): Promise<PlannerWeek[]>;
   getPlannerWeek(id: number): Promise<PlannerWeek | undefined>;
@@ -970,6 +971,24 @@ export class DatabaseStorage implements IStorage {
 
   async updateMealTemplateId(mealId: number, mealTemplateId: number): Promise<Meal | undefined> {
     const [result] = await db.update(meals).set({ mealTemplateId }).where(eq(meals.id, mealId)).returning();
+    return result;
+  }
+
+  // Copy Hybrid Meal Occasion + style metadata from a meal template onto a meal
+  // row. Used by the shell-to-meal apply path so future shell-created meals carry
+  // the same styleTags / suitableSlots / primarySlot / energyBand the Planner Meal
+  // Card V2 reads. Legacy templates with empty metadata write empty defaults (no-op).
+  async applyTemplateMetadataToMeal(mealId: number, template: MealTemplate): Promise<Meal | undefined> {
+    const [result] = await db
+      .update(meals)
+      .set({
+        styleTags: template.styleTags ?? [],
+        suitableSlots: template.suitableSlots ?? [],
+        primarySlot: template.primarySlot ?? null,
+        energyBand: template.energyBand ?? null,
+      })
+      .where(eq(meals.id, mealId))
+      .returning();
     return result;
   }
 
