@@ -15,9 +15,14 @@ import { PageHeader } from "@/components/PageHeader";
 import { appendPendingIngredient } from "@/lib/quick-list";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { useToast } from "@/hooks/use-toast";
+import { useAdaptiveDensity } from "@/hooks/use-adaptive-density";
 import { motion } from "framer-motion";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { scaleIngredient } from "@/lib/scaleIngredient";
+import { MealTrustSummary } from "@/components/meal-detail/MealTrustSummary";
+import { MealFamilyConfidence } from "@/components/meal-detail/MealFamilyConfidence";
+import { HouseholdAdaptationsSummary } from "@/components/meal-detail/HouseholdAdaptationsSummary";
+import { SimplyBetterChoicesPanel } from "@/components/meal-detail/SimplyBetterChoicesPanel";
 
 type SwapGoal = "vegetarian" | "keto" | "lower-cost" | "less-processed" | "under-time" | "household";
 
@@ -83,6 +88,7 @@ export default function MealDetailPage() {
   const [, params] = useRoute("/meals/:id");
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { density } = useAdaptiveDensity();
   const queryClient = useQueryClient();
   const mealId = params?.id ? Number(params.id) : null;
   const [reimportOpen, setReimportOpen] = useState(false);
@@ -672,6 +678,33 @@ export default function MealDetailPage() {
           })}
         </div>
       )}
+
+      {/* Trust Screen Sections - Phase 1 */}
+      <div className={`${density === "compact" ? "space-y-3" : density === "comfortable" ? "space-y-4" : "space-y-6"} mb-8`}>
+        <MealTrustSummary
+          meal={meal}
+          mealDiets={mealDiets}
+          allDiets={allDiets}
+          allergens={allergens}
+          density={density}
+        />
+        <MealFamilyConfidence
+          householdCompatibilityPercent={undefined}
+          substitutionCount={undefined}
+          weeklyReuseFourWeeks={undefined}
+          density={density}
+        />
+        <HouseholdAdaptationsSummary
+          meal={meal}
+          adaptations={undefined}
+          density={density}
+        />
+        <SimplyBetterChoicesPanel
+          mealName={meal.name}
+          upliftMatches={[]}
+          density={density}
+        />
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="md:col-span-1">
