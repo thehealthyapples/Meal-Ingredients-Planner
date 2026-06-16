@@ -5,6 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { getDialogWidthClass } from "@/components/ui/dialog-foundation";
 import { Loader2 } from "lucide-react";
 import type { FoodKnowledge } from "@shared/schema";
 
@@ -34,7 +35,7 @@ export default function FoodKnowledgeModal({ slug, onClose }: Props) {
 
   return (
     <Dialog open={!!slug} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-md">
+      <DialogContent className={getDialogWidthClass("comfortable")}>
         <DialogHeader>
           <DialogTitle className="text-base">
             {isLoading ? "Loading…" : (data?.title ?? slug)}

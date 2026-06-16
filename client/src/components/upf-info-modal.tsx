@@ -1,6 +1,7 @@
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { getDialogWidthClass } from "@/components/ui/dialog-foundation";
 import { useState } from "react";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 
@@ -20,7 +21,7 @@ export function UPFInfoModal({ trigger }: Props) {
       </span>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className={getDialogWidthClass("comfortable")}>
           <DialogHeader>
             <DialogTitle>What is ultra-processed food?</DialogTitle>
           </DialogHeader>
