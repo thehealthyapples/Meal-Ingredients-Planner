@@ -1,19 +1,13 @@
 import * as React from "react"
+import { useAdaptiveDensity } from "./use-adaptive-density"
 
-const MOBILE_BREAKPOINT = 768
-
+// Legacy: useIsMobile maintains the 768px threshold for backward compatibility.
+// New code should use useAdaptiveDensity() instead, which provides a three-tier
+// density model (compact/comfortable/expanded) that better handles the full
+// range of device sizes. This hook remains for existing components and will
+// be migrated incrementally to the new density-based system.
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
-
-  React.useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
-    mql.addEventListener("change", onChange)
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    return () => mql.removeEventListener("change", onChange)
-  }, [])
-
-  return !!isMobile
+  const density = useAdaptiveDensity()
+  // Legacy threshold remains at 768px for backward compatibility
+  return density.width < 768
 }
