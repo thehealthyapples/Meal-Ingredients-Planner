@@ -13,9 +13,10 @@ interface MealFamilyConfidenceProps {
 interface ConfidenceLevel {
   level: "very-high" | "high" | "moderate" | "low" | "getting-started";
   label: string;
-  stars: number;
+  meterFill: number;
   colorClass: string;
   bgClass: string;
+  meterColorClass: string;
 }
 
 function calculateConfidence(
@@ -32,9 +33,10 @@ function calculateConfidence(
     return {
       level: "high",
       label: "Great household match",
-      stars: 4,
+      meterFill: 80,
       colorClass: "text-green-600",
       bgClass: "bg-green-50 border-green-200",
+      meterColorClass: "bg-green-500",
     };
   }
 
@@ -48,44 +50,49 @@ function calculateConfidence(
     return {
       level: "very-high",
       label: "Very high confidence",
-      stars: 5,
+      meterFill: 100,
       colorClass: "text-green-600",
       bgClass: "bg-green-50 border-green-200",
+      meterColorClass: "bg-green-500",
     };
   }
   if (score >= 0.70) {
     return {
       level: "high",
       label: "High confidence",
-      stars: 4,
+      meterFill: 80,
       colorClass: "text-green-600",
       bgClass: "bg-green-50 border-green-200",
+      meterColorClass: "bg-green-500",
     };
   }
   if (score >= 0.55) {
     return {
       level: "moderate",
       label: "Moderate confidence",
-      stars: 3,
+      meterFill: 60,
       colorClass: "text-amber-600",
       bgClass: "bg-amber-50 border-amber-200",
+      meterColorClass: "bg-amber-500",
     };
   }
   if (score >= 0.40) {
     return {
       level: "low",
       label: "Low confidence",
-      stars: 2,
+      meterFill: 40,
       colorClass: "text-orange-600",
       bgClass: "bg-orange-50 border-orange-200",
+      meterColorClass: "bg-orange-500",
     };
   }
   return {
     level: "getting-started",
     label: "Getting started",
-    stars: 1,
+    meterFill: 20,
     colorClass: "text-gray-600",
     bgClass: "bg-gray-50 border-gray-200",
+    meterColorClass: "bg-gray-400",
   };
 }
 
@@ -150,18 +157,17 @@ export function MealFamilyConfidence({
           )}
         </div>
 
-        {/* Star rating */}
-        <div className="flex items-center gap-1 pt-1">
-          {[...Array(5)].map((_, i) => (
-            <span
-              key={i}
-              className={`text-lg ${
-                i < confidence.stars ? confidence.colorClass : "text-gray-300"
-              }`}
-            >
-              ★
-            </span>
-          ))}
+        {/* Confidence meter */}
+        <div className="space-y-1.5 pt-1">
+          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div
+              className={`h-full ${confidence.meterColorClass} transition-all duration-300`}
+              style={{ width: `${confidence.meterFill}%` }}
+            />
+          </div>
+          <p className={`text-xs font-medium ${confidence.colorClass}`}>
+            {confidence.meterFill}% confidence
+          </p>
         </div>
       </CardContent>
     </Card>

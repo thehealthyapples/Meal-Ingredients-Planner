@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 interface EaterAdaptation {
   eaterName: string;
-  status: "compatible" | "needs-changes";
+  status: "fully-compatible" | "minor-adjustment" | "easy-adaptation";
   primarySwap?: string;
   reason?: string;
   details?: {
@@ -43,11 +43,11 @@ export function HouseholdAdaptationsSummary({
   const displayedAdaptations: EaterAdaptation[] = adaptations || [
     {
       eaterName: "Household member 1",
-      status: "compatible",
+      status: "fully-compatible",
     },
     {
       eaterName: "Household member 2",
-      status: "compatible",
+      status: "fully-compatible",
     },
   ];
 
@@ -81,17 +81,30 @@ export function HouseholdAdaptationsSummary({
                       {adaptation.eaterName}
                     </p>
                     <div className="flex items-center gap-1 mt-1">
-                      {adaptation.status === "compatible" ? (
+                      {adaptation.status === "fully-compatible" ? (
                         <>
                           <Check className="h-3 w-3 text-green-600" />
                           <span className={`${textSizeClass} text-green-600`}>
                             Fully compatible
                           </span>
                         </>
+                      ) : adaptation.status === "minor-adjustment" ? (
+                        <>
+                          <Check className="h-3 w-3 text-blue-600" />
+                          <span className={`${textSizeClass} text-blue-600`}>
+                            Minor adjustment
+                          </span>
+                          {adaptation.primarySwap && (
+                            <span className={`${textSizeClass} text-muted-foreground`}>
+                              {adaptation.primarySwap}
+                            </span>
+                          )}
+                        </>
                       ) : (
                         <>
-                          <span className={`${textSizeClass} text-orange-600 font-medium`}>
-                            Needs changes
+                          <Check className="h-3 w-3 text-amber-600" />
+                          <span className={`${textSizeClass} text-amber-600`}>
+                            Easy adaptation
                           </span>
                           {adaptation.primarySwap && (
                             <span className={`${textSizeClass} text-muted-foreground`}>
