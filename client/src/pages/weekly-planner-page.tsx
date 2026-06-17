@@ -34,8 +34,6 @@ import { emitStageProposal } from "@/lib/planner-staging-bus";
 import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@/lib/nutrition-variety";
 import { getMealNutrients } from "@/lib/nutrition-insights";
 import { NutritionVarietyDots, PlannerVarietyLegend, WeeklyPlantDiversityCounter } from "@/components/nutrition-variety-chips";
-import { PlantDiversityExplorer } from "@/components/PlantDiversityExplorer";
-import type { WeekMealEntry } from "@/components/PlantDiversityExplorer";
 import { getMealBoosts } from "@/lib/nutrition-boosts";
 import { MealNutrientTags } from "@/components/nutrition-insights-panel";
 import { useUser } from "@/hooks/use-user";
@@ -563,22 +561,6 @@ export default function WeeklyPlannerPage() {
     );
   }, [activeWeekData, mealById]);
 
-  // ── Plant Diversity Explorer: enriched meal data with names and day labels ──
-  const weekMealsData = useMemo<WeekMealEntry[]>(() => {
-    if (!activeWeekData) return [];
-    const result: WeekMealEntry[] = [];
-    for (const day of activeWeekData.days) {
-      const dayName = DAY_SHORT[day.dayOfWeek];
-      for (const entry of day.entries) {
-        const meal = mealById.get(entry.mealId);
-        if (meal?.ingredients?.length) {
-          result.push({ mealName: meal.name, dayName, ingredients: meal.ingredients });
-        }
-      }
-    }
-    return result;
-  }, [activeWeekData, mealById]);
-
   // ── Weekly reuse map: ingredient → meal names using it this week ──────────────
   // Used by MealUpliftPanel to surface "Already used this week" labels and to
   // rank reuse suggestions (P1) above discovery suggestions (P2).
@@ -826,7 +808,6 @@ export default function WeeklyPlannerPage() {
 
   // ── Week eater overrides (Phase 4) ───────────────────────────────────────────
   const [weekDietsOpen, setWeekDietsOpen] = useState(false);
-  const [plantExplorerOpen, setPlantExplorerOpen] = useState(false);
 
   const activeWeekId = fullPlanner.find((w) => w.weekNumber === Number(activeWeek))?.id;
 
@@ -1905,7 +1886,7 @@ export default function WeeklyPlannerPage() {
           <div className="flex items-center gap-4 flex-wrap">
             <WeeklyPlantDiversityCounter
               weekIngredients={weekIngredients}
-              onExplore={() => setPlantExplorerOpen(true)}
+              onExplore={() => navigate("/plant-diversity")}
             />
             <PlannerVarietyLegend compact />
           </div>
@@ -3938,13 +3919,6 @@ export default function WeeklyPlannerPage() {
       </Dialog>
 
       <SharePlanDialog open={sharePlanOpen} onOpenChange={setSharePlanOpen} />
-
-      {/* ── Plant Diversity Explorer ── */}
-      <PlantDiversityExplorer
-        open={plantExplorerOpen}
-        onClose={() => setPlantExplorerOpen(false)}
-        weekMeals={weekMealsData}
-      />
 
       {/* ── Save Week Dialog ── */}
       <Dialog open={saveWeekOpen} onOpenChange={(v) => { if (!v) setSaveWeekOpen(false); }}>

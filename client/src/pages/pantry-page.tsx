@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useSearch } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import { FirstVisitHint } from "@/components/first-visit-hint";
 import { getPantryKnowledge, pantryItemMatchesQuery, MICRO_INSIGHTS } from "@/lib/pantry-knowledge";
 import { PageHeader } from "@/components/PageHeader";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { PantryExplore } from "@/components/PantryExplore";
 
 interface PantryItem {
   id: number;
@@ -919,6 +921,14 @@ export default function PantryPage() {
   const [activeHome, setActiveHome] = useState<HomeCat>("household");
   const [mobileHomeOpen, setMobileHomeOpen] = useState(false);
 
+  // ── Inventory / Explore mode (URL-driven so it is deep-linkable) ──────────
+  const [, navigate] = useLocation();
+  const search = useSearch();
+  const mode: "inventory" | "explore" =
+    new URLSearchParams(search).get("mode") === "explore" ? "explore" : "inventory";
+  const setMode = (m: "inventory" | "explore") =>
+    navigate(m === "explore" ? "/pantry?mode=explore" : "/pantry");
+
   // Repeat-tap nav: open Home drawer when mobile nav fires tha:open-workspace for this page
   useEffect(() => {
     const handler = (e: Event) => {
@@ -940,12 +950,40 @@ export default function PantryPage() {
         realm="pantry"
         titleTestId="text-pantry-title"
         center={
-          <CategoryTabs
-            categories={FOOD_CATS}
-            active={activeFood}
-            onChange={setActiveFood}
-            className="flex items-center gap-1 rounded-lg bg-muted/40 p-1"
-          />
+          mode === "inventory" ? (
+            <CategoryTabs
+              categories={FOOD_CATS}
+              active={activeFood}
+              onChange={setActiveFood}
+              className="flex items-center gap-1 rounded-lg bg-muted/40 p-1"
+            />
+          ) : undefined
+        }
+        actions={
+          <div className="flex items-center gap-1 rounded-lg bg-muted/40 p-1" role="tablist">
+            <button
+              role="tab"
+              aria-selected={mode === "inventory"}
+              onClick={() => setMode("inventory")}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
+                mode === "inventory" ? "shadow-sm realm-banner-btn" : "text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid="button-pantry-mode-inventory"
+            >
+              Inventory
+            </button>
+            <button
+              role="tab"
+              aria-selected={mode === "explore"}
+              onClick={() => setMode("explore")}
+              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
+                mode === "explore" ? "shadow-sm realm-banner-btn" : "text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid="button-pantry-mode-explore"
+            >
+              Explore
+            </button>
+          </div>
         }
         context={<span>Your everyday choices live here.</span>}
       />
@@ -964,25 +1002,31 @@ export default function PantryPage() {
           message="Add the ingredients you have at home - fridge, freezer, and larder. Your pantry helps tailor meal suggestions and avoids duplicates when you shop."
         />
 
-        {/* Two-column layout: Food (dominant, 2/3) | Home (narrower, 1/3) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 pb-8">
-          <div className="lg:col-span-2">
-            <FoodPantrySection
-              items={items}
-              isLoading={isLoading}
-              activeCategory={activeFood}
-              onCategoryChange={setActiveFood}
-            />
+        {mode === "explore" ? (
+          <div className="pb-8">
+            <PantryExplore />
           </div>
-          <div className="lg:col-span-1">
-            <HomePantrySection
-              items={items}
-              isLoading={isLoading}
-              activeCategory={activeHome}
-              onCategoryChange={setActiveHome}
-            />
+        ) : (
+          /* Two-column layout: Food (dominant, 2/3) | Home (narrower, 1/3) */
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 pb-8">
+            <div className="lg:col-span-2">
+              <FoodPantrySection
+                items={items}
+                isLoading={isLoading}
+                activeCategory={activeFood}
+                onCategoryChange={setActiveFood}
+              />
+            </div>
+            <div className="lg:col-span-1">
+              <HomePantrySection
+                items={items}
+                isLoading={isLoading}
+                activeCategory={activeHome}
+                onCategoryChange={setActiveHome}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <Drawer open={mobileHomeOpen} onOpenChange={setMobileHomeOpen} shouldScaleBackground={false}>

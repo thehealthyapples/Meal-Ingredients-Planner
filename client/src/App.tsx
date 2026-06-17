@@ -29,6 +29,7 @@ import AdminIngredientProductsPage from "@/pages/admin-ingredient-products-page"
 import AdminRecipeSourcesPage from "@/pages/admin-recipe-sources-page";
 import SharedPlanPage from "@/pages/shared-plan-page";
 import PantryPage from "@/pages/pantry-page";
+import PlantDiversityPage from "@/pages/plant-diversity-page";
 import FoodDiaryPage from "@/pages/food-diary-page";
 import PartnersPage from "@/pages/partners-page";
 import QuickMealPage from "@/pages/quick-meal-page";
@@ -195,6 +196,7 @@ function Router() {
       <Route path="/admin/ingredient-products" component={() => <ProtectedRoute component={AdminIngredientProductsPage} />} />
       <Route path="/admin/recipe-sources" component={() => <ProtectedRoute component={AdminRecipeSourcesPage} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
+      <Route path="/plant-diversity" component={() => <ProtectedRoute component={PlantDiversityPage} />} />
       <Route path="/diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
       <Route path="/my-diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />
       <Route path="/shared/:token" component={SharedPlanPage} />

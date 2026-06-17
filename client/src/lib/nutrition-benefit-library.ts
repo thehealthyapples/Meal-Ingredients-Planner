@@ -218,3 +218,15 @@ const BENEFIT_MAP = new Map<string, NutritionBenefit>(
 export function getNutritionBenefit(ingredient: string): NutritionBenefit | null {
   return BENEFIT_MAP.get(normaliseForReuse(ingredient)) ?? null;
 }
+
+/**
+ * Returns every curated entry in the Nutrition Benefit Library.
+ *
+ * Read-only accessor over existing curated data — added so the shared Health
+ * Benefits display model (health-benefits-model.ts) can drive the evergreen
+ * Pantry Explore browse from the same source the planner already uses. It does
+ * not add, infer, or modify any nutrition data.
+ */
+export function getAllNutritionBenefits(): readonly NutritionBenefit[] {
+  return LIBRARY;
+}

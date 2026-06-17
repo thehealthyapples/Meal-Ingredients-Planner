@@ -253,7 +253,7 @@ export type PlantCategory =
  * Uses the same priority order as isPlantIngredient — herbs before vegetables
  * to prevent e.g. "chilli powder" matching "chilli" in the vegetables list.
  *
- * Used by PlantDiversityExplorer to group plants by category.
+ * Used by the Plant Diversity Report to group plants by category.
  */
 export function getPlantCategory(ingredient: string): PlantCategory | null {
   const norm = normalizeIngredientKey(ingredient);
