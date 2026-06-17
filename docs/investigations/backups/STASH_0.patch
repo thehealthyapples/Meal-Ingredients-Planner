@@ -1,0 +1,191 @@
+diff --git a/client/src/components/meal-detail/MealFamilyConfidence.tsx b/client/src/components/meal-detail/MealFamilyConfidence.tsx
+index c46dcb0..b762c46 100644
+--- a/client/src/components/meal-detail/MealFamilyConfidence.tsx
++++ b/client/src/components/meal-detail/MealFamilyConfidence.tsx
+@@ -11,12 +11,14 @@ interface MealFamilyConfidenceProps {
+ }
+ 
+ interface ConfidenceLevel {
+-  level: "very-high" | "high" | "moderate" | "low" | "getting-started";
++  level: "very-high" | "high" | "moderate" | "learning" | "no-data";
+   label: string;
+-  meterFill: number;
++  description: string;
++  meterFill?: number;
++  showMeter: boolean;
+   colorClass: string;
+   bgClass: string;
+-  meterColorClass: string;
++  meterColorClass?: string;
+ }
+ 
+ function calculateConfidence(
+@@ -24,33 +26,51 @@ function calculateConfidence(
+   subs?: number,
+   reuse?: number
+ ): ConfidenceLevel {
+-  // Simple algorithm: if we have limited data, show generic high confidence
+-  // Real algorithm will be implemented in Phase 2
++  // THA Trust Principle: Confidence is earned, never fabricated.
++  // Confidence meters and percentages only appear when backed by observable evidence.
+ 
+-  const hasData = compat !== undefined || subs !== undefined || reuse !== undefined;
++  const hasCompatibility = compat !== undefined;
++  const hasSubstitutions = subs !== undefined;
++  const hasReuse = reuse !== undefined;
++  const hasAllEvidence = hasCompatibility && hasSubstitutions && hasReuse;
+ 
+-  if (!hasData) {
++  if (!hasCompatibility && !hasSubstitutions && !hasReuse) {
++    // No data: honest learning state
+     return {
+-      level: "high",
+-      label: "Great household match",
+-      meterFill: 80,
+-      colorClass: "text-green-600",
+-      bgClass: "bg-green-50 border-green-200",
+-      meterColorClass: "bg-green-500",
++      level: "no-data",
++      label: "We're still learning",
++      description: "As your household uses The Healthy Apples, we'll learn:\n• who eats what\n• which meals become favourites\n• which adaptations work best\n• your household's nutrition patterns",
++      showMeter: false,
++      colorClass: "text-blue-600",
++      bgClass: "bg-blue-50 border-blue-200",
+     };
+   }
+ 
+-  // Phase 2: Real calculation
+-  let score = 0.5; // Base score if we have some data
+-  if (compat !== undefined) score = Math.max(score, compat / 100);
+-  if (subs !== undefined) score = Math.max(score, Math.max(0, 1 - subs / 3) * 0.8);
+-  if (reuse !== undefined) score = Math.max(score, Math.min(reuse, 4) / 4);
++  if (!hasAllEvidence) {
++    // Incomplete data: transparent about what's being learned
++    return {
++      level: "learning",
++      label: "We're still learning",
++      description: "As your household uses The Healthy Apples, we'll learn:\n• who eats what\n• which meals become favourites\n• which adaptations work best\n• your household's nutrition patterns",
++      showMeter: false,
++      colorClass: "text-amber-600",
++      bgClass: "bg-amber-50 border-amber-200",
++    };
++  }
++
++  // All evidence exists: calculate real confidence
++  let score = 0.5;
++  if (hasCompatibility) score = Math.max(score, compat / 100);
++  if (hasSubstitutions) score = Math.max(score, Math.max(0, 1 - subs / 3) * 0.8);
++  if (hasReuse) score = Math.max(score, Math.min(reuse, 4) / 4);
+ 
+   if (score >= 0.85) {
+     return {
+       level: "very-high",
+       label: "Very high confidence",
++      description: "",
+       meterFill: 100,
++      showMeter: true,
+       colorClass: "text-green-600",
+       bgClass: "bg-green-50 border-green-200",
+       meterColorClass: "bg-green-500",
+@@ -60,7 +80,9 @@ function calculateConfidence(
+     return {
+       level: "high",
+       label: "High confidence",
++      description: "",
+       meterFill: 80,
++      showMeter: true,
+       colorClass: "text-green-600",
+       bgClass: "bg-green-50 border-green-200",
+       meterColorClass: "bg-green-500",
+@@ -70,29 +92,22 @@ function calculateConfidence(
+     return {
+       level: "moderate",
+       label: "Moderate confidence",
++      description: "",
+       meterFill: 60,
++      showMeter: true,
+       colorClass: "text-amber-600",
+       bgClass: "bg-amber-50 border-amber-200",
+       meterColorClass: "bg-amber-500",
+     };
+   }
+-  if (score >= 0.40) {
+-    return {
+-      level: "low",
+-      label: "Low confidence",
+-      meterFill: 40,
+-      colorClass: "text-orange-600",
+-      bgClass: "bg-orange-50 border-orange-200",
+-      meterColorClass: "bg-orange-500",
+-    };
+-  }
++
+   return {
+-    level: "getting-started",
+-    label: "Getting started",
+-    meterFill: 20,
++    level: "learning",
++    label: "Building confidence",
++    description: "As you create more meal plans and provide feedback, The Healthy Apples will learn your household preferences and improve these recommendations.",
++    showMeter: false,
+     colorClass: "text-gray-600",
+     bgClass: "bg-gray-50 border-gray-200",
+-    meterColorClass: "bg-gray-400",
+   };
+ }
+ 
+@@ -124,6 +139,23 @@ export function MealFamilyConfidence({
+           {confidence.label}
+         </div>
+ 
++        {confidence.description && (
++          <div className={`${textSizeClass} leading-relaxed text-gray-700 space-y-2`}>
++            {confidence.description.split('\n').map((line, idx) => (
++              <div key={idx}>
++                {line.startsWith('•') ? (
++                  <div className="flex items-start gap-2">
++                    <span className="text-gray-400 flex-shrink-0">•</span>
++                    <span>{line.replace('• ', '')}</span>
++                  </div>
++                ) : (
++                  line
++                )}
++              </div>
++            ))}
++          </div>
++        )}
++
+         <div className={`space-y-${gapClass}`}>
+           {householdCompatibilityPercent !== undefined && (
+             <div className="flex items-start gap-2">
+@@ -157,18 +189,19 @@ export function MealFamilyConfidence({
+           )}
+         </div>
+ 
+-        {/* Confidence meter */}
+-        <div className="space-y-1.5 pt-1">
+-          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+-            <div
+-              className={`h-full ${confidence.meterColorClass} transition-all duration-300`}
+-              style={{ width: `${confidence.meterFill}%` }}
+-            />
++        {confidence.showMeter && confidence.meterFill !== undefined && (
++          <div className="space-y-1.5 pt-1">
++            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
++              <div
++                className={`h-full ${confidence.meterColorClass} transition-all duration-300`}
++                style={{ width: `${confidence.meterFill}%` }}
++              />
++            </div>
++            <p className={`text-xs font-medium ${confidence.colorClass}`}>
++              {confidence.meterFill}% confidence
++            </p>
+           </div>
+-          <p className={`text-xs font-medium ${confidence.colorClass}`}>
+-            {confidence.meterFill}% confidence
+-          </p>
+-        </div>
++        )}
+       </CardContent>
+     </Card>
+   );

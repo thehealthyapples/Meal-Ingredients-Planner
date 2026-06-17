@@ -1,0 +1,232 @@
+diff --git a/client/src/components/MealUpliftPanel.tsx b/client/src/components/MealUpliftPanel.tsx
+index 7c9fe0b..550b9d6 100644
+--- a/client/src/components/MealUpliftPanel.tsx
++++ b/client/src/components/MealUpliftPanel.tsx
+@@ -16,7 +16,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+ import { ChevronDown, ChevronUp, Check, X, Loader2, Leaf } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+ import { apiRequest } from "@/lib/queryClient";
+-import type { MealUpliftApplication } from "@shared/schema";
++import type { Meal, MealUpliftApplication } from "@shared/schema";
+ import { normaliseForReuse, getReuseLabel } from "@/lib/ingredient-reuse";
+ import { getNutritionBenefit } from "@/lib/nutrition-benefit-library";
+ 
+@@ -67,8 +67,8 @@ interface MealUpliftPanelProps {
+   weeklyReuseMap?: Map<string, string[]>;
+   /** Called when a system meal was forked — provides the new mealId to parent */
+   onMealForked?: (newMealId: number) => void;
+-  /** Called when uplift is successfully accepted — provides effective mealId */
+-  onUpliftAccepted?: (mealId: number) => void;
++  /** Called when uplift is successfully accepted — provides effective mealId and the ingredients that were added */
++  onUpliftAccepted?: (mealId: number, addedIngredients: string[]) => void;
+   /** Called when uplift is successfully removed — provides effective mealId */
+   onUpliftRemoved?: (mealId: number) => void;
+ }
+@@ -160,6 +160,7 @@ export function MealUpliftPanel({
+         mealId: number;
+         forkedFromMealId: number | null;
+         added: string[];
++        applications: MealUpliftApplication[];
+       }>;
+     },
+     onSuccess: (data, suggestion) => {
+@@ -175,7 +176,28 @@ export function MealUpliftPanel({
+         return next;
+       });
+ 
+-      // Refresh meals + provenance
++      // Immediately populate the applications cache from the server response so
++      // ingredient list boost labels appear before the background refetch lands.
++      if (data.applications?.length) {
++        qc.setQueryData<MealUpliftApplication[]>(
++          ["/api/meals", data.mealId, "uplift-applications"],
++          (old = []) => [...old, ...data.applications]
++        );
++      }
++
++      // Immediately update the /api/meals cache entry for non-fork case so the
++      // meal dialog ingredient list reflects the addition before the refetch lands.
++      if (!data.forkedFromMealId && data.added.length > 0) {
++        qc.setQueryData<Meal[]>(["/api/meals"], (old = []) =>
++          old.map((m) =>
++            m.id === data.mealId
++              ? { ...m, ingredients: [...(m.ingredients ?? []), ...data.added] }
++              : m
++          )
++        );
++      }
++
++      // Refresh meals + provenance (background sync to confirm server state)
+       qc.invalidateQueries({ queryKey: ["/api/meals"] });
+       qc.invalidateQueries({
+         queryKey: ["/api/meals", data.mealId, "uplift-applications"],
+@@ -184,7 +206,7 @@ export function MealUpliftPanel({
+       for (const key of SHOPPING_LIST_KEYS) {
+         qc.invalidateQueries({ queryKey: key });
+       }
+-      onUpliftAccepted?.(data.mealId);
++      onUpliftAccepted?.(data.mealId, data.added);
+     },
+   });
+ 
+diff --git a/client/src/pages/weekly-planner-page.tsx b/client/src/pages/weekly-planner-page.tsx
+index e016a3d..87685b3 100644
+--- a/client/src/pages/weekly-planner-page.tsx
++++ b/client/src/pages/weekly-planner-page.tsx
+@@ -47,7 +47,7 @@ import { buildWeeklyReuseMap, normaliseForReuse } from "@/lib/ingredient-reuse";
+ import { useToast } from "@/hooks/use-toast";
+ import { ToastAction } from "@/components/ui/toast";
+ import { api } from "@shared/routes";
+-import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutrition, MealCategory, WeekEaterOverride } from "@shared/schema";
++import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutrition, MealCategory, WeekEaterOverride, MealUpliftApplication } from "@shared/schema";
+ import type { HouseholdEater, GuestEater } from "@shared/household-eater";
+ import type { AdaptationResult, HouseholdSafePreview } from "@shared/meal-adaptation";
+ import { computeRestrictionSafety, type EaterProfile } from "@shared/restrictions/restriction-safety";
+@@ -428,13 +428,31 @@ export default function WeeklyPlannerPage() {
+ 
+   // Track mealIds that received accepted uplift in this session (for immediate card feedback).
+   const [boostedMealIds, setBoostedMealIds] = useState<Set<number>>(new Set());
+-  const handleUpliftAccepted = (mealId: number) => {
++  const handleUpliftAccepted = (mealId: number, addedIngredients: string[]) => {
+     setBoostedMealIds(prev => new Set(Array.from(prev).concat(mealId)));
+-    // Fork case: if the system meal was forked, update mealDetail so the dialog
+-    // resolves the live meal by the new fork ID rather than the original meal ID.
++    // Immediately update mealDetail so the dialog's ingredient list reflects the
++    // accepted boost without waiting for the /api/meals refetch to land.
++    // - Non-fork: mealId === prev.meal.id; only ingredients need updating.
++    //   (The /api/meals cache is also updated synchronously via setQueryData in
++    //   MealUpliftPanel, so meals.find() picks up the change at the same render.)
++    // - Fork: mealId differs from prev.meal.id; update both id and ingredients so
++    //   the meals.find() fallback (mealSnapshot) has the correct fork ID + ingredients
++    //   before the refetch adds the fork to the cache.
+     setMealDetail(prev => {
+-      if (!prev || prev.meal.id === mealId) return prev;
+-      return { ...prev, meal: { ...prev.meal, id: mealId } };
++      if (!prev) return prev;
++      const currentIngredients = prev.meal.ingredients ?? [];
++      const deduped = addedIngredients.filter(
++        a => !currentIngredients.some(i => i.toLowerCase() === a.toLowerCase())
++      );
++      if (prev.meal.id === mealId && deduped.length === 0) return prev;
++      return {
++        ...prev,
++        meal: {
++          ...prev.meal,
++          id: mealId,
++          ingredients: deduped.length > 0 ? [...currentIngredients, ...deduped] : currentIngredients,
++        },
++      };
+     });
+   };
+   const handleUpliftRemoved = (mealId: number) =>
+@@ -907,6 +925,75 @@ export default function WeeklyPlannerPage() {
+     onError: () => toast({ title: "Failed to remove guest", variant: "destructive" }),
+   });
+ 
++  // ── Uplift applications for the open meal dialog ─────────────────────────────
++  // Shares the same React Query cache key as MealUpliftPanel's internal query.
++  // When MealUpliftPanel calls setQueryData after accept, this query immediately
++  // reflects the update — no extra network requests.
++  const { data: mealDetailApplications = [] } = useQuery<MealUpliftApplication[]>({
++    queryKey: ["/api/meals", mealDetail?.meal.id, "uplift-applications"],
++    queryFn: async () => {
++      const res = await apiRequest("GET", `/api/meals/${mealDetail!.meal.id}/uplift-applications`);
++      const body = await res.json();
++      return body.applications ?? [];
++    },
++    enabled: !!mealDetail,
++    staleTime: 30_000,
++  });
++  // Only ingredients with status "accepted" get the boost label + remove action.
++  // "duplicate_skipped" means the ingredient was already present — do not label it.
++  const boostAcceptedApplications = mealDetailApplications.filter(
++    (a) => a.status === "accepted"
++  );
++
++  const removeBoostFromDialogMutation = useMutation({
++    mutationFn: async (applicationId: number) => {
++      const res = await apiRequest("DELETE", `/api/uplift/applications/${applicationId}`);
++      if (!res.ok) throw new Error("Failed to remove boost ingredient");
++      return res.json() as Promise<{ applicationId: number; ingredientRemoved: boolean; application: MealUpliftApplication }>;
++    },
++    onMutate: async (applicationId: number) => {
++      const mealId = mealDetail?.meal.id;
++      const appKey = ["/api/meals", mealId, "uplift-applications"];
++      const currentApps = qc.getQueryData<MealUpliftApplication[]>(appKey) ?? [];
++      const app = currentApps.find((a) => a.id === applicationId);
++      // Immediately mark as removed in cache
++      qc.setQueryData<MealUpliftApplication[]>(appKey,
++        currentApps.map((a) => a.id === applicationId ? { ...a, status: "removed" } : a)
++      );
++      if (app) {
++        const ingKey = (ing: string) => ing.toLowerCase().trim() !== app.ingredient.toLowerCase().trim();
++        // Immediately strip ingredient from mealDetail snapshot
++        setMealDetail((prev) => {
++          if (!prev) return prev;
++          return { ...prev, meal: { ...prev.meal, ingredients: (prev.meal.ingredients ?? []).filter(ingKey) } };
++        });
++        // Immediately strip ingredient from /api/meals cache
++        qc.setQueryData<Meal[]>(["/api/meals"], (old = []) =>
++          old.map((m) =>
++            m.id === mealId
++              ? { ...m, ingredients: (m.ingredients ?? []).filter(ingKey) }
++              : m
++          )
++        );
++      }
++      return { mealId };
++    },
++    onSuccess: (data) => {
++      qc.invalidateQueries({ queryKey: ["/api/meals", data.application.mealId, "uplift-applications"] });
++      qc.invalidateQueries({ queryKey: ["/api/meals"] });
++      for (const key of [["/api/shopping-list"], ["/api/shopping-list/sources"], ["/api/shopping-list/prices"], ["/api/shopping-list/total-cost"]]) {
++        qc.invalidateQueries({ queryKey: key });
++      }
++    },
++    onError: (_err, _vars, context) => {
++      // Re-sync on error — invalidate so stale optimistic state doesn't persist
++      if (context?.mealId) {
++        qc.invalidateQueries({ queryKey: ["/api/meals", context.mealId, "uplift-applications"] });
++      }
++      qc.invalidateQueries({ queryKey: ["/api/meals"] });
++    },
++  });
++
+   const { data: myWeekTemplates = [] } = useQuery<any[]>({
+     queryKey: ["/api/plan-templates/mine"],
+     queryFn: async () => {
+@@ -3611,6 +3698,34 @@ export default function WeeklyPlannerPage() {
+                                   </li>
+                                 );
+                               }
++                              const boostApp = boostAcceptedApplications.find(
++                                (a) => a.ingredient.toLowerCase().trim() === ing.toLowerCase().trim()
++                              );
++                              if (boostApp) {
++                                const isRemoving = removeBoostFromDialogMutation.isPending &&
++                                  removeBoostFromDialogMutation.variables === boostApp.id;
++                                return (
++                                  <li key={idx} className="text-sm flex items-center gap-2 text-foreground/80">
++                                    <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-emerald-500/70" />
++                                    <span className="flex-1 min-w-0">{ing}</span>
++                                    <span className="text-[10px] text-emerald-600/60 font-medium whitespace-nowrap shrink-0">
++                                      Added via Nutrition Boost
++                                    </span>
++                                    <button
++                                      className="shrink-0 text-[10px] text-muted-foreground/50 hover:text-rose-500 transition-colors px-1 rounded"
++                                      onClick={() => removeBoostFromDialogMutation.mutate(boostApp.id)}
++                                      disabled={isRemoving}
++                                      aria-label={`Remove ${ing}`}
++                                    >
++                                      {isRemoving ? (
++                                        <Loader2 className="h-3 w-3 animate-spin" />
++                                      ) : (
++                                        "Remove"
++                                      )}
++                                    </button>
++                                  </li>
++                                );
++                              }
+                               return (
+                                 <li key={idx} className="text-sm flex items-start gap-2 text-foreground/80">
+                                   <span className="mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />

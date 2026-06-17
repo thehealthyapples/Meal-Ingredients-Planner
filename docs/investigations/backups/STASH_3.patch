@@ -1,0 +1,96 @@
+diff --git a/client/src/components/PageHeader.tsx b/client/src/components/PageHeader.tsx
+index c1ebc90..2c4655d 100644
+--- a/client/src/components/PageHeader.tsx
++++ b/client/src/components/PageHeader.tsx
+@@ -1,5 +1,6 @@
+ import { type ReactNode, useState, useEffect, useRef, useCallback } from "react";
+ import { ChevronDown, ChevronUp } from "lucide-react";
++import { useAdaptiveDensity } from "../hooks/use-adaptive-density";
+ 
+ export type PageRealm =
+   | "cookbook"
+@@ -53,6 +54,9 @@ interface PageHeaderProps {
+ // Manual chevron click locks the state until the user clicks chevron again.
+ // Resets to expanded when scrolled back to top.
+ //
++// Receives width from parent (useAdaptiveDensity) to determine mobile state.
++// Preserves legacy 1024px threshold for backward compatibility.
++//
+ // lockAfterCollapse: when true, the auto-collapse is treated as a manual action
+ // (sets manualRef so scroll cannot undo it), and the at-top reset is disabled.
+ // Collapse state only changes via explicit chevron tap. Used by fullCollapseOnMobile.
+@@ -60,8 +64,9 @@ interface PageHeaderProps {
+ // collapseDisabled: when true, suppresses both the auto-timer and scroll-based
+ // collapse. Stored as a ref so it never resets the 4 s timer. Manual toggle
+ // still works. Use while a popover/panel is open.
+-function useScrollCollapse(options?: { lockAfterCollapse?: boolean; collapseDisabled?: boolean }) {
++function useScrollCollapse(options?: { lockAfterCollapse?: boolean; collapseDisabled?: boolean; width?: number }) {
+   const lockAfterCollapse = options?.lockAfterCollapse ?? false;
++  const width = options?.width ?? window.innerWidth;
+   // Ref so that changes to collapseDisabled never cancel/restart the 4 s timer.
+   const collapseDisabledRef = useRef(options?.collapseDisabled ?? false);
+   collapseDisabledRef.current = options?.collapseDisabled ?? false;
+@@ -73,10 +78,10 @@ function useScrollCollapse(options?: { lockAfterCollapse?: boolean; collapseDisa
+ 
+   // Auto-collapse after 4 s on mobile (fires once; respects manual interaction)
+   useEffect(() => {
+-    const isMobile = () => window.innerWidth < 1024;
+-    if (!isMobile()) return;
++    const isMobile = width < 1024;
++    if (!isMobile) return;
+     const timer = setTimeout(() => {
+-      if (!isMobile()) return;                    // window may have been resized
++      if (width >= 1024) return;                  // width may have changed
+       if (collapseDisabledRef.current) return;    // skip while popover/panel is open
+       if (manualRef.current === null) {           // skip if user already acted
+         setIsCollapsed(true);
+@@ -87,19 +92,18 @@ function useScrollCollapse(options?: { lockAfterCollapse?: boolean; collapseDisa
+       }
+     }, 4000);
+     return () => clearTimeout(timer);
+-  }, [lockAfterCollapse]);
++  }, [lockAfterCollapse, width]);
+ 
+   useEffect(() => {
+-    const checkMobile = () => {
+-      const mobile = window.innerWidth < 1024;
+-      isMobileRef.current = mobile;
+-      if (!mobile) {
+-        setIsCollapsed(false);
+-        manualRef.current = null;
+-      }
+-    };
+-    checkMobile();
++    const mobile = width < 1024;
++    isMobileRef.current = mobile;
++    if (!mobile) {
++      setIsCollapsed(false);
++      manualRef.current = null;
++    }
++  }, [width]);
+ 
++  useEffect(() => {
+     const onScroll = () => {
+       if (!isMobileRef.current) return;
+       if (collapseDisabledRef.current) return;    // skip while popover/panel is open
+@@ -121,10 +125,8 @@ function useScrollCollapse(options?: { lockAfterCollapse?: boolean; collapseDisa
+       lastY.current = y;
+     };
+ 
+-    window.addEventListener("resize", checkMobile, { passive: true });
+     window.addEventListener("scroll", onScroll, { passive: true });
+     return () => {
+-      window.removeEventListener("resize", checkMobile);
+       window.removeEventListener("scroll", onScroll);
+     };
+   }, [lockAfterCollapse]);
+@@ -156,7 +158,8 @@ export function PageHeader({
+   className,
+ }: PageHeaderProps) {
+   const maxW = wide ? "max-w-screen-2xl" : "max-w-screen-xl";
+-  const { isCollapsed, toggleManual } = useScrollCollapse({ lockAfterCollapse: fullCollapseOnMobile, collapseDisabled });
++  const densityResult = useAdaptiveDensity();
++  const { isCollapsed, toggleManual } = useScrollCollapse({ lockAfterCollapse: fullCollapseOnMobile, collapseDisabled, width: densityResult.width });
+ 
+   const chevronBtn = (
+     <button

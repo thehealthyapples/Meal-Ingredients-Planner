@@ -1,0 +1,104 @@
+diff --git a/client/src/components/MealUpliftPanel.tsx b/client/src/components/MealUpliftPanel.tsx
+index 5dcbabd..2f0235b 100644
+--- a/client/src/components/MealUpliftPanel.tsx
++++ b/client/src/components/MealUpliftPanel.tsx
+@@ -345,7 +345,7 @@ export function MealUpliftPanel({
+         <div className="flex items-center gap-2">
+           <Leaf className="h-3.5 w-3.5 text-emerald-600/70 shrink-0" />
+           <span className="text-sm font-medium text-foreground">
+-            Nutrition Boost
++            Simply Better Choices
+           </span>
+           {pendingSuggestions.length > 0 && (
+             <span className="text-xs text-muted-foreground">
+@@ -475,7 +475,7 @@ export function MealUpliftPanel({
+           {activeApplications.length > 0 && (
+             <div className="px-3 py-2 space-y-1.5">
+               <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+-                Added via THA Boost
++                Added via Simply Better Choices
+               </p>
+               {activeApplications.map((app) => {
+                 const isRemoving =
+@@ -493,7 +493,7 @@ export function MealUpliftPanel({
+                         {app.ingredient}
+                       </span>
+                       <span className="text-[10px] text-muted-foreground/60 shrink-0">
+-                        · THA Boost
++                        · Better Choice
+                       </span>
+                     </div>
+                     <button
+@@ -519,7 +519,7 @@ export function MealUpliftPanel({
+           {pendingSuggestions.length === 0 && activeApplications.length === 0 && (
+             <div className="px-3 py-2.5">
+               <p className="text-xs text-muted-foreground">
+-                No boost ideas for this meal right now.
++                No suggestions for this meal yet.
+               </p>
+             </div>
+           )}
+@@ -548,12 +548,12 @@ export function UpliftCardIndicator({
+         e.stopPropagation();
+         onClick();
+       }}
+-      title="Nutrition Boost ideas available"
++      title="Simply Better Choices available"
+       data-testid="uplift-card-indicator"
+     >
+       <Leaf className="h-2.5 w-2.5 shrink-0" />
+       <span>
+-        {suggestionCount} boost idea{suggestionCount !== 1 ? "s" : ""}
++        {suggestionCount} Simply Better Choice{suggestionCount !== 1 ? "s" : ""}
+       </span>
+     </button>
+   );
+diff --git a/client/src/pages/weekly-planner-page.tsx b/client/src/pages/weekly-planner-page.tsx
+index ccd3645..e3ac564 100644
+--- a/client/src/pages/weekly-planner-page.tsx
++++ b/client/src/pages/weekly-planner-page.tsx
+@@ -820,7 +820,7 @@ export default function WeeklyPlannerPage() {
+       }
+     },
+     onError: () => {
+-      toast({ title: "Failed to remove boost", variant: "destructive" });
++      toast({ title: "Failed to remove ingredient", variant: "destructive" });
+     },
+   });
+ 
+@@ -2131,10 +2131,10 @@ export default function WeeklyPlannerPage() {
+                                           <button
+                                             className="flex items-center gap-0.5 text-[10px] text-emerald-600/70 leading-none mt-0.5"
+                                             onClick={(e) => { e.stopPropagation(); setMealDetail({ entry, meal, dayId: mobileDay.id, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[mobileDay.dayOfWeek], slotLabel: row.label }); }}
+-                                            title="Nutrition boost applied"
++                                            title="Simply Better Choice applied"
+                                           >
+                                             <Check className="h-2.5 w-2.5 shrink-0" />
+-                                            <span>Boosted</span>
++                                            <span>Improved</span>
+                                           </button>
+                                         );
+                                       }
+@@ -2417,11 +2417,11 @@ export default function WeeklyPlannerPage() {
+                                               <button
+                                                 className="flex items-center gap-0.5 text-[10px] text-emerald-600/70 leading-none mt-0.5"
+                                                 onClick={(e) => { e.stopPropagation(); setMealDetail({ entry, meal, dayId: day.id, mealType: row.mealType ?? row.addMealType, audience: row.audience, isDrink: row.isDrink, dayName: DAY_NAMES[day.dayOfWeek], slotLabel: row.label }); }}
+-                                                title="Nutrition boost applied"
++                                                title="Simply Better Choice applied"
+                                                 data-testid={`uplift-boosted-${meal.id}`}
+                                               >
+                                                 <Check className="h-2.5 w-2.5 shrink-0" />
+-                                                <span>Boosted</span>
++                                                <span>Improved</span>
+                                               </button>
+                                             );
+                                           }
+@@ -3738,7 +3738,7 @@ export default function WeeklyPlannerPage() {
+                                           className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70"
+                                           data-testid={`ingredient-boost-label-${boostApp.id}`}
+                                         >
+-                                          Added via Nutrition Boost
++                                          Added via Simply Better Choices
+                                         </span>
+                                         <button
+                                           className="text-[10px] text-muted-foreground/60 hover:text-destructive underline underline-offset-2 transition-colors disabled:opacity-50"

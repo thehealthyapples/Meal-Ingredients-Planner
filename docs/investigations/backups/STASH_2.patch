@@ -1,0 +1,117 @@
+diff --git a/client/src/pages/shopping-list-page.tsx b/client/src/pages/shopping-list-page.tsx
+index ad6ec1e..48fb4d8 100644
+--- a/client/src/pages/shopping-list-page.tsx
++++ b/client/src/pages/shopping-list-page.tsx
+@@ -26,6 +26,7 @@ import {
+   DialogTitle,
+   DialogFooter,
+ } from "@/components/ui/dialog";
++import { getDialogWidthClass } from "@/components/ui/dialog-foundation";
+ import {
+   Popover,
+   PopoverContent,
+@@ -3910,7 +3911,7 @@ export default function ShoppingListPage() {
+ 
+       {/* Clear basket dialog - shown when quick list items exist */}
+       <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+-        <DialogContent className="max-w-sm" data-testid="dialog-clear-basket">
++        <DialogContent className={getDialogWidthClass("compact")} data-testid="dialog-clear-basket">
+           <DialogHeader>
+             <DialogTitle>Clear basket</DialogTitle>
+           </DialogHeader>
+@@ -3925,7 +3926,7 @@ export default function ShoppingListPage() {
+ 
+       {/* Remove item dialog - shown when an item exists in both planned + quick list */}
+       <Dialog open={!!removeDialog} onOpenChange={(open) => { if (!open) setRemoveDialog(null); }}>
+-        <DialogContent className="max-w-sm" data-testid="dialog-remove-item">
++        <DialogContent className={getDialogWidthClass("compact")} data-testid="dialog-remove-item">
+           <DialogHeader>
+             <DialogTitle>Remove item</DialogTitle>
+           </DialogHeader>
+@@ -3940,7 +3941,7 @@ export default function ShoppingListPage() {
+ 
+       {/* Always in Basket confirmation modal */}
+       <Dialog open={!!alwaysAddModal} onOpenChange={(open) => { if (!open) setAlwaysAddModal(null); }}>
+-        <DialogContent className="max-w-sm" data-testid="dialog-always-add">
++        <DialogContent className={getDialogWidthClass("compact")} data-testid="dialog-always-add">
+           <DialogHeader>
+             <DialogTitle>Turn off "Always in Basket"?</DialogTitle>
+           </DialogHeader>
+diff --git a/client/src/pages/shopping-workspace-page.tsx b/client/src/pages/shopping-workspace-page.tsx
+index d07408e..d2fd84d 100644
+--- a/client/src/pages/shopping-workspace-page.tsx
++++ b/client/src/pages/shopping-workspace-page.tsx
+@@ -31,6 +31,7 @@ import thaAppleSrc from "@/assets/icons/tha-apple.png";
+ import {
+   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+ } from "@/components/ui/dialog";
++import { getDialogWidthClass } from "@/components/ui/dialog-foundation";
+ import {
+   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+ } from "@/components/ui/select";
+@@ -2462,7 +2463,7 @@ export default function ShoppingWorkspacePage() {
+ 
+       {/* ── Clear confirmation dialog ──────────────────────────────── */}
+       <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+-        <DialogContent className="sm:max-w-[360px]" data-testid="dialog-clear-list">
++        <DialogContent className={getDialogWidthClass("compact")} data-testid="dialog-clear-list">
+           <DialogHeader>
+             <DialogTitle>Clear shopping list?</DialogTitle>
+           </DialogHeader>
+diff --git a/client/src/pages/weekly-planner-page.tsx b/client/src/pages/weekly-planner-page.tsx
+index ccd3645..a4c5f61 100644
+--- a/client/src/pages/weekly-planner-page.tsx
++++ b/client/src/pages/weekly-planner-page.tsx
+@@ -5,6 +5,7 @@ import thaAppleSrc from "@/assets/icons/tha-apple.png";
+ import { Button } from "@/components/ui/button";
+ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
++import { getDialogWidthClass } from "@/components/ui/dialog-foundation";
+ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+ import { AnimatePresence, motion } from "framer-motion";
+ import { Input } from "@/components/ui/input";
+@@ -3913,7 +3914,7 @@ export default function WeeklyPlannerPage() {
+       </Dialog>
+ 
+       <Dialog open={clearWeekId !== null} onOpenChange={(v) => { if (!v) setClearWeekId(null); }}>
+-        <DialogContent className="max-w-sm" data-testid="dialog-clear-week">
++        <DialogContent className={getDialogWidthClass("compact")} data-testid="dialog-clear-week">
+           <DialogHeader>
+             <DialogTitle className="flex items-center gap-2">
+               <Trash2 className="h-4 w-4 text-destructive" />
+@@ -3948,7 +3949,7 @@ export default function WeeklyPlannerPage() {
+ 
+       {/* ── Save Week Dialog ── */}
+       <Dialog open={saveWeekOpen} onOpenChange={(v) => { if (!v) setSaveWeekOpen(false); }}>
+-        <DialogContent className="max-w-sm" data-testid="dialog-save-week">
++        <DialogContent className={getDialogWidthClass("compact")} data-testid="dialog-save-week">
+           <DialogHeader>
+             <DialogTitle>Save this week</DialogTitle>
+             <DialogDescription>Give this week a name so you can load it into any week later.</DialogDescription>
+@@ -3977,7 +3978,7 @@ export default function WeeklyPlannerPage() {
+ 
+       {/* ── Load Saved Week Dialog ── */}
+       <Dialog open={loadWeekOpen} onOpenChange={(v) => { if (!v) setLoadWeekOpen(false); }}>
+-        <DialogContent className="max-w-sm" data-testid="dialog-load-week">
++        <DialogContent className={getDialogWidthClass("compact")} data-testid="dialog-load-week">
+           <DialogHeader>
+             <DialogTitle>Load saved week</DialogTitle>
+             <DialogDescription>Choose a saved week to fill into {activeWeekData?.weekName ?? "this week"}. Existing meals will be replaced.</DialogDescription>
+@@ -4004,7 +4005,7 @@ export default function WeeklyPlannerPage() {
+ 
+       {/* ── Phase 5A: Copy Day Dialog ── */}
+       <Dialog open={copyDayOpen} onOpenChange={(v) => { if (!v) { setCopyDayOpen(false); setCopyDaySourceId(null); setCopyDayTargetId(""); } }}>
+-        <DialogContent className="max-w-sm" data-testid="dialog-copy-day">
++        <DialogContent className={getDialogWidthClass("compact")} data-testid="dialog-copy-day">
+           <DialogHeader>
+             <DialogTitle className="flex items-center gap-2">
+               <Copy className="h-4 w-4" />
+@@ -4053,7 +4054,7 @@ export default function WeeklyPlannerPage() {
+ 
+       {/* ── Phase 5A: Clear Slot Confirmation Dialog ── */}
+       <Dialog open={clearSlotConfirm !== null} onOpenChange={(v) => { if (!v) setClearSlotConfirm(null); }}>
+-        <DialogContent className="max-w-sm" data-testid="dialog-clear-slot">
++        <DialogContent className={getDialogWidthClass("compact")} data-testid="dialog-clear-slot">
+           <DialogHeader>
+             <DialogTitle className="flex items-center gap-2">
+               <Trash2 className="h-4 w-4 text-destructive" />
