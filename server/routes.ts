@@ -15,6 +15,14 @@ import { sendBasketToSupermarket, getSupportedSupermarkets } from "./lib/grocery
 import { filterMealsByPreferences, rankMealsByPreferences } from "./lib/recommendation-service";
 import { analyzeProductUPF, buildTHAExplanation } from "./lib/upf-analysis-service";
 import { isWholeFoodIngredient } from "./lib/smp-rating-service";
+import {
+  searchKnowledgeRegistry,
+  listFoodCategories,
+  listFoodCards,
+  getFoodDetailView,
+  getNutrientDetailView,
+  getBenefitDetailView,
+} from "./services/nutrition-knowledge-registry";
 import { createBasket, getBasketSupermarkets } from "./lib/supermarket-basket-service";
 import { generateSmartSuggestion, type SmartSuggestSettings, type LockedEntry } from "./lib/smart-suggest-service";
 import { rankMealsByIngredients } from "./lib/smart-meal-creation-engine";
@@ -9396,6 +9404,75 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
     } catch (err) {
       console.error("[DiaryImport] confirm error:", err);
       res.status(500).json({ message: "Import failed" });
+    }
+  });
+
+  // ── WS1 — Pantry Explore / Nutrition Knowledge Hub (READ ONLY) ──────────────
+  // Surfaces the WS0 editorial registry to the Pantry Explore UI. Every handler
+  // reads through the display layer of nutrition-knowledge-registry, which has
+  // already stripped internal editorial signals (source / evidence / confidence).
+  // Nothing here writes, ranks, plans or recommends — it only retrieves.
+
+  app.get("/api/knowledge/search", async (req, res) => {
+    const q = String(req.query.q ?? "").trim();
+    if (!q) return res.json({ query: "", foods: [], nutrients: [], benefits: [] });
+    try {
+      res.json(await searchKnowledgeRegistry(q));
+    } catch (err) {
+      console.error("[Knowledge] search error:", err);
+      res.status(500).json({ message: "Knowledge search failed" });
+    }
+  });
+
+  app.get("/api/knowledge/categories", async (_req, res) => {
+    try {
+      res.json(await listFoodCategories());
+    } catch (err) {
+      console.error("[Knowledge] categories error:", err);
+      res.status(500).json({ message: "Failed to fetch categories" });
+    }
+  });
+
+  app.get("/api/knowledge/foods", async (req, res) => {
+    const category = req.query.category ? String(req.query.category) : undefined;
+    try {
+      res.json(await listFoodCards(category));
+    } catch (err) {
+      console.error("[Knowledge] foods error:", err);
+      res.status(500).json({ message: "Failed to fetch foods" });
+    }
+  });
+
+  app.get("/api/knowledge/foods/:slug", async (req, res) => {
+    try {
+      const detail = await getFoodDetailView(req.params.slug);
+      if (!detail) return res.status(404).json({ message: "Food not found" });
+      res.json(detail);
+    } catch (err) {
+      console.error("[Knowledge] food detail error:", err);
+      res.status(500).json({ message: "Failed to fetch food" });
+    }
+  });
+
+  app.get("/api/knowledge/nutrients/:slug", async (req, res) => {
+    try {
+      const detail = await getNutrientDetailView(req.params.slug);
+      if (!detail) return res.status(404).json({ message: "Nutrient not found" });
+      res.json(detail);
+    } catch (err) {
+      console.error("[Knowledge] nutrient detail error:", err);
+      res.status(500).json({ message: "Failed to fetch nutrient" });
+    }
+  });
+
+  app.get("/api/knowledge/benefits/:slug", async (req, res) => {
+    try {
+      const detail = await getBenefitDetailView(req.params.slug);
+      if (!detail) return res.status(404).json({ message: "Benefit not found" });
+      res.json(detail);
+    } catch (err) {
+      console.error("[Knowledge] benefit detail error:", err);
+      res.status(500).json({ message: "Failed to fetch benefit" });
     }
   });
 

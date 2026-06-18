@@ -16,7 +16,7 @@ import { FirstVisitHint } from "@/components/first-visit-hint";
 import { getPantryKnowledge, pantryItemMatchesQuery, MICRO_INSIGHTS } from "@/lib/pantry-knowledge";
 import { PageHeader } from "@/components/PageHeader";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
-import { PantryExplore } from "@/components/PantryExplore";
+import { PantryKnowledgeHub } from "@/components/PantryKnowledgeHub";
 
 interface PantryItem {
   id: number;
@@ -1004,7 +1004,7 @@ export default function PantryPage() {
 
         {mode === "explore" ? (
           <div className="pb-8">
-            <PantryExplore />
+            <PantryKnowledgeHub />
           </div>
         ) : (
           /* Two-column layout: Food (dominant, 2/3) | Home (narrower, 1/3) */
