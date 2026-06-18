@@ -1435,3 +1435,131 @@ export const insertMealUpliftApplicationSchema = createInsertSchema(mealUpliftAp
 
 export type MealUpliftApplication = typeof mealUpliftApplications.$inferSelect;
 export type InsertMealUpliftApplication = z.infer<typeof insertMealUpliftApplicationSchema>;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WS0 — NUTRITION KNOWLEDGE REGISTRY (additive, shared source of truth)
+// ═══════════════════════════════════════════════════════════════════════════
+// Editorial nutrition knowledge — NOT pantry inventory, NOT recipe storage.
+// Human-curated, deterministic, explainable. Every record carries a `source`
+// field and an `isActive` flag so it can be edited or retired. No AI-generated
+// medical claims live here — content is added by curation only.
+//
+// This layer is intentionally NOT wired into planner ranking, the restriction
+// engine, meal scoring or recommendation ranking. It exposes typed storage and
+// retrieval helpers only (see server/services/nutrition-knowledge-registry.ts).
+//
+// Entities are addressed by a stable, human-readable `slug` so that the seed
+// data and the relationship tables remain editable and reviewable by hand.
+
+// ── Foods ──────────────────────────────────────────────────────────────────
+export const knowledgeFoods = pgTable("knowledge_foods", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  subcategory: text("subcategory"),
+  aliases: text("aliases").array().notNull().default(sql`'{}'`),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  commonForms: text("common_forms").array().notNull().default(sql`'{}'`),
+  storageGuidance: text("storage_guidance"),
+  seasonality: text("seasonality"),
+  source: text("source").notNull().default("THA editorial"),
+  displayOrder: integer("display_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ── Nutrients ──────────────────────────────────────────────────────────────
+export const knowledgeNutrients = pgTable("knowledge_nutrients", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category"),
+  source: text("source").notNull().default("THA editorial"),
+  displayOrder: integer("display_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ── Health Benefits ──────────────────────────────────────────────────────────
+export const knowledgeHealthBenefits = pgTable("knowledge_health_benefits", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  icon: text("icon"),
+  source: text("source").notNull().default("THA editorial"),
+  displayOrder: integer("display_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ── Food ↔ Nutrient ──────────────────────────────────────────────────────────
+export const knowledgeFoodNutrients = pgTable("knowledge_food_nutrients", {
+  id: serial("id").primaryKey(),
+  foodSlug: text("food_slug").notNull().references(() => knowledgeFoods.slug, { onDelete: "cascade" }),
+  nutrientSlug: text("nutrient_slug").notNull().references(() => knowledgeNutrients.slug, { onDelete: "cascade" }),
+  // Optional editorial amount string, e.g. "high", "150mg per 30g". Never a fabricated precise figure.
+  amount: text("amount"),
+  // Editorial confidence in the association: 'established' | 'good' | 'emerging'.
+  confidence: text("confidence").notNull().default("established"),
+  // Lower = more prominent. Used to order "top nutrients" for a food.
+  ranking: integer("ranking").notNull().default(0),
+  source: text("source").notNull().default("THA editorial"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  uniqueFoodNutrient: unique("uq_knowledge_food_nutrient").on(t.foodSlug, t.nutrientSlug),
+}));
+
+// ── Food ↔ Health Benefit ────────────────────────────────────────────────────
+// evidenceStrength is STORED ONLY — it must not be surfaced to users yet.
+export const knowledgeFoodBenefits = pgTable("knowledge_food_benefits", {
+  id: serial("id").primaryKey(),
+  foodSlug: text("food_slug").notNull().references(() => knowledgeFoods.slug, { onDelete: "cascade" }),
+  benefitSlug: text("benefit_slug").notNull().references(() => knowledgeHealthBenefits.slug, { onDelete: "cascade" }),
+  // 'established' | 'good' | 'emerging' — internal editorial signal, not for display.
+  evidenceStrength: text("evidence_strength").notNull().default("emerging"),
+  ranking: integer("ranking").notNull().default(0),
+  source: text("source").notNull().default("THA editorial"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  uniqueFoodBenefit: unique("uq_knowledge_food_benefit").on(t.foodSlug, t.benefitSlug),
+}));
+
+// ── Nutrient ↔ Health Benefit ────────────────────────────────────────────────
+export const knowledgeNutrientBenefits = pgTable("knowledge_nutrient_benefits", {
+  id: serial("id").primaryKey(),
+  nutrientSlug: text("nutrient_slug").notNull().references(() => knowledgeNutrients.slug, { onDelete: "cascade" }),
+  benefitSlug: text("benefit_slug").notNull().references(() => knowledgeHealthBenefits.slug, { onDelete: "cascade" }),
+  evidenceStrength: text("evidence_strength").notNull().default("emerging"),
+  ranking: integer("ranking").notNull().default(0),
+  source: text("source").notNull().default("THA editorial"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => ({
+  uniqueNutrientBenefit: unique("uq_knowledge_nutrient_benefit").on(t.nutrientSlug, t.benefitSlug),
+}));
+
+export const insertKnowledgeFoodSchema = createInsertSchema(knowledgeFoods).omit({ id: true, createdAt: true });
+export const insertKnowledgeNutrientSchema = createInsertSchema(knowledgeNutrients).omit({ id: true, createdAt: true });
+export const insertKnowledgeHealthBenefitSchema = createInsertSchema(knowledgeHealthBenefits).omit({ id: true, createdAt: true });
+export const insertKnowledgeFoodNutrientSchema = createInsertSchema(knowledgeFoodNutrients).omit({ id: true, createdAt: true });
+export const insertKnowledgeFoodBenefitSchema = createInsertSchema(knowledgeFoodBenefits).omit({ id: true, createdAt: true });
+export const insertKnowledgeNutrientBenefitSchema = createInsertSchema(knowledgeNutrientBenefits).omit({ id: true, createdAt: true });
+
+export type KnowledgeFood = typeof knowledgeFoods.$inferSelect;
+export type InsertKnowledgeFood = z.infer<typeof insertKnowledgeFoodSchema>;
+export type KnowledgeNutrient = typeof knowledgeNutrients.$inferSelect;
+export type InsertKnowledgeNutrient = z.infer<typeof insertKnowledgeNutrientSchema>;
+export type KnowledgeHealthBenefit = typeof knowledgeHealthBenefits.$inferSelect;
+export type InsertKnowledgeHealthBenefit = z.infer<typeof insertKnowledgeHealthBenefitSchema>;
+export type KnowledgeFoodNutrient = typeof knowledgeFoodNutrients.$inferSelect;
+export type InsertKnowledgeFoodNutrient = z.infer<typeof insertKnowledgeFoodNutrientSchema>;
+export type KnowledgeFoodBenefit = typeof knowledgeFoodBenefits.$inferSelect;
+export type InsertKnowledgeFoodBenefit = z.infer<typeof insertKnowledgeFoodBenefitSchema>;
+export type KnowledgeNutrientBenefit = typeof knowledgeNutrientBenefits.$inferSelect;
+export type InsertKnowledgeNutrientBenefit = z.infer<typeof insertKnowledgeNutrientBenefitSchema>;

@@ -1360,6 +1360,95 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // WS0 — Nutrition Knowledge Registry. Additive only: creates six new tables
+    // for editorial nutrition knowledge (foods, nutrients, health benefits and
+    // their relationships). Touches no existing table, column or row. Not wired
+    // into planner scoring, restrictions, meal scoring or recommendation ranking.
+    // Idempotent — safe to re-run. Seeded separately via `npm run seed:knowledge`.
+    id: "2026-06-18_ws0_knowledge_registry",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS knowledge_foods (
+        id              SERIAL PRIMARY KEY,
+        slug            TEXT NOT NULL UNIQUE,
+        name            TEXT NOT NULL,
+        category        TEXT NOT NULL,
+        subcategory     TEXT,
+        aliases         TEXT[] NOT NULL DEFAULT '{}',
+        description     TEXT,
+        image_url       TEXT,
+        common_forms    TEXT[] NOT NULL DEFAULT '{}',
+        storage_guidance TEXT,
+        seasonality     TEXT,
+        source          TEXT NOT NULL DEFAULT 'THA editorial',
+        display_order   INTEGER NOT NULL DEFAULT 0,
+        is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS knowledge_nutrients (
+        id              SERIAL PRIMARY KEY,
+        slug            TEXT NOT NULL UNIQUE,
+        name            TEXT NOT NULL,
+        description     TEXT,
+        category        TEXT,
+        source          TEXT NOT NULL DEFAULT 'THA editorial',
+        display_order   INTEGER NOT NULL DEFAULT 0,
+        is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS knowledge_health_benefits (
+        id              SERIAL PRIMARY KEY,
+        slug            TEXT NOT NULL UNIQUE,
+        name            TEXT NOT NULL,
+        description     TEXT,
+        icon            TEXT,
+        source          TEXT NOT NULL DEFAULT 'THA editorial',
+        display_order   INTEGER NOT NULL DEFAULT 0,
+        is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS knowledge_food_nutrients (
+        id            SERIAL PRIMARY KEY,
+        food_slug     TEXT NOT NULL REFERENCES knowledge_foods(slug) ON DELETE CASCADE,
+        nutrient_slug TEXT NOT NULL REFERENCES knowledge_nutrients(slug) ON DELETE CASCADE,
+        amount        TEXT,
+        confidence    TEXT NOT NULL DEFAULT 'established',
+        ranking       INTEGER NOT NULL DEFAULT 0,
+        source        TEXT NOT NULL DEFAULT 'THA editorial',
+        is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT uq_knowledge_food_nutrient UNIQUE (food_slug, nutrient_slug)
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS knowledge_food_benefits (
+        id                SERIAL PRIMARY KEY,
+        food_slug         TEXT NOT NULL REFERENCES knowledge_foods(slug) ON DELETE CASCADE,
+        benefit_slug      TEXT NOT NULL REFERENCES knowledge_health_benefits(slug) ON DELETE CASCADE,
+        evidence_strength TEXT NOT NULL DEFAULT 'emerging',
+        ranking           INTEGER NOT NULL DEFAULT 0,
+        source            TEXT NOT NULL DEFAULT 'THA editorial',
+        is_active         BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT uq_knowledge_food_benefit UNIQUE (food_slug, benefit_slug)
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS knowledge_nutrient_benefits (
+        id                SERIAL PRIMARY KEY,
+        nutrient_slug     TEXT NOT NULL REFERENCES knowledge_nutrients(slug) ON DELETE CASCADE,
+        benefit_slug      TEXT NOT NULL REFERENCES knowledge_health_benefits(slug) ON DELETE CASCADE,
+        evidence_strength TEXT NOT NULL DEFAULT 'emerging',
+        ranking           INTEGER NOT NULL DEFAULT 0,
+        source            TEXT NOT NULL DEFAULT 'THA editorial',
+        is_active         BOOLEAN NOT NULL DEFAULT TRUE,
+        created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        CONSTRAINT uq_knowledge_nutrient_benefit UNIQUE (nutrient_slug, benefit_slug)
+      )`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
