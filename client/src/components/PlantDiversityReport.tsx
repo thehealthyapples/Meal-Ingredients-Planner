@@ -8,7 +8,6 @@ import { getNutritionBenefit } from "@/lib/nutrition-benefit-library";
 import { getCategoryEmoji } from "@/lib/ingredient-imagery";
 import {
   COLUMN_LABELS,
-  TERMINOLOGY,
   EMPTY_STATES,
   HEALTH_DISCLAIMER,
   getFoodHealthProfile,
@@ -18,6 +17,8 @@ import {
   buildRowVarietyDisplays,
   type CanonicalVarietyDisplay,
 } from "@shared/canonical/variety";
+// WS2G — canonical Food Report UI (read-only display layer over WS2F adapter).
+import { FoodReport } from "@/components/FoodReport";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -333,60 +334,7 @@ function SortControl({
 // a report. Secondary columns collapse on narrow widths; the plant cell carries
 // a stacked summary line instead.
 
-// WS2B — "Your Variety" (eaten) + "Broaden Your Variety" (defined-but-not-eaten),
-// surfaced ONLY from canonical varieties WS2A already defined. Read-only and
-// fully decoupled from plant counting. Renders nothing when there is no canonical
-// variety data — no empty cards, no placeholder copy.
-function CanonicalVarietySections({ variety }: { variety: CanonicalVarietyDisplay }) {
-  const hasYours = variety.yourVarieties.length > 0;
-  const hasBroaden = variety.broadenVarieties.length > 0;
-  if (!hasYours && !hasBroaden) return null;
 
-  return (
-    <>
-      {hasYours && (
-        <div data-testid={`variety-yours-${variety.canonicalSlug}`}>
-          <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1.5">
-            {TERMINOLOGY.yourVariety}
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {variety.yourVarieties.map((label) => (
-              <span
-                key={label}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40"
-              >
-                <Check className="h-2.5 w-2.5" aria-hidden="true" />
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {hasBroaden && (
-        <div data-testid={`variety-broaden-${variety.canonicalSlug}`}>
-          <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1.5">
-            {TERMINOLOGY.broadenYourVariety}
-          </p>
-          <div className="flex flex-wrap gap-1.5">
-            {variety.broadenVarieties.map((label) => (
-              <span
-                key={label}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-muted/50 text-foreground/60 border border-border/40"
-              >
-                <span
-                  className="h-2 w-2 rounded-full border border-muted-foreground/40"
-                  aria-hidden="true"
-                />
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-    </>
-  );
-}
 
 function PlantReportRow({
   row,
@@ -499,60 +447,17 @@ function PlantReportRow({
         <tr className="bg-muted/10 border-b border-border/20">
           <td colSpan={4} className="px-5 pb-4 pt-2">
             <div className="space-y-4">
-              {/* More Health Benefits — empty state until benefit registry exists */}
-              <div>
-                <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1.5">
-                  {TERMINOLOGY.moreHealthBenefits}
-                </p>
-                {hasBenefits ? (
-                  <div className="flex flex-wrap gap-1.5">
-                    {healthBenefits.map((b) => (
-                      <span
-                        key={b.name}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-muted/50 text-foreground/70 border border-border/40"
-                      >
-                        {b.emoji ? `${b.emoji} ` : ""}
-                        {b.name}
-                        {b.nutrient ? (
-                          <span className="text-muted-foreground/45">
-                            · {b.nutrient}
-                          </span>
-                        ) : null}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground/45 italic">
-                    {EMPTY_STATES.noHealthBenefits}
-                  </p>
-                )}
-                {row.benefitSummary && (
-                  <p className="text-xs text-foreground/65 leading-relaxed mt-2">
-                    {row.benefitSummary}
-                  </p>
-                )}
-              </div>
+              {/* WS2G — canonical Food Report (overview, nutrients, benefits,
+                  context, variety sections). Replaces the former WS0-only
+                  health benefits / key nutrients / WS2B variety sections.
+                  variety?.canonicalSlug is the resolver-authoritative slug;
+                  row.canonicalKey is the fallback for foods with no varieties. */}
+              <FoodReport
+                canonicalSlug={variety?.canonicalSlug ?? row.canonicalKey}
+                eatenVarietyLabels={variety?.yourVarieties}
+              />
 
-              {/* Key Nutrients */}
-              {row.keyNutrients.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1.5">
-                    {TERMINOLOGY.keyNutrients}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {row.keyNutrients.map((n) => (
-                      <span
-                        key={n}
-                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40"
-                      >
-                        {n}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Used In — meal + day evidence, expanded (not inline on the row) */}
+              {/* Used In — meal + day evidence (week-specific, not in adapter) */}
               <div>
                 <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1.5">
                   Used In
@@ -570,11 +475,6 @@ function PlantReportRow({
                   ))}
                 </div>
               </div>
-
-              {/* WS2B — Your Variety / Broaden Your Variety (canonical, educational).
-                  Read-only; surfaced only when WS2A defines varieties for this
-                  food. Supersedes the former raw-form variant list. */}
-              {variety && <CanonicalVarietySections variety={variety} />}
             </div>
           </td>
         </tr>
