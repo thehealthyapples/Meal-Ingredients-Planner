@@ -1563,3 +1563,112 @@ export type KnowledgeFoodBenefit = typeof knowledgeFoodBenefits.$inferSelect;
 export type InsertKnowledgeFoodBenefit = z.infer<typeof insertKnowledgeFoodBenefitSchema>;
 export type KnowledgeNutrientBenefit = typeof knowledgeNutrientBenefits.$inferSelect;
 export type InsertKnowledgeNutrientBenefit = z.infer<typeof insertKnowledgeNutrientBenefitSchema>;
+
+// ════════════════════════════════════════════════════════════════════════════
+// WS2A — Canonical Food Identity Foundations
+// ════════════════════════════════════════════════════════════════════════════
+// "One food. One meaning. Everywhere." — the identity spine.
+//
+// These four tables are ADDITIVE and stand BESIDE every existing identity
+// system (knowledge_foods, ingredient-aliases, food-synonyms, nutrition-variety
+// keyword lists, …). Nothing reads them in production yet — they exist to be
+// validated in SHADOW MODE against the live counting before any cutover.
+//
+// Hard guarantees baked into the schema:
+//   • canonical_food_alias.alias_key is UNIQUE  → one string resolves to AT MOST
+//     one food. This is the anti-fork lock: "tomatoes" can never simultaneously
+//     mean two foods, so a food can never silently split and double-count.
+//   • Plant Diversity counts at diversity_group level, not canonical_food, so a
+//     food's varieties (cherry/plum/heirloom tomato) share ONE group and can
+//     never inflate the 30-plants count.
+//
+// See docs/investigations/WS2A_CANONICAL_FOOD_FOUNDATIONS_IMPLEMENTATION.md.
+
+// ── Diversity Group ──────────────────────────────────────────────────────────
+// What the 30-plants-a-week counter counts ONCE. All tomato varieties → the
+// single "tomato" group; all mushroom varieties → the single "mushroom" group.
+export const diversityGroups = pgTable("diversity_group", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  // When true, every canonical_food in this group counts as exactly one plant.
+  countAsSinglePlant: boolean("count_as_single_plant").notNull().default(true),
+  source: text("source").notNull().default("THA editorial"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ── Canonical Food ───────────────────────────────────────────────────────────
+// The identity spine. A SUPERSET of knowledge_foods: it may carry foods with no
+// editorial entry (knowledge_food_slug = NULL). For editorial foods the slugs
+// may differ in number (canonical "tomato" ↔ knowledge "tomatoes"); the link is
+// the explicit knowledge_food_slug FK, never an assumption.
+export const canonicalFoods = pgTable("canonical_food", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  category: text("category").notNull(),
+  subcategory: text("subcategory"),
+  description: text("description"),
+  // Optional link OUT to the editorial Knowledge Registry (WS0). Nullable so the
+  // spine can hold foods the registry was never meant to cover.
+  knowledgeFoodSlug: text("knowledge_food_slug").references(() => knowledgeFoods.slug, { onDelete: "set null" }),
+  // What this food counts as for Plant Diversity. Nullable for non-plant foods.
+  diversityGroupSlug: text("diversity_group_slug").references(() => diversityGroups.slug, { onDelete: "set null" }),
+  // active | draft | merged | retired — identities are retireable, never deleted.
+  status: text("status").notNull().default("active"),
+  source: text("source").notNull().default("THA editorial"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ── Food Variety ─────────────────────────────────────────────────────────────
+// A named sub-kind of ONE canonical food (cherry/plum/heirloom → tomato). A
+// variety shares its parent's diversity group, so tracking it NEVER changes a
+// plant count — it only powers "Your Variety / Broaden Your Variety" later.
+export const foodVarieties = pgTable("food_variety", {
+  id: serial("id").primaryKey(),
+  canonicalFoodId: integer("canonical_food_id").notNull().references(() => canonicalFoods.id, { onDelete: "cascade" }),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description"),
+  displayOrder: integer("display_order").notNull().default(0),
+  status: text("status").notNull().default("active"),
+  source: text("source").notNull().default("THA editorial"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ── Canonical Food Alias ─────────────────────────────────────────────────────
+// Same food, different words. alias_key (the normalizeIngredientKey output) is
+// UNIQUE across the whole table — the single most important integrity rule in
+// the project: one string → at most one food.
+export const canonicalFoodAliases = pgTable("canonical_food_alias", {
+  id: serial("id").primaryKey(),
+  canonicalFoodId: integer("canonical_food_id").notNull().references(() => canonicalFoods.id, { onDelete: "cascade" }),
+  // Human/display form of the alias, e.g. "Cherry Tomatoes", "EVOO".
+  alias: text("alias").notNull(),
+  // normalizeIngredientKey(alias) — the matchable key. UNIQUE = the anti-fork lock.
+  aliasKey: text("alias_key").notNull().unique(),
+  // singular | plural | common_name | brand | misspelling | form
+  aliasType: text("alias_type").notNull(),
+  source: text("source").notNull().default("THA editorial"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertDiversityGroupSchema = createInsertSchema(diversityGroups).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCanonicalFoodSchema = createInsertSchema(canonicalFoods).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertFoodVarietySchema = createInsertSchema(foodVarieties).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCanonicalFoodAliasSchema = createInsertSchema(canonicalFoodAliases).omit({ id: true, createdAt: true });
+
+export type DiversityGroup = typeof diversityGroups.$inferSelect;
+export type InsertDiversityGroup = z.infer<typeof insertDiversityGroupSchema>;
+export type CanonicalFood = typeof canonicalFoods.$inferSelect;
+export type InsertCanonicalFood = z.infer<typeof insertCanonicalFoodSchema>;
+export type FoodVariety = typeof foodVarieties.$inferSelect;
+export type InsertFoodVariety = z.infer<typeof insertFoodVarietySchema>;
+export type CanonicalFoodAlias = typeof canonicalFoodAliases.$inferSelect;
+export type InsertCanonicalFoodAlias = z.infer<typeof insertCanonicalFoodAliasSchema>;

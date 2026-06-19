@@ -13,6 +13,11 @@ import {
   HEALTH_DISCLAIMER,
   getFoodHealthProfile,
 } from "@/lib/health-benefits-model";
+// WS2B — educational variety surfacing (read-only; never feeds plant counting).
+import {
+  buildRowVarietyDisplays,
+  type CanonicalVarietyDisplay,
+} from "@shared/canonical/variety";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -328,12 +333,69 @@ function SortControl({
 // a report. Secondary columns collapse on narrow widths; the plant cell carries
 // a stacked summary line instead.
 
+// WS2B — "Your Variety" (eaten) + "Broaden Your Variety" (defined-but-not-eaten),
+// surfaced ONLY from canonical varieties WS2A already defined. Read-only and
+// fully decoupled from plant counting. Renders nothing when there is no canonical
+// variety data — no empty cards, no placeholder copy.
+function CanonicalVarietySections({ variety }: { variety: CanonicalVarietyDisplay }) {
+  const hasYours = variety.yourVarieties.length > 0;
+  const hasBroaden = variety.broadenVarieties.length > 0;
+  if (!hasYours && !hasBroaden) return null;
+
+  return (
+    <>
+      {hasYours && (
+        <div data-testid={`variety-yours-${variety.canonicalSlug}`}>
+          <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1.5">
+            {TERMINOLOGY.yourVariety}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {variety.yourVarieties.map((label) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40"
+              >
+                <Check className="h-2.5 w-2.5" aria-hidden="true" />
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {hasBroaden && (
+        <div data-testid={`variety-broaden-${variety.canonicalSlug}`}>
+          <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1.5">
+            {TERMINOLOGY.broadenYourVariety}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {variety.broadenVarieties.map((label) => (
+              <span
+                key={label}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-muted/50 text-foreground/60 border border-border/40"
+              >
+                <span
+                  className="h-2 w-2 rounded-full border border-muted-foreground/40"
+                  aria-hidden="true"
+                />
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function PlantReportRow({
   row,
+  variety,
   expanded,
   onToggle,
 }: {
   row: PlantRow;
+  variety?: CanonicalVarietyDisplay;
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -509,24 +571,10 @@ function PlantReportRow({
                 </div>
               </div>
 
-              {/* Broaden Your Variety — real variant forms used; no fabrication */}
-              {row.variants.length > 0 && (
-                <div>
-                  <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1.5">
-                    {TERMINOLOGY.broadenYourVariety}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {row.variants.map((v) => (
-                      <span
-                        key={v}
-                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-muted/50 text-foreground/60 border border-border/40"
-                      >
-                        {v}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* WS2B — Your Variety / Broaden Your Variety (canonical, educational).
+                  Read-only; surfaced only when WS2A defines varieties for this
+                  food. Supersedes the former raw-form variant list. */}
+              {variety && <CanonicalVarietySections variety={variety} />}
             </div>
           </td>
         </tr>
@@ -537,10 +585,12 @@ function PlantReportRow({
 
 function PlantReportTable({
   plantRows,
+  varietyByRowKey,
   expandedKeys,
   onToggle,
 }: {
   plantRows: PlantRow[];
+  varietyByRowKey: Map<string, CanonicalVarietyDisplay>;
   expandedKeys: Set<string>;
   onToggle: (key: string) => void;
 }) {
@@ -567,6 +617,7 @@ function PlantReportTable({
           <PlantReportRow
             key={row.canonicalKey}
             row={row}
+            variety={varietyByRowKey.get(row.canonicalKey)}
             expanded={expandedKeys.has(row.canonicalKey)}
             onToggle={() => onToggle(row.canonicalKey)}
           />
@@ -598,6 +649,15 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
     () => sortPlantRows(plantRows, sortKey),
     [plantRows, sortKey],
   );
+
+  // WS2B — educational variety surfacing. Computed in a SEPARATE pass that never
+  // feeds plantRows / plantCount; sort order doesn't affect ownership. Keyed by
+  // row canonicalKey so each row can render its food's Your/Broaden sections.
+  const varietyByRowKey = useMemo(() => {
+    const allIngredients = weekMeals.flatMap((m) => m.ingredients);
+    const rowInputs = plantRows.map((r) => ({ key: r.canonicalKey, representative: r.canonicalKey }));
+    return buildRowVarietyDisplays(allIngredients, rowInputs);
+  }, [weekMeals, plantRows]);
 
   const plantCount = plantRows.length;
   const pct = Math.min((plantCount / WEEKLY_PLANT_TARGET) * 100, 100);
@@ -695,6 +755,7 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
           </div>
           <PlantReportTable
             plantRows={sortedRows}
+            varietyByRowKey={varietyByRowKey}
             expandedKeys={expandedKeys}
             onToggle={toggleRow}
           />

@@ -51,6 +51,7 @@ export const TERMINOLOGY = {
   moreHealthBenefits: "More Health Benefits",
   keyNutrients: "Key Nutrients",
   meals: "Meals",
+  yourVariety: "Your Variety",
   broadenYourVariety: "Broaden Your Variety",
 } as const;
 
