@@ -6,18 +6,11 @@ import type { PlantCategory } from "@/lib/nutrition-variety";
 import { normaliseForReuse } from "@/lib/ingredient-reuse";
 import { getNutritionBenefit } from "@/lib/nutrition-benefit-library";
 import { getCategoryEmoji } from "@/lib/ingredient-imagery";
-import {
-  COLUMN_LABELS,
-  EMPTY_STATES,
-  HEALTH_DISCLAIMER,
-  getFoodHealthProfile,
-} from "@/lib/health-benefits-model";
-// WS2B — educational variety surfacing (read-only; never feeds plant counting).
+import { HEALTH_DISCLAIMER } from "@/lib/health-benefits-model";
 import {
   buildRowVarietyDisplays,
   type CanonicalVarietyDisplay,
 } from "@shared/canonical/variety";
-// WS2G — canonical Food Report UI (read-only display layer over WS2F adapter).
 import { FoodReport } from "@/components/FoodReport";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -28,18 +21,36 @@ export interface WeekMealEntry {
   ingredients: string[];
 }
 
-interface PlantRow {
+type ReportSection = "plant-based" | "meat" | "dairy" | "eggs" | "other";
+
+interface IngredientRow {
+  displayKey: string;
   canonicalKey: string;
   displayName: string;
-  category: PlantCategory;
-  variants: string[];
-  mealNames: string[];
+  section: ReportSection;
+  plantCategory: PlantCategory | null;
+  reportCategory: string;
+  /** dayName → sorted meal names (deduped). */
+  dayMealMap: Map<string, string[]>;
+  /** Sorted by week day order. */
   dayNames: string[];
+  /** All unique meal names. */
+  mealNames: string[];
   keyNutrients: string[];
   benefitSummary: string | null;
 }
 
-export type SortKey = "plant" | "category" | "meals";
+export type SortKey =
+  | "category"
+  | "ingredient"
+  | "benefits"
+  | "nutrients"
+  | "days"
+  | "meals";
+
+export interface PlantDiversityReportProps {
+  weekMeals: WeekMealEntry[];
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -57,126 +68,311 @@ const CATEGORY_ORDER: PlantCategory[] = [
   "Fermented Foods",
 ];
 
-// Per-category completion suggestions — drawn from Nutrition Benefit Library
-// ingredients where possible so nutrient data is already available.
 const CATEGORY_SUGGESTIONS: Record<PlantCategory, string[]> = {
-  "Vegetables":      ["Spinach", "Kale"],
-  "Fruits":          ["Avocado", "Blueberries"],
-  "Legumes":         ["Chickpeas", "Lentils"],
+  Vegetables:        ["Spinach", "Kale"],
+  Fruits:            ["Avocado", "Blueberries"],
+  Legumes:           ["Chickpeas", "Lentils"],
   "Whole Grains":    ["Oats", "Brown Rice"],
-  "Seeds":           ["Pumpkin Seeds", "Chia Seeds"],
-  "Nuts":            ["Walnuts", "Almonds"],
+  Seeds:             ["Pumpkin Seeds", "Chia Seeds"],
+  Nuts:              ["Walnuts", "Almonds"],
   "Herbs & Spices":  ["Basil", "Coriander"],
   "Olive Oil":       ["Extra Virgin Olive Oil"],
   "Fermented Foods": ["Sauerkraut", "Kimchi"],
 };
 
+const DAY_ORDER = [
+  "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday",
+];
+const DAY_RANK = new Map(DAY_ORDER.map((d, i) => [d, i]));
+
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: "plant", label: COLUMN_LABELS.plant },
-  { key: "category", label: "Category" },
-  { key: "meals", label: COLUMN_LABELS.meals },
+  { key: "category",   label: "Category" },
+  { key: "ingredient", label: "Ingredient" },
+  { key: "benefits",   label: "Benefits" },
+  { key: "nutrients",  label: "Key Nutrients" },
+  { key: "days",       label: "Days" },
+  { key: "meals",      label: "Meals" },
 ];
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Non-plant Categorisation ─────────────────────────────────────────────────
+
+const MEAT_KEYWORDS = [
+  "chicken", "beef", "pork", "lamb", "turkey", "duck", "veal", "venison",
+  "rabbit", "bacon", "ham", "sausage", "sausages", "mince", "steak",
+  "fillet", "loin", "rib", "ribs", "brisket", "shank", "chop", "chops",
+  "fish", "salmon", "tuna", "cod", "haddock", "mackerel", "sardine",
+  "sardines", "trout", "sea bass", "seabass", "halibut", "tilapia",
+  "prawn", "prawns", "shrimp", "crab", "lobster", "mussel", "mussels",
+  "clam", "clams", "scallop", "scallops", "squid", "anchovy", "anchovies",
+  "chorizo", "pepperoni", "salami", "bresaola", "pancetta",
+] as const;
+
+const DAIRY_KEYWORDS = [
+  "milk", "cheese", "yogurt", "yoghurt", "butter", "cream",
+  "cheddar", "mozzarella", "parmesan", "feta", "ricotta", "brie",
+  "camembert", "gouda", "stilton", "halloumi", "gruyere", "emmental",
+  "mascarpone", "quark", "fromage frais", "creme fraiche",
+  "soured cream", "sour cream", "buttermilk", "ghee",
+  "condensed milk", "evaporated milk", "whey",
+] as const;
+
+const EGG_KEYWORDS = ["egg", "eggs"] as const;
+
+function containsKeyword(text: string, word: string): boolean {
+  const t = text.toLowerCase();
+  const w = word.toLowerCase();
+  return (
+    t === w ||
+    t.startsWith(w + " ") ||
+    t.endsWith(" " + w) ||
+    t.includes(" " + w + " ")
+  );
+}
+
+function matchesKeywords(text: string, keywords: readonly string[]): boolean {
+  return keywords.some((w) => containsKeyword(text, w));
+}
+
+function getSectionForIngredient(raw: string): ReportSection {
+  if (isPlantIngredient(raw)) return "plant-based";
+  const lower = raw.toLowerCase();
+  if (matchesKeywords(lower, MEAT_KEYWORDS)) return "meat";
+  if (matchesKeywords(lower, DAIRY_KEYWORDS)) return "dairy";
+  if (matchesKeywords(lower, EGG_KEYWORDS)) return "eggs";
+  return "other";
+}
+
+function getReportCategory(
+  section: ReportSection,
+  plantCategory: PlantCategory | null,
+): string {
+  if (section === "plant-based" && plantCategory) {
+    return `Plant based → ${plantCategory}`;
+  }
+  switch (section) {
+    case "meat":  return "Meat & Fish";
+    case "dairy": return "Dairy";
+    case "eggs":  return "Eggs";
+    default:      return "Other";
+  }
+}
+
+function getSectionEmoji(section: ReportSection): string {
+  switch (section) {
+    case "plant-based": return "🌱";
+    case "meat":        return "🥩";
+    case "dairy":       return "🧀";
+    case "eggs":        return "🥚";
+    default:            return "🧂";
+  }
+}
+
+function getSectionLabel(section: ReportSection): string {
+  switch (section) {
+    case "plant-based": return "Plant Based";
+    case "meat":        return "Meat & Fish";
+    case "dairy":       return "Dairy";
+    case "eggs":        return "Eggs";
+    default:            return "Other Ingredients";
+  }
+}
+
+// ─── Display key helper (Stage 4 — display-only, never touches plant count) ──
+
+// Strips full-word unit labels that normaliseForReuse's regex doesn't cover.
+// "tablespoon olive oil" → pre-stripped → "olive oil" → normaliseForReuse → "olive oil"
+// This groups display rows only. Production plant counting is untouched.
+const EXTRA_UNIT_RE =
+  /\b(tablespoon|tablespoons|teaspoon|teaspoons|can|cans|tin|tins|jar|jars|bunch|bunches|sprig|sprigs|stalk|stalks|slice|slices|piece|pieces|head|heads|small|medium|large|big)\b/gi;
+
+function getDisplayKey(raw: string): string {
+  const preStripped = raw.replace(EXTRA_UNIT_RE, "").replace(/\s+/g, " ").trim();
+  return normaliseForReuse(preStripped);
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function toDisplayName(key: string): string {
   return key.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function stripLeadingQuantity(raw: string): string {
-  return raw
-    .toLowerCase()
-    .replace(/^\d+(\.\d+)?\s*(g|kg|ml|l|tsp|tbsp|cup|cups|oz|lb|lbs|x)?\s*/i, "")
-    .replace(/^[½⅓⅔¼¾⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]\s*/, "")
-    .trim();
-}
+// ─── Data Builder ─────────────────────────────────────────────────────────────
 
-// ─── Data builder ─────────────────────────────────────────────────────────────
-
-function computePlantData(weekMeals: WeekMealEntry[]): {
-  plantRows: PlantRow[];
+function computeAllRows(weekMeals: WeekMealEntry[]): {
+  plantRows: IngredientRow[];
+  meatRows: IngredientRow[];
+  dairyRows: IngredientRow[];
+  eggRows: IngredientRow[];
+  otherRows: IngredientRow[];
+  plantCount: number;
+  totalIngredients: number;
   categoriesFound: Set<PlantCategory>;
 } {
-  const rowMap = new Map<
-    string,
-    {
-      displayName: string;
-      category: PlantCategory;
-      rawVariants: Set<string>;
-      mealNames: Set<string>;
-      dayNames: Set<string>;
-      keyNutrients: string[];
-      benefitSummary: string | null;
+  // Pass 1 — plant count (UNCHANGED, source of truth).
+  // Uses normaliseForReuse(raw) directly, same as before WS3A.
+  const plantCountKeys = new Set<string>();
+  for (const meal of weekMeals) {
+    for (const raw of meal.ingredients) {
+      if (!raw.trim() || !isPlantIngredient(raw)) continue;
+      const key = normaliseForReuse(raw);
+      if (key) plantCountKeys.add(key);
     }
-  >();
+  }
+  const plantCount = plantCountKeys.size;
+
+  // Pass 2 — display rows, grouped by getDisplayKey (measurement-stripped).
+  type RowAcc = {
+    canonicalKey: string;
+    displayName: string;
+    section: ReportSection;
+    plantCategory: PlantCategory | null;
+    reportCategory: string;
+    dayMealAcc: Map<string, Set<string>>;
+    keyNutrients: string[];
+    benefitSummary: string | null;
+  };
+
+  const rowMap = new Map<string, RowAcc>();
 
   for (const meal of weekMeals) {
     for (const raw of meal.ingredients) {
       if (!raw.trim()) continue;
-      if (!isPlantIngredient(raw)) continue;
+      const displayKey = getDisplayKey(raw);
+      if (!displayKey) continue;
 
-      const canonicalKey = normaliseForReuse(raw);
-      if (!canonicalKey) continue;
+      const section = getSectionForIngredient(raw);
 
-      if (!rowMap.has(canonicalKey)) {
-        const benefit = getNutritionBenefit(canonicalKey);
-        const category = getPlantCategory(canonicalKey) ?? "Vegetables";
-        rowMap.set(canonicalKey, {
-          displayName: toDisplayName(canonicalKey),
-          category,
-          rawVariants: new Set(),
-          mealNames: new Set(),
-          dayNames: new Set(),
+      if (!rowMap.has(displayKey)) {
+        const plantCategory =
+          section === "plant-based"
+            ? (getPlantCategory(displayKey) ?? "Vegetables")
+            : null;
+        const benefit = getNutritionBenefit(displayKey);
+        rowMap.set(displayKey, {
+          canonicalKey: displayKey,
+          displayName: toDisplayName(displayKey),
+          section,
+          plantCategory,
+          reportCategory: getReportCategory(section, plantCategory),
+          dayMealAcc: new Map(),
           keyNutrients: benefit?.keyNutrients ?? [],
           benefitSummary: benefit?.summary ?? null,
         });
       }
 
-      const entry = rowMap.get(canonicalKey)!;
-      entry.mealNames.add(meal.mealName);
-      entry.dayNames.add(meal.dayName);
-
-      // Record variant if the stripped raw form differs from the canonical display name
-      const stripped = stripLeadingQuantity(raw);
-      const variantDisplay = toDisplayName(stripped);
-      if (variantDisplay.toLowerCase() !== entry.displayName.toLowerCase()) {
-        entry.rawVariants.add(variantDisplay);
+      const entry = rowMap.get(displayKey)!;
+      if (!entry.dayMealAcc.has(meal.dayName)) {
+        entry.dayMealAcc.set(meal.dayName, new Set());
       }
+      entry.dayMealAcc.get(meal.dayName)!.add(meal.mealName);
     }
   }
 
-  const plantRows: PlantRow[] = Array.from(rowMap.entries()).map(
-    ([canonicalKey, data]) => ({
-      canonicalKey,
-      displayName: data.displayName,
-      category: data.category,
-      variants: Array.from(data.rawVariants).sort(),
-      mealNames: Array.from(data.mealNames),
-      dayNames: Array.from(data.dayNames),
-      keyNutrients: data.keyNutrients,
-      benefitSummary: data.benefitSummary,
-    }),
-  );
-
-  plantRows.sort((a, b) => {
-    const catA = CATEGORY_ORDER.indexOf(a.category);
-    const catB = CATEGORY_ORDER.indexOf(b.category);
-    if (catA !== catB) return catA - catB;
-    return a.displayName.localeCompare(b.displayName);
+  // Materialise rows
+  const allRows: IngredientRow[] = Array.from(rowMap.values()).map((acc) => {
+    const dayMealMap = new Map<string, string[]>();
+    Array.from(acc.dayMealAcc.entries()).forEach(([day, meals]) => {
+      dayMealMap.set(day, Array.from(meals as Set<string>).sort());
+    });
+    const dayNames = Array.from(acc.dayMealAcc.keys()).sort(
+      (a, b) => (DAY_RANK.get(a) ?? 99) - (DAY_RANK.get(b) ?? 99),
+    );
+    const allMeals = new Set<string>();
+    Array.from(acc.dayMealAcc.values()).forEach((meals) => {
+      Array.from(meals as Set<string>).forEach((m) => allMeals.add(m));
+    });
+    return {
+      displayKey: acc.canonicalKey,
+      canonicalKey: acc.canonicalKey,
+      displayName: acc.displayName,
+      section: acc.section,
+      plantCategory: acc.plantCategory,
+      reportCategory: acc.reportCategory,
+      dayMealMap,
+      dayNames,
+      mealNames: Array.from(allMeals).sort(),
+      keyNutrients: acc.keyNutrients,
+      benefitSummary: acc.benefitSummary,
+    };
   });
 
+  const bySection = (s: ReportSection) =>
+    allRows
+      .filter((r) => r.section === s)
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+  const plantRows = allRows
+    .filter((r) => r.section === "plant-based")
+    .sort((a, b) => {
+      const catA = CATEGORY_ORDER.indexOf(a.plantCategory ?? "Vegetables");
+      const catB = CATEGORY_ORDER.indexOf(b.plantCategory ?? "Vegetables");
+      if (catA !== catB) return catA - catB;
+      return a.displayName.localeCompare(b.displayName);
+    });
+
   const categoriesFound = new Set<PlantCategory>(
-    plantRows.map((r) => r.category),
+    plantRows
+      .map((r) => r.plantCategory)
+      .filter((c): c is PlantCategory => c !== null),
   );
 
-  return { plantRows, categoriesFound };
+  return {
+    plantRows,
+    meatRows:  bySection("meat"),
+    dairyRows: bySection("dairy"),
+    eggRows:   bySection("eggs"),
+    otherRows: bySection("other"),
+    plantCount,
+    totalIngredients: allRows.length,
+    categoriesFound,
+  };
 }
 
-function sortPlantRows(rows: PlantRow[], sortKey: SortKey): PlantRow[] {
+// ─── Sort ─────────────────────────────────────────────────────────────────────
+
+function sortRows(rows: IngredientRow[], sortKey: SortKey): IngredientRow[] {
   const sorted = [...rows];
   switch (sortKey) {
-    case "plant":
+    case "ingredient":
       sorted.sort((a, b) => a.displayName.localeCompare(b.displayName));
+      break;
+    case "category":
+      sorted.sort((a, b) => {
+        const catA = CATEGORY_ORDER.indexOf(a.plantCategory ?? "Vegetables");
+        const catB = CATEGORY_ORDER.indexOf(b.plantCategory ?? "Vegetables");
+        if (catA !== catB) return catA - catB;
+        return a.displayName.localeCompare(b.displayName);
+      });
+      break;
+    case "benefits":
+      sorted.sort((a, b) => {
+        const aHas = a.benefitSummary ? 1 : 0;
+        const bHas = b.benefitSummary ? 1 : 0;
+        if (aHas !== bHas) return bHas - aHas;
+        return a.displayName.localeCompare(b.displayName);
+      });
+      break;
+    case "nutrients":
+      sorted.sort((a, b) => {
+        if (a.keyNutrients.length !== b.keyNutrients.length)
+          return b.keyNutrients.length - a.keyNutrients.length;
+        return (a.keyNutrients[0] ?? "").localeCompare(b.keyNutrients[0] ?? "")
+          || a.displayName.localeCompare(b.displayName);
+      });
+      break;
+    case "days":
+      // Single-day rows first (sorted Mon→Sun), multi-day rows last
+      sorted.sort((a, b) => {
+        const aMulti = a.dayNames.length > 1;
+        const bMulti = b.dayNames.length > 1;
+        if (aMulti !== bMulti) return aMulti ? 1 : -1;
+        if (!aMulti) {
+          const rankA = DAY_RANK.get(a.dayNames[0] ?? "") ?? 99;
+          const rankB = DAY_RANK.get(b.dayNames[0] ?? "") ?? 99;
+          if (rankA !== rankB) return rankA - rankB;
+        }
+        return a.displayName.localeCompare(b.displayName);
+      });
       break;
     case "meals":
       sorted.sort(
@@ -185,25 +381,13 @@ function sortPlantRows(rows: PlantRow[], sortKey: SortKey): PlantRow[] {
           a.displayName.localeCompare(b.displayName),
       );
       break;
-    case "category":
-    default:
-      sorted.sort((a, b) => {
-        const catA = CATEGORY_ORDER.indexOf(a.category);
-        const catB = CATEGORY_ORDER.indexOf(b.category);
-        if (catA !== catB) return catA - catB;
-        return a.displayName.localeCompare(b.displayName);
-      });
   }
   return sorted;
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function CategoryGrid({
-  categoriesFound,
-}: {
-  categoriesFound: Set<PlantCategory>;
-}) {
+function CategoryGrid({ categoriesFound }: { categoriesFound: Set<PlantCategory> }) {
   return (
     <div className="px-5 py-4 border-b border-border/50">
       <p className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wide mb-3">
@@ -235,32 +419,30 @@ function CategoryGrid({
   );
 }
 
-function CategoryCompletionSuggestions({
-  categoriesFound,
-}: {
-  categoriesFound: Set<PlantCategory>;
-}) {
-  const missingCategories = CATEGORY_ORDER.filter(
-    (cat) => !categoriesFound.has(cat),
-  );
-
+function BroadenYourWeek({ categoriesFound }: { categoriesFound: Set<PlantCategory> }) {
+  const missingCategories = CATEGORY_ORDER.filter((cat) => !categoriesFound.has(cat));
   if (missingCategories.length === 0) return null;
 
   return (
-    <div className="px-5 py-4 border-b border-border/50">
-      <p className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wide mb-3">
-        Easy additions to broaden your week
-      </p>
-      <div className="space-y-3">
+    <div className="rounded-2xl border border-border/50 bg-background overflow-hidden">
+      <div className="px-5 py-4 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <span className="text-base" aria-hidden="true">🌿</span>
+          <h3 className="text-sm font-semibold">Ideas to Broaden Your Week</h3>
+        </div>
+        <p className="text-xs text-muted-foreground/55 mt-0.5">
+          Small additions that bring new plant categories into your week.
+        </p>
+      </div>
+      <div className="px-5 py-4 space-y-4">
         {missingCategories.map((cat) => {
           const suggestions = CATEGORY_SUGGESTIONS[cat];
           return (
             <div key={cat}>
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-[11px] font-medium text-muted-foreground/50">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] font-medium text-muted-foreground/50 uppercase tracking-wide">
                   {cat}
                 </p>
-                {/* Cross-link: explore this missing category in the Pantry hub */}
                 <Link
                   href="/pantry?mode=explore"
                   className="text-[10px] font-medium text-emerald-700/70 dark:text-emerald-400/70 hover:underline"
@@ -277,9 +459,7 @@ function CategoryCompletionSuggestions({
                       key={name}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/30 border border-border/40"
                     >
-                      <span className="text-xs font-medium text-foreground/80">
-                        {name}
-                      </span>
+                      <span className="text-xs font-medium text-foreground/80">{name}</span>
                       {benefit && benefit.keyNutrients.length > 0 && (
                         <span className="text-[11px] text-emerald-700/60 dark:text-emerald-400/60 font-medium">
                           {benefit.keyNutrients.slice(0, 2).join(" · ")}
@@ -328,38 +508,80 @@ function SortControl({
   );
 }
 
-// ─── Report table ─────────────────────────────────────────────────────────────
-// Visible structure: Plant | Health Benefits | Key Nutrients | Meals.
-// Semantic <table> enforces consistent column widths across rows so it reads as
-// a report. Secondary columns collapse on narrow widths; the plant cell carries
-// a stacked summary line instead.
+// ─── Row ──────────────────────────────────────────────────────────────────────
 
+function DaysCell({ row }: { row: IngredientRow }) {
+  if (row.dayNames.length === 0)
+    return <span className="text-[11px] text-muted-foreground/30">—</span>;
+  if (row.dayNames.length === 1)
+    return <span className="text-xs text-foreground/70">{row.dayNames[0]}</span>;
+  return (
+    <span className="text-xs font-medium text-muted-foreground/70">Multi</span>
+  );
+}
 
+function MealsCell({ row }: { row: IngredientRow }) {
+  const count = row.mealNames.length;
+  if (count === 0)
+    return <span className="text-[11px] text-muted-foreground/30">—</span>;
+  if (count === 1)
+    return (
+      <span className="text-xs text-foreground/70 block max-w-[140px] truncate">
+        {row.mealNames[0]}
+      </span>
+    );
+  return (
+    <span className="text-xs text-muted-foreground/70 whitespace-nowrap tabular-nums">
+      {count} meals
+    </span>
+  );
+}
 
-function PlantReportRow({
+function ExpandedDayMealList({ row }: { row: IngredientRow }) {
+  return (
+    <div>
+      <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-2">
+        Meals
+      </p>
+      <div className="space-y-2">
+        {row.dayNames.map((day) => {
+          const meals = row.dayMealMap.get(day) ?? [];
+          return (
+            <div key={day}>
+              <p className="text-[11px] font-medium text-foreground/60 mb-0.5">{day}</p>
+              <ul className="space-y-0.5 pl-2">
+                {meals.map((meal) => (
+                  <li key={meal} className="flex items-start gap-1.5">
+                    <span className="text-muted-foreground/40 text-xs leading-tight mt-px">•</span>
+                    <span className="text-xs text-foreground/70">{meal}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ReportRow({
   row,
   variety,
   expanded,
   onToggle,
 }: {
-  row: PlantRow;
+  row: IngredientRow;
   variety?: CanonicalVarietyDisplay;
   expanded: boolean;
   onToggle: () => void;
 }) {
-  // Shared display model. healthBenefits is empty until the benefit registry is
-  // populated, so the Health Benefits column shows a safe empty state today.
-  const profile = getFoodHealthProfile(row.canonicalKey, {
-    displayName: row.displayName,
-    category: row.category,
-  });
-  const healthBenefits = profile?.healthBenefits ?? [];
-  const hasBenefits = healthBenefits.length > 0;
+  const hasBenefitSummary = !!row.benefitSummary;
+  const hasNutrients = row.keyNutrients.length > 0;
   const mealCount = row.mealNames.length;
 
   return (
     <>
-      {/* ── Collapsed row ─────────────────────────────────────── */}
       <tr
         onClick={onToggle}
         onKeyDown={(e) => {
@@ -371,10 +593,10 @@ function PlantReportRow({
         tabIndex={0}
         aria-expanded={expanded}
         className="border-b border-border/30 hover:bg-muted/20 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-inset focus-visible:ring-1 focus-visible:ring-ring"
-        data-testid={`row-plant-${row.canonicalKey}`}
+        data-testid={`row-ingredient-${row.displayKey}`}
       >
-        {/* Plant — always visible */}
-        <td className="px-5 py-2.5 align-middle">
+        {/* Ingredient — always visible */}
+        <td className="px-4 py-2.5 align-middle">
           <div className="flex items-center gap-2 min-w-0">
             <ChevronRight
               className={`h-3.5 w-3.5 text-muted-foreground/40 flex-shrink-0 transition-transform duration-150 ${
@@ -383,44 +605,47 @@ function PlantReportRow({
               aria-hidden="true"
             />
             <span className="text-base leading-none flex-shrink-0" aria-hidden="true">
-              {getCategoryEmoji(row.category)}
+              {getCategoryEmoji(row.plantCategory ?? undefined)}
             </span>
             <div className="min-w-0">
               <span className="block text-sm font-medium text-foreground/90 truncate">
                 {row.displayName}
               </span>
-              {/* Mobile: nutrients + meal count stacked (columns hidden on mobile) */}
-              <span className="md:hidden block text-[11px] text-muted-foreground/55 mt-0.5">
-                {row.keyNutrients.length > 0 && (
-                  <span className="text-emerald-700/60 dark:text-emerald-400/60 font-medium">
-                    {row.keyNutrients.slice(0, 2).join(" · ")}
+              {/* Mobile stacked summary */}
+              <span className="md:hidden block text-[11px] text-muted-foreground/55 mt-0.5 truncate">
+                {row.reportCategory}
+                {mealCount > 0 && (
+                  <span className="ml-2 text-muted-foreground/40">
+                    · {mealCount === 1 ? "1 meal" : `${mealCount} meals`}
                   </span>
                 )}
-                {row.keyNutrients.length > 0 && " · "}
-                {mealCount} {mealCount === 1 ? "meal" : "meals"}
               </span>
             </div>
           </div>
         </td>
 
-        {/* Health Benefits — desktop only (empty state until data populated) */}
-        <td className="hidden md:table-cell px-4 py-2.5 align-middle">
-          {hasBenefits ? (
-            <span className="text-xs text-foreground/80">
-              {healthBenefits[0]?.emoji ? `${healthBenefits[0].emoji} ` : ""}
-              {healthBenefits[0]?.name}
+        {/* Category — desktop */}
+        <td className="hidden md:table-cell px-3 py-2.5 align-middle">
+          <span className="text-[11px] text-foreground/65 whitespace-nowrap">
+            {row.reportCategory}
+          </span>
+        </td>
+
+        {/* Supports / Benefits — desktop */}
+        <td className="hidden md:table-cell px-3 py-2.5 align-middle">
+          {hasBenefitSummary ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-muted/50 text-foreground/70 border border-border/40 truncate max-w-[160px]">
+              {row.benefitSummary}
             </span>
           ) : (
-            <span className="text-[11px] text-muted-foreground/35 italic">
-              {EMPTY_STATES.healthBenefitsComingSoon}
-            </span>
+            <span className="text-[11px] text-muted-foreground/30">—</span>
           )}
         </td>
 
-        {/* Key Nutrients — desktop only (real curated data) */}
-        <td className="hidden md:table-cell px-4 py-2.5 align-middle">
-          {row.keyNutrients.length > 0 ? (
-            <span className="text-[11px] text-emerald-700/60 dark:text-emerald-400/60 font-medium">
+        {/* Key Nutrients — desktop */}
+        <td className="hidden md:table-cell px-3 py-2.5 align-middle">
+          {hasNutrients ? (
+            <span className="text-[11px] text-emerald-700/60 dark:text-emerald-400/60 font-medium whitespace-nowrap">
               {row.keyNutrients.slice(0, 2).join(" · ")}
             </span>
           ) : (
@@ -428,53 +653,40 @@ function PlantReportRow({
           )}
         </td>
 
-        {/* Meals — desktop only: count, not a long inline list */}
-        <td className="hidden md:table-cell px-5 py-2.5 align-middle text-right">
-          <span className="text-xs text-muted-foreground/70 whitespace-nowrap tabular-nums">
-            {mealCount} {mealCount === 1 ? "meal" : "meals"}
+        {/* Days — desktop */}
+        <td className="hidden md:table-cell px-3 py-2.5 align-middle">
+          <DaysCell row={row} />
+        </td>
+
+        {/* Meals — desktop */}
+        <td className="hidden md:table-cell px-4 py-2.5 align-middle text-right">
+          <div className="flex items-center justify-end gap-1">
+            <MealsCell row={row} />
             <ChevronRight
-              className={`inline h-3 w-3 ml-0.5 text-muted-foreground/40 transition-transform duration-150 ${
+              className={`h-3 w-3 text-muted-foreground/40 flex-shrink-0 transition-transform duration-150 ${
                 expanded ? "rotate-90" : ""
               }`}
               aria-hidden="true"
             />
-          </span>
+          </div>
         </td>
       </tr>
 
-      {/* ── Expanded row ──────────────────────────────────────── */}
+      {/* Expanded row */}
       {expanded && (
         <tr className="bg-muted/10 border-b border-border/20">
-          <td colSpan={4} className="px-5 pb-4 pt-2">
+          <td colSpan={6} className="px-5 pb-4 pt-2">
             <div className="space-y-4">
-              {/* WS2G — canonical Food Report (overview, nutrients, benefits,
-                  context, variety sections). Replaces the former WS0-only
-                  health benefits / key nutrients / WS2B variety sections.
-                  variety?.canonicalSlug is the resolver-authoritative slug;
-                  row.canonicalKey is the fallback for foods with no varieties. */}
-              <FoodReport
-                canonicalSlug={variety?.canonicalSlug ?? row.canonicalKey}
-                eatenVarietyLabels={variety?.yourVarieties}
-              />
+              {/* WS2G — FoodReport (plant-based rows only) */}
+              {row.section === "plant-based" && (
+                <FoodReport
+                  canonicalSlug={variety?.canonicalSlug ?? row.canonicalKey}
+                  eatenVarietyLabels={variety?.yourVarieties}
+                />
+              )}
 
-              {/* Used In — meal + day evidence (week-specific, not in adapter) */}
-              <div>
-                <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1.5">
-                  Used In
-                </p>
-                <div className="flex flex-wrap gap-x-4 gap-y-1">
-                  {row.mealNames.map((name, i) => (
-                    <span key={name} className="text-xs text-foreground/70">
-                      {name}
-                      {row.dayNames[i] ? (
-                        <span className="text-muted-foreground/40 ml-1">
-                          · {row.dayNames[i]}
-                        </span>
-                      ) : null}
-                    </span>
-                  ))}
-                </div>
-              </div>
+              {/* Day → Meal mapping (all rows) */}
+              <ExpandedDayMealList row={row} />
             </div>
           </td>
         </tr>
@@ -483,43 +695,51 @@ function PlantReportRow({
   );
 }
 
-function PlantReportTable({
-  plantRows,
+function ReportTable({
+  rows,
   varietyByRowKey,
   expandedKeys,
   onToggle,
 }: {
-  plantRows: PlantRow[];
+  rows: IngredientRow[];
   varietyByRowKey: Map<string, CanonicalVarietyDisplay>;
   expandedKeys: Set<string>;
   onToggle: (key: string) => void;
 }) {
+  if (rows.length === 0) return null;
+
   return (
     <table className="w-full text-left border-collapse">
       <thead>
         <tr className="bg-muted/20 border-b border-border/50">
-          <th className="px-5 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide">
-            {COLUMN_LABELS.plant}
+          <th className="px-4 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide">
+            Ingredient
           </th>
-          <th className="hidden md:table-cell px-4 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide whitespace-nowrap">
-            {COLUMN_LABELS.healthBenefits}
+          <th className="hidden md:table-cell px-3 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide">
+            Category
           </th>
-          <th className="hidden md:table-cell px-4 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide whitespace-nowrap">
-            {COLUMN_LABELS.keyNutrients}
+          <th className="hidden md:table-cell px-3 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide whitespace-nowrap">
+            Supports
           </th>
-          <th className="hidden md:table-cell px-5 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide text-right whitespace-nowrap">
-            {COLUMN_LABELS.meals}
+          <th className="hidden md:table-cell px-3 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide whitespace-nowrap">
+            Key Nutrients
+          </th>
+          <th className="hidden md:table-cell px-3 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide">
+            Days
+          </th>
+          <th className="hidden md:table-cell px-4 py-2 text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide text-right">
+            Meals
           </th>
         </tr>
       </thead>
       <tbody>
-        {plantRows.map((row) => (
-          <PlantReportRow
-            key={row.canonicalKey}
+        {rows.map((row) => (
+          <ReportRow
+            key={row.displayKey}
             row={row}
-            variety={varietyByRowKey.get(row.canonicalKey)}
-            expanded={expandedKeys.has(row.canonicalKey)}
-            onToggle={() => onToggle(row.canonicalKey)}
+            variety={varietyByRowKey.get(row.displayKey)}
+            expanded={expandedKeys.has(row.displayKey)}
+            onToggle={() => onToggle(row.displayKey)}
           />
         ))}
       </tbody>
@@ -527,39 +747,69 @@ function PlantReportTable({
   );
 }
 
-// ─── Main report body ─────────────────────────────────────────────────────────
-// Container-agnostic page body. The host page provides the page chrome and
-// back navigation. No Dialog shell — this is the page conversion of the former
-// PlantDiversityExplorer modal.
+// ─── Section block ────────────────────────────────────────────────────────────
 
-export interface PlantDiversityReportProps {
-  weekMeals: WeekMealEntry[];
+function SectionBlock({
+  section,
+  sortedRows,
+  varietyByRowKey,
+  expandedKeys,
+  onToggle,
+  children,
+}: {
+  section: ReportSection;
+  sortedRows: IngredientRow[];
+  varietyByRowKey: Map<string, CanonicalVarietyDisplay>;
+  expandedKeys: Set<string>;
+  onToggle: (key: string) => void;
+  children?: React.ReactNode;
+}) {
+  if (sortedRows.length === 0 && !children) return null;
+
+  return (
+    <div className="rounded-2xl border border-border/50 bg-background overflow-hidden">
+      <div className="px-5 py-4 border-b border-border/50">
+        <div className="flex items-center gap-2">
+          <span className="text-lg" aria-hidden="true">
+            {getSectionEmoji(section)}
+          </span>
+          <h2 className="text-base font-semibold">{getSectionLabel(section)}</h2>
+          {sortedRows.length > 0 && (
+            <span className="ml-auto text-[11px] text-muted-foreground/45 tabular-nums">
+              {sortedRows.length} ingredient{sortedRows.length !== 1 ? "s" : ""}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Optional extra content (e.g. 30 Plants tracker, category grid) */}
+      {children}
+
+      {sortedRows.length > 0 ? (
+        <ReportTable
+          rows={sortedRows}
+          varietyByRowKey={varietyByRowKey}
+          expandedKeys={expandedKeys}
+          onToggle={onToggle}
+        />
+      ) : (
+        <div className="px-5 py-8 text-center text-sm text-muted-foreground/45">
+          No {getSectionLabel(section).toLowerCase()} ingredients this week.
+        </div>
+      )}
+    </div>
+  );
 }
 
-export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
-  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
-  const [sortKey, setSortKey] = useState<SortKey>("category");
+// ─── 30 Plants tracker ────────────────────────────────────────────────────────
 
-  const { plantRows, categoriesFound } = useMemo(
-    () => computePlantData(weekMeals),
-    [weekMeals],
-  );
-
-  const sortedRows = useMemo(
-    () => sortPlantRows(plantRows, sortKey),
-    [plantRows, sortKey],
-  );
-
-  // WS2B — educational variety surfacing. Computed in a SEPARATE pass that never
-  // feeds plantRows / plantCount; sort order doesn't affect ownership. Keyed by
-  // row canonicalKey so each row can render its food's Your/Broaden sections.
-  const varietyByRowKey = useMemo(() => {
-    const allIngredients = weekMeals.flatMap((m) => m.ingredients);
-    const rowInputs = plantRows.map((r) => ({ key: r.canonicalKey, representative: r.canonicalKey }));
-    return buildRowVarietyDisplays(allIngredients, rowInputs);
-  }, [weekMeals, plantRows]);
-
-  const plantCount = plantRows.length;
+function ThirtyPlantsTracker({
+  plantCount,
+  categoriesFound,
+}: {
+  plantCount: number;
+  categoriesFound: Set<PlantCategory>;
+}) {
   const pct = Math.min((plantCount / WEEKLY_PLANT_TARGET) * 100, 100);
   const isComplete = plantCount >= WEEKLY_PLANT_TARGET;
   const isOnTrack = plantCount >= Math.round(WEEKLY_PLANT_TARGET * 0.6);
@@ -570,6 +820,155 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
       ? "bg-teal-500"
       : "bg-amber-400";
 
+  const statusMessage = isComplete
+    ? "You've hit 30 plants this week — brilliant variety."
+    : isOnTrack
+      ? `${WEEKLY_PLANT_TARGET - plantCount} more plants to reach 30 this week.`
+      : `${WEEKLY_PLANT_TARGET - plantCount} plants still to go. Every meal is a chance to add more.`;
+
+  return (
+    <>
+      {/* 30 Plants progress */}
+      <div className="px-5 pt-4 pb-3 border-b border-border/50">
+        <div className="flex items-center gap-2 mb-2">
+          <Leaf className="h-3.5 w-3.5 text-emerald-600/70 dark:text-emerald-400/70 flex-shrink-0" />
+          <p className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wide">
+            30 Plants This Week
+          </p>
+        </div>
+        <div className="flex items-baseline gap-1.5 mb-2">
+          <span
+            className={`text-3xl font-bold tabular-nums ${
+              isComplete ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+            }`}
+            data-testid="text-plant-count"
+          >
+            {plantCount}
+          </span>
+          <span className="text-lg text-muted-foreground/60 font-medium">
+            / {WEEKLY_PLANT_TARGET}
+          </span>
+          <span className="text-sm text-muted-foreground/50 ml-1">plants</span>
+        </div>
+        <div className="h-2 w-full bg-muted/40 rounded-full overflow-hidden mb-2">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+            style={{ width: `${pct}%` }}
+            role="progressbar"
+            aria-valuenow={plantCount}
+            aria-valuemax={WEEKLY_PLANT_TARGET}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground/60 leading-relaxed">{statusMessage}</p>
+      </div>
+
+      {/* Categories covered */}
+      <CategoryGrid categoriesFound={categoriesFound} />
+    </>
+  );
+}
+
+// ─── Compact summary (Stage 1) ────────────────────────────────────────────────
+
+function ReportSummary({
+  plantCount,
+  totalIngredients,
+  categoriesFound,
+}: {
+  plantCount: number;
+  totalIngredients: number;
+  categoriesFound: Set<PlantCategory>;
+}) {
+  const isComplete = plantCount >= WEEKLY_PLANT_TARGET;
+  const pct = Math.min((plantCount / WEEKLY_PLANT_TARGET) * 100, 100);
+
+  return (
+    <div className="rounded-2xl border border-border/50 bg-background overflow-hidden">
+      <div className="px-5 py-4 grid grid-cols-3 divide-x divide-border/40">
+        <div className="pr-4">
+          <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1">
+            Plants
+          </p>
+          <p
+            className={`text-xl font-bold tabular-nums ${
+              isComplete ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
+            }`}
+          >
+            {plantCount}
+            <span className="text-sm font-normal text-muted-foreground/50 ml-1">
+              / {WEEKLY_PLANT_TARGET}
+            </span>
+          </p>
+          <div className="h-1 w-full bg-muted/40 rounded-full overflow-hidden mt-1.5">
+            <div
+              className={`h-full rounded-full transition-all ${
+                isComplete ? "bg-emerald-500" : pct >= 60 ? "bg-teal-500" : "bg-amber-400"
+              }`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
+        <div className="px-4">
+          <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1">
+            Ingredients
+          </p>
+          <p className="text-xl font-bold tabular-nums">{totalIngredients}</p>
+          <p className="text-[11px] text-muted-foreground/45 mt-1">this week</p>
+        </div>
+        <div className="pl-4">
+          <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1">
+            Plant Categories
+          </p>
+          <p className="text-xl font-bold tabular-nums">
+            {categoriesFound.size}
+            <span className="text-sm font-normal text-muted-foreground/50 ml-1">
+              / {CATEGORY_ORDER.length}
+            </span>
+          </p>
+          <p className="text-[11px] text-muted-foreground/45 mt-1">covered</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
+  const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
+  const [sortKey, setSortKey] = useState<SortKey>("category");
+
+  const {
+    plantRows,
+    meatRows,
+    dairyRows,
+    eggRows,
+    otherRows,
+    plantCount,
+    totalIngredients,
+    categoriesFound,
+  } = useMemo(() => computeAllRows(weekMeals), [weekMeals]);
+
+  // Sort within each section independently
+  const sortedPlantRows  = useMemo(() => sortRows(plantRows,  sortKey), [plantRows,  sortKey]);
+  const sortedMeatRows   = useMemo(() => sortRows(meatRows,   sortKey), [meatRows,   sortKey]);
+  const sortedDairyRows  = useMemo(() => sortRows(dairyRows,  sortKey), [dairyRows,  sortKey]);
+  const sortedEggRows    = useMemo(() => sortRows(eggRows,    sortKey), [eggRows,    sortKey]);
+  const sortedOtherRows  = useMemo(() => sortRows(otherRows,  sortKey), [otherRows,  sortKey]);
+
+  // WS2B variety surfacing — plant rows only (read-only, never feeds count)
+  const varietyByRowKey = useMemo(() => {
+    const allIngredients = weekMeals.flatMap((m) => m.ingredients);
+    const rowInputs = plantRows.map((r) => ({
+      key: r.displayKey,
+      representative: r.canonicalKey,
+    }));
+    return buildRowVarietyDisplays(allIngredients, rowInputs);
+  }, [weekMeals, plantRows]);
+
+  // Empty variety map for non-plant sections (no FoodReport shown)
+  const emptyVarietyMap = useMemo(() => new Map<string, CanonicalVarietyDisplay>(), []);
+
   function toggleRow(key: string) {
     setExpandedKeys((prev) => {
       const next = new Set(prev);
@@ -579,91 +978,105 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
     });
   }
 
-  const statusMessage = isComplete
-    ? "You've hit 30 plants this week — brilliant variety."
-    : isOnTrack
-      ? `${WEEKLY_PLANT_TARGET - plantCount} more plants to reach 30 this week.`
-      : `${WEEKLY_PLANT_TARGET - plantCount} plants still to go. Every meal is a chance to add more.`;
+  const hasAnyIngredients = totalIngredients > 0;
 
-  return (
-    <div className="rounded-2xl border border-border/50 bg-background overflow-hidden">
-      {/* ── Header / score ─────────────────────────────────────────────── */}
-      <div className="px-5 pt-5 pb-4 border-b border-border/50">
-        <div className="flex items-center gap-2">
-          <Leaf className="h-4 w-4 text-emerald-600/70 dark:text-emerald-400/70 flex-shrink-0" />
-          <h2 className="text-base font-semibold">30 Plants This Week</h2>
-        </div>
-        <p className="text-xs text-muted-foreground/55 mt-0.5">
-          How your meals contributed to this week's plant nutrition.
-        </p>
-
-        <div className="mt-3 space-y-2">
-          <div className="flex items-baseline gap-1.5">
-            <span
-              className={`text-3xl font-bold tabular-nums ${
-                isComplete ? "text-emerald-600 dark:text-emerald-400" : "text-foreground"
-              }`}
-              data-testid="text-plant-count"
-            >
-              {plantCount}
-            </span>
-            <span className="text-lg text-muted-foreground/60 font-medium">
-              / {WEEKLY_PLANT_TARGET}
-            </span>
-            <span className="text-sm text-muted-foreground/50 ml-1">plants</span>
-          </div>
-
-          <div className="h-2 w-full bg-muted/40 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-              style={{ width: `${pct}%` }}
-              role="progressbar"
-              aria-valuenow={plantCount}
-              aria-valuemax={WEEKLY_PLANT_TARGET}
-            />
-          </div>
-
-          <p className="text-xs text-muted-foreground/60 leading-relaxed">
-            {statusMessage}
+  if (!hasAnyIngredients) {
+    return (
+      <div className="rounded-2xl border border-border/50 bg-background overflow-hidden">
+        <div className="px-5 py-16 text-center">
+          <p className="text-sm text-muted-foreground/50">
+            Your Nutrition Report will appear here once meals are added to your week.
           </p>
         </div>
       </div>
+    );
+  }
 
-      {/* ── Categories covered ─────────────────────────────────────────── */}
-      <CategoryGrid categoriesFound={categoriesFound} />
+  return (
+    <div className="space-y-4">
+      {/* Compact summary (Stage 1) */}
+      <ReportSummary
+        plantCount={plantCount}
+        totalIngredients={totalIngredients}
+        categoriesFound={categoriesFound}
+      />
 
-      {/* ── Suggestions for missing categories ─────────────────────────── */}
-      <CategoryCompletionSuggestions categoriesFound={categoriesFound} />
+      {/* Sort controls */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <p className="text-[11px] text-muted-foreground/45">
+          {totalIngredients} ingredient{totalIngredients !== 1 ? "s" : ""} across all sections
+        </p>
+        <SortControl sortKey={sortKey} onChange={setSortKey} />
+      </div>
 
-      {/* ── Plant report ───────────────────────────────────────────────── */}
-      {plantRows.length === 0 ? (
-        <div className="px-5 py-10 text-center text-sm text-muted-foreground/50">
-          Your plant nutrition report will appear here once meals are added to your week.
-        </div>
-      ) : (
-        <div>
-          <div className="px-5 py-3 border-b border-border/50 bg-muted/10 flex items-center justify-between gap-4 flex-wrap">
-            <div className="min-w-0">
-              <p className="text-[11px] font-medium text-muted-foreground/60 uppercase tracking-wide">
-                Plant Nutrition Report
-              </p>
-              <p className="text-[11px] text-muted-foreground/45 mt-0.5 leading-relaxed">
-                What each plant contributes to your week's nutrition.
-              </p>
-            </div>
-            <SortControl sortKey={sortKey} onChange={setSortKey} />
+      {/* Section 1 — Plant Based */}
+      <SectionBlock
+        section="plant-based"
+        sortedRows={sortedPlantRows}
+        varietyByRowKey={varietyByRowKey}
+        expandedKeys={expandedKeys}
+        onToggle={toggleRow}
+      >
+        <ThirtyPlantsTracker
+          plantCount={plantCount}
+          categoriesFound={categoriesFound}
+        />
+        {sortedPlantRows.length === 0 && (
+          <div className="px-5 py-6 text-center text-sm text-muted-foreground/45 border-b border-border/30">
+            No plant-based ingredients found this week.
           </div>
-          <PlantReportTable
-            plantRows={sortedRows}
-            varietyByRowKey={varietyByRowKey}
-            expandedKeys={expandedKeys}
-            onToggle={toggleRow}
-          />
-        </div>
+        )}
+      </SectionBlock>
+
+      {/* Section 2 — Meat & Fish */}
+      {meatRows.length > 0 && (
+        <SectionBlock
+          section="meat"
+          sortedRows={sortedMeatRows}
+          varietyByRowKey={emptyVarietyMap}
+          expandedKeys={expandedKeys}
+          onToggle={toggleRow}
+        />
       )}
 
-      {/* ── Cross-link to evergreen Pantry Explore hub ─────────────────── */}
-      <div className="px-5 py-4 border-t border-border/30">
+      {/* Section 3 — Dairy */}
+      {dairyRows.length > 0 && (
+        <SectionBlock
+          section="dairy"
+          sortedRows={sortedDairyRows}
+          varietyByRowKey={emptyVarietyMap}
+          expandedKeys={expandedKeys}
+          onToggle={toggleRow}
+        />
+      )}
+
+      {/* Section 4 — Eggs */}
+      {eggRows.length > 0 && (
+        <SectionBlock
+          section="eggs"
+          sortedRows={sortedEggRows}
+          varietyByRowKey={emptyVarietyMap}
+          expandedKeys={expandedKeys}
+          onToggle={toggleRow}
+        />
+      )}
+
+      {/* Section 5 — Other Ingredients */}
+      {otherRows.length > 0 && (
+        <SectionBlock
+          section="other"
+          sortedRows={sortedOtherRows}
+          varietyByRowKey={emptyVarietyMap}
+          expandedKeys={expandedKeys}
+          onToggle={toggleRow}
+        />
+      )}
+
+      {/* Broaden Your Week — at the end (Stage 7) */}
+      <BroadenYourWeek categoriesFound={categoriesFound} />
+
+      {/* Cross-link to Pantry */}
+      <div className="rounded-2xl border border-border/50 bg-background px-5 py-4">
         <Link
           href="/pantry?mode=explore"
           className="inline-flex items-center gap-2 text-xs font-medium text-emerald-700 dark:text-emerald-400 hover:underline"
@@ -674,8 +1087,8 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
         </Link>
       </div>
 
-      {/* ── Footer note + disclaimer ───────────────────────────────────── */}
-      <div className="px-5 py-4 border-t border-border/30 space-y-1.5">
+      {/* Disclaimer */}
+      <div className="px-1 space-y-1">
         <p className="text-[11px] text-muted-foreground/40 leading-relaxed">
           Plant count is an approximation based on ingredient names. Fruit, veg,
           legumes, seeds, nuts, whole grains, herbs, spices, and olive oil all count.

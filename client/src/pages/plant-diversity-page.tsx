@@ -1,17 +1,17 @@
 import { Link } from "wouter";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, BarChart3, Loader2 } from "lucide-react";
 import { useWeekMealEntries } from "@/hooks/use-week-meal-entries";
 import { PlantDiversityReport } from "@/components/PlantDiversityReport";
 
 /**
- * Plant Diversity Report page (route: /plant-diversity).
+ * Nutrition Report page (route: /plant-diversity).
  *
- * The dedicated-page conversion of the former "30 Plants This Week" modal.
- * Reached from the planner's plant-diversity counter. Answers:
- *   "How did my meals contribute to this week's plant nutrition?"
+ * Full redesign from the former "30 Plants This Week" modal.
+ * Shows what the household ate, how it contributes to nutrition,
+ * and helps users broaden variety across the week.
  *
- * Data is resolved independently via useWeekMealEntries (shared query caches),
- * so the page is deep-linkable and decoupled from planner component state.
+ * Data resolved via useWeekMealEntries (shared query cache) — page is
+ * deep-linkable and decoupled from planner component state.
  */
 export default function PlantDiversityPage() {
   const { weekMeals, isLoading } = useWeekMealEntries();
@@ -21,16 +21,29 @@ export default function PlantDiversityPage() {
       {/* Back to planner */}
       <Link
         href="/planner"
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground/70 hover:text-foreground transition-colors mb-3"
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground/70 hover:text-foreground transition-colors mb-5"
         data-testid="link-back-to-planner"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
         Back to your week
       </Link>
 
-      <h1 className="text-xl font-semibold mb-4" data-testid="text-plant-diversity-title">
-        Plant Diversity Report
-      </h1>
+      {/* Page hero */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2.5 mb-1.5">
+          <BarChart3 className="h-5 w-5 text-emerald-600/70 dark:text-emerald-400/70 flex-shrink-0" />
+          <h1
+            className="text-2xl font-bold tracking-tight"
+            data-testid="text-nutrition-report-title"
+          >
+            Nutrition Report
+          </h1>
+        </div>
+        <p className="text-sm text-muted-foreground/60 leading-relaxed max-w-2xl">
+          Understand what your household eats, how it supports your health, and
+          discover ingredients to try next.
+        </p>
+      </div>
 
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
