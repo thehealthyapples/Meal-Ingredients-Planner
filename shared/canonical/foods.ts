@@ -243,14 +243,20 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
 
   // ════════════════════════ Vegetables — Leafy greens ════════════════════════
   // WS2F: Spinach added — exists in WS0 registry, high cross-system presence.
+  // WS2F Amendment: baby-spinach and mature-spinach are VARIETIES (not aliases).
+  // Variety matters for user recognition, exploration and food report usefulness.
+  // Fresh / frozen are forms (preparation aliases), not varieties.
   {
     food: {
       slug: "spinach", name: "Spinach", category: "Vegetables", subcategory: "Leafy greens",
       description: "A leafy green vegetable rich in folate, iron and vitamin K.",
       knowledgeFoodSlug: "spinach", diversityGroupSlug: "spinach",
     },
+    varieties: [
+      { slug: "baby-spinach", name: "Baby Spinach", displayOrder: 0 },
+      { slug: "mature-spinach", name: "Mature Spinach", displayOrder: 1 },
+    ],
     aliases: [
-      { alias: "baby spinach", aliasType: "form" },
       { alias: "fresh spinach", aliasType: "form" },
       { alias: "frozen spinach", aliasType: "form" },
     ],

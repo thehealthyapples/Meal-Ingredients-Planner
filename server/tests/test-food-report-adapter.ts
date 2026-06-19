@@ -112,7 +112,19 @@ function run() {
     check("spinach: has Vitamin K", contains(spinach.keyNutrients, "Vitamin K"));
     check("spinach: healthBenefits ≥ 1", spinach.healthBenefits.length >= 1);
     check("spinach: nutritionContext non-empty (iron absorption)", spinach.nutritionContext.length >= 1);
-    check("spinach: 0 varieties (no variety data defined)", spinach.varieties.length === 0);
+    // WS2F Amendment: spinach uses the variety model (baby + mature).
+    check("spinach: 2 varieties (baby-spinach, mature-spinach)", spinach.varieties.length === 2);
+    const baby = spinach.varieties.find((v) => v.slug === "baby-spinach");
+    const mature = spinach.varieties.find((v) => v.slug === "mature-spinach");
+    check("spinach: baby-spinach variety present", baby !== undefined);
+    check("spinach: baby label = Baby", baby?.label === "Baby");
+    check("spinach: mature-spinach variety present", mature !== undefined);
+    check("spinach: mature label = Mature", mature?.label === "Mature");
+    // No knowledgeFoodSlug on varieties → no additional facts fabricated
+    check(
+      "spinach: varieties have no additional nutrients (no WS0 link)",
+      spinach.varieties.every((v) => v.additionalNutrients.length === 0),
+    );
   }
 
   // ── 3. Mushroom (shared knowledge + variety knowledge) ──────────────────────
