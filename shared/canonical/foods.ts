@@ -1,19 +1,25 @@
 // WS2A — Canonical Food Identity: Food / Variety / Alias seed data.
+// Extended in WS2F with spinach, lentils, and variety knowledgeFoodSlug links.
 //
 // Authored in a STRUCTURED form (one entry per canonical food, with its
 // varieties and aliases nested) so the editorial intent reads top-to-bottom.
 // shared/canonical/index.ts flattens this into the per-table insert arrays.
 //
 // Proving set (NOT the whole world): Tomatoes, Mushrooms, Herbs, Spices, Apples,
-// Citrus, Beans, Seeds, Nuts, Healthy fats — chosen to exercise every mechanism:
+// Citrus, Beans, Seeds, Nuts, Healthy fats, Leafy greens, Lentils — chosen to
+// exercise every mechanism:
 //   • aliases (singular/plural/common_name/form/misspelling)
-//   • varieties (cherry/plum/heirloom tomato; mushroom kinds; apple kinds)
+//   • varieties (cherry/plum/heirloom tomato; mushroom kinds; apple kinds;
+//     red/green/puy/beluga lentil)
 //   • diversity groups (one-food-many-varieties AND many-foods-one-group/citrus)
 //
 // Editorial rules applied (WS1.5):
 //   • Tomato = 1 plant; cherry/plum/heirloom = VARIETIES (not aliases, not foods).
 //   • Mushroom = 1 plant; button/chestnut/shiitake/oyster = VARIETIES.
+//   • Lentils = 1 plant; red/green/puy/beluga = VARIETIES; preparations (dried,
+//     split, tinned) = ALIASES (form).
 //   • Each herb/spice counts individually; fresh vs dried = ALIASES (form).
+//   • Preparations are NEVER canonical foods (WS2F rule).
 import type { InsertCanonicalFood } from "../schema";
 
 export type AliasType = "singular" | "plural" | "common_name" | "brand" | "misspelling" | "form";
@@ -23,6 +29,10 @@ export interface VarietySeed {
   name: string;
   description?: string;
   displayOrder?: number;
+  // WS2F: optional link to the WS0 knowledge food that covers this variety.
+  // Used by the FoodReportKnowledgeAdapter to surface variety-specific nutrients
+  // and benefits without creating a new data store.
+  knowledgeFoodSlug?: string | null;
 }
 
 export interface AliasSeed {
@@ -68,10 +78,10 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       knowledgeFoodSlug: null, diversityGroupSlug: "mushroom",
     },
     varieties: [
-      { slug: "button-mushroom", name: "Button Mushroom", description: "Also sold as white or closed-cup.", displayOrder: 0 },
-      { slug: "chestnut-mushroom", name: "Chestnut Mushroom", description: "Also sold as cremini or brown.", displayOrder: 1 },
-      { slug: "shiitake-mushroom", name: "Shiitake Mushroom", displayOrder: 2 },
-      { slug: "oyster-mushroom", name: "Oyster Mushroom", displayOrder: 3 },
+      { slug: "button-mushroom", name: "Button Mushroom", description: "Also sold as white or closed-cup.", displayOrder: 0, knowledgeFoodSlug: "white-mushrooms" },
+      { slug: "chestnut-mushroom", name: "Chestnut Mushroom", description: "Also sold as cremini or brown.", displayOrder: 1, knowledgeFoodSlug: "chestnut-mushrooms" },
+      { slug: "shiitake-mushroom", name: "Shiitake Mushroom", displayOrder: 2, knowledgeFoodSlug: "shiitake-mushrooms" },
+      { slug: "oyster-mushroom", name: "Oyster Mushroom", displayOrder: 3, knowledgeFoodSlug: "oyster-mushrooms" },
     ],
     aliases: [
       { alias: "mushrooms", aliasType: "plural" },
@@ -231,6 +241,21 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     ],
   },
 
+  // ════════════════════════ Vegetables — Leafy greens ════════════════════════
+  // WS2F: Spinach added — exists in WS0 registry, high cross-system presence.
+  {
+    food: {
+      slug: "spinach", name: "Spinach", category: "Vegetables", subcategory: "Leafy greens",
+      description: "A leafy green vegetable rich in folate, iron and vitamin K.",
+      knowledgeFoodSlug: "spinach", diversityGroupSlug: "spinach",
+    },
+    aliases: [
+      { alias: "baby spinach", aliasType: "form" },
+      { alias: "fresh spinach", aliasType: "form" },
+      { alias: "frozen spinach", aliasType: "form" },
+    ],
+  },
+
   // ════════════════════════ Beans / Legumes ════════════════════════
   {
     food: {
@@ -273,6 +298,30 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     },
     aliases: [
       { alias: "lima beans", aliasType: "common_name" },
+    ],
+  },
+  // WS2F: Lentils added as one canonical food with four varieties (WS2E
+  // recommended decision: generic lentil = 1 food + red/green/puy/beluga
+  // varieties). knowledgeFoodSlug is null to avoid conflating the generic
+  // "lentils" with red-lentils nutritionally; each variety wires to WS0.
+  // Preparations (dried/split/tinned) are form ALIASES, never foods.
+  {
+    food: {
+      slug: "lentils", name: "Lentils", category: "Legumes", subcategory: "Lentils",
+      description: "A versatile legume available in several varieties; a good source of plant protein and fibre.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "lentils",
+    },
+    varieties: [
+      { slug: "red-lentil", name: "Red Lentils", displayOrder: 0, knowledgeFoodSlug: "red-lentils" },
+      { slug: "green-lentil", name: "Green Lentils", displayOrder: 1 },
+      { slug: "puy-lentil", name: "Puy Lentils", displayOrder: 2 },
+      { slug: "beluga-lentil", name: "Beluga Lentils", displayOrder: 3 },
+    ],
+    aliases: [
+      { alias: "dried lentils", aliasType: "form" },
+      { alias: "split lentils", aliasType: "form" },
+      { alias: "tinned lentils", aliasType: "form" },
+      { alias: "cooked lentils", aliasType: "form" },
     ],
   },
 

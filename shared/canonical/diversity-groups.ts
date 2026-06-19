@@ -35,11 +35,16 @@ export const DIVERSITY_GROUP_SEED: InsertDiversityGroup[] = [
   { slug: "ginger", displayName: "Ginger", countAsSinglePlant: true },
   { slug: "paprika", displayName: "Paprika", countAsSinglePlant: true },
 
+  // ── Vegetables / leafy ──────────────────────────────────────────────────────
+  { slug: "spinach", displayName: "Spinach", countAsSinglePlant: true },
+
   // ── Legumes ─────────────────────────────────────────────────────────────────
   { slug: "chickpeas", displayName: "Chickpeas", countAsSinglePlant: true },
   { slug: "black-beans", displayName: "Black Beans", countAsSinglePlant: true },
   { slug: "kidney-beans", displayName: "Kidney Beans", countAsSinglePlant: true },
   { slug: "butter-beans", displayName: "Butter Beans", countAsSinglePlant: true },
+  // All lentil varieties (red / green / puy / beluga) count as one plant.
+  { slug: "lentils", displayName: "Lentils", description: "All lentil varieties — red, green, puy and beluga — count as one plant.", countAsSinglePlant: true },
 
   // ── Seeds ───────────────────────────────────────────────────────────────────
   { slug: "pumpkin-seeds", displayName: "Pumpkin Seeds", countAsSinglePlant: true },
