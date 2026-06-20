@@ -10,8 +10,9 @@
 | **Date** | 2026-06-20 |
 | **Branch** | `safety/preserve-since-last-prod-20260617-1613` |
 | **HEAD at investigation** | `72eccee` (WS3A complete) |
-| **Rollback tag** | `rollback/ws4b-pre-investigation-20260620` → commit `72eccee` |
-| **Restore command** | `git checkout rollback/ws4b-pre-investigation-20260620` |
+| **Rollback tag (original investigation)** | `rollback/ws4b-pre-investigation-20260620` → commit `72eccee` |
+| **Rollback tag (this amendment)** | `rollback/ws4b-amendment-20260620` → commit `5d453d0` |
+| **Restore command** | `git reset --hard rollback/ws4b-amendment-20260620` (amendment) · `git checkout rollback/ws4b-pre-investigation-20260620` (original) |
 | **Predecessor documents** | WS0 · WS1.5 · WS2A · WS2B · WS2C · WS2D · WS2E · WS2F · WS2G · WS3A · WS3B |
 | **Prior pipeline investigations** | `NUTRITION_KNOWLEDGE_MANAGEMENT_SYSTEM_V1_DESIGN.md` · `NUTRITION_KNOWLEDGE_EDITORIAL_AND_AUTOMATION_FRAMEWORK.md` |
 
@@ -28,6 +29,29 @@ Changes meaning of existing data: NO. Requires backfill: NO.
    All prior workstreams (WS0–WS2G) also protected via their respective tags.
 3. ✅ **Rollback tag created:** `rollback/ws4b-pre-investigation-20260620` → commit `72eccee`.
 4. ✅ **Rollback identifier:** `rollback/ws4b-pre-investigation-20260620`
+
+### 0.1 AMENDMENT ROLLBACK & SAFETY HEADER (this amendment — completed 2026-06-20)
+
+This document was amended on 2026-06-20 to add (1) automated canonical food growth and
+(2) multi-path benefits. Rollback protection for the amendment was established before any edit:
+
+1. ✅ **Working tree cleaned and protected.** Two untracked investigations (`WS4B…`, `WS3B…`) were
+   committed so the WS4B file itself was no longer unprotected. Commit `5d453d0`.
+2. ✅ **WS4B investigation protected.** Now in git history (was untracked). Original investigation
+   content preserved verbatim below; this amendment only adds sections and in-place pointers.
+3. ✅ **Amendment rollback tag created:** `rollback/ws4b-amendment-20260620` → commit `5d453d0`.
+4. ✅ **Rollback identifier:** `rollback/ws4b-amendment-20260620`
+   (restore: `git reset --hard rollback/ws4b-amendment-20260620`)
+
+> **AMENDMENT NOTICE (2026-06-20).** Two architecture amendments are recorded in this document:
+> - **Amendment A — Automated Canonical Food Growth** (full spec: *Amendment A*, below; in-place
+>   changes at §4.3 and §12.3). The canonical spine may now grow automatically **for identity only**,
+>   under strict safety gates. It does **not** weaken the hard wall, which protects *claims*.
+> - **Amendment B — Multi-Path Benefits** (full spec: *Amendment B*, below; in-place change at §3.4).
+>   A benefit may now be supported by **nutrient, attribute, or dietary-pattern** evidence paths —
+>   the nutrient-bridge "composed, not invented" rule is generalised, not relaxed.
+>
+> Investigation only. No implementation. No schema changes. No UI. No automatic publishing of claims.
 
 ---
 
@@ -431,6 +455,13 @@ This means:
 
 THA never writes "Tomatoes support heart health" as a direct, unanchored claim. The composition proves it.
 
+> **AMENDED BY AMENDMENT B (2026-06-20).** The nutrient bridge is now **one of three** evidence
+> paths. A benefit may be composed from a **nutrient path** (above), an **attribute path**
+> (e.g. *fermented* → gut health), or a **dietary-pattern path** (e.g. *Mediterranean diet* →
+> heart health) — or any combination. The "composed, not invented" rule is **unchanged and
+> generalised**: THA still never authors an unanchored food→benefit claim; every path is
+> independently sourced. See *Amendment B — Multi-Path Benefits*.
+
 ---
 
 ## SECTION 4 — PART 3: INGESTION ARCHITECTURE
@@ -522,10 +553,17 @@ Step 4 — Normalised lookup
 Step 5 — No match found
   source_term placed in candidate_facts with canonical_food_id = NULL
   editorial_status = 'unmatched' (a sub-status of 'candidate')
-  Admin sees it in a separate "Unmatched Claims" queue
+  → AMENDED: enters the Canonical Growth path (Amendment A) instead of waiting
+    indefinitely for an admin. The grower decides: auto-promote (safe) or queue (review).
 ```
 
-**Unmatched claims are not discarded** — they surface in the editorial queue as items requiring a manual canonical match decision. If the claim is for a valid food THA does not yet have in the canonical spine, this becomes a trigger to add it there first.
+**Unmatched claims are not discarded.** **AMENDED BY AMENDMENT A (2026-06-20):** an unmatched
+term that has **trusted-source evidence** no longer waits for a human to hand-create the food.
+It enters the **Canonical Growth path**: the system creates a **Candidate Canonical Food**, runs
+the safe-promotion validation, and either auto-promotes the *identity* (safe, whole-food cases) or
+queues it for review (blends, products, ambiguous cases). The associated *claims* still never
+auto-publish — they continue through the full editorial wall. See *Amendment A — Automated
+Canonical Food Growth*.
 
 ### 4.4 Conflict handling
 
@@ -1123,6 +1161,27 @@ The recommendation is to **build Phase 1 correctly first** — with the full har
 | A UK regulatory body (ASA/NHS) updates guidance on health claims | Medium | NHS is a monitored source; guidance changes are ingested as candidate items |
 | Wording that was safe in context looks promotional in isolation (e.g. on Shopping) | Medium | Surface-specific wording review: all surfaces pre-test display of approved wording |
 
+### 11.5 Automated canonical growth risks (Amendment A)
+
+| Risk | Severity | Mitigation |
+|---|---|---|
+| Duplicate canonical food auto-created | Medium | G4 dup gate; continuous dup-detection job; merge tool; `origin='auto'` makes all auto foods queryable |
+| Marketing product / blend enters spine as a food | Medium | G1 + G5 blend/product/brand classifier; demote action; **no claims auto-attach**, so blast radius = one empty node |
+| Wrong or missing category | Low–Medium | G3 single-high-confidence-category gate (else queue); category editable post-hoc; surfaces in audit list |
+| Trust in the curated spine erodes as auto foods accumulate | Medium | `origin='auto'` + `human_confirmed=false`; low-priority post-hoc audit list; **claims never ride in with identity** |
+| Plural/variety collision (e.g. `lentils` vs `lentil`) | Low | G4 + G6 normalisation; WS2B variety resolver; merge tool |
+| Grower precision unknown before launch | Medium | Shadow/propose-only mode first; thresholds are config; auto-promote can be switched to queue-everything without a code change |
+
+### 11.6 Multi-path benefit risks (Amendment B)
+
+| Risk | Severity | Mitigation |
+|---|---|---|
+| A weak path inflates a benefit | Medium | `headline_strength = max(qualifying paths)`; weak paths add confidence only, never strength; wording gated per §6.3/§9 |
+| Confidence inflated by double-counting paths | Low–Medium | Confidence counts **independent sources**, not paths; shared sources don't compound |
+| Attribute claims read as marketing ("fermented = healthy") | Medium | Attribute→benefit links carry their own evidence + wording gate; same guardrails (§9) as nutrient claims; attributes ≠ WS3B qualifiers |
+| Food "inherits" a whole diet's benefit (pattern overreach) | Medium–High | Pattern path needs **two** anchored links (food→pattern membership AND pattern→benefit); wording must attribute to the pattern, never the food alone |
+| Cross-path contradiction silently published | Medium | Contradiction handling (§4.4) elevates to editorial; default cautious; nothing publishes until resolved |
+
 ---
 
 ## SECTION 12 — CANONICAL MAPPING APPROACH (SYNTHESIS)
@@ -1198,7 +1257,16 @@ The canonical matcher is read-only against the canonical spine — it cannot add
 2. An admin decides: add this food to the canonical spine (WS2A operation), add an alias, or classify as out of scope
 3. Only after the canonical spine is updated does the claim re-enter the standard pipeline
 
-This preserves the WS2A invariant: **the canonical food spine is curated, not auto-populated**.
+> **AMENDED BY AMENDMENT A (2026-06-20).** The WS2A invariant changes from *"the canonical food
+> spine is curated, not auto-populated"* to:
+>
+> **The canonical food spine is curated *or* auto-grown under safety gates — but every claim about
+> a food is still human-approved.**
+>
+> The matcher itself stays read-only. A **separate, governed Canonical Grower** (not the matcher)
+> may create and, for safe whole-food cases, auto-promote new canonical foods from trusted-source
+> evidence. Blends, products, and ambiguous terms still follow steps 1–3 above (human decision).
+> All auto-created foods carry `origin = 'auto'` and remain fully reversible. See *Amendment A*.
 
 ---
 
@@ -1216,15 +1284,25 @@ This preserves the WS2A invariant: **the canonical food spine is curated, not au
 | **Phase 5** | Staleness monitoring; review expiry; staleness dashboard | Knowledge maintenance |
 | **Phase 6 (future)** | AI-assisted wording suggestions within constrained templates | Only after Phase 1–5 are stable and trusted |
 
+**Amendment build-order notes:**
+- **Multi-path benefits (Amendment B) is a Phase 1 data-model decision.** Model the per-path evidence
+  record (path_type / anchor / strength / sources / wording / explanation) from the start, even if
+  only the nutrient path is populated initially. Retrofitting paths onto a single-path schema later is
+  costly; modelling them now is free.
+- **Automated canonical growth (Amendment A) is a Phase 4+ capability.** It requires the canonical
+  matcher (Phase 4) and the editorial/audit infrastructure (Phase 2) to exist first. Ship it in
+  **shadow mode** before enabling auto-promote. Auto-grow **identity only**; never auto-publish claims.
+
 ### 13.2 Design decisions to preserve
 
 These findings from prior investigations must not be reversed:
 
-1. **The hard wall** — candidate tables are physically separate from published tables. This is not negotiable for trust reasons.
-2. **The nutrient bridge** — THA composes claims from `food → nutrient → benefit`; THA does not author direct food→benefit claims
+1. **The hard wall** — candidate tables are physically separate from published tables. *Amended scope (Amendment A): the hard wall protects **claims**. Identity (a food's existence/name/category) may be auto-grown under safety gates; claims never auto-publish.*
+2. **The nutrient bridge → the path bridge** — THA composes benefits from anchored evidence paths (`food → nutrient/attribute/dietary-pattern → benefit`); THA never authors a direct, unanchored food→benefit claim *(generalised by Amendment B)*
 3. **One adapter** — all surfaces read through `buildFoodKnowledge()`; no surface has its own knowledge store
-4. **Wording is pre-approved** — surfaces display approved_wording; they do not compose sentences
+4. **Wording is pre-approved** — surfaces display approved_wording; they do not compose sentences. *Per-path wording (Amendment B) is each gated to its own path's evidence strength.*
 5. **AI never publishes** — any AI involvement stops before the publication action
+6. **Auto-growth is identity-only and reversible** *(Amendment A)* — every auto-created food carries `origin='auto'`, attaches zero claims, and is recoverable by merge / re-categorise / demote
 
 ### 13.3 Decisions WS4B leaves open (for implementation phase)
 
@@ -1233,6 +1311,281 @@ These findings from prior investigations must not be reversed:
 - The exact Drizzle schema names for candidate and published tables (follow `shared/schema.ts` conventions when implementing)
 - Whether staleness alerts are in-app dashboard items or email notifications
 - Whether Phase 2 autonomy is ever pursued (depends on editorial workload observed in Phase 1)
+- *(Amendment A)* The exact gate thresholds for safe auto-promotion (source count, category confidence, dup distance) and whether auto-promoted foods carry a human-confirmation SLA
+- *(Amendment A)* The product/blend/brand classifier's implementation (rules-only vs assisted) for the G1/G5 gates
+- *(Amendment B)* Ownership of the attribute taxonomy (`KnowledgeAttribute`) and how food→attribute membership is curated vs inferred
+- *(Amendment B)* How dietary-pattern membership (food→pattern) is curated, and its overlap with existing `DIETARY_PATTERN_*` work
+
+---
+
+## AMENDMENT A — AUTOMATED CANONICAL FOOD GROWTH (2026-06-20)
+
+> Amends §4.3 (step 5), §12.3, and the WS2A "never auto-populate" invariant.
+> Status: architecture only. No implementation. No schema changes. No auto-publishing of claims.
+
+### A.1 The decision
+
+**Previous proposal (original WS4B, §4.3 step 5 / §12.3):**
+
+```
+Resolver cannot match
+   ↓
+Manual queue
+   ↓
+Admin creates canonical food
+```
+
+**Approved amendment:**
+
+```
+Resolver cannot match
+   ↓
+Trusted-source evidence exists?
+   ↓ yes
+System creates Candidate Canonical Food (CCF) automatically   ← quarantine, not live
+   ↓
+Validation (safe-promotion gates — §A.3)
+   ↓
+   ├─ If SAFE   → auto-promote to canonical registry  (origin = 'auto', reversible)
+   └─ If NOT    → queue for review (human decides)
+```
+
+The goal: **THA knowledge grows naturally.** Admins are not required to hand-create every food
+forever. Whole, unambiguous foods that a Tier-1 source already treats as foods should appear in the
+spine without a manual step — while anything blend-like, product-like, or ambiguous still stops at a
+human.
+
+### A.2 The one distinction that keeps this safe — IDENTITY vs CLAIMS
+
+This amendment **only** automates the **identity spine** — the fact that a food *exists*, its name,
+and its category. It does **not** touch the claims wall.
+
+| Layer | What auto-growth does | Risk if wrong | Recovery |
+|---|---|---|---|
+| **Identity** (food exists, name, category) | **May auto-create and auto-promote** under §A.3 gates | An empty/duplicate/mis-categorised food node appears | Merge, re-categorise, or demote — no user-facing claim is affected |
+| **Claims** (food→nutrient, nutrient/attribute/pattern→benefit, wording) | **Never auto-published.** Always cross the editorial hard wall (§5, §9) | A wrong health claim could reach a user | Prevented by design — claims never auto-publish |
+
+So the worst-case outcome of a bad auto-promotion is *an empty food card with no claims* — not
+misinformation. This is what makes auto-growth acceptable while the §13.2 hard wall remains intact.
+**The hard wall protected claims all along; it never protected mere identity.** Auto-growth simply
+recognises that distinction.
+
+A newly auto-promoted food therefore has **zero published claims** until the normal
+ingestion → review → publish pipeline (Sections 4–5) supplies them through a human.
+
+### A.3 What qualifies as "safe auto-promotion"
+
+A Candidate Canonical Food is auto-promoted **only if it passes every gate**. Any failed gate routes
+it to the review queue with the failing gate(s) named.
+
+| Gate | Rule | Fails when… |
+|---|---|---|
+| **G1 — Single whole food** | Resolves to exactly one botanical / animal / dairy / fungal entity | term contains `mixed`, `blend`, `trail`, `assorted`, `&`, `and`, `with`, multiple food heads |
+| **G2 — Trusted-source corroboration** | Treated as a food entity by ≥2 Tier-1 sources, or 1 Tier-1 + 1 Tier-2 (see §2) | only one low-tier source, or only research-literature mention |
+| **G3 — Clean category resolution** | Maps to exactly one existing DiversityGroup / category at high confidence | resolves to 0 or >1 categories, or low confidence |
+| **G4 — No duplicate** | Not within the alias / near-name / normalised-slug threshold of an existing canonical food, alias, or variety | a curated or auto food already covers it (incl. singular/plural, variety) |
+| **G5 — No product / marketing signal** | Passes the "food, not a product" classifier; no brand, no superlative, no manufactured-product noun | contains a brand, `bar`, `shake`, `supplement`, `adaptogenic`, `superfood`, dosage/format words |
+| **G6 — Clean name normalisation** | Normalises to a single canonical slug (singular, lowercase, qualifier-free) | residual qualifiers/forms remain after normalisation (e.g. `sun-dried`) |
+
+**Worked examples (matching the brief):**
+
+| Term | G1 | G2 | G3 | G4 | G5 | G6 | Outcome |
+|---|---|---|---|---|---|---|---|
+| Broccoli | ✅ | ✅ NHS+USDA | ✅ Vegetables | ✅ | ✅ | ✅ | **Auto-promote** |
+| Carrot | ✅ | ✅ | ✅ Vegetables | ✅ | ✅ | ✅ | **Auto-promote** |
+| Kiwi | ✅ | ✅ | ✅ Fruit | ✅ | ✅ | ✅ | **Auto-promote** |
+| Lentils | ✅ | ✅ | ✅ Pulses/Legumes | ✅ (→ `lentil`) | ✅ | ✅ plural→singular | **Auto-promote** |
+| Kefir | ✅ (generic food, not a brand) | ✅ NHS+Harvard | ✅ Dairy/Fermented | ✅ | ✅ | ✅ | **Auto-promote** |
+| Mixed beans | ❌ blend | — | ✅ but ambiguous | — | — | — | **Queue for review** |
+| Mixed seeds | ❌ blend | — | — | — | — | — | **Queue for review** |
+| Trail mix | ❌ blend | — | ❌ no single category | — | ❌ product form | — | **Queue for review** |
+| Adaptogenic mushroom blend | ❌ blend | — | — | — | ❌ "adaptogenic" marketing | — | **Queue for review** |
+| Protein bar | ❌ compound | — | ❌ | — | ❌ manufactured product | — | **Queue for review** |
+
+Note on **Kefir**: it is product-*like* but is a generic, Tier-1-recognised whole food (not a brand),
+so it passes. The G5 classifier targets *brands and manufactured formats*, not foods that happen to
+be processed. This boundary (generic fermented food = OK; branded product = not OK) is the kind of
+edge the review queue exists to adjudicate when the classifier is unsure.
+
+### A.4 Metadata an auto-created food receives
+
+Every Candidate Canonical Food — whether auto-promoted or queued — is created with:
+
+| Field | Source | Notes |
+|---|---|---|
+| `canonical_name` | normalised display name | e.g. "Lentil" from "lentils" |
+| `canonical_slug` | generated (singular, lowercase) | unique; dup-checked at G4 |
+| `category` / `diversity_group` | G3 resolution | single category or `unresolved` (→ queue) |
+| `possible_attributes` | inferred from source language | **unconfirmed** candidates (e.g. `fermented`, `wholegrain`); never published until reviewed — feeds Amendment B |
+| `trusted_source_references` | the `source_document_id`s that triggered creation | the evidence that justified creation |
+| `editorial_status` | `published` (auto-promoted) **or** `candidate_canonical` (queued) | identity status only |
+| `evidence_summary` | machine-generated | "Created automatically: appears as a food in NHS + USDA; category Vegetables; 2 sources." |
+| `origin` | `'auto'` | **critical** — makes every auto-created food queryable & reversible |
+| `created_by` | `'system:canonical-grower'` | provenance |
+| `promotion_confidence` | score from the gate pass | low scores still publish but rank high in the post-hoc audit list |
+| `human_confirmed` | `false` until a curator confirms | drives the light-touch audit list (§A.6) |
+
+`possible_attributes` are **candidates only**. They are the seed for an attribute path (Amendment B)
+but carry no published benefit until a human approves the attribute→benefit link.
+
+### A.5 Trust check — could auto-growth go wrong?
+
+| Failure mode | Gate that prevents it | If it slips through anyway |
+|---|---|---|
+| **Duplicate food created** | G4 (alias / near-name / normalised-slug check) | Continuous dup-detection job + a **merge tool** that collapses the `origin='auto'` node into the curated one and re-points aliases |
+| **Marketing product becomes a "food"** | G1 + G5 (blend / product / brand classifier) | **Demote** action soft-deletes it from the spine (retained for audit). Because no claims auto-attach, demotion has **no user-facing claim fallout** |
+| **Poor / wrong category** | G3 (single high-confidence category, else queue) | Category is editable post-hoc; mis-categorised auto foods surface in the audit list |
+| **Spine trust erodes over time** | `origin='auto'` + `human_confirmed=false` flags | A low-priority **"auto-created, confirm when convenient"** audit list lets curators sweep auto foods in batches; claims never rode in with them |
+| **Plural / variety collision** (e.g. `lentils` vs `lentil`) | G4 + G6 normalisation | Merge tool; variety resolver (WS2B) reconciles |
+
+**Recovery summary.** Three reversible operations cover every bad outcome: **merge** (duplicate),
+**re-categorise** (wrong category), **demote** (not actually a food). All are cheap precisely because
+auto-growth never attaches claims — the blast radius of any error is a single empty identity node.
+
+### A.6 Governance for auto-growth
+
+- **Shadow mode first (recommended).** Run the grower in propose-only mode initially: it logs what it
+  *would* auto-promote without promoting, so precision can be measured before auto-promote is enabled.
+- **Light-touch post-hoc review.** Auto-promoted foods are live but appear, ranked by lowest
+  `promotion_confidence`, in an audit list for unhurried human confirmation. This is the inverse of the
+  claims wall: claims are reviewed *before* publish; auto identity is reviewed *after* — acceptable
+  only because identity carries no claim risk.
+- **Tunable & pausable.** The grower's gate thresholds are configuration, and auto-promotion can be
+  switched to queue-everything without a code change if precision drops.
+
+---
+
+## AMENDMENT B — MULTI-PATH BENEFITS (2026-06-20)
+
+> Amends §3.4 (the nutrient bridge) and §6 (evidence model).
+> Status: architecture only. No implementation. No schema changes.
+
+### B.1 The decision
+
+**Previous proposal (original WS4B / WS2D spine):**
+
+```
+Food → Nutrients → Benefits
+```
+
+**Approved amendment:**
+
+```
+Food → { Nutrients · Attributes · Dietary Patterns } → Benefits
+        (a benefit may have multiple evidence paths)
+```
+
+A benefit attached to a food is now **composed from one or more evidence paths**, each independently
+sourced and graded. The nutrient bridge's central rule is **preserved and generalised**:
+
+> **THA never invents a food→benefit claim. It composes the benefit from one or more evidence paths
+> — nutrient, attribute, or dietary-pattern — each of which is independently anchored to a trusted
+> source.** Adding paths does not relax the rule; it adds two more *anchored* ways to satisfy it.
+
+### B.2 The three path types
+
+| Path type | Anchor | "Authored by" | Example |
+|---|---|---|---|
+| **Nutrient** (existing) | a `KnowledgeNutrient` | composition source (USDA/NHS) + nutrient→benefit science (NIH ODS) | Tomato → lycopene → heart health |
+| **Attribute** (new) | a `KnowledgeAttribute` — an intrinsic food property | attribute membership (food *is* fermented) + attribute→benefit science | Kefir → *fermented / probiotic* → gut health |
+| **Dietary pattern** (new) | a `KnowledgeDietaryPattern` | food→pattern membership + pattern→benefit science | Olive oil → *Mediterranean diet* → heart health |
+
+**Attributes vs WS3B qualifiers — important distinction.**
+- A **WS3B FoodQualifier** is a *production / sourcing* signal (organic, grass-fed, wild-caught) — it
+  is about how a food was produced, and carries no intrinsic health claim.
+- A **KnowledgeAttribute** (this amendment) is an *intrinsic food property* (fermented, wholegrain,
+  oily/omega-rich, high-fibre) that can itself carry an attribute→benefit evidence link.
+- They are different entities. An attribute path is a *claim* path (gated like any claim); a qualifier
+  is not.
+
+**Dietary patterns** reuse existing THA dietary-pattern work (`DIETARY_PATTERN_*` investigations). A
+pattern path requires **two** anchored links — (1) the food is a member/staple of the pattern, and
+(2) the pattern is associated with the benefit — so the food never silently "inherits" a whole diet's
+benefits without evidence for its membership.
+
+### B.3 What a benefit stores (answering the brief's questions)
+
+The brief asks whether benefits should store multiple evidence links, source strength, editorial
+wording, confidence, and explanation text. **Yes to all — but per path, not per benefit.** A
+food→benefit record aggregates one or more **evidence-path records**, each carrying:
+
+| Field | Why |
+|---|---|
+| `path_type` | `nutrient` / `attribute` / `dietary_pattern` |
+| `path_anchor` | the nutrient / attribute / pattern slug this path runs through |
+| `source_ids[]` | **multiple evidence links** per path (evidence accumulation, as §4.5) |
+| `evidence_strength` | per §6.2 — strong / moderate / emerging / insufficient |
+| `confidence` | per §6.4 — THA's certainty the sources represent the literature |
+| `approved_wording` | editorial wording **fragment** appropriate to this path's strength (§6.3 / §9) |
+| `explanation_text` | plain-language "why" (e.g. "Fermented foods contain live cultures that…") |
+| `editorial_status` | per §3.2 lifecycle — each path is reviewed and published independently |
+
+A benefit can thus be published when **any single path** independently earns the wording — and extra
+qualifying paths raise *confidence*, not *strength* (see §B.5).
+
+### B.4 The updated evidence graph
+
+```
+CanonicalFood
+  │
+  ├─(nutrient path)──→ KnowledgeFoodNutrient ─→ KnowledgeNutrient ──┐
+  │                                                                  │
+  ├─(attribute path)─→ KnowledgeFoodAttribute ─→ KnowledgeAttribute ─┼─→ …Benefit link ─→ KnowledgeHealthBenefit
+  │                                                                  │        (food→benefit, one per benefit)
+  └─(pattern path)───→ KnowledgeFoodPattern ──→ KnowledgeDietaryPattern ─┘
+                                                                           ▲
+        each …Benefit link carries, PER PATH:
+        evidence_strength · source_ids[] · confidence · approved_wording · explanation_text · editorial_status
+```
+
+Benefit-centric view: a single `KnowledgeFoodBenefit (food → benefit)` is the headline record the
+surfaces read; it is **backed by 1..N path records** that prove it.
+
+### B.5 Worked examples (from the brief)
+
+**Olive oil → Supports heart health** (two paths)
+
+```
+Benefit: heart-health   (headline strength = MODERATE; confidence = HIGH — two independent paths)
+  Path 1 — nutrient
+    anchor: monounsaturated-fats (+ vitamin-e)
+    evidence_strength: moderate
+    sources: [NHS, British Heart Foundation]
+    wording: "Olive oil is high in monounsaturated fats, associated with heart health"
+  Path 2 — dietary pattern
+    anchor: mediterranean-diet   (olive oil = staple member; pattern ↔ heart health)
+    evidence_strength: moderate
+    sources: [PREDIMED, British Heart Foundation]
+    wording: "As a staple of the Mediterranean diet, olive oil is associated with heart health"
+  Attributes (descriptive): healthy-fats, mediterranean-staple
+```
+
+**Kefir → Supports gut health** (one path, attribute)
+
+```
+Benefit: gut-health     (headline strength = MODERATE; confidence = HIGH)
+  Path 1 — attribute
+    anchor: fermented (+ probiotic)
+    evidence_strength: moderate
+    sources: [NHS, Harvard]
+    wording: "Kefir is a fermented food containing probiotics, associated with gut health"
+```
+
+### B.6 Trust check — how multi-path benefits behave under stress
+
+| Situation | Behaviour |
+|---|---|
+| **Evidence on a path is weak** | A path below the wording threshold (§6.3) is **retained as evidence but contributes no headline wording**. The benefit publishes only if *another* path qualifies; otherwise it stays as nutrition context with a caveat (§6.2 *insufficient*). |
+| **Sources disagree within one path** | Existing cautious rule (§4.4) applies unchanged: the **lower** strength wins. |
+| **Two paths support the SAME benefit at different strengths** | `headline_strength = max(qualifying path strengths)`. Multiple agreeing paths raise **confidence**, never strength. A weak path can never drag down a well-evidenced one, and weak paths are **never summed** into a strong claim. |
+| **Paths support DIFFERENT benefits** | No conflict — they are simply separate benefit records. |
+| **One path supports a benefit, another path actively contradicts the same benefit** | Treated as a **contradiction** (§4.4): elevated in the editorial queue; default to the **cautious** position; nothing publishes until a human resolves it. |
+| **Confidence inflation from double-counting** | Confidence counts **independent sources**, not paths. Two paths citing the same source do **not** compound confidence. |
+
+**The anti-overreach rule for pattern paths:** wording on a dietary-pattern path must attribute the
+benefit to the *pattern* ("as part of a Mediterranean diet…"), never to the food in isolation. This
+prevents a single food from claiming a whole diet's benefit. Attribute and nutrient paths attribute to
+the food's property/nutrient, as today.
 
 ---
 
@@ -1258,6 +1611,18 @@ A disclosure UI on benefit claims that surfaces evidence strength in user-friend
 **SUGGESTION — Automated EFSA register diff alerts**
 When the EFSA register changes, automatically diff against currently-published claim phrasings and flag anything that may need update.
 
+**SUGGESTION — Canonical Grower shadow-mode precision report** *(Amendment A)*
+Before enabling auto-promote, run the grower in propose-only mode and report precision/recall of the
+safe-promotion gates against a hand-labelled sample, so the auto-promote threshold is data-driven.
+
+**SUGGESTION — Cross-path agreement score for benefits** *(Amendment B)*
+A numeric score summarising how many independent paths (and sources) support a benefit and whether they
+agree — used to prioritise editorial attention and to power a future user-facing confidence disclosure.
+
+**SUGGESTION — Attribute taxonomy seeded from existing dietary dictionaries** *(Amendment B)*
+Seed the `KnowledgeAttribute` set (fermented, wholegrain, oily/omega-rich, high-fibre…) from THA's
+existing dietary dictionaries rather than authoring it from scratch.
+
 ---
 
 ## DEFINITION OF DONE (CONFIRMED)
@@ -1280,11 +1645,31 @@ When the EFSA register changes, automatically diff against currently-published c
 | No schema changes | ✅ |
 | No UI changes | ✅ |
 
+### Amendment Definition of Done (2026-06-20)
+
+| Item | Status |
+|---|---|
+| Rollback point created before amendment | ✅ `rollback/ws4b-amendment-20260620` → `5d453d0` |
+| Automated canonical growth model documented | ✅ Amendment A (§A.1–A.6) |
+| Safe vs review paths defined (with worked examples) | ✅ §A.3 gate table + examples |
+| Auto-created food metadata defined | ✅ §A.4 |
+| Multi-path benefits model documented | ✅ Amendment B (§B.1–B.6) |
+| Evidence graph updated | ✅ §B.4 |
+| Benefit evidence storage questions answered (links/strength/wording/confidence/explanation) | ✅ §B.3 |
+| Examples included (olive oil, kefir, broccoli…) | ✅ §A.3, §B.5 |
+| Trust check (duplicates / products / categories / weak evidence / disagreement) | ✅ §A.5, §B.6 |
+| Risks documented | ✅ §11.5, §11.6 |
+| Recommendations updated | ✅ §13.1–13.3 |
+| In-place models amended (§3.4, §4.3, §12.3) | ✅ |
+| No implementation / no schema changes / no UI / no auto-publishing of claims | ✅ |
+
 ---
 
 ## FINAL REPORT
 
-**Rollback tag:** `rollback/ws4b-pre-investigation-20260620` → commit `72eccee`
+**Original rollback tag:** `rollback/ws4b-pre-investigation-20260620` → commit `72eccee`
+**Amendment rollback tag:** `rollback/ws4b-amendment-20260620` → commit `5d453d0`
+**Restore (amendment):** `git reset --hard rollback/ws4b-amendment-20260620`
 
 **Document:** `docs/investigations/WS4B_NUTRITION_KNOWLEDGE_PIPELINE.md`
 
@@ -1292,4 +1677,25 @@ When the EFSA register changes, automatically diff against currently-published c
 
 WS4B proposes a complete Nutrition Knowledge Pipeline for The Healthy Apples. The design inherits and extends two prior investigations (the four-plane KMS and the Editorial/Automation Framework) into a concrete pipeline specification covering: a three-tier trusted source hierarchy with EFSA as a wording authority; a six-stage ingestion flow with content-hash change detection and canonical food matching; a five-state editorial review lifecycle (candidate → draft → in_review → approved → published/deprecated); a four-level evidence model (strong/moderate/emerging/insufficient) with direct wording consequences; an alert-only staleness monitoring system with content hash, URL availability, and review expiry detection; a single `buildFoodKnowledge()` adapter contract for all seven THA surfaces; a three-layer language guardrail model (hard blocks, strength-gated language, tone review); and a bounded AI assistance model where AI assists only in THA-owned layers (wording templates, parsing, conflict flagging) and never crosses the hard wall into publication.
 
-No implementation. No schema changes. No UI changes. No automatic imports made.
+**Amendment (2026-06-20)** adds two capabilities without weakening any trust invariant:
+
+- **Amendment A — Automated Canonical Food Growth.** Unmatched terms with trusted-source evidence now
+  create a *Candidate Canonical Food* automatically. Six safety gates (single whole food, source
+  corroboration, clean category, no duplicate, no product/marketing signal, clean normalisation)
+  decide whether to **auto-promote the identity** (broccoli, carrot, kiwi, lentils, kefir) or **queue
+  for review** (mixed beans, mixed seeds, trail mix, adaptogenic mushroom blend, protein bar). The key
+  trust insight: auto-growth populates **identity only** — every auto-created food carries
+  `origin='auto'`, attaches **zero claims**, and is reversible by merge / re-categorise / demote. The
+  editorial hard wall, which protects **claims**, is untouched.
+
+- **Amendment B — Multi-Path Benefits.** A benefit may now be composed from **nutrient, attribute,
+  or dietary-pattern** evidence paths (e.g. olive oil → heart health via both monounsaturated fats and
+  the Mediterranean diet; kefir → gut health via the *fermented/probiotic* attribute). Each path
+  stores its own sources, evidence strength, confidence, approved wording, and explanation, and is
+  reviewed independently. Headline strength = strongest qualifying path; extra agreeing paths raise
+  confidence, never strength; weak paths never sum into strong claims; pattern wording must attribute
+  to the pattern, not the food alone. The nutrient-bridge "composed, not invented" rule is preserved
+  and generalised.
+
+No implementation. No schema changes. No UI changes. No automatic imports made. No auto-publishing of
+claims.
