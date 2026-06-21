@@ -1,0 +1,952 @@
+{
+  "generatedAt": "2026-06-21T22:10:39.238Z",
+  "note": "WS8 Food Discovery Engine — worked examples (season fixed to summer) and seasonal sets. Deterministic snapshot for preservation.",
+  "workedExamples": {
+    "tomato": {
+      "anchor": {
+        "slug": "tomato",
+        "name": "Tomato"
+      },
+      "sections": [
+        {
+          "type": "explore_varieties",
+          "title": "Varieties to explore",
+          "suggestions": [
+            {
+              "slug": "cherry-tomato",
+              "name": "Cherry Tomato",
+              "type": "explore_varieties",
+              "reason": "Cherry Tomato is a variety of Tomato.",
+              "familiar": false,
+              "source": "derived"
+            },
+            {
+              "slug": "heirloom-tomato",
+              "name": "Heirloom Tomato",
+              "type": "explore_varieties",
+              "reason": "Heirloom Tomato is a variety of Tomato.",
+              "familiar": false,
+              "source": "derived"
+            },
+            {
+              "slug": "plum-tomato",
+              "name": "Plum Tomato",
+              "type": "explore_varieties",
+              "reason": "Plum Tomato is a variety of Tomato.",
+              "familiar": false,
+              "source": "derived"
+            }
+          ]
+        },
+        {
+          "type": "similar",
+          "title": "You might enjoy",
+          "suggestions": [
+            {
+              "slug": "aubergine",
+              "name": "Aubergine",
+              "type": "similar",
+              "reason": "Both are Mediterranean nightshade vegetables that work well roasted, in stews or baked in gratin-style dishes.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "pepper",
+              "name": "Pepper",
+              "type": "similar",
+              "reason": "Both are fruiting vegetables commonly used fresh in salads, sauces and roasted dishes across Mediterranean cooking.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "olives",
+              "name": "Olives",
+              "type": "similar",
+              "reason": "Olives and Tomato are both fruiting vegetables.",
+              "familiar": false,
+              "source": "derived"
+            }
+          ]
+        },
+        {
+          "type": "cook_with",
+          "title": "Lovely cooked together",
+          "suggestions": [
+            {
+              "slug": "basil",
+              "name": "Basil",
+              "type": "cook_with",
+              "reason": "A classic Italian pairing — tomato and basil appear together in salads, sauces, bruschetta and pizza.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "extra-virgin-olive-oil",
+              "name": "Extra Virgin Olive Oil",
+              "type": "cook_with",
+              "reason": "Mediterranean cooking nearly always pairs tomatoes with olive oil, whether as a dressing or cooking base.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "garlic",
+              "name": "Garlic",
+              "type": "cook_with",
+              "reason": "Garlic forms the flavour base of almost every tomato sauce, from pasta to curries.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "cuisine",
+          "title": "Explore the cuisine",
+          "suggestions": [
+            {
+              "slug": "artichoke",
+              "name": "Artichoke",
+              "type": "cuisine",
+              "reason": "A common Mediterranean ingredient — a natural next step if you enjoy that style of cooking.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "aubergine",
+              "name": "Aubergine",
+              "type": "cuisine",
+              "reason": "A common Mediterranean ingredient — a natural next step if you enjoy that style of cooking.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "avocado",
+              "name": "Avocado",
+              "type": "cuisine",
+              "reason": "A common Mexican ingredient — a natural next step if you enjoy that style of cooking.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "seasonal",
+          "title": "At their best right now",
+          "suggestions": [
+            {
+              "slug": "aubergine",
+              "name": "Aubergine",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy aubergine.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "basil",
+              "name": "Basil",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy basil.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "courgette",
+              "name": "Courgette",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy courgette.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "chickpeas": {
+      "anchor": {
+        "slug": "chickpeas",
+        "name": "Chickpeas"
+      },
+      "sections": [
+        {
+          "type": "similar",
+          "title": "You might enjoy",
+          "suggestions": [
+            {
+              "slug": "lentils",
+              "name": "Lentils",
+              "type": "similar",
+              "reason": "Both are plant protein staples used in similar dishes — dhal, soups, stews and curries.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "butter-beans",
+              "name": "Butter Beans",
+              "type": "similar",
+              "reason": "Both are large, mild legumes with a satisfying texture in salads, traybakes and stews.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "cannellini-beans",
+              "name": "Cannellini Beans",
+              "type": "similar",
+              "reason": "Both are versatile, creamy legumes used in stews, soups and salads; cannellini are slightly milder.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "cook_with",
+          "title": "Lovely cooked together",
+          "suggestions": [
+            {
+              "slug": "coriander",
+              "name": "Coriander",
+              "type": "cook_with",
+              "reason": "Fresh coriander finishes chickpea curries, falafels and Middle Eastern chickpea dishes.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "cumin",
+              "name": "Cumin",
+              "type": "cook_with",
+              "reason": "Cumin's earthy warmth is used in chickpea curries, falafels and roasted chickpea dishes.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "lemon",
+              "name": "Lemon",
+              "type": "cook_with",
+              "reason": "A squeeze of lemon balances hummus, chickpea salads and roasted chickpea dishes.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "cuisine",
+          "title": "Explore the cuisine",
+          "suggestions": [
+            {
+              "slug": "artichoke",
+              "name": "Artichoke",
+              "type": "cuisine",
+              "reason": "A common Mediterranean ingredient — a natural next step if you enjoy that style of cooking.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "aubergine",
+              "name": "Aubergine",
+              "type": "cuisine",
+              "reason": "A common Mediterranean ingredient — a natural next step if you enjoy that style of cooking.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "cardamom",
+              "name": "Cardamom",
+              "type": "cuisine",
+              "reason": "A common Indian ingredient — a natural next step if you enjoy that style of cooking.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "seasonal",
+          "title": "At their best right now",
+          "suggestions": [
+            {
+              "slug": "aubergine",
+              "name": "Aubergine",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy aubergine.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "courgette",
+              "name": "Courgette",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy courgette.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "tomato",
+              "name": "Tomato",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy tomato.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "greek-yoghurt": {
+      "anchor": {
+        "slug": "greek-yoghurt",
+        "name": "Greek Yoghurt"
+      },
+      "sections": [
+        {
+          "type": "explore_varieties",
+          "title": "Varieties to explore",
+          "suggestions": [
+            {
+              "slug": "yoghurt",
+              "name": "Yoghurt",
+              "type": "explore_varieties",
+              "reason": "Greek Yoghurt is a variety of Yoghurt.",
+              "familiar": false,
+              "source": "derived"
+            }
+          ]
+        },
+        {
+          "type": "similar",
+          "title": "You might enjoy",
+          "suggestions": [
+            {
+              "slug": "kefir",
+              "name": "Kefir",
+              "type": "similar",
+              "reason": "Both are fermented dairy products with live cultures; kefir is drinkable and has a more pronounced tang.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "cook_with",
+          "title": "Lovely cooked together",
+          "suggestions": [
+            {
+              "slug": "garlic",
+              "name": "Garlic",
+              "type": "cook_with",
+              "reason": "Garlic is essential in tzatziki and yoghurt-based dips, dressings and marinades.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "mint",
+              "name": "Mint",
+              "type": "cook_with",
+              "reason": "Mint and yoghurt are paired in tzatziki, raita and Middle Eastern sauces.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "blueberry",
+              "name": "Blueberry",
+              "type": "cook_with",
+              "reason": "Blueberries and Greek yoghurt are a popular breakfast and snack combination.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "seasonal",
+          "title": "At their best right now",
+          "suggestions": [
+            {
+              "slug": "aubergine",
+              "name": "Aubergine",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy aubergine.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "basil",
+              "name": "Basil",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy basil.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "courgette",
+              "name": "Courgette",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy courgette.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "chicken": {
+      "anchor": {
+        "slug": "chicken",
+        "name": "Chicken"
+      },
+      "sections": [
+        {
+          "type": "similar",
+          "title": "You might enjoy",
+          "suggestions": [
+            {
+              "slug": "turkey",
+              "name": "Turkey",
+              "type": "similar",
+              "reason": "Both are lean poultry with a similar mild flavour; turkey works in most chicken recipes.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "duck",
+              "name": "Duck",
+              "type": "similar",
+              "reason": "Duck and Chicken are both poultry.",
+              "familiar": false,
+              "source": "derived"
+            }
+          ]
+        },
+        {
+          "type": "cook_with",
+          "title": "Lovely cooked together",
+          "suggestions": [
+            {
+              "slug": "coriander",
+              "name": "Coriander",
+              "type": "cook_with",
+              "reason": "Fresh coriander finishes Thai, Indian and Middle Eastern chicken dishes.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "garlic",
+              "name": "Garlic",
+              "type": "cook_with",
+              "reason": "Garlic appears in almost every chicken dish across world cuisines.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "lemon",
+              "name": "Lemon",
+              "type": "cook_with",
+              "reason": "Lemon brightens roasted chicken and marinades across Mediterranean cooking.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "seasonal",
+          "title": "At their best right now",
+          "suggestions": [
+            {
+              "slug": "aubergine",
+              "name": "Aubergine",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy aubergine.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "basil",
+              "name": "Basil",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy basil.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "courgette",
+              "name": "Courgette",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy courgette.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "pumpkin-seeds": {
+      "anchor": {
+        "slug": "pumpkin-seeds",
+        "name": "Pumpkin Seeds"
+      },
+      "sections": [
+        {
+          "type": "similar",
+          "title": "You might enjoy",
+          "suggestions": [
+            {
+              "slug": "sesame-seeds",
+              "name": "Sesame Seeds",
+              "type": "similar",
+              "reason": "Sesame Seeds and Pumpkin Seeds are both whole seeds.",
+              "familiar": false,
+              "source": "derived"
+            },
+            {
+              "slug": "chia-seeds",
+              "name": "Chia Seeds",
+              "type": "similar",
+              "reason": "Chia Seeds and Pumpkin Seeds are both whole seeds.",
+              "familiar": false,
+              "source": "derived"
+            },
+            {
+              "slug": "flaxseed",
+              "name": "Flaxseed",
+              "type": "similar",
+              "reason": "Flaxseed and Pumpkin Seeds are both whole seeds.",
+              "familiar": false,
+              "source": "derived"
+            }
+          ]
+        },
+        {
+          "type": "seasonal",
+          "title": "At their best right now",
+          "suggestions": [
+            {
+              "slug": "aubergine",
+              "name": "Aubergine",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy aubergine.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "basil",
+              "name": "Basil",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy basil.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "courgette",
+              "name": "Courgette",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy courgette.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "apple": {
+      "anchor": {
+        "slug": "apple",
+        "name": "Apple"
+      },
+      "sections": [
+        {
+          "type": "explore_varieties",
+          "title": "Varieties to explore",
+          "suggestions": [
+            {
+              "slug": "braeburn-apple",
+              "name": "Braeburn Apple",
+              "type": "explore_varieties",
+              "reason": "Braeburn Apple is a variety of Apple.",
+              "familiar": false,
+              "source": "derived"
+            },
+            {
+              "slug": "gala-apple",
+              "name": "Gala Apple",
+              "type": "explore_varieties",
+              "reason": "Gala Apple is a variety of Apple.",
+              "familiar": false,
+              "source": "derived"
+            },
+            {
+              "slug": "granny-smith-apple",
+              "name": "Granny Smith Apple",
+              "type": "explore_varieties",
+              "reason": "Granny Smith Apple is a variety of Apple.",
+              "familiar": false,
+              "source": "derived"
+            }
+          ]
+        },
+        {
+          "type": "similar",
+          "title": "You might enjoy",
+          "suggestions": [
+            {
+              "slug": "grape",
+              "name": "Grape",
+              "type": "similar",
+              "reason": "Grape and Apple are both top fruit.",
+              "familiar": false,
+              "source": "derived"
+            },
+            {
+              "slug": "pear",
+              "name": "Pear",
+              "type": "similar",
+              "reason": "Pear and Apple are both top fruit.",
+              "familiar": false,
+              "source": "derived"
+            }
+          ]
+        },
+        {
+          "type": "cuisine",
+          "title": "Explore the cuisine",
+          "suggestions": [
+            {
+              "slug": "cabbage",
+              "name": "Cabbage",
+              "type": "cuisine",
+              "reason": "A common British ingredient — a natural next step if you enjoy that style of cooking.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "carrots",
+              "name": "Carrots",
+              "type": "cuisine",
+              "reason": "A common British ingredient — a natural next step if you enjoy that style of cooking.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "leek",
+              "name": "Leek",
+              "type": "cuisine",
+              "reason": "A common British ingredient — a natural next step if you enjoy that style of cooking.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "seasonal",
+          "title": "At their best right now",
+          "suggestions": [
+            {
+              "slug": "aubergine",
+              "name": "Aubergine",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy aubergine.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "basil",
+              "name": "Basil",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy basil.",
+              "familiar": false,
+              "source": "editorial"
+            },
+            {
+              "slug": "courgette",
+              "name": "Courgette",
+              "type": "seasonal",
+              "reason": "At its best in the UK summer — a lovely time to enjoy courgette.",
+              "familiar": false,
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "seasonal": {
+      "spring": {
+        "anchor": null,
+        "sections": [
+          {
+            "type": "seasonal",
+            "title": "At their best right now",
+            "suggestions": [
+              {
+                "slug": "spring-onion",
+                "name": "Spring Onion",
+                "type": "seasonal",
+                "reason": "At its best in the UK spring — a lovely time to enjoy spring onion.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "asparagus",
+                "name": "Asparagus",
+                "type": "seasonal",
+                "reason": "At its best in the UK spring — a lovely time to enjoy asparagus.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "peas",
+                "name": "Peas",
+                "type": "seasonal",
+                "reason": "At its best in the UK spring — a lovely time to enjoy peas.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "purple-sprouting-broccoli",
+                "name": "Purple Sprouting Broccoli",
+                "type": "seasonal",
+                "reason": "At its best in the UK spring — a lovely time to enjoy purple sprouting broccoli.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "radish",
+                "name": "Radish",
+                "type": "seasonal",
+                "reason": "At its best in the UK spring — a lovely time to enjoy radish.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "rocket",
+                "name": "Rocket",
+                "type": "seasonal",
+                "reason": "At its best in the UK spring — a lovely time to enjoy rocket.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "watercress",
+                "name": "Watercress",
+                "type": "seasonal",
+                "reason": "At its best in the UK spring — a lovely time to enjoy watercress.",
+                "familiar": false,
+                "source": "editorial"
+              }
+            ]
+          }
+        ]
+      },
+      "summer": {
+        "anchor": null,
+        "sections": [
+          {
+            "type": "seasonal",
+            "title": "At their best right now",
+            "suggestions": [
+              {
+                "slug": "aubergine",
+                "name": "Aubergine",
+                "type": "seasonal",
+                "reason": "At its best in the UK summer — a lovely time to enjoy aubergine.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "basil",
+                "name": "Basil",
+                "type": "seasonal",
+                "reason": "At its best in the UK summer — a lovely time to enjoy basil.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "courgette",
+                "name": "Courgette",
+                "type": "seasonal",
+                "reason": "At its best in the UK summer — a lovely time to enjoy courgette.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "tomato",
+                "name": "Tomato",
+                "type": "seasonal",
+                "reason": "At its best in the UK summer — a lovely time to enjoy tomato.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "cucumber",
+                "name": "Cucumber",
+                "type": "seasonal",
+                "reason": "At its best in the UK summer — a lovely time to enjoy cucumber.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "peach",
+                "name": "Peach",
+                "type": "seasonal",
+                "reason": "At its best in the UK summer — a lovely time to enjoy peach.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "raspberry",
+                "name": "Raspberry",
+                "type": "seasonal",
+                "reason": "At its best in the UK summer — a lovely time to enjoy raspberry.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "strawberry",
+                "name": "Strawberry",
+                "type": "seasonal",
+                "reason": "At its best in the UK summer — a lovely time to enjoy strawberry.",
+                "familiar": false,
+                "source": "editorial"
+              }
+            ]
+          }
+        ]
+      },
+      "autumn": {
+        "anchor": null,
+        "sections": [
+          {
+            "type": "seasonal",
+            "title": "At their best right now",
+            "suggestions": [
+              {
+                "slug": "apple",
+                "name": "Apple",
+                "type": "seasonal",
+                "reason": "At its best in the UK autumn — a lovely time to enjoy apple.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "leek",
+                "name": "Leek",
+                "type": "seasonal",
+                "reason": "At its best in the UK autumn — a lovely time to enjoy leek.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "beetroot",
+                "name": "Beetroot",
+                "type": "seasonal",
+                "reason": "At its best in the UK autumn — a lovely time to enjoy beetroot.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "butternut-squash",
+                "name": "Butternut Squash",
+                "type": "seasonal",
+                "reason": "At its best in the UK autumn — a lovely time to enjoy butternut squash.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "kale",
+                "name": "Kale",
+                "type": "seasonal",
+                "reason": "At its best in the UK autumn — a lovely time to enjoy kale.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "mushroom",
+                "name": "Mushroom",
+                "type": "seasonal",
+                "reason": "At its best in the UK autumn — a lovely time to enjoy mushroom.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "pear",
+                "name": "Pear",
+                "type": "seasonal",
+                "reason": "At its best in the UK autumn — a lovely time to enjoy pear.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "pumpkin",
+                "name": "Pumpkin",
+                "type": "seasonal",
+                "reason": "At its best in the UK autumn — a lovely time to enjoy pumpkin.",
+                "familiar": false,
+                "source": "editorial"
+              }
+            ]
+          }
+        ]
+      },
+      "winter": {
+        "anchor": null,
+        "sections": [
+          {
+            "type": "seasonal",
+            "title": "At their best right now",
+            "suggestions": [
+              {
+                "slug": "leek",
+                "name": "Leek",
+                "type": "seasonal",
+                "reason": "At its best in the UK winter — a lovely time to enjoy leek.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "parsnip",
+                "name": "Parsnip",
+                "type": "seasonal",
+                "reason": "At its best in the UK winter — a lovely time to enjoy parsnip.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "swede",
+                "name": "Swede",
+                "type": "seasonal",
+                "reason": "At its best in the UK winter — a lovely time to enjoy swede.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "brussels-sprouts",
+                "name": "Brussels Sprouts",
+                "type": "seasonal",
+                "reason": "At its best in the UK winter — a lovely time to enjoy brussels sprouts.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "cavolo-nero",
+                "name": "Cavolo Nero",
+                "type": "seasonal",
+                "reason": "At its best in the UK winter — a lovely time to enjoy cavolo nero.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "celeriac",
+                "name": "Celeriac",
+                "type": "seasonal",
+                "reason": "At its best in the UK winter — a lovely time to enjoy celeriac.",
+                "familiar": false,
+                "source": "editorial"
+              },
+              {
+                "slug": "red-cabbage",
+                "name": "Red Cabbage",
+                "type": "seasonal",
+                "reason": "At its best in the UK winter — a lovely time to enjoy red cabbage.",
+                "familiar": false,
+                "source": "editorial"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
