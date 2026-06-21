@@ -1,0 +1,464 @@
+{
+ "meta": {
+  "workstream": "WS0.11",
+  "target": 500,
+  "selected": 500,
+  "foundation_selected": 246,
+  "sr_legacy_selected": 254,
+  "sources": {
+   "foundation": "FoodData_Central_foundation_food_json_2025-04-24",
+   "sr_legacy": "FoodData_Central_sr_legacy_food_json_2021-10-28"
+  },
+  "filter_audit": {
+   "skip_branded_prepared": 112,
+   "skip_excessive_qualifiers": 2827,
+   "skip_category": 3064,
+   "skip_dupe_desc": 55
+  },
+  "foundation_total": 340,
+  "sr_legacy_total": 7793
+ },
+ "before": {
+  "newEntries": 316,
+  "preparedLeaked": 21,
+  "messyNames": 278,
+  "confidence": {
+   "high": 64,
+   "medium": 238,
+   "low": 14
+  },
+  "collisions": 7,
+  "review": 14
+ },
+ "after": {
+  "newEntries": 295,
+  "preparedBlocked": 24,
+  "nameQuality": {
+   "auto": 238,
+   "review": 57,
+   "manual": 0
+  },
+  "macroFallback": 9,
+  "confidence": {
+   "high": 59,
+   "medium": 230,
+   "low": 6
+  },
+  "collisions": 12,
+  "review": 6,
+  "promotionStages": {
+   "ready_for_canonical": 8,
+   "ready_for_claude_authoring": 257,
+   "needs_tha_review": 30
+  },
+  "meanPromotionScore": 60.7
+ },
+ "trust": {
+  "wronglyBlocked": 0,
+  "foundationMacrosOverwritten": 0,
+  "collapsedFoods": 12
+ },
+ "samples": {
+  "renames": [
+   {
+    "raw": "Nuts, almonds, dry roasted, with salt added",
+    "normalised": "Almonds",
+    "quality": "auto"
+   },
+   {
+    "raw": "Cheese, parmesan, grated",
+    "normalised": "Parmesan Cheese",
+    "quality": "auto"
+   },
+   {
+    "raw": "Grapefruit juice, white, canned or bottled, unsweetened",
+    "normalised": "White Grapefruit Juice",
+    "quality": "auto"
+   },
+   {
+    "raw": "Seeds, sunflower seed kernels, dry roasted, with salt added",
+    "normalised": "Sunflower Seed Kernels",
+    "quality": "auto"
+   },
+   {
+    "raw": "Mustard, prepared, yellow",
+    "normalised": "Yellow Mustard",
+    "quality": "auto"
+   },
+   {
+    "raw": "Cheese, cheddar",
+    "normalised": "Cheddar Cheese",
+    "quality": "auto"
+   },
+   {
+    "raw": "Cheese, cottage, lowfat, 2% milkfat",
+    "normalised": "Cottage Cheese",
+    "quality": "auto"
+   },
+   {
+    "raw": "Cheese, mozzarella, low moisture, part-skim",
+    "normalised": "Mozzarella Cheese",
+    "quality": "auto"
+   },
+   {
+    "raw": "Oil, coconut",
+    "normalised": "Coconut Oil",
+    "quality": "auto"
+   },
+   {
+    "raw": "Fish, haddock, raw",
+    "normalised": "Haddock",
+    "quality": "auto"
+   },
+   {
+    "raw": "Fish, pollock, raw",
+    "normalised": "Pollock",
+    "quality": "auto"
+   },
+   {
+    "raw": "Cheese, dry white, queso seco",
+    "normalised": "Queso Seco Dry White Cheese",
+    "quality": "review"
+   },
+   {
+    "raw": "Cheese, ricotta, whole milk",
+    "normalised": "Ricotta Cheese",
+    "quality": "auto"
+   },
+   {
+    "raw": "Cheese, swiss",
+    "normalised": "Swiss Cheese",
+    "quality": "auto"
+   },
+   {
+    "raw": "Salt, table, iodized",
+    "normalised": "Table Iodized Salt",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Medium Red (0% moisture)",
+    "normalised": "Dry Medium Red",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Red (0% moisture)",
+    "normalised": "Dry Red",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Flor de Mayo (0% moisture)",
+    "normalised": "Dry Flor De Mayo",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Brown (0% moisture)",
+    "normalised": "Dry Brown",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Tan (0% moisture)",
+    "normalised": "Dry Tan",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Light Tan (0% moisture)",
+    "normalised": "Dry Light Tan",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Carioca (0% moisture)",
+    "normalised": "Dry Carioca",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Cranberry (0% moisture)",
+    "normalised": "Dry Cranberry",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Light Red Kidney (0% moisture)",
+    "normalised": "Dry Light Red Kidney",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Pink (0% moisture)",
+    "normalised": "Dry Pink",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Dark Red Kidney (0% moisture)",
+    "normalised": "Dry Dark Red Kidney",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Navy (0% moisture)",
+    "normalised": "Dry Navy",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Small White (0% moisture)",
+    "normalised": "Dry Small White",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Small Red (0% moisture)",
+    "normalised": "Dry Small Red",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Black (0% moisture)",
+    "normalised": "Dry Black",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Pinto (0% moisture)",
+    "normalised": "Dry Pinto",
+    "quality": "review"
+   },
+   {
+    "raw": "Beans, Dry, Great Northern (0% moisture)",
+    "normalised": "Dry Great Northern",
+    "quality": "review"
+   },
+   {
+    "raw": "Oil, canola",
+    "normalised": "Canola Oil",
+    "quality": "auto"
+   },
+   {
+    "raw": "Oil, corn",
+    "normalised": "Corn Oil",
+    "quality": "auto"
+   },
+   {
+    "raw": "Oil, soybean",
+    "normalised": "Soybean Oil",
+    "quality": "auto"
+   },
+   {
+    "raw": "Oil, olive, extra virgin",
+    "normalised": "Extra Virgin Olive Oil",
+    "quality": "review"
+   },
+   {
+    "raw": "Flour, whole wheat, unenriched",
+    "normalised": "Whole Wheat Flour",
+    "quality": "auto"
+   },
+   {
+    "raw": "Flour, rice, white, unenriched",
+    "normalised": "White Rice Flour",
+    "quality": "review"
+   },
+   {
+    "raw": "Flour, soy, defatted",
+    "normalised": "Defatted Soy Flour",
+    "quality": "review"
+   },
+   {
+    "raw": "Flour, soy, full-fat",
+    "normalised": "Full-Fat Soy Flour",
+    "quality": "review"
+   }
+  ],
+  "preparedBlocked": [
+   {
+    "desc": "Pickles, cucumber, dill or kosher dill",
+    "token": "pickles"
+   },
+   {
+    "desc": "Olives, green, Manzanilla, stuffed with pimiento",
+    "token": "stuffed"
+   },
+   {
+    "desc": "Tomato, sauce, canned, with salt added",
+    "token": "sauce"
+   },
+   {
+    "desc": "Ice cream cookie sandwich",
+    "token": "sandwich"
+   },
+   {
+    "desc": "Ice cream sandwich",
+    "token": "sandwich"
+   },
+   {
+    "desc": "Potato pancakes",
+    "token": "pancakes"
+   },
+   {
+    "desc": "Soy sauce made from hydrolyzed vegetable protein",
+    "token": "sauce"
+   },
+   {
+    "desc": "Soy sauce made from soy (tamari)",
+    "token": "sauce"
+   },
+   {
+    "desc": "Soy sauce made from soy and wheat (shoyu)",
+    "token": "sauce"
+   },
+   {
+    "desc": "Spinach souffle",
+    "token": "souffle"
+   },
+   {
+    "desc": "Vegetarian meatloaf or patties",
+    "token": "meatloaf"
+   },
+   {
+    "desc": "Yeast extract spread",
+    "token": "spread"
+   },
+   {
+    "desc": "Cheese sauce, prepared from recipe",
+    "token": "sauce"
+   },
+   {
+    "desc": "Cheese spread, cream cheese base",
+    "token": "spread"
+   },
+   {
+    "desc": "Corn pudding, home prepared",
+    "token": "pudding"
+   },
+   {
+    "desc": "Cranberry-orange relish, canned",
+    "token": "relish"
+   },
+   {
+    "desc": "Eggplant, pickled",
+    "token": "pickled"
+   },
+   {
+    "desc": "Fish, tuna salad",
+    "token": "salad"
+   },
+   {
+    "desc": "Guava sauce, cooked",
+    "token": "sauce"
+   },
+   {
+    "desc": "Margarine-like spread, SMART BALANCE Omega Plus Spread (with plant sterols & fish oil)",
+    "token": "spread"
+   },
+   {
+    "desc": "Margarine-like spread, SMART BALANCE Regular Buttery Spread with flax oil",
+    "token": "spread"
+   },
+   {
+    "desc": "Margarine-like spread, SMART BEAT Smart Squeeze",
+    "token": "spread"
+   },
+   {
+    "desc": "Margarine-like spread, SMART BEAT Super Light without saturated fat",
+    "token": "spread"
+   },
+   {
+    "desc": "Meatballs, meatless",
+    "token": "meatballs"
+   }
+  ],
+  "macroFallback": [
+   {
+    "name": "Coconut Oil",
+    "source": "derived_pure_fat",
+    "nutrients": {
+     "energyKcal": 833,
+     "proteinG": 0,
+     "fatG": 99.1,
+     "carbsG": 0.84,
+     "fibreG": 0
+    }
+   },
+   {
+    "name": "Canola Oil",
+    "source": "sr_legacy",
+    "nutrients": {
+     "energyKcal": 884,
+     "proteinG": 0,
+     "fatG": 100,
+     "carbsG": 0,
+     "fibreG": 0
+    }
+   },
+   {
+    "name": "Corn Oil",
+    "source": "sr_legacy",
+    "nutrients": {
+     "energyKcal": 900,
+     "proteinG": 0,
+     "fatG": 100,
+     "carbsG": 0,
+     "fibreG": 0
+    }
+   },
+   {
+    "name": "Soybean Oil",
+    "source": "sr_legacy",
+    "nutrients": {
+     "energyKcal": 884,
+     "proteinG": 0,
+     "fatG": 100,
+     "carbsG": 0,
+     "fibreG": 0
+    }
+   },
+   {
+    "name": "Extra Virgin Olive Oil",
+    "source": "derived_pure_fat",
+    "nutrients": {
+     "energyKcal": 884,
+     "proteinG": 0,
+     "fatG": 100,
+     "carbsG": 0,
+     "fibreG": 0
+    }
+   },
+   {
+    "name": "Peanut Oil",
+    "source": "sr_legacy",
+    "nutrients": {
+     "energyKcal": 884,
+     "proteinG": 0,
+     "fatG": 100,
+     "carbsG": 0,
+     "fibreG": 0
+    }
+   },
+   {
+    "name": "Sunflower Oil",
+    "source": "sr_legacy",
+    "nutrients": {
+     "energyKcal": 884,
+     "proteinG": 0,
+     "fatG": 100,
+     "carbsG": 0,
+     "fibreG": 0
+    }
+   },
+   {
+    "name": "Safflower Oil",
+    "source": "sr_legacy",
+    "nutrients": {
+     "energyKcal": 884,
+     "proteinG": 0,
+     "fatG": 100,
+     "carbsG": 0,
+     "fibreG": 0
+    }
+   },
+   {
+    "name": "Extra Light Olive Oil",
+    "source": "derived_pure_fat",
+    "nutrients": {
+     "energyKcal": 884,
+     "proteinG": 0,
+     "fatG": 100,
+     "carbsG": 0,
+     "fibreG": 0
+    }
+   }
+  ]
+ }
+}

@@ -70,6 +70,18 @@ export interface CatalogueIngestionResult {
 
   confidence: ConfidenceLevel;
   reasons: string[];            // human-readable scoring notes
+
+  // WS0.12 — normalisation + promotion readiness (set on create/review actions)
+  rawName?: string;             // original USDA description (before normalisation)
+  nameQuality?: "auto" | "review" | "manual";
+  aliasCandidates?: string[];   // harvested aliases (parentheticals + original)
+  macroFallbackUsed?: boolean;  // a missing key macro was completed from fallback
+  macroSource?: string;         // dominant macro provenance for reporting
+  promotionScore?: number;      // 0..100 promotion readiness
+  promotionStage?: "ready_for_canonical" | "ready_for_claude_authoring" | "needs_tha_review";
+
+  // WS0.12 — prepared-food skip
+  preparedToken?: string;       // when action="skip" due to a composite-dish token
 }
 
 export interface IngestionReport {
