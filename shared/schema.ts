@@ -1620,6 +1620,15 @@ export const canonicalFoods = pgTable("canonical_food", {
   // active | draft | merged | retired — identities are retireable, never deleted.
   status: text("status").notNull().default("active"),
   source: text("source").notNull().default("THA editorial"),
+  // WS0.10 — Global Food Catalogue tier support.
+  // "canonical" = THA editorial (current default). "catalogue" = imported, not yet curated.
+  tier: text("tier").notNull().default("canonical"),
+  // Botanical/biological name — primary cross-source deduplication key.
+  scientificName: text("scientific_name"),
+  // Attribution for imported data: "USDA:167762", "UKFCT:A01234", etc.
+  sourceRef: text("source_ref"),
+  // Import confidence — null for THA editorial (no scoring needed). "high" | "medium" | "low".
+  confidence: text("confidence"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
