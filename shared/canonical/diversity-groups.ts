@@ -58,4 +58,32 @@ export const DIVERSITY_GROUP_SEED: InsertDiversityGroup[] = [
 
   // ── Healthy fats ────────────────────────────────────────────────────────────
   { slug: "olive-oil", displayName: "Olive Oil", countAsSinglePlant: true },
+
+  // ── Vegetables — Mediterranean (WS0.6 authoring trial) ──────────────────────
+  // Each vegetable is a distinct plant; all count individually.
+  { slug: "kale", displayName: "Kale", description: "Curly kale and cavolo nero are cultivars of the same plant.", countAsSinglePlant: true },
+  { slug: "watercress", displayName: "Watercress", countAsSinglePlant: true },
+  { slug: "rocket", displayName: "Rocket", countAsSinglePlant: true },
+  { slug: "beetroot", displayName: "Beetroot", countAsSinglePlant: true },
+  { slug: "carrots", displayName: "Carrots", countAsSinglePlant: true },
+  { slug: "parsnip", displayName: "Parsnip", countAsSinglePlant: true },
+  { slug: "turnip", displayName: "Turnip", countAsSinglePlant: true },
+  { slug: "swede", displayName: "Swede", countAsSinglePlant: true },
+  { slug: "broccoli", displayName: "Broccoli", description: "Calabrese and purple sprouting broccoli are cultivars of the same plant.", countAsSinglePlant: true },
+  { slug: "red-cabbage", displayName: "Red Cabbage", countAsSinglePlant: true },
+  { slug: "pak-choi", displayName: "Pak Choi", countAsSinglePlant: true },
+  { slug: "garlic", displayName: "Garlic", countAsSinglePlant: true },
+  { slug: "onion", displayName: "Onion", description: "Red, brown and white onions are cultivars of the same plant.", countAsSinglePlant: true },
+  { slug: "spring-onion", displayName: "Spring Onion", countAsSinglePlant: true },
+  { slug: "aubergine", displayName: "Aubergine", countAsSinglePlant: true },
+  { slug: "courgette", displayName: "Courgette", countAsSinglePlant: true },
+  { slug: "pepper", displayName: "Pepper", description: "Red, green, yellow and orange bell peppers are all the same plant.", countAsSinglePlant: true },
+  { slug: "cucumber", displayName: "Cucumber", countAsSinglePlant: true },
+  { slug: "fennel", displayName: "Fennel", countAsSinglePlant: true },
+  { slug: "celery", displayName: "Celery", countAsSinglePlant: true },
+  { slug: "asparagus", displayName: "Asparagus", countAsSinglePlant: true },
+  { slug: "artichoke", displayName: "Artichoke", countAsSinglePlant: true },
+  { slug: "broad-beans", displayName: "Broad Beans", countAsSinglePlant: true },
+  { slug: "radicchio", displayName: "Radicchio", countAsSinglePlant: true },
+  { slug: "chicory", displayName: "Chicory", countAsSinglePlant: true },
 ];

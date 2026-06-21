@@ -69,6 +69,25 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
   "bananas": ["potassium", "vitamin-b6", "fibre"],
   "oranges": ["vitamin-c", "folate", "fibre"],
   "kiwi": ["vitamin-c", "fibre", "potassium"],
+  // Mediterranean Vegetables (WS0.6)
+  "watercress": ["vitamin-k", "vitamin-c", "beta-carotene", "calcium"],
+  "rocket": ["vitamin-k", "folate", "vitamin-c", "calcium"],
+  "parsnip": ["fibre", "folate", "potassium", "vitamin-c"],
+  "turnip": ["vitamin-c", "fibre", "folate"],
+  "swede": ["vitamin-c", "fibre", "potassium"],
+  "red-cabbage": ["anthocyanins", "vitamin-c", "fibre", "vitamin-k"],
+  "pak-choi": ["vitamin-k", "vitamin-c", "beta-carotene", "calcium"],
+  "spring-onion": ["vitamin-k", "vitamin-c", "folate"],
+  "aubergine": ["fibre", "polyphenols", "manganese"],
+  "courgette": ["vitamin-c", "vitamin-b6", "potassium", "fibre"],
+  "cucumber": ["vitamin-k", "potassium", "vitamin-c"],
+  "fennel": ["fibre", "potassium", "vitamin-c", "folate"],
+  "celery": ["vitamin-k", "potassium", "fibre", "folate"],
+  "asparagus": ["folate", "vitamin-k", "fibre", "vitamin-c"],
+  "artichoke": ["fibre", "folate", "vitamin-c", "magnesium"],
+  "broad-beans": ["plant-protein", "fibre", "folate", "iron"],
+  "radicchio": ["anthocyanins", "vitamin-k", "fibre", "folate"],
+  "chicory": ["fibre", "vitamin-k", "folate", "vitamin-c"],
 };
 
 // ── Food → Health benefits it supports ──────────────────────────────────────
@@ -124,6 +143,25 @@ export const FOOD_BENEFITS: Record<string, string[]> = {
   "bananas": ["energy-support", "muscle-recovery", "gut-health"],
   "oranges": ["immune-support", "skin-health", "heart-health"],
   "kiwi": ["immune-support", "digestive-comfort", "skin-health"],
+  // Mediterranean Vegetables (WS0.6)
+  "watercress": ["immune-support", "bone-health", "eye-health", "anti-inflammatory-support"],
+  "rocket": ["bone-health", "anti-inflammatory-support", "immune-support"],
+  "parsnip": ["gut-health", "heart-health", "energy-support"],
+  "turnip": ["immune-support", "gut-health"],
+  "swede": ["immune-support", "gut-health", "heart-health"],
+  "red-cabbage": ["gut-health", "anti-inflammatory-support", "immune-support", "healthy-ageing"],
+  "pak-choi": ["bone-health", "immune-support", "eye-health"],
+  "spring-onion": ["bone-health", "immune-support"],
+  "aubergine": ["heart-health", "gut-health", "anti-inflammatory-support"],
+  "courgette": ["immune-support", "heart-health", "gut-health"],
+  "cucumber": ["heart-health", "digestive-comfort"],
+  "fennel": ["gut-health", "digestive-comfort", "heart-health"],
+  "celery": ["heart-health", "bone-health", "digestive-comfort"],
+  "asparagus": ["bone-health", "gut-health", "energy-support"],
+  "artichoke": ["gut-health", "digestive-comfort", "heart-health", "blood-sugar-balance"],
+  "broad-beans": ["muscle-recovery", "gut-health", "energy-support"],
+  "radicchio": ["gut-health", "anti-inflammatory-support", "bone-health", "healthy-ageing"],
+  "chicory": ["gut-health", "digestive-comfort", "anti-inflammatory-support"],
 };
 
 // ── Nutrient → Health benefits it supports ──────────────────────────────────

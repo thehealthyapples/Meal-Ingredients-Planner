@@ -428,4 +428,339 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       { alias: "avocados", aliasType: "plural" },
     ],
   },
+
+  // ════════════════════════ Mediterranean Vegetables (WS0.6) ════════════════════════
+
+  // ── Leafy greens ─────────────────────────────────────────────────────────────
+  {
+    food: {
+      slug: "kale", name: "Kale", category: "Vegetables", subcategory: "Leafy greens",
+      description: "A hardy leafy green; curly kale and cavolo nero are cultivars of the same plant.",
+      knowledgeFoodSlug: "kale", diversityGroupSlug: "kale",
+    },
+    varieties: [
+      { slug: "curly-kale", name: "Curly Kale", displayOrder: 0 },
+      { slug: "cavolo-nero", name: "Cavolo Nero", description: "Also known as Tuscan kale or black kale.", displayOrder: 1 },
+    ],
+    aliases: [
+      { alias: "black kale", aliasType: "common_name" },
+      { alias: "Tuscan kale", aliasType: "common_name" },
+      { alias: "kale leaves", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "watercress", name: "Watercress", category: "Vegetables", subcategory: "Leafy greens",
+      description: "A peppery aquatic leafy green rich in vitamin K, vitamin C and beta-carotene.",
+      knowledgeFoodSlug: "watercress", diversityGroupSlug: "watercress",
+    },
+    aliases: [
+      { alias: "water cress", aliasType: "misspelling" },
+    ],
+  },
+  {
+    food: {
+      slug: "rocket", name: "Rocket", category: "Vegetables", subcategory: "Leafy greens",
+      description: "A peppery salad leaf; known as arugula in the US and roquette in France.",
+      knowledgeFoodSlug: "rocket", diversityGroupSlug: "rocket",
+    },
+    aliases: [
+      { alias: "arugula", aliasType: "common_name" },
+      { alias: "roquette", aliasType: "common_name" },
+      { alias: "rocket leaves", aliasType: "form" },
+    ],
+  },
+
+  // ── Root vegetables ───────────────────────────────────────────────────────────
+  {
+    food: {
+      slug: "beetroot", name: "Beetroot", category: "Vegetables", subcategory: "Root vegetables",
+      description: "A deep-red root rich in dietary nitrates and anthocyanins; eaten raw, cooked or juiced.",
+      knowledgeFoodSlug: "beetroot", diversityGroupSlug: "beetroot",
+    },
+    aliases: [
+      { alias: "beet", aliasType: "common_name" },
+      { alias: "beets", aliasType: "common_name" },
+      { alias: "raw beetroot", aliasType: "form" },
+      { alias: "cooked beetroot", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "carrots", name: "Carrots", category: "Vegetables", subcategory: "Root vegetables",
+      description: "A crunchy root vegetable and one of the richest plant sources of beta-carotene.",
+      knowledgeFoodSlug: "carrots", diversityGroupSlug: "carrots",
+    },
+    aliases: [
+      { alias: "carrot", aliasType: "singular" },
+      { alias: "baby carrots", aliasType: "form" },
+      { alias: "grated carrot", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "parsnip", name: "Parsnip", category: "Vegetables", subcategory: "Root vegetables",
+      description: "A sweet, cream-coloured root vegetable rich in fibre and folate; popular roasted or in soups.",
+      knowledgeFoodSlug: "parsnip", diversityGroupSlug: "parsnip",
+    },
+    aliases: [
+      { alias: "parsnips", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "turnip", name: "Turnip", category: "Vegetables", subcategory: "Root vegetables",
+      description: "A mild brassica root with white flesh and purple-tinged skin, supplying vitamin C and fibre.",
+      knowledgeFoodSlug: "turnip", diversityGroupSlug: "turnip",
+    },
+    aliases: [
+      { alias: "turnips", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "swede", name: "Swede", category: "Vegetables", subcategory: "Root vegetables",
+      description: "A mild, slightly sweet brassica root; known as rutabaga in North America.",
+      knowledgeFoodSlug: "swede", diversityGroupSlug: "swede",
+    },
+    aliases: [
+      { alias: "swedes", aliasType: "plural" },
+      { alias: "rutabaga", aliasType: "common_name" },
+    ],
+  },
+
+  // ── Brassicas ─────────────────────────────────────────────────────────────────
+  {
+    food: {
+      slug: "broccoli", name: "Broccoli", category: "Vegetables", subcategory: "Brassicas",
+      description: "A green brassica rich in vitamin C, sulforaphane and folate; calabrese and sprouting are the same plant.",
+      knowledgeFoodSlug: "broccoli", diversityGroupSlug: "broccoli",
+    },
+    varieties: [
+      { slug: "calabrese-broccoli", name: "Calabrese Broccoli", description: "The standard large-headed variety found in most supermarkets.", displayOrder: 0 },
+      { slug: "purple-sprouting-broccoli", name: "Purple Sprouting Broccoli", displayOrder: 1 },
+    ],
+    aliases: [
+      { alias: "calabrese", aliasType: "common_name" },
+      { alias: "tender stem broccoli", aliasType: "form" },
+      { alias: "tenderstem", aliasType: "form" },
+      { alias: "frozen broccoli", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "red-cabbage", name: "Red Cabbage", category: "Vegetables", subcategory: "Brassicas",
+      description: "A vivid purple brassica packed with anthocyanins and fibre; excellent raw, pickled or braised.",
+      knowledgeFoodSlug: "red-cabbage", diversityGroupSlug: "red-cabbage",
+    },
+    aliases: [
+      { alias: "purple cabbage", aliasType: "common_name" },
+      { alias: "pickled red cabbage", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "pak-choi", name: "Pak Choi", category: "Vegetables", subcategory: "Brassicas",
+      description: "A mild Chinese brassica with crisp white stems and dark leafy tops; used in stir-fries and soups.",
+      knowledgeFoodSlug: "pak-choi", diversityGroupSlug: "pak-choi",
+    },
+    aliases: [
+      { alias: "bok choy", aliasType: "common_name" },
+      { alias: "bok choi", aliasType: "common_name" },
+      { alias: "pak choy", aliasType: "misspelling" },
+      { alias: "baby pak choi", aliasType: "form" },
+    ],
+  },
+
+  // ── Alliums ───────────────────────────────────────────────────────────────────
+  {
+    food: {
+      slug: "garlic", name: "Garlic", category: "Vegetables", subcategory: "Alliums",
+      description: "An aromatic allium bulb that releases allicin when crushed; fresh and dried forms are the same food.",
+      knowledgeFoodSlug: "garlic", diversityGroupSlug: "garlic",
+    },
+    aliases: [
+      { alias: "garlic clove", aliasType: "form" },
+      { alias: "garlic cloves", aliasType: "form" },
+      { alias: "garlic bulb", aliasType: "form" },
+      { alias: "crushed garlic", aliasType: "form" },
+      { alias: "garlic powder", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "onion", name: "Onion", category: "Vegetables", subcategory: "Alliums",
+      description: "A kitchen staple allium; red, brown and white onions are cultivars of the same plant.",
+      knowledgeFoodSlug: "onion", diversityGroupSlug: "onion",
+    },
+    aliases: [
+      { alias: "onions", aliasType: "plural" },
+      { alias: "red onion", aliasType: "common_name" },
+      { alias: "brown onion", aliasType: "common_name" },
+      { alias: "white onion", aliasType: "common_name" },
+      { alias: "yellow onion", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "spring-onion", name: "Spring Onion", category: "Vegetables", subcategory: "Alliums",
+      description: "A slender mild allium eaten whole; a distinct species from the common onion.",
+      knowledgeFoodSlug: "spring-onion", diversityGroupSlug: "spring-onion",
+    },
+    aliases: [
+      { alias: "spring onions", aliasType: "plural" },
+      { alias: "scallion", aliasType: "common_name" },
+      { alias: "scallions", aliasType: "common_name" },
+      { alias: "green onion", aliasType: "common_name" },
+      { alias: "salad onion", aliasType: "common_name" },
+    ],
+  },
+
+  // ── Fruiting vegetables ───────────────────────────────────────────────────────
+  {
+    food: {
+      slug: "aubergine", name: "Aubergine", category: "Vegetables", subcategory: "Fruiting vegetables",
+      description: "A deep-purple nightshade fruit used as a vegetable; known as eggplant in the US and brinjal in South Asia.",
+      knowledgeFoodSlug: "aubergine", diversityGroupSlug: "aubergine",
+    },
+    aliases: [
+      { alias: "aubergines", aliasType: "plural" },
+      { alias: "eggplant", aliasType: "common_name" },
+      { alias: "brinjal", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "courgette", name: "Courgette", category: "Vegetables", subcategory: "Fruiting vegetables",
+      description: "A tender summer squash; known as zucchini in the US, Italy and Australia.",
+      knowledgeFoodSlug: "courgette", diversityGroupSlug: "courgette",
+    },
+    aliases: [
+      { alias: "courgettes", aliasType: "plural" },
+      { alias: "zucchini", aliasType: "common_name" },
+    ],
+  },
+  {
+    // knowledgeFoodSlug is null: the canonical "pepper" covers all colours;
+    // "red-pepper" knowledge food covers red only. Variety wires red to that entry.
+    food: {
+      slug: "pepper", name: "Pepper", category: "Vegetables", subcategory: "Fruiting vegetables",
+      description: "A sweet bell pepper; all colours (red, green, yellow, orange) count as one plant for diversity.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "pepper",
+    },
+    varieties: [
+      { slug: "red-pepper", name: "Red Pepper", displayOrder: 0, knowledgeFoodSlug: "red-pepper" },
+      { slug: "green-pepper", name: "Green Pepper", displayOrder: 1 },
+      { slug: "yellow-pepper", name: "Yellow Pepper", displayOrder: 2 },
+      { slug: "orange-pepper", name: "Orange Pepper", displayOrder: 3 },
+    ],
+    aliases: [
+      { alias: "peppers", aliasType: "plural" },
+      { alias: "bell pepper", aliasType: "common_name" },
+      { alias: "bell peppers", aliasType: "common_name" },
+      { alias: "capsicum", aliasType: "common_name" },
+      { alias: "sweet pepper", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "cucumber", name: "Cucumber", category: "Vegetables", subcategory: "Fruiting vegetables",
+      description: "A refreshing, high-water-content vegetable with a cool, mild flavour; eaten raw or pickled.",
+      knowledgeFoodSlug: "cucumber", diversityGroupSlug: "cucumber",
+    },
+    aliases: [
+      { alias: "cucumbers", aliasType: "plural" },
+    ],
+  },
+
+  // ── Bulb and stem vegetables ──────────────────────────────────────────────────
+  {
+    food: {
+      slug: "fennel", name: "Fennel", category: "Vegetables", subcategory: "Bulb vegetables",
+      description: "An aromatic bulb vegetable with an aniseed flavour; the bulb, fronds and seeds are all the same plant.",
+      knowledgeFoodSlug: "fennel", diversityGroupSlug: "fennel",
+    },
+    aliases: [
+      { alias: "fennel bulb", aliasType: "form" },
+      { alias: "florence fennel", aliasType: "common_name" },
+      { alias: "fennel seed", aliasType: "form" },
+      { alias: "fennel seeds", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "celery", name: "Celery", category: "Vegetables", subcategory: "Stem vegetables",
+      description: "A crunchy stem vegetable with a mild savoury flavour, rich in vitamin K and commonly used as a cooking base.",
+      knowledgeFoodSlug: "celery", diversityGroupSlug: "celery",
+    },
+    aliases: [
+      { alias: "celery sticks", aliasType: "form" },
+      { alias: "celery stalks", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "asparagus", name: "Asparagus", category: "Vegetables", subcategory: "Stem vegetables",
+      description: "A seasonal spring vegetable rich in folate and vitamin K, with a distinctive savoury flavour.",
+      knowledgeFoodSlug: "asparagus", diversityGroupSlug: "asparagus",
+    },
+    aliases: [
+      { alias: "asparagus spears", aliasType: "form" },
+      { alias: "green asparagus", aliasType: "form" },
+    ],
+  },
+
+  // ── Speciality vegetables ─────────────────────────────────────────────────────
+  {
+    food: {
+      slug: "artichoke", name: "Artichoke", category: "Vegetables", subcategory: "Speciality vegetables",
+      description: "A thistle vegetable prized for its heart; the globe artichoke is a Mediterranean staple with outstanding fibre content.",
+      knowledgeFoodSlug: "artichoke", diversityGroupSlug: "artichoke",
+    },
+    aliases: [
+      { alias: "globe artichoke", aliasType: "common_name" },
+      { alias: "artichoke heart", aliasType: "form" },
+      { alias: "artichoke hearts", aliasType: "form" },
+      { alias: "tinned artichokes", aliasType: "form" },
+    ],
+  },
+  {
+    // Broad beans are botanically legumes but culinarily treated as vegetables
+    // when fresh or frozen; categorised here under Vegetables.
+    food: {
+      slug: "broad-beans", name: "Broad Beans", category: "Vegetables", subcategory: "Pods and beans",
+      description: "A hearty legume eaten as a vegetable; a good source of plant protein and folate, and a Mediterranean staple.",
+      knowledgeFoodSlug: "broad-beans", diversityGroupSlug: "broad-beans",
+    },
+    aliases: [
+      { alias: "broad bean", aliasType: "singular" },
+      { alias: "fava beans", aliasType: "common_name" },
+      { alias: "fava bean", aliasType: "common_name" },
+      { alias: "frozen broad beans", aliasType: "form" },
+    ],
+  },
+
+  // ── Chicory family ────────────────────────────────────────────────────────────
+  {
+    food: {
+      slug: "radicchio", name: "Radicchio", category: "Vegetables", subcategory: "Chicory",
+      description: "A vivid red chicory variety from Italy with a distinctive bitter flavour and high anthocyanin content.",
+      knowledgeFoodSlug: "radicchio", diversityGroupSlug: "radicchio",
+    },
+    aliases: [
+      { alias: "red chicory", aliasType: "common_name" },
+      { alias: "Italian chicory", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "chicory", name: "Chicory", category: "Vegetables", subcategory: "Chicory",
+      description: "A pale, tightly furled endive with a mild bitter flavour; includes Belgian and witloof varieties.",
+      knowledgeFoodSlug: "chicory", diversityGroupSlug: "chicory",
+    },
+    aliases: [
+      { alias: "Belgian endive", aliasType: "common_name" },
+      { alias: "witloof", aliasType: "common_name" },
+    ],
+  },
 ];
