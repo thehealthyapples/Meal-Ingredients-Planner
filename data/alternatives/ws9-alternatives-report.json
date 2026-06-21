@@ -1,0 +1,1447 @@
+{
+  "workstream": "WS9 — Food Alternatives Engine",
+  "generatedAt": "2026-06-21T22:29:52.404Z",
+  "anchors": [
+    "chicken",
+    "milk",
+    "white-rice",
+    "greek-yoghurt",
+    "bacon",
+    "pizza-base",
+    "beef-mince",
+    "tomato-sauce",
+    "breakfast-cereal",
+    "basil"
+  ],
+  "totalOptions": 46,
+  "examples": {
+    "chicken": {
+      "anchor": {
+        "slug": "chicken",
+        "name": "Chicken"
+      },
+      "sections": [
+        {
+          "type": "dietary",
+          "title": "Different dietary choices",
+          "options": [
+            {
+              "slug": "tofu",
+              "name": "Tofu",
+              "type": "dietary",
+              "reason": "Firm tofu takes on marinades and can be baked, grilled or stir-fried in the same way as chicken — a popular vegetarian protein.",
+              "note": "Milder on its own, so it leans on its seasoning.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "tempeh",
+              "name": "Tempeh",
+              "type": "dietary",
+              "reason": "A fermented plant protein with a firm bite; slices and cubes work wherever chicken goes in stir-fries and traybakes.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "lentils",
+              "name": "Lentils",
+              "type": "dietary",
+              "reason": "Often used to carry the protein in stews, curries and ragùs where chicken would be the main protein.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "chickpeas",
+              "name": "Chickpeas",
+              "type": "dietary",
+              "reason": "A satisfying plant protein that can fill a similar role in curries and traybakes — one most kitchens already stock.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "quorn-pieces",
+              "name": "Quorn Pieces",
+              "type": "dietary",
+              "reason": "Mycoprotein pieces are frequently chosen as a like-for-like in stir-fries and curries.",
+              "suitableFor": [
+                "vegetarian"
+              ],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "meal_role",
+          "title": "Could fill a similar role",
+          "options": [
+            {
+              "slug": "turkey",
+              "name": "Turkey",
+              "type": "meal_role",
+              "reason": "Lean poultry with a mild flavour that works in most chicken recipes with no change to the cooking method.",
+              "suitableFor": [],
+              "source": "editorial"
+            },
+            {
+              "slug": "pork",
+              "name": "Pork",
+              "type": "meal_role",
+              "reason": "Another light meat that roasts, grills and stir-fries in a similar way.",
+              "suitableFor": [],
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "milk": {
+      "anchor": {
+        "slug": "milk",
+        "name": "Milk"
+      },
+      "sections": [
+        {
+          "type": "dietary",
+          "title": "Different dietary choices",
+          "options": [
+            {
+              "slug": "oat-milk",
+              "name": "Oat Milk",
+              "type": "dietary",
+              "reason": "A common dairy-free choice that sits well on cereal, in tea and in cooking thanks to its mild taste.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "nut_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "soy-milk",
+              "name": "Soy Milk",
+              "type": "dietary",
+              "reason": "The plant drink closest to milk on protein; a popular dairy-free option for drinks, cereal and cooking.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free",
+                "nut_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "almond-milk",
+              "name": "Almond Milk",
+              "type": "dietary",
+              "reason": "A light, slightly nutty dairy-free option many households enjoy on cereal and in smoothies.",
+              "note": "Lower in protein than milk.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free",
+                "soya_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "rice": {
+      "anchor": {
+        "slug": "white-rice",
+        "name": "White Rice"
+      },
+      "sections": [
+        {
+          "type": "meal_role",
+          "title": "Could fill a similar role",
+          "options": [
+            {
+              "slug": "brown-rice",
+              "name": "Brown Rice",
+              "type": "meal_role",
+              "reason": "Wholegrain rice that fills exactly the same base role and cooks much the same way.",
+              "note": "A little nuttier and chewier, and a touch slower to cook.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "quinoa",
+              "name": "Quinoa",
+              "type": "meal_role",
+              "reason": "A grain-like seed often used where rice would go, filling the same base role.",
+              "note": "Firmer, with a slight bite and a more distinct flavour.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "bulgur-wheat",
+              "name": "Bulgur Wheat",
+              "type": "meal_role",
+              "reason": "A quick-cooking wheat grain that fills the base role in Mediterranean and Middle Eastern dishes.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "cauliflower-rice",
+              "name": "Cauliflower Rice",
+              "type": "meal_role",
+              "reason": "Grated cauliflower stands in for the base in lighter dishes.",
+              "note": "Much lighter and softer — it doesn't absorb sauce the way rice does.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free",
+                "keto",
+                "lower_carb"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "greek-yoghurt": {
+      "anchor": {
+        "slug": "greek-yoghurt",
+        "name": "Greek Yoghurt"
+      },
+      "sections": [
+        {
+          "type": "dietary",
+          "title": "Different dietary choices",
+          "options": [
+            {
+              "slug": "soya-yoghurt",
+              "name": "Soya Yoghurt",
+              "type": "dietary",
+              "reason": "The dairy-free yoghurt closest on protein; a common choice for breakfast bowls and dressings.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "coconut-yoghurt",
+              "name": "Coconut Yoghurt",
+              "type": "dietary",
+              "reason": "A creamy dairy-free pot many households enjoy in the same role.",
+              "note": "Lower in protein than Greek yoghurt.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free",
+                "soya_free",
+                "nut_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "meal_role",
+          "title": "Could fill a similar role",
+          "options": [
+            {
+              "slug": "skyr",
+              "name": "Skyr",
+              "type": "meal_role",
+              "reason": "An Icelandic strained dairy with a similarly thick texture; frequently used the same way as Greek yoghurt.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "kefir",
+              "name": "Kefir",
+              "type": "meal_role",
+              "reason": "A drinkable cultured dairy with live cultures that fills a similar breakfast and dressing role.",
+              "note": "Thinner — it pours rather than spoons.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "cottage-cheese",
+              "name": "Cottage Cheese",
+              "type": "meal_role",
+              "reason": "A fresh curd cheese often chosen for the same creamy, high-protein role at breakfast or in dips.",
+              "note": "Lumpier in texture, milder in tang.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "lower_upf",
+          "title": "Less processed options",
+          "options": [
+            {
+              "slug": "plain-greek-yoghurt",
+              "name": "Plain Greek Yoghurt",
+              "type": "lower_upf",
+              "reason": "Plain pots are less processed than the flavoured ones and fill the same creamy role — you sweeten them yourself with fruit or honey.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "bacon": {
+      "anchor": {
+        "slug": "bacon",
+        "name": "Bacon"
+      },
+      "sections": [
+        {
+          "type": "dietary",
+          "title": "Different dietary choices",
+          "options": [
+            {
+              "slug": "vegetarian-bacon",
+              "name": "Meat-free Rashers",
+              "type": "dietary",
+              "reason": "Smoky meat-free rashers frequently chosen to keep the savoury, crispy role in a fry-up.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "tempeh",
+              "name": "Tempeh",
+              "type": "dietary",
+              "reason": "Sliced thin and marinated, tempeh crisps into a smoky, savoury element many households enjoy.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "eggs",
+              "name": "Eggs",
+              "type": "dietary",
+              "reason": "A classic cooked-breakfast protein that fills the savoury role without the rashers.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free",
+                "nut_free",
+                "soya_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "meal_role",
+          "title": "Could fill a similar role",
+          "options": [
+            {
+              "slug": "sausage",
+              "name": "Sausage",
+              "type": "meal_role",
+              "reason": "Another cooked-breakfast protein that fills the savoury role on the plate.",
+              "suitableFor": [],
+              "source": "editorial"
+            },
+            {
+              "slug": "mushrooms",
+              "name": "Mushrooms",
+              "type": "meal_role",
+              "reason": "Pan-fried mushrooms bring a savoury, umami element to a fry-up.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "lower_upf",
+          "title": "Less processed options",
+          "options": [
+            {
+              "slug": "grilled-pork",
+              "name": "Grilled Fresh Pork",
+              "type": "lower_upf",
+              "reason": "A grilled fresh pork cut is less processed than cured rashers and fills the same savoury breakfast role.",
+              "note": "Different texture — not crispy the way rashers are.",
+              "suitableFor": [],
+              "source": "editorial"
+            },
+            {
+              "slug": "eggs",
+              "name": "Eggs",
+              "type": "lower_upf",
+              "reason": "A minimally processed cooked-breakfast protein in the same savoury role.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free",
+                "nut_free",
+                "soya_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "pizza-base": {
+      "anchor": {
+        "slug": "pizza-base",
+        "name": "Pizza Base"
+      },
+      "sections": [
+        {
+          "type": "dietary",
+          "title": "Different dietary choices",
+          "options": [
+            {
+              "slug": "gluten-free-base",
+              "name": "Gluten-free Base",
+              "type": "dietary",
+              "reason": "A gluten-free base holds the toppings the same way, so the whole household can share the pizza.",
+              "note": "Usually thinner and a little crisper.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "keto-base",
+              "name": "Keto Base",
+              "type": "dietary",
+              "reason": "A cauliflower or almond base keeps the pizza role for a keto or lower-carb plate.",
+              "note": "Softer and not bread-like.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free",
+                "keto",
+                "lower_carb"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "wholemeal-base",
+              "name": "Wholemeal Base",
+              "type": "dietary",
+              "reason": "A wholemeal base fills exactly the same role with a nuttier flavour.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan"
+              ],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "lower_upf",
+          "title": "Less processed options",
+          "options": [
+            {
+              "slug": "homemade-base",
+              "name": "Homemade Base",
+              "type": "lower_upf",
+              "reason": "A simple homemade dough is less processed than a shop-bought base and fills exactly the same role — you control what goes in.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "beef-mince": {
+      "anchor": {
+        "slug": "beef-mince",
+        "name": "Beef Mince"
+      },
+      "sections": [
+        {
+          "type": "dietary",
+          "title": "Different dietary choices",
+          "options": [
+            {
+              "slug": "quorn-mince",
+              "name": "Quorn Mince",
+              "type": "dietary",
+              "reason": "Mycoprotein mince frequently chosen as a like-for-like in bolognese, chilli and lasagne.",
+              "suitableFor": [
+                "vegetarian"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "soya-mince",
+              "name": "Soya Mince",
+              "type": "dietary",
+              "reason": "Dried or frozen soya mince fills the same savoury base role in ragùs and chillis.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "lentils",
+              "name": "Lentils",
+              "type": "dietary",
+              "reason": "Brown or green lentils give a hearty, savoury base in bolognese and cottage pie.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "meal_role",
+          "title": "Could fill a similar role",
+          "options": [
+            {
+              "slug": "turkey-mince",
+              "name": "Turkey Mince",
+              "type": "meal_role",
+              "reason": "A lean mince that browns and seasons just like beef in the same dishes.",
+              "suitableFor": [],
+              "source": "editorial"
+            },
+            {
+              "slug": "pork-mince",
+              "name": "Pork Mince",
+              "type": "meal_role",
+              "reason": "Another mince that fills the same savoury base role.",
+              "suitableFor": [],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "lower_upf",
+          "title": "Less processed options",
+          "options": [
+            {
+              "slug": "plain-beef-mince",
+              "name": "Plain Beef Mince",
+              "type": "lower_upf",
+              "reason": "Plain mince is less processed than ready-seasoned mince mixes and fills the same role — you season it yourself.",
+              "suitableFor": [],
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "tomato-sauce": {
+      "anchor": {
+        "slug": "tomato-sauce",
+        "name": "Tomato Sauce"
+      },
+      "sections": [
+        {
+          "type": "lower_upf",
+          "title": "Less processed options",
+          "options": [
+            {
+              "slug": "passata",
+              "name": "Passata",
+              "type": "lower_upf",
+              "reason": "Sieved tomatoes are a minimally processed base that fills the same sauce role — you season it yourself.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "chopped-tomatoes",
+              "name": "Chopped Tomatoes",
+              "type": "lower_upf",
+              "reason": "Tinned chopped tomatoes simmer down into the same sauce with a fresher taste.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "homemade-tomato-sauce",
+              "name": "Homemade Tomato Sauce",
+              "type": "lower_upf",
+              "reason": "A simple sauce from tomatoes, garlic and herbs fills the same role and you control what goes in.",
+              "note": "Takes a little longer to cook from scratch.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "chicken__vegan": {
+      "anchor": {
+        "slug": "chicken",
+        "name": "Chicken"
+      },
+      "sections": [
+        {
+          "type": "dietary",
+          "title": "Different dietary choices",
+          "options": [
+            {
+              "slug": "tofu",
+              "name": "Tofu",
+              "type": "dietary",
+              "reason": "Firm tofu takes on marinades and can be baked, grilled or stir-fried in the same way as chicken — a popular vegetarian protein.",
+              "note": "Milder on its own, so it leans on its seasoning.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "tempeh",
+              "name": "Tempeh",
+              "type": "dietary",
+              "reason": "A fermented plant protein with a firm bite; slices and cubes work wherever chicken goes in stir-fries and traybakes.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "lentils",
+              "name": "Lentils",
+              "type": "dietary",
+              "reason": "Often used to carry the protein in stews, curries and ragùs where chicken would be the main protein.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "chickpeas",
+              "name": "Chickpeas",
+              "type": "dietary",
+              "reason": "A satisfying plant protein that can fill a similar role in curries and traybakes — one most kitchens already stock.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "rice__gluten_free": {
+      "anchor": {
+        "slug": "white-rice",
+        "name": "White Rice"
+      },
+      "sections": [
+        {
+          "type": "meal_role",
+          "title": "Could fill a similar role",
+          "options": [
+            {
+              "slug": "brown-rice",
+              "name": "Brown Rice",
+              "type": "meal_role",
+              "reason": "Wholegrain rice that fills exactly the same base role and cooks much the same way.",
+              "note": "A little nuttier and chewier, and a touch slower to cook.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "quinoa",
+              "name": "Quinoa",
+              "type": "meal_role",
+              "reason": "A grain-like seed often used where rice would go, filling the same base role.",
+              "note": "Firmer, with a slight bite and a more distinct flavour.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "cauliflower-rice",
+              "name": "Cauliflower Rice",
+              "type": "meal_role",
+              "reason": "Grated cauliflower stands in for the base in lighter dishes.",
+              "note": "Much lighter and softer — it doesn't absorb sauce the way rice does.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free",
+                "keto",
+                "lower_carb"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "rice__keto": {
+      "anchor": {
+        "slug": "white-rice",
+        "name": "White Rice"
+      },
+      "sections": [
+        {
+          "type": "meal_role",
+          "title": "Could fill a similar role",
+          "options": [
+            {
+              "slug": "cauliflower-rice",
+              "name": "Cauliflower Rice",
+              "type": "meal_role",
+              "reason": "Grated cauliflower stands in for the base in lighter dishes.",
+              "note": "Much lighter and softer — it doesn't absorb sauce the way rice does.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free",
+                "keto",
+                "lower_carb"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "greek-yoghurt__dairy_free": {
+      "anchor": {
+        "slug": "greek-yoghurt",
+        "name": "Greek Yoghurt"
+      },
+      "sections": [
+        {
+          "type": "dietary",
+          "title": "Different dietary choices",
+          "options": [
+            {
+              "slug": "soya-yoghurt",
+              "name": "Soya Yoghurt",
+              "type": "dietary",
+              "reason": "The dairy-free yoghurt closest on protein; a common choice for breakfast bowls and dressings.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "coconut-yoghurt",
+              "name": "Coconut Yoghurt",
+              "type": "dietary",
+              "reason": "A creamy dairy-free pot many households enjoy in the same role.",
+              "note": "Lower in protein than Greek yoghurt.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free",
+                "soya_free",
+                "nut_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "processed-sauce__lowerUpf": {
+      "anchor": {
+        "slug": "tomato-sauce",
+        "name": "Tomato Sauce"
+      },
+      "sections": [
+        {
+          "type": "lower_upf",
+          "title": "Less processed options",
+          "options": [
+            {
+              "slug": "passata",
+              "name": "Passata",
+              "type": "lower_upf",
+              "reason": "Sieved tomatoes are a minimally processed base that fills the same sauce role — you season it yourself.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "chopped-tomatoes",
+              "name": "Chopped Tomatoes",
+              "type": "lower_upf",
+              "reason": "Tinned chopped tomatoes simmer down into the same sauce with a fresher taste.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "homemade-tomato-sauce",
+              "name": "Homemade Tomato Sauce",
+              "type": "lower_upf",
+              "reason": "A simple sauce from tomatoes, garlic and herbs fills the same role and you control what goes in.",
+              "note": "Takes a little longer to cook from scratch.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "basil": {
+      "anchor": {
+        "slug": "basil",
+        "name": "Basil"
+      },
+      "sections": [
+        {
+          "type": "cuisine",
+          "title": "In a different cuisine",
+          "options": [
+            {
+              "slug": "parsley",
+              "name": "Parsley",
+              "type": "cuisine",
+              "reason": "Often used as the fresh green herb finish in European and Middle Eastern dishes.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "cuisine": "European",
+              "source": "editorial"
+            },
+            {
+              "slug": "coriander",
+              "name": "Coriander",
+              "type": "cuisine",
+              "reason": "Frequently chosen as the fresh herb in Thai, Indian, Vietnamese and Mexican cooking.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "cuisine": "Asian & Latin American",
+              "source": "editorial"
+            },
+            {
+              "slug": "mint",
+              "name": "Mint",
+              "type": "cuisine",
+              "reason": "Used as the bright fresh herb in Middle Eastern and North African dishes.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "cuisine": "Middle Eastern & North African",
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "basil__asian": {
+      "anchor": {
+        "slug": "basil",
+        "name": "Basil"
+      },
+      "sections": [
+        {
+          "type": "cuisine",
+          "title": "In a different cuisine",
+          "options": [
+            {
+              "slug": "coriander",
+              "name": "Coriander",
+              "type": "cuisine",
+              "reason": "Frequently chosen as the fresh herb in Thai, Indian, Vietnamese and Mexican cooking.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "cuisine": "Asian & Latin American",
+              "source": "editorial"
+            }
+          ]
+        }
+      ]
+    },
+    "beef-mince__household": {
+      "anchor": {
+        "slug": "beef-mince",
+        "name": "Beef Mince"
+      },
+      "sections": [
+        {
+          "type": "dietary",
+          "title": "Different dietary choices",
+          "options": [
+            {
+              "slug": "quorn-mince",
+              "name": "Quorn Mince",
+              "type": "dietary",
+              "reason": "Mycoprotein mince frequently chosen as a like-for-like in bolognese, chilli and lasagne.",
+              "suitableFor": [
+                "vegetarian"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "soya-mince",
+              "name": "Soya Mince",
+              "type": "dietary",
+              "reason": "Dried or frozen soya mince fills the same savoury base role in ragùs and chillis.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "lentils",
+              "name": "Lentils",
+              "type": "dietary",
+              "reason": "Brown or green lentils give a hearty, savoury base in bolognese and cottage pie.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "meal_role",
+          "title": "Could fill a similar role",
+          "options": [
+            {
+              "slug": "turkey-mince",
+              "name": "Turkey Mince",
+              "type": "meal_role",
+              "reason": "A lean mince that browns and seasons just like beef in the same dishes.",
+              "suitableFor": [],
+              "source": "editorial"
+            },
+            {
+              "slug": "pork-mince",
+              "name": "Pork Mince",
+              "type": "meal_role",
+              "reason": "Another mince that fills the same savoury base role.",
+              "suitableFor": [],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "lower_upf",
+          "title": "Less processed options",
+          "options": [
+            {
+              "slug": "plain-beef-mince",
+              "name": "Plain Beef Mince",
+              "type": "lower_upf",
+              "reason": "Plain mince is less processed than ready-seasoned mince mixes and fills the same role — you season it yourself.",
+              "suitableFor": [],
+              "source": "editorial"
+            }
+          ]
+        }
+      ],
+      "adaptation": {
+        "anchor": {
+          "slug": "beef-mince",
+          "name": "Beef Mince"
+        },
+        "members": [
+          {
+            "eater": "Family",
+            "slug": "beef-mince",
+            "name": "Beef Mince",
+            "shared": true,
+            "reason": "Enjoys the shared beef mince."
+          },
+          {
+            "eater": "Lilly",
+            "slug": "quorn-mince",
+            "name": "Quorn Mince",
+            "shared": false,
+            "reason": "Quorn Mince fills the same role for Lilly."
+          }
+        ]
+      }
+    },
+    "pizza__household": {
+      "anchor": {
+        "slug": "pizza-base",
+        "name": "Pizza Base"
+      },
+      "sections": [
+        {
+          "type": "dietary",
+          "title": "Different dietary choices",
+          "options": [
+            {
+              "slug": "gluten-free-base",
+              "name": "Gluten-free Base",
+              "type": "dietary",
+              "reason": "A gluten-free base holds the toppings the same way, so the whole household can share the pizza.",
+              "note": "Usually thinner and a little crisper.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "keto-base",
+              "name": "Keto Base",
+              "type": "dietary",
+              "reason": "A cauliflower or almond base keeps the pizza role for a keto or lower-carb plate.",
+              "note": "Softer and not bread-like.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free",
+                "keto",
+                "lower_carb"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "wholemeal-base",
+              "name": "Wholemeal Base",
+              "type": "dietary",
+              "reason": "A wholemeal base fills exactly the same role with a nuttier flavour.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan"
+              ],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "lower_upf",
+          "title": "Less processed options",
+          "options": [
+            {
+              "slug": "homemade-base",
+              "name": "Homemade Base",
+              "type": "lower_upf",
+              "reason": "A simple homemade dough is less processed than a shop-bought base and fills exactly the same role — you control what goes in.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ],
+      "adaptation": {
+        "anchor": {
+          "slug": "pizza-base",
+          "name": "Pizza Base"
+        },
+        "members": [
+          {
+            "eater": "Parents",
+            "slug": "pizza-base",
+            "name": "Pizza Base",
+            "shared": true,
+            "reason": "Enjoys the shared pizza base."
+          },
+          {
+            "eater": "Lilly",
+            "slug": "gluten-free-base",
+            "name": "Gluten-free Base",
+            "shared": false,
+            "reason": "Gluten-free Base fills the same role for Lilly."
+          },
+          {
+            "eater": "Dad",
+            "slug": "keto-base",
+            "name": "Keto Base",
+            "shared": false,
+            "reason": "Keto Base fills the same role for Dad."
+          }
+        ]
+      }
+    },
+    "bacon__household": {
+      "anchor": {
+        "slug": "bacon",
+        "name": "Bacon"
+      },
+      "sections": [
+        {
+          "type": "dietary",
+          "title": "Different dietary choices",
+          "options": [
+            {
+              "slug": "vegetarian-bacon",
+              "name": "Meat-free Rashers",
+              "type": "dietary",
+              "reason": "Smoky meat-free rashers frequently chosen to keep the savoury, crispy role in a fry-up.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "tempeh",
+              "name": "Tempeh",
+              "type": "dietary",
+              "reason": "Sliced thin and marinated, tempeh crisps into a smoky, savoury element many households enjoy.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "eggs",
+              "name": "Eggs",
+              "type": "dietary",
+              "reason": "A classic cooked-breakfast protein that fills the savoury role without the rashers.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free",
+                "nut_free",
+                "soya_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "meal_role",
+          "title": "Could fill a similar role",
+          "options": [
+            {
+              "slug": "sausage",
+              "name": "Sausage",
+              "type": "meal_role",
+              "reason": "Another cooked-breakfast protein that fills the savoury role on the plate.",
+              "suitableFor": [],
+              "source": "editorial"
+            },
+            {
+              "slug": "mushrooms",
+              "name": "Mushrooms",
+              "type": "meal_role",
+              "reason": "Pan-fried mushrooms bring a savoury, umami element to a fry-up.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "lower_upf",
+          "title": "Less processed options",
+          "options": [
+            {
+              "slug": "grilled-pork",
+              "name": "Grilled Fresh Pork",
+              "type": "lower_upf",
+              "reason": "A grilled fresh pork cut is less processed than cured rashers and fills the same savoury breakfast role.",
+              "note": "Different texture — not crispy the way rashers are.",
+              "suitableFor": [],
+              "source": "editorial"
+            },
+            {
+              "slug": "eggs",
+              "name": "Eggs",
+              "type": "lower_upf",
+              "reason": "A minimally processed cooked-breakfast protein in the same savoury role.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free",
+                "nut_free",
+                "soya_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ],
+      "adaptation": {
+        "anchor": {
+          "slug": "bacon",
+          "name": "Bacon"
+        },
+        "members": [
+          {
+            "eater": "Dad",
+            "slug": "bacon",
+            "name": "Bacon",
+            "shared": true,
+            "reason": "Enjoys the shared bacon."
+          },
+          {
+            "eater": "Lilly",
+            "slug": "vegetarian-bacon",
+            "name": "Meat-free Rashers",
+            "shared": false,
+            "reason": "Meat-free Rashers fills the same role for Lilly."
+          }
+        ]
+      }
+    },
+    "greek-yoghurt__already-fits": {
+      "anchor": {
+        "slug": "greek-yoghurt",
+        "name": "Greek Yoghurt"
+      },
+      "sections": [
+        {
+          "type": "dietary",
+          "title": "Different dietary choices",
+          "options": [
+            {
+              "slug": "soya-yoghurt",
+              "name": "Soya Yoghurt",
+              "type": "dietary",
+              "reason": "The dairy-free yoghurt closest on protein; a common choice for breakfast bowls and dressings.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "coconut-yoghurt",
+              "name": "Coconut Yoghurt",
+              "type": "dietary",
+              "reason": "A creamy dairy-free pot many households enjoy in the same role.",
+              "note": "Lower in protein than Greek yoghurt.",
+              "suitableFor": [
+                "vegetarian",
+                "vegan",
+                "dairy_free",
+                "gluten_free",
+                "soya_free",
+                "nut_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "meal_role",
+          "title": "Could fill a similar role",
+          "options": [
+            {
+              "slug": "skyr",
+              "name": "Skyr",
+              "type": "meal_role",
+              "reason": "An Icelandic strained dairy with a similarly thick texture; frequently used the same way as Greek yoghurt.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "kefir",
+              "name": "Kefir",
+              "type": "meal_role",
+              "reason": "A drinkable cultured dairy with live cultures that fills a similar breakfast and dressing role.",
+              "note": "Thinner — it pours rather than spoons.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            },
+            {
+              "slug": "cottage-cheese",
+              "name": "Cottage Cheese",
+              "type": "meal_role",
+              "reason": "A fresh curd cheese often chosen for the same creamy, high-protein role at breakfast or in dips.",
+              "note": "Lumpier in texture, milder in tang.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        },
+        {
+          "type": "lower_upf",
+          "title": "Less processed options",
+          "options": [
+            {
+              "slug": "plain-greek-yoghurt",
+              "name": "Plain Greek Yoghurt",
+              "type": "lower_upf",
+              "reason": "Plain pots are less processed than the flavoured ones and fill the same creamy role — you sweeten them yourself with fruit or honey.",
+              "suitableFor": [
+                "vegetarian",
+                "gluten_free"
+              ],
+              "source": "editorial"
+            }
+          ]
+        }
+      ],
+      "adaptation": {
+        "anchor": {
+          "slug": "greek-yoghurt",
+          "name": "Greek Yoghurt"
+        },
+        "members": [
+          {
+            "eater": "Mum",
+            "slug": "greek-yoghurt",
+            "name": "Greek Yoghurt",
+            "shared": true,
+            "reason": "The shared greek yoghurt already suits Mum's choices."
+          }
+        ]
+      }
+    },
+    "milk__lowerUpf-silent": {
+      "anchor": {
+        "slug": "milk",
+        "name": "Milk"
+      },
+      "sections": []
+    }
+  }
+}
