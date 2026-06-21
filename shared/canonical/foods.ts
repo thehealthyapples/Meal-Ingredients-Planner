@@ -146,7 +146,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "cumin", name: "Cumin", category: "Spices", subcategory: "Ground spices",
       description: "An earthy spice from cumin seeds; whole and ground are the same food.",
-      knowledgeFoodSlug: null, diversityGroupSlug: "cumin",
+      knowledgeFoodSlug: "cumin", diversityGroupSlug: "cumin",
     },
     aliases: [
       { alias: "ground cumin", aliasType: "form" },
@@ -157,7 +157,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "turmeric", name: "Turmeric", category: "Spices", subcategory: "Ground spices",
       description: "A golden root spice, usually used ground.",
-      knowledgeFoodSlug: null, diversityGroupSlug: "turmeric",
+      knowledgeFoodSlug: "turmeric", diversityGroupSlug: "turmeric",
     },
     aliases: [
       { alias: "ground turmeric", aliasType: "form" },
@@ -169,7 +169,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "cinnamon", name: "Cinnamon", category: "Spices", subcategory: "Ground spices",
       description: "A warm sweet spice from tree bark; stick and ground are the same food.",
-      knowledgeFoodSlug: null, diversityGroupSlug: "cinnamon",
+      knowledgeFoodSlug: "cinnamon", diversityGroupSlug: "cinnamon",
     },
     aliases: [
       { alias: "ground cinnamon", aliasType: "form" },
@@ -180,7 +180,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "ginger", name: "Ginger", category: "Spices", subcategory: "Root spices",
       description: "A pungent root used fresh or ground.",
-      knowledgeFoodSlug: null, diversityGroupSlug: "ginger",
+      knowledgeFoodSlug: "ginger", diversityGroupSlug: "ginger",
     },
     aliases: [
       { alias: "fresh ginger", aliasType: "form" },
@@ -191,7 +191,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "paprika", name: "Paprika", category: "Spices", subcategory: "Ground spices",
       description: "A ground pepper spice; sweet and smoked are the same food here.",
-      knowledgeFoodSlug: null, diversityGroupSlug: "paprika",
+      knowledgeFoodSlug: "paprika", diversityGroupSlug: "paprika",
     },
     aliases: [
       { alias: "smoked paprika", aliasType: "form" },
@@ -231,7 +231,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "clementine", name: "Clementine", category: "Fruit", subcategory: "Citrus",
       description: "A small easy-peel citrus fruit; distinct from orange but shares the citrus plant group.",
-      knowledgeFoodSlug: null, diversityGroupSlug: "citrus",
+      knowledgeFoodSlug: "clementine", diversityGroupSlug: "citrus",
     },
     aliases: [
       { alias: "clementines", aliasType: "plural" },
@@ -319,9 +319,9 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     },
     varieties: [
       { slug: "red-lentil", name: "Red Lentils", displayOrder: 0, knowledgeFoodSlug: "red-lentils" },
-      { slug: "green-lentil", name: "Green Lentils", displayOrder: 1 },
-      { slug: "puy-lentil", name: "Puy Lentils", displayOrder: 2 },
-      { slug: "beluga-lentil", name: "Beluga Lentils", displayOrder: 3 },
+      { slug: "green-lentil", name: "Green Lentils", displayOrder: 1, knowledgeFoodSlug: "green-lentils" },
+      { slug: "puy-lentil", name: "Puy Lentils", displayOrder: 2, knowledgeFoodSlug: "puy-lentils" },
+      { slug: "beluga-lentil", name: "Beluga Lentils", displayOrder: 3, knowledgeFoodSlug: "beluga-lentils" },
     ],
     aliases: [
       { alias: "dried lentils", aliasType: "form" },
@@ -761,6 +761,1655 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     aliases: [
       { alias: "Belgian endive", aliasType: "common_name" },
       { alias: "witloof", aliasType: "common_name" },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // WS0.8 — Launch Food Coverage Expansion
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  // ════════════════════════ Wave 1: Pantry Essentials ════════════════════════
+
+  {
+    food: {
+      slug: "potato", name: "Potato", category: "Vegetables", subcategory: "Root vegetables",
+      description: "A starchy root vegetable and UK kitchen staple; all varieties count as one plant.",
+      knowledgeFoodSlug: "potato", diversityGroupSlug: "potato",
+    },
+    varieties: [
+      { slug: "maris-piper-potato", name: "Maris Piper", displayOrder: 0 },
+      { slug: "king-edward-potato", name: "King Edward", displayOrder: 1 },
+      { slug: "jersey-royal-potato", name: "Jersey Royal", displayOrder: 2 },
+      { slug: "charlotte-potato", name: "Charlotte", displayOrder: 3 },
+    ],
+    aliases: [
+      { alias: "potatoes", aliasType: "plural" },
+      { alias: "spud", aliasType: "common_name" },
+      { alias: "spuds", aliasType: "common_name" },
+      { alias: "new potato", aliasType: "form" },
+      { alias: "new potatoes", aliasType: "form" },
+      { alias: "baked potato", aliasType: "form" },
+      { alias: "jacket potato", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "sweet-potato", name: "Sweet Potato", category: "Vegetables", subcategory: "Root vegetables",
+      description: "A naturally sweet orange-fleshed root rich in beta-carotene and fibre.",
+      knowledgeFoodSlug: "sweet-potato", diversityGroupSlug: "sweet-potato",
+    },
+    aliases: [
+      { alias: "sweet potatoes", aliasType: "plural" },
+      { alias: "yam", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "leek", name: "Leek", category: "Vegetables", subcategory: "Alliums",
+      description: "A mild, sweet allium rich in folate, vitamin K and prebiotic fibre.",
+      knowledgeFoodSlug: "leek", diversityGroupSlug: "leek",
+    },
+    aliases: [
+      { alias: "leeks", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "shallot", name: "Shallot", category: "Vegetables", subcategory: "Alliums",
+      description: "A small, sweet allium with a milder flavour than onion; banana shallots are the most widely sold variety.",
+      knowledgeFoodSlug: "shallot", diversityGroupSlug: "shallot",
+    },
+    aliases: [
+      { alias: "shallots", aliasType: "plural" },
+      { alias: "banana shallot", aliasType: "common_name" },
+      { alias: "echalion", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "cauliflower", name: "Cauliflower", category: "Vegetables", subcategory: "Brassicas",
+      description: "A white brassica rich in vitamin C; purple and Romanesco varieties are the same plant.",
+      knowledgeFoodSlug: "cauliflower", diversityGroupSlug: "cauliflower",
+    },
+    varieties: [
+      { slug: "white-cauliflower", name: "White Cauliflower", displayOrder: 0 },
+      { slug: "purple-cauliflower", name: "Purple Cauliflower", displayOrder: 1 },
+      { slug: "romanesco-cauliflower", name: "Romanesco", displayOrder: 2 },
+    ],
+    aliases: [
+      { alias: "cauliflowers", aliasType: "plural" },
+      { alias: "cauli", aliasType: "common_name" },
+      { alias: "cauliflower rice", aliasType: "form" },
+      { alias: "cauliflower florets", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "cabbage", name: "Cabbage", category: "Vegetables", subcategory: "Brassicas",
+      description: "A brassica family staple; white, green, savoy and hispi are cultivars of the same plant.",
+      knowledgeFoodSlug: "cabbage", diversityGroupSlug: "cabbage",
+    },
+    varieties: [
+      { slug: "savoy-cabbage", name: "Savoy Cabbage", displayOrder: 0 },
+      { slug: "hispi-cabbage", name: "Hispi Cabbage", description: "Also called pointed or sweetheart cabbage.", displayOrder: 1 },
+    ],
+    aliases: [
+      { alias: "white cabbage", aliasType: "common_name" },
+      { alias: "green cabbage", aliasType: "common_name" },
+      { alias: "spring cabbage", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "butternut-squash", name: "Butternut Squash", category: "Vegetables", subcategory: "Squash",
+      description: "A sweet winter squash with orange flesh rich in beta-carotene and vitamin C.",
+      knowledgeFoodSlug: "butternut-squash", diversityGroupSlug: "butternut-squash",
+    },
+    aliases: [
+      { alias: "butternut", aliasType: "common_name" },
+      { alias: "butternut squashes", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "pumpkin", name: "Pumpkin", category: "Vegetables", subcategory: "Squash",
+      description: "A large round squash with vibrant orange flesh high in beta-carotene.",
+      knowledgeFoodSlug: "pumpkin", diversityGroupSlug: "pumpkin",
+    },
+    aliases: [
+      { alias: "pumpkins", aliasType: "plural" },
+      { alias: "tinned pumpkin", aliasType: "form" },
+      { alias: "pumpkin puree", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "peas", name: "Peas", category: "Vegetables", subcategory: "Pods and beans",
+      description: "Small sweet legumes eaten as a vegetable; garden peas, sugar snaps and mangetout are the same plant.",
+      knowledgeFoodSlug: "garden-peas", diversityGroupSlug: "peas",
+    },
+    varieties: [
+      { slug: "sugar-snap-peas", name: "Sugar Snap Peas", displayOrder: 0 },
+      { slug: "mangetout", name: "Mangetout", displayOrder: 1 },
+    ],
+    aliases: [
+      { alias: "garden peas", aliasType: "common_name" },
+      { alias: "frozen peas", aliasType: "form" },
+      { alias: "fresh peas", aliasType: "form" },
+      { alias: "petits pois", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "edamame", name: "Edamame", category: "Vegetables", subcategory: "Pods and beans",
+      description: "Young green soya beans eaten in the pod or shelled, offering complete plant protein and folate.",
+      knowledgeFoodSlug: "edamame", diversityGroupSlug: "edamame",
+    },
+    aliases: [
+      { alias: "soya beans", aliasType: "common_name" },
+      { alias: "frozen edamame", aliasType: "form" },
+      { alias: "edamame beans", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "brussels-sprouts", name: "Brussels Sprouts", category: "Vegetables", subcategory: "Brassicas",
+      description: "Small brassica buds rich in vitamin C, vitamin K and sulforaphane.",
+      knowledgeFoodSlug: "brussels-sprouts", diversityGroupSlug: "brussels-sprouts",
+    },
+    aliases: [
+      { alias: "sprouts", aliasType: "common_name" },
+      { alias: "brussels sprout", aliasType: "singular" },
+    ],
+  },
+  {
+    food: {
+      slug: "celeriac", name: "Celeriac", category: "Vegetables", subcategory: "Root vegetables",
+      description: "A knobbly root vegetable with a mild celery flavour, supplying vitamin C and fibre.",
+      knowledgeFoodSlug: "celeriac", diversityGroupSlug: "celeriac",
+    },
+    aliases: [
+      { alias: "celery root", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "green-beans", name: "Green Beans", category: "Vegetables", subcategory: "Pods and beans",
+      description: "Slender pod vegetables eaten whole; French beans, fine beans and haricot verts are the same plant.",
+      knowledgeFoodSlug: "green-beans", diversityGroupSlug: "green-beans",
+    },
+    aliases: [
+      { alias: "French beans", aliasType: "common_name" },
+      { alias: "fine beans", aliasType: "common_name" },
+      { alias: "haricot verts", aliasType: "common_name" },
+      { alias: "string beans", aliasType: "common_name" },
+      { alias: "runner beans", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "radish", name: "Radish", category: "Vegetables", subcategory: "Root vegetables",
+      description: "A crisp, peppery brassica root eaten raw in salads or pickled; a quick-growing seasonal vegetable.",
+      knowledgeFoodSlug: "radish", diversityGroupSlug: "radish",
+    },
+    aliases: [
+      { alias: "radishes", aliasType: "plural" },
+      { alias: "breakfast radish", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "kohlrabi", name: "Kohlrabi", category: "Vegetables", subcategory: "Brassicas",
+      description: "A crunchy brassica bulb with a mild, slightly sweet flavour; green and purple varieties are the same plant.",
+      knowledgeFoodSlug: "kohlrabi", diversityGroupSlug: "kohlrabi",
+    },
+    aliases: [
+      { alias: "german turnip", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "corn", name: "Sweetcorn", category: "Vegetables", subcategory: "Grain vegetables",
+      description: "A sweet grain vegetable rich in fibre and folate, available fresh, frozen or tinned.",
+      knowledgeFoodSlug: "corn", diversityGroupSlug: "corn",
+    },
+    aliases: [
+      { alias: "sweetcorn", aliasType: "common_name" },
+      { alias: "maize", aliasType: "common_name" },
+      { alias: "corn on the cob", aliasType: "form" },
+      { alias: "sweet corn", aliasType: "common_name" },
+      { alias: "tinned sweetcorn", aliasType: "form" },
+      { alias: "frozen sweetcorn", aliasType: "form" },
+    ],
+  },
+
+  // ════════════════════════ Wave 2: Mediterranean Vegetables ══════════════════
+
+  {
+    food: {
+      slug: "lettuce", name: "Lettuce", category: "Vegetables", subcategory: "Leafy greens",
+      description: "Leafy salad greens; romaine, little gem, iceberg and butterhead are all the same plant.",
+      knowledgeFoodSlug: "lettuce", diversityGroupSlug: "lettuce",
+    },
+    varieties: [
+      { slug: "romaine-lettuce", name: "Romaine Lettuce", displayOrder: 0 },
+      { slug: "little-gem-lettuce", name: "Little Gem", displayOrder: 1 },
+      { slug: "iceberg-lettuce", name: "Iceberg Lettuce", displayOrder: 2 },
+      { slug: "butterhead-lettuce", name: "Butterhead Lettuce", displayOrder: 3 },
+    ],
+    aliases: [
+      { alias: "salad leaves", aliasType: "common_name" },
+      { alias: "cos lettuce", aliasType: "common_name" },
+      { alias: "mixed salad", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "olives", name: "Olives", category: "Vegetables", subcategory: "Fruiting vegetables",
+      description: "A Mediterranean fruit drupe rich in unsaturated fats and polyphenols; black and green are the same fruit at different ripeness.",
+      knowledgeFoodSlug: "olives", diversityGroupSlug: "olives",
+    },
+    aliases: [
+      { alias: "black olives", aliasType: "common_name" },
+      { alias: "green olives", aliasType: "common_name" },
+      { alias: "kalamata olives", aliasType: "common_name" },
+      { alias: "pitted olives", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "chard", name: "Chard", category: "Vegetables", subcategory: "Leafy greens",
+      description: "A leafy green with colourful stems, rich in vitamin K, magnesium and beta-carotene; Swiss chard and rainbow chard are the same plant.",
+      knowledgeFoodSlug: "chard", diversityGroupSlug: "chard",
+    },
+    aliases: [
+      { alias: "Swiss chard", aliasType: "common_name" },
+      { alias: "rainbow chard", aliasType: "common_name" },
+      { alias: "silverbeet", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "jerusalem-artichoke", name: "Jerusalem Artichoke", category: "Vegetables", subcategory: "Root vegetables",
+      description: "A knobby tuber from the sunflower family, exceptionally high in inulin fibre.",
+      knowledgeFoodSlug: "jerusalem-artichoke", diversityGroupSlug: "jerusalem-artichoke",
+    },
+    aliases: [
+      { alias: "sunchoke", aliasType: "common_name" },
+      { alias: "earth apple", aliasType: "common_name" },
+      { alias: "Jerusalem artichokes", aliasType: "plural" },
+    ],
+  },
+
+  // ════════════════════════ Wave 3: Beans, Pulses and Legumes ════════════════
+
+  {
+    food: {
+      slug: "cannellini-beans", name: "Cannellini Beans", category: "Legumes", subcategory: "Beans",
+      description: "Large, creamy white beans rich in fibre and plant protein; widely used in Italian cooking.",
+      knowledgeFoodSlug: "cannellini-beans", diversityGroupSlug: "cannellini-beans",
+    },
+    aliases: [
+      { alias: "cannellini bean", aliasType: "singular" },
+      { alias: "white kidney beans", aliasType: "common_name" },
+      { alias: "white beans", aliasType: "common_name" },
+      { alias: "tinned cannellini", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "borlotti-beans", name: "Borlotti Beans", category: "Legumes", subcategory: "Beans",
+      description: "Speckled Italian beans with a creamy, nutty flavour, rich in fibre and plant protein.",
+      knowledgeFoodSlug: "borlotti-beans", diversityGroupSlug: "borlotti-beans",
+    },
+    aliases: [
+      { alias: "borlotti bean", aliasType: "singular" },
+      { alias: "romano beans", aliasType: "common_name" },
+      { alias: "cranberry beans", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "haricot-beans", name: "Haricot Beans", category: "Legumes", subcategory: "Beans",
+      description: "Small, oval white beans high in fibre and plant protein; the classic bean used in baked beans.",
+      knowledgeFoodSlug: "haricot-beans", diversityGroupSlug: "haricot-beans",
+    },
+    aliases: [
+      { alias: "haricot bean", aliasType: "singular" },
+      { alias: "navy beans", aliasType: "common_name" },
+      { alias: "baked beans", aliasType: "form" },
+    ],
+  },
+
+  // ════════════════════════ Wave 4: Fruit ════════════════════════
+
+  {
+    food: {
+      slug: "banana", name: "Banana", category: "Fruit", subcategory: "Tropical fruit",
+      description: "A portable, naturally sweet fruit supplying potassium, vitamin B6 and fibre.",
+      knowledgeFoodSlug: "bananas", diversityGroupSlug: "banana",
+    },
+    aliases: [
+      { alias: "bananas", aliasType: "plural" },
+      { alias: "ripe banana", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "strawberry", name: "Strawberry", category: "Fruit", subcategory: "Berries",
+      description: "A sweet red berry rich in vitamin C, flavonoids and fibre.",
+      knowledgeFoodSlug: "strawberries", diversityGroupSlug: "strawberry",
+    },
+    aliases: [
+      { alias: "strawberries", aliasType: "plural" },
+      { alias: "frozen strawberries", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "blueberry", name: "Blueberry", category: "Fruit", subcategory: "Berries",
+      description: "Small blue berries rich in anthocyanins, polyphenols and vitamin C.",
+      knowledgeFoodSlug: "blueberries", diversityGroupSlug: "blueberry",
+    },
+    aliases: [
+      { alias: "blueberries", aliasType: "plural" },
+      { alias: "frozen blueberries", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "raspberry", name: "Raspberry", category: "Fruit", subcategory: "Berries",
+      description: "Soft red berries exceptionally high in fibre, vitamin C and flavonoids.",
+      knowledgeFoodSlug: "raspberry", diversityGroupSlug: "raspberry",
+    },
+    aliases: [
+      { alias: "raspberries", aliasType: "plural" },
+      { alias: "frozen raspberries", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "kiwi", name: "Kiwi", category: "Fruit", subcategory: "Exotic fruit",
+      description: "A tangy green fruit exceptionally rich in vitamin C and fibre; golden kiwi is a variety of the same plant.",
+      knowledgeFoodSlug: "kiwi", diversityGroupSlug: "kiwi",
+    },
+    varieties: [
+      { slug: "green-kiwi", name: "Green Kiwi", displayOrder: 0 },
+      { slug: "golden-kiwi", name: "Golden Kiwi", displayOrder: 1 },
+    ],
+    aliases: [
+      { alias: "kiwifruit", aliasType: "common_name" },
+      { alias: "kiwi fruit", aliasType: "common_name" },
+      { alias: "kiwis", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "pear", name: "Pear", category: "Fruit", subcategory: "Top fruit",
+      description: "A gently sweet fruit high in fibre and vitamin C; Conference, Williams and Comice are cultivars.",
+      knowledgeFoodSlug: "pear", diversityGroupSlug: "pear",
+    },
+    varieties: [
+      { slug: "conference-pear", name: "Conference Pear", displayOrder: 0 },
+      { slug: "williams-pear", name: "Williams Pear", displayOrder: 1 },
+    ],
+    aliases: [
+      { alias: "pears", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "mango", name: "Mango", category: "Fruit", subcategory: "Tropical fruit",
+      description: "A sweet tropical fruit rich in beta-carotene, vitamin C and folate.",
+      knowledgeFoodSlug: "mango", diversityGroupSlug: "mango",
+    },
+    aliases: [
+      { alias: "mangoes", aliasType: "plural" },
+      { alias: "frozen mango", aliasType: "form" },
+      { alias: "dried mango", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "grape", name: "Grape", category: "Fruit", subcategory: "Top fruit",
+      description: "Small juicy fruits rich in flavonoids; red and black grapes also supply anthocyanins.",
+      knowledgeFoodSlug: "grape", diversityGroupSlug: "grape",
+    },
+    varieties: [
+      { slug: "red-grape", name: "Red Grape", displayOrder: 0 },
+      { slug: "green-grape", name: "Green Grape", displayOrder: 1 },
+      { slug: "black-grape", name: "Black Grape", displayOrder: 2 },
+    ],
+    aliases: [
+      { alias: "grapes", aliasType: "plural" },
+      { alias: "seedless grapes", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "lemon", name: "Lemon", category: "Fruit", subcategory: "Citrus",
+      description: "A tart citrus fruit rich in vitamin C; belongs to the citrus plant group.",
+      knowledgeFoodSlug: "lemon", diversityGroupSlug: "citrus",
+    },
+    aliases: [
+      { alias: "lemons", aliasType: "plural" },
+      { alias: "lemon juice", aliasType: "form" },
+      { alias: "lemon zest", aliasType: "form" },
+      { alias: "preserved lemon", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "lime", name: "Lime", category: "Fruit", subcategory: "Citrus",
+      description: "A small, bright citrus fruit rich in vitamin C; belongs to the citrus plant group.",
+      knowledgeFoodSlug: "lime", diversityGroupSlug: "citrus",
+    },
+    aliases: [
+      { alias: "limes", aliasType: "plural" },
+      { alias: "lime juice", aliasType: "form" },
+      { alias: "lime zest", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "pomegranate", name: "Pomegranate", category: "Fruit", subcategory: "Exotic fruit",
+      description: "A jewel-seeded fruit rich in anthocyanins, polyphenols and vitamin C.",
+      knowledgeFoodSlug: "pomegranate", diversityGroupSlug: "pomegranate",
+    },
+    aliases: [
+      { alias: "pomegranates", aliasType: "plural" },
+      { alias: "pomegranate seeds", aliasType: "form" },
+      { alias: "pomegranate arils", aliasType: "form" },
+      { alias: "pomegranate juice", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "peach", name: "Peach", category: "Fruit", subcategory: "Stone fruit",
+      description: "A sweet stone fruit with soft, fragrant flesh rich in beta-carotene and vitamin C; yellow and white varieties are the same plant.",
+      knowledgeFoodSlug: "peach", diversityGroupSlug: "peach",
+    },
+    varieties: [
+      { slug: "yellow-peach", name: "Yellow Peach", displayOrder: 0 },
+      { slug: "white-peach", name: "White Peach", displayOrder: 1 },
+    ],
+    aliases: [
+      { alias: "peaches", aliasType: "plural" },
+      { alias: "tinned peaches", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "plum", name: "Plum", category: "Fruit", subcategory: "Stone fruit",
+      description: "A sweet-tart stone fruit rich in fibre and vitamin C; Victoria, damson and greengage are varieties.",
+      knowledgeFoodSlug: "plum", diversityGroupSlug: "plum",
+    },
+    varieties: [
+      { slug: "victoria-plum", name: "Victoria Plum", displayOrder: 0 },
+      { slug: "damson", name: "Damson", displayOrder: 1 },
+    ],
+    aliases: [
+      { alias: "plums", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "cherry", name: "Cherry", category: "Fruit", subcategory: "Stone fruit",
+      description: "Small stone fruits rich in anthocyanins and vitamin C; sweet and sour varieties are the same plant.",
+      knowledgeFoodSlug: "cherry", diversityGroupSlug: "cherry",
+    },
+    aliases: [
+      { alias: "cherries", aliasType: "plural" },
+      { alias: "sweet cherry", aliasType: "common_name" },
+      { alias: "morello cherry", aliasType: "common_name" },
+      { alias: "frozen cherries", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "nectarine", name: "Nectarine", category: "Fruit", subcategory: "Stone fruit",
+      description: "A smooth-skinned stone fruit closely related to the peach, rich in beta-carotene and vitamin C.",
+      knowledgeFoodSlug: "nectarine", diversityGroupSlug: "nectarine",
+    },
+    aliases: [
+      { alias: "nectarines", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "watermelon", name: "Watermelon", category: "Fruit", subcategory: "Melon",
+      description: "A large, refreshing fruit with high water content, supplying lycopene, potassium and vitamin C.",
+      knowledgeFoodSlug: "watermelon", diversityGroupSlug: "watermelon",
+    },
+    aliases: [
+      { alias: "watermelons", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "pineapple", name: "Pineapple", category: "Fruit", subcategory: "Tropical fruit",
+      description: "A tropical fruit rich in vitamin C and manganese, with a sweet and tangy flavour.",
+      knowledgeFoodSlug: "pineapple", diversityGroupSlug: "pineapple",
+    },
+    aliases: [
+      { alias: "pineapples", aliasType: "plural" },
+      { alias: "tinned pineapple", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "fig", name: "Fig", category: "Fruit", subcategory: "Exotic fruit",
+      description: "A soft, sweet fruit rich in fibre, calcium and potassium; enjoyed fresh in summer or dried year-round.",
+      knowledgeFoodSlug: "fig", diversityGroupSlug: "fig",
+    },
+    aliases: [
+      { alias: "figs", aliasType: "plural" },
+      { alias: "dried figs", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "apricot", name: "Apricot", category: "Fruit", subcategory: "Stone fruit",
+      description: "A golden stone fruit rich in beta-carotene and vitamin C; dried apricots are a concentrated source of iron.",
+      knowledgeFoodSlug: "apricot", diversityGroupSlug: "apricot",
+    },
+    aliases: [
+      { alias: "apricots", aliasType: "plural" },
+      { alias: "dried apricots", aliasType: "form" },
+      { alias: "tinned apricots", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "grapefruit", name: "Grapefruit", category: "Fruit", subcategory: "Citrus",
+      description: "A large, bitter-sweet citrus fruit rich in vitamin C and folate; belongs to the citrus plant group.",
+      knowledgeFoodSlug: null, diversityGroupSlug: "citrus",
+    },
+    aliases: [
+      { alias: "grapefruits", aliasType: "plural" },
+      { alias: "pink grapefruit", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "passion-fruit", name: "Passion Fruit", category: "Fruit", subcategory: "Exotic fruit",
+      description: "A tropical fruit with aromatic, seedy pulp rich in fibre and vitamin C.",
+      knowledgeFoodSlug: "passion-fruit", diversityGroupSlug: "passion-fruit",
+    },
+    aliases: [
+      { alias: "passionfruit", aliasType: "common_name" },
+      { alias: "passion fruits", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "blackberry", name: "Blackberry", category: "Fruit", subcategory: "Berries",
+      description: "Deep purple berries rich in anthocyanins, fibre and vitamin C.",
+      knowledgeFoodSlug: "blackberry", diversityGroupSlug: "blackberry",
+    },
+    aliases: [
+      { alias: "blackberries", aliasType: "plural" },
+      { alias: "bramble", aliasType: "common_name" },
+      { alias: "frozen blackberries", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "melon", name: "Melon", category: "Fruit", subcategory: "Melon",
+      description: "A refreshing fruit with high water content; honeydew, cantaloupe and galia are the most widely available varieties.",
+      knowledgeFoodSlug: "melon", diversityGroupSlug: "melon",
+    },
+    varieties: [
+      { slug: "cantaloupe-melon", name: "Cantaloupe", displayOrder: 0 },
+      { slug: "honeydew-melon", name: "Honeydew", displayOrder: 1 },
+      { slug: "galia-melon", name: "Galia", displayOrder: 2 },
+    ],
+    aliases: [
+      { alias: "melons", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "cranberry", name: "Cranberry", category: "Fruit", subcategory: "Berries",
+      description: "Tart red berries rich in flavonoids and vitamin C; commonly dried or juiced.",
+      knowledgeFoodSlug: "cranberry", diversityGroupSlug: "cranberry",
+    },
+    aliases: [
+      { alias: "cranberries", aliasType: "plural" },
+      { alias: "dried cranberries", aliasType: "form" },
+      { alias: "cranberry juice", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "blackcurrant", name: "Blackcurrant", category: "Fruit", subcategory: "Berries",
+      description: "Small, intensely flavoured berries with exceptional vitamin C content and anthocyanins.",
+      knowledgeFoodSlug: "blackcurrant", diversityGroupSlug: "blackcurrant",
+    },
+    aliases: [
+      { alias: "blackcurrants", aliasType: "plural" },
+      { alias: "black currant", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "redcurrant", name: "Redcurrant", category: "Fruit", subcategory: "Berries",
+      description: "Tart, jewel-like berries rich in vitamin C and flavonoids, used in jams and as a cooking ingredient.",
+      knowledgeFoodSlug: "redcurrant", diversityGroupSlug: "redcurrant",
+    },
+    aliases: [
+      { alias: "redcurrants", aliasType: "plural" },
+      { alias: "red currant", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "gooseberry", name: "Gooseberry", category: "Fruit", subcategory: "Berries",
+      description: "A tart British berry rich in vitamin C and fibre, traditionally used in crumbles and jams.",
+      knowledgeFoodSlug: "gooseberry", diversityGroupSlug: "gooseberry",
+    },
+    aliases: [
+      { alias: "gooseberries", aliasType: "plural" },
+    ],
+  },
+  {
+    food: {
+      slug: "raisins", name: "Raisins", category: "Fruit", subcategory: "Dried fruit",
+      description: "Dried grapes concentrated in fibre, potassium and iron; sultanas and currants are related dried grape products.",
+      knowledgeFoodSlug: "raisins", diversityGroupSlug: "raisins",
+    },
+    aliases: [
+      { alias: "sultanas", aliasType: "common_name" },
+      { alias: "currants", aliasType: "common_name" },
+      { alias: "mixed dried fruit", aliasType: "form" },
+    ],
+  },
+
+  // ════════════════════════ Wave 5: Herbs ════════════════════════
+
+  {
+    food: {
+      slug: "rosemary", name: "Rosemary", category: "Herbs", subcategory: "Woody herbs",
+      description: "An aromatic woody herb rich in protective polyphenols, used in Mediterranean cooking.",
+      knowledgeFoodSlug: "rosemary", diversityGroupSlug: "rosemary",
+    },
+    aliases: [
+      { alias: "fresh rosemary", aliasType: "form" },
+      { alias: "dried rosemary", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "thyme", name: "Thyme", category: "Herbs", subcategory: "Woody herbs",
+      description: "A small-leaved woody herb full of aromatic polyphenols, used in many European cuisines.",
+      knowledgeFoodSlug: "thyme", diversityGroupSlug: "thyme",
+    },
+    aliases: [
+      { alias: "fresh thyme", aliasType: "form" },
+      { alias: "dried thyme", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "oregano", name: "Oregano", category: "Herbs", subcategory: "Woody herbs",
+      description: "An aromatic herb central to Mediterranean cooking, rich in protective polyphenols.",
+      knowledgeFoodSlug: "oregano", diversityGroupSlug: "oregano",
+    },
+    aliases: [
+      { alias: "dried oregano", aliasType: "form" },
+      { alias: "fresh oregano", aliasType: "form" },
+      { alias: "wild marjoram", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "dill", name: "Dill", category: "Herbs", subcategory: "Soft herbs",
+      description: "A feathery soft herb with a fresh, anise-like flavour, supplying vitamin C and folate.",
+      knowledgeFoodSlug: "dill", diversityGroupSlug: "dill",
+    },
+    aliases: [
+      { alias: "fresh dill", aliasType: "form" },
+      { alias: "dried dill", aliasType: "form" },
+      { alias: "dill weed", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "chives", name: "Chives", category: "Herbs", subcategory: "Soft herbs",
+      description: "A slender allium herb with a mild onion flavour, supplying vitamin K.",
+      knowledgeFoodSlug: "chives", diversityGroupSlug: "chives",
+    },
+    aliases: [
+      { alias: "fresh chives", aliasType: "form" },
+      { alias: "garlic chives", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "sage", name: "Sage", category: "Herbs", subcategory: "Woody herbs",
+      description: "A robust, earthy woody herb rich in polyphenols; used in roasting, butter sauces and Italian cooking.",
+      knowledgeFoodSlug: "sage", diversityGroupSlug: "sage",
+    },
+    aliases: [
+      { alias: "fresh sage", aliasType: "form" },
+      { alias: "dried sage", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "tarragon", name: "Tarragon", category: "Herbs", subcategory: "Soft herbs",
+      description: "An aromatic herb with a distinctive anise-like flavour, central to French cooking.",
+      knowledgeFoodSlug: "tarragon", diversityGroupSlug: "tarragon",
+    },
+    aliases: [
+      { alias: "French tarragon", aliasType: "common_name" },
+      { alias: "fresh tarragon", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "bay-leaf", name: "Bay Leaf", category: "Herbs", subcategory: "Woody herbs",
+      description: "The leaf of the bay laurel tree; dried or fresh, used to add depth to slow-cooked dishes.",
+      knowledgeFoodSlug: "bay-leaf", diversityGroupSlug: "bay-leaf",
+    },
+    aliases: [
+      { alias: "bay leaves", aliasType: "plural" },
+      { alias: "dried bay leaf", aliasType: "form" },
+      { alias: "bay laurel", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "lemongrass", name: "Lemongrass", category: "Herbs", subcategory: "Stem herbs",
+      description: "A fragrant stem herb with a bright citrus flavour, widely used in South East Asian cooking.",
+      knowledgeFoodSlug: "lemongrass", diversityGroupSlug: "lemongrass",
+    },
+    aliases: [
+      { alias: "lemon grass", aliasType: "misspelling" },
+      { alias: "lemongrass paste", aliasType: "form" },
+    ],
+  },
+
+  // ════════════════════════ Wave 5: Spices ════════════════════════
+
+  {
+    food: {
+      slug: "vanilla", name: "Vanilla", category: "Spices", subcategory: "Sweet spices",
+      description: "A fragrant spice from orchid pods, used to flavour baking and desserts.",
+      knowledgeFoodSlug: "vanilla", diversityGroupSlug: "vanilla",
+    },
+    aliases: [
+      { alias: "vanilla pods", aliasType: "form" },
+      { alias: "vanilla extract", aliasType: "form" },
+      { alias: "vanilla paste", aliasType: "form" },
+      { alias: "vanilla bean", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "chilli", name: "Chilli", category: "Spices", subcategory: "Chillies",
+      description: "A hot pepper supplying vitamin C and protective polyphenols; fresh, dried and ground forms are the same plant.",
+      knowledgeFoodSlug: "chilli", diversityGroupSlug: "chilli",
+    },
+    aliases: [
+      { alias: "chili", aliasType: "misspelling" },
+      { alias: "red chilli", aliasType: "form" },
+      { alias: "green chilli", aliasType: "form" },
+      { alias: "chilli flakes", aliasType: "form" },
+      { alias: "chilli powder", aliasType: "form" },
+      { alias: "dried chilli", aliasType: "form" },
+      { alias: "bird's eye chilli", aliasType: "common_name" },
+      { alias: "jalapeño", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "black-pepper", name: "Black Pepper", category: "Spices", subcategory: "Peppercorns",
+      description: "The world's most widely used spice; whole peppercorns and ground pepper are the same food.",
+      knowledgeFoodSlug: "black-pepper", diversityGroupSlug: "black-pepper",
+    },
+    aliases: [
+      { alias: "ground black pepper", aliasType: "form" },
+      { alias: "peppercorns", aliasType: "form" },
+      { alias: "white pepper", aliasType: "form" },
+      { alias: "black peppercorns", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "cardamom", name: "Cardamom", category: "Spices", subcategory: "Pod spices",
+      description: "A fragrant aromatic spice from the ginger family used in South Asian, Nordic and Middle Eastern cooking.",
+      knowledgeFoodSlug: "cardamom", diversityGroupSlug: "cardamom",
+    },
+    aliases: [
+      { alias: "green cardamom", aliasType: "form" },
+      { alias: "ground cardamom", aliasType: "form" },
+      { alias: "cardamom pods", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "star-anise", name: "Star Anise", category: "Spices", subcategory: "Pod spices",
+      description: "A star-shaped spice with an intense aniseed flavour, used in Chinese five-spice and braised dishes.",
+      knowledgeFoodSlug: "star-anise", diversityGroupSlug: "star-anise",
+    },
+    aliases: [
+      { alias: "star anise", aliasType: "common_name" },
+      { alias: "ground star anise", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "cloves", name: "Cloves", category: "Spices", subcategory: "Ground spices",
+      description: "Intensely aromatic dried flower buds rich in polyphenols; whole and ground are the same food.",
+      knowledgeFoodSlug: "cloves", diversityGroupSlug: "cloves",
+    },
+    aliases: [
+      { alias: "whole cloves", aliasType: "form" },
+      { alias: "ground cloves", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "nutmeg", name: "Nutmeg", category: "Spices", subcategory: "Ground spices",
+      description: "A warm spice grated from a tropical tree seed; used in béchamel, baking and spiced drinks.",
+      knowledgeFoodSlug: "nutmeg", diversityGroupSlug: "nutmeg",
+    },
+    aliases: [
+      { alias: "whole nutmeg", aliasType: "form" },
+      { alias: "ground nutmeg", aliasType: "form" },
+    ],
+  },
+
+  // ════════════════════════ Wave 6: Nuts and Seeds ════════════════════════
+
+  {
+    food: {
+      slug: "sesame-seeds", name: "Sesame Seeds", category: "Seeds", subcategory: "Whole seeds",
+      description: "Small seeds supplying calcium and healthy fats; also pressed into tahini.",
+      knowledgeFoodSlug: "sesame-seeds", diversityGroupSlug: "sesame-seeds",
+    },
+    aliases: [
+      { alias: "sesame seed", aliasType: "singular" },
+      { alias: "sesame", aliasType: "common_name" },
+      { alias: "tahini", aliasType: "form" },
+      { alias: "tahini paste", aliasType: "form" },
+      { alias: "black sesame seeds", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "hemp-seeds", name: "Hemp Seeds", category: "Seeds", subcategory: "Whole seeds",
+      description: "Soft seeds offering complete plant protein and a balance of healthy fats.",
+      knowledgeFoodSlug: "hemp-seeds", diversityGroupSlug: "hemp-seeds",
+    },
+    aliases: [
+      { alias: "hemp seed", aliasType: "singular" },
+      { alias: "hemp hearts", aliasType: "common_name" },
+      { alias: "hulled hemp seeds", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "hazelnuts", name: "Hazelnuts", category: "Nuts", subcategory: "Tree nuts",
+      description: "A round tree nut rich in vitamin E, magnesium and copper with a buttery flavour.",
+      knowledgeFoodSlug: "hazelnuts", diversityGroupSlug: "hazelnuts",
+    },
+    aliases: [
+      { alias: "hazelnut", aliasType: "singular" },
+      { alias: "cobnuts", aliasType: "common_name" },
+      { alias: "filberts", aliasType: "common_name" },
+      { alias: "ground hazelnuts", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "cashews", name: "Cashews", category: "Nuts", subcategory: "Tree nuts",
+      description: "Creamy tree nuts supplying magnesium, copper, zinc and unsaturated fats.",
+      knowledgeFoodSlug: "cashews", diversityGroupSlug: "cashews",
+    },
+    aliases: [
+      { alias: "cashew nut", aliasType: "singular" },
+      { alias: "cashew nuts", aliasType: "plural" },
+      { alias: "roasted cashews", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "pistachios", name: "Pistachios", category: "Nuts", subcategory: "Tree nuts",
+      description: "Green tree nuts rich in vitamin B6, potassium and copper.",
+      knowledgeFoodSlug: "pistachios", diversityGroupSlug: "pistachios",
+    },
+    aliases: [
+      { alias: "pistachio", aliasType: "singular" },
+      { alias: "pistachio nut", aliasType: "singular" },
+      { alias: "shelled pistachios", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "brazil-nuts", name: "Brazil Nuts", category: "Nuts", subcategory: "Tree nuts",
+      description: "Large South American nuts and one of the richest food sources of selenium.",
+      knowledgeFoodSlug: "brazil-nuts", diversityGroupSlug: "brazil-nuts",
+    },
+    aliases: [
+      { alias: "brazil nut", aliasType: "singular" },
+    ],
+  },
+  {
+    food: {
+      slug: "pine-nuts", name: "Pine Nuts", category: "Nuts", subcategory: "Tree nuts",
+      description: "Small, soft seeds from pine trees rich in magnesium and vitamin E; essential in traditional pesto.",
+      knowledgeFoodSlug: "pine-nuts", diversityGroupSlug: "pine-nuts",
+    },
+    aliases: [
+      { alias: "pine nut", aliasType: "singular" },
+      { alias: "pine kernels", aliasType: "common_name" },
+      { alias: "pignoli", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "pecans", name: "Pecans", category: "Nuts", subcategory: "Tree nuts",
+      description: "A rich, buttery tree nut supplying unsaturated fats, copper and manganese.",
+      knowledgeFoodSlug: "pecans", diversityGroupSlug: "pecans",
+    },
+    aliases: [
+      { alias: "pecan", aliasType: "singular" },
+      { alias: "pecan nut", aliasType: "singular" },
+      { alias: "pecan halves", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "peanuts", name: "Peanuts", category: "Nuts", subcategory: "Legume nuts",
+      description: "Technically a legume, peanuts supply plant protein, magnesium, vitamin E and zinc.",
+      knowledgeFoodSlug: "peanuts", diversityGroupSlug: "peanuts",
+    },
+    aliases: [
+      { alias: "peanut", aliasType: "singular" },
+      { alias: "groundnuts", aliasType: "common_name" },
+      { alias: "monkey nuts", aliasType: "common_name" },
+      { alias: "peanut butter", aliasType: "form" },
+      { alias: "roasted peanuts", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "macadamia", name: "Macadamia Nuts", category: "Nuts", subcategory: "Tree nuts",
+      description: "Rich, buttery Australian tree nuts high in unsaturated fats and manganese.",
+      knowledgeFoodSlug: "macadamia", diversityGroupSlug: "macadamia",
+    },
+    aliases: [
+      { alias: "macadamia nut", aliasType: "singular" },
+      { alias: "macadamias", aliasType: "plural" },
+    ],
+  },
+
+  // ════════════════════════ Wave 7: Dairy and Alternatives ════════════════════
+
+  {
+    food: {
+      slug: "milk", name: "Milk", category: "Dairy", subcategory: "Cow's milk",
+      description: "A nutrient-dense dairy liquid supplying calcium, vitamin D, vitamin B12 and iodine.",
+      knowledgeFoodSlug: "milk", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "whole milk", aliasType: "form" },
+      { alias: "semi-skimmed milk", aliasType: "form" },
+      { alias: "skimmed milk", aliasType: "form" },
+      { alias: "full-fat milk", aliasType: "form" },
+      { alias: "cow's milk", aliasType: "common_name" },
+      { alias: "cows milk", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "yoghurt", name: "Yoghurt", category: "Dairy", subcategory: "Fermented dairy",
+      description: "A cultured dairy food supplying calcium and vitamin B12; includes live, natural and Greek-style varieties.",
+      knowledgeFoodSlug: "live-yogurt", diversityGroupSlug: null,
+    },
+    varieties: [
+      { slug: "greek-yoghurt", name: "Greek Yoghurt", description: "Strained yoghurt with a much higher protein content and richer texture.", displayOrder: 0, knowledgeFoodSlug: "greek-yoghurt" },
+    ],
+    aliases: [
+      { alias: "natural yoghurt", aliasType: "form" },
+      { alias: "plain yoghurt", aliasType: "form" },
+      { alias: "live yoghurt", aliasType: "form" },
+      { alias: "yogurt", aliasType: "misspelling" },
+      { alias: "natural yogurt", aliasType: "form" },
+      { alias: "plain yogurt", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "cheddar", name: "Cheddar", category: "Dairy", subcategory: "Hard cheese",
+      description: "A firm, tangy British cheese and an excellent source of calcium, vitamin B12 and iodine.",
+      knowledgeFoodSlug: "cheddar", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "cheddar cheese", aliasType: "form" },
+      { alias: "mature cheddar", aliasType: "form" },
+      { alias: "mild cheddar", aliasType: "form" },
+      { alias: "grated cheddar", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "mozzarella", name: "Mozzarella", category: "Dairy", subcategory: "Fresh cheese",
+      description: "A soft, mild Italian cheese supplying calcium and vitamin B12.",
+      knowledgeFoodSlug: "mozzarella", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "fresh mozzarella", aliasType: "form" },
+      { alias: "buffalo mozzarella", aliasType: "form" },
+      { alias: "grated mozzarella", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "halloumi", name: "Halloumi", category: "Dairy", subcategory: "Semi-hard cheese",
+      description: "A firm Cypriot cheese with a high melting point; best grilled or pan-fried.",
+      knowledgeFoodSlug: "halloumi", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "grilling cheese", aliasType: "common_name" },
+      { alias: "haloumi", aliasType: "misspelling" },
+    ],
+  },
+  {
+    food: {
+      slug: "feta", name: "Feta", category: "Dairy", subcategory: "Soft cheese",
+      description: "A crumbly, tangy Greek cheese made from sheep's and goat's milk, supplying calcium.",
+      knowledgeFoodSlug: "feta", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "feta cheese", aliasType: "form" },
+      { alias: "Greek cheese", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "parmesan", name: "Parmesan", category: "Dairy", subcategory: "Hard cheese",
+      description: "A hard, aged Italian cheese with intense umami flavour, rich in calcium and vitamin B12.",
+      knowledgeFoodSlug: "parmesan", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "parmigiano reggiano", aliasType: "common_name" },
+      { alias: "parmigiano-reggiano", aliasType: "common_name" },
+      { alias: "grana padano", aliasType: "common_name" },
+      { alias: "grated parmesan", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "ricotta", name: "Ricotta", category: "Dairy", subcategory: "Fresh cheese",
+      description: "A soft, mild Italian whey cheese light in flavour and supplying calcium.",
+      knowledgeFoodSlug: "ricotta", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "ricotta cheese", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "oat-milk", name: "Oat Milk", category: "Dairy alternatives", subcategory: "Plant milks",
+      description: "A plant-based milk made from oats; contributes oat plant diversity and is commonly fortified.",
+      knowledgeFoodSlug: "oat-milk", diversityGroupSlug: "oats",
+    },
+    aliases: [
+      { alias: "oat drink", aliasType: "common_name" },
+      { alias: "oat milk barista", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "soy-milk", name: "Soy Milk", category: "Dairy alternatives", subcategory: "Plant milks",
+      description: "A plant-based milk made from soybeans, supplying plant protein; commonly fortified.",
+      knowledgeFoodSlug: "soy-milk", diversityGroupSlug: "edamame",
+    },
+    aliases: [
+      { alias: "soya milk", aliasType: "common_name" },
+      { alias: "soya drink", aliasType: "common_name" },
+      { alias: "soy drink", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "almond-milk", name: "Almond Milk", category: "Dairy alternatives", subcategory: "Plant milks",
+      description: "A plant-based milk made from almonds, supplying some vitamin E; commonly fortified.",
+      knowledgeFoodSlug: "almond-milk", diversityGroupSlug: "almonds",
+    },
+    aliases: [
+      { alias: "almond drink", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "kefir", name: "Kefir", category: "Dairy", subcategory: "Fermented dairy",
+      description: "A cultured, drinkable ferment rich in live cultures and calcium.",
+      knowledgeFoodSlug: "kefir", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "milk kefir", aliasType: "common_name" },
+      { alias: "kefir drink", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "tempeh", name: "Tempeh", category: "Fermented foods", subcategory: "Fermented soya",
+      description: "A firm fermented soya cake offering complete plant protein and fibre.",
+      knowledgeFoodSlug: "tempeh", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "fermented soya", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "tofu", name: "Tofu", category: "Legumes", subcategory: "Soya",
+      description: "A versatile soya food supplying plant protein, calcium and iron; available in firm and silken varieties.",
+      knowledgeFoodSlug: "tofu", diversityGroupSlug: null,
+    },
+    varieties: [
+      { slug: "firm-tofu", name: "Firm Tofu", displayOrder: 0 },
+      { slug: "silken-tofu", name: "Silken Tofu", displayOrder: 1 },
+    ],
+    aliases: [
+      { alias: "bean curd", aliasType: "common_name" },
+      { alias: "extra-firm tofu", aliasType: "form" },
+      { alias: "smoked tofu", aliasType: "form" },
+    ],
+  },
+
+  // ════════════════════════ Wave 8: Proteins ════════════════════════
+
+  {
+    food: {
+      slug: "eggs", name: "Eggs", category: "Proteins", subcategory: "Eggs",
+      description: "A complete protein food supplying vitamin D, vitamin B12, selenium and iodine.",
+      knowledgeFoodSlug: "eggs", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "egg", aliasType: "singular" },
+      { alias: "hen eggs", aliasType: "common_name" },
+      { alias: "free-range eggs", aliasType: "form" },
+      { alias: "organic eggs", aliasType: "form" },
+      { alias: "boiled egg", aliasType: "form" },
+      { alias: "scrambled eggs", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "chicken", name: "Chicken", category: "Proteins", subcategory: "Poultry",
+      description: "A widely eaten white meat supplying selenium, vitamin B6, zinc and vitamin B12.",
+      knowledgeFoodSlug: "chicken", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "chicken breast", aliasType: "form" },
+      { alias: "chicken thigh", aliasType: "form" },
+      { alias: "chicken leg", aliasType: "form" },
+      { alias: "whole chicken", aliasType: "form" },
+      { alias: "chicken mince", aliasType: "form" },
+      { alias: "roast chicken", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "turkey", name: "Turkey", category: "Proteins", subcategory: "Poultry",
+      description: "A lean white meat supplying selenium, vitamin B6, zinc and vitamin B12.",
+      knowledgeFoodSlug: "turkey", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "turkey breast", aliasType: "form" },
+      { alias: "turkey mince", aliasType: "form" },
+      { alias: "turkey steak", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "beef", name: "Beef", category: "Proteins", subcategory: "Red meat",
+      description: "A red meat supplying well-absorbed iron, zinc and vitamin B12.",
+      knowledgeFoodSlug: "beef", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "beef mince", aliasType: "form" },
+      { alias: "minced beef", aliasType: "form" },
+      { alias: "ground beef", aliasType: "form" },
+      { alias: "steak", aliasType: "form" },
+      { alias: "sirloin", aliasType: "form" },
+      { alias: "rump steak", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "lamb", name: "Lamb", category: "Proteins", subcategory: "Red meat",
+      description: "A red meat with a distinctive flavour supplying iron, zinc and vitamin B12.",
+      knowledgeFoodSlug: "lamb", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "lamb chops", aliasType: "form" },
+      { alias: "lamb mince", aliasType: "form" },
+      { alias: "lamb leg", aliasType: "form" },
+      { alias: "lamb shoulder", aliasType: "form" },
+      { alias: "mutton", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "pork", name: "Pork", category: "Proteins", subcategory: "White meat",
+      description: "A versatile white meat supplying vitamin B6, vitamin B12, selenium and zinc.",
+      knowledgeFoodSlug: "pork", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "pork chops", aliasType: "form" },
+      { alias: "pork loin", aliasType: "form" },
+      { alias: "pork belly", aliasType: "form" },
+      { alias: "pork mince", aliasType: "form" },
+      { alias: "pork tenderloin", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "duck", name: "Duck", category: "Proteins", subcategory: "Poultry",
+      description: "A rich, dark poultry meat supplying iron, zinc and vitamin B12.",
+      knowledgeFoodSlug: "duck", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "duck breast", aliasType: "form" },
+      { alias: "duck leg", aliasType: "form" },
+      { alias: "whole duck", aliasType: "form" },
+      { alias: "duck confit", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "salmon", name: "Salmon", category: "Healthy fats", subcategory: "Oily fish",
+      description: "An oily fish rich in omega-3 fats and vitamin D.",
+      knowledgeFoodSlug: "salmon", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "salmon fillet", aliasType: "form" },
+      { alias: "smoked salmon", aliasType: "form" },
+      { alias: "tinned salmon", aliasType: "form" },
+      { alias: "fresh salmon", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "sardines", name: "Sardines", category: "Healthy fats", subcategory: "Oily fish",
+      description: "Small oily fish rich in omega-3, calcium and vitamin D; often available tinned.",
+      knowledgeFoodSlug: "sardines", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "pilchards", aliasType: "common_name" },
+      { alias: "tinned sardines", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "tuna", name: "Tuna", category: "Healthy fats", subcategory: "Oily fish",
+      description: "An oily fish supplying omega-3 fats, selenium and vitamin D; tinned tuna is a pantry staple.",
+      knowledgeFoodSlug: "tuna", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "tinned tuna", aliasType: "form" },
+      { alias: "tuna steak", aliasType: "form" },
+      { alias: "tuna in spring water", aliasType: "form" },
+      { alias: "tuna in brine", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "mackerel", name: "Mackerel", category: "Healthy fats", subcategory: "Oily fish",
+      description: "A rich oily fish and one of the best sources of omega-3 fats, vitamin D and vitamin B12.",
+      knowledgeFoodSlug: "mackerel", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "smoked mackerel", aliasType: "form" },
+      { alias: "mackerel fillet", aliasType: "form" },
+      { alias: "tinned mackerel", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "cod", name: "Cod", category: "Proteins", subcategory: "White fish",
+      description: "A mild-flavoured white fish supplying selenium, vitamin B12 and iodine.",
+      knowledgeFoodSlug: "cod", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "cod fillet", aliasType: "form" },
+      { alias: "cod loin", aliasType: "form" },
+      { alias: "salt cod", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "haddock", name: "Haddock", category: "Proteins", subcategory: "White fish",
+      description: "A firm white fish with a slightly sweet flavour, supplying selenium, vitamin B12 and iodine.",
+      knowledgeFoodSlug: "haddock", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "haddock fillet", aliasType: "form" },
+      { alias: "smoked haddock", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "anchovies", name: "Anchovies", category: "Healthy fats", subcategory: "Oily fish",
+      description: "Small, intensely flavoured oily fish supplying omega-3 fats, calcium and vitamin D.",
+      knowledgeFoodSlug: "anchovies", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "anchovy", aliasType: "singular" },
+      { alias: "tinned anchovies", aliasType: "form" },
+      { alias: "salted anchovies", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "prawns", name: "Prawns", category: "Proteins", subcategory: "Shellfish",
+      description: "A lean shellfish supplying selenium, zinc, iodine and vitamin B12.",
+      knowledgeFoodSlug: "prawns", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "prawn", aliasType: "singular" },
+      { alias: "shrimp", aliasType: "common_name" },
+      { alias: "king prawns", aliasType: "form" },
+      { alias: "tiger prawns", aliasType: "form" },
+      { alias: "cooked prawns", aliasType: "form" },
+      { alias: "frozen prawns", aliasType: "form" },
+    ],
+  },
+
+  // ════════════════════════ Fermented Foods (Canonical) ═══════════════════════
+
+  {
+    food: {
+      slug: "miso", name: "Miso", category: "Fermented foods", subcategory: "Fermented soya",
+      description: "A savoury fermented soya bean paste used to add depth and live cultures to soups and sauces.",
+      knowledgeFoodSlug: "miso", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "miso paste", aliasType: "form" },
+      { alias: "white miso", aliasType: "form" },
+      { alias: "red miso", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "sauerkraut", name: "Sauerkraut", category: "Fermented foods", subcategory: "Fermented vegetables",
+      description: "Fermented cabbage providing live cultures and fibre; choose unpasteurised for live cultures.",
+      knowledgeFoodSlug: "sauerkraut", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "fermented cabbage", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "kimchi", name: "Kimchi", category: "Fermented foods", subcategory: "Fermented vegetables",
+      description: "A Korean ferment of cabbage and spices, rich in live cultures and fibre.",
+      knowledgeFoodSlug: "kimchi", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "kimchee", aliasType: "misspelling" },
+    ],
+  },
+
+  // ════════════════════════ Grains & Cereals ═══════════════════════════════════
+
+  {
+    food: {
+      slug: "oats", name: "Oats", category: "Grains", subcategory: "Whole grains",
+      description: "A whole grain rich in soluble fibre (beta-glucan), magnesium and iron; associated with heart health.",
+      knowledgeFoodSlug: "oats", diversityGroupSlug: "oats",
+    },
+    aliases: [
+      { alias: "porridge oats", aliasType: "form" },
+      { alias: "rolled oats", aliasType: "form" },
+      { alias: "oat flakes", aliasType: "form" },
+      { alias: "jumbo oats", aliasType: "form" },
+      { alias: "oat flour", aliasType: "form" },
+      { alias: "oatmeal", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "brown-rice", name: "Brown Rice", category: "Grains", subcategory: "Whole grains",
+      description: "A whole grain with the bran layer intact, supplying fibre, magnesium and manganese.",
+      knowledgeFoodSlug: "brown-rice", diversityGroupSlug: "rice",
+    },
+    aliases: [
+      { alias: "wholegrain rice", aliasType: "common_name" },
+      { alias: "long-grain brown rice", aliasType: "form" },
+      { alias: "brown basmati rice", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "white-rice", name: "White Rice", category: "Grains", subcategory: "Refined grains",
+      description: "A refined grain staple; basmati and jasmine are the most popular varieties in UK households.",
+      knowledgeFoodSlug: "white-rice", diversityGroupSlug: "rice",
+    },
+    aliases: [
+      { alias: "basmati rice", aliasType: "form" },
+      { alias: "jasmine rice", aliasType: "form" },
+      { alias: "long-grain rice", aliasType: "form" },
+      { alias: "arborio rice", aliasType: "form" },
+      { alias: "risotto rice", aliasType: "form" },
+      { alias: "sushi rice", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "quinoa", name: "Quinoa", category: "Grains", subcategory: "Pseudo-cereals",
+      description: "A seed used as a grain; one of few plant foods supplying all essential amino acids.",
+      knowledgeFoodSlug: "quinoa", diversityGroupSlug: "quinoa",
+    },
+    aliases: [
+      { alias: "white quinoa", aliasType: "form" },
+      { alias: "red quinoa", aliasType: "form" },
+      { alias: "tricolour quinoa", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "buckwheat", name: "Buckwheat", category: "Grains", subcategory: "Pseudo-cereals",
+      description: "A naturally gluten-free pseudo-cereal rich in fibre, magnesium and manganese.",
+      knowledgeFoodSlug: "buckwheat", diversityGroupSlug: "buckwheat",
+    },
+    aliases: [
+      { alias: "buckwheat groats", aliasType: "form" },
+      { alias: "kasha", aliasType: "common_name" },
+      { alias: "buckwheat flour", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "barley", name: "Barley", category: "Grains", subcategory: "Whole grains",
+      description: "A chewy, nutty whole grain rich in soluble fibre and selenium.",
+      knowledgeFoodSlug: "barley", diversityGroupSlug: "barley",
+    },
+    aliases: [
+      { alias: "pearl barley", aliasType: "form" },
+      { alias: "pot barley", aliasType: "form" },
+      { alias: "barley flakes", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "spelt", name: "Spelt", category: "Grains", subcategory: "Whole grains",
+      description: "An ancient variety of wheat with a nutty, slightly sweet flavour, supplying fibre and magnesium.",
+      knowledgeFoodSlug: "spelt", diversityGroupSlug: "spelt",
+    },
+    aliases: [
+      { alias: "spelt flour", aliasType: "form" },
+      { alias: "wholegrain spelt", aliasType: "form" },
+      { alias: "spelt pasta", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "rye", name: "Rye", category: "Grains", subcategory: "Whole grains",
+      description: "A dense, flavourful grain with high fibre content and a lower glycaemic impact than wheat.",
+      knowledgeFoodSlug: "rye", diversityGroupSlug: "rye",
+    },
+    aliases: [
+      { alias: "rye bread", aliasType: "form" },
+      { alias: "rye flour", aliasType: "form" },
+      { alias: "dark rye", aliasType: "form" },
+      { alias: "rye crispbread", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "wheat", name: "Wheat", category: "Grains", subcategory: "Whole grains",
+      description: "The world's most widely grown cereal grain; whole wheat retains the most fibre and nutrients.",
+      knowledgeFoodSlug: "wheat", diversityGroupSlug: "wheat",
+    },
+    aliases: [
+      { alias: "whole wheat", aliasType: "form" },
+      { alias: "wheat flour", aliasType: "form" },
+      { alias: "wholemeal flour", aliasType: "form" },
+      { alias: "wheat berries", aliasType: "form" },
+      { alias: "wholewheat flour", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "couscous", name: "Couscous", category: "Grains", subcategory: "Wheat products",
+      description: "Tiny steamed wheat granules that cook quickly; a staple of North African and Middle Eastern cooking.",
+      knowledgeFoodSlug: "couscous", diversityGroupSlug: "wheat",
+    },
+    aliases: [
+      { alias: "wholewheat couscous", aliasType: "form" },
+      { alias: "giant couscous", aliasType: "form" },
+      { alias: "Israeli couscous", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "bulgur-wheat", name: "Bulgur Wheat", category: "Grains", subcategory: "Wheat products",
+      description: "Pre-cooked cracked wheat with a nutty flavour, high in fibre; used in tabbouleh and pilafs.",
+      knowledgeFoodSlug: "bulgur-wheat", diversityGroupSlug: "wheat",
+    },
+    aliases: [
+      { alias: "bulgur", aliasType: "common_name" },
+      { alias: "bulgar wheat", aliasType: "misspelling" },
+      { alias: "cracked wheat", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "pasta", name: "Pasta", category: "Grains", subcategory: "Wheat products",
+      description: "A versatile wheat-based staple; wholemeal pasta adds significantly more fibre than white pasta.",
+      knowledgeFoodSlug: "pasta", diversityGroupSlug: "wheat",
+    },
+    varieties: [
+      { slug: "wholemeal-pasta", name: "Wholemeal Pasta", displayOrder: 0 },
+    ],
+    aliases: [
+      { alias: "spaghetti", aliasType: "form" },
+      { alias: "penne", aliasType: "form" },
+      { alias: "fusilli", aliasType: "form" },
+      { alias: "tagliatelle", aliasType: "form" },
+      { alias: "rigatoni", aliasType: "form" },
+      { alias: "macaroni", aliasType: "form" },
+      { alias: "wholemeal pasta", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "millet", name: "Millet", category: "Grains", subcategory: "Whole grains",
+      description: "A small gluten-free grain supplying magnesium, iron and fibre, with a mild, slightly sweet flavour.",
+      knowledgeFoodSlug: "millet", diversityGroupSlug: "millet",
+    },
+    aliases: [
+      { alias: "millet flakes", aliasType: "form" },
+      { alias: "millet flour", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "freekeh", name: "Freekeh", category: "Grains", subcategory: "Wheat products",
+      description: "Roasted green durum wheat with a smoky, nutty flavour and high fibre and iron content.",
+      knowledgeFoodSlug: "freekeh", diversityGroupSlug: "wheat",
+    },
+    aliases: [
+      { alias: "freekah", aliasType: "misspelling" },
+      { alias: "farik", aliasType: "common_name" },
+    ],
+  },
+
+  // ════════════════════════ Other Pantry Staples ═══════════════════════════════
+
+  {
+    food: {
+      slug: "coconut", name: "Coconut", category: "Healthy fats", subcategory: "Tropical nuts",
+      description: "A tropical drupe with fibre-rich flesh; desiccated, coconut milk and coconut cream are all the same plant.",
+      knowledgeFoodSlug: "coconut", diversityGroupSlug: "coconut",
+    },
+    aliases: [
+      { alias: "desiccated coconut", aliasType: "form" },
+      { alias: "coconut milk", aliasType: "form" },
+      { alias: "coconut cream", aliasType: "form" },
+      { alias: "coconut water", aliasType: "form" },
+      { alias: "coconut flakes", aliasType: "form" },
+      { alias: "coconut flour", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "dates", name: "Dates", category: "Fruit", subcategory: "Dried fruit",
+      description: "A naturally sweet dried fruit rich in fibre, potassium and iron from the date palm.",
+      knowledgeFoodSlug: "dates", diversityGroupSlug: "dates",
+    },
+    aliases: [
+      { alias: "medjool dates", aliasType: "form" },
+      { alias: "dried dates", aliasType: "form" },
+      { alias: "deglet nour", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "dark-chocolate", name: "Dark Chocolate", category: "Healthy fats", subcategory: "Cacao",
+      description: "Dark chocolate from 70%+ cocoa content is rich in polyphenols, magnesium and iron from the cacao plant.",
+      knowledgeFoodSlug: "dark-chocolate", diversityGroupSlug: "dark-chocolate",
+    },
+    aliases: [
+      { alias: "cocoa", aliasType: "form" },
+      { alias: "cacao", aliasType: "common_name" },
+      { alias: "dark choc", aliasType: "form" },
+      { alias: "cocoa powder", aliasType: "form" },
+      { alias: "70% chocolate", aliasType: "form" },
+      { alias: "85% chocolate", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "butter", name: "Butter", category: "Dairy", subcategory: "Dairy fats",
+      description: "A dairy fat made from churned cream, supplying fat-soluble vitamins A and D.",
+      knowledgeFoodSlug: "butter", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "unsalted butter", aliasType: "form" },
+      { alias: "salted butter", aliasType: "form" },
+      { alias: "block butter", aliasType: "form" },
+      { alias: "spreadable butter", aliasType: "form" },
+      { alias: "ghee", aliasType: "form" },
+      { alias: "clarified butter", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "sunflower-oil", name: "Sunflower Oil", category: "Healthy fats", subcategory: "Oils",
+      description: "A light, neutral oil supplying vitamin E and unsaturated fats, widely used for cooking and baking.",
+      knowledgeFoodSlug: "sunflower-oil", diversityGroupSlug: "sunflower-oil",
+    },
+    aliases: [
+      { alias: "sunflower cooking oil", aliasType: "form" },
+      { alias: "vegetable oil", aliasType: "form" },
     ],
   },
 ];
