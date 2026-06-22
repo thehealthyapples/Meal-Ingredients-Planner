@@ -1,0 +1,669 @@
+{
+  "workstream": "WS10 — Household Stories Engine",
+  "generatedAt": "2026-06-22T06:30:15.715Z",
+  "totalCards": 42,
+  "examples": {
+    "tomatoes": {
+      "sections": [
+        {
+          "type": "favourite_foods",
+          "title": "Foods your household loves",
+          "cards": [
+            {
+              "headline": "Tomato became a household favourite.",
+              "facts": [
+                {
+                  "text": "Tomato featured in 38 meals."
+                },
+                {
+                  "text": "Across: Pasta Sauce, Greek Salad, Pizza."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Tomato"
+            },
+            {
+              "headline": "Basil quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Basil featured in 8 meals."
+                }
+              ],
+              "slug": "basil",
+              "name": "Basil"
+            },
+            {
+              "headline": "Courgette quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Courgette featured in 6 meals."
+                }
+              ],
+              "slug": "courgette",
+              "name": "Courgette"
+            }
+          ]
+        },
+        {
+          "type": "discovery",
+          "title": "Foods your household has discovered",
+          "cards": [
+            {
+              "headline": "Your household discovered: Tomato, Basil, Cherry Tomato, Courgette, Heirloom Tomato.",
+              "facts": [
+                {
+                  "text": "• Tomato — first tried summer 2025."
+                },
+                {
+                  "text": "• Basil — first tried summer 2025."
+                },
+                {
+                  "text": "• Cherry Tomato — first tried summer 2025."
+                },
+                {
+                  "text": "• Courgette — first tried summer 2025."
+                },
+                {
+                  "text": "• Heirloom Tomato — first tried summer 2025."
+                }
+              ]
+            },
+            {
+              "headline": "Your household explored 4 tomato varieties.",
+              "facts": [
+                {
+                  "text": "Varieties: Tomato, Cherry Tomato, Plum Tomato, Heirloom Tomato."
+                },
+                {
+                  "text": "First variety tried summer 2025."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Tomato"
+            }
+          ]
+        },
+        {
+          "type": "family_traditions",
+          "title": "Your household traditions",
+          "cards": [
+            {
+              "headline": "Tuesday became pasta sauce night.",
+              "facts": [
+                {
+                  "text": "Pasta Sauce appeared on Tuesdays 11 times."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Pasta Sauce"
+            },
+            {
+              "headline": "Friday became pizza night.",
+              "facts": [
+                {
+                  "text": "Pizza appeared on Fridays 10 times."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Pizza"
+            },
+            {
+              "headline": "Saturday became ratatouille night.",
+              "facts": [
+                {
+                  "text": "Ratatouille appeared on Saturdays 4 times."
+                }
+              ],
+              "slug": "courgette",
+              "name": "Ratatouille"
+            }
+          ]
+        },
+        {
+          "type": "seasonal_habits",
+          "title": "Your seasonal habits",
+          "cards": [
+            {
+              "headline": "Summer became: Tomato, Basil, Courgette.",
+              "facts": [
+                {
+                  "text": "• Tomato — featured 20 times this summer."
+                },
+                {
+                  "text": "• Basil — featured 8 times this summer."
+                },
+                {
+                  "text": "• Courgette — featured 6 times this summer."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "chickpeas": {
+      "sections": [
+        {
+          "type": "favourite_foods",
+          "title": "Foods your household loves",
+          "cards": [
+            {
+              "headline": "Chickpeas became a household favourite.",
+              "facts": [
+                {
+                  "text": "Chickpeas featured in 16 meals."
+                }
+              ],
+              "slug": "chickpeas",
+              "name": "Chickpeas"
+            },
+            {
+              "headline": "Lentils became a household favourite.",
+              "facts": [
+                {
+                  "text": "Lentils featured in 13 meals."
+                }
+              ],
+              "slug": "lentils",
+              "name": "Lentils"
+            },
+            {
+              "headline": "Butter Beans became a household favourite.",
+              "facts": [
+                {
+                  "text": "Butter Beans featured in 11 meals."
+                }
+              ],
+              "slug": "butter-beans",
+              "name": "Butter Beans"
+            },
+            {
+              "headline": "Cannellini Beans quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Cannellini Beans featured in 8 meals."
+                }
+              ],
+              "slug": "cannellini-beans",
+              "name": "Cannellini Beans"
+            }
+          ]
+        },
+        {
+          "type": "discovery",
+          "title": "Foods your household has discovered",
+          "cards": [
+            {
+              "headline": "Your household discovered: Chickpeas, Lentils, Butter Beans, Cannellini Beans.",
+              "facts": [
+                {
+                  "text": "• Chickpeas — first tried summer 2024."
+                },
+                {
+                  "text": "• Lentils — first tried summer 2024."
+                },
+                {
+                  "text": "• Butter Beans — first tried autumn 2024."
+                },
+                {
+                  "text": "• Cannellini Beans — first tried spring 2025."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "seasonal_habits",
+          "title": "Your seasonal habits",
+          "cards": [
+            {
+              "headline": "Spring became: Chickpeas, Butter Beans, Cannellini Beans.",
+              "facts": [
+                {
+                  "text": "• Chickpeas — featured 4 times this spring."
+                },
+                {
+                  "text": "• Butter Beans — featured 4 times this spring."
+                },
+                {
+                  "text": "• Cannellini Beans — featured 3 times this spring."
+                }
+              ]
+            },
+            {
+              "headline": "Summer became: Chickpeas, Lentils, Butter Beans.",
+              "facts": [
+                {
+                  "text": "• Chickpeas — featured 5 times this summer."
+                },
+                {
+                  "text": "• Lentils — featured 4 times this summer."
+                },
+                {
+                  "text": "• Butter Beans — featured 1 time this summer."
+                }
+              ]
+            },
+            {
+              "headline": "Autumn brought: Lentils, Chickpeas, Butter Beans.",
+              "facts": [
+                {
+                  "text": "• Lentils — featured 4 times this autumn."
+                },
+                {
+                  "text": "• Chickpeas — featured 3 times this autumn."
+                },
+                {
+                  "text": "• Butter Beans — featured 3 times this autumn."
+                }
+              ]
+            },
+            {
+              "headline": "Winter brought: Chickpeas, Butter Beans, Lentils.",
+              "facts": [
+                {
+                  "text": "• Chickpeas — featured 4 times this winter."
+                },
+                {
+                  "text": "• Butter Beans — featured 3 times this winter."
+                },
+                {
+                  "text": "• Lentils — featured 3 times this winter."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "food_journey",
+          "title": "Your food journeys",
+          "cards": [
+            {
+              "headline": "You started with Chickpeas. Then discovered Butter Beans. Now you enjoy Cannellini Beans.",
+              "facts": [
+                {
+                  "text": "Started with Chickpeas (summer 2024)."
+                },
+                {
+                  "text": "Explored 4 foods in this family: Chickpeas, Lentils, Butter Beans, Cannellini Beans."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "greek-yoghurt": {
+      "sections": [
+        {
+          "type": "favourite_foods",
+          "title": "Foods your household loves",
+          "cards": [
+            {
+              "headline": "Yoghurt became a household favourite.",
+              "facts": [
+                {
+                  "text": "Yoghurt featured in 20 meals."
+                }
+              ],
+              "slug": "yoghurt",
+              "name": "Yoghurt"
+            },
+            {
+              "headline": "Strawberry quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Strawberry featured in 8 meals."
+                }
+              ],
+              "slug": "strawberry",
+              "name": "Strawberry"
+            },
+            {
+              "headline": "Blueberry quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Blueberry featured in 5 meals."
+                }
+              ],
+              "slug": "blueberry",
+              "name": "Blueberry"
+            }
+          ]
+        },
+        {
+          "type": "discovery",
+          "title": "Foods your household has discovered",
+          "cards": [
+            {
+              "headline": "Your household discovered: Greek Yoghurt, Strawberry, Blueberry.",
+              "facts": [
+                {
+                  "text": "• Greek Yoghurt — first tried summer 2025."
+                },
+                {
+                  "text": "• Strawberry — first tried summer 2025."
+                },
+                {
+                  "text": "• Blueberry — first tried summer 2025."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "family_traditions",
+          "title": "Your household traditions",
+          "cards": [
+            {
+              "headline": "Breakfast Bowl became your go-to weekday meal.",
+              "facts": [
+                {
+                  "text": "Breakfast Bowl featured 33 times, mostly on weekdays."
+                }
+              ],
+              "slug": "greek-yoghurt",
+              "name": "Greek Yoghurt"
+            }
+          ]
+        },
+        {
+          "type": "seasonal_habits",
+          "title": "Your seasonal habits",
+          "cards": [
+            {
+              "headline": "Summer became: Yoghurt, Strawberry, Blueberry.",
+              "facts": [
+                {
+                  "text": "• Yoghurt — featured 15 times this summer."
+                },
+                {
+                  "text": "• Strawberry — featured 8 times this summer."
+                },
+                {
+                  "text": "• Blueberry — featured 5 times this summer."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "pizza": {
+      "sections": [
+        {
+          "type": "favourite_foods",
+          "title": "Foods your household loves",
+          "cards": [
+            {
+              "headline": "Tomato became a household favourite.",
+              "facts": [
+                {
+                  "text": "Tomato featured in 12 meals."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Tomato"
+            }
+          ]
+        },
+        {
+          "type": "family_traditions",
+          "title": "Your household traditions",
+          "cards": [
+            {
+              "headline": "Friday became pizza night.",
+              "facts": [
+                {
+                  "text": "Pizza appeared on Fridays 10 times."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Pizza"
+            }
+          ]
+        }
+      ]
+    },
+    "mediterranean": {
+      "sections": [
+        {
+          "type": "favourite_foods",
+          "title": "Foods your household loves",
+          "cards": [
+            {
+              "headline": "Tomato became a household favourite.",
+              "facts": [
+                {
+                  "text": "Tomato featured in 20 meals."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Tomato"
+            },
+            {
+              "headline": "Extra Virgin Olive Oil became a household favourite.",
+              "facts": [
+                {
+                  "text": "Extra Virgin Olive Oil featured in 18 meals."
+                }
+              ],
+              "slug": "extra-virgin-olive-oil",
+              "name": "Extra Virgin Olive Oil"
+            },
+            {
+              "headline": "Feta became a household favourite.",
+              "facts": [
+                {
+                  "text": "Feta featured in 10 meals."
+                }
+              ],
+              "slug": "feta",
+              "name": "Feta"
+            },
+            {
+              "headline": "Courgette quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Courgette featured in 5 meals."
+                }
+              ],
+              "slug": "courgette",
+              "name": "Courgette"
+            },
+            {
+              "headline": "Butter Beans quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Butter Beans featured in 6 meals."
+                }
+              ],
+              "slug": "butter-beans",
+              "name": "Butter Beans"
+            }
+          ]
+        },
+        {
+          "type": "discovery",
+          "title": "Foods your household has discovered",
+          "cards": [
+            {
+              "headline": "Your household discovered: Tomato, Extra Virgin Olive Oil, Chickpeas, Courgette, Feta.",
+              "facts": [
+                {
+                  "text": "• Tomato — first tried summer 2024."
+                },
+                {
+                  "text": "• Extra Virgin Olive Oil — first tried summer 2024."
+                },
+                {
+                  "text": "• Chickpeas — first tried summer 2024."
+                },
+                {
+                  "text": "• Courgette — first tried summer 2024."
+                },
+                {
+                  "text": "• Feta — first tried summer 2024."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "family_traditions",
+          "title": "Your household traditions",
+          "cards": [
+            {
+              "headline": "Monday became chickpea stew night.",
+              "facts": [
+                {
+                  "text": "Chickpea Stew appeared on Mondays 5 times."
+                }
+              ],
+              "slug": "chickpeas",
+              "name": "Chickpea Stew"
+            },
+            {
+              "headline": "Saturday became bean stew night.",
+              "facts": [
+                {
+                  "text": "Bean Stew appeared on Saturdays 3 times."
+                }
+              ],
+              "slug": "cannellini-beans",
+              "name": "Bean Stew"
+            },
+            {
+              "headline": "Greek Salad became your go-to weekday meal.",
+              "facts": [
+                {
+                  "text": "Greek Salad featured 48 times, mostly on weekdays."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Tomato"
+            }
+          ]
+        },
+        {
+          "type": "seasonal_habits",
+          "title": "Your seasonal habits",
+          "cards": [
+            {
+              "headline": "Spring became: Tomato, Extra Virgin Olive Oil, Feta.",
+              "facts": [
+                {
+                  "text": "• Tomato — featured 6 times this spring."
+                },
+                {
+                  "text": "• Extra Virgin Olive Oil — featured 5 times this spring."
+                },
+                {
+                  "text": "• Feta — featured 2 times this spring."
+                }
+              ]
+            },
+            {
+              "headline": "Summer became: Tomato, Extra Virgin Olive Oil, Courgette.",
+              "facts": [
+                {
+                  "text": "• Tomato — featured 14 times this summer."
+                },
+                {
+                  "text": "• Extra Virgin Olive Oil — featured 13 times this summer."
+                },
+                {
+                  "text": "• Courgette — featured 5 times this summer."
+                }
+              ]
+            },
+            {
+              "headline": "Autumn brought: Feta, Aubergine, Chickpeas.",
+              "facts": [
+                {
+                  "text": "• Feta — featured 5 times this autumn."
+                },
+                {
+                  "text": "• Aubergine — featured 4 times this autumn."
+                },
+                {
+                  "text": "• Chickpeas — featured 2 times this autumn."
+                }
+              ]
+            },
+            {
+              "headline": "Winter brought: Butter Beans, Cannellini Beans, Feta.",
+              "facts": [
+                {
+                  "text": "• Butter Beans — featured 2 times this winter."
+                },
+                {
+                  "text": "• Cannellini Beans — featured 2 times this winter."
+                },
+                {
+                  "text": "• Feta — featured 1 time this winter."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "food_journey",
+          "title": "Your food journeys",
+          "cards": [
+            {
+              "headline": "You started with Chickpeas. Then discovered Butter Beans. Now you enjoy Cannellini Beans.",
+              "facts": [
+                {
+                  "text": "Started with Chickpeas (summer 2024)."
+                },
+                {
+                  "text": "Explored 3 foods in this family: Chickpeas, Butter Beans, Cannellini Beans."
+                }
+              ]
+            },
+            {
+              "headline": "Your family embraced Mediterranean cooking: Tomato, Courgette, Aubergine and more.",
+              "facts": [
+                {
+                  "text": "Started with Tomato (summer 2024)."
+                },
+                {
+                  "text": "Explored 6 foods in this family: Tomato, Extra Virgin Olive Oil, Chickpeas, Courgette, Feta, Aubergine."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "spring-2026-discovery": {
+      "sections": [
+        {
+          "type": "discovery",
+          "title": "Foods your household has discovered",
+          "cards": [
+            {
+              "headline": "Your household explored 4 tomato varieties.",
+              "facts": [
+                {
+                  "text": "Varieties: Tomato, Cherry Tomato, Plum Tomato, Heirloom Tomato."
+                },
+                {
+                  "text": "First variety tried summer 2025."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Tomato"
+            }
+          ]
+        }
+      ],
+      "window": {
+        "start": "2026-03-01T00:00:00.000Z",
+        "end": "2026-05-31T00:00:00.000Z",
+        "label": "This spring"
+      }
+    }
+  }
+}
