@@ -1,0 +1,1360 @@
+{
+  "workstream": "WS11 — Seasonal Stories Engine",
+  "generatedAt": "2026-06-22T06:50:48.143Z",
+  "totalCards": 77,
+  "examples": {
+    "mediterranean-spring-2026": {
+      "season": "spring",
+      "year": 2026,
+      "label": "Spring 2026",
+      "window": {
+        "start": "2026-03-01T00:00:00.000Z",
+        "end": "2026-05-31T23:59:59.999Z",
+        "label": "Spring 2026"
+      },
+      "blocks": [
+        {
+          "type": "season_summary",
+          "title": "Your season together",
+          "cards": [
+            {
+              "headline": "This spring you cooked 17 meals together.",
+              "facts": [
+                {
+                  "text": "You explored 6 foods."
+                },
+                {
+                  "text": "You cooked most often with Tomato, Extra Virgin Olive Oil and Asparagus."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "discoveries",
+          "title": "What you discovered",
+          "cards": [
+            {
+              "headline": "Fennel made its way into your kitchen.",
+              "facts": [
+                {
+                  "text": "First tried spring 2026, and featured 3 times."
+                }
+              ],
+              "slug": "fennel",
+              "name": "Fennel"
+            },
+            {
+              "headline": "Asparagus made its way into your kitchen.",
+              "facts": [
+                {
+                  "text": "First tried spring 2026, and featured 3 times."
+                }
+              ],
+              "slug": "asparagus",
+              "name": "Asparagus"
+            }
+          ]
+        },
+        {
+          "type": "favourite_moments",
+          "title": "Favourite moments",
+          "cards": [
+            {
+              "headline": "Tomato quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Tomato featured in 6 meals."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Tomato"
+            },
+            {
+              "headline": "Extra Virgin Olive Oil featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Extra Virgin Olive Oil featured in 4 meals."
+                }
+              ],
+              "slug": "extra-virgin-olive-oil",
+              "name": "Extra Virgin Olive Oil"
+            },
+            {
+              "headline": "Feta featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Feta featured in 3 meals."
+                }
+              ],
+              "slug": "feta",
+              "name": "Feta"
+            },
+            {
+              "headline": "Fennel featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Fennel featured in 3 meals."
+                }
+              ],
+              "slug": "fennel",
+              "name": "Fennel"
+            },
+            {
+              "headline": "Asparagus featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Asparagus featured in 3 meals."
+                }
+              ],
+              "slug": "asparagus",
+              "name": "Asparagus"
+            },
+            {
+              "headline": "Friday became greek salad night.",
+              "facts": [
+                {
+                  "text": "Greek Salad appeared on Fridays 13 times."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Greek Salad"
+            },
+            {
+              "headline": "Saturday became fennel salad night.",
+              "facts": [
+                {
+                  "text": "Fennel Salad appeared on Saturdays 3 times."
+                }
+              ],
+              "slug": "fennel",
+              "name": "Fennel Salad"
+            },
+            {
+              "headline": "Saturday became spring plate night.",
+              "facts": [
+                {
+                  "text": "Spring Plate appeared on Saturdays 3 times."
+                }
+              ],
+              "slug": "asparagus",
+              "name": "Spring Plate"
+            }
+          ]
+        },
+        {
+          "type": "seasonal_habits",
+          "title": "The shape of the season",
+          "cards": [
+            {
+              "headline": "Spring became: Tomato, Extra Virgin Olive Oil, Feta.",
+              "facts": [
+                {
+                  "text": "• Tomato — featured 6 times this spring."
+                },
+                {
+                  "text": "• Extra Virgin Olive Oil — featured 4 times this spring."
+                },
+                {
+                  "text": "• Feta — featured 3 times this spring."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "looking_ahead",
+          "title": "Looking ahead",
+          "cards": [
+            {
+              "headline": "Looking ahead to summer, you may enjoy Basil, Courgette, Cucumber.",
+              "facts": [
+                {
+                  "text": "Basil — At its best in the UK summer — a lovely time to enjoy basil."
+                },
+                {
+                  "text": "Courgette — At its best in the UK summer — a lovely time to enjoy courgette."
+                },
+                {
+                  "text": "Cucumber — At its best in the UK summer — a lovely time to enjoy cucumber."
+                },
+                {
+                  "text": "Peach — At its best in the UK summer — a lovely time to enjoy peach."
+                },
+                {
+                  "text": "Raspberry — At its best in the UK summer — a lovely time to enjoy raspberry."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "mediterranean-summer-2025": {
+      "season": "summer",
+      "year": 2025,
+      "label": "Summer 2025",
+      "window": {
+        "start": "2025-06-01T00:00:00.000Z",
+        "end": "2025-08-31T23:59:59.999Z",
+        "label": "Summer 2025"
+      },
+      "blocks": [
+        {
+          "type": "season_summary",
+          "title": "Your season together",
+          "cards": [
+            {
+              "headline": "This summer you cooked 18 meals together.",
+              "facts": [
+                {
+                  "text": "You explored 5 foods."
+                },
+                {
+                  "text": "You cooked most often with Tomato, Basil and Courgette."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "discoveries",
+          "title": "What you discovered",
+          "cards": [
+            {
+              "headline": "This summer your household discovered: Tomato, Extra Virgin Olive Oil, Courgette, Basil, Feta.",
+              "facts": [
+                {
+                  "text": "• Tomato — first tried this period."
+                },
+                {
+                  "text": "• Extra Virgin Olive Oil — first tried this period."
+                },
+                {
+                  "text": "• Courgette — first tried this period."
+                },
+                {
+                  "text": "• Basil — first tried this period."
+                },
+                {
+                  "text": "• Feta — first tried this period."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "favourite_moments",
+          "title": "Favourite moments",
+          "cards": [
+            {
+              "headline": "Tomato quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Tomato featured in 7 meals."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Tomato"
+            },
+            {
+              "headline": "Basil quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Basil featured in 6 meals."
+                }
+              ],
+              "slug": "basil",
+              "name": "Basil"
+            },
+            {
+              "headline": "Courgette quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Courgette featured in 5 meals."
+                }
+              ],
+              "slug": "courgette",
+              "name": "Courgette"
+            },
+            {
+              "headline": "Extra Virgin Olive Oil featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Extra Virgin Olive Oil featured in 4 meals."
+                }
+              ],
+              "slug": "extra-virgin-olive-oil",
+              "name": "Extra Virgin Olive Oil"
+            },
+            {
+              "headline": "Feta featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Feta featured in 3 meals."
+                }
+              ],
+              "slug": "feta",
+              "name": "Feta"
+            },
+            {
+              "headline": "Friday became greek salad night.",
+              "facts": [
+                {
+                  "text": "Greek Salad appeared on Fridays 14 times."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Greek Salad"
+            },
+            {
+              "headline": "Friday became pasta sauce night.",
+              "facts": [
+                {
+                  "text": "Pasta Sauce appeared on Fridays 6 times."
+                }
+              ],
+              "slug": "basil",
+              "name": "Pasta Sauce"
+            },
+            {
+              "headline": "Tuesday became ratatouille night.",
+              "facts": [
+                {
+                  "text": "Ratatouille appeared on Tuesdays 5 times."
+                }
+              ],
+              "slug": "courgette",
+              "name": "Ratatouille"
+            }
+          ]
+        },
+        {
+          "type": "seasonal_habits",
+          "title": "The shape of the season",
+          "cards": [
+            {
+              "headline": "Summer became: Tomato, Basil, Courgette.",
+              "facts": [
+                {
+                  "text": "• Tomato — featured 7 times this summer."
+                },
+                {
+                  "text": "• Basil — featured 6 times this summer."
+                },
+                {
+                  "text": "• Courgette — featured 5 times this summer."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "looking_ahead",
+          "title": "Looking ahead",
+          "cards": [
+            {
+              "headline": "Looking ahead to autumn, you may enjoy Apple, Leek, Beetroot.",
+              "facts": [
+                {
+                  "text": "Apple — At its best in the UK autumn — a lovely time to enjoy apple."
+                },
+                {
+                  "text": "Leek — At its best in the UK autumn — a lovely time to enjoy leek."
+                },
+                {
+                  "text": "Beetroot — At its best in the UK autumn — a lovely time to enjoy beetroot."
+                },
+                {
+                  "text": "Butternut Squash — At its best in the UK autumn — a lovely time to enjoy butternut squash."
+                },
+                {
+                  "text": "Kale — At its best in the UK autumn — a lovely time to enjoy kale."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "mediterranean-autumn-2025": {
+      "season": "autumn",
+      "year": 2025,
+      "label": "Autumn 2025",
+      "window": {
+        "start": "2025-09-01T00:00:00.000Z",
+        "end": "2025-11-30T23:59:59.999Z",
+        "label": "Autumn 2025"
+      },
+      "blocks": [
+        {
+          "type": "season_summary",
+          "title": "Your season together",
+          "cards": [
+            {
+              "headline": "This autumn you cooked 17 meals together.",
+              "facts": [
+                {
+                  "text": "You explored 6 foods."
+                },
+                {
+                  "text": "You cooked most often with Butternut Squash, Aubergine and Extra Virgin Olive Oil."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "discoveries",
+          "title": "What you discovered",
+          "cards": [
+            {
+              "headline": "This autumn your household discovered: Aubergine, Butternut Squash, Kale.",
+              "facts": [
+                {
+                  "text": "• Aubergine — first tried this period."
+                },
+                {
+                  "text": "• Butternut Squash — first tried this period."
+                },
+                {
+                  "text": "• Kale — first tried this period."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "favourite_moments",
+          "title": "Favourite moments",
+          "cards": [
+            {
+              "headline": "Butternut Squash quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Butternut Squash featured in 5 meals."
+                }
+              ],
+              "slug": "butternut-squash",
+              "name": "Butternut Squash"
+            },
+            {
+              "headline": "Aubergine featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Aubergine featured in 4 meals."
+                }
+              ],
+              "slug": "aubergine",
+              "name": "Aubergine"
+            },
+            {
+              "headline": "Tomato featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Tomato featured in 3 meals."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Tomato"
+            },
+            {
+              "headline": "Extra Virgin Olive Oil featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Extra Virgin Olive Oil featured in 3 meals."
+                }
+              ],
+              "slug": "extra-virgin-olive-oil",
+              "name": "Extra Virgin Olive Oil"
+            },
+            {
+              "headline": "Feta featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Feta featured in 3 meals."
+                }
+              ],
+              "slug": "feta",
+              "name": "Feta"
+            },
+            {
+              "headline": "Friday became greek salad night.",
+              "facts": [
+                {
+                  "text": "Greek Salad appeared on Fridays 9 times."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Greek Salad"
+            },
+            {
+              "headline": "Saturday became moussaka night.",
+              "facts": [
+                {
+                  "text": "Moussaka appeared on Saturdays 4 times."
+                }
+              ],
+              "slug": "aubergine",
+              "name": "Moussaka"
+            },
+            {
+              "headline": "Saturday became roasted squash night.",
+              "facts": [
+                {
+                  "text": "Roasted Squash appeared on Saturdays 5 times."
+                }
+              ],
+              "slug": "butternut-squash",
+              "name": "Roasted Squash"
+            },
+            {
+              "headline": "Saturday became greens night.",
+              "facts": [
+                {
+                  "text": "Greens appeared on Saturdays 3 times."
+                }
+              ],
+              "slug": "kale",
+              "name": "Greens"
+            }
+          ]
+        },
+        {
+          "type": "seasonal_habits",
+          "title": "The shape of the season",
+          "cards": [
+            {
+              "headline": "Autumn brought: Butternut Squash, Aubergine, Tomato.",
+              "facts": [
+                {
+                  "text": "• Butternut Squash — featured 5 times this autumn."
+                },
+                {
+                  "text": "• Aubergine — featured 4 times this autumn."
+                },
+                {
+                  "text": "• Tomato — featured 3 times this autumn."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "looking_ahead",
+          "title": "Looking ahead",
+          "cards": [
+            {
+              "headline": "Looking ahead to winter, you may enjoy Leek, Parsnip, Swede.",
+              "facts": [
+                {
+                  "text": "Leek — At its best in the UK winter — a lovely time to enjoy leek."
+                },
+                {
+                  "text": "Parsnip — At its best in the UK winter — a lovely time to enjoy parsnip."
+                },
+                {
+                  "text": "Swede — At its best in the UK winter — a lovely time to enjoy swede."
+                },
+                {
+                  "text": "Brussels Sprouts — At its best in the UK winter — a lovely time to enjoy brussels sprouts."
+                },
+                {
+                  "text": "Cavolo Nero — At its best in the UK winter — a lovely time to enjoy cavolo nero."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "mediterranean-winter-2026": {
+      "season": "winter",
+      "year": 2026,
+      "label": "Winter 2026",
+      "window": {
+        "start": "2025-12-01T00:00:00.000Z",
+        "end": "2026-02-28T23:59:59.999Z",
+        "label": "Winter 2026"
+      },
+      "blocks": [
+        {
+          "type": "season_summary",
+          "title": "Your season together",
+          "cards": [
+            {
+              "headline": "This winter you cooked 15 meals together.",
+              "facts": [
+                {
+                  "text": "You explored 5 foods."
+                },
+                {
+                  "text": "You cooked most often with Butter Beans, Leek and Extra Virgin Olive Oil."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "discoveries",
+          "title": "What you discovered",
+          "cards": [
+            {
+              "headline": "Butter Beans made its way into your kitchen.",
+              "facts": [
+                {
+                  "text": "First tried winter 2025, and featured 5 times."
+                }
+              ],
+              "slug": "butter-beans",
+              "name": "Butter Beans"
+            },
+            {
+              "headline": "Leek made its way into your kitchen.",
+              "facts": [
+                {
+                  "text": "First tried winter 2025, and featured 4 times."
+                }
+              ],
+              "slug": "leek",
+              "name": "Leek"
+            }
+          ]
+        },
+        {
+          "type": "favourite_moments",
+          "title": "Favourite moments",
+          "cards": [
+            {
+              "headline": "Butter Beans quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Butter Beans featured in 5 meals."
+                }
+              ],
+              "slug": "butter-beans",
+              "name": "Butter Beans"
+            },
+            {
+              "headline": "Leek featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Leek featured in 4 meals."
+                }
+              ],
+              "slug": "leek",
+              "name": "Leek"
+            },
+            {
+              "headline": "Tomato featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Tomato featured in 3 meals."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Tomato"
+            },
+            {
+              "headline": "Extra Virgin Olive Oil featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Extra Virgin Olive Oil featured in 3 meals."
+                }
+              ],
+              "slug": "extra-virgin-olive-oil",
+              "name": "Extra Virgin Olive Oil"
+            },
+            {
+              "headline": "Kale featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Kale featured in 3 meals."
+                }
+              ],
+              "slug": "kale",
+              "name": "Kale"
+            },
+            {
+              "headline": "Friday became greek salad night.",
+              "facts": [
+                {
+                  "text": "Greek Salad appeared on Fridays 6 times."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Greek Salad"
+            },
+            {
+              "headline": "Saturday became greens night.",
+              "facts": [
+                {
+                  "text": "Greens appeared on Saturdays 3 times."
+                }
+              ],
+              "slug": "kale",
+              "name": "Greens"
+            },
+            {
+              "headline": "Saturday became butter bean stew night.",
+              "facts": [
+                {
+                  "text": "Butter Bean Stew appeared on Saturdays 5 times."
+                }
+              ],
+              "slug": "butter-beans",
+              "name": "Butter Bean Stew"
+            },
+            {
+              "headline": "Friday became leek soup night.",
+              "facts": [
+                {
+                  "text": "Leek Soup appeared on Fridays 4 times."
+                }
+              ],
+              "slug": "leek",
+              "name": "Leek Soup"
+            }
+          ]
+        },
+        {
+          "type": "seasonal_habits",
+          "title": "The shape of the season",
+          "cards": [
+            {
+              "headline": "Winter brought: Butter Beans, Leek, Tomato.",
+              "facts": [
+                {
+                  "text": "• Butter Beans — featured 5 times this winter."
+                },
+                {
+                  "text": "• Leek — featured 4 times this winter."
+                },
+                {
+                  "text": "• Tomato — featured 3 times this winter."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "looking_ahead",
+          "title": "Looking ahead",
+          "cards": [
+            {
+              "headline": "Looking ahead to spring, you may enjoy Spring Onion, Asparagus, Rocket.",
+              "facts": [
+                {
+                  "text": "Spring Onion — At its best in the UK spring — a lovely time to enjoy spring onion."
+                },
+                {
+                  "text": "Asparagus — At its best in the UK spring — a lovely time to enjoy asparagus."
+                },
+                {
+                  "text": "Rocket — At its best in the UK spring — a lovely time to enjoy rocket."
+                },
+                {
+                  "text": "Watercress — At its best in the UK spring — a lovely time to enjoy watercress."
+                },
+                {
+                  "text": "Peas — At its best in the UK spring — a lovely time to enjoy peas."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "family-summer-2025": {
+      "season": "summer",
+      "year": 2025,
+      "label": "Summer 2025",
+      "window": {
+        "start": "2025-06-01T00:00:00.000Z",
+        "end": "2025-08-31T23:59:59.999Z",
+        "label": "Summer 2025"
+      },
+      "blocks": [
+        {
+          "type": "season_summary",
+          "title": "Your season together",
+          "cards": [
+            {
+              "headline": "This summer you cooked 27 meals together.",
+              "facts": [
+                {
+                  "text": "You explored 5 foods."
+                },
+                {
+                  "text": "You cooked most often with Tomato, Pasta and Strawberry."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "discoveries",
+          "title": "What you discovered",
+          "cards": [
+            {
+              "headline": "This summer your household discovered: Tomato, Strawberry, Greek Yoghurt, Pasta, Cucumber.",
+              "facts": [
+                {
+                  "text": "• Tomato — first tried this period."
+                },
+                {
+                  "text": "• Strawberry — first tried this period."
+                },
+                {
+                  "text": "• Greek Yoghurt — first tried this period."
+                },
+                {
+                  "text": "• Pasta — first tried this period."
+                },
+                {
+                  "text": "• Cucumber — first tried this period."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "favourite_moments",
+          "title": "Favourite moments",
+          "cards": [
+            {
+              "headline": "Tomato became a household favourite.",
+              "facts": [
+                {
+                  "text": "Tomato featured in 11 meals."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Tomato"
+            },
+            {
+              "headline": "Pasta quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Pasta featured in 7 meals."
+                }
+              ],
+              "slug": "pasta",
+              "name": "Pasta"
+            },
+            {
+              "headline": "Strawberry quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Strawberry featured in 6 meals."
+                }
+              ],
+              "slug": "strawberry",
+              "name": "Strawberry"
+            },
+            {
+              "headline": "Yoghurt quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Yoghurt featured in 6 meals."
+                }
+              ],
+              "slug": "yoghurt",
+              "name": "Yoghurt"
+            },
+            {
+              "headline": "Cucumber featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Cucumber featured in 3 meals."
+                }
+              ],
+              "slug": "cucumber",
+              "name": "Cucumber"
+            },
+            {
+              "headline": "Friday became pizza night.",
+              "facts": [
+                {
+                  "text": "Pizza appeared on Fridays 11 times."
+                }
+              ],
+              "slug": "tomato",
+              "name": "Pizza"
+            },
+            {
+              "headline": "Monday became pasta bake night.",
+              "facts": [
+                {
+                  "text": "Pasta Bake appeared on Mondays 7 times."
+                }
+              ],
+              "slug": "pasta",
+              "name": "Pasta Bake"
+            },
+            {
+              "headline": "Saturday became breakfast bowl night.",
+              "facts": [
+                {
+                  "text": "Breakfast Bowl appeared on Saturdays 12 times."
+                }
+              ],
+              "slug": "strawberry",
+              "name": "Breakfast Bowl"
+            },
+            {
+              "headline": "Wednesday became snack plate night.",
+              "facts": [
+                {
+                  "text": "Snack Plate appeared on Wednesdays 3 times."
+                }
+              ],
+              "slug": "cucumber",
+              "name": "Snack Plate"
+            }
+          ]
+        },
+        {
+          "type": "seasonal_habits",
+          "title": "The shape of the season",
+          "cards": [
+            {
+              "headline": "Summer became: Tomato, Pasta, Strawberry.",
+              "facts": [
+                {
+                  "text": "• Tomato — featured 11 times this summer."
+                },
+                {
+                  "text": "• Pasta — featured 7 times this summer."
+                },
+                {
+                  "text": "• Strawberry — featured 6 times this summer."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "looking_ahead",
+          "title": "Looking ahead",
+          "cards": [
+            {
+              "headline": "Looking ahead to autumn, you may enjoy Apple, Leek, Beetroot.",
+              "facts": [
+                {
+                  "text": "Apple — At its best in the UK autumn — a lovely time to enjoy apple."
+                },
+                {
+                  "text": "Leek — At its best in the UK autumn — a lovely time to enjoy leek."
+                },
+                {
+                  "text": "Beetroot — At its best in the UK autumn — a lovely time to enjoy beetroot."
+                },
+                {
+                  "text": "Butternut Squash — At its best in the UK autumn — a lovely time to enjoy butternut squash."
+                },
+                {
+                  "text": "Kale — At its best in the UK autumn — a lovely time to enjoy kale."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "vegetarian-autumn-2025": {
+      "season": "autumn",
+      "year": 2025,
+      "label": "Autumn 2025",
+      "window": {
+        "start": "2025-09-01T00:00:00.000Z",
+        "end": "2025-11-30T23:59:59.999Z",
+        "label": "Autumn 2025"
+      },
+      "blocks": [
+        {
+          "type": "season_summary",
+          "title": "Your season together",
+          "cards": [
+            {
+              "headline": "This autumn you cooked 25 meals together.",
+              "facts": [
+                {
+                  "text": "You explored 5 foods."
+                },
+                {
+                  "text": "You cooked most often with Butternut Squash, Lentils and Mushroom."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "discoveries",
+          "title": "What you discovered",
+          "cards": [
+            {
+              "headline": "This autumn your household discovered: Butternut Squash, Mushroom, Lentils, Kale, Beetroot.",
+              "facts": [
+                {
+                  "text": "• Butternut Squash — first tried this period."
+                },
+                {
+                  "text": "• Mushroom — first tried this period."
+                },
+                {
+                  "text": "• Lentils — first tried this period."
+                },
+                {
+                  "text": "• Kale — first tried this period."
+                },
+                {
+                  "text": "• Beetroot — first tried this period."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "favourite_moments",
+          "title": "Favourite moments",
+          "cards": [
+            {
+              "headline": "Butternut Squash quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Butternut Squash featured in 7 meals."
+                }
+              ],
+              "slug": "butternut-squash",
+              "name": "Butternut Squash"
+            },
+            {
+              "headline": "Mushroom quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Mushroom featured in 6 meals."
+                }
+              ],
+              "slug": "mushroom",
+              "name": "Mushroom"
+            },
+            {
+              "headline": "Lentils quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Lentils featured in 6 meals."
+                }
+              ],
+              "slug": "lentils",
+              "name": "Lentils"
+            },
+            {
+              "headline": "Kale featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Kale featured in 3 meals."
+                }
+              ],
+              "slug": "kale",
+              "name": "Kale"
+            },
+            {
+              "headline": "Beetroot featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Beetroot featured in 3 meals."
+                }
+              ],
+              "slug": "beetroot",
+              "name": "Beetroot"
+            },
+            {
+              "headline": "Friday became squash risotto night.",
+              "facts": [
+                {
+                  "text": "Squash Risotto appeared on Fridays 7 times."
+                }
+              ],
+              "slug": "butternut-squash",
+              "name": "Squash Risotto"
+            },
+            {
+              "headline": "Monday became mushroom stroganoff night.",
+              "facts": [
+                {
+                  "text": "Mushroom Stroganoff appeared on Mondays 6 times."
+                }
+              ],
+              "slug": "mushroom",
+              "name": "Mushroom Stroganoff"
+            },
+            {
+              "headline": "Friday became lentil soup night.",
+              "facts": [
+                {
+                  "text": "Lentil Soup appeared on Fridays 6 times."
+                }
+              ],
+              "slug": "lentils",
+              "name": "Lentil Soup"
+            },
+            {
+              "headline": "Monday became greens night.",
+              "facts": [
+                {
+                  "text": "Greens appeared on Mondays 3 times."
+                }
+              ],
+              "slug": "kale",
+              "name": "Greens"
+            },
+            {
+              "headline": "Wednesday became roasted beets night.",
+              "facts": [
+                {
+                  "text": "Roasted Beets appeared on Wednesdays 3 times."
+                }
+              ],
+              "slug": "beetroot",
+              "name": "Roasted Beets"
+            }
+          ]
+        },
+        {
+          "type": "seasonal_habits",
+          "title": "The shape of the season",
+          "cards": [
+            {
+              "headline": "Autumn brought: Butternut Squash, Mushroom, Lentils.",
+              "facts": [
+                {
+                  "text": "• Butternut Squash — featured 7 times this autumn."
+                },
+                {
+                  "text": "• Mushroom — featured 6 times this autumn."
+                },
+                {
+                  "text": "• Lentils — featured 6 times this autumn."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "looking_ahead",
+          "title": "Looking ahead",
+          "cards": [
+            {
+              "headline": "Looking ahead to winter, you may enjoy Parsnip, Swede, Leek.",
+              "facts": [
+                {
+                  "text": "Parsnip — At its best in the UK winter — a lovely time to enjoy parsnip."
+                },
+                {
+                  "text": "Swede — At its best in the UK winter — a lovely time to enjoy swede."
+                },
+                {
+                  "text": "Leek — At its best in the UK winter — a lovely time to enjoy leek."
+                },
+                {
+                  "text": "Brussels Sprouts — At its best in the UK winter — a lovely time to enjoy brussels sprouts."
+                },
+                {
+                  "text": "Cavolo Nero — At its best in the UK winter — a lovely time to enjoy cavolo nero."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "legumes-winter-2026": {
+      "season": "winter",
+      "year": 2026,
+      "label": "Winter 2026",
+      "window": {
+        "start": "2025-12-01T00:00:00.000Z",
+        "end": "2026-02-28T23:59:59.999Z",
+        "label": "Winter 2026"
+      },
+      "blocks": [
+        {
+          "type": "season_summary",
+          "title": "Your season together",
+          "cards": [
+            {
+              "headline": "This winter you cooked 17 meals together.",
+              "facts": [
+                {
+                  "text": "You explored 5 foods."
+                },
+                {
+                  "text": "You cooked most often with Chickpeas, Butter Beans and Leek."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "discoveries",
+          "title": "What you discovered",
+          "cards": [
+            {
+              "headline": "This winter your household discovered: Chickpeas, Leek, Butter Beans, Potato, Cannellini Beans.",
+              "facts": [
+                {
+                  "text": "• Chickpeas — first tried this period."
+                },
+                {
+                  "text": "• Leek — first tried this period."
+                },
+                {
+                  "text": "• Butter Beans — first tried this period."
+                },
+                {
+                  "text": "• Potato — first tried this period."
+                },
+                {
+                  "text": "• Cannellini Beans — first tried this period."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "favourite_moments",
+          "title": "Favourite moments",
+          "cards": [
+            {
+              "headline": "Chickpeas quietly appeared in more and more meals.",
+              "facts": [
+                {
+                  "text": "Chickpeas featured in 6 meals."
+                }
+              ],
+              "slug": "chickpeas",
+              "name": "Chickpeas"
+            },
+            {
+              "headline": "Butter Beans featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Butter Beans featured in 3 meals."
+                }
+              ],
+              "slug": "butter-beans",
+              "name": "Butter Beans"
+            },
+            {
+              "headline": "Leek featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Leek featured in 3 meals."
+                }
+              ],
+              "slug": "leek",
+              "name": "Leek"
+            },
+            {
+              "headline": "Potato featured regularly in your household.",
+              "facts": [
+                {
+                  "text": "Potato featured in 3 meals."
+                }
+              ],
+              "slug": "potato",
+              "name": "Potato"
+            },
+            {
+              "headline": "Wednesday became chickpea curry night.",
+              "facts": [
+                {
+                  "text": "Chickpea Curry appeared on Wednesdays 6 times."
+                }
+              ],
+              "slug": "chickpeas",
+              "name": "Chickpea Curry"
+            },
+            {
+              "headline": "Wednesday became butter bean stew night.",
+              "facts": [
+                {
+                  "text": "Butter Bean Stew appeared on Wednesdays 3 times."
+                }
+              ],
+              "slug": "butter-beans",
+              "name": "Butter Bean Stew"
+            },
+            {
+              "headline": "Friday became leek & potato soup night.",
+              "facts": [
+                {
+                  "text": "Leek & Potato Soup appeared on Fridays 3 times."
+                }
+              ],
+              "slug": "leek",
+              "name": "Leek & Potato Soup"
+            },
+            {
+              "headline": "Friday became roast veg night.",
+              "facts": [
+                {
+                  "text": "Roast Veg appeared on Fridays 3 times."
+                }
+              ],
+              "slug": "potato",
+              "name": "Roast Veg"
+            }
+          ]
+        },
+        {
+          "type": "seasonal_habits",
+          "title": "The shape of the season",
+          "cards": [
+            {
+              "headline": "Winter brought: Chickpeas, Butter Beans, Leek.",
+              "facts": [
+                {
+                  "text": "• Chickpeas — featured 6 times this winter."
+                },
+                {
+                  "text": "• Butter Beans — featured 3 times this winter."
+                },
+                {
+                  "text": "• Leek — featured 3 times this winter."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "looking_ahead",
+          "title": "Looking ahead",
+          "cards": [
+            {
+              "headline": "Looking ahead to spring, you may enjoy Spring Onion, Asparagus, Peas.",
+              "facts": [
+                {
+                  "text": "Spring Onion — At its best in the UK spring — a lovely time to enjoy spring onion."
+                },
+                {
+                  "text": "Asparagus — At its best in the UK spring — a lovely time to enjoy asparagus."
+                },
+                {
+                  "text": "Peas — At its best in the UK spring — a lovely time to enjoy peas."
+                },
+                {
+                  "text": "Purple Sprouting Broccoli — At its best in the UK spring — a lovely time to enjoy purple sprouting broccoli."
+                },
+                {
+                  "text": "Radish — At its best in the UK spring — a lovely time to enjoy radish."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
