@@ -13,6 +13,8 @@
 //     for storage/internal use but MUST NOT be surfaced to users yet. Prefer
 //     getFoodBenefitsForDisplay() / getNutrientBenefitsForDisplay(), which strip
 //     the evidence signal before it can reach the UI.
+import { normalizeIngredientKey } from "@shared/normalize";
+import { resolveIngredientAlias } from "@shared/ingredient-aliases";
 import { db } from "../db";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import {
@@ -358,4 +360,352 @@ export async function getBenefitDetailView(slug: string): Promise<BenefitDetailV
     benefit: { slug: benefit.slug, name: benefit.name, description: benefit.description, icon: benefit.icon },
     foods: foods.map(toFoodCard),
   };
+}
+
+// ── M1: Batch ingredient → WS0 knowledge lookup ───────────────────────────────
+//
+// Resolves a list of pre-normalised ingredient strings (from client's
+// normaliseForReuse pipeline) to their WS0 nutrients and benefits.
+// Used by PlantDiversityReport and MealUpliftPanel to replace the retired
+// nutrition-benefit-library.ts static lookup.
+//
+// Trust rules:
+//   • Only returns data for foods found in WS0. Unmatched ingredients are
+//     absent from the result — consumers show empty state, never guessed data.
+//   • No source / confidence / evidenceStrength exposed — display-safe only.
+//   • Alias resolution covers plural forms (e.g. "chicken breasts" → chicken).
+
+// ── Ingredient resolution helpers ─────────────────────────────────────────────
+//
+// Real meal ingredient strings contain quantities and preparation words:
+//   "4 Chicken Legs", "500g Passata", "A handful of Pumpkin Seeds",
+//   "Finely Chopped Parsley", "2 tbsp Extra Virgin Olive Oil".
+//
+// The resolution strategy tries each candidate in order, stopping at first match:
+//   1. Exact normalized key
+//   2. Exact key via ingredient alias table
+//   3. Trailing-s removal (regular plurals)
+//   4. Quantity/unit prefix stripped → then (2) and (3)
+//   5. Preparation-word prefix stripped → then (2) and (3)
+//   6. Both stripped → then (2) and (3)
+//
+// If uncertain, leave unmatched. Honest silence over wrong intelligence.
+
+// Leading quantity + optional measurement modifier + optional unit + optional "of".
+// Handles: "4 chicken legs", "500g passata", "2 tbsp of olive oil", "1/2 cup oats",
+//          "1 heaped tsp paprika", "3 rounded tablespoons yogurt".
+const LEADING_QTY_RE =
+  /^[\d./]+\s*(?:heaped|rounded|level|scant|generous)?\s*(?:g|kg|mg|oz|lb|lbs|gram|grams|kilogram|kilograms|ounce|ounces|pound|pounds|ml|cl|dl|l|litre|litres|liter|liters|fl\s*oz|cup|cups|tbsp|tbsps|tablespoon|tablespoons|tsp|tsps|teaspoon|teaspoons|tin|tins|can|cans|piece|pieces|slice|slices|clove|cloves|head|heads|sprig|sprigs|leaf|leaves|handful|handfuls|bunch|bunches|pinch|pinches|knob|knobs|dash|dashes|drop|drops|drizzle|drizzles|splash|splashes|strip|strips)?\s+(?:of\s+)?/i;
+
+// Vague count phrases: "a handful of", "a bunch of", etc.
+const VAGUE_QTY_RE =
+  /^(?:a|an|one|some|half)\s+(?:(?:small|large|medium|generous|heaped|good|big|little)\s+)?(?:handful|bunch|pinch|dash|splash|drizzle|knob|bit|touch|strip|sprig|piece|slice|head)s?\s+(?:of\s+)?/i;
+
+// Container prefix without a leading count: "can cherry tomatoes", "tin chickpeas", "jar olives".
+// Applied after numeric quantity strip since "400g can X" becomes "can X" after the numeric strip.
+// Also handles informal unit words: "pinch chilli flakes", "pack spinach", "sachet yeast".
+const CONTAINER_PREFIX_RE =
+  /^(?:tin|tins|can|cans|jar|jars|bag|bags|box|boxes|packet|packets|punnet|punnets|bunch|bunches|pack|packs|sachet|sachets|pinch|pinches|dash|dashes)\s+(?:of\s+)?/i;
+
+// Single leading preparation/adjective word describing form, not the food.
+// Applied repeatedly so "finely chopped" strips in two passes.
+// Includes preservation forms (tinned, canned, smoked, pickled) so
+// "tinned chopped tomatoes" → "chopped tomatoes" → "tomatoes".
+// Also includes cooking methods used as qualifiers (roast, braised) so
+// "roast potatoes" → "potatoes" and "braised red cabbage" → "red cabbage".
+const PREP_WORD_RE =
+  /^(?:(?:very|finely|roughly|coarsely|thinly|thickly|freshly|lightly|well|evenly)\s+)?(?:chopped|sliced|diced|minced|grated|shredded|toasted|roasted|roast|braised|crushed|blended|dried|cooked|raw|frozen|fresh|peeled|rinsed|drained|wilted|ground|whole|trimmed|deseeded|tinned|canned|smoked|pickled|jarred|preserved|salted)\s+/i;
+
+// Trailing preparation phrase anchored to the end of the string.
+// Strips "finely sliced", "cut into thin wedges", "roughly chopped", etc.
+// Applied iteratively to catch stacked phrases like "peeled and roughly chopped".
+const TRAILING_PREP_RE =
+  /[\s,]+(?:and\s+)?(?:(?:(?:very|finely|roughly|coarsely|thinly|thickly|freshly|lightly|well|evenly)\s+)?(?:chopped|sliced|diced|minced|grated|shredded|toasted|roasted|crushed|blended|cooked|raw|frozen|fresh|peeled|rinsed|drained|wilted|ground|trimmed|deseeded|halved|quartered|torn|beaten|mashed|divided|crumbled|flaked)|cut\s+into\b.*|to\s+serve.*)$/i;
+
+// Leading size/quality adjective after the quantity has been stripped.
+// Covers: "large eggs", "small onion", "medium carrots", "big handful spinach".
+const SIZE_ADJ_RE = /^(?:large|small|medium|big)\s+/i;
+
+function stripQuantityPrefix(key: string): string {
+  let s = key.replace(LEADING_QTY_RE, "").trim();
+  if (s !== key) {
+    // After a numeric quantity, also strip any orphaned container word ("can X", "tin X").
+    s = s.replace(CONTAINER_PREFIX_RE, "").trim();
+    return s;
+  }
+  s = key.replace(VAGUE_QTY_RE, "").trim();
+  if (s !== key) return s;
+  // No numeric prefix — try bare container prefix ("can chickpeas", "tin tomatoes").
+  s = key.replace(CONTAINER_PREFIX_RE, "").trim();
+  return s;
+}
+
+function stripPrepPrefix(key: string): string {
+  let s = key;
+  let prev: string;
+  do {
+    prev = s;
+    s = s.replace(PREP_WORD_RE, "").trim();
+  } while (s !== prev && s.length > 0);
+  return s || key;
+}
+
+function stripTrailingPrep(key: string): string {
+  let s = key;
+  let prev: string;
+  do {
+    prev = s;
+    s = s.replace(TRAILING_PREP_RE, "").trim();
+  } while (s !== prev && s.length > 0);
+  return s || key;
+}
+
+function stripSizeAdj(key: string): string {
+  return key.replace(SIZE_ADJ_RE, "").trim();
+}
+
+// Try all resolution strategies for one normalized key candidate.
+function tryKey(candidate: string, termToSlug: Map<string, string>): string | undefined {
+  // Direct
+  let slug = termToSlug.get(candidate);
+  if (slug) return slug;
+  // Alias
+  const aliased = resolveIngredientAlias(candidate);
+  if (aliased !== candidate) {
+    slug = termToSlug.get(aliased);
+    if (slug) return slug;
+    // Alias + trailing-s removal
+    if (aliased.endsWith("s")) {
+      slug = termToSlug.get(aliased.slice(0, -1));
+      if (slug) return slug;
+    }
+  }
+  // Trailing-s removal
+  if (candidate.endsWith("s")) {
+    slug = termToSlug.get(candidate.slice(0, -1));
+    if (slug) return slug;
+  }
+  return undefined;
+}
+
+// Full multi-strategy match: returns WS0 slug or undefined.
+// Resolution order (first match wins):
+//   1. Exact normalised key
+//   2. Qty-stripped key
+//      a. + trailing prep stripped
+//      b. + leading size adj stripped
+//      c. + leading prep stripped
+//      d. + trailing then leading prep stripped
+//      e. + size adj then trailing prep stripped
+//   3. Trailing prep stripped from original key
+//      a. + leading prep stripped
+//   4. Leading prep stripped from original key
+function matchIngredientToSlug(raw: string, termToSlug: Map<string, string>): string | undefined {
+  const key = normalizeIngredientKey(raw);
+
+  // 1. Try original normalized key
+  let slug = tryKey(key, termToSlug);
+  if (slug) return slug;
+
+  // 2. Strip quantity/unit prefix and retry
+  const noQty = stripQuantityPrefix(key);
+  if (noQty !== key) {
+    slug = tryKey(noQty, termToSlug);
+    if (slug) return slug;
+
+    // 2a. Strip trailing prep from de-quantified form
+    const noQtyTrail = stripTrailingPrep(noQty);
+    if (noQtyTrail !== noQty) {
+      slug = tryKey(noQtyTrail, termToSlug);
+      if (slug) return slug;
+    }
+
+    // 2b. Strip leading size adjective from de-quantified form
+    const noQtySize = stripSizeAdj(noQty);
+    if (noQtySize !== noQty) {
+      slug = tryKey(noQtySize, termToSlug);
+      if (slug) return slug;
+      // 2b-i. Size adj stripped + trailing prep
+      const noQtySizeTrail = stripTrailingPrep(noQtySize);
+      if (noQtySizeTrail !== noQtySize) {
+        slug = tryKey(noQtySizeTrail, termToSlug);
+        if (slug) return slug;
+      }
+    }
+
+    // 2c. Strip leading prep words from de-quantified form (existing)
+    const noQtyNoPrep = stripPrepPrefix(noQty);
+    if (noQtyNoPrep !== noQty) {
+      slug = tryKey(noQtyNoPrep, termToSlug);
+      if (slug) return slug;
+      // 2c-i. Leading prep stripped + trailing prep
+      const noQtyNoPrepTrail = stripTrailingPrep(noQtyNoPrep);
+      if (noQtyNoPrepTrail !== noQtyNoPrep) {
+        slug = tryKey(noQtyNoPrepTrail, termToSlug);
+        if (slug) return slug;
+      }
+    }
+
+    // 2d. Trailing prep stripped + leading prep stripped (combined)
+    if (noQtyTrail !== noQty) {
+      const noQtyTrailPrep = stripPrepPrefix(noQtyTrail);
+      if (noQtyTrailPrep !== noQtyTrail) {
+        slug = tryKey(noQtyTrailPrep, termToSlug);
+        if (slug) return slug;
+      }
+    }
+  }
+
+  // 3. Strip trailing prep from original key (handles "garlic cloves crushed" without qty)
+  const noTrail = stripTrailingPrep(key);
+  if (noTrail !== key) {
+    slug = tryKey(noTrail, termToSlug);
+    if (slug) return slug;
+    // 3a. Trailing stripped + leading prep stripped
+    const noTrailPrep = stripPrepPrefix(noTrail);
+    if (noTrailPrep !== noTrail) {
+      slug = tryKey(noTrailPrep, termToSlug);
+      if (slug) return slug;
+    }
+    // 3b. Trailing stripped + size adj stripped (handles "small bunch X roughly chopped")
+    const noTrailSize = stripSizeAdj(noTrail);
+    if (noTrailSize !== noTrail) {
+      slug = tryKey(noTrailSize, termToSlug);
+      if (slug) return slug;
+      // 3b-i. Also strip container prefix (handles "small bunch X" → "X")
+      const noTrailSizeCont = noTrailSize.replace(CONTAINER_PREFIX_RE, "").trim();
+      if (noTrailSizeCont !== noTrailSize) {
+        slug = tryKey(noTrailSizeCont, termToSlug);
+        if (slug) return slug;
+        // 3b-ii. Then leading prep
+        const noTrailSizeContPrep = stripPrepPrefix(noTrailSizeCont);
+        if (noTrailSizeContPrep !== noTrailSizeCont) {
+          slug = tryKey(noTrailSizeContPrep, termToSlug);
+          if (slug) return slug;
+        }
+      }
+    }
+  }
+
+  // 4. Strip leading prep words from original key (existing — no quantity prefix case)
+  const noPrep = stripPrepPrefix(key);
+  if (noPrep !== key) {
+    slug = tryKey(noPrep, termToSlug);
+    if (slug) return slug;
+    // 4a. Leading prep stripped + trailing prep stripped
+    const noPrepTrail = stripTrailingPrep(noPrep);
+    if (noPrepTrail !== noPrep) {
+      slug = tryKey(noPrepTrail, termToSlug);
+      if (slug) return slug;
+    }
+  }
+
+  // 5. Strip size adjective from original key ("small bunch basil" → "bunch basil" → "basil")
+  const noSize = stripSizeAdj(key);
+  if (noSize !== key) {
+    slug = tryKey(noSize, termToSlug);
+    if (slug) return slug;
+    // 5a. Strip container prefix ("bunch basil" → "basil")
+    const noSizeCont = noSize.replace(CONTAINER_PREFIX_RE, "").trim();
+    if (noSizeCont !== noSize) {
+      slug = tryKey(noSizeCont, termToSlug);
+      if (slug) return slug;
+      // 5b. Leading prep on top
+      const noSizeContPrep = stripPrepPrefix(noSizeCont);
+      if (noSizeContPrep !== noSizeCont) {
+        slug = tryKey(noSizeContPrep, termToSlug);
+        if (slug) return slug;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+export interface IngredientKnowledgeSummary {
+  nutrients: string[];
+  benefits: string[];
+}
+
+/** Resolves raw ingredient strings to WS0 knowledge_food slugs.
+ *  Returns a Map<rawIngredient, slug> for matched ingredients only.
+ *  Used by meal food intelligence to look up food context (availability, seasons, origin). */
+export async function resolveIngredientSlugs(
+  rawIngredients: string[],
+): Promise<Map<string, string>> {
+  if (rawIngredients.length === 0) return new Map();
+  const foods = await listFoods();
+  const termToSlug = new Map<string, string>();
+  for (const food of foods) {
+    const register = (term: string) => {
+      const key = normalizeIngredientKey(term);
+      if (key && !termToSlug.has(key)) termToSlug.set(key, food.slug);
+    };
+    register(food.name);
+    register(food.slug.replace(/-/g, " "));
+    for (const alias of food.aliases) register(alias);
+  }
+  const result = new Map<string, string>();
+  for (const raw of rawIngredients) {
+    const slug = matchIngredientToSlug(raw, termToSlug);
+    if (slug) result.set(raw, slug);
+  }
+  return result;
+}
+
+export async function resolveIngredientsToKnowledgeSummary(
+  rawIngredients: string[],
+): Promise<Record<string, IngredientKnowledgeSummary>> {
+  if (rawIngredients.length === 0) return {};
+
+  const foods = await listFoods();
+
+  // Build lookup: normalised term → food slug.
+  const termToSlug = new Map<string, string>();
+  for (const food of foods) {
+    const register = (term: string) => {
+      const key = normalizeIngredientKey(term);
+      if (key && !termToSlug.has(key)) termToSlug.set(key, food.slug);
+    };
+    register(food.name);
+    register(food.slug.replace(/-/g, " "));
+    for (const alias of food.aliases) register(alias);
+  }
+
+  // Match each ingredient using multi-strategy resolution (quantity strip, alias, prep strip).
+  const ingredientToSlug = new Map<string, string>();
+  const slugsNeeded = new Set<string>();
+
+  for (const raw of rawIngredients) {
+    const slug = matchIngredientToSlug(raw, termToSlug);
+    if (slug) {
+      ingredientToSlug.set(raw, slug);
+      slugsNeeded.add(slug);
+    }
+  }
+
+  if (slugsNeeded.size === 0) return {};
+
+  // Fetch nutrients + benefits for each matched food.
+  const foodKnowledge = new Map<string, IngredientKnowledgeSummary>();
+  await Promise.all(
+    Array.from(slugsNeeded).map(async (slug) => {
+      const [nutrients, benefits] = await Promise.all([
+        getNutrientsForFood(slug),
+        getFoodBenefitsForDisplay(slug),
+      ]);
+      foodKnowledge.set(slug, {
+        nutrients: nutrients.map((n) => n.nutrient.name),
+        benefits: benefits.map((b) => b.benefit.name),
+      });
+    }),
+  );
+
+  // Build output keyed by original ingredient string.
+  const result: Record<string, IngredientKnowledgeSummary> = {};
+  Array.from(ingredientToSlug.entries()).forEach(([raw, slug]) => {
+    const k = foodKnowledge.get(slug);
+    if (k) result[raw] = k;
+  });
+  return result;
 }
