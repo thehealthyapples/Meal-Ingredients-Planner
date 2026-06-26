@@ -27,6 +27,7 @@ const MICRO_INSIGHTS = [
 import { PageHeader } from "@/components/PageHeader";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { PantryKnowledgeHub } from "@/components/PantryKnowledgeHub";
+import PantryIntelligencePanel from "@/components/PantryIntelligencePanel";
 
 interface PantryItem {
   id: number;
@@ -253,6 +254,19 @@ function FoodPantrySection({
     tags: string[];
   }>>(new Map());
 
+  // WX7 — canonical search index: maps each pantry item to its canonical TERMS
+  // (benefits, nutrients, attributes, seasonality) so search matches by meaning,
+  // not just by name. Reuses canonical knowledge; never a second search engine.
+  const { data: searchIndexData } = useQuery<{ index: Array<{ ingredientKey: string; terms: string[] }> }>({
+    queryKey: ["/api/pantry/search-index"],
+    staleTime: 5 * 60 * 1000,
+  });
+  const searchTerms = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const row of searchIndexData?.index ?? []) m.set(row.ingredientKey, row.terms);
+    return m;
+  }, [searchIndexData]);
+
   const addMutation = useMutation({
     mutationFn: (data: { ingredient: string; displayName: string; category: string }) =>
       apiRequest("POST", "/api/pantry", data),
@@ -299,12 +313,15 @@ function FoodPantrySection({
     const ql = query.toLowerCase();
     return activeItems.filter(item => {
       if ((item.displayName || item.ingredientKey).toLowerCase().includes(ql)) return true;
+      // WX7 — match canonical terms (benefits, nutrients, attributes, seasonality).
+      const terms = searchTerms.get(item.ingredientKey);
+      if (terms && terms.some(t => t.includes(ql))) return true;
       const know = serverKnowledge.get(item.ingredientKey);
       if (!know || know === "loading") return false;
       return know.tags.some(t => t.toLowerCase().includes(ql)) ||
         know.supports.some(s => s.toLowerCase().includes(ql));
     });
-  }, [activeItems, query, serverKnowledge]);
+  }, [activeItems, query, serverKnowledge, searchTerms]);
 
   // Called when banner tab changes
   const handleCategoryChange = (cat: FoodCat) => {
@@ -607,6 +624,11 @@ function FoodPantrySection({
                               {!isLoadingKnowledge && !knowledge && (
                                 <p className="text-xs text-muted-foreground/50 italic pt-2.5">No additional info available yet.</p>
                               )}
+                              {/* WX7 — Household Food Library: your household's relationship with this food. */}
+                              <PantryIntelligencePanel
+                                name={item.displayName || item.ingredientKey}
+                                data-testid={`pantry-intelligence-${item.id}`}
+                              />
                             </div>
                           )}
                         </div>

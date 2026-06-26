@@ -5762,6 +5762,301 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // ── WX7: Pantry Intelligence ──────────────────────────────────────────────────
+  // The Pantry becomes the Household Food Library. This route OWNS NOTHING: it
+  // resolves a pantry item's name to a canonical food (shared resolver) and then
+  // delegates to the EXISTING Food Intelligence and Connected Food Intelligence
+  // assemblers — the very functions the Food page (WX4), Connected panel (WX5) and
+  // Shopping Intelligence (WX6) use. Nothing is computed, persisted, or cached here.
+  //
+  // The only WX7-specific assembly is "Pantry Opportunities": for Cookbook meals
+  // that contain this food, find the meals the household is missing exactly ONE
+  // other canonical ingredient for, and surface "adding X would unlock N meals you
+  // have the rest of." This is an ephemeral assembly of Meal Intelligence
+  // (ingredients) + Pantry (contents) + the shared resolver — evidence-gated and
+  // never fabricated. When no real meal supports it, the section disappears.
+  //
+  // Trust & progressive enrichment: a name that does not resolve to a canonical
+  // food returns { resolved: false } and the panel hides. Each section is
+  // independently optional and traces to a canonical owner.
+  app.get("/api/pantry/intelligence", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const name = String(req.query.name ?? "").trim();
+    if (!name) {
+      return res.status(400).json({ message: "A food name is required" });
+    }
+    try {
+      const { resolveCanonicalFood } = await import("@shared/canonical/resolver");
+      const resolution = resolveCanonicalFood(name);
+
+      // Not a recognised canonical food → nothing to assemble. Panel hides.
+      if (!resolution.matched || !resolution.canonicalSlug) {
+        return res.json({ resolved: false });
+      }
+      const slug = resolution.canonicalSlug;
+      const householdId = await getHouseholdForUser(req.user!.id);
+
+      const { getFoodIntelligence } = await import("./lib/food-intelligence-assembler");
+      const { getConnectedFoodIntelligence } = await import("./lib/connected-food-intelligence-assembler");
+      const [food, connected] = await Promise.all([
+        getFoodIntelligence(slug, householdId ?? undefined),
+        getConnectedFoodIntelligence(slug, householdId ?? undefined),
+      ]);
+
+      // Slug resolved but isn't actually a canonical food in the knowledge base.
+      if (!food.food) {
+        return res.json({ resolved: false });
+      }
+
+      // ── Meal connections (Meal Intelligence) ────────────────────────────────────
+      const MEAL_CAP = 8;
+      const mealSupport =
+        food.meals.length > 0
+          ? {
+              count: food.meals.length,
+              atCap: food.meals.length >= MEAL_CAP,
+              meals: food.meals.slice(0, 4).map((m) => ({ mealId: m.mealId, name: m.name })),
+            }
+          : null;
+
+      // ── Household (evidence-gated, same language family as WX6) ─────────────────
+      let household:
+        | { headline: string; isNewDiscovery: boolean }
+        | null = null;
+      if (food.household) {
+        const n = food.household.plannerAppearanceCount;
+        const headline =
+          n >= 3
+            ? "Your household reaches for this regularly."
+            : food.household.mostCommonMeal
+              ? `You've cooked with this before, in ${food.household.mostCommonMeal.name}.`
+              : "You've cooked with this before.";
+        household = { headline, isNewDiscovery: false };
+      } else {
+        household = {
+          headline: "Your household hasn't cooked with this yet — a discovery waiting to happen.",
+          isNewDiscovery: true,
+        };
+      }
+
+      // ── Simply Better (one validated Nutrition Enhancement) ─────────────────────
+      const upliftMatch = food.nutritionEnhancement?.matches?.[0] ?? null;
+      const upliftSuggestion = upliftMatch?.suggestions?.[0] ?? null;
+      const simplyBetter = upliftSuggestion
+        ? {
+            suggestion:
+              upliftSuggestion.action === "swap"
+                ? `Swap in ${upliftSuggestion.ingredient}`
+                : upliftSuggestion.action === "boost"
+                  ? `Add more ${upliftSuggestion.ingredient}`
+                  : `Add ${upliftSuggestion.ingredient}`,
+            why: upliftSuggestion.why,
+          }
+        : null;
+
+      // ── Connected foods (Connected Food Intelligence): two calm chip rows ───────
+      const projectConnected = (
+        section: typeof connected.oftenEnjoyedWith,
+      ) =>
+        section && section.items.length > 0
+          ? {
+              title: section.title,
+              items: section.items.slice(0, 6).map((i) => ({
+                slug: i.slug,
+                name: i.name,
+                linkable: i.linkable,
+              })),
+            }
+          : null;
+      const oftenEnjoyedWith = projectConnected(connected.oftenEnjoyedWith);
+      const similarFoods = projectConnected(connected.similarFoods);
+
+      // ── Discovery (one thoughtful suggestion — quality over quantity) ───────────
+      // Skip "similar"/"cook_with" — the Connected Foods rows above already own
+      // those relationships (same de-duplication the Food Page applies).
+      const discoverySection =
+        food.discovery?.sections?.find(
+          (s) => s.type !== "similar" && s.type !== "cook_with",
+        ) ?? null;
+      const discoverySuggestion = discoverySection?.suggestions?.[0] ?? null;
+      const discovery = discoverySuggestion
+        ? {
+            title: discoverySection!.title,
+            slug: discoverySuggestion.slug,
+            name: discoverySuggestion.name,
+            reason: discoverySuggestion.reason,
+            linkable: discoverySuggestion.linkable,
+          }
+        : null;
+
+      // ── Pantry Opportunities (assembly: Meals + Pantry + resolver) ──────────────
+      // For Cookbook meals containing this food, find meals the household is missing
+      // exactly ONE other canonical ingredient for. Aggregate by that ingredient.
+      let opportunity:
+        | { ingredient: string; mealCount: number; meals: string[] }
+        | null = null;
+      try {
+        const pantryItems = await storage.getPantryItems(req.user!.id);
+        const pantrySlugs = new Set<string>();
+        for (const it of pantryItems) {
+          if (it.isDeleted) continue;
+          const r = resolveCanonicalFood(it.displayName || it.ingredientKey);
+          if (r.canonicalSlug) pantrySlugs.add(r.canonicalSlug);
+        }
+
+        const { meals: mealsTable } = await import("@shared/schema");
+        const systemMeals = await db
+          .select({ name: mealsTable.name, ingredients: mealsTable.ingredients })
+          .from(mealsTable)
+          .where(eq(mealsTable.isSystemMeal, true));
+
+        // ingredientSlug → { count, meals[], displayName }
+        const unlock = new Map<
+          string,
+          { count: number; meals: string[]; name: string }
+        >();
+        for (const m of systemMeals) {
+          const slugs = new Set<string>();
+          const slugName = new Map<string, string>();
+          for (const ing of m.ingredients ?? []) {
+            const r = resolveCanonicalFood(ing);
+            if (r.canonicalSlug) {
+              slugs.add(r.canonicalSlug);
+              if (!slugName.has(r.canonicalSlug)) {
+                slugName.set(r.canonicalSlug, r.canonicalName || ing);
+              }
+            }
+          }
+          // Must contain the viewed food, and the household must lack exactly one
+          // other canonical ingredient.
+          if (!slugs.has(slug)) continue;
+          const missing = Array.from(slugs).filter(
+            (s) => s !== slug && !pantrySlugs.has(s),
+          );
+          if (missing.length !== 1) continue;
+          const missSlug = missing[0];
+          const acc = unlock.get(missSlug);
+          if (acc) {
+            acc.count += 1;
+            if (acc.meals.length < 3) acc.meals.push(m.name);
+          } else {
+            unlock.set(missSlug, {
+              count: 1,
+              meals: [m.name],
+              name: slugName.get(missSlug) ?? missSlug,
+            });
+          }
+        }
+
+        // Pick the ingredient that unlocks the most meals.
+        let best: { slug: string; count: number; meals: string[]; name: string } | null =
+          null;
+        for (const [missSlug, acc] of Array.from(unlock)) {
+          if (!best || acc.count > best.count) {
+            best = { slug: missSlug, ...acc };
+          }
+        }
+        if (best) {
+          opportunity = {
+            ingredient: best.name,
+            mealCount: best.count,
+            meals: best.meals,
+          };
+        }
+      } catch (oppErr) {
+        // Opportunities are a bonus layer — never let them break the panel.
+        console.error("[WX7] pantry opportunities error:", oppErr);
+      }
+
+      const hasAnySection =
+        food.seasonality ||
+        mealSupport ||
+        household ||
+        simplyBetter ||
+        oftenEnjoyedWith ||
+        similarFoods ||
+        discovery ||
+        opportunity;
+
+      return res.json({
+        resolved: true,
+        slug,
+        foodName: food.food.name,
+        hasAnySection: !!hasAnySection,
+        seasonal: food.seasonality ? { note: food.seasonality.note } : null,
+        mealSupport,
+        household,
+        simplyBetter,
+        oftenEnjoyedWith,
+        similarFoods,
+        discovery,
+        opportunity,
+      });
+    } catch (err) {
+      console.error("[WX7] pantry-intelligence error:", err);
+      res.status(500).json({ message: "Failed to assemble pantry intelligence" });
+    }
+  });
+
+  // ── WX7: Pantry Search Index ──────────────────────────────────────────────────
+  // Projects each FOOD pantry item the user owns into a lightweight search record
+  // of canonical TERMS (health benefits + key nutrients + attributes + seasonality)
+  // so the Food panel search can match by food, benefit, nutrient, attribute and
+  // season — not just by name. This OWNS NOTHING and is NOT a second search engine:
+  // it is an index projection of the same canonical knowledge the Food page reads.
+  app.get("/api/pantry/search-index", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const { resolveCanonicalFood } = await import("@shared/canonical/resolver");
+      const { buildFoodReport } = await import("@shared/canonical/food-report-adapter");
+      const { CANONICAL_SEED } = await import("@shared/canonical/foods");
+      const { seasonForDate, SEASON_SEED, SEASON_LABEL } = await import(
+        "@shared/discovery/seasonal-map"
+      );
+
+      const now = new Date();
+      const currentSeason = seasonForDate(now);
+      const inSeasonNow = new Set(SEASON_SEED[currentSeason].map((f) => f.slug));
+
+      const items = await storage.getPantryItems(req.user!.id);
+      const index: Array<{ ingredientKey: string; terms: string[] }> = [];
+
+      for (const it of items) {
+        if (it.isDeleted) continue;
+        const display = it.displayName || it.ingredientKey;
+        const r = resolveCanonicalFood(display);
+        const terms = new Set<string>();
+        if (!r.canonicalSlug) {
+          index.push({ ingredientKey: it.ingredientKey, terms: [] });
+          continue;
+        }
+        const slug = r.canonicalSlug;
+        const report = buildFoodReport(slug);
+        if (report) {
+          for (const b of report.healthBenefits) terms.add(b.toLowerCase());
+          for (const n of report.keyNutrients) terms.add(n.toLowerCase());
+          terms.add((report.overview.category || "").toLowerCase());
+        }
+        // Attributes from the canonical seed (e.g. fermented).
+        const entry = CANONICAL_SEED.find((e) => e.food.slug === slug);
+        if (entry?.food.fermented) terms.add("fermented");
+        // Seasonality term — only when this food is at its UK best right now.
+        if (inSeasonNow.has(slug)) {
+          terms.add("in season");
+          terms.add(SEASON_LABEL[currentSeason].toLowerCase());
+          terms.add(currentSeason.toLowerCase());
+        }
+        terms.delete("");
+        index.push({ ingredientKey: it.ingredientKey, terms: Array.from(terms) });
+      }
+
+      res.json({ index });
+    } catch (err) {
+      console.error("[WX7] pantry-search-index error:", err);
+      res.status(500).json({ message: "Failed to build pantry search index" });
+    }
+  });
+
   // Save a single planner week as a private week template
   app.post("/api/planner/weeks/:weekId/save-week-template", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
