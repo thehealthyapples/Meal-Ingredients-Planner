@@ -1848,7 +1848,7 @@ export default function WeeklyPlannerPage() {
         </div>
       }
     />
-    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8" data-realm="planner">
+    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4" data-realm="planner">
       <DndContext
         sensors={dndSensors}
         collisionDetection={mobileFriendlyCollision}
@@ -1870,7 +1870,7 @@ export default function WeeklyPlannerPage() {
 
         {/* ── Combined row: household diet toggle (left) + variety at a glance (right) ── */}
         {/* Variety stays visible even when the diets dropdown expands below this row. */}
-        <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-1 mb-2" data-testid="section-week-diets">
+        <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-2 mb-3" data-testid="section-week-diets">
           {householdEaters.length > 0 && activeWeekId ? (
             <button
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
@@ -2292,7 +2292,7 @@ export default function WeeklyPlannerPage() {
                             style={{ backgroundColor: "hsl(var(--background))" }}
                           >
                             <div className="flex items-center gap-1">
-                              <RowIcon className={`h-3 w-3 flex-shrink-0 ${row.iconColor}`} />
+                              <RowIcon className={`h-3.5 w-3.5 flex-shrink-0 ${row.iconColor}`} />
                               <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">{row.label}</span>
                             </div>
                             {row.mealType && (
@@ -2304,7 +2304,7 @@ export default function WeeklyPlannerPage() {
                                     disabled={addToBasketMutation.isPending}
                                     data-testid={`button-add-slot-${row.mealType}-basket`}
                                   >
-                                    <ShoppingBasket className="h-5 w-5" />
+                                    <ShoppingBasket className="h-4 w-4" />
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent side="right"><p className="text-xs">Add {row.label}s to basket</p></TooltipContent>
@@ -2325,7 +2325,7 @@ export default function WeeklyPlannerPage() {
                                 mealType={row.mealType ?? row.addMealType}
                                 audience={row.audience}
                                 isDrink={row.isDrink}
-                                className={`relative p-1.5 min-h-[56px] flex flex-col gap-0.5 border-l border-border ${!isLastRow ? "border-b border-border" : ""}`}
+                                className={`relative p-2 min-h-[68px] flex flex-col gap-0.5 border-l border-border ${!isLastRow ? "border-b border-border" : ""}`}
                                 data-testid={`cell-${row.id}-${day.dayOfWeek}`}
                               >
                                 {/* Meal name pills — each slot is its own sortable context for within-slot reorder */}
@@ -2350,7 +2350,7 @@ export default function WeeklyPlannerPage() {
                                     >
                                       <div className={`relative group/entry w-full transition-opacity ${isCooked ? "opacity-50" : ""}`}>
                                         <button
-                                          className={`w-full text-left text-xs leading-snug transition-colors flex items-start gap-0.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
+                                          className={`w-full text-left text-sm leading-snug transition-colors flex items-start gap-0.5 ${isPlaceholder ? "text-muted-foreground/70 hover:text-muted-foreground" : "text-foreground hover:text-primary"}`}
                                           onClick={() => {
                                             if (isPlaceholder) {
                                               setResolveSession({
@@ -2388,11 +2388,11 @@ export default function WeeklyPlannerPage() {
                                             isPlaceholder={isPlaceholder}
                                             isCooked={isCooked}
                                           />
-                                          {isFrozen && !isCooked && <Snowflake className="h-2.5 w-2.5 text-blue-400 flex-shrink-0 mt-0.5" />}
+                                          {isFrozen && !isCooked && <Snowflake className="h-3 w-3 text-blue-400 flex-shrink-0 mt-0.5" />}
                                           {basketMealIdSet.has(meal.id) && !isCooked && (
-                                            <ShoppingCart className="h-2.5 w-2.5 text-emerald-500/70 flex-shrink-0 mt-0.5" data-testid={`icon-in-basket-${meal.id}`} />
+                                            <ShoppingCart className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" data-testid={`icon-in-basket-${meal.id}`} />
                                           )}
-                                          {isCooked && <Check className="h-2.5 w-2.5 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
+                                          {isCooked && <Check className="h-3 w-3 text-emerald-500/70 flex-shrink-0 mt-0.5" />}
                                         </button>
                                         {/* Nutrition Boost indicator — subtle, async, non-blocking */}
                                         {!isPlaceholder && (() => {

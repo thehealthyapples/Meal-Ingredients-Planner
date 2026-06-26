@@ -656,7 +656,7 @@ function MobileNavItem({
       data-testid={`mobile-nav-${label.toLowerCase().replace(/\s+/g, "-")}`}
     >
       <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
-      <span className="text-[9px] font-medium leading-tight">{label}</span>
+      <span className="text-[10px] font-medium leading-tight">{label}</span>
     </button>
   );
 }

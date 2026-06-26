@@ -142,13 +142,13 @@ export function PlannerMealCardContent({
           {chips.length > 0 && (
             <div className="flex items-center gap-0.5">
               <span
-                className={`inline-flex items-center px-1.5 rounded-full text-[10px] font-medium border leading-none h-[18px] ${chips[0].color}`}
+                className={`inline-flex items-center px-1.5 rounded-full text-[10px] font-medium border leading-none h-[20px] ${chips[0].color}`}
               >
                 {chips[0].label}
               </span>
               {chips[1] && (
                 <span
-                  className={`hidden sm:inline-flex items-center px-1.5 rounded-full text-[10px] font-medium border leading-none h-[18px] ${chips[1].color}`}
+                  className={`hidden sm:inline-flex items-center px-1.5 rounded-full text-[10px] font-medium border leading-none h-[20px] ${chips[1].color}`}
                 >
                   {chips[1].label}
                 </span>
