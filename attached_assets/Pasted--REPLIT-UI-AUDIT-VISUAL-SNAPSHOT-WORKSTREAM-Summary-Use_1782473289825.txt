@@ -1,0 +1,437 @@
+# REPLIT_UI_AUDIT_VISUAL_SNAPSHOT_WORKSTREAM
+
+**Summary:** Use Replit to capture real browser screenshots of The Healthy Apples across all major pages and produce a launch-readiness UI audit focused on spacing, density, hierarchy, responsiveness and intelligence visibility.
+
+---
+
+# OBJECTIVE
+
+Create a visual snapshot of the current application so we can review the real product instead of relying on manual screenshots.
+
+This is an **audit only**.
+
+Do not implement UI changes.
+
+Do not refactor.
+
+Do not redesign.
+
+Do not modify application behaviour.
+
+---
+
+# PRE-AUDIT REQUIREMENTS
+
+Before starting:
+
+1. Confirm current `git status`.
+2. Do **not** change application code.
+3. If any audit tooling/scripts are created, create rollback protection first.
+4. Create a report file:
+
+```text
+docs/ui-audit/WX9A_LAUNCH_EXPERIENCE_VISUAL_AUDIT.md
+```
+
+5. Create a screenshot folder:
+
+```text
+docs/ui-audit/wx9a-snapshots/
+```
+
+---
+
+# GOAL
+
+Capture real screenshots for the current app state after the WX intelligence workstreams:
+
+* Home / Dashboard
+* Planner
+* Cookbook
+* Meal Detail
+* Food Page
+* Shopping
+* Pantry
+* Household Nutrition Centre
+* Profile
+* Analyser, if available
+
+For each page capture:
+
+* desktop 1440px width
+* laptop 1280px width
+* tablet width if practical
+* mobile width if practical
+
+Prioritise desktop + laptop if time is limited.
+
+---
+
+# SCREENSHOT REQUIREMENTS
+
+Use the real running Replit app.
+
+Prefer Playwright if available.
+
+If Playwright cannot run, use the best available browser automation or document the blocker clearly.
+
+For each page:
+
+1. Navigate to the page.
+2. Wait for data to load.
+3. Expand key intelligence sections where appropriate.
+4. Capture:
+
+   * above-the-fold screenshot
+   * full-page screenshot where useful
+5. Save with clear names.
+
+Example:
+
+```text
+docs/ui-audit/wx9a-snapshots/
+01-dashboard-desktop.png
+01-dashboard-mobile.png
+02-planner-desktop.png
+02-planner-mobile.png
+03-cookbook-desktop.png
+04-meal-detail-desktop.png
+05-food-page-tomato-desktop.png
+06-shopping-desktop.png
+07-pantry-desktop.png
+08-nutrition-centre-desktop.png
+```
+
+---
+
+# PAGE-SPECIFIC INSTRUCTIONS
+
+## Dashboard / Home
+
+Capture:
+
+* initial view
+* intelligence companion
+* weekly progress / celebration / opportunity
+
+Check:
+
+* does it feel like a companion?
+* is the most important insight visible without scrolling?
+* is spacing too loose?
+
+---
+
+## Planner
+
+Capture:
+
+* full planner week
+* top header area
+* at least one meal detail dialog if possible
+
+Check:
+
+* does planner intelligence appear?
+* is it competing with planner controls?
+* is there too much vertical stacking before meals appear?
+* are meal cards too spaced out?
+* are labels/chips coherent?
+
+---
+
+## Cookbook
+
+Capture:
+
+* grid or card view
+* one meal card with intelligence visible
+* one meal detail if available
+
+Check:
+
+* does meal intelligence feel integrated?
+* are actions too spaced out?
+* are sections competing equally?
+* is “why cook this?” obvious?
+
+---
+
+## Meal Detail
+
+Capture one representative meal, for example:
+
+```text
+Breakfast Burrito
+```
+
+or any available meal with intelligence.
+
+Check:
+
+* title hierarchy
+* action button density
+* Family Confidence / Household Learning copy
+* Simply Better Choices placement
+* excess whitespace
+* whether confidence percentages still appear
+
+Important:
+If any confidence percentage appears, flag it as a trust issue.
+
+---
+
+## Food Page
+
+Capture:
+
+```text
+/foods/tomato
+```
+
+and optionally:
+
+```text
+/foods/spinach
+/foods/kimchi
+```
+
+Check:
+
+* does the page feel rich but calm?
+* are connected foods visible?
+* do links feel natural?
+* is it too long or too card-heavy?
+
+---
+
+## Shopping
+
+Capture:
+
+* shopping list
+* product analysis modal with Shopping Intelligence visible if possible
+
+Check:
+
+* does intelligence help purchasing decisions?
+* does it interrupt shopping?
+* does analyser/product intelligence duplicate food intelligence?
+
+---
+
+## Pantry
+
+Capture:
+
+* pantry list
+* expanded pantry item with Pantry Intelligence
+* search result if possible
+
+Check:
+
+* does it feel like a Household Food Library?
+* is the intelligence discoverable?
+* does the item expansion become too large?
+
+---
+
+## Household Nutrition Centre
+
+Capture:
+
+```text
+/plant-diversity
+```
+
+Check:
+
+* does the new Centre appear above the original Plant Diversity report?
+* does it feel like a nutrition centre, not just another report?
+* is the old plant report still readable?
+* is the page too long?
+
+---
+
+# AUDIT REPORT FORMAT
+
+Create:
+
+```text
+docs/ui-audit/WX9A_LAUNCH_EXPERIENCE_VISUAL_AUDIT.md
+```
+
+Use this structure:
+
+---
+
+## 1. Executive Summary
+
+Include:
+
+* overall launch-readiness impression
+* strongest pages
+* weakest pages
+* top 5 visible issues
+* top 5 quick wins
+
+---
+
+## 2. Screenshot Inventory
+
+List every screenshot captured with file path.
+
+---
+
+## 3. Page-by-page Audit
+
+For each page include:
+
+### Page
+
+### Screenshots
+
+List file paths.
+
+### Above-the-fold Assessment
+
+What is visible without scrolling?
+
+What important intelligence is hidden?
+
+### Scores
+
+Score 1–10:
+
+* Information hierarchy
+* Density
+* Spacing
+* Visual consistency
+* Intelligence visibility
+* Interaction clarity
+* Mobile readiness, if captured
+
+### Issues
+
+List specific issues.
+
+### Recommendations
+
+List specific improvements.
+
+---
+
+## 4. Cross-App Patterns
+
+Identify repeated issues across pages:
+
+Examples:
+
+* too much vertical spacing
+* card sections acting like separate pages
+* too many competing chips
+* intelligence below the fold
+* inconsistent button density
+* weak hierarchy between primary and secondary information
+* confidence percentages still appearing
+* old terminology still visible
+* mobile layout pressure
+
+---
+
+## 5. Trust Issues
+
+Flag any user-facing copy that violates trust principles.
+
+Examples:
+
+* confidence percentages
+* fabricated certainty
+* “ate” when only planner evidence exists
+* placeholder intelligence
+* “coming soon” text visible in production UI
+
+---
+
+## 6. Density & Hierarchy Opportunities
+
+Specifically analyse:
+
+* page headers
+* card padding
+* section gaps
+* chip layout
+* action button rows
+* above-the-fold information
+* scroll burden
+
+---
+
+## 7. Launch Blockers
+
+Separate:
+
+### Must fix before launch
+
+### Should fix before launch
+
+### Can wait
+
+---
+
+## 8. Recommended WX9 Scope
+
+Based on the screenshots, propose the precise scope for:
+
+```text
+WX9_EXPERIENCE_INTEGRATION_DENSITY_AND_LAUNCH_READINESS
+```
+
+Do not implement WX9.
+
+Only recommend.
+
+---
+
+# SCORING GUIDANCE
+
+Use honest scoring.
+
+Do not inflate scores.
+
+A score of 10 means launch-quality.
+
+A score of 6 means usable but noticeably rough.
+
+A score of 4 means users will notice friction.
+
+---
+
+# IMPORTANT CONSTRAINTS
+
+Do not modify application source code unless needed only to create temporary audit tooling.
+
+Do not fix issues during the audit.
+
+Do not redesign pages.
+
+Do not add features.
+
+Do not change copy.
+
+Do not change CSS.
+
+This is a visual audit only.
+
+---
+
+# OUTPUT AT COMPLETION
+
+At the end, report:
+
+* screenshots captured
+* report location
+* pages audited
+* any pages that could not be captured
+* blockers encountered
+* recommended next workstream

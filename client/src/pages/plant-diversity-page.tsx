@@ -2,13 +2,19 @@ import { Link } from "wouter";
 import { ArrowLeft, BarChart3, Loader2 } from "lucide-react";
 import { useWeekMealEntries } from "@/hooks/use-week-meal-entries";
 import { PlantDiversityReport } from "@/components/PlantDiversityReport";
+import { HouseholdNutritionCentre } from "@/components/HouseholdNutritionCentre";
 
 /**
- * Nutrition Report page (route: /plant-diversity).
+ * Household Nutrition Centre page (route: /plant-diversity).
  *
  * Full redesign from the former "30 Plants This Week" modal.
  * Shows what the household ate, how it contributes to nutrition,
  * and helps users broaden variety across the week.
+ *
+ * Two layers, both read-only over canonical owners:
+ *  - HouseholdNutritionCentre — household-lifetime assembly (WX8). Self-fetches
+ *    /api/nutrition-centre and hides entirely when no planner history exists.
+ *  - PlantDiversityReport — the existing weekly view, preserved unchanged.
  *
  * Data resolved via useWeekMealEntries (shared query cache) — page is
  * deep-linkable and decoupled from planner component state.
@@ -36,7 +42,7 @@ export default function PlantDiversityPage() {
             className="text-2xl font-bold tracking-tight"
             data-testid="text-nutrition-report-title"
           >
-            Nutrition Report
+            Household Nutrition Centre
           </h1>
         </div>
         <p className="text-sm text-muted-foreground/60 leading-relaxed max-w-2xl">
@@ -45,13 +51,19 @@ export default function PlantDiversityPage() {
         </p>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-6 w-6 animate-spin text-primary/50" />
-        </div>
-      ) : (
-        <PlantDiversityReport weekMeals={weekMeals} />
-      )}
+      {/* Household-lifetime Centre (WX8) — hides itself when no history exists */}
+      <HouseholdNutritionCentre />
+
+      {/* Weekly report — preserved unchanged below the Centre */}
+      <div className="mt-6">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="h-6 w-6 animate-spin text-primary/50" />
+          </div>
+        ) : (
+          <PlantDiversityReport weekMeals={weekMeals} />
+        )}
+      </div>
     </div>
   );
 }

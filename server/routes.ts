@@ -54,6 +54,7 @@ import { isAdmin, hasPremiumAccess, assertAdmin } from "./lib/access";
 import { enrichRetailData, STORE_TAG_MAP, UK_RETAILER_STORE_TAGS } from "./lib/retailIntelligence";
 import { getCanonicalProduct, isCompatibleSwap } from "./lib/productCanonicaliser";
 import { getHouseholdForUser } from "./lib/household";
+import { assembleNutritionCentre } from "./lib/nutrition-centre-assembler";
 import { pool } from "./db";
 import { db } from "./db";
 import { shoppingFulfilmentMemory } from "@shared/schema";
@@ -10010,6 +10011,26 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
     } catch (err) {
       console.error("[Knowledge] ingredient-lookup error:", err);
       res.status(500).json({ message: "Ingredient lookup failed" });
+    }
+  });
+
+  // ── WX8: Household Nutrition Centre ─────────────────────────────────────────
+  // Read-only assembly over canonical owners (household planner history, WS0
+  // Knowledge Registry, Discovery, Seasonality, Nutrition Enhancement). Owns
+  // nothing; persists nothing. Returns { available: false } when the household
+  // has no planner history — the client Centre then hides its household sections.
+  app.get("/api/nutrition-centre", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      if (householdId == null) {
+        return res.json({ available: false });
+      }
+      const centre = await assembleNutritionCentre(householdId);
+      res.json(centre);
+    } catch (err) {
+      console.error("[WX8] nutrition-centre error:", err);
+      res.status(500).json({ message: "Failed to assemble nutrition centre" });
     }
   });
 

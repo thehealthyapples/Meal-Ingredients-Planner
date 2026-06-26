@@ -212,22 +212,38 @@ async function assembleMeals(slug: string): Promise<FoodMealReference[]> {
 }
 
 /** Per-slug planner accumulation, keyed by canonical food slug. */
-interface PlannerFoodAcc {
+export interface PlannerFoodAcc {
   appearances: number;
   lastWeek: number;
   firstWeek: number;
   mealCounts: Map<number, { name: string; count: number }>;
 }
 
+/** Everything one household-planner read yields. */
+export interface HouseholdPlannerFoods {
+  /** Every canonical slug the household has planned. */
+  enjoys: string[];
+  /** Per-food planner accumulation — history for ANY requested slug. */
+  bySlug: Map<string, PlannerFoodAcc>;
+  /** Total planner entries (meals placed on the planner) — "meals cooked". */
+  mealEntryCount: number;
+  /** Distinct meal ids the household has planned. */
+  distinctMealIds: number[];
+}
+
 /**
- * Fetch the household's planner meals once and derive BOTH:
+ * Fetch the household's planner meals once and derive:
  *   • per-food planner accumulation (bySlug) — history for ANY requested slug
  *   • the household's `enjoys` set (every canonical slug they have planned),
  *     used to give Discovery household context.
+ *   • planner-entry + distinct-meal counts (household-wide totals).
+ *
+ * Single canonical read of household planner history. The Nutrition Centre
+ * reuses this; it does not re-derive any of these figures elsewhere.
  */
-async function fetchHouseholdPlannerFoods(
+export async function fetchHouseholdPlannerFoods(
   householdId: number
-): Promise<{ enjoys: string[]; bySlug: Map<string, PlannerFoodAcc> }> {
+): Promise<HouseholdPlannerFoods> {
   const rows = await db
     .select({
       mealId: plannerEntries.mealId,
@@ -242,10 +258,12 @@ async function fetchHouseholdPlannerFoods(
     .where(eq(plannerWeeks.householdId, householdId));
 
   const enjoys = new Set<string>();
+  const distinctMeals = new Set<number>();
   // Per-slug accumulation so we can build history for ANY requested food.
   const bySlug = new Map<string, PlannerFoodAcc>();
 
   for (const row of rows) {
+    distinctMeals.add(row.mealId);
     // One distinct canonical slug per planner entry, even if several
     // ingredients resolve to the same food.
     const slugsInEntry = new Set<string>();
@@ -277,7 +295,12 @@ async function fetchHouseholdPlannerFoods(
     }
   }
 
-  return { enjoys: Array.from(enjoys), bySlug };
+  return {
+    enjoys: Array.from(enjoys),
+    bySlug,
+    mealEntryCount: rows.length,
+    distinctMealIds: Array.from(distinctMeals),
+  };
 }
 
 function buildHouseholdForSlug(
