@@ -1,7 +1,7 @@
 import React from "react";
 import { type Meal, type MealDiet, type Diet, type MealAllergen } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Leaf } from "lucide-react";
+import { Check } from "lucide-react";
 import { type AdaptiveDensity } from "@/hooks/use-adaptive-density";
 
 interface MealTrustSummaryProps {
@@ -57,16 +57,9 @@ export function MealTrustSummary({
     });
   }
 
-  // Placeholder reasons for Phase 2 (marked as future data)
-  if (reasons.length < 6) {
-    reasons.push({
-      icon: <Leaf className="h-4 w-4 text-amber-600 opacity-50" />,
-      text: "Plant variety contribution (coming soon)",
-    });
-  }
-
-  // Cap at 6 reasons
+  // Cap at 6 reasons; skip the card entirely when no real reasons exist
   const displayedReasons = reasons.slice(0, 6);
+  if (displayedReasons.length === 0) return null;
   const hiddenCount = reasons.length - displayedReasons.length;
 
   const paddingClass = density === "compact" ? "p-3 sm:p-4" : density === "comfortable" ? "p-4 md:p-5" : "p-5 lg:p-6";

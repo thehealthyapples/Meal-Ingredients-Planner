@@ -102,6 +102,13 @@ export function MealFamilyConfidence({
   weeklyReuseFourWeeks,
   density,
 }: MealFamilyConfidenceProps) {
+  // Only render when at least one real data point exists — not placeholder state
+  const hasData =
+    householdCompatibilityPercent !== undefined ||
+    substitutionCount !== undefined ||
+    weeklyReuseFourWeeks !== undefined;
+  if (!hasData) return null;
+
   const confidence = calculateConfidence(
     householdCompatibilityPercent,
     substitutionCount,

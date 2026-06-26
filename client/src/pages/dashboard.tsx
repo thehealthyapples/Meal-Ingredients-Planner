@@ -229,6 +229,72 @@ export default function Dashboard() {
             <HomeIntelligenceCompanion />
           </motion.div>
 
+          {/* ── Recent Meals — conversational first, before numbers ── */}
+          <motion.div variants={item}>
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="title-section">Recent Meals</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">Your latest additions</p>
+              </div>
+              {userMeals.length > 4 && (
+                <Link href="/cookbook">
+                  <Button variant="ghost" className="text-sm text-muted-foreground gap-1" data-testid="link-view-all-meals">
+                    View all <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              )}
+            </div>
+
+            {userMeals.length === 0 ? (
+              <Card className="border-dashed" data-testid="card-empty-meals">
+                <CardContent className="py-10 text-center">
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: GREEN_PALE }}>
+                    <Utensils className="h-6 w-6" style={{ color: GREEN_DEEP }} />
+                  </div>
+                  <h3 className="font-semibold text-base">No meals yet</h3>
+                  <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
+                    Start by adding your favourite recipes to build your personal collection.
+                  </p>
+                  <Link href="/cookbook">
+                    <Button className="mt-5" data-testid="button-add-first-meal">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Your First Meal
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {userMeals.slice(0, 4).map((meal) => (
+                  <Link key={meal.id} href={`/meals/${meal.id}`}>
+                    <Card className="group cursor-pointer overflow-hidden hover-elevate transition-all duration-200" data-testid={`card-recent-meal-${meal.id}`}>
+                      {meal.imageUrl ? (
+                        <div className="w-full aspect-[4/3] overflow-hidden bg-muted">
+                          <img
+                            src={meal.imageUrl}
+                            alt={meal.name}
+                            className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-full aspect-[4/3] flex items-center justify-center" style={{ background: GREEN_PALE }}>
+                          <Utensils className="h-8 w-8" style={{ color: GREEN_MID, opacity: 0.4 }} />
+                        </div>
+                      )}
+                      <CardContent className="p-4">
+                        <h3 className="title-card truncate">{meal.name}</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {meal.ingredientCount} ingredient{meal.ingredientCount !== 1 ? "s" : ""}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </motion.div>
+
           {/* ── Stat strip ── */}
           <motion.div variants={item}>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -252,7 +318,7 @@ export default function Dashboard() {
                 </Card>
               </Link>
 
-              {/* Basket - neutral blue, not a warning colour */}
+              {/* Basket */}
               <Link href="/basket" aria-label="Go to Basket">
                 <Card className="h-full group cursor-pointer hover-elevate transition-all duration-200" data-testid="card-basket-items"
                   style={{ background: BASKET_BG, borderColor: BASKET_BORDER }}>
@@ -404,7 +470,7 @@ export default function Dashboard() {
             </Card>
           </motion.div>
 
-          {/* ── Meal mix + Quick actions ── */}
+          {/* ── Collection overview + Quick actions ── */}
           <motion.div variants={item}>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
@@ -459,7 +525,7 @@ export default function Dashboard() {
                 </Card>
               </div>
 
-              {/* Quick actions */}
+              {/* Quick actions — 3 primary actions */}
               <div>
                 <h2 className="title-section mb-3">Quick Actions</h2>
                 <div className="flex flex-col gap-3">
@@ -505,100 +571,29 @@ export default function Dashboard() {
                       </CardContent>
                     </Card>
                   </Link>
-                  <Card className="group cursor-pointer hover-elevate transition-all duration-200" data-testid="action-log-weight" onClick={() => setWeightOpen(true)}>
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
-                        <Scale className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="title-card">Log Today's Weight</p>
-                        <p className="text-xs text-muted-foreground">Keep track of your progress</p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground/40 ml-auto shrink-0" />
-                    </CardContent>
-                  </Card>
-                  <Card className="group cursor-pointer hover-elevate transition-all duration-200" data-testid="action-log-signals" onClick={() => setSignalsOpen(true)}>
-                    <CardContent className="p-4 flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0">
-                        <Sparkles className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="title-card">Log Daily Signals</p>
-                        <p className="text-xs text-muted-foreground">Mood, energy, sleep &amp; more</p>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-muted-foreground/40 ml-auto shrink-0" />
-                    </CardContent>
-                  </Card>
+                  {/* Secondary health-tracking actions — compact row */}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      className="flex-1 text-left text-xs text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg border border-border/50 hover:border-border transition-colors"
+                      onClick={() => setWeightOpen(true)}
+                      data-testid="action-log-weight"
+                    >
+                      <Scale className="h-3.5 w-3.5 inline mr-1.5 opacity-60" />
+                      Log weight
+                    </button>
+                    <button
+                      className="flex-1 text-left text-xs text-muted-foreground hover:text-foreground px-3 py-2 rounded-lg border border-border/50 hover:border-border transition-colors"
+                      onClick={() => setSignalsOpen(true)}
+                      data-testid="action-log-signals"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 inline mr-1.5 opacity-60" />
+                      Log signals
+                    </button>
+                  </div>
                 </div>
               </div>
 
             </div>
-          </motion.div>
-
-          {/* ── Recent Meals ── */}
-          <motion.div variants={item}>
-            <div className="flex items-center justify-between mb-3">
-              <div>
-                <h2 className="title-section">Recent Meals</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">Your latest additions</p>
-              </div>
-              {userMeals.length > 4 && (
-                <Link href="/cookbook">
-                  <Button variant="ghost" className="text-sm text-muted-foreground gap-1" data-testid="link-view-all-meals">
-                    View all <ArrowRight className="h-3.5 w-3.5" />
-                  </Button>
-                </Link>
-              )}
-            </div>
-
-            {userMeals.length === 0 ? (
-              <Card className="border-dashed" data-testid="card-empty-meals">
-                <CardContent className="py-10 text-center">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: GREEN_PALE }}>
-                    <Utensils className="h-6 w-6" style={{ color: GREEN_DEEP }} />
-                  </div>
-                  <h3 className="font-semibold text-base">No meals yet</h3>
-                  <p className="text-sm text-muted-foreground mt-1 max-w-xs mx-auto">
-                    Start by adding your favourite recipes to build your personal collection.
-                  </p>
-                  <Link href="/cookbook">
-                    <Button className="mt-5" data-testid="button-add-first-meal">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Meal
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {userMeals.slice(0, 4).map((meal) => (
-                  <Link key={meal.id} href={`/meals/${meal.id}`}>
-                    <Card className="group cursor-pointer overflow-hidden hover-elevate transition-all duration-200" data-testid={`card-recent-meal-${meal.id}`}>
-                      {meal.imageUrl ? (
-                        <div className="w-full aspect-[4/3] overflow-hidden bg-muted">
-                          <img
-                            src={meal.imageUrl}
-                            alt={meal.name}
-                            className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
-                            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-full aspect-[4/3] flex items-center justify-center" style={{ background: GREEN_PALE }}>
-                          <Utensils className="h-8 w-8" style={{ color: GREEN_MID, opacity: 0.4 }} />
-                        </div>
-                      )}
-                      <CardContent className="p-4">
-                        <h3 className="title-card truncate">{meal.name}</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {meal.ingredientCount} ingredient{meal.ingredientCount !== 1 ? "s" : ""}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
-              </div>
-            )}
           </motion.div>
 
         </motion.div>

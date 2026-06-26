@@ -39,17 +39,10 @@ export function HouseholdAdaptationsSummary({
     });
   };
 
-  // Placeholder data for Phase 1
-  const displayedAdaptations: EaterAdaptation[] = adaptations || [
-    {
-      eaterName: "Household member 1",
-      status: "fully-compatible",
-    },
-    {
-      eaterName: "Household member 2",
-      status: "fully-compatible",
-    },
-  ];
+  // Only render when real adaptation data has been provided
+  if (!adaptations) return null;
+
+  const displayedAdaptations: EaterAdaptation[] = adaptations;
 
   const paddingClass = density === "compact" ? "p-3 sm:p-4" : density === "comfortable" ? "p-4 md:p-5" : "p-5 lg:p-6";
   const gapClass = density === "compact" ? "gap-2" : density === "comfortable" ? "gap-3" : "gap-3 lg:gap-4";

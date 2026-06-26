@@ -682,33 +682,6 @@ export default function MealDetailPage() {
         </div>
       )}
 
-      {/* Trust Screen Sections - Phase 1 */}
-      <div className={`${density === "compact" ? "space-y-3" : density === "comfortable" ? "space-y-4" : "space-y-6"} mb-8`}>
-        <MealTrustSummary
-          meal={meal}
-          mealDiets={mealDiets}
-          allDiets={allDiets}
-          allergens={allergens}
-          density={density}
-        />
-        <MealFamilyConfidence
-          householdCompatibilityPercent={undefined}
-          substitutionCount={undefined}
-          weeklyReuseFourWeeks={undefined}
-          density={density}
-        />
-        <HouseholdAdaptationsSummary
-          meal={meal}
-          adaptations={undefined}
-          density={density}
-        />
-        <SimplyBetterChoicesPanel
-          mealName={meal.name}
-          upliftMatches={[]}
-          density={density}
-        />
-      </div>
-
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="md:col-span-1">
           {meal.imageUrl ? (
@@ -1207,6 +1180,33 @@ export default function MealDetailPage() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* Meal Intelligence — shown below the recipe so the meal comes first */}
+      <div className={`${density === "compact" ? "space-y-3" : density === "comfortable" ? "space-y-4" : "space-y-6"} mb-8`}>
+        <MealTrustSummary
+          meal={meal}
+          mealDiets={mealDiets}
+          allDiets={allDiets}
+          allergens={allergens}
+          density={density}
+        />
+        <MealFamilyConfidence
+          householdCompatibilityPercent={undefined}
+          substitutionCount={undefined}
+          weeklyReuseFourWeeks={undefined}
+          density={density}
+        />
+        <HouseholdAdaptationsSummary
+          meal={meal}
+          adaptations={undefined}
+          density={density}
+        />
+        <SimplyBetterChoicesPanel
+          mealName={meal.name}
+          upliftMatches={[]}
+          density={density}
+        />
       </div>
 
       {isEditedCopy && isEditing && hasChanges && (
