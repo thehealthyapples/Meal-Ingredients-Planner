@@ -618,7 +618,7 @@ export default function MealDetailPage() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe"
+      className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 main-safe"
     >
       {isEditedCopy && isEditing && (
         <div className="mb-4 flex items-center gap-2">
@@ -682,18 +682,18 @@ export default function MealDetailPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="md:col-span-1">
           {meal.imageUrl ? (
             <img
               src={meal.imageUrl}
               alt={meal.name}
-              className="w-full rounded-md object-cover aspect-square"
+              className="w-full rounded-md object-cover aspect-[4/3]"
               data-testid="img-meal"
             />
           ) : (
-            <div className="w-full rounded-md bg-muted flex items-center justify-center aspect-square" data-testid="img-meal-placeholder">
-              <ChefHat className="h-16 w-16 text-muted-foreground" />
+            <div className="w-full rounded-md bg-muted flex items-center justify-center aspect-[4/3]" data-testid="img-meal-placeholder">
+              <ChefHat className="h-12 w-12 text-muted-foreground" />
             </div>
           )}
 

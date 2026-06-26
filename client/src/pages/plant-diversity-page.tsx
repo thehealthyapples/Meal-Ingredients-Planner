@@ -23,7 +23,7 @@ export default function PlantDiversityPage() {
   const { weekMeals, isLoading } = useWeekMealEntries();
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+    <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
       {/* Back to planner */}
       <Link
         href="/planner"

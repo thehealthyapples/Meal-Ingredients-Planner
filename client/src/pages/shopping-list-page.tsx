@@ -3041,7 +3041,7 @@ export default function ShoppingListPage() {
       />
     )}
     <div
-      className={`${isFullscreen ? 'fixed inset-0 z-50 overflow-auto flex flex-col' : 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6'}`}
+      className={`${isFullscreen ? 'fixed inset-0 z-50 overflow-auto flex flex-col' : 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4'}`}
       style={isFullscreen ? { backgroundImage: "url('/orchard-bg.png')", backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
     >
 

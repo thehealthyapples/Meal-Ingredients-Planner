@@ -178,7 +178,7 @@ export function PageHeader({
       className={`page-sticky-header realm-header-bg border-b realm-header-border${className ? ` ${className}` : ""}`}
     >
       {center ? (
-        <div className={`${maxW} mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4`}>
+        <div className={`${maxW} mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3`}>
           {/* ── 2-row operational layout (tabs, workspace) ── */}
           <div>
             {/* Row 1: always visible on all viewports */}
@@ -245,7 +245,7 @@ export function PageHeader({
         /* ── Single-row layout (no center prop) ── */
         <>
           {/* Full header: always on desktop; on mobile only when not fully collapsed */}
-          <div className={`${maxW} mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4${fullCollapseOnMobile && isCollapsed ? " hidden sm:block" : ""}`}>
+          <div className={`${maxW} mx-auto px-4 sm:px-6 lg:px-8 py-2.5 sm:py-3${fullCollapseOnMobile && isCollapsed ? " hidden sm:block" : ""}`}>
             <div>
               {/* Always visible row */}
               <div className="flex items-center justify-between gap-4 flex-wrap">

@@ -16,10 +16,10 @@ export const intelligenceSurface =
   "rounded-xl border border-border/30 bg-background/60 backdrop-blur-sm";
 
 /** Compact padding used by every intelligence card. */
-export const cardPadding = "px-5 py-4";
+export const cardPadding = "px-4 py-3";
 
 /** Vertical rhythm between elements inside a card. */
-export const cardStack = "space-y-3";
+export const cardStack = "space-y-2.5";
 
 /** Gap between chips in a chip group. */
 export const chipGap = "gap-1";

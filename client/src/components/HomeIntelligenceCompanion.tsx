@@ -105,12 +105,12 @@ export default function HomeIntelligenceCompanion() {
 
   return (
     <div
-      className="rounded-xl border border-border/25 bg-background/60 backdrop-blur-sm px-6 py-5 space-y-4"
+      className="rounded-xl border border-border/25 bg-background/60 backdrop-blur-sm px-5 py-4 space-y-3"
       data-testid="home-intelligence-companion"
     >
       {/* Greeting */}
       <p
-        className="text-lg font-medium text-foreground tracking-tight"
+        className="text-base font-medium text-foreground tracking-tight"
         data-testid="home-intelligence-greeting"
       >
         {greeting}
@@ -118,7 +118,7 @@ export default function HomeIntelligenceCompanion() {
 
       {/* Modules — only rendered when the API has returned and data exists */}
       {!isLoading && data && (
-        <div className="space-y-3.5">
+        <div className="space-y-3">
           {/* Weekly progress */}
           {(() => {
             const text = buildProgressText(data.weeklyProgress);

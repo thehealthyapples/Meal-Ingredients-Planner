@@ -121,7 +121,7 @@ export default function PlannerIntelligenceCompanion({ weekId }: Props) {
 
   return (
     <div
-      className="mb-4 space-y-3"
+      className="mb-3 space-y-2"
       data-testid="planner-intelligence-companion"
     >
       {data.weeklyProgress && (

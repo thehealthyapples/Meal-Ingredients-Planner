@@ -221,8 +221,8 @@ export default function Dashboard() {
     />
     <div>
 
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+        <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
 
           {/* ── Home Intelligence Companion ── */}
           <motion.div variants={item}>
@@ -247,8 +247,8 @@ export default function Dashboard() {
 
             {userMeals.length === 0 ? (
               <Card className="border-dashed" data-testid="card-empty-meals">
-                <CardContent className="py-10 text-center">
-                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4" style={{ background: GREEN_PALE }}>
+                <CardContent className="py-6 text-center">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-2" style={{ background: GREEN_PALE }}>
                     <Utensils className="h-6 w-6" style={{ color: GREEN_DEEP }} />
                   </div>
                   <h3 className="font-semibold text-base">No meals yet</h3>
@@ -420,7 +420,7 @@ export default function Dashboard() {
             <Card style={{ borderColor: "hsl(132,14%,87%)" }}>
               <CardContent className="p-5 pt-4">
                 {mealsPlannedThisWeek === 0 ? (
-                  <div className="flex flex-col items-center py-7 gap-3">
+                  <div className="flex flex-col items-center py-4 gap-2.5">
                     <CalendarDays className="h-8 w-8 text-muted-foreground/25" />
                     <p className="text-sm text-muted-foreground text-center max-w-xs">
                       No meals planned yet - head to the planner to map out your week.
