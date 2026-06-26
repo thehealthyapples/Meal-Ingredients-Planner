@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Leaf, Check, ChevronRight, Compass } from "lucide-react";
-import { isPlantIngredient, getPlantCategory } from "@/lib/nutrition-variety";
-import type { PlantCategory } from "@/lib/nutrition-variety";
+import { isPlantIngredient, getPlantCategory } from "@shared/canonical/plant-classifier";
+import type { PlantCategory } from "@shared/canonical/plant-classifier";
 import { normaliseForReuse } from "@/lib/ingredient-reuse";
-import { getNutritionBenefit } from "@/lib/nutrition-benefit-library";
 import { getCategoryEmoji } from "@/lib/ingredient-imagery";
 import { HEALTH_DISCLAIMER } from "@/lib/health-benefits-model";
 import {
@@ -38,6 +38,8 @@ interface IngredientRow {
   mealNames: string[];
   keyNutrients: string[];
   benefitSummary: string | null;
+  /** Cut/variety labels when multiple raw forms collapse to one canonical row. */
+  formsUsed: string[];
 }
 
 export type SortKey =
@@ -196,9 +198,49 @@ function toDisplayName(key: string): string {
   return key.replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/**
+ * Extracts the "form" label when a raw ingredient has been aliased to a
+ * canonical display key. Returns null when no alias was applied.
+ *
+ * Examples:
+ *   "Chicken Breasts" + canonical "chicken" → "Breasts"
+ *   "Chicken Legs"    + canonical "chicken" → "Legs"
+ *   "Braeburn Apple"  + canonical "apple"   → "Braeburn"
+ *   "Pink Lady Apple" + canonical "apple"   → "Pink Lady"
+ */
+function computeFormLabel(raw: string, canonicalKey: string): string | null {
+  const preAlias = raw.replace(EXTRA_UNIT_RE, "").replace(/\s+/g, " ").trim();
+  const preAliasLower = preAlias.toLowerCase();
+  if (preAliasLower === canonicalKey) return null;
+
+  // Prefix: "Chicken Breasts" → canonical "chicken" → "Breasts"
+  if (preAliasLower.startsWith(canonicalKey + " ")) {
+    const form = preAlias.slice(canonicalKey.length + 1).trim();
+    return form || null;
+  }
+
+  // Suffix: "Braeburn Apple" → canonical "apple" → "Braeburn"
+  if (preAliasLower.endsWith(" " + canonicalKey)) {
+    const form = preAlias.slice(0, preAlias.length - canonicalKey.length - 1).trim();
+    return form || null;
+  }
+
+  return null;
+}
+
+// ─── WS0 knowledge type (mirrors server IngredientKnowledgeSummary) ───────────
+
+interface IngredientKnowledge {
+  nutrients: string[];
+  benefits: string[];
+}
+
 // ─── Data Builder ─────────────────────────────────────────────────────────────
 
-function computeAllRows(weekMeals: WeekMealEntry[]): {
+function computeAllRows(
+  weekMeals: WeekMealEntry[],
+  knowledgeMap: Record<string, IngredientKnowledge>,
+): {
   plantRows: IngredientRow[];
   meatRows: IngredientRow[];
   dairyRows: IngredientRow[];
@@ -230,6 +272,7 @@ function computeAllRows(weekMeals: WeekMealEntry[]): {
     dayMealAcc: Map<string, Set<string>>;
     keyNutrients: string[];
     benefitSummary: string | null;
+    formsUsed: Set<string>;
   };
 
   const rowMap = new Map<string, RowAcc>();
@@ -247,7 +290,7 @@ function computeAllRows(weekMeals: WeekMealEntry[]): {
           section === "plant-based"
             ? (getPlantCategory(displayKey) ?? "Vegetables")
             : null;
-        const benefit = getNutritionBenefit(displayKey);
+        const knowledge = knowledgeMap[displayKey];
         rowMap.set(displayKey, {
           canonicalKey: displayKey,
           displayName: toDisplayName(displayKey),
@@ -255,8 +298,9 @@ function computeAllRows(weekMeals: WeekMealEntry[]): {
           plantCategory,
           reportCategory: getReportCategory(section, plantCategory),
           dayMealAcc: new Map(),
-          keyNutrients: benefit?.keyNutrients ?? [],
-          benefitSummary: benefit?.summary ?? null,
+          keyNutrients: knowledge?.nutrients ?? [],
+          benefitSummary: knowledge?.benefits?.slice(0, 2).join(" · ") ?? null,
+          formsUsed: new Set(),
         });
       }
 
@@ -265,6 +309,10 @@ function computeAllRows(weekMeals: WeekMealEntry[]): {
         entry.dayMealAcc.set(meal.dayName, new Set());
       }
       entry.dayMealAcc.get(meal.dayName)!.add(meal.mealName);
+
+      // Track the cut/variety form when aliasing collapsed this ingredient
+      const formLabel = computeFormLabel(raw, displayKey);
+      if (formLabel) entry.formsUsed.add(formLabel);
     }
   }
 
@@ -287,6 +335,7 @@ function computeAllRows(weekMeals: WeekMealEntry[]): {
       displayName: acc.displayName,
       section: acc.section,
       plantCategory: acc.plantCategory,
+      formsUsed: Array.from(acc.formsUsed).sort(),
       reportCategory: acc.reportCategory,
       dayMealMap,
       dayNames,
@@ -419,7 +468,13 @@ function CategoryGrid({ categoriesFound }: { categoriesFound: Set<PlantCategory>
   );
 }
 
-function BroadenYourWeek({ categoriesFound }: { categoriesFound: Set<PlantCategory> }) {
+function BroadenYourWeek({
+  categoriesFound,
+  knowledgeMap,
+}: {
+  categoriesFound: Set<PlantCategory>;
+  knowledgeMap: Record<string, IngredientKnowledge>;
+}) {
   const missingCategories = CATEGORY_ORDER.filter((cat) => !categoriesFound.has(cat));
   if (missingCategories.length === 0) return null;
 
@@ -453,16 +508,16 @@ function BroadenYourWeek({ categoriesFound }: { categoriesFound: Set<PlantCatego
               </div>
               <div className="flex flex-wrap gap-2">
                 {suggestions.map((name) => {
-                  const benefit = getNutritionBenefit(normaliseForReuse(name));
+                  const knowledge = knowledgeMap[normaliseForReuse(name)];
                   return (
                     <div
                       key={name}
                       className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-muted/30 border border-border/40"
                     >
                       <span className="text-xs font-medium text-foreground/80">{name}</span>
-                      {benefit && benefit.keyNutrients.length > 0 && (
+                      {knowledge && knowledge.nutrients.length > 0 && (
                         <span className="text-[11px] text-emerald-700/60 dark:text-emerald-400/60 font-medium">
-                          {benefit.keyNutrients.slice(0, 2).join(" · ")}
+                          {knowledge.nutrients.slice(0, 2).join(" · ")}
                         </span>
                       )}
                     </div>
@@ -683,6 +738,25 @@ function ReportRow({
                   canonicalSlug={variety?.canonicalSlug ?? row.canonicalKey}
                   eatenVarietyLabels={variety?.yourVarieties}
                 />
+              )}
+
+              {/* Forms used this week (non-plant rows with aliased cuts/varieties) */}
+              {row.section !== "plant-based" && row.formsUsed.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-medium text-muted-foreground/50 uppercase tracking-wide mb-1.5">
+                    Forms used this week
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {row.formsUsed.map((form) => (
+                      <span
+                        key={form}
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] bg-muted/50 text-foreground/70 border border-border/40"
+                      >
+                        {form}
+                      </span>
+                    ))}
+                  </div>
+                </div>
               )}
 
               {/* Day → Meal mapping (all rows) */}
@@ -938,6 +1012,44 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>("category");
 
+  // Collect all ingredient keys: week-meal rows + static suggestion names.
+  // Single deduplicated set fed to the WS0 batch lookup.
+  const allLookupKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const meal of weekMeals) {
+      for (const raw of meal.ingredients) {
+        if (!raw.trim()) continue;
+        const key = getDisplayKey(raw);
+        if (key) keys.add(key);
+      }
+    }
+    for (const suggestions of Object.values(CATEGORY_SUGGESTIONS)) {
+      for (const name of suggestions) {
+        const key = normaliseForReuse(name);
+        if (key) keys.add(key);
+      }
+    }
+    return Array.from(keys).sort();
+  }, [weekMeals]);
+
+  // Batch-fetch WS0 nutrients + benefits for all ingredient keys.
+  // Returns {} on error / while loading — all rows gracefully show "—".
+  const { data: ingredientKnowledge = {} } = useQuery<Record<string, IngredientKnowledge>>({
+    queryKey: ["/api/knowledge/ingredient-lookup", allLookupKeys.join(",")],
+    queryFn: async () => {
+      if (allLookupKeys.length === 0) return {};
+      const res = await fetch("/api/knowledge/ingredient-lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ingredients: allLookupKeys }),
+      });
+      if (!res.ok) return {};
+      return res.json() as Promise<Record<string, IngredientKnowledge>>;
+    },
+    enabled: allLookupKeys.length > 0,
+    staleTime: 10 * 60 * 1000,
+  });
+
   const {
     plantRows,
     meatRows,
@@ -947,7 +1059,7 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
     plantCount,
     totalIngredients,
     categoriesFound,
-  } = useMemo(() => computeAllRows(weekMeals), [weekMeals]);
+  } = useMemo(() => computeAllRows(weekMeals, ingredientKnowledge), [weekMeals, ingredientKnowledge]);
 
   // Sort within each section independently
   const sortedPlantRows  = useMemo(() => sortRows(plantRows,  sortKey), [plantRows,  sortKey]);
@@ -1073,7 +1185,7 @@ export function PlantDiversityReport({ weekMeals }: PlantDiversityReportProps) {
       )}
 
       {/* Broaden Your Week — at the end (Stage 7) */}
-      <BroadenYourWeek categoriesFound={categoriesFound} />
+      <BroadenYourWeek categoriesFound={categoriesFound} knowledgeMap={ingredientKnowledge} />
 
       {/* Cross-link to Pantry */}
       <div className="rounded-2xl border border-border/50 bg-background px-5 py-4">

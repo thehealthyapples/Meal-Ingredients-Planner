@@ -25,7 +25,7 @@ import {
   ChevronDown, Heart, Flame, Target, Activity, Droplet,
   Gift, ClipboardCheck, PiggyBank, Search, FileDown, Settings,
 } from "lucide-react";
-import { computeMealVariety } from "@/lib/nutrition-variety";
+import { computeMealVariety } from "@shared/canonical/plant-classifier";
 import { DayVarietySummary } from "@/components/nutrition-variety-chips";
 import { getMealNutrients } from "@/lib/nutrition-insights";
 import { DayNutrientSummary, NutrientSupportWidget } from "@/components/nutrition-insights-panel";

@@ -9,11 +9,26 @@ import { normalizeIngredientKey } from "../normalize";
 import { FOOD_SEED } from "../knowledge/foods";
 import { DIVERSITY_GROUP_SEED } from "./diversity-groups";
 import { CANONICAL_SEED, type AliasType } from "./foods";
+import { FOOD_CONTEXT_SEED, validateFoodContext } from "./food-context";
 import { buildCanonicalIndex } from "./resolver";
 
 export { DIVERSITY_GROUP_SEED } from "./diversity-groups";
 export { CANONICAL_SEED } from "./foods";
 export type { AliasType, CanonicalFoodSeed } from "./foods";
+export {
+  FOOD_CONTEXT_SEED,
+  getFoodContext,
+  validateFoodContext,
+  AVAILABILITY_LEVELS,
+  AVAILABILITY_MODIFIERS,
+  UK_SEASONS,
+  ORIGIN_REGIONS,
+  type AvailabilityLevel,
+  type AvailabilityModifier,
+  type UKSeasonSlug,
+  type OriginRegion,
+  type FoodContextSeed,
+} from "./food-context";
 export {
   resolveCanonicalFood,
   buildCanonicalIndex,
@@ -23,7 +38,21 @@ export {
 
 // ── Flattened insert arrays (consumed by the seed runner) ─────────────────────
 
-export const CANONICAL_FOOD_SEED = CANONICAL_SEED.map((e) => e.food);
+// WS0X.5 — merge the per-food context (availability / peak_seasons / origin_region /
+// modifiers) onto each canonical_food insert at seed-build time. This is what makes
+// canonical_food the SINGLE runtime owner of food context: the authoring map in
+// food-context.ts is folded in here, never read at runtime in parallel.
+export const CANONICAL_FOOD_SEED = CANONICAL_SEED.map((e) => {
+  const ctx = FOOD_CONTEXT_SEED[e.food.slug];
+  if (!ctx) return e.food;
+  return {
+    ...e.food,
+    availability: ctx.availability,
+    availabilityModifiers: ctx.modifiers,
+    peakSeasons: ctx.peakSeasons,
+    originRegion: ctx.originRegion,
+  };
+});
 
 export interface FoodVarietySeedRow {
   canonicalFoodSlug: string;
@@ -62,6 +91,40 @@ export const CANONICAL_FOOD_ALIAS_SEED: CanonicalFoodAliasSeedRow[] = CANONICAL_
 const ALIAS_TYPES: ReadonlySet<string> = new Set([
   "singular", "plural", "common_name", "brand", "misspelling", "form",
 ]);
+
+/**
+ * WS0X.10A — Progressive Food Intelligence. Whether a canonical food MUST carry
+ * food context (Level 2) to be seeded. Curated editorial foods do; foods that are
+ * intentionally staged at Level 1 (imported catalogue tier, or draft status) do NOT —
+ * for them context is optional enrichment that accretes later, never a visibility gate.
+ *
+ * Defaults match the DB column defaults (tier="canonical", status="active"), so a seed
+ * food that sets neither is treated as curated. Behaviour is therefore UNCHANGED unless
+ * a food is EXPLICITLY marked Level 1 — the existing spine keeps 100% context coverage.
+ */
+export function isContextRequired(food: { tier?: string | null; status?: string | null }): boolean {
+  const tier = food.tier ?? "canonical";
+  const status = food.status ?? "active";
+  const isLevel1 = tier === "catalogue" || status === "draft";
+  return !isLevel1;
+}
+
+/**
+ * WS0X.10A — Non-fatal Level-1 context coverage gaps. Lists canonical foods that are
+ * intentionally staged at Level 1 and do not yet carry food context. These are TRACKED
+ * (never silent) so back-fill can be prioritised, but they never block the seed.
+ */
+export function canonicalSeedContextWarnings(): string[] {
+  const warnings: string[] = [];
+  for (const f of CANONICAL_FOOD_SEED) {
+    if (!FOOD_CONTEXT_SEED[f.slug] && !isContextRequired(f)) {
+      warnings.push(
+        `canonical_food "${f.slug}": Level 1 (context pending) — availability/peak_seasons/origin_region not yet authored`,
+      );
+    }
+  }
+  return warnings;
+}
 
 /**
  * Referential-integrity + anti-fork check over the editorial seed. Returns a
@@ -124,6 +187,31 @@ export function validateCanonicalSeed(): string[] {
     seenAliasKeys.set(a.aliasKey, a.canonicalFoodSlug);
   }
 
+  // WS0X.5 / WS0X.5A / WS0X.10A — Food context integrity (single-owner enforcement).
+  // (a) Pre-staged context entries (slugs not yet in CANONICAL_SEED) are intentionally
+  //     allowed — they are authored ahead of promotion so auto-tagging requires no
+  //     manual step at promotion time. Orphan entries are NOT flagged as errors.
+  // (b) WS0X.10A Progressive Food Intelligence: food context is OPTIONAL ENRICHMENT
+  //     (Level 2), not a visibility gate. A curated editorial food (tier="canonical",
+  //     status="active") MUST still carry context — so the existing spine keeps 100%
+  //     coverage with no silent regression. A food that is intentionally staged at
+  //     Level 1 (tier="catalogue" OR status="draft") MAY be seeded without context;
+  //     that is a TRACKED coverage gap (see canonicalSeedContextWarnings()), never a
+  //     fatal error, and context is NEVER fabricated to satisfy a gate.
+  // (c) Whatever context IS present must be in the controlled vocabulary — UNCHANGED.
+  //     A malformed context value still blocks the seed, preserving trust.
+  for (const f of CANONICAL_FOOD_SEED) {
+    const ctx = FOOD_CONTEXT_SEED[f.slug];
+    if (!ctx) {
+      if (isContextRequired(f)) {
+        problems.push(`canonical_food "${f.slug}": missing food context (availability/peak_seasons/origin_region)`);
+      }
+      // Level-1 foods: missing context is a non-fatal, tracked coverage gap.
+      continue;
+    }
+    problems.push(...validateFoodContext(f.slug, ctx));
+  }
+
   // Resolver index conflicts: any single key two different foods both claim.
   const { conflicts } = buildCanonicalIndex();
   for (const c of conflicts) {
@@ -139,3 +227,28 @@ export const CANONICAL_SEED_COUNTS = {
   varieties: FOOD_VARIETY_SEED.length,
   aliases: CANONICAL_FOOD_ALIAS_SEED.length,
 } as const;
+
+// WS0X.5 — food-context coverage over the editorial canonical foods. A dimension
+// is "covered" when it carries a non-empty/known value (peakSeasons may legitimately
+// be empty for year-round foods, so coverage there = "has a context record").
+export const FOOD_CONTEXT_COVERAGE = (() => {
+  const foods = CANONICAL_FOOD_SEED;
+  const total = foods.length;
+  let availability = 0, peakSeasons = 0, originRegion = 0, hasContext = 0;
+  for (const f of foods) {
+    const ctx = FOOD_CONTEXT_SEED[f.slug];
+    if (!ctx) continue;
+    hasContext += 1;
+    if (ctx.availability) availability += 1;
+    if (ctx.originRegion) originRegion += 1;
+    if (ctx.peakSeasons.length > 0) peakSeasons += 1;
+  }
+  const pct = (n: number) => (total === 0 ? 0 : Math.round((n / total) * 1000) / 10);
+  return {
+    total,
+    hasContext,
+    availability: { count: availability, pct: pct(availability) },
+    originRegion: { count: originRegion, pct: pct(originRegion) },
+    peakSeasonsNonEmpty: { count: peakSeasons, pct: pct(peakSeasons) },
+  } as const;
+})();

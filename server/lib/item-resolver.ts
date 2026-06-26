@@ -25,7 +25,8 @@ export type ReviewReason =
   | 'unrecognised_item'  // category fell through to 'other'
   | 'ambiguous_term'     // user entered an umbrella term with multiple specific variants
   | 'low_confidence'     // keyword match but confidence is marginal
-  | 'category_conflict'; // incoming category differs from canonical map
+  | 'category_conflict'  // incoming category differs from canonical map
+  | 'ai_correction';     // AI suggested a match but it has not been human-confirmed
 
 // ── Resolved item payload ─────────────────────────────────────────────────────
 

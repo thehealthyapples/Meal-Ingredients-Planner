@@ -158,7 +158,7 @@ assert(!NONE(meal('Chickpea curry', ['chickpeas', 'rice'])),
 
 section('Consistency — planner matches dietRules engine directly');
 
-import { shouldExcludeRecipe } from '../lib/dietRules.js';
+import { shouldExcludeRecipe } from '../../shared/dietRules.js';
 
 const sample = meal("Pasta Puttanesca (Tart's Spaghetti)", [
   'spaghetti', 'olive oil', 'garlic', 'anchovies', 'tomatoes',

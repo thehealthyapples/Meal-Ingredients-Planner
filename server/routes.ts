@@ -22,18 +22,25 @@ import {
   getFoodDetailView,
   getNutrientDetailView,
   getBenefitDetailView,
+  resolveIngredientsToKnowledgeSummary,
 } from "./services/nutrition-knowledge-registry";
 import { createBasket, getBasketSupermarkets } from "./lib/supermarket-basket-service";
 import { generateSmartSuggestion, type SmartSuggestSettings, type LockedEntry } from "./lib/smart-suggest-service";
 import { rankMealsByIngredients } from "./lib/smart-meal-creation-engine";
 import { searchAllRecipes, searchJamieOliver, searchSeriousEats, searchEdamam, searchApiNinjas, searchBigOven, searchFatSecret, type ExternalMealCandidate } from "./lib/external-meal-service";
 import { seedSourceSettings, isSourceCallable, getSourceKeyForUrl, logAuditEvent, getAllSourceSettings, updateSourceSettings, getAuditLogs } from "./lib/recipe-source-gate";
-import { shouldExcludeRecipe, scoreRecipeForDiet } from "./lib/dietRules";
+import { shouldExcludeRecipe, scoreRecipeForDiet } from "@shared/dietRules";
 import { resolvePlannerComplianceContext, isComplianceActive, isMealCompliantForUser } from "./lib/planner-compliance";
 import { expandSearchQuery, correctFoodSpelling, conservativeSpellCorrect, suggestSpellings } from "@shared/food-synonyms";
 import { parseIngredient as parseIngredientShared } from "@shared/parse-ingredient";
 import { INGREDIENT_TAXONOMY } from "@shared/ingredient-taxonomy";
-import { normalizeIngredientKey } from "@shared/normalize";
+import { normalizeIngredientKey, singularizeIngredientKey } from "@shared/normalize";
+import { discover } from "../shared/discovery/engine";
+import { alternatives } from "../shared/alternatives/engine";
+import { stories } from "../shared/stories/engine";
+import { seasonalStories } from "../shared/seasonal/engine";
+import type { HouseholdHistory, MealEntry } from "../shared/stories/types";
+import type { AlternativeContext, Diet as AlternativeDiet } from "../shared/alternatives/types";
 import { lookupFoodConstruct, isLikelyFoodConstruct, logUnrecognisedConstruct, logConstructMappingFailure } from "@shared/food-constructs";
 import { insertMealTemplateSchema, insertMealTemplateProductSchema, insertFreezerMealSchema, updateMealSchema, householdMembers, users } from "@shared/schema";
 import { importGlobalMeals, getImportStatus } from "./lib/openfoodfacts-importer";
@@ -66,6 +73,7 @@ import UPLIFT_RULES from "./lib/uplift-rules.js";
 import type { BatchUpliftInput } from "./lib/uplift-types.js";
 import { mergeUpliftIngredients, removeUpliftIngredient, buildForkName, type AcceptedSuggestion } from "./lib/uplift-persistence.js";
 import { resolveActiveRestrictions, resolveIngredientRestrictions } from "../shared/restrictions/restriction-resolver.js";
+import { isPlantIngredient } from "../shared/canonical/plant-classifier.js";
 
 // Singleton index built once at startup — all rules are stateless
 const UPLIFT_INDEX = buildRuleIndex(UPLIFT_RULES);
@@ -5541,6 +5549,219 @@ Example output: [{"productName":"Chicken breast","quantity":null,"unit":null},{"
     }
   });
 
+  // ── WS0X.6: Meal Detail Food Intelligence ────────────────────────────────────
+  // Builds consolidated WS0 intelligence (nutrients, benefits, seasonality,
+  // origin, availability, discovery) for a meal's ingredients.
+  // Source of truth: WS0 knowledge registry + FOOD_CONTEXT_SEED + SEASON_SEED + WS8.
+  // No new data is created; returns EMPTY when WS0 coverage is absent.
+  app.get("/api/meals/:id/food-intelligence", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const mealId = parseInt(req.params.id, 10);
+    if (isNaN(mealId)) return res.status(400).json({ message: "Invalid meal ID" });
+    const meal = await storage.getMeal(mealId);
+    if (!meal || (meal.userId !== req.user!.id && !meal.isSystemMeal)) {
+      return res.status(404).json({ message: "Meal not found" });
+    }
+    try {
+      const { buildMealFoodIntelligence } = await import("./services/meal-food-intelligence");
+      const intelligence = await buildMealFoodIntelligence(meal.ingredients ?? []);
+      res.json(intelligence);
+    } catch (err) {
+      console.error("[WS0X6] food-intelligence error:", err);
+      res.status(500).json({ message: "Failed to build food intelligence" });
+    }
+  });
+
+  // ── WX1A: Cookbook Meal Intelligence Surface ──────────────────────────────────
+  // Thin wrapper around MealIntelligenceAssembler. Returns assembled runtime
+  // intelligence for a single meal. No data is written; all sections are optional.
+  app.get("/api/meals/:id/intelligence", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const mealId = parseInt(req.params.id, 10);
+    if (isNaN(mealId)) return res.status(400).json({ message: "Invalid meal ID" });
+    try {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const { getMealIntelligence } = await import("./lib/meal-intelligence-assembler");
+      const intel = await getMealIntelligence(mealId, householdId ?? undefined);
+      res.json(intel);
+    } catch (err) {
+      console.error("[WX1A] meal-intelligence error:", err);
+      res.status(500).json({ message: "Failed to assemble meal intelligence" });
+    }
+  });
+
+  // ── WX4: Food Intelligence Pages ──────────────────────────────────────────────
+  // Thin wrapper around FoodIntelligenceAssembler. Returns assembled runtime
+  // intelligence for a single canonical food. Computes nothing here; owns nothing;
+  // writes nothing. Returns 404 when the slug is not a canonical food.
+  app.get("/api/foods/:slug/intelligence", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const slug = String(req.params.slug ?? "").trim().toLowerCase();
+    if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
+      return res.status(400).json({ message: "Invalid food slug" });
+    }
+    try {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const { getFoodIntelligence } = await import("./lib/food-intelligence-assembler");
+      const intel = await getFoodIntelligence(slug, householdId ?? undefined);
+      if (!intel.food) {
+        return res.status(404).json({ message: "Food not found" });
+      }
+      res.json(intel);
+    } catch (err) {
+      console.error("[WX4] food-intelligence error:", err);
+      res.status(500).json({ message: "Failed to assemble food intelligence" });
+    }
+  });
+
+  // ── WX5: Connected Food Intelligence ──────────────────────────────────────────
+  // Thin wrapper around ConnectedFoodIntelligenceAssembler. Returns the assembled
+  // relationship web (often-enjoyed-with, similar, appears-in, discover-next,
+  // seasonal, household, simply-better) for a single canonical food. Reads only;
+  // owns nothing; writes nothing. 404 when the slug is not a canonical food.
+  app.get("/api/foods/:slug/connected", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const slug = String(req.params.slug ?? "").trim().toLowerCase();
+    if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
+      return res.status(400).json({ message: "Invalid food slug" });
+    }
+    try {
+      const householdId = await getHouseholdForUser(req.user!.id);
+      const { getConnectedFoodIntelligence } = await import("./lib/connected-food-intelligence-assembler");
+      const connected = await getConnectedFoodIntelligence(slug, householdId ?? undefined);
+      if (!connected.food) {
+        return res.status(404).json({ message: "Food not found" });
+      }
+      res.json(connected);
+    } catch (err) {
+      console.error("[WX5] connected-food-intelligence error:", err);
+      res.status(500).json({ message: "Failed to assemble connected food intelligence" });
+    }
+  });
+
+  // ── WX6: Shopping Intelligence ────────────────────────────────────────────────
+  // A thin assembler/projection for the Shopping detail surface. It OWNS NOTHING:
+  // it resolves a free-text shopping item name to a canonical food (via the shared
+  // resolver) and then delegates to the EXISTING Food Intelligence and Connected
+  // Food Intelligence assemblers — the same functions the Food page (WX4) and the
+  // Connected panel (WX5) use. Nothing is computed, persisted, or cached here. The
+  // Analyser (Apple Score / additives / healthier alternatives) is reused as-is in
+  // the shopping UI and is intentionally NOT reproduced here.
+  //
+  // Trust & progressive enrichment: an item name that does not resolve to a
+  // canonical food returns { resolved: false } and the panel disappears. Each
+  // section is independently optional and traces to a canonical owner.
+  app.get("/api/shopping/intelligence", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const name = String(req.query.name ?? "").trim();
+    if (!name) {
+      return res.status(400).json({ message: "A food name is required" });
+    }
+    try {
+      const { resolveCanonicalFood } = await import("@shared/canonical/resolver");
+      const resolution = resolveCanonicalFood(name);
+
+      // Not a recognised food (e.g. a packaged/branded product with no canonical
+      // identity, or an unknown term) → nothing to assemble. Panel hides.
+      if (!resolution.matched || !resolution.canonicalSlug) {
+        return res.json({ resolved: false });
+      }
+      const slug = resolution.canonicalSlug;
+      const householdId = await getHouseholdForUser(req.user!.id);
+
+      const { getFoodIntelligence } = await import("./lib/food-intelligence-assembler");
+      const { getConnectedFoodIntelligence } = await import("./lib/connected-food-intelligence-assembler");
+      const [food, connected] = await Promise.all([
+        getFoodIntelligence(slug, householdId ?? undefined),
+        getConnectedFoodIntelligence(slug, householdId ?? undefined),
+      ]);
+
+      // Slug resolved but isn't actually a canonical food in the knowledge base.
+      if (!food.food) {
+        return res.json({ resolved: false });
+      }
+
+      // ── Project the assembled intelligence into a compact shopping shape ────────
+      // Quality over quantity: one primary insight, one opportunity, one
+      // celebration. Each field is null when its canonical source is empty.
+
+      // Meal support — honest about the assembler's MAX_MEALS cap.
+      const MEAL_CAP = 8;
+      const mealSupport =
+        food.meals.length > 0
+          ? {
+              count: food.meals.length,
+              atCap: food.meals.length >= MEAL_CAP,
+              meals: food.meals.slice(0, 4).map((m) => ({ mealId: m.mealId, name: m.name })),
+            }
+          : null;
+
+      // Household — evidence-gated. "Regularly" only when planned ≥ 3 times.
+      // "New discovery" only when the food is canonical but has zero history.
+      let household:
+        | { headline: string; isNewDiscovery: boolean }
+        | null = null;
+      if (food.household) {
+        const n = food.household.plannerAppearanceCount;
+        const headline =
+          n >= 3
+            ? "Your family enjoys this regularly."
+            : food.household.mostCommonMeal
+              ? `You've chosen this before, in ${food.household.mostCommonMeal.name}.`
+              : "You've chosen this before.";
+        household = { headline, isNewDiscovery: false };
+      } else {
+        household = {
+          headline: "This would be a new discovery for your household.",
+          isNewDiscovery: true,
+        };
+      }
+
+      // Simply Better — at most one validated Nutrition Enhancement suggestion.
+      const upliftMatch = food.nutritionEnhancement?.matches?.[0] ?? null;
+      const upliftSuggestion = upliftMatch?.suggestions?.[0] ?? null;
+      const simplyBetter = upliftSuggestion
+        ? {
+            suggestion:
+              upliftSuggestion.action === "swap"
+                ? `Swap in ${upliftSuggestion.ingredient}`
+                : upliftSuggestion.action === "boost"
+                  ? `Add more ${upliftSuggestion.ingredient}`
+                  : `Add ${upliftSuggestion.ingredient}`,
+            why: upliftSuggestion.why,
+          }
+        : null;
+
+      // Connected foods — "Often enjoyed with" only (one calm chip row).
+      const oftenWith = connected.oftenEnjoyedWith;
+      const connectedFoods =
+        oftenWith && oftenWith.items.length > 0
+          ? {
+              title: oftenWith.title,
+              items: oftenWith.items.slice(0, 6).map((i) => ({
+                slug: i.slug,
+                name: i.name,
+                linkable: i.linkable,
+              })),
+            }
+          : null;
+
+      return res.json({
+        resolved: true,
+        slug,
+        foodName: food.food.name,
+        seasonal: food.seasonality ? { note: food.seasonality.note } : null,
+        mealSupport,
+        household,
+        simplyBetter,
+        connectedFoods,
+      });
+    } catch (err) {
+      console.error("[WX6] shopping-intelligence error:", err);
+      res.status(500).json({ message: "Failed to assemble shopping intelligence" });
+    }
+  });
+
   // Save a single planner week as a private week template
   app.post("/api/planner/weeks/:weekId/save-week-template", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
@@ -9476,6 +9697,27 @@ Keep each string short and concrete. Return [] for any array with no entries.`;
     }
   });
 
+  // ── M1: Batch ingredient → WS0 knowledge lookup ────────────────────────────
+  // Resolves pre-normalised ingredient strings to WS0 nutrients + benefits.
+  // Used by PlantDiversityReport and MealUpliftPanel (replaces nutrition-benefit-library.ts).
+  // Returns only matched foods — absent key = no knowledge = honest empty state.
+  app.post("/api/knowledge/ingredient-lookup", async (req, res) => {
+    try {
+      const { ingredients } = req.body as { ingredients?: unknown };
+      if (!Array.isArray(ingredients)) {
+        return res.status(400).json({ message: "ingredients must be an array" });
+      }
+      const safe = ingredients
+        .filter((i): i is string => typeof i === "string" && i.trim().length > 0)
+        .slice(0, 200);
+      const result = await resolveIngredientsToKnowledgeSummary(safe);
+      res.json(result);
+    } catch (err) {
+      console.error("[Knowledge] ingredient-lookup error:", err);
+      res.status(500).json({ message: "Ingredient lookup failed" });
+    }
+  });
+
   // ── Food Knowledge (Encyclopedia) ──────────────────────────────────────────
   app.get("/api/food-knowledge", async (req, res) => {
     try {
@@ -10257,6 +10499,394 @@ Generate a complete recipe using these as the foundation.`;
     } catch (err) {
       console.error('[Uplift] Provenance error:', err);
       return res.status(500).json({ message: 'Failed to fetch uplift applications' });
+    }
+  });
+
+  // ── WS2 — Pantry Explore V2 Read APIs ────────────────────────────────────────
+  // Thin, read-only HTTP wrappers. Assemble household context from existing
+  // tables, call WS8–WS11 engines, strip internal signals before responding.
+  // No writes. No business logic. No stored summaries.
+
+  async function buildHouseholdHistory(userId: number): Promise<HouseholdHistory> {
+    const weeks = await storage.getPlannerWeeks(userId);
+    if (!weeks.length) return { entries: [] };
+
+    const now = new Date();
+    const maxWeek = Math.max(...weeks.map(w => w.weekNumber));
+    const entries: MealEntry[] = [];
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+    for (const week of weeks) {
+      const days = await storage.getPlannerDays(week.id);
+      const weeksAgo = maxWeek - week.weekNumber;
+
+      for (const day of days) {
+        const dayEntries = await storage.getPlannerEntriesForDay(day.id);
+        // dayOfWeek: 0 = Monday in plannerDays convention; shift so recent days are closer to now
+        const approxDate = new Date(now.getTime() - (weeksAgo * 7 + Math.max(0, 6 - day.dayOfWeek)) * MS_PER_DAY);
+
+        for (const entry of dayEntries) {
+          const meal = await storage.getMeal(entry.mealId);
+          if (!meal) continue;
+          const slot = entry.mealType === "snacks" ? "snack"
+            : (["breakfast", "lunch", "dinner"].includes(entry.mealType) ? entry.mealType as "breakfast" | "lunch" | "dinner" : undefined);
+
+          for (const rawIng of meal.ingredients) {
+            const parsed = parseIngredientShared(rawIng);
+            const foodSlug = singularizeIngredientKey(parsed.normalizedName);
+            entries.push({
+              food: foodSlug,
+              foodName: parsed.productName,
+              mealName: meal.name,
+              date: approxDate,
+              mealSlot: slot,
+              source: "planned",
+            });
+          }
+        }
+      }
+    }
+
+    return { entries };
+  }
+
+  app.get("/api/pantry/discover", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const food = req.query.food ? String(req.query.food) : undefined;
+    try {
+      const history = await buildHouseholdHistory(req.user!.id);
+      const enjoys = Array.from(new Set(history.entries.map(e => e.food)));
+      const result = discover({ food, household: { enjoys }, limitPerType: 3 });
+      res.json({
+        ...result,
+        sections: result.sections.map(section => ({
+          ...section,
+          suggestions: section.suggestions.map(({ familiar: _f, source: _s, ...s }) => s),
+        })),
+      });
+    } catch (err) {
+      console.error("[PantryV2] discover error:", err);
+      res.status(500).json({ message: "Failed to fetch discovery" });
+    }
+  });
+
+  app.get("/api/pantry/alternatives", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const food = req.query.food ? String(req.query.food) : undefined;
+    if (!food) return res.status(400).json({ message: "food parameter required" });
+    const diet = req.query.diet ? String(req.query.diet) : undefined;
+    try {
+      const ctx: AlternativeContext = {};
+      if (diet === "lower_upf") {
+        ctx.preferLowerUpf = true;
+      } else if (diet) {
+        ctx.diets = [diet as AlternativeDiet];
+      }
+      const result = alternatives({ food, context: Object.keys(ctx).length ? ctx : undefined });
+      res.json({
+        ...result,
+        sections: result.sections.map(section => ({
+          ...section,
+          options: section.options.map(({ source: _s, ...o }) => o),
+        })),
+      });
+    } catch (err) {
+      console.error("[PantryV2] alternatives error:", err);
+      res.status(500).json({ message: "Failed to fetch alternatives" });
+    }
+  });
+
+  app.get("/api/pantry/stories", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const food = req.query.food ? String(req.query.food) : undefined;
+    const limitPerType = food ? 3 : 1;
+    try {
+      const history = await buildHouseholdHistory(req.user!.id);
+      const result = stories({ household: history, limitPerType });
+      if (food) {
+        res.json({
+          ...result,
+          sections: result.sections
+            .map(section => ({
+              ...section,
+              cards: section.cards.filter(card => !card.slug || card.slug === food),
+            }))
+            .filter(section => section.cards.length > 0),
+        });
+      } else {
+        res.json(result);
+      }
+    } catch (err) {
+      console.error("[PantryV2] stories error:", err);
+      res.status(500).json({ message: "Failed to fetch stories" });
+    }
+  });
+
+  app.get("/api/pantry/seasonal", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const history = await buildHouseholdHistory(req.user!.id);
+      const enjoys = Array.from(new Set(history.entries.map(e => e.food)));
+      const result = seasonalStories({ household: history, enjoys });
+      res.json(result);
+    } catch (err) {
+      console.error("[PantryV2] seasonal error:", err);
+      res.status(500).json({ message: "Failed to fetch seasonal stories" });
+    }
+  });
+
+  // ── Home Intelligence ─────────────────────────────────────────────────────────
+  // Assembles ephemeral intelligence for the Home Intelligence Companion from
+  // existing canonical owners. Owns nothing, persists nothing. Each field is null
+  // when no validated data exists — progressive enrichment, never fabrication.
+
+  app.get("/api/home/intelligence", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user!.id;
+
+    try {
+      // ── 1. Weekly planner progress ──────────────────────────────────────────
+      let weeklyProgress: {
+        plantCount: number;
+        mealsPlanned: number;
+        daysWithMeals: number;
+      } | null = null;
+
+      const weeks = await storage.getPlannerWeeks(userId);
+      if (weeks.length > 0) {
+        const currentWeek = weeks.reduce((a, b) =>
+          b.weekNumber > a.weekNumber ? b : a
+        );
+        const days = await storage.getPlannerDays(currentWeek.id);
+        const plantSlugs = new Set<string>();
+        let mealsPlanned = 0;
+        let daysWithMeals = 0;
+
+        for (const day of days) {
+          const entries = await storage.getPlannerEntriesForDay(day.id);
+          if (entries.length > 0) {
+            daysWithMeals++;
+            mealsPlanned += entries.length;
+          }
+          for (const entry of entries) {
+            const meal = await storage.getMeal(entry.mealId);
+            if (!meal) continue;
+            for (const rawIng of meal.ingredients) {
+              const parsed = parseIngredientShared(rawIng);
+              const slug = singularizeIngredientKey(parsed.normalizedName);
+              if (isPlantIngredient(slug)) plantSlugs.add(slug);
+            }
+          }
+        }
+
+        weeklyProgress = {
+          plantCount: plantSlugs.size,
+          mealsPlanned,
+          daysWithMeals,
+        };
+      }
+
+      // ── 2. Stories — celebration and household insight ──────────────────────
+      let celebration: { headline: string } | null = null;
+      let householdInsight: { headline: string } | null = null;
+
+      const history = await buildHouseholdHistory(userId);
+      if (history.entries.length > 0) {
+        const storiesResult = stories({ household: history, limitPerType: 2 });
+
+        const celebSection =
+          storiesResult.sections.find((s) => s.type === "discovery") ??
+          storiesResult.sections.find((s) => s.type === "favourite_foods");
+        if (celebSection?.cards[0]) {
+          celebration = { headline: celebSection.cards[0].headline };
+        }
+
+        const insightSection =
+          storiesResult.sections.find(
+            (s) =>
+              s.type === "family_traditions" ||
+              s.type === "seasonal_habits"
+          ) ??
+          storiesResult.sections.find((s) => s !== celebSection);
+        if (insightSection?.cards[0]) {
+          householdInsight = { headline: insightSection.cards[0].headline };
+        }
+      }
+
+      // ── 3. Seasonal highlight ───────────────────────────────────────────────
+      let seasonalHighlight: { headline: string } | null = null;
+
+      const enjoys = Array.from(new Set(history.entries.map((e) => e.food)));
+      const seasonal = seasonalStories({ household: history, enjoys, limitPerBlock: 3 });
+      const lookingAheadBlock = seasonal.blocks.find((b) => b.type === "looking_ahead");
+      const discoveriesBlock = seasonal.blocks.find((b) => b.type === "discoveries");
+
+      if (lookingAheadBlock?.cards[0]) {
+        seasonalHighlight = { headline: lookingAheadBlock.cards[0].headline };
+      } else if (discoveriesBlock?.cards[0]) {
+        seasonalHighlight = { headline: discoveriesBlock.cards[0].headline };
+      }
+
+      // ── 4. Gentle opportunity ───────────────────────────────────────────────
+      let opportunity: { text: string } | null = null;
+
+      const disc = discover({
+        household: { enjoys },
+        types: ["broaden_horizons", "seasonal"],
+        limitPerType: 1,
+      });
+      const oppSection =
+        disc.sections.find((s) => s.type === "seasonal") ??
+        disc.sections.find((s) => s.type === "broaden_horizons");
+      if (oppSection?.suggestions[0]) {
+        opportunity = { text: oppSection.suggestions[0].reason };
+      }
+
+      // Seasonal highlight fallback: use discover if WS11 yielded nothing
+      if (!seasonalHighlight) {
+        const seasonalSection = disc.sections.find((s) => s.type === "seasonal");
+        if (seasonalSection?.suggestions[0]) {
+          const sug = seasonalSection.suggestions[0];
+          seasonalHighlight = { headline: `${sug.name} is at its best right now.` };
+        }
+      }
+
+      res.json({
+        weeklyProgress,
+        celebration,
+        seasonalHighlight,
+        opportunity,
+        householdInsight,
+      });
+    } catch (err) {
+      console.error("[HomeIntelligence] error:", err);
+      res.status(500).json({ message: "Failed to build home intelligence" });
+    }
+  });
+
+  // WX3 — Planner Intelligence Companion.
+  //
+  // Presentation-only assembly for a SPECIFIC planner week. Owns nothing: scopes
+  // weekly progress to the requested week and reuses the same canonical owners as
+  // /api/home/intelligence (stories, seasonalStories, discover) for the
+  // household-wide celebration, seasonal highlight, opportunity and household
+  // insight. Every field is independently nullable — absent data disappears.
+  app.get("/api/planner/weeks/:weekId/intelligence", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = req.user!.id;
+    const weekId = parseInt(String(req.params.weekId), 10);
+    if (isNaN(weekId)) return res.status(400).json({ message: "Invalid week id" });
+
+    try {
+      // Ownership: the week must belong to the caller's household.
+      const householdId = await getHouseholdForUser(userId);
+      const week = await storage.getPlannerWeek(weekId);
+      if (!week || week.householdId !== householdId) {
+        return res.status(404).json({ message: "Week not found" });
+      }
+
+      // ── 1. Weekly progress — scoped to THIS week ────────────────────────────
+      const days = await storage.getPlannerDays(weekId);
+      const plantSlugs = new Set<string>();
+      let mealsPlanned = 0;
+      let daysWithMeals = 0;
+
+      for (const day of days) {
+        const entries = await storage.getPlannerEntriesForDay(day.id);
+        if (entries.length > 0) {
+          daysWithMeals++;
+          mealsPlanned += entries.length;
+        }
+        for (const entry of entries) {
+          const meal = await storage.getMeal(entry.mealId);
+          if (!meal) continue;
+          for (const rawIng of meal.ingredients) {
+            const parsed = parseIngredientShared(rawIng);
+            const slug = singularizeIngredientKey(parsed.normalizedName);
+            if (isPlantIngredient(slug)) plantSlugs.add(slug);
+          }
+        }
+      }
+
+      const weeklyProgress =
+        mealsPlanned > 0
+          ? {
+              plantCount: plantSlugs.size,
+              mealsPlanned,
+              daysWithMeals,
+            }
+          : null;
+
+      // ── 2. Household-wide stories — celebration & household insight ──────────
+      let celebration: { headline: string } | null = null;
+      let householdInsight: { headline: string } | null = null;
+
+      const history = await buildHouseholdHistory(userId);
+      if (history.entries.length > 0) {
+        const storiesResult = stories({ household: history, limitPerType: 2 });
+
+        const celebSection =
+          storiesResult.sections.find((s) => s.type === "discovery") ??
+          storiesResult.sections.find((s) => s.type === "favourite_foods");
+        if (celebSection?.cards[0]) {
+          celebration = { headline: celebSection.cards[0].headline };
+        }
+
+        const insightSection =
+          storiesResult.sections.find(
+            (s) =>
+              s.type === "family_traditions" || s.type === "seasonal_habits"
+          ) ?? storiesResult.sections.find((s) => s !== celebSection);
+        if (insightSection?.cards[0]) {
+          householdInsight = { headline: insightSection.cards[0].headline };
+        }
+      }
+
+      // ── 3. Seasonal highlight ───────────────────────────────────────────────
+      let seasonalHighlight: { headline: string } | null = null;
+      const enjoys = Array.from(new Set(history.entries.map((e) => e.food)));
+      const seasonal = seasonalStories({ household: history, enjoys, limitPerBlock: 3 });
+      const lookingAheadBlock = seasonal.blocks.find((b) => b.type === "looking_ahead");
+      const discoveriesBlock = seasonal.blocks.find((b) => b.type === "discoveries");
+      if (lookingAheadBlock?.cards[0]) {
+        seasonalHighlight = { headline: lookingAheadBlock.cards[0].headline };
+      } else if (discoveriesBlock?.cards[0]) {
+        seasonalHighlight = { headline: discoveriesBlock.cards[0].headline };
+      }
+
+      // ── 4. Gentle opportunity ───────────────────────────────────────────────
+      let opportunity: { text: string } | null = null;
+      const disc = discover({
+        household: { enjoys },
+        types: ["broaden_horizons", "seasonal"],
+        limitPerType: 1,
+      });
+      const oppSection =
+        disc.sections.find((s) => s.type === "seasonal") ??
+        disc.sections.find((s) => s.type === "broaden_horizons");
+      if (oppSection?.suggestions[0]) {
+        opportunity = { text: oppSection.suggestions[0].reason };
+      }
+
+      // Seasonal highlight fallback: use discover if WS11 yielded nothing.
+      if (!seasonalHighlight) {
+        const seasonalSection = disc.sections.find((s) => s.type === "seasonal");
+        if (seasonalSection?.suggestions[0]) {
+          const sug = seasonalSection.suggestions[0];
+          seasonalHighlight = { headline: `${sug.name} is at its best right now.` };
+        }
+      }
+
+      res.json({
+        weeklyProgress,
+        celebration,
+        seasonalHighlight,
+        opportunity,
+        householdInsight,
+      });
+    } catch (err) {
+      console.error("[PlannerIntelligence] error:", err);
+      res.status(500).json({ message: "Failed to build planner intelligence" });
     }
   });
 

@@ -6,6 +6,15 @@
 // imports mean almost everything is buyable year-round; this is about PEAK).
 //
 // Kept deliberately small per season. All slugs are real canonical food slugs.
+//
+// SOURCE-OF-TRUTH DECLARATION (WS0X.4 Consolidation Gate, 2026-06-24):
+// SEASON_SEED is the CANONICAL representation of seasonality FOR LOGIC. The two
+// other forms are DERIVED, not authoritative:
+//   • knowledge_foods.seasonality (free text)  → display copy only
+//   • food-graph.ts `seasonal_with` relations   → derived editorial pairings
+// When `peak_seasons` is added to canonical_food it must ABSORB this seed (this
+// becomes a derived curated view), never become a fourth representation.
+// See docs/investigations/WS0X_4_FOOD_INTELLIGENCE_CONSOLIDATION_GATE.md.
 
 import type { UKSeason } from "./types";
 

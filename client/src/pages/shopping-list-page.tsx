@@ -76,6 +76,7 @@ import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@
 import { rankChoices, buildWhyBetter, type RankingMode } from "@/lib/analyser-choice";
 import FoodKnowledgeModal from "@/components/food-knowledge-modal";
 import WholeFoodSelector from "@/components/whole-food-selector";
+import ShoppingIntelligencePanel from "@/components/ShoppingIntelligencePanel";
 import { appendPendingIngredient } from "@/lib/quick-list";
 import ShoppingListView, { resolvePickKey } from "@/components/ShoppingListView";
 import { matchesSourceFilter, sourceLabel, sourcePriority, type SourceFilter } from "@/lib/source-helpers";
@@ -951,6 +952,9 @@ function ProductAnalyseModal({ open, onOpenChange, item, preferredStore }: { ope
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+
+          {/* ── WX6: Shopping Intelligence (food story; hides when nothing validated) ── */}
+          <ShoppingIntelligencePanel name={item.canonicalName ?? item.productName} />
 
           {/* ── 2. Why this scores the way it does ─────────────────────── */}
           <div data-testid="section-why-score">

@@ -15,7 +15,7 @@ import { Leaf } from "lucide-react";
 import { getMealBoosts, type NutritionBoostSuggestion, type BoostCategory } from "@/lib/nutrition-boosts";
 import type { HouseholdEater } from "@shared/household-eater";
 import { computeRestrictionSafety, type EaterProfile } from "@shared/restrictions/restriction-safety";
-import { shouldExcludeRecipe } from "@/lib/dietRules";
+import { shouldExcludeRecipe } from "@shared/dietRules";
 
 // ─── Category display config ──────────────────────────────────────────────────
 

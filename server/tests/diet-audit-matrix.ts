@@ -1,4 +1,4 @@
-import { shouldExcludeRecipe } from '../lib/dietRules.js';
+import { shouldExcludeRecipe } from '../../shared/dietRules.js';
 
 const tests: [string, string][] = [
   ['Pizza Dough', 'flour water yeast salt'],
@@ -33,7 +33,7 @@ for (const [name, ingredients] of tests) {
 }
 
 // Test Keto scoring - does it boost pizza with cheese?
-import { scoreRecipeForDiet } from '../lib/dietRules.js';
+import { scoreRecipeForDiet } from '../../shared/dietRules.js';
 
 console.log('\n=== KETO SCORE BOOST TEST (cheese/dairy in pizza) ===');
 const ketoMeals = [

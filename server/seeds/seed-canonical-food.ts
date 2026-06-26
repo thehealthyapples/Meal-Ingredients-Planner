@@ -69,7 +69,15 @@ async function run() {
       name: sqlExcluded("name"), category: sqlExcluded("category"), subcategory: sqlExcluded("subcategory"),
       description: sqlExcluded("description"), knowledgeFoodSlug: sqlExcluded("knowledge_food_slug"),
       diversityGroupSlug: sqlExcluded("diversity_group_slug"), status: sqlExcluded("status"),
-      source: sqlExcluded("source"), updatedAt: sql.raw("now()"),
+      source: sqlExcluded("source"),
+      // WS0X.5 — food context (single owner). Idempotent: re-seeding re-aligns to the editorial seed.
+      availability: sqlExcluded("availability"),
+      availabilityModifiers: sqlExcluded("availability_modifiers"),
+      peakSeasons: sqlExcluded("peak_seasons"),
+      originRegion: sqlExcluded("origin_region"),
+      // M4.5 — fermented attribute.
+      fermented: sqlExcluded("fermented"),
+      updatedAt: sql.raw("now()"),
     },
   });
 

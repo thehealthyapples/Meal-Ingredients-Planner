@@ -36,6 +36,7 @@ import QuickMealPage from "@/pages/quick-meal-page";
 import ListPage from "@/pages/list-page";
 import HomePage from "@/pages/home-page";
 import DashboardPage from "@/pages/dashboard";
+import FoodDetailPage from "@/pages/food-detail-page";
 import ShoppingWorkspacePage from "@/pages/shopping-workspace-page";
 
 let _contentRenderMeasured = false;
@@ -181,6 +182,7 @@ function Router() {
       <Route path="/" component={HomeRoute} />
       <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />
       <Route path="/meals/:id" component={() => <ProtectedRoute component={MealDetailPage} />} />
+      <Route path="/foods/:slug" component={() => <ProtectedRoute component={FoodDetailPage} />} />
       <Route path="/meals" component={() => <ProtectedRoute component={MealsPage} />} />
       <Route path="/cookbook" component={() => <ProtectedRoute component={MealsPage} />} />
       <Route path="/import-recipe" component={() => <ProtectedRoute component={ImportRecipePage} />} />

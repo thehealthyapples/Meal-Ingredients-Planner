@@ -18,7 +18,7 @@
  * Run with: npx tsx server/tests/test-keto-low-carb-dictionary.ts
  */
 
-import { shouldExcludeRecipe } from '../lib/dietRules.js';
+import { shouldExcludeRecipe } from '../../shared/dietRules.js';
 
 // ─── Test harness ─────────────────────────────────────────────────────────────
 

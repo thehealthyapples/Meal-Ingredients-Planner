@@ -23,6 +23,7 @@ import { MealTrustSummary } from "@/components/meal-detail/MealTrustSummary";
 import { MealFamilyConfidence } from "@/components/meal-detail/MealFamilyConfidence";
 import { HouseholdAdaptationsSummary } from "@/components/meal-detail/HouseholdAdaptationsSummary";
 import { SimplyBetterChoicesPanel } from "@/components/meal-detail/SimplyBetterChoicesPanel";
+import { useMealFoodIntelligence, MealDiscoveryRow } from "@/components/meal-detail/MealFoodIntelligenceSection";
 
 type SwapGoal = "vegetarian" | "keto" | "lower-cost" | "less-processed" | "under-time" | "household";
 
@@ -202,6 +203,8 @@ export default function MealDetailPage() {
     },
     enabled: !!mealId,
   });
+
+  const { getIntelligenceFor, discovery } = useMealFoodIntelligence(mealId);
 
   const { data: allMeals = [] } = useQuery<Meal[]>({
     queryKey: [api.meals.list.path],
@@ -920,13 +923,37 @@ export default function MealDetailPage() {
                 </div>
               ) : (
                 <ul className="space-y-2">
-                  {displayIngredients.map((ing, idx) => (
-                    <li key={idx} className="text-sm flex items-start gap-2" data-testid={`text-ingredient-${idx}`}>
-                      <span className="text-primary mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
-                      <span>{ing}</span>
-                    </li>
-                  ))}
+                  {displayIngredients.map((ing, idx) => {
+                    const originalIng = meal.ingredients[idx];
+                    const intel = getIntelligenceFor(originalIng);
+                    const annotationParts: string[] = [];
+                    if (intel) {
+                      annotationParts.push(...intel.nutrients);
+                    }
+                    const showSeasonal = intel?.isSeasonal;
+                    return (
+                      <li key={idx} className="text-sm" data-testid={`text-ingredient-${idx}`}>
+                        <div className="flex items-start gap-2">
+                          <span className="text-primary mt-1.5 shrink-0 w-1.5 h-1.5 rounded-full bg-primary" />
+                          <span>{ing}</span>
+                        </div>
+                        {(annotationParts.length > 0 || showSeasonal) && (
+                          <div className="ml-3.5 mt-0.5 text-xs text-muted-foreground/70 leading-none">
+                            {annotationParts.join(' · ')}
+                            {showSeasonal && (
+                              <span className="text-amber-600/70">
+                                {annotationParts.length > 0 ? ' · ' : ''}in season
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
+              )}
+              {!isGrouped && !isEditing && (
+                <MealDiscoveryRow discovery={discovery} />
               )}
             </CardContent>
           </Card>

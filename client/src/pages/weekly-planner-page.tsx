@@ -31,9 +31,11 @@ import { SharePlanDialog } from "@/components/share-plan-dialog";
 import { PlannerScanReview, type PlannerScanData, type PlannerDayEntry } from "@/components/PlannerScanReview";
 import { RecipeScanReview, type RecipeScanData } from "@/components/RecipeScanReview";
 import { emitStageProposal } from "@/lib/planner-staging-bus";
-import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@/lib/nutrition-variety";
+import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@shared/canonical/plant-classifier";
 import { getMealNutrients } from "@/lib/nutrition-insights";
 import { NutritionVarietyDots, PlannerVarietyLegend, WeeklyPlantDiversityCounter } from "@/components/nutrition-variety-chips";
+import PlannerIntelligenceCompanion from "@/components/PlannerIntelligenceCompanion";
+import { CookbookMealIntelligenceStrip } from "@/components/CookbookMealIntelligenceStrip";
 import { getMealBoosts } from "@/lib/nutrition-boosts";
 import { MealNutrientTags } from "@/components/nutrition-insights-panel";
 import { useUser } from "@/hooks/use-user";
@@ -49,7 +51,7 @@ import type { PlannerWeek, PlannerDay, PlannerEntry, Meal, FreezerMeal, Nutritio
 import type { HouseholdEater, GuestEater } from "@shared/household-eater";
 import type { AdaptationResult, HouseholdSafePreview } from "@shared/meal-adaptation";
 import { computeRestrictionSafety, type EaterProfile } from "@shared/restrictions/restriction-safety";
-import { shouldExcludeRecipe } from "@/lib/dietRules";
+import { shouldExcludeRecipe } from "@shared/dietRules";
 import { ONBOARDING_DIET_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
 import { PageHeader } from "@/components/PageHeader";
 import { AdaptationReviewSheet } from "@/components/AdaptationReviewSheet";
@@ -1954,6 +1956,11 @@ export default function WeeklyPlannerPage() {
           </Card>
         )}
 
+        {/* WX3 — Planner Intelligence Companion: calm, week-scoped nudges. Owns
+            nothing; reads /api/planner/weeks/:weekId/intelligence. Disappears
+            entirely when no validated intelligence exists. */}
+        <PlannerIntelligenceCompanion weekId={activeWeekId} />
+
         {fullPlanner.map((week) => (
           <TabsContent key={week.id} value={String(week.weekNumber)} className="mt-0">
 
@@ -3601,9 +3608,9 @@ export default function WeeklyPlannerPage() {
                    * alone. MealUpliftPanel (with deterministic fallback) serves this goal.
                    *
                    * The component and underlying engine (nutrition-variety-chips.tsx,
-                   * nutrition-variety.ts) are preserved for the 30 Plants This Week counter,
-                   * day-level variety chips, and planner legend — none of which are affected
-                   * by this removal.
+                   * shared/canonical/plant-classifier.ts) are preserved for the 30 Plants
+                   * This Week counter, day-level variety chips, and planner legend — none of
+                   * which are affected by this removal.
                    */}
 
                   {/* Single Nutrition Boost panel — merges server uplift with deterministic
@@ -3651,6 +3658,17 @@ export default function WeeklyPlannerPage() {
                       />
                     );
                   })()}
+
+                  {/* WX3 — Reused Meal Intelligence (Supports / Introduces /
+                      seasonal / household). Fetches only while the meal-detail
+                      dialog is open (active), so there is no N+1 across cards.
+                      showUplift=false: the actionable uplift is already shown by
+                      MealUpliftPanel above. Hidden entirely when empty. */}
+                  <CookbookMealIntelligenceStrip
+                    mealId={meal.id}
+                    active={!!mealDetail}
+                    showUplift={false}
+                  />
 
                   {/* Two-column layout: Ingredients + Instructions */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

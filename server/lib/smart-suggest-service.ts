@@ -4,7 +4,7 @@ import { scoreMeal, convertMealToCandidate, convertExternalToCandidate, type Sco
 import { generateMealExplanation, type MealExplanation } from "./explainability-service";
 import { resolveActiveRestrictions, resolveIngredientRestrictions } from "@shared/restrictions/restriction-resolver.js";
 import type { RestrictionDefinition } from "@shared/restrictions/restriction-types.js";
-import { shouldExcludeRecipe } from "./dietRules";
+import { shouldExcludeRecipe } from "@shared/dietRules";
 import { matchMealsForHousehold, buildHouseholdContext, scoreMealCompatibility, type MealMatch, type HouseholdContext } from "./household-meal-matcher";
 
 export interface LockedEntry {

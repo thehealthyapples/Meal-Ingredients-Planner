@@ -10,6 +10,14 @@
 // feature. Add cautiously; review every entry; keep each list short.
 //
 // All slugs below are real canonical food slugs (shared/canonical/foods.ts).
+//
+// SOURCE-OF-TRUTH DECLARATION (WS0X.4 Consolidation Gate, 2026-06-24):
+// CUISINE_SEED is the single FOOD-LEVEL cuisine owner (culinary association,
+// many-to-many: a food belongs to several cuisines). Meal-level cuisine tags are
+// a DIFFERENT domain — not a duplicate of this. A future `origin_region`
+// (geographic origin: where a food COMES FROM) is a DISTINCT concept and must
+// NOT be folded into cuisine, nor cuisine stored as a scalar food column.
+// See docs/investigations/WS0X_4_FOOD_INTELLIGENCE_CONSOLIDATION_GATE.md.
 
 export interface CuisineSeed {
   slug: string;

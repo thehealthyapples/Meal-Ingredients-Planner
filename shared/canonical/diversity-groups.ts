@@ -199,4 +199,58 @@ export const DIVERSITY_GROUP_SEED: InsertDiversityGroup[] = [
   { slug: "dates", displayName: "Dates", countAsSinglePlant: true },
   { slug: "dark-chocolate", displayName: "Dark Chocolate", description: "Dark chocolate comes from the cacao plant and counts as one plant.", countAsSinglePlant: true },
   { slug: "sunflower-oil", displayName: "Sunflower Oil", description: "Sunflower oil comes from the sunflower plant (same as sunflower seeds).", countAsSinglePlant: false },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // WS0X.8 — Food Intelligence Data Expansion (H1 batch promotion)
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  // ── Vegetables (new canonical plants) ───────────────────────────────────────
+  { slug: "okra", displayName: "Okra", countAsSinglePlant: true },
+  { slug: "runner-beans", displayName: "Runner Beans", countAsSinglePlant: true },
+  { slug: "spring-greens", displayName: "Spring Greens", countAsSinglePlant: true },
+  { slug: "water-chestnuts", displayName: "Water Chestnuts", countAsSinglePlant: true },
+  { slug: "bean-sprouts", displayName: "Bean Sprouts", countAsSinglePlant: true },
+  { slug: "bamboo-shoots", displayName: "Bamboo Shoots", countAsSinglePlant: true },
+  { slug: "cassava", displayName: "Cassava", countAsSinglePlant: true },
+  { slug: "broccoli-raab", displayName: "Broccoli Raab", countAsSinglePlant: true },
+  { slug: "mustard-greens", displayName: "Mustard Greens", countAsSinglePlant: true },
+
+  // ── Fruit (new canonical plants) ────────────────────────────────────────────
+  { slug: "jackfruit", displayName: "Jackfruit", countAsSinglePlant: true },
+  { slug: "elderberry", displayName: "Elderberry", countAsSinglePlant: true },
+  { slug: "goji-berry", displayName: "Goji Berry", countAsSinglePlant: true },
+  { slug: "lychee", displayName: "Lychee", countAsSinglePlant: true },
+  { slug: "papaya", displayName: "Papaya", countAsSinglePlant: true },
+  { slug: "mulberry", displayName: "Mulberry", countAsSinglePlant: true },
+  { slug: "loganberry", displayName: "Loganberry", countAsSinglePlant: true },
+  { slug: "guava", displayName: "Guava", countAsSinglePlant: true },
+  { slug: "plantain", displayName: "Plantain", countAsSinglePlant: true },
+  { slug: "physalis", displayName: "Physalis", countAsSinglePlant: true },
+
+  // ── Grains (genuinely new plants — processed forms share parent groups) ──────
+  { slug: "sorghum", displayName: "Sorghum", countAsSinglePlant: true },
+  { slug: "amaranth", displayName: "Amaranth", countAsSinglePlant: true },
+  { slug: "farro", displayName: "Farro", description: "Farro (emmer wheat) is a distinct ancient wheat species separate from modern wheat.", countAsSinglePlant: true },
+  { slug: "teff", displayName: "Teff", countAsSinglePlant: true },
+
+  // ── Legumes ──────────────────────────────────────────────────────────────────
+  { slug: "pinto-beans", displayName: "Pinto Beans", countAsSinglePlant: true },
+  { slug: "black-eyed-peas", displayName: "Black-Eyed Peas", countAsSinglePlant: true },
+
+  // ── Seeds ────────────────────────────────────────────────────────────────────
+  { slug: "nigella-seeds", displayName: "Nigella Seeds", countAsSinglePlant: true },
+
+  // ── Herbs ────────────────────────────────────────────────────────────────────
+  { slug: "marjoram", displayName: "Marjoram", countAsSinglePlant: true },
+  { slug: "chervil", displayName: "Chervil", countAsSinglePlant: true },
+
+  // ── Spices & Condiments ──────────────────────────────────────────────────────
+  { slug: "capers", displayName: "Capers", countAsSinglePlant: true },
+  { slug: "horseradish", displayName: "Horseradish", countAsSinglePlant: true },
+  { slug: "caraway-seeds", displayName: "Caraway Seeds", countAsSinglePlant: true },
+  { slug: "fenugreek", displayName: "Fenugreek", countAsSinglePlant: true },
+  { slug: "sumac", displayName: "Sumac", countAsSinglePlant: true },
+
+  // ── Oils ─────────────────────────────────────────────────────────────────────
+  { slug: "rapeseed", displayName: "Rapeseed", description: "Rapeseed oil comes from the rapeseed plant, distinct from sunflower or olive.", countAsSinglePlant: true },
 ];

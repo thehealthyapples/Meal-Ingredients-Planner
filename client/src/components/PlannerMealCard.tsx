@@ -26,8 +26,8 @@
 
 import type { Meal } from "@shared/schema";
 import { getStyleTagDisplayLabel } from "@shared/style-tags";
-import { computeMealVariety } from "@/lib/nutrition-variety";
-import type { VarietyScore } from "@/lib/nutrition-variety";
+import { computeMealVariety } from "@shared/canonical/plant-classifier";
+import type { VarietyScore } from "@shared/canonical/plant-classifier";
 
 // ── Chip priority: lower index → shown first ──────────────────────────────────
 const CHIP_PRIORITY_ORDER = [

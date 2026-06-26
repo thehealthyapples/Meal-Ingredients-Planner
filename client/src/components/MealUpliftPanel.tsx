@@ -11,14 +11,20 @@
  * - Mobile-safe: no overflow, adequate touch targets
  */
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronDown, ChevronUp, Check, X, Loader2, Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/queryClient";
 import type { MealUpliftApplication, Meal } from "@shared/schema";
 import { normaliseForReuse, getReuseLabel } from "@/lib/ingredient-reuse";
-import { getNutritionBenefit } from "@/lib/nutrition-benefit-library";
+
+// ─── WS0 knowledge type (mirrors server IngredientKnowledgeSummary) ──────────
+
+interface IngredientKnowledge {
+  nutrients: string[];
+  benefits: string[];
+}
 
 // ─── Client-side type mirrors (server/lib/uplift-types.ts) ───────────────────
 
@@ -130,6 +136,28 @@ export function MealUpliftPanel({
   // Priority order: Safety → Meal Fit (already enforced by uplift engine) →
   //   Weekly Reuse → Nutrition Value → Discovery / Variety
   const visibleSuggestions = selectVisibleBoosts(upliftMatches, weeklyReuseMap, currentMealName);
+
+  // Batch-fetch WS0 nutrients + benefits for visible suggestion ingredients.
+  // Returns {} while loading — expanded rows fall back to suggestion.why.
+  const suggestionKeys = useMemo(
+    () => visibleSuggestions.map((s) => s.ingredient).sort(),
+    [visibleSuggestions],
+  );
+  const { data: suggestionKnowledge = {} } = useQuery<Record<string, IngredientKnowledge>>({
+    queryKey: ["/api/knowledge/ingredient-lookup", "uplift", suggestionKeys.join(",")],
+    queryFn: async () => {
+      if (suggestionKeys.length === 0) return {};
+      const res = await fetch("/api/knowledge/ingredient-lookup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ingredients: suggestionKeys }),
+      });
+      if (!res.ok) return {};
+      return res.json() as Promise<Record<string, IngredientKnowledge>>;
+    },
+    enabled: suggestionKeys.length > 0,
+    staleTime: 10 * 60 * 1000,
+  });
 
   // Load provenance (accepted uplift applications for this meal)
   const { data: applications = [] } = useQuery<MealUpliftApplication[]>({
@@ -376,7 +404,7 @@ export function MealUpliftPanel({
               acceptMutation.isPending &&
               acceptMutation.variables?.ingredient === suggestion.ingredient;
             const wasJustAdded = justAdded.has(suggestion.ingredient);
-            const benefit = getNutritionBenefit(suggestion.ingredient);
+            const knowledge = suggestionKnowledge[suggestion.ingredient];
 
             return (
               <div
@@ -438,17 +466,25 @@ export function MealUpliftPanel({
                   </div>
                 </div>
 
-                {/* Expanded content — nutrients, summary, reuse label */}
+                {/* Expanded content — nutrients, benefits, reuse label */}
                 {isExpanded && (
                   <div className="px-3 pb-3 space-y-1.5 border-t border-border/30">
-                    {benefit ? (
+                    {knowledge ? (
                       <>
-                        <p className="text-[10px] text-emerald-700/60 dark:text-emerald-400/60 leading-snug mt-1.5 font-medium tracking-wide">
-                          {benefit.keyNutrients.join(" · ")}
-                        </p>
-                        <p className="text-xs text-muted-foreground leading-snug">
-                          {benefit.summary}
-                        </p>
+                        {knowledge.nutrients.length > 0 && (
+                          <p className="text-[10px] text-emerald-700/60 dark:text-emerald-400/60 leading-snug mt-1.5 font-medium tracking-wide">
+                            {knowledge.nutrients.join(" · ")}
+                          </p>
+                        )}
+                        {knowledge.benefits.length > 0 ? (
+                          <p className="text-xs text-muted-foreground leading-snug">
+                            {knowledge.benefits.slice(0, 2).join(" · ")}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground leading-snug">
+                            {suggestion.why}
+                          </p>
+                        )}
                       </>
                     ) : (
                       <p className="text-xs text-muted-foreground leading-snug mt-1.5">

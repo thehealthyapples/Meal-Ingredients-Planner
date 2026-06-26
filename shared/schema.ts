@@ -1463,6 +1463,9 @@ export const knowledgeFoods = pgTable("knowledge_foods", {
   imageUrl: text("image_url"),
   commonForms: text("common_forms").array().notNull().default(sql`'{}'`),
   storageGuidance: text("storage_guidance"),
+  // DISPLAY COPY ONLY (WS0X.4 Consolidation Gate). Free-text seasonality for the
+  // food-detail surface. NOT the source of truth for seasonality logic — that is
+  // SEASON_SEED (shared/discovery/seasonal-map.ts). Do not filter/rank on this.
   seasonality: text("seasonality"),
   source: text("source").notNull().default("THA editorial"),
   displayOrder: integer("display_order").notNull().default(0),
@@ -1629,6 +1632,29 @@ export const canonicalFoods = pgTable("canonical_food", {
   sourceRef: text("source_ref"),
   // Import confidence — null for THA editorial (no scoring needed). "high" | "medium" | "low".
   confidence: text("confidence"),
+  // ── WS0X.5 Food Context Foundation ─────────────────────────────────────────
+  // The SINGLE source of truth for food-intrinsic context. Controlled vocabularies
+  // live in shared/canonical/food-context.ts; validateCanonicalSeed() enforces them.
+  // UK-scoped, additive, nullable — no backfill, no behaviour change on existing reads.
+  //
+  // Availability (UK retail reach, ordinal): "mainstream" | "common" | "specialist" | "rare".
+  // Recommendation tier is DERIVED from this at query time — never reuse `tier` (provenance).
+  availability: text("availability"),
+  // Orthogonal availability modifiers (NOT folded into the ordinal scale, since a
+  // food can be both "mainstream" and "imported"): subset of "imported" | "seasonal" | "online_only".
+  availabilityModifiers: text("availability_modifiers").array().notNull().default(sql`'{}'`),
+  // Structured UK peak seasons — the canonical seasonality FACT owner. Subset of
+  // "spring" | "summer" | "autumn" | "winter". Empty = no distinct UK peak (year-round/imported).
+  // ABSORBS the SEASON_SEED knowledge; SEASON_SEED becomes a derived curated view (WS0X.4 §Phase 2).
+  peakSeasons: text("peak_seasons").array().notNull().default(sql`'{}'`),
+  // Geographic/botanical origin — a controlled region slug (where the food COMES FROM).
+  // DISTINCT from cuisine association (CUISINE_SEED, many-to-many). Single-valued, nullable.
+  originRegion: text("origin_region"),
+  // M4.5 — Fermented Food Attribute. Single canonical owner of fermentation status.
+  // true = food undergoes meaningful fermentation (live cultures or metabolic transformation by micro-organisms).
+  // false (default) = not fermented, or fermentation is not a defining attribute of this food.
+  // Enables "Fermented Foods This Week" reporting independently of plant diversity.
+  fermented: boolean("fermented").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });

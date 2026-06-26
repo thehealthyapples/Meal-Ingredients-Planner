@@ -38,13 +38,16 @@ export const ALLOW_LIST: string[] = [
   "marrow",              // vegetable marrow / bone marrow
   "cornbread",           // (kept as an ingredient-grain product; remove if undesired)
   "soup celery",         // "soup celery" is a celery type in some sources
+  "ice plant",           // a succulent vegetable — not an ice cream product
+  "sugar cone",          // raw sugar product — context differs from ice cream cone
 ];
 
 // ── BLOCK TOKENS ── composite-dish / prepared / non-ingredient words.
 // Matched as whole words (\bWORD\b) so substrings inside single-ingredient
 // names ("rolled", "applesauce", "breadfruit") never trigger a false block.
 export const BLOCK_TOKENS: string[] = [
-  // composite / baked dishes
+  // composite / baked dishes — WS0X.1 Fix 1: ice cream composites, sundae, cone added
+  "ice cream", "sundae", "cone",
   "souffle", "soufflé", "pancake", "pancakes", "waffle", "waffles",
   "casserole", "gratin", "quiche", "pie", "cobbler", "crumble",
   "pizza", "lasagna", "lasagne", "ravioli", "dumpling", "dumplings",

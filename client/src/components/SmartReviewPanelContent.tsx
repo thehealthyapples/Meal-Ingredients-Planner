@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { computeMealVariety } from "@/lib/nutrition-variety";
+import { computeMealVariety } from "@shared/canonical/plant-classifier";
 import { getMealNutrients } from "@/lib/nutrition-insights";
 import { NutritionVarietyDots } from "@/components/nutrition-variety-chips";
 import { MealNutrientTags } from "@/components/nutrition-insights-panel";

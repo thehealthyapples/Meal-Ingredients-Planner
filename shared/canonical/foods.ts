@@ -400,7 +400,6 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     },
     aliases: [
       { alias: "almond", aliasType: "singular" },
-      { alias: "ground almonds", aliasType: "form" },
       { alias: "flaked almonds", aliasType: "form" },
     ],
   },
@@ -538,7 +537,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     },
     varieties: [
       { slug: "calabrese-broccoli", name: "Calabrese Broccoli", description: "The standard large-headed variety found in most supermarkets.", displayOrder: 0 },
-      { slug: "purple-sprouting-broccoli", name: "Purple Sprouting Broccoli", displayOrder: 1 },
+      { slug: "purple-sprouting-broccoli", name: "Purple Sprouting Broccoli", displayOrder: 1, knowledgeFoodSlug: "purple-sprouting-broccoli" },
     ],
     aliases: [
       { alias: "calabrese", aliasType: "common_name" },
@@ -850,13 +849,15 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       knowledgeFoodSlug: "cabbage", diversityGroupSlug: "cabbage",
     },
     varieties: [
-      { slug: "savoy-cabbage", name: "Savoy Cabbage", displayOrder: 0 },
+      { slug: "savoy-cabbage", name: "Savoy Cabbage", displayOrder: 0, knowledgeFoodSlug: "savoy-cabbage" },
       { slug: "hispi-cabbage", name: "Hispi Cabbage", description: "Also called pointed or sweetheart cabbage.", displayOrder: 1 },
+      { slug: "white-cabbage", name: "White Cabbage", description: "A firm, pale-green round cabbage widely used raw in coleslaw or cooked in soups and stews.", displayOrder: 2, knowledgeFoodSlug: "white-cabbage" },
     ],
     aliases: [
       { alias: "white cabbage", aliasType: "common_name" },
       { alias: "green cabbage", aliasType: "common_name" },
-      { alias: "spring cabbage", aliasType: "form" },
+      { alias: "Dutch cabbage", aliasType: "common_name" },
+      { alias: "hard cabbage", aliasType: "common_name" },
     ],
   },
   {
@@ -889,8 +890,8 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       knowledgeFoodSlug: "garden-peas", diversityGroupSlug: "peas",
     },
     varieties: [
-      { slug: "sugar-snap-peas", name: "Sugar Snap Peas", displayOrder: 0 },
-      { slug: "mangetout", name: "Mangetout", displayOrder: 1 },
+      { slug: "sugar-snap-peas", name: "Sugar Snap Peas", displayOrder: 0, knowledgeFoodSlug: "sugar-snap-peas" },
+      { slug: "mangetout", name: "Mangetout", displayOrder: 1, knowledgeFoodSlug: "mangetout" },
     ],
     aliases: [
       { alias: "garden peas", aliasType: "common_name" },
@@ -943,7 +944,6 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       { alias: "fine beans", aliasType: "common_name" },
       { alias: "haricot verts", aliasType: "common_name" },
       { alias: "string beans", aliasType: "common_name" },
-      { alias: "runner beans", aliasType: "common_name" },
     ],
   },
   {
@@ -1632,8 +1632,6 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     aliases: [
       { alias: "sesame seed", aliasType: "singular" },
       { alias: "sesame", aliasType: "common_name" },
-      { alias: "tahini", aliasType: "form" },
-      { alias: "tahini paste", aliasType: "form" },
       { alias: "black sesame seeds", aliasType: "form" },
     ],
   },
@@ -1760,14 +1758,13 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       { alias: "skimmed milk", aliasType: "form" },
       { alias: "full-fat milk", aliasType: "form" },
       { alias: "cow's milk", aliasType: "common_name" },
-      { alias: "cows milk", aliasType: "common_name" },
     ],
   },
   {
     food: {
       slug: "yoghurt", name: "Yoghurt", category: "Dairy", subcategory: "Fermented dairy",
       description: "A cultured dairy food supplying calcium and vitamin B12; includes live, natural and Greek-style varieties.",
-      knowledgeFoodSlug: "live-yogurt", diversityGroupSlug: null,
+      knowledgeFoodSlug: "live-yogurt", diversityGroupSlug: null, fermented: true,
     },
     varieties: [
       { slug: "greek-yoghurt", name: "Greek Yoghurt", description: "Strained yoghurt with a much higher protein content and richer texture.", displayOrder: 0, knowledgeFoodSlug: "greek-yoghurt" },
@@ -1888,7 +1885,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "kefir", name: "Kefir", category: "Dairy", subcategory: "Fermented dairy",
       description: "A cultured, drinkable ferment rich in live cultures and calcium.",
-      knowledgeFoodSlug: "kefir", diversityGroupSlug: null,
+      knowledgeFoodSlug: "kefir", diversityGroupSlug: null, fermented: true,
     },
     aliases: [
       { alias: "milk kefir", aliasType: "common_name" },
@@ -1899,7 +1896,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "tempeh", name: "Tempeh", category: "Fermented foods", subcategory: "Fermented soya",
       description: "A firm fermented soya cake offering complete plant protein and fibre.",
-      knowledgeFoodSlug: "tempeh", diversityGroupSlug: null,
+      knowledgeFoodSlug: "tempeh", diversityGroupSlug: null, fermented: true,
     },
     aliases: [
       { alias: "fermented soya", aliasType: "common_name" },
@@ -2128,7 +2125,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "miso", name: "Miso", category: "Fermented foods", subcategory: "Fermented soya",
       description: "A savoury fermented soya bean paste used to add depth and live cultures to soups and sauces.",
-      knowledgeFoodSlug: "miso", diversityGroupSlug: null,
+      knowledgeFoodSlug: "miso", diversityGroupSlug: null, fermented: true,
     },
     aliases: [
       { alias: "miso paste", aliasType: "form" },
@@ -2140,7 +2137,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "sauerkraut", name: "Sauerkraut", category: "Fermented foods", subcategory: "Fermented vegetables",
       description: "Fermented cabbage providing live cultures and fibre; choose unpasteurised for live cultures.",
-      knowledgeFoodSlug: "sauerkraut", diversityGroupSlug: null,
+      knowledgeFoodSlug: "sauerkraut", diversityGroupSlug: null, fermented: true,
     },
     aliases: [
       { alias: "fermented cabbage", aliasType: "common_name" },
@@ -2150,7 +2147,7 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     food: {
       slug: "kimchi", name: "Kimchi", category: "Fermented foods", subcategory: "Fermented vegetables",
       description: "A Korean ferment of cabbage and spices, rich in live cultures and fibre.",
-      knowledgeFoodSlug: "kimchi", diversityGroupSlug: null,
+      knowledgeFoodSlug: "kimchi", diversityGroupSlug: null, fermented: true,
     },
     aliases: [
       { alias: "kimchee", aliasType: "misspelling" },
@@ -2244,7 +2241,6 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       knowledgeFoodSlug: "spelt", diversityGroupSlug: "spelt",
     },
     aliases: [
-      { alias: "spelt flour", aliasType: "form" },
       { alias: "wholegrain spelt", aliasType: "form" },
       { alias: "spelt pasta", aliasType: "form" },
     ],
@@ -2356,7 +2352,6 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
       { alias: "coconut cream", aliasType: "form" },
       { alias: "coconut water", aliasType: "form" },
       { alias: "coconut flakes", aliasType: "form" },
-      { alias: "coconut flour", aliasType: "form" },
     ],
   },
   {
@@ -2410,6 +2405,906 @@ export const CANONICAL_SEED: CanonicalFoodSeed[] = [
     aliases: [
       { alias: "sunflower cooking oil", aliasType: "form" },
       { alias: "vegetable oil", aliasType: "form" },
+    ],
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // WS0X.8 — Food Intelligence Data Expansion (H1 batch promotion)
+  // 68 new canonical foods promoted from WS0X.2 H1 knowledge batch.
+  // All context pre-staged in food-context.ts; no changes to food-context.ts needed.
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  // ════════════════════════ Fish & Seafood ═════════════════════════════════════
+
+  {
+    food: {
+      slug: "pollock", name: "Pollock", category: "Proteins", subcategory: "White fish",
+      description: "A lean white fish widely used in UK fish and chips and fish fingers; a good source of protein, iodine and B vitamins.",
+      knowledgeFoodSlug: "pollock", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "pollack", aliasType: "common_name" },
+      { alias: "coley", aliasType: "common_name" },
+      { alias: "Alaska pollock", aliasType: "common_name" },
+      { alias: "pollock fillet", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "tilapia", name: "Tilapia", category: "Proteins", subcategory: "White fish",
+      description: "A mild, firm white fish farmed widely and available fresh or frozen in UK supermarkets; a lean source of protein and selenium.",
+      knowledgeFoodSlug: "tilapia", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "tilapia fillet", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "sea-bass", name: "Sea Bass", category: "Proteins", subcategory: "White fish",
+      description: "A popular white fish with delicate, flaky flesh; rich in protein and selenium, widely available at UK fish counters.",
+      knowledgeFoodSlug: "sea-bass", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "seabass", aliasType: "common_name" },
+      { alias: "European sea bass", aliasType: "common_name" },
+      { alias: "branzino", aliasType: "common_name" },
+      { alias: "sea bass fillet", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "sea-bream", name: "Sea Bream", category: "Proteins", subcategory: "White fish",
+      description: "A sweet, mild white fish popular in Mediterranean cooking and widely sold in UK supermarkets; a lean source of protein and iodine.",
+      knowledgeFoodSlug: "sea-bream", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "seabream", aliasType: "common_name" },
+      { alias: "gilt-head bream", aliasType: "common_name" },
+      { alias: "dorade", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "squid", name: "Squid", category: "Proteins", subcategory: "Seafood",
+      description: "A lean, firm-textured seafood widely available in UK supermarkets fresh, frozen or as rings; rich in protein and selenium.",
+      knowledgeFoodSlug: "squid", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "calamari", aliasType: "common_name" },
+      { alias: "squid rings", aliasType: "form" },
+      { alias: "cuttlefish", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "mussels", name: "Mussels", category: "Proteins", subcategory: "Seafood",
+      description: "A sustainable shellfish farmed widely around the British Isles; rich in protein, iron and omega-3 fats.",
+      knowledgeFoodSlug: "mussels", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "mussel", aliasType: "singular" },
+      { alias: "blue mussels", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "crab", name: "Crab", category: "Proteins", subcategory: "Seafood",
+      description: "A shellfish widely caught around UK coasts; a rich source of protein, selenium and vitamin B12.",
+      knowledgeFoodSlug: "crab", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "brown crab", aliasType: "common_name" },
+      { alias: "crab meat", aliasType: "form" },
+      { alias: "dressed crab", aliasType: "form" },
+      { alias: "tinned crab", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "scallops", name: "Scallops", category: "Proteins", subcategory: "Seafood",
+      description: "A sweet, delicately flavoured shellfish caught around UK coasts; a lean source of protein and zinc.",
+      knowledgeFoodSlug: "scallops", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "scallop", aliasType: "singular" },
+      { alias: "king scallops", aliasType: "form" },
+      { alias: "queen scallops", aliasType: "form" },
+    ],
+  },
+
+  // ════════════════════════ Meat ═══════════════════════════════════════════════
+
+  {
+    food: {
+      slug: "venison", name: "Venison", category: "Proteins", subcategory: "Game",
+      description: "A lean, richly flavoured red meat from deer; a good source of iron and vitamin B12, lower in fat than beef.",
+      knowledgeFoodSlug: "venison", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "deer meat", aliasType: "common_name" },
+      { alias: "venison steak", aliasType: "form" },
+      { alias: "venison mince", aliasType: "form" },
+      { alias: "venison haunch", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "liver", name: "Liver", category: "Proteins", subcategory: "Offal",
+      description: "An organ meat exceptionally rich in iron, vitamin B12, folate and vitamin A; chicken and lamb's liver are the most widely available.",
+      knowledgeFoodSlug: "liver", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "chicken liver", aliasType: "form" },
+      { alias: "chicken livers", aliasType: "form" },
+      { alias: "lamb's liver", aliasType: "form" },
+      { alias: "lamb liver", aliasType: "form" },
+      { alias: "beef liver", aliasType: "form" },
+    ],
+  },
+
+  // ════════════════════════ Vegetables ═════════════════════════════════════════
+
+  {
+    food: {
+      slug: "okra", name: "Okra", category: "Vegetables", subcategory: "Pods",
+      description: "A green pod vegetable widely used in South Asian, West African and Caribbean cooking; a source of fibre, folate and vitamin C.",
+      knowledgeFoodSlug: "okra", diversityGroupSlug: "okra",
+    },
+    aliases: [
+      { alias: "lady's fingers", aliasType: "common_name" },
+      { alias: "bhindi", aliasType: "common_name" },
+      { alias: "bamia", aliasType: "common_name" },
+      { alias: "gumbo", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "runner-beans", name: "Runner Beans", category: "Vegetables", subcategory: "Pods and beans",
+      description: "A quintessential British summer vegetable with long flat pods; a source of fibre, folate and vitamin C.",
+      knowledgeFoodSlug: "runner-beans", diversityGroupSlug: "runner-beans",
+    },
+    aliases: [
+      { alias: "runner bean", aliasType: "singular" },
+      { alias: "flat beans", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "spring-greens", name: "Spring Greens", category: "Vegetables", subcategory: "Brassicas",
+      description: "Loose-leaf cabbage harvested young in early spring, with a mild, sweet flavour; rich in vitamin K, folate and vitamin C.",
+      knowledgeFoodSlug: "spring-greens", diversityGroupSlug: "spring-greens",
+    },
+    aliases: [
+      { alias: "spring green", aliasType: "singular" },
+      { alias: "spring cabbage", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "water-chestnuts", name: "Water Chestnuts", category: "Vegetables", subcategory: "Root and tuber",
+      description: "A crunchy, white-fleshed aquatic tuber widely used in Asian cooking; sold tinned in UK supermarkets and retains crunch when cooked.",
+      knowledgeFoodSlug: "water-chestnuts", diversityGroupSlug: "water-chestnuts",
+    },
+    aliases: [
+      { alias: "water chestnut", aliasType: "singular" },
+      { alias: "Chinese water chestnuts", aliasType: "common_name" },
+      { alias: "tinned water chestnuts", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "bean-sprouts", name: "Bean Sprouts", category: "Vegetables", subcategory: "Sprouted",
+      description: "Sprouted mung beans with a crisp texture widely used in Asian cooking and stir-fries; a source of vitamin C.",
+      knowledgeFoodSlug: "bean-sprouts", diversityGroupSlug: "bean-sprouts",
+    },
+    aliases: [
+      { alias: "beansprouts", aliasType: "common_name" },
+      { alias: "mung bean sprouts", aliasType: "common_name" },
+      { alias: "bean shoots", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "bamboo-shoots", name: "Bamboo Shoots", category: "Vegetables", subcategory: "Other vegetables",
+      description: "Young shoots of bamboo plants, crisp and mild; sold tinned in UK supermarkets and widely used in East and South-East Asian cooking.",
+      knowledgeFoodSlug: "bamboo-shoots", diversityGroupSlug: "bamboo-shoots",
+    },
+    aliases: [
+      { alias: "bamboo shoot", aliasType: "singular" },
+      { alias: "tinned bamboo shoots", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "cassava", name: "Cassava", category: "Vegetables", subcategory: "Root and tuber",
+      description: "A starchy root vegetable native to South America, widely eaten across Africa, the Caribbean and Latin America; available in many UK supermarkets.",
+      knowledgeFoodSlug: "cassava", diversityGroupSlug: "cassava",
+    },
+    aliases: [
+      { alias: "yuca", aliasType: "common_name" },
+      { alias: "manioc", aliasType: "common_name" },
+      { alias: "tapioca root", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "broccoli-raab", name: "Broccoli Raab", category: "Vegetables", subcategory: "Brassicas",
+      description: "An Italian brassica with pleasantly bitter florets, stems and leaves; rich in folate, vitamin K and vitamin C.",
+      knowledgeFoodSlug: "broccoli-raab", diversityGroupSlug: "broccoli-raab",
+    },
+    aliases: [
+      { alias: "rapini", aliasType: "common_name" },
+      { alias: "broccoli rabe", aliasType: "common_name" },
+      { alias: "cime di rapa", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "mustard-greens", name: "Mustard Greens", category: "Vegetables", subcategory: "Leafy greens",
+      description: "Peppery, slightly bitter leafy greens widely used in South Asian cooking; a source of folate, vitamin K and vitamin C.",
+      knowledgeFoodSlug: "mustard-greens", diversityGroupSlug: "mustard-greens",
+    },
+    aliases: [
+      { alias: "mustard leaves", aliasType: "common_name" },
+      { alias: "Indian mustard", aliasType: "common_name" },
+      { alias: "sarson ka saag", aliasType: "common_name" },
+    ],
+  },
+
+  // ════════════════════════ Fruit ══════════════════════════════════════════════
+
+  {
+    food: {
+      slug: "jackfruit", name: "Jackfruit", category: "Fruit", subcategory: "Tropical fruit",
+      description: "A large tropical fruit with a meaty, fibrous texture when unripe; popular as a plant-based alternative in curries, widely sold tinned in UK supermarkets.",
+      knowledgeFoodSlug: "jackfruit", diversityGroupSlug: "jackfruit",
+    },
+    aliases: [
+      { alias: "young jackfruit", aliasType: "form" },
+      { alias: "green jackfruit", aliasType: "form" },
+      { alias: "tinned jackfruit", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "elderberries", name: "Elderberries", category: "Fruit", subcategory: "Berries",
+      description: "Small, dark purple berries from the elder tree common in UK hedgerows, used to make cordials and jams; must be cooked before eating.",
+      knowledgeFoodSlug: "elderberries", diversityGroupSlug: "elderberry",
+    },
+    aliases: [
+      { alias: "elderberry", aliasType: "singular" },
+    ],
+  },
+  {
+    food: {
+      slug: "goji-berries", name: "Goji Berries", category: "Fruit", subcategory: "Berries",
+      description: "Small, dried red berries from Central Asia, widely sold in UK supermarkets' health food sections; a source of vitamin C and iron.",
+      knowledgeFoodSlug: "goji-berries", diversityGroupSlug: "goji-berry",
+    },
+    aliases: [
+      { alias: "goji berry", aliasType: "singular" },
+      { alias: "wolfberries", aliasType: "common_name" },
+      { alias: "wolfberry", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "lychees", name: "Lychees", category: "Fruit", subcategory: "Tropical fruit",
+      description: "A sweet, fragrant tropical fruit with white, juicy flesh; widely sold fresh and tinned in UK supermarkets.",
+      knowledgeFoodSlug: "lychees", diversityGroupSlug: "lychee",
+    },
+    aliases: [
+      { alias: "lychee", aliasType: "singular" },
+      { alias: "litchi", aliasType: "common_name" },
+      { alias: "tinned lychees", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "papayas", name: "Papaya", category: "Fruit", subcategory: "Tropical fruit",
+      description: "A soft, orange-fleshed tropical fruit with a sweet flavour and the digestive enzyme papain; sold ripe and green in UK supermarkets.",
+      knowledgeFoodSlug: "papayas", diversityGroupSlug: "papaya",
+    },
+    aliases: [
+      { alias: "pawpaw", aliasType: "common_name" },
+      { alias: "papaw", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "mulberries", name: "Mulberries", category: "Fruit", subcategory: "Berries",
+      description: "Soft, dark berries from mulberry trees, rich in vitamin C, anthocyanins and iron; grown in UK gardens in season.",
+      knowledgeFoodSlug: "mulberries", diversityGroupSlug: "mulberry",
+    },
+    aliases: [
+      { alias: "mulberry", aliasType: "singular" },
+      { alias: "black mulberry", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "loganberries", name: "Loganberries", category: "Fruit", subcategory: "Berries",
+      description: "A large, dark red berry — a natural cross between a blackberry and raspberry — commonly grown in UK gardens and sold at farm shops.",
+      knowledgeFoodSlug: "loganberries", diversityGroupSlug: "loganberry",
+    },
+    aliases: [
+      { alias: "loganberry", aliasType: "singular" },
+    ],
+  },
+  {
+    food: {
+      slug: "guava", name: "Guava", category: "Fruit", subcategory: "Tropical fruit",
+      description: "A tropical fruit with sweet, pink or white flesh and a distinctive floral aroma; exceptionally high in vitamin C and increasingly available in UK supermarkets.",
+      knowledgeFoodSlug: "guava", diversityGroupSlug: "guava",
+    },
+    aliases: [
+      { alias: "guavas", aliasType: "plural" },
+      { alias: "pink guava", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "plantain", name: "Plantain", category: "Fruit", subcategory: "Tropical fruit",
+      description: "A starchy, banana-like fruit cooked as a vegetable or side dish; widely available in UK African and Caribbean food stores and many supermarkets.",
+      knowledgeFoodSlug: "plantain", diversityGroupSlug: "plantain",
+    },
+    aliases: [
+      { alias: "plantains", aliasType: "plural" },
+      { alias: "green plantain", aliasType: "form" },
+      { alias: "ripe plantain", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "physalis", name: "Physalis", category: "Fruit", subcategory: "Berries",
+      description: "A small orange berry encased in a papery husk; sold in UK supermarkets as a garnish and sweet snack, a source of vitamin C.",
+      knowledgeFoodSlug: "physalis", diversityGroupSlug: "physalis",
+    },
+    aliases: [
+      { alias: "cape gooseberry", aliasType: "common_name" },
+      { alias: "goldenberry", aliasType: "common_name" },
+      { alias: "ground cherry", aliasType: "common_name" },
+    ],
+  },
+
+  // ════════════════════════ Grains ══════════════════════════════════════════════
+
+  {
+    food: {
+      slug: "sorghum", name: "Sorghum", category: "Grains", subcategory: "Ancient grains",
+      description: "An ancient gluten-free grain originating in Africa; a source of fibre, iron and B vitamins, available in UK health food stores.",
+      knowledgeFoodSlug: "sorghum", diversityGroupSlug: "sorghum",
+    },
+    aliases: [
+      { alias: "jowar", aliasType: "common_name" },
+      { alias: "grain sorghum", aliasType: "common_name" },
+      { alias: "sorghum grain", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "amaranth", name: "Amaranth", category: "Grains", subcategory: "Ancient grains",
+      description: "A gluten-free pseudo-cereal and one of few plant foods containing all essential amino acids; available in UK health food stores.",
+      knowledgeFoodSlug: "amaranth", diversityGroupSlug: "amaranth",
+    },
+    aliases: [
+      { alias: "amaranth grain", aliasType: "form" },
+      { alias: "popped amaranth", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "farro", name: "Farro", category: "Grains", subcategory: "Ancient grains",
+      description: "An ancient wheat grain from the Mediterranean with a nutty flavour and chewy texture; available in UK supermarkets including Waitrose and M&S.",
+      knowledgeFoodSlug: "farro", diversityGroupSlug: "farro",
+    },
+    aliases: [
+      { alias: "emmer wheat", aliasType: "common_name" },
+      { alias: "pearled farro", aliasType: "form" },
+      { alias: "farro perlato", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "semolina", name: "Semolina", category: "Grains", subcategory: "Processed grains",
+      description: "Coarsely ground durum wheat used for semolina pudding, pasta-making and coatings; a source of fibre and B vitamins.",
+      knowledgeFoodSlug: "semolina", diversityGroupSlug: "wheat",
+    },
+    aliases: [
+      { alias: "durum semolina", aliasType: "form" },
+      { alias: "coarse semolina", aliasType: "form" },
+      { alias: "fine semolina", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "black-rice", name: "Black Rice", category: "Grains", subcategory: "Rice varieties",
+      description: "A richly coloured wholegrain rice with a deep purple-black hue when cooked; the colour comes from anthocyanins, the same pigments found in blueberries.",
+      knowledgeFoodSlug: "black-rice", diversityGroupSlug: "rice",
+    },
+    aliases: [
+      { alias: "forbidden rice", aliasType: "common_name" },
+      { alias: "purple rice", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "polenta", name: "Polenta", category: "Grains", subcategory: "Processed grains",
+      description: "Ground dried maize widely used in Italian cooking; can be cooked soft or set and grilled, available in all UK supermarkets.",
+      knowledgeFoodSlug: "polenta", diversityGroupSlug: "corn",
+    },
+    aliases: [
+      { alias: "cornmeal", aliasType: "common_name" },
+      { alias: "corn grits", aliasType: "common_name" },
+      { alias: "instant polenta", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "teff", name: "Teff", category: "Grains", subcategory: "Ancient grains",
+      description: "A tiny ancient grain from Ethiopia, the basis for injera flatbread; naturally gluten-free and a good source of iron and calcium.",
+      knowledgeFoodSlug: "teff", diversityGroupSlug: "teff",
+    },
+    aliases: [
+      { alias: "tef", aliasType: "common_name" },
+      { alias: "teff flour", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "rice-flour", name: "Rice Flour", category: "Grains", subcategory: "Flours",
+      description: "Finely ground rice used in gluten-free cooking and baking; a staple in East and South-East Asian cuisines, widely available in UK supermarkets.",
+      knowledgeFoodSlug: "rice-flour", diversityGroupSlug: "rice",
+    },
+    aliases: [
+      { alias: "white rice flour", aliasType: "form" },
+      { alias: "brown rice flour", aliasType: "form" },
+      { alias: "ground rice", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "barley-flour", name: "Barley Flour", category: "Grains", subcategory: "Flours",
+      description: "Flour milled from barley grain with a slightly sweet, malty flavour; used in baking and as a thickener.",
+      knowledgeFoodSlug: "barley-flour", diversityGroupSlug: "barley",
+    },
+    aliases: [
+      { alias: "wholemeal barley flour", aliasType: "form" },
+      { alias: "barley meal", aliasType: "common_name" },
+    ],
+  },
+
+  // ════════════════════════ Legumes ═════════════════════════════════════════════
+
+  {
+    food: {
+      slug: "pinto-beans", name: "Pinto Beans", category: "Legumes", subcategory: "Beans",
+      description: "A speckled cream-and-tan bean popular in Mexican cooking; rich in plant protein and fibre, widely available dried or tinned in UK supermarkets.",
+      knowledgeFoodSlug: "pinto-beans", diversityGroupSlug: "pinto-beans",
+    },
+    aliases: [
+      { alias: "pinto bean", aliasType: "singular" },
+      { alias: "speckled beans", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "black-eyed-peas", name: "Black-Eyed Peas", category: "Legumes", subcategory: "Beans",
+      description: "Small cream-coloured beans with a distinctive black spot, widely used in African, Caribbean and American Southern cooking; available dried and tinned in UK supermarkets.",
+      knowledgeFoodSlug: "black-eyed-peas", diversityGroupSlug: "black-eyed-peas",
+    },
+    aliases: [
+      { alias: "black-eyed beans", aliasType: "common_name" },
+      { alias: "black eyed beans", aliasType: "common_name" },
+      { alias: "cowpeas", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "chickpea-flour", name: "Chickpea Flour", category: "Legumes", subcategory: "Flours",
+      description: "A high-protein flour made from ground dried chickpeas, central to South Asian cooking for pakoras and flatbreads; widely available in UK supermarkets.",
+      knowledgeFoodSlug: "chickpea-flour", diversityGroupSlug: "chickpeas",
+    },
+    aliases: [
+      { alias: "gram flour", aliasType: "common_name" },
+      { alias: "besan", aliasType: "common_name" },
+      { alias: "garbanzo flour", aliasType: "common_name" },
+    ],
+  },
+
+  // ════════════════════════ Dairy ═══════════════════════════════════════════════
+
+  {
+    food: {
+      slug: "cottage-cheese", name: "Cottage Cheese", category: "Dairy", subcategory: "Fresh cheese",
+      description: "A mild, fresh cheese with a lumpy curd texture; a high-protein, lower-fat dairy food widely available in UK supermarkets.",
+      knowledgeFoodSlug: "cottage-cheese", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "low-fat cottage cheese", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "cream-cheese", name: "Cream Cheese", category: "Dairy", subcategory: "Fresh cheese",
+      description: "A soft, creamy fresh cheese used in cooking, baking and as a spread; a UK kitchen staple available in all supermarkets.",
+      knowledgeFoodSlug: "cream-cheese", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "full-fat cream cheese", aliasType: "form" },
+      { alias: "soft cheese", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "sour-cream", name: "Sour Cream", category: "Dairy", subcategory: "Cream",
+      description: "Cream fermented with lactic acid bacteria, giving it a characteristic tangy flavour; widely used in cooking and as a topping.",
+      knowledgeFoodSlug: "sour-cream", diversityGroupSlug: null, fermented: true,
+    },
+    aliases: [
+      { alias: "soured cream", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "creme-fraiche", name: "Crème Fraîche", category: "Dairy", subcategory: "Cream",
+      description: "A thick, rich cultured cream with a mild tang; a UK supermarket staple widely used in French and British cooking.",
+      knowledgeFoodSlug: "creme-fraiche", diversityGroupSlug: null, fermented: true,
+    },
+    aliases: [
+      { alias: "creme fraiche", aliasType: "misspelling" },
+    ],
+  },
+  {
+    food: {
+      slug: "buttermilk", name: "Buttermilk", category: "Dairy", subcategory: "Dairy drinks",
+      description: "A tangy liquid cultured from low-fat milk; used in baking to create light, tender textures in scones, pancakes and soda bread.",
+      knowledgeFoodSlug: "buttermilk", diversityGroupSlug: null, fermented: true,
+    },
+    aliases: [
+      { alias: "cultured buttermilk", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "blue-cheese", name: "Blue Cheese", category: "Dairy", subcategory: "Blue cheese",
+      description: "A family of cheeses with distinctive blue or green veining, including Gorgonzola and Roquefort; strongly flavoured and widely available in UK supermarkets.",
+      knowledgeFoodSlug: "blue-cheese", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "blue-veined cheese", aliasType: "common_name" },
+      { alias: "bleu cheese", aliasType: "common_name" },
+      { alias: "gorgonzola", aliasType: "common_name" },
+      { alias: "roquefort", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "gouda", name: "Gouda", category: "Dairy", subcategory: "Hard and semi-hard cheese",
+      description: "A semi-hard Dutch cheese with a smooth, slightly sweet flavour; a good source of calcium and protein, widely available in UK supermarkets.",
+      knowledgeFoodSlug: "gouda", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "Dutch gouda", aliasType: "common_name" },
+      { alias: "smoked gouda", aliasType: "form" },
+      { alias: "aged gouda", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "brie", name: "Brie", category: "Dairy", subcategory: "Soft and bloomy cheese",
+      description: "A soft French cheese with an edible white rind and creamy interior; a source of calcium, protein and B vitamins, widely available in UK supermarkets.",
+      knowledgeFoodSlug: "brie", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "baked brie", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "camembert", name: "Camembert", category: "Dairy", subcategory: "Soft and bloomy cheese",
+      description: "A soft, creamy French cheese with a white bloomy rind; famous for baking whole and serving with bread, widely available in UK supermarkets.",
+      knowledgeFoodSlug: "camembert", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "baked camembert", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "stilton", name: "Stilton", category: "Dairy", subcategory: "Blue cheese",
+      description: "A celebrated English blue cheese with PDO status, made in Derbyshire, Leicestershire and Nottinghamshire; rich and strongly flavoured.",
+      knowledgeFoodSlug: "stilton", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "Blue Stilton", aliasType: "common_name" },
+      { alias: "White Stilton", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "goat-cheese", name: "Goat's Cheese", category: "Dairy", subcategory: "Fresh and soft cheese",
+      description: "A tangy, soft cheese made from goat's milk; lower in lactose than cow's milk cheese, widely available fresh or aged in UK supermarkets.",
+      knowledgeFoodSlug: "goat-cheese", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "goat cheese", aliasType: "common_name" },
+      { alias: "chevre", aliasType: "common_name" },
+      { alias: "fresh goat's cheese", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "mascarpone", name: "Mascarpone", category: "Dairy", subcategory: "Fresh cheese",
+      description: "A thick, rich Italian cream cheese used in tiramisu and as a cooking ingredient; available in all UK supermarkets.",
+      knowledgeFoodSlug: "mascarpone", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "mascarpone cheese", aliasType: "form" },
+      { alias: "Italian cream cheese", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "double-cream", name: "Double Cream", category: "Dairy", subcategory: "Cream",
+      description: "A very thick cream with high fat content, used for whipping, pouring and enriching sauces and desserts; a UK kitchen staple.",
+      knowledgeFoodSlug: "double-cream", diversityGroupSlug: null,
+    },
+    aliases: [
+      { alias: "whipping cream", aliasType: "form" },
+      { alias: "heavy cream", aliasType: "common_name" },
+    ],
+  },
+
+  // ════════════════════════ Nuts & Seeds ════════════════════════════════════════
+
+  {
+    food: {
+      slug: "almond-butter", name: "Almond Butter", category: "Healthy fats", subcategory: "Nut butters",
+      description: "A spread made from ground almonds; a source of vitamin E, healthy fats and plant protein, widely available in UK supermarkets.",
+      knowledgeFoodSlug: "almond-butter", diversityGroupSlug: "almonds",
+    },
+    aliases: [
+      { alias: "smooth almond butter", aliasType: "form" },
+      { alias: "crunchy almond butter", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "tahini", name: "Tahini", category: "Healthy fats", subcategory: "Nut butters",
+      description: "A smooth paste made from ground sesame seeds; central to Middle Eastern cooking in hummus and dressings, widely available in UK supermarkets.",
+      knowledgeFoodSlug: "tahini", diversityGroupSlug: "sesame-seeds",
+    },
+    aliases: [
+      { alias: "tahini paste", aliasType: "form" },
+      { alias: "tahina", aliasType: "common_name" },
+      { alias: "sesame paste", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "nigella-seeds", name: "Nigella Seeds", category: "Seeds", subcategory: "Whole seeds",
+      description: "Tiny black seeds with a peppery, slightly bitter flavour; widely used in South Asian and Middle Eastern cooking, available in most UK supermarkets.",
+      knowledgeFoodSlug: "nigella-seeds", diversityGroupSlug: "nigella-seeds",
+    },
+    aliases: [
+      { alias: "nigella seed", aliasType: "singular" },
+      { alias: "black seed", aliasType: "common_name" },
+      { alias: "black cumin", aliasType: "common_name" },
+      { alias: "kalonji", aliasType: "common_name" },
+      { alias: "black onion seeds", aliasType: "common_name" },
+    ],
+  },
+
+  // ════════════════════════ Herbs ═══════════════════════════════════════════════
+
+  {
+    food: {
+      slug: "marjoram", name: "Marjoram", category: "Herbs", subcategory: "Woody herbs",
+      description: "A fragrant Mediterranean herb closely related to oregano but sweeter and more delicate; available fresh and dried in UK supermarkets.",
+      knowledgeFoodSlug: "marjoram", diversityGroupSlug: "marjoram",
+    },
+    aliases: [
+      { alias: "sweet marjoram", aliasType: "common_name" },
+      { alias: "dried marjoram", aliasType: "form" },
+      { alias: "fresh marjoram", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "chervil", name: "Chervil", category: "Herbs", subcategory: "Delicate herbs",
+      description: "A delicate herb with feathery leaves and a mild anise flavour, central to French cuisine; available fresh in specialist UK supermarkets.",
+      knowledgeFoodSlug: "chervil", diversityGroupSlug: "chervil",
+    },
+    aliases: [
+      { alias: "French parsley", aliasType: "common_name" },
+      { alias: "garden chervil", aliasType: "common_name" },
+    ],
+  },
+
+  // ════════════════════════ Spices & Condiments ════════════════════════════════
+
+  {
+    food: {
+      slug: "capers", name: "Capers", category: "Herbs", subcategory: "Condiments",
+      description: "The pickled flower buds of the caper bush; widely used in Mediterranean cooking to add a sharp, salty flavour, available in all UK supermarkets.",
+      knowledgeFoodSlug: "capers", diversityGroupSlug: "capers",
+    },
+    aliases: [
+      { alias: "caper", aliasType: "singular" },
+      { alias: "capers in brine", aliasType: "form" },
+      { alias: "salted capers", aliasType: "form" },
+      { alias: "caperberries", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "horseradish", name: "Horseradish", category: "Herbs", subcategory: "Condiments",
+      description: "A pungent root used as a condiment, traditionally paired with roast beef in British cooking; available fresh, grated or as sauce in UK supermarkets.",
+      knowledgeFoodSlug: "horseradish", diversityGroupSlug: "horseradish",
+    },
+    aliases: [
+      { alias: "horseradish root", aliasType: "form" },
+      { alias: "horseradish sauce", aliasType: "form" },
+      { alias: "prepared horseradish", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "caraway-seeds", name: "Caraway Seeds", category: "Spices", subcategory: "Seeds and pods",
+      description: "Small, crescent-shaped seeds with an anise-like, earthy flavour; used in rye bread, sauerkraut and Central European cooking.",
+      knowledgeFoodSlug: "caraway-seeds", diversityGroupSlug: "caraway-seeds",
+    },
+    aliases: [
+      { alias: "caraway seed", aliasType: "singular" },
+      { alias: "caraway", aliasType: "common_name" },
+      { alias: "Persian cumin", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "fenugreek", name: "Fenugreek", category: "Spices", subcategory: "Seeds and pods",
+      description: "A versatile plant whose seeds and dried leaves are central to South Asian cooking, adding a distinctive slightly bitter, maple-like flavour; widely available in UK supermarkets.",
+      knowledgeFoodSlug: "fenugreek", diversityGroupSlug: "fenugreek",
+    },
+    aliases: [
+      { alias: "fenugreek seeds", aliasType: "form" },
+      { alias: "methi seeds", aliasType: "common_name" },
+      { alias: "methi", aliasType: "common_name" },
+      { alias: "fenugreek leaves", aliasType: "form" },
+      { alias: "kasuri methi", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "sumac", name: "Sumac", category: "Spices", subcategory: "Ground spices",
+      description: "A deep red-purple ground spice made from dried sumac berries; central to Middle Eastern cooking for its fruity, lemony tang, widely available in UK supermarkets.",
+      knowledgeFoodSlug: "sumac", diversityGroupSlug: "sumac",
+    },
+    aliases: [
+      { alias: "ground sumac", aliasType: "form" },
+      { alias: "sumac berries", aliasType: "form" },
+    ],
+  },
+
+  // ════════════════════════ Oils ════════════════════════════════════════════════
+
+  {
+    food: {
+      slug: "coconut-oil", name: "Coconut Oil", category: "Healthy fats", subcategory: "Oils",
+      description: "An oil pressed from coconut flesh; solid at room temperature and widely used in cooking, baking and plant-based recipes.",
+      knowledgeFoodSlug: "coconut-oil", diversityGroupSlug: "coconut",
+    },
+    aliases: [
+      { alias: "virgin coconut oil", aliasType: "form" },
+      { alias: "refined coconut oil", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "rapeseed-oil", name: "Rapeseed Oil", category: "Healthy fats", subcategory: "Oils",
+      description: "A light, golden oil pressed from UK-grown rapeseed with a neutral flavour and high smoke point; the UK's native cooking oil, available in all supermarkets.",
+      knowledgeFoodSlug: "rapeseed-oil", diversityGroupSlug: "rapeseed",
+    },
+    aliases: [
+      { alias: "canola oil", aliasType: "common_name" },
+      { alias: "cold-pressed rapeseed oil", aliasType: "form" },
+      { alias: "British rapeseed oil", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "sesame-oil", name: "Sesame Oil", category: "Healthy fats", subcategory: "Oils",
+      description: "An oil pressed from sesame seeds widely used in East and South-East Asian cooking to add a rich, nutty flavour; available in all UK supermarkets.",
+      knowledgeFoodSlug: "sesame-oil", diversityGroupSlug: "sesame-seeds",
+    },
+    aliases: [
+      { alias: "toasted sesame oil", aliasType: "form" },
+      { alias: "sesame seed oil", aliasType: "common_name" },
+      { alias: "dark sesame oil", aliasType: "form" },
+    ],
+  },
+
+  // ════════════════════════ Fermented ══════════════════════════════════════════
+
+  {
+    food: {
+      slug: "natto", name: "Natto", category: "Fermented foods", subcategory: "Fermented soya",
+      description: "A traditional Japanese food made from fermented soybeans with a sticky texture; an exceptionally rich source of vitamin K2 and beneficial bacteria.",
+      knowledgeFoodSlug: "natto", diversityGroupSlug: "edamame", fermented: true,
+    },
+    aliases: [
+      { alias: "fermented soybeans", aliasType: "common_name" },
+      { alias: "Japanese natto", aliasType: "form" },
+    ],
+  },
+
+  // ════════════════════════ M4.5 — Fermented Food Additions ════════════════════
+  {
+    food: {
+      slug: "kombucha", name: "Kombucha", category: "Fermented foods", subcategory: "Fermented drinks",
+      description: "A naturally fizzy fermented tea made using a SCOBY (symbiotic culture of bacteria and yeast); contains live cultures and organic acids.",
+      knowledgeFoodSlug: null, diversityGroupSlug: null, fermented: true,
+    },
+    aliases: [
+      { alias: "fermented tea", aliasType: "common_name" },
+      { alias: "jun tea", aliasType: "common_name" },
+    ],
+  },
+
+  // ════════════════════════ M5 — Trusted Food Intelligence Activation ══════════
+  // Five knowledge foods from the WS0X.2 H1 editorial batch that had food context
+  // pre-staged in food-context.ts but lacked canonical entries. Added here to give
+  // each food its own canonical identity, resolver coverage, and diversity group.
+
+  {
+    food: {
+      slug: "almond-flour", name: "Almond Flour", category: "Grains", subcategory: "Flours",
+      description: "Finely ground almonds used in gluten-free baking; supplies vitamin E, magnesium and plant protein.",
+      knowledgeFoodSlug: "almond-flour", diversityGroupSlug: "almonds",
+    },
+    aliases: [
+      { alias: "ground almonds", aliasType: "form" },
+      { alias: "almond meal", aliasType: "form" },
+      { alias: "blanched almond flour", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "baby-corn", name: "Baby Corn", category: "Vegetables", subcategory: "Grain vegetables",
+      description: "Miniature corn cobs harvested before the kernels develop; eaten whole and widely available fresh, frozen or tinned.",
+      knowledgeFoodSlug: "baby-corn", diversityGroupSlug: "corn",
+    },
+    aliases: [
+      { alias: "baby corn", aliasType: "common_name" },
+      { alias: "baby sweetcorn", aliasType: "common_name" },
+      { alias: "miniature corn", aliasType: "common_name" },
+      { alias: "young corn", aliasType: "common_name" },
+    ],
+  },
+  {
+    food: {
+      slug: "coconut-flour", name: "Coconut Flour", category: "Grains", subcategory: "Flours",
+      description: "A high-fibre flour made from dried coconut flesh; used in gluten-free baking.",
+      knowledgeFoodSlug: "coconut-flour", diversityGroupSlug: "coconut",
+    },
+    aliases: [
+      { alias: "coconut flour", aliasType: "common_name" },
+      { alias: "desiccated coconut flour", aliasType: "form" },
+    ],
+  },
+  {
+    food: {
+      slug: "spelt-flour", name: "Spelt Flour", category: "Grains", subcategory: "Flours",
+      description: "Flour milled from spelt grain; supplies fibre, magnesium, iron and zinc with a mild nutty flavour.",
+      knowledgeFoodSlug: "spelt-flour", diversityGroupSlug: "spelt",
+    },
+    aliases: [
+      { alias: "spelt flour", aliasType: "common_name" },
+      { alias: "whole spelt flour", aliasType: "form" },
+      { alias: "white spelt flour", aliasType: "form" },
+      { alias: "spelt wholemeal flour", aliasType: "form" },
     ],
   },
 ];

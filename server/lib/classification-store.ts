@@ -47,17 +47,45 @@ export async function updateClassification(
 }
 
 // ── Apply to shopping list items ───────────────────────────────────────────────
+//
+// FAIL-SAFE: AI classifications (source='ai', reviewStatus='pending') must NOT
+// resolve an item or remove the needsReview flag.  The existing price-lookup
+// guard (`if (item.needsReview === true) continue`) blocks fake prices, but only
+// if we never clear that flag for unconfirmed AI results.
+//
+// Rule: only source='manual' or source='deterministic', or an admin-approved AI
+// record (reviewStatus='approved'), may fully resolve an item.  Everything else
+// updates the category hint but keeps the item in needs_review so the user can
+// confirm before any product or price is attached.
+
+function isConfirmedClassification(c: IngredientClassification): boolean {
+  return c.source !== 'ai' || c.reviewStatus === 'approved';
+}
 
 async function applyToItem(itemId: number, c: IngredientClassification): Promise<void> {
-  await db.update(shoppingList).set({
-    canonicalName:   c.canonicalName,
-    category:        c.category,
-    subcategory:     c.subcategory ?? null,
-    resolutionState: 'resolved',
-    reviewReason:    null,
-    needsReview:     false,
-    validationNote:  null,
-  } as any).where(eq(shoppingList.id, itemId));
+  if (isConfirmedClassification(c)) {
+    await db.update(shoppingList).set({
+      canonicalName:   c.canonicalName,
+      category:        c.category,
+      subcategory:     c.subcategory ?? null,
+      resolutionState: 'resolved',
+      reviewReason:    null,
+      needsReview:     false,
+      validationNote:  null,
+    } as any).where(eq(shoppingList.id, itemId));
+  } else {
+    // AI suggested a match but it is unconfirmed — update category for display
+    // context but keep the item in review so no price or product is attached.
+    await db.update(shoppingList).set({
+      canonicalName:   c.canonicalName,
+      category:        c.category,
+      subcategory:     c.subcategory ?? null,
+      resolutionState: 'needs_review',
+      reviewReason:    'ai_correction',
+      needsReview:     true,
+      validationNote:  `We couldn't confidently recognise this item — did you mean "${c.canonicalName}"?`,
+    } as any).where(eq(shoppingList.id, itemId));
+  }
 }
 
 export async function applyClassificationToItems(
@@ -79,15 +107,27 @@ export async function applyClassificationToItems(
 
   if (ids.length === 0) return 0;
 
-  await db.update(shoppingList).set({
-    canonicalName:   c.canonicalName,
-    category:        c.category,
-    subcategory:     c.subcategory ?? null,
-    resolutionState: 'resolved',
-    reviewReason:    null,
-    needsReview:     false,
-    validationNote:  null,
-  } as any).where(inArray(shoppingList.id, ids));
+  if (isConfirmedClassification(c)) {
+    await db.update(shoppingList).set({
+      canonicalName:   c.canonicalName,
+      category:        c.category,
+      subcategory:     c.subcategory ?? null,
+      resolutionState: 'resolved',
+      reviewReason:    null,
+      needsReview:     false,
+      validationNote:  null,
+    } as any).where(inArray(shoppingList.id, ids));
+  } else {
+    await db.update(shoppingList).set({
+      canonicalName:   c.canonicalName,
+      category:        c.category,
+      subcategory:     c.subcategory ?? null,
+      resolutionState: 'needs_review',
+      reviewReason:    'ai_correction',
+      needsReview:     true,
+      validationNote:  `We couldn't confidently recognise this item — did you mean "${c.canonicalName}"?`,
+    } as any).where(inArray(shoppingList.id, ids));
+  }
 
   return ids.length;
 }

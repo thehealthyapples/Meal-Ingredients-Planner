@@ -14,7 +14,7 @@
  * Run with: npx tsx server/tests/test-plant-milk-vegan.ts
  */
 
-import { shouldExcludeRecipe } from '../lib/dietRules.js';
+import { shouldExcludeRecipe } from '../../shared/dietRules.js';
 import { candidateDietExcluded } from '../lib/smart-suggest-service.js';
 
 let passed = 0;

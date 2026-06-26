@@ -38,12 +38,13 @@ import { useLocation, useSearch } from "wouter";
 import { MealWatermark, getWatermarkType } from "@/components/meal-watermark";
 import ScoreBadge from "@/components/ui/score-badge";
 import { Switch } from "@/components/ui/switch";
-import { shouldExcludeRecipe } from "@/lib/dietRules";
+import { shouldExcludeRecipe } from "@shared/dietRules";
 import { useUser } from "@/hooks/use-user";
 import { scoreMealSearch } from "@shared/food-synonyms";
 import { writePendingIngredients, appendPendingIngredient } from "@/lib/quick-list";
 import { PageHeader } from "@/components/PageHeader";
 import { CookbookWorkspacePanel, type CookbookWorkspaceMode } from "@/components/CookbookWorkspacePanel";
+import { CookbookMealIntelligenceStrip } from "@/components/CookbookMealIntelligenceStrip";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { compressImage, inferMimeFromFilename } from "@/lib/image-utils";
 
@@ -2563,7 +2564,7 @@ export default function MealsPage() {
   });
   const [addToFreezerMealId, setAddToFreezerMealId] = useState<number | null>(null);
   const [expandedMealId, setExpandedMealId] = useState<number | string | null>(null);
-  const [cardInfoTabs, setCardInfoTabs] = useState<Map<number, 'ingredients' | 'nutrition'>>(new Map());
+  const [cardInfoTabs, setCardInfoTabs] = useState<Map<number, 'ingredients' | 'nutrition' | 'intelligence'>>(new Map());
 
   // Three-dot action sheet state (mobile cookbook cards)
   const [actionSheetMeal, setActionSheetMeal] = useState<Meal | null>(null);
@@ -3918,7 +3919,7 @@ export default function MealsPage() {
                         onMobileClick={() => setActionSheetMeal(meal)}
                       />
                     </div>
-                    {/* Permanent info strip — ingredients/nutrition always visible, no hover required */}
+                    {/* Permanent info strip — ingredients/nutrition/intelligence tabs */}
                     <div className="border-t border-border/50 px-2 pt-1.5 pb-2" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-center gap-0.5 mb-1">
                         <button
@@ -3934,6 +3935,13 @@ export default function MealsPage() {
                           data-testid={`tab-strip-nutrition-${meal.id}`}
                         >
                           Nutrition
+                        </button>
+                        <button
+                          className={`text-[11px] font-medium px-2 py-0.5 rounded transition-colors ${infoTab === 'intelligence' ? 'text-foreground bg-muted' : 'text-muted-foreground hover:text-foreground'}`}
+                          onClick={() => setCardInfoTabs(prev => new Map(prev).set(meal.id, 'intelligence'))}
+                          data-testid={`tab-strip-intelligence-${meal.id}`}
+                        >
+                          Why Good
                         </button>
                       </div>
                       <div className="min-h-[70px]">
@@ -3962,7 +3970,7 @@ export default function MealsPage() {
                           ) : (
                             <p className="text-[11px] text-muted-foreground" data-testid={`strip-no-ingredients-${meal.id}`}>No ingredients listed</p>
                           )
-                        ) : (
+                        ) : infoTab === 'nutrition' ? (
                           cardNutrition && (cardNutrition.calories || cardNutrition.protein || cardNutrition.fat || cardNutrition.carbs) ? (
                             <>
                               {/* Desktop: 2-column, consistent height with ingredient view */}
@@ -3983,6 +3991,11 @@ export default function MealsPage() {
                           ) : (
                             <p className="text-[11px] text-muted-foreground" data-testid={`strip-no-nutrition-${meal.id}`}>Nutrition not yet analysed</p>
                           )
+                        ) : (
+                          <CookbookMealIntelligenceStrip
+                            mealId={meal.id}
+                            active={infoTab === 'intelligence'}
+                          />
                         )}
                       </div>
                     </div>

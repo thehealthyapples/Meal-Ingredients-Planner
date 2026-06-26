@@ -1,5 +1,5 @@
-import type { VarietyScore } from "@/lib/nutrition-variety";
-import { computeMealVariety, isPlantIngredient } from "@/lib/nutrition-variety";
+import type { VarietyScore } from "@shared/canonical/plant-classifier";
+import { computeMealVariety, isPlantIngredient } from "@shared/canonical/plant-classifier";
 import { normaliseForReuse } from "@/lib/ingredient-reuse";
 import {
   Tooltip,

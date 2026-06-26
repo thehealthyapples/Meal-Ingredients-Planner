@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useUser } from "@/hooks/use-user";
 import { PageHeader } from "@/components/PageHeader";
+import HomeIntelligenceCompanion from "@/components/HomeIntelligenceCompanion";
 import { useMealsSummary } from "@/hooks/use-meals-summary";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
@@ -222,6 +223,11 @@ export default function Dashboard() {
 
       <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-6">
+
+          {/* ── Home Intelligence Companion ── */}
+          <motion.div variants={item}>
+            <HomeIntelligenceCompanion />
+          </motion.div>
 
           {/* ── Stat strip ── */}
           <motion.div variants={item}>

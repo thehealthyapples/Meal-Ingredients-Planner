@@ -13,7 +13,17 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { FirstVisitHint } from "@/components/first-visit-hint";
-import { getPantryKnowledge, pantryItemMatchesQuery, MICRO_INSIGHTS } from "@/lib/pantry-knowledge";
+const MICRO_INSIGHTS = [
+  "Different plant foods feed different gut bacteria.",
+  "A mix of colours often brings a wider range of nutrients.",
+  "Herbs and spices add both flavour and nutrition.",
+  "Whole grains tend to keep you fuller for longer.",
+  "Cold-pressed oils preserve more of their natural qualities.",
+  "Fermented foods like yogurt and kefir support gut diversity.",
+  "Leafy greens are one of the easiest ways to add variety to any meal.",
+  "Oily fish a couple of times a week is one of the most widely supported dietary habits.",
+  "Seeds like chia and flaxseed are small but surprisingly rich in plant-based omega-3.",
+];
 import { PageHeader } from "@/components/PageHeader";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { PantryKnowledgeHub } from "@/components/PantryKnowledgeHub";
@@ -286,10 +296,15 @@ function FoodPantrySection({
 
   const displayedItems = useMemo(() => {
     if (!query.trim()) return activeItems;
-    return activeItems.filter(item =>
-      pantryItemMatchesQuery(item.displayName || item.ingredientKey, item.ingredientKey, query)
-    );
-  }, [activeItems, query]);
+    const ql = query.toLowerCase();
+    return activeItems.filter(item => {
+      if ((item.displayName || item.ingredientKey).toLowerCase().includes(ql)) return true;
+      const know = serverKnowledge.get(item.ingredientKey);
+      if (!know || know === "loading") return false;
+      return know.tags.some(t => t.toLowerCase().includes(ql)) ||
+        know.supports.some(s => s.toLowerCase().includes(ql));
+    });
+  }, [activeItems, query, serverKnowledge]);
 
   // Called when banner tab changes
   const handleCategoryChange = (cat: FoodCat) => {
@@ -329,8 +344,7 @@ function FoodPantrySection({
         next.delete(id);
       } else {
         next.add(id);
-        const staticKnowledge = getPantryKnowledge(ingredientKey);
-        if (!staticKnowledge && !serverKnowledge.has(ingredientKey)) {
+        if (!serverKnowledge.has(ingredientKey)) {
           setServerKnowledge(m => new Map(m).set(ingredientKey, "loading"));
           fetch(`/api/pantry/knowledge/${encodeURIComponent(ingredientKey)}`)
             .then(r => r.json())
@@ -497,11 +511,10 @@ function FoodPantrySection({
                       </p>
                     )}
                     {groupItems.map(item => {
-                      const staticKnow = getPantryKnowledge(item.ingredientKey);
                       const serverKnow = serverKnowledge.get(item.ingredientKey);
-                      const knowledge = staticKnow ?? (serverKnow !== "loading" ? serverKnow ?? null : null);
                       const isExpanded = expandedItems.has(item.id);
                       const isLoadingKnowledge = serverKnow === "loading";
+                      const knowledge = !isLoadingKnowledge && serverKnow != null ? serverKnow : null;
 
                       return (
                         <div key={item.id} className="group" data-testid={`row-food-pantry-item-${item.id}`}>

@@ -19,7 +19,7 @@ import {
   type PlannerComplianceContext,
   type CompliableMeal,
 } from '../lib/planner-compliance.js';
-import { shouldExcludeRecipe } from '../lib/dietRules.js';
+import { shouldExcludeRecipe } from '../../shared/dietRules.js';
 
 let passed = 0;
 let failed = 0;
