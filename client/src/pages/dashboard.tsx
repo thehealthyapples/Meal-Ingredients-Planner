@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback } from "react";
 import { useUser } from "@/hooks/use-user";
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 import HomeIntelligenceCompanion from "@/components/HomeIntelligenceCompanion";
 import { useMealsSummary } from "@/hooks/use-meals-summary";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,9 +15,8 @@ import {
   Utensils, ShoppingBasket, Plus, ArrowRight,
   CalendarDays, CheckCircle2, Circle, Apple, Scale,
   Sparkles, Moon, Zap, Activity, Droplet, Heart, ClipboardCheck,
-  LayoutDashboard,
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { api } from "@shared/routes";
 import { apiRequest } from "@/lib/queryClient";
@@ -196,32 +195,80 @@ export default function Dashboard() {
   }, [shoppingListItems]);
 
   const displayName = user?.displayName || user?.username || "there";
+  const [, navigate] = useLocation();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = useCallback(() => {
+    if (searchQuery.trim()) {
+      navigate(`/cookbook?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery("");
+    }
+  }, [searchQuery, navigate]);
 
   return (
     <>
-    <PageHeader
+    <WorkspaceHeader
       realm="home"
       title="Dashboard"
-      icon={<LayoutDashboard className="h-5 w-5" />}
-      context="Your health journey at a glance"
+      wide
+      titleTestId="text-dashboard-title"
+      search={{
+        placeholder: "Search meals...",
+        value: searchQuery,
+        onChange: setSearchQuery,
+        onSubmit: handleSearch,
+      }}
       actions={
-        <div className="text-right" data-testid="text-welcome">
-          <p className="text-sm font-medium realm-title leading-snug">
-            {getGreeting()}, {displayName.split("@")[0]}
-          </p>
-          <p className="text-xs mt-0.5 realm-title opacity-60 leading-snug">
-            {mealsPlannedThisWeek > 0
-              ? `${mealsPlannedThisWeek} meal${mealsPlannedThisWeek !== 1 ? "s" : ""} planned this week · ${userMeals.length} in your collection`
-              : userMeals.length > 0
-                ? `${userMeals.length} meal${userMeals.length !== 1 ? "s" : ""} in your collection`
-                : "Start building your healthy meal collection"}
-          </p>
+        <p className="text-sm font-medium realm-title leading-none hidden sm:block whitespace-nowrap" data-testid="text-welcome">
+          {getGreeting()}, {displayName.split("@")[0]}
+        </p>
+      }
+      contextBar={
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <Link href="/my-diary">
+            <button
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium realm-banner-btn shrink-0 transition-colors"
+              data-testid="button-dashboard-log-food"
+            >
+              <Utensils className="h-3.5 w-3.5" />
+              <span>Log Food</span>
+            </button>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setSignalsOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 shrink-0 transition-colors"
+            data-testid="button-dashboard-log-signals"
+          >
+            <Activity className="h-3.5 w-3.5" />
+            <span>Log Signals</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setWeightOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 shrink-0 transition-colors"
+            data-testid="button-dashboard-log-weight"
+          >
+            <Scale className="h-3.5 w-3.5" />
+            <span>Log Weight</span>
+          </button>
+          <Link href="/planner">
+            <button
+              type="button"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 shrink-0 transition-colors"
+              data-testid="button-dashboard-plan-week"
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+              <span>Plan Week</span>
+            </button>
+          </Link>
         </div>
       }
     />
     <div>
 
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-4 space-y-4">
+      <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-3 space-y-4">
         <motion.div variants={container} initial="hidden" animate="show" className="space-y-4">
 
           {/* ── Home Intelligence Companion ── */}

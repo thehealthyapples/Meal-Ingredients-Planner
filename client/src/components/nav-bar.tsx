@@ -13,7 +13,7 @@ import {
   LogOut, ShieldCheck, Star,
   Sliders, Search, ChevronLeft, ChevronRight,
   Microscope, BookOpen, Heart, ChefHat,
-  User, ListPlus,
+  User, BarChart3,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -32,30 +32,42 @@ function PantryIcon({ className }: { className?: string }) {
   );
 }
 
-// Sidebar nav - high-frequency items (Dashboard, Search, Basket, Profile) live in the top bar
 const NAV_ITEMS_MAIN = [
-  { href: "/shopping-list", label: "Quick List", icon: ListPlus },
-  { href: "/cookbook", label: "Cookbook", icon: ChefHat },
   { href: "/planner", label: "Planner", icon: CalendarDays },
+  { href: "/plant-diversity", label: "Nutrition", icon: BarChart3 },
+  { href: "/cookbook", label: "Cookbook", icon: ChefHat },
   { href: "/pantry", label: "Pantry", icon: PantryIcon },
   { href: "/analyser", label: "Analyser", icon: Microscope },
-  { href: "/shopping-workspace?stage=shop", label: "Shop", icon: ShoppingCart },
-  { href: "/my-diary", label: "My Diary", icon: BookOpen },
+  { href: "/shopping-workspace", label: "Shopping", icon: ShoppingCart },
+  { href: "/my-diary", label: "Diary", icon: BookOpen },
 ];
 
-// Mobile bottom nav - 7 items; Quick List leads on the left
-// hasWorkspace: true → long-press opens that page's workspace drawer
+// Mobile bottom nav — Shopping accessed via basket icon in header; Dashboard via THA logo.
+// hasWorkspace: true → repeat-tap on active page opens that page's workspace drawer
 const MOBILE_BOTTOM_ITEMS = [
-  { href: "/shopping-list", label: "List", icon: ListPlus, hasWorkspace: true },
-  { href: "/cookbook", label: "Cookbook", icon: ChefHat, hasWorkspace: true },
   { href: "/planner", label: "Planner", icon: CalendarDays, hasWorkspace: true },
+  { href: "/plant-diversity", label: "Nutrition", icon: BarChart3, hasWorkspace: false },
+  { href: "/cookbook", label: "Cookbook", icon: ChefHat, hasWorkspace: true },
   { href: "/pantry", label: "Pantry", icon: PantryIcon, hasWorkspace: true },
   { href: "/analyser", label: "Analyser", icon: Microscope, hasWorkspace: true },
   { href: "/my-diary", label: "Diary", icon: BookOpen },
-  { href: "/shopping-workspace?stage=shop", label: "Shop", icon: ShoppingCart },
 ];
 
 const REALM_STYLES: Record<string, { active: string; hover: string; inactive: string; mobileActive: string; mobileInactive: string }> = {
+  "/dashboard": {
+    active:         "bg-[hsl(42,45%,88%)] text-[hsl(42,58%,20%)] dark:bg-[hsl(42,22%,17%)] dark:text-[hsl(42,48%,72%)]",
+    hover:          "hover:bg-[hsl(42,38%,93%)] hover:text-[hsl(42,52%,28%)] dark:hover:bg-[hsl(42,14%,14%)] dark:hover:text-[hsl(42,38%,60%)]",
+    inactive:       "bg-[hsl(42,26%,94%)] text-[hsl(42,32%,44%)] dark:bg-[hsl(42,12%,12%)] dark:text-[hsl(42,20%,46%)]",
+    mobileActive:   "bg-[hsl(42,45%,86%)] text-[hsl(42,58%,20%)] dark:bg-[hsl(42,22%,19%)] dark:text-[hsl(42,48%,72%)]",
+    mobileInactive: "bg-[hsl(42,28%,92%)] text-[hsl(42,28%,44%)] dark:bg-[hsl(42,12%,14%)] dark:text-[hsl(42,16%,44%)]",
+  },
+  "/plant-diversity": {
+    active:         "bg-[hsl(145,22%,88%)] text-[hsl(145,36%,20%)] dark:bg-[hsl(145,14%,17%)] dark:text-[hsl(145,26%,70%)]",
+    hover:          "hover:bg-[hsl(145,16%,92%)] hover:text-[hsl(145,30%,26%)] dark:hover:bg-[hsl(145,10%,14%)] dark:hover:text-[hsl(145,20%,58%)]",
+    inactive:       "bg-[hsl(145,10%,94%)] text-[hsl(145,20%,42%)] dark:bg-[hsl(145,8%,12%)] dark:text-[hsl(145,12%,46%)]",
+    mobileActive:   "bg-[hsl(145,22%,86%)] text-[hsl(145,36%,20%)] dark:bg-[hsl(145,14%,19%)] dark:text-[hsl(145,26%,70%)]",
+    mobileInactive: "bg-[hsl(145,12%,92%)] text-[hsl(145,16%,44%)] dark:bg-[hsl(145,8%,14%)] dark:text-[hsl(145,10%,44%)]",
+  },
   "/cookbook": {
     // wheat amber - warm baked honey tones
     active:         "bg-[hsl(38,50%,87%)] text-[hsl(38,65%,20%)] dark:bg-[hsl(38,28%,17%)] dark:text-[hsl(38,55%,78%)]",
@@ -117,6 +129,10 @@ const REALM_STYLES: Record<string, { active: string; hover: string; inactive: st
 export type SidebarContextValue = { isCollapsed: boolean };
 export const SidebarContext = createContext<SidebarContextValue>({ isCollapsed: false });
 export const useSidebar = () => useContext(SidebarContext);
+
+export interface AppRealmContextValue { realm: string; setRealm: (r: string) => void; }
+export const AppRealmContext = createContext<AppRealmContextValue>({ realm: "home", setRealm: () => {} });
+export function useAppRealm() { return useContext(AppRealmContext); }
 
 function useSidebarState() {
   const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -440,7 +456,7 @@ export function TopBar() {
               <TooltipTrigger asChild>
                 <Link
                   href="/shopping-workspace"
-                  className={`relative flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket" ? "bg-[hsl(62,28%,86%)] text-[hsl(62,38%,22%)] dark:bg-[hsl(62,15%,17%)] dark:text-[hsl(62,28%,68%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+                  className={`relative flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket" ? "bg-[hsl(190,30%,86%)] text-[hsl(190,42%,20%)] dark:bg-[hsl(190,18%,17%)] dark:text-[hsl(190,32%,72%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
                   aria-label="Shopping"
                   data-testid="button-topbar-basket"
                 >
@@ -494,7 +510,7 @@ export function TopBar() {
           <div className="flex items-center">
             <Link
               href="/shopping-workspace"
-              className={`relative flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket" ? "text-[hsl(62,38%,22%)] dark:text-[hsl(62,28%,68%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+              className={`relative flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket" ? "text-[hsl(190,42%,20%)] dark:text-[hsl(190,32%,72%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
               aria-label="Shopping"
               data-testid="button-topbar-basket"
             >
@@ -550,6 +566,26 @@ export function TopBar() {
   );
 }
 
+/* ── Brand Banner — full-width top row, desktop only ── */
+export function BrandBanner() {
+  const { realm } = useAppRealm();
+  return (
+    <div
+      data-realm={realm}
+      className="hidden md:flex items-center shrink-0 realm-header-bg border-b realm-header-border h-11 px-4"
+      data-testid="brand-banner"
+    >
+      <Link href="/dashboard" aria-label="Dashboard" className="flex items-center">
+        <img
+          src="/logo-long.png"
+          alt="The Healthy Apples"
+          className="max-h-7 h-auto w-auto object-contain opacity-90 hover:opacity-100 transition-opacity"
+        />
+      </Link>
+    </div>
+  );
+}
+
 /* ── Desktop Sidebar ── */
 export function DesktopSidebar() {
   const [location] = useLocation();
@@ -562,7 +598,7 @@ export function DesktopSidebar() {
   return (
     <>
       <aside
-        className={`hidden md:flex flex-col relative flex-shrink-0 h-full bg-card/60 backdrop-blur-md border-r border-border transition-all duration-200 overflow-x-hidden overflow-y-hidden ${
+        className={`hidden md:flex flex-col relative flex-shrink-0 h-full bg-card/60 backdrop-blur-md transition-all duration-200 overflow-x-hidden overflow-y-hidden ${
           isCollapsed ? "w-16" : "w-[220px]"
         }`}
         data-testid="desktop-sidebar"
@@ -578,18 +614,19 @@ export function DesktopSidebar() {
           }}
         />
 
-        <div className="relative z-10 flex flex-col flex-1 h-full overflow-hidden">
-          {/* Collapse toggle */}
-          <div className={`flex ${isCollapsed ? "justify-center" : "justify-end"} px-2 pt-3 pb-1 shrink-0`}>
+        {/* Nav body — sidebar starts directly below brand banner */}
+        <div className="relative z-10 flex flex-col flex-1 h-full overflow-hidden border-r border-border">
+          {/* Collapse toggle — at the top of the sidebar nav */}
+          <div className={`flex shrink-0 px-2 py-1.5 ${isCollapsed ? "justify-center" : "justify-end"}`}>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={toggle}
-                  className="flex items-center justify-center h-7 w-7 rounded-md hover:bg-accent/60 text-muted-foreground transition-colors"
+                  className="flex items-center justify-center h-6 w-6 rounded-md hover:bg-accent/60 text-muted-foreground transition-colors"
                   data-testid="button-sidebar-toggle"
                   aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >
-                  {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+                  {isCollapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
                 </button>
               </TooltipTrigger>
               <TooltipContent side="right">

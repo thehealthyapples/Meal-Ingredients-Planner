@@ -65,7 +65,7 @@ function CompanionRow({
 export default function HomeIntelligenceCompanion() {
   const { user } = useUser();
 
-  const { data, isLoading } = useQuery<HomeIntelligenceData>({
+  const { data, isPending: isLoading } = useQuery<HomeIntelligenceData>({
     queryKey: ["/api/home/intelligence"],
     enabled: !!user,
     staleTime: 5 * 60 * 1000,

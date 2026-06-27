@@ -94,7 +94,7 @@ export default function SharedPlanPage() {
   const { user } = useUser();
   const { toast } = useToast();
 
-  const { data: plan, isLoading, isError } = useQuery<SharedPlan>({
+  const { data: plan, isPending: isLoading, isError } = useQuery<SharedPlan>({
     queryKey: ["/api/shared", token],
     queryFn: async () => {
       const res = await fetch(`/api/shared/${token}`);

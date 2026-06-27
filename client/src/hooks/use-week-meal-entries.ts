@@ -39,10 +39,10 @@ export interface UseWeekMealEntriesResult {
 export function useWeekMealEntries(): UseWeekMealEntriesResult {
   const activeWeek = loadActiveWeek();
 
-  const { data: fullPlanner = [], isLoading: plannerLoading } = useQuery<FullWeek[]>({
+  const { data: fullPlanner = [], isPending: plannerLoading } = useQuery<FullWeek[]>({
     queryKey: ["/api/planner/full"],
   });
-  const { data: meals = [], isLoading: mealsLoading } = useQuery<Meal[]>({
+  const { data: meals = [], isPending: mealsLoading } = useQuery<Meal[]>({
     queryKey: ["/api/meals"],
   });
 

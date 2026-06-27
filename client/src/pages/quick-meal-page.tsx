@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, X, ShoppingBasket, Loader2, ChefHat, Leaf, Save, Globe, UtensilsCrossed, Snowflake, Check, ChevronDown, ChevronUp, Utensils, ImageOff, Camera, Store } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { getWholeFoodAlternative } from "@/lib/whole-food-alternatives";
@@ -119,7 +119,7 @@ export default function QuickMealPage() {
     queryKey: [api.meals.list.path],
   });
 
-  const { data: existingMeal, isLoading: isLoadingMeal } = useQuery<Meal>({
+  const { data: existingMeal, isPending: isLoadingMeal } = useQuery<Meal>({
     queryKey: [api.meals.list.path, editId],
     queryFn: async () => {
       const res = await fetch(`/api/meals/${editId}`, { credentials: "include" });
@@ -376,33 +376,22 @@ export default function QuickMealPage() {
 
   return (
     <>
-    <PageHeader
+    <WorkspaceHeader
       realm="cookbook"
       title={editId ? "Edit Meal" : "Build a Meal"}
-      icon={<ChefHat className="h-5 w-5" />}
+      wide
     />
-    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe">
+    <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe">
 
       {isLoadingMeal ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       ) : (
-        <>
-          <Card className="mb-4">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Meal name (optional)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Input
-                placeholder="e.g. Sunday roast dinner"
-                value={mealName}
-                onChange={(e) => setMealName(e.target.value)}
-                data-testid="input-quick-meal-name"
-              />
-            </CardContent>
-          </Card>
+        <div className="lg:grid lg:grid-cols-12 lg:gap-6 lg:items-start">
 
+          {/* Left: components builder — primary task area */}
+          <div className="lg:col-span-7">
           <Card className="mb-4">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">Add components</CardTitle>
@@ -680,39 +669,64 @@ export default function QuickMealPage() {
               )}
             </CardContent>
           </Card>
-
-          <div className="flex flex-col gap-2">
-            <Button
-              className="w-full"
-              disabled={parts.length === 0 || isWorking}
-              onClick={() => createBasketMutation.mutate()}
-              data-testid="button-create-basket-list"
-            >
-              {createBasketMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <ShoppingBasket className="h-4 w-4 mr-2" />
-              )}
-              {editId ? "Update & Add to Basket" : "Create Basket List"}
-              {parts.length > 0 && ` (${parts.length} item${parts.length === 1 ? "" : "s"})`}
-            </Button>
-
-            <Button
-              variant="outline"
-              className="w-full"
-              disabled={parts.length === 0 || isWorking}
-              onClick={() => saveToMealsMutation.mutate()}
-              data-testid="button-save-to-meals"
-            >
-              {saveToMealsMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              {editId ? "Save Changes" : "Save to Cookbook"}
-            </Button>
           </div>
-        </>
+
+          {/* Right: meal name + actions — sticky sidebar on desktop */}
+          <div className="lg:col-span-5 lg:sticky lg:top-[72px]">
+            <Card className="mb-4">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium text-muted-foreground">Meal name (optional)</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Input
+                  placeholder="e.g. Sunday roast dinner"
+                  value={mealName}
+                  onChange={(e) => setMealName(e.target.value)}
+                  data-testid="input-quick-meal-name"
+                />
+              </CardContent>
+            </Card>
+
+            <div className="flex flex-col gap-2 mb-4">
+              <Button
+                className="w-full"
+                disabled={parts.length === 0 || isWorking}
+                onClick={() => createBasketMutation.mutate()}
+                data-testid="button-create-basket-list"
+              >
+                {createBasketMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <ShoppingBasket className="h-4 w-4 mr-2" />
+                )}
+                {editId ? "Update & Add to Basket" : "Create Basket List"}
+                {parts.length > 0 && ` (${parts.length} item${parts.length === 1 ? "" : "s"})`}
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                disabled={parts.length === 0 || isWorking}
+                onClick={() => saveToMealsMutation.mutate()}
+                data-testid="button-save-to-meals"
+              >
+                {saveToMealsMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                {editId ? "Save Changes" : "Save to Cookbook"}
+              </Button>
+            </div>
+
+            {parts.length > 0 && (
+              <p className="text-xs text-muted-foreground text-center px-2">
+                {parts.length} component{parts.length !== 1 ? "s" : ""} added
+              </p>
+            )}
+          </div>
+
+        </div>
       )}
 
       <ProductPickerSheet

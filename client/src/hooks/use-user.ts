@@ -19,7 +19,7 @@ function perfMeasure(name: string, from: string, to: string): number {
 export function useUser() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { data: user, isLoading, error } = useQuery<User | null>({
+  const { data: user, isPending: isLoading, error } = useQuery<User | null>({
     queryKey: ["/api/user"],
     queryFn: async () => {
       const res = await fetch("/api/user", { credentials: "include" });

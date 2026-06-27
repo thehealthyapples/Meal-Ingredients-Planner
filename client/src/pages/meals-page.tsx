@@ -42,7 +42,7 @@ import { shouldExcludeRecipe } from "@shared/dietRules";
 import { useUser } from "@/hooks/use-user";
 import { scoreMealSearch } from "@shared/food-synonyms";
 import { writePendingIngredients, appendPendingIngredient } from "@/lib/quick-list";
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 import { CookbookWorkspacePanel, type CookbookWorkspaceMode } from "@/components/CookbookWorkspacePanel";
 import { CookbookMealIntelligenceStrip } from "@/components/CookbookMealIntelligenceStrip";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
@@ -2602,9 +2602,9 @@ export default function MealsPage() {
       writePendingIngredients(payload as Parameters<typeof writePendingIngredients>[0]);
     } catch {}
     if (isFromList) {
-      navigate("/shopping-list");
+      navigate("/shopping-workspace");
     } else {
-      toast({ title: "Added to your list", description: "Open List to see and edit your quick list." });
+      toast({ title: "Added to Shopping", description: "Open Shopping to review your list." });
     }
   }, [navigate, isFromList, toast]);
 
@@ -3322,49 +3322,51 @@ export default function MealsPage() {
 
   return (
     <>
-    <PageHeader
+    <WorkspaceHeader
       title="Cookbook"
-      icon={<ChefHat className="h-5 w-5" />}
       realm="cookbook"
       wide
       titleTestId="text-meals-title"
-      context={<span>Create, search, import and organise your recipes.</span>}
-      center={
-        <div className="flex items-center gap-2">
-          {/* Group tabs: desktop always visible; mobile access via workspace drawer Browse section */}
-          <div className="hidden sm:flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40" role="tablist">
-            {([
-              { id: "cookbook", label: "My Cookbook", Icon: ChefHat },
-              { id: "recipes", label: "Recipes", Icon: Globe },
-              { id: "freezer", label: "My Freezer", Icon: Snowflake },
-              { id: "packaged", label: "Packaged", Icon: Package },
-            ] as const).map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                role="tab"
-                aria-selected={activeGroups.has(id)}
-                onClick={() => toggleGroup(id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
-                  activeGroups.has(id)
-                    ? "shadow-sm realm-banner-btn"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-                data-testid={`button-filter-${id}`}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-                {id === "freezer" && freezerMeals.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">
-                    {freezerMeals.reduce((sum, f) => sum + f.remainingPortions, 0)}
-                  </Badge>
-                )}
-              </button>
-            ))}
-          </div>
+      search={{
+        placeholder: "Search recipes...",
+        value: searchTerm,
+        onChange: setSearchTerm,
+        onSubmit: () => {},
+      }}
+      contextBar={
+        /* Group tabs: desktop always visible; mobile access via workspace drawer Browse section */
+        <div className="hidden sm:flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40 overflow-x-auto no-scrollbar" role="tablist">
+          {([
+            { id: "cookbook", label: "My Cookbook", Icon: ChefHat },
+            { id: "recipes", label: "Recipes", Icon: Globe },
+            { id: "freezer", label: "My Freezer", Icon: Snowflake },
+            { id: "packaged", label: "Packaged", Icon: Package },
+          ] as const).map(({ id, label, Icon }) => (
+            <button
+              key={id}
+              role="tab"
+              aria-selected={activeGroups.has(id)}
+              onClick={() => toggleGroup(id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
+                activeGroups.has(id)
+                  ? "shadow-sm realm-banner-btn"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+              data-testid={`button-filter-${id}`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+              {id === "freezer" && freezerMeals.length > 0 && (
+                <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">
+                  {freezerMeals.reduce((sum, f) => sum + f.remainingPortions, 0)}
+                </Badge>
+              )}
+            </button>
+          ))}
         </div>
       }
       actions={
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
           <input
             ref={scanFileRef}
             type="file"
@@ -3403,7 +3405,7 @@ export default function MealsPage() {
         </div>
       }
     />
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 overflow-x-clip" data-realm="cookbook">
+    <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 overflow-x-clip" data-realm="cookbook">
       {/* Planner import context banner */}
       {plannerImportCtx && (
         <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2.5 mb-4">
@@ -3436,8 +3438,8 @@ export default function MealsPage() {
           </p>
           <button
             className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            onClick={() => navigate("/shopping-list")}
-            aria-label="Back to list"
+            onClick={() => navigate("/shopping-workspace")}
+            aria-label="Back to shopping"
             data-testid="button-back-to-list"
           >
             <X className="h-3.5 w-3.5" />
@@ -3555,7 +3557,7 @@ export default function MealsPage() {
 
           {webSearchResults.length > 0 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-2">
                 <AnimatePresence mode="popLayout">
                   {webSearchResults.map((recipe) => {
                     const isImporting = webImportingIds.has(recipe.id);
@@ -3811,7 +3813,7 @@ export default function MealsPage() {
       )}
 
       {isLoading ? (
-        <div className={viewMode === 'grid' ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2" : "flex flex-col gap-2"}>
+        <div className={viewMode === 'grid' ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-2" : "flex flex-col gap-2"}>
           {[1, 2, 3, 4].map(i => (
             <div key={i} className={`bg-muted animate-pulse rounded-md ${viewMode === 'grid' ? 'h-28' : 'h-16'}`} />
           ))}
@@ -3819,7 +3821,7 @@ export default function MealsPage() {
       ) : (
         <AnimatePresence>
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-2">
               {visibleMeals?.map((meal, index) => {
                 const cat = getMealDisplayCategory(meal);
                 const prevCat = index > 0 ? getMealDisplayCategory(visibleMeals[index - 1]) : null;
@@ -4186,7 +4188,7 @@ export default function MealsPage() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-2">
               {householdVariants.map(variant => {
                 const originalName = variant.householdSafeFor?.originalMealName ?? null;
                 return (
@@ -4305,7 +4307,7 @@ export default function MealsPage() {
               </div>
             </Card>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-2">
               {freezerMeals.map((frozen, index) => {
                 const meal = meals?.find(m => m.id === frozen.mealId);
                 const portionPercent = frozen.totalPortions > 0 ? (frozen.remainingPortions / frozen.totalPortions) * 100 : 0;
@@ -4483,7 +4485,7 @@ export default function MealsPage() {
 
           {productResults.length > 0 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-2">
                 <AnimatePresence mode="popLayout">
                   {productResults.map((product) => {
                     const productKey = product.barcode || product.product_name;
@@ -4723,7 +4725,7 @@ export default function MealsPage() {
 
           {webSearchResults.length > 0 && (
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-4">
                 <AnimatePresence mode="popLayout">
                   {webSearchResults.map((recipe) => {
                     const isImporting = webImportingIds.has(recipe.id);

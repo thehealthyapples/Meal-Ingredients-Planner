@@ -70,7 +70,7 @@ interface TemplatePreviewProps {
 }
 
 function TemplatePreview({ templateId, importMode, onImport, isImporting, canImport }: TemplatePreviewProps) {
-  const { data: template, isLoading } = useQuery<TemplateWithItems>({
+  const { data: template, isPending: isLoading } = useQuery<TemplateWithItems>({
     queryKey: ["/api/plan-templates", templateId],
     queryFn: async () => {
       const res = await fetch(`/api/plan-templates/${templateId}`);
@@ -229,12 +229,12 @@ export function TemplatesPanel({ open, onClose, user, inline }: TemplatePanelPro
   const [adminNewSeason, setAdminNewSeason] = useState("");
   const [adminNewDesc, setAdminNewDesc] = useState("");
 
-  const { data: library, isLoading: libraryLoading } = useQuery<LibraryResponse>({
+  const { data: library, isPending: libraryLoading } = useQuery<LibraryResponse>({
     queryKey: ["/api/plan-templates/library"],
     enabled: open,
   });
 
-  const { data: adminTemplates, isLoading: adminLoading } = useQuery<MealPlanTemplate[]>({
+  const { data: adminTemplates, isPending: adminLoading } = useQuery<MealPlanTemplate[]>({
     queryKey: ["/api/admin/plan-templates"],
     enabled: open && isAdmin,
   });

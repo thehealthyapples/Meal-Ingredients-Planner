@@ -66,11 +66,20 @@
 
   /* Shared page layout system */
   --topbar-h: 60px; /* mobile: h-14 (56px) + py-0.5 (4px) */
+
+  /* Adaptive workspace layout */
+  --ws-col-label: 100px; /* planner row-label column width */
 }
 
 @media (min-width: 768px) {
   :root {
     --topbar-h: 44px; /* desktop: h-10 buttons (40px) + py-0.5 (4px) */
+  }
+}
+
+@media (min-width: 1536px) {
+  :root {
+    --ws-col-label: 120px;
   }
 }
 
@@ -202,6 +211,12 @@
   --realm-bg:     hsl(132,18%,91%);
   --realm-border: hsl(132,14%,82%);
 }
+[data-realm="nutrition"] {
+  --realm-accent: hsl(145,32%,36%);
+  --realm-text:   hsl(145,36%,16%);
+  --realm-bg:     hsl(145,22%,90%);
+  --realm-border: hsl(145,18%,81%);
+}
 
 /* Dark mode */
 .dark [data-realm="cookbook"] {
@@ -251,6 +266,12 @@
   --realm-text:   hsl(132,14%,72%);
   --realm-bg:     hsl(132,10%,13%);
   --realm-border: hsl(132,8%,20%);
+}
+.dark [data-realm="nutrition"] {
+  --realm-accent: hsl(145,28%,54%);
+  --realm-text:   hsl(145,28%,74%);
+  --realm-bg:     hsl(145,14%,13%);
+  --realm-border: hsl(145,12%,20%);
 }
 
 /* Realm title colour */

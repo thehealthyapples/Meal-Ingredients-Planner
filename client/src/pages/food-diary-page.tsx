@@ -23,7 +23,7 @@ import {
   Copy, Loader2, TrendingUp, Weight, Moon, Zap, BookOpen,
   Sun, Coffee, UtensilsCrossed, Droplets, Sparkles, ChefHat,
   ChevronDown, Heart, Flame, Target, Activity, Droplet,
-  Gift, ClipboardCheck, PiggyBank, Search, FileDown, Settings,
+  Gift, ClipboardCheck, PiggyBank, Search, FileDown, Settings, SlidersHorizontal,
 } from "lucide-react";
 import { computeMealVariety } from "@shared/canonical/plant-classifier";
 import { DayVarietySummary } from "@/components/nutrition-variety-chips";
@@ -36,7 +36,7 @@ import { apiRequest } from "@/lib/queryClient";
 import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
 import AppleRating from "@/components/AppleRating";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -1234,7 +1234,7 @@ export default function FoodDiaryPage() {
 
   const diaryKey = ["/api/food-diary", date];
 
-  const { data: diary, isLoading } = useQuery<DiaryResponse>({
+  const { data: diary, isPending: isLoading } = useQuery<DiaryResponse>({
     queryKey: diaryKey,
     queryFn: async () => {
       const res = await fetch(`/api/food-diary/${date}`, { credentials: "include" });
@@ -1474,14 +1474,13 @@ export default function FoodDiaryPage() {
 
   return (
     <>
-      <PageHeader
+      <WorkspaceHeader
         title="My Diary"
-        icon={<BookOpen className="h-5 w-5" />}
         realm="diary"
-        context={<span>No pressure. Just clearer choices.</span>}
-        center={
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40" role="tablist">
+        wide
+        contextBar={
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full">
+            <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40 shrink-0" role="tablist">
               {([
                 { id: "diary", label: "Daily Log", Icon: BookOpen },
                 { id: "progress", label: "Progress", Icon: TrendingUp },
@@ -1491,7 +1490,7 @@ export default function FoodDiaryPage() {
                   role="tab"
                   aria-selected={activeTab === id}
                   onClick={() => setActiveTab(id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium transition-all ${
                     activeTab === id
                       ? "shadow-sm realm-banner-btn"
                       : "text-muted-foreground hover:text-foreground"
@@ -1504,68 +1503,65 @@ export default function FoodDiaryPage() {
               ))}
             </div>
             {activeTab === "diary" && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 shrink-0">
                 <button
                   type="button"
-                  className="flex items-center justify-center h-8 w-8 rounded-md border border-input bg-background hover:bg-accent text-sm"
+                  className="flex items-center justify-center h-7 w-7 rounded-md border border-input bg-background hover:bg-accent text-sm"
                   onClick={prevDay}
                   data-testid="button-prev-day"
                 >
                   <ChevronLeft className="h-3.5 w-3.5" />
                 </button>
-                <span className="text-sm font-medium px-2 min-w-[120px] text-center" data-testid="text-diary-date">
+                <span className="text-xs font-medium px-2 min-w-[100px] text-center" data-testid="text-diary-date">
                   {formatDisplayDate(date)}
                 </span>
                 <button
                   type="button"
-                  className="flex items-center justify-center h-8 w-8 rounded-md border border-input bg-background hover:bg-accent text-sm"
+                  className="flex items-center justify-center h-7 w-7 rounded-md border border-input bg-background hover:bg-accent text-sm"
                   onClick={nextDay}
                   data-testid="button-next-day"
                 >
                   <ChevronRight className="h-3.5 w-3.5" />
                 </button>
                 {!isToday && (
-                  <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={goToday} data-testid="button-today">
+                  <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={goToday} data-testid="button-today">
                     <Calendar className="h-3 w-3 mr-1" />Today
                   </Button>
                 )}
               </div>
             )}
+            {activeTab === "progress" && (
+              <div className="flex items-center gap-1 shrink-0">
+                {(["week", "month", "year"] as ProgressRange[]).map((r) => (
+                  <Button
+                    key={r}
+                    variant={progressRange === r ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 text-xs capitalize realm-banner-btn px-2.5"
+                    onClick={() => setProgressRange(r)}
+                    data-testid={`button-range-${r}`}
+                  >
+                    {r.charAt(0).toUpperCase() + r.slice(1)}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
-        }
-        controlBar={
-          activeTab === "progress" ? (
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-muted-foreground">Show:</span>
-              {(["week", "month", "year"] as ProgressRange[]).map((r) => (
-                <Button
-                  key={r}
-                  variant={progressRange === r ? "default" : "outline"}
-                  size="sm"
-                  className="h-8 text-xs capitalize realm-banner-btn"
-                  onClick={() => setProgressRange(r)}
-                  data-testid={`button-range-${r}`}
-                >
-                  {r.charAt(0).toUpperCase() + r.slice(1)}
-                </Button>
-              ))}
-            </div>
-          ) : undefined
         }
         actions={
           /* Desktop only — mobile access via Diary workspace drawer → Settings */
           <button
             type="button"
-            className="hidden md:flex items-center justify-center p-1 rounded-md hover:bg-accent/40 transition-colors"
+            className="hidden md:flex items-center justify-center h-8 w-8 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
             onClick={() => setDiarySettingsOpen(true)}
             aria-label="Diary settings"
             data-testid="button-diary-settings"
           >
-            <img src={thaAppleSrc} alt="" className="h-9 w-9 object-contain opacity-70 hover:opacity-100 transition-opacity" />
+            <SlidersHorizontal className="h-4 w-4" />
           </button>
         }
       />
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6" data-realm="diary">
+      <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6" data-realm="diary">
 
         {/* UPF awareness banner */}
         {!upfDismissed && (

@@ -114,7 +114,7 @@ export default function AdminUsersPage() {
 
   const queryKey = ["/api/admin/users", { query: activeQuery, limit: PAGE_SIZE, offset }];
 
-  const { data, isLoading } = useQuery<UsersResponse>({
+  const { data, isPending: isLoading } = useQuery<UsersResponse>({
     queryKey,
     queryFn: async () => {
       const params = new URLSearchParams({

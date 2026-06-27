@@ -13,7 +13,7 @@ import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { FirstVisitHint } from "@/components/first-visit-hint";
 import thaAppleUrl from "@/assets/icons/tha-apple.png";
 import RetailerLogo from "@/components/RetailerLogo";
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -396,14 +396,13 @@ export default function ListPage() {
 
   return (
     <>
-      <PageHeader
+      <WorkspaceHeader
         title="Quick List"
-        icon={<NotepadText className="h-5 w-5" />}
         realm="list"
+        wide
         titleTestId="text-list-title"
-        context="Popping to the shop? Type, paste or import from Cookbook for a quick list - with all the benefits of The Healthy Apples flow."
       />
-      <div className="sm:max-w-screen-xl sm:mx-auto px-3 sm:px-6 lg:px-8 pt-1 sm:pt-6 sm:space-y-5 flex flex-col flex-1 min-h-0 sm:flex-none">
+      <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-1 sm:pt-6 sm:space-y-5 flex flex-col flex-1 min-h-0 sm:flex-none">
 
       {/* ── First-visit hint ─────────────────────────────────────────────── */}
       <FirstVisitHint

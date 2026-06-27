@@ -24,7 +24,7 @@ const MICRO_INSIGHTS = [
   "Oily fish a couple of times a week is one of the most widely supported dietary habits.",
   "Seeds like chia and flaxseed are small but surprisingly rich in plant-based omega-3.",
 ];
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 import { PantryKnowledgeHub } from "@/components/PantryKnowledgeHub";
 import PantryIntelligencePanel from "@/components/PantryIntelligencePanel";
@@ -181,7 +181,7 @@ const HOME_CAT_EMPTY: Record<HomeCat, string> = {
 
 
 // ── Category tab buttons ──────────────────────────────────────────────────────
-// Used in the page banner (via PageHeader center/actions) and not inside cards.
+// Used in the WorkspaceHeader contextBar and not inside cards.
 // Selected = realm-bg/realm-text; unselected = muted foreground.
 
 function CategoryTabs<T extends string>({
@@ -230,11 +230,13 @@ function FoodPantrySection({
   isLoading,
   activeCategory,
   onCategoryChange,
+  searchFilter,
 }: {
   items: PantryItem[];
   isLoading: boolean;
   activeCategory: FoodCat;
   onCategoryChange: (c: FoodCat) => void;
+  searchFilter?: string;
 }) {
   const { toast } = useToast();
   const qclient = useQueryClient();
@@ -308,9 +310,12 @@ function FoodPantrySection({
   const allFoodItems = items.filter(i => foodCatValues.includes(i.category));
   const activeItems = allFoodItems.filter(i => i.category === activeCategory);
 
+  // searchFilter (from WorkspaceHeader) takes priority over internal query for filtering
+  const activeFilter = (searchFilter ?? "").trim() || query.trim();
+
   const displayedItems = useMemo(() => {
-    if (!query.trim()) return activeItems;
-    const ql = query.toLowerCase();
+    if (!activeFilter) return activeItems;
+    const ql = activeFilter.toLowerCase();
     return activeItems.filter(item => {
       if ((item.displayName || item.ingredientKey).toLowerCase().includes(ql)) return true;
       // WX7 — match canonical terms (benefits, nutrients, attributes, seasonality).
@@ -321,7 +326,7 @@ function FoodPantrySection({
       return know.tags.some(t => t.toLowerCase().includes(ql)) ||
         know.supports.some(s => s.toLowerCase().includes(ql));
     });
-  }, [activeItems, query, serverKnowledge, searchTerms]);
+  }, [activeItems, activeFilter, serverKnowledge, searchTerms]);
 
   // Called when banner tab changes
   const handleCategoryChange = (cat: FoodCat) => {
@@ -441,17 +446,16 @@ function FoodPantrySection({
         )}
       </div>
 
-      {/* Unified search + add — single field drives live filtering and new-item add */}
+      {/* Add ingredient — search lives in the Workspace Header */}
       <div className="flex gap-2 mb-3">
         <div className="relative flex-1 min-w-0">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/40 pointer-events-none" />
           <input
             type="text"
-            placeholder={`Search ${catLabel} or add ingredient…`}
+            placeholder={`Add to ${catLabel}…`}
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleAdd()}
-            className="w-full pl-8 pr-8 py-2 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full pl-3 pr-8 py-2 text-sm rounded-md border border-border bg-background text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-ring"
             data-testid="input-food-pantry-ingredient"
           />
           {query && (
@@ -483,9 +487,9 @@ function FoodPantrySection({
           <Skeleton className="h-6 w-full" />
           <Skeleton className="h-6 w-3/4" />
         </div>
-      ) : query.trim() && displayedItems.length === 0 ? (
+      ) : activeFilter && displayedItems.length === 0 ? (
         <p className="text-sm text-muted-foreground italic text-center py-6">
-          No items matched "{query}"
+          No items matched "{activeFilter}"
         </p>
       ) : (
         <div
@@ -948,7 +952,7 @@ function HomePantrySection({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PantryPage() {
-  const { data: items = [], isLoading } = useQuery<PantryItem[]>({
+  const { data: items = [], isPending: isLoading } = useQuery<PantryItem[]>({
     queryKey: ["/api/pantry"],
   });
 
@@ -976,57 +980,63 @@ export default function PantryPage() {
   }, []);
 
   const microInsight = MICRO_INSIGHTS[new Date().getDate() % MICRO_INSIGHTS.length];
+  const [pantrySearch, setPantrySearch] = useState("");
 
   return (
     <>
-      <PageHeader
+      <WorkspaceHeader
         title="My Pantry"
-        icon={<PantryIcon className="h-5 w-5" />}
         realm="pantry"
+        wide
         titleTestId="text-pantry-title"
-        center={
-          mode === "inventory" ? (
-            <CategoryTabs
-              categories={FOOD_CATS}
-              active={activeFood}
-              onChange={setActiveFood}
-              className="flex items-center gap-1 rounded-lg bg-muted/40 p-1"
-            />
-          ) : undefined
-        }
-        actions={
-          <div className="flex items-center gap-1 rounded-lg bg-muted/40 p-1" role="tablist">
-            <button
-              role="tab"
-              aria-selected={mode === "inventory"}
-              onClick={() => setMode("inventory")}
-              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
-                mode === "inventory" ? "shadow-sm realm-banner-btn" : "text-muted-foreground hover:text-foreground"
-              }`}
-              data-testid="button-pantry-mode-inventory"
-            >
-              Inventory
-            </button>
-            <button
-              role="tab"
-              aria-selected={mode === "explore"}
-              onClick={() => setMode("explore")}
-              className={`px-2.5 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
-                mode === "explore" ? "shadow-sm realm-banner-btn" : "text-muted-foreground hover:text-foreground"
-              }`}
-              data-testid="button-pantry-mode-explore"
-            >
-              Explore
-            </button>
+        search={{
+          placeholder: "Search pantry...",
+          value: pantrySearch,
+          onChange: setPantrySearch,
+          onSubmit: () => {},
+        }}
+        contextBar={
+          <div className="flex items-center gap-2 w-full">
+            <div className="flex items-center gap-1 rounded-lg bg-muted/40 p-1" role="tablist">
+              <button
+                role="tab"
+                aria-selected={mode === "inventory"}
+                onClick={() => setMode("inventory")}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
+                  mode === "inventory" ? "shadow-sm realm-banner-btn" : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="button-pantry-mode-inventory"
+              >
+                Inventory
+              </button>
+              <button
+                role="tab"
+                aria-selected={mode === "explore"}
+                onClick={() => setMode("explore")}
+                className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all whitespace-nowrap ${
+                  mode === "explore" ? "shadow-sm realm-banner-btn" : "text-muted-foreground hover:text-foreground"
+                }`}
+                data-testid="button-pantry-mode-explore"
+              >
+                Explore
+              </button>
+            </div>
+            {mode === "inventory" && (
+              <CategoryTabs
+                categories={FOOD_CATS}
+                active={activeFood}
+                onChange={setActiveFood}
+                className="flex items-center gap-1 rounded-lg bg-muted/40 p-1 overflow-x-auto no-scrollbar"
+              />
+            )}
           </div>
         }
-        context={<span>Your everyday choices live here.</span>}
       />
 
       {/* data-realm propagates CSS custom properties so tabs use var(--realm-bg/text) */}
       <div
         data-realm="pantry"
-        className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 space-y-3"
+        className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 space-y-3"
       >
         <p className="text-xs text-muted-foreground/50 italic" data-testid="text-pantry-micro-insight">
           {microInsight}
@@ -1050,6 +1060,7 @@ export default function PantryPage() {
                 isLoading={isLoading}
                 activeCategory={activeFood}
                 onCategoryChange={setActiveFood}
+                searchFilter={pantrySearch}
               />
             </div>
             <div className="lg:col-span-1">

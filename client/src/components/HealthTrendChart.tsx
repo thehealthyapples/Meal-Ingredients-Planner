@@ -30,7 +30,7 @@ type Period = 7 | 30 | 90;
 export default function HealthTrendChart() {
   const [period, setPeriod] = useState<Period>(30);
 
-  const { data: trends = [], isLoading } = useQuery<HealthTrendData[]>({
+  const { data: trends = [], isPending: isLoading } = useQuery<HealthTrendData[]>({
     queryKey: ["/api/user/health-trends", period],
     queryFn: async () => {
       const res = await fetch(`/api/user/health-trends?days=${period}`, { credentials: "include" });

@@ -107,11 +107,11 @@ export default function AdminRecipeSourcesPage() {
   const [auditOpen, setAuditOpen] = useState(false);
   const [auditPage, setAuditPage] = useState(1);
 
-  const { data: sources, isLoading, isError } = useQuery<RecipeSource[]>({
+  const { data: sources, isPending: isLoading, isError } = useQuery<RecipeSource[]>({
     queryKey: ["/api/admin/recipe-sources"],
   });
 
-  const { data: auditData, isLoading: auditLoading } = useQuery<{ logs: AuditLog[]; total: number; page: number; pageSize: number }>({
+  const { data: auditData, isPending: auditLoading } = useQuery<{ logs: AuditLog[]; total: number; page: number; pageSize: number }>({
     queryKey: ["/api/admin/recipe-audit-logs", auditPage],
     queryFn: () => apiRequest("GET", `/api/admin/recipe-audit-logs?page=${auditPage}&pageSize=20`).then(r => r.json()),
     enabled: auditOpen,

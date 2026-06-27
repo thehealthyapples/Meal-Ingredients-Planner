@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Store, ExternalLink, ShoppingCart, Globe, Loader2 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@shared/routes";
@@ -22,7 +22,7 @@ export default function SupermarketsPage() {
   const { toast } = useToast();
   const [selectedCountry, setSelectedCountry] = useState("ALL");
 
-  const { data: allSupermarkets = [], isLoading } = useQuery<SupermarketLink[]>({
+  const { data: allSupermarkets = [], isPending: isLoading } = useQuery<SupermarketLink[]>({
     queryKey: [api.supermarkets.list.path],
   });
 
@@ -74,15 +74,13 @@ export default function SupermarketsPage() {
 
   return (
     <>
-    <PageHeader
+    <WorkspaceHeader
       realm="list"
       title="Supermarkets"
-      icon={<Store className="h-5 w-5" />}
-      context="Search your basket across major supermarkets"
       wide
       actions={
         <Select value={selectedCountry} onValueChange={setSelectedCountry}>
-          <SelectTrigger className="w-[160px]" data-testid="select-country-filter">
+          <SelectTrigger className="w-[140px] h-8" data-testid="select-country-filter">
             <Globe className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Filter by country" />
           </SelectTrigger>
@@ -96,7 +94,7 @@ export default function SupermarketsPage() {
         </Select>
       }
     />
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe">
+    <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe">
 
       {shoppingItems.length > 0 && (
         <Card className="mb-8">

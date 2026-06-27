@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WX9.5 — Workspace Header Design Spike · The Healthy Apples</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Gallery Shell ────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#f0ebe2;color:#1f2520;min-height:100vh;}
+
+.g-shell{display:flex;flex-direction:column;min-height:100vh;}
+
+/* Top nav */
+.g-nav{background:#fff;border-bottom:1px solid #e3d9cd;padding:0 24px;display:flex;align-items:center;gap:0;position:sticky;top:0;z-index:100;}
+.g-brand{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#26362a;padding:14px 0;white-space:nowrap;margin-right:20px;border-right:1px solid #e3d9cd;padding-right:20px;}
+.g-brand span{color:#5e7a62;}
+.g-tabs{display:flex;gap:2px;padding:8px 0;overflow-x:auto;flex:1;}
+.g-tab{padding:6px 14px;border-radius:7px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:12.5px;font-weight:500;background:transparent;color:#535a54;transition:all .15s;white-space:nowrap;}
+.g-tab:hover{background:#f0ebe2;}
+.g-tab.active{background:#5e7a62;color:#fff;}
+.g-tab.compare-tab{background:#f0ebe2;color:#3d2e1f;border:1px solid #d8ccbf;}
+.g-tab.compare-tab.active{background:#7d6347;color:#fff;border-color:transparent;}
+
+/* Page sub-tabs */
+.g-pagenav{background:#faf7f3;border-bottom:1px solid #e3d9cd;padding:6px 24px;display:flex;align-items:center;gap:6px;}
+.g-pagetab{padding:5px 14px;border-radius:6px;border:none;cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;background:transparent;color:#535a54;transition:all .15s;white-space:nowrap;}
+.g-pagetab:hover{background:#e8e2da;}
+.g-pagetab.active{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.08);color:#1f2520;font-weight:600;}
+.g-pagenav-label{font-size:11px;font-weight:600;color:#9aa09a;text-transform:uppercase;letter-spacing:.05em;margin-right:6px;}
+
+/* Info strip */
+.g-info{background:#fff;border-bottom:1px solid #e3d9cd;padding:10px 24px;display:flex;align-items:center;gap:16px;min-height:44px;}
+.g-info-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;background:#d1ebe7;color:#1a4a44;white-space:nowrap;}
+.g-info-desc{font-size:12.5px;color:#535a54;flex:1;}
+.g-info-effort{font-size:11px;font-weight:600;color:#9aa09a;white-space:nowrap;}
+
+/* Main area */
+.g-main{flex:1;padding:24px;display:flex;flex-direction:column;gap:20px;overflow:auto;}
+
+/* Mock-up frame */
+.mockup-outer{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;}
+.mockup-wrapper{width:720px;height:450px;overflow:hidden;border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,0.14);position:relative;flex-shrink:0;border:1px solid rgba(0,0,0,0.08);}
+.mockup-scale{transform:scale(0.5);transform-origin:top left;width:1440px;height:900px;}
+
+/* Info panels */
+.g-panels{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;max-width:700px;}
+.g-panel{background:#fff;border:1px solid #e3d9cd;border-radius:10px;padding:14px 16px;}
+.g-panel h4{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;color:#9aa09a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.g-panel ul{list-style:none;display:flex;flex-direction:column;gap:5px;}
+.g-panel ul li{font-size:12px;color:#3a4a3c;padding-left:12px;position:relative;line-height:1.4;}
+.g-panel ul li::before{content:'·';position:absolute;left:0;color:#5e7a62;font-weight:700;}
+.g-panel.cons ul li::before{color:#c0704a;}
+
+/* Overview grid */
+.overview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1200px;}
+.ov-card{background:#fff;border:1px solid #e3d9cd;border-radius:12px;overflow:hidden;cursor:pointer;transition:box-shadow .15s;}
+.ov-card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.1);}
+.ov-card-header{height:72px;overflow:hidden;position:relative;}
+.ov-card-header-scale{transform:scale(0.5);transform-origin:top left;width:200%;position:absolute;top:0;left:0;}
+.ov-card-body{padding:14px 16px;}
+.ov-card-label{font-family:'DM Sans',sans-serif;font-size:13.5px;font-weight:700;color:#1f2520;margin-bottom:4px;}
+.ov-card-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d1ebe7;color:#1a4a44;margin-bottom:6px;}
+.ov-card-desc{font-size:12px;color:#535a54;line-height:1.4;}
+
+/* Sections */
+.g-section{display:none;}
+.g-section.active{display:block;}
+
+/* ── THA Mock-up App ──────────────────────────────────────────────── */
+.tha-app{width:1440px;height:900px;position:relative;overflow:hidden;background:hsl(42,27%,95%);font-family:'Inter',sans-serif;color:hsl(120,14%,14%);font-size:14px;line-height:1.5;display:flex;flex-direction:column;}
+.tha-orchard{position:absolute;inset:0;background-image:url('../../../client/public/orchard-bg.png');background-size:cover;background-position:center;opacity:.72;pointer-events:none;z-index:0;}
+.tha-chrome{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;overflow:hidden;}
+
+/* TopBar variants */
+.tha-topbar-current{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;background:rgba(255,255,255,.62);backdrop-filter:blur(12px);border-bottom:1px solid hsl(33,22%,87%);padding:4px 16px;}
+.tha-topbar-frosted{display:flex;align-items:center;background:rgba(255,255,255,.62);backdrop-filter:blur(12px);border-bottom:1px solid hsl(33,22%,87%);padding:0 16px;gap:8px;}
+.tha-topbar-ultra{display:flex;align-items:center;background:rgba(255,255,255,.96);border-bottom:1px solid hsl(33,22%,90%);padding:0 16px;gap:8px;}
+
+/* Icon buttons */
+.tib{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:none;background:transparent;cursor:pointer;color:hsl(120,5%,34%);flex-shrink:0;position:relative;}
+.tib:hover{background:hsl(118,19%,94%);}
+.tib svg{width:18px;height:18px;}
+.tib-sm{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:none;background:transparent;cursor:pointer;color:hsl(120,5%,34%);flex-shrink:0;position:relative;}
+.tib-sm svg{width:15px;height:15px;}
+
+/* Badge */
+.tbadge{position:absolute;top:3px;right:3px;background:hsl(132,14%,44%);color:#fff;font-size:9px;font-weight:700;border-radius:999px;min-width:14px;height:14px;display:flex;align-items:center;justify-content:center;padding:0 2px;pointer-events:none;}
+
+/* Layout */
+.tha-layout{flex:1;display:flex;overflow:hidden;}
+.tha-sidebar{width:220px;flex-shrink:0;background:rgba(255,255,255,.92);border-right:1px solid hsl(33,22%,87%);display:flex;flex-direction:column;padding:8px;gap:2px;}
+.tha-main{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.tha-scroll{flex:1;overflow-y:auto;padding:20px 28px;}
+
+/* Sidebar item */
+.sbi{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;color:hsl(120,5%,34%);font-size:13px;font-weight:500;}
+.sbi svg{width:17px;height:17px;flex-shrink:0;}
+.sbi-active-planner{background:hsl(172,26%,87%);color:hsl(172,38%,18%);}
+.sbi-active-pantry{background:hsl(115,22%,88%);color:hsl(115,30%,22%);}
+.sbi-active-home{background:hsl(42,45%,88%);color:hsl(42,58%,20%);}
+.sbi-active-basket{background:hsl(190,30%,88%);color:hsl(190,42%,20%);}
+
+/* Page headers */
+.tha-ph{flex-shrink:0;border-bottom:1px solid;padding:10px 28px;}
+.tha-ph-planner{background:hsl(172,28%,89%);border-color:hsl(172,22%,80%);color:hsl(172,38%,18%);}
+.tha-ph-pantry{background:hsl(118,22%,90%);border-color:hsl(118,18%,81%);color:hsl(118,32%,18%);}
+.tha-ph-home{background:hsl(132,18%,91%);border-color:hsl(132,14%,82%);color:hsl(132,16%,18%);}
+.tha-ph-basket{background:hsl(26,20%,91%);border-color:hsl(26,16%,82%);color:hsl(26,24%,20%);}
+
+.pha-planner{color:hsl(172,35%,38%);}
+.pha-pantry{color:hsl(118,30%,38%);}
+.pha-home{color:hsl(132,14%,44%);}
+.pha-basket{color:hsl(26,22%,40%);}
+
+.ph-title{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:600;letter-spacing:-.01em;display:flex;align-items:center;gap:8px;}
+.ph-title svg{width:20px;height:20px;}
+.ph-row{display:flex;align-items:center;gap:10px;}
+.ph-center{flex:1;display:flex;justify-content:center;align-items:center;gap:6px;}
+.ph-actions{display:flex;align-items:center;gap:6px;margin-left:auto;}
+
+/* Realm buttons */
+.rbtn{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:7px;border:1px solid rgba(0,0,0,.08);cursor:pointer;font-family:'Inter',sans-serif;font-size:12px;font-weight:500;white-space:nowrap;}
+.rbtn-planner{background:rgba(255,255,255,.5);border-color:hsl(172,22%,78%);color:hsl(172,38%,18%);}
+.rbtn-pantry{background:rgba(255,255,255,.5);border-color:hsl(118,18%,78%);color:hsl(118,32%,18%);}
+.rbtn-home{background:rgba(255,255,255,.5);border-color:hsl(132,14%,78%);color:hsl(132,16%,18%);}
+.rbtn-basket{background:rgba(255,255,255,.5);border-color:hsl(26,16%,78%);color:hsl(26,24%,20%);}
+
+/* Tab strip */
+.tstrip{display:flex;gap:2px;background:rgba(255,255,255,.4);border:1px solid rgba(0,0,0,.1);border-radius:8px;padding:2px;}
+.tsb{padding:4px 12px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:500;font-family:'Inter',sans-serif;background:transparent;color:inherit;opacity:.7;}
+.tsb.tsb-on{background:rgba(255,255,255,.8);opacity:1;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+
+/* Nav pill (concept E) */
+.npill{padding:5px 13px;border-radius:8px;font-size:13px;font-weight:500;color:hsl(120,5%,34%);}
+.npill-on{background:hsl(172,28%,89%);color:hsl(172,38%,18%);font-weight:600;}
+
+/* Floating glass topbar (concept H) */
+.tha-topbar-float{display:flex;align-items:center;background:rgba(255,255,255,.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.6);border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.12),0 1px 4px rgba(0,0,0,.06);padding:0 16px;gap:8px;margin:8px 12px 0;position:sticky;top:8px;z-index:20;}
+
+/* Sidebar active: Cookbook + Analyser */
+.sbi-active-cookbook{background:hsl(38,42%,88%);color:hsl(38,65%,18%);}
+.sbi-active-analyser{background:hsl(132,18%,88%);color:hsl(132,32%,18%);}
+
+/* Command bar pill (concept J) */
+.cmd-bar{flex:1;max-width:320px;height:30px;background:rgba(255,255,255,.6);border:1px solid hsl(33,22%,85%);border-radius:999px;display:flex;align-items:center;padding:0 12px;gap:8px;font-size:12px;color:hsl(120,5%,46%);cursor:text;}
+.cmd-bar-kbd{font-size:10px;font-weight:600;background:hsl(33,22%,90%);color:hsl(120,5%,34%);border-radius:4px;padding:1px 5px;white-space:nowrap;}
+
+/* Cookbook content */
+.recipe-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.recipe-card{background:rgba(255,255,255,.9);border:1px solid hsl(33,22%,87%);border-radius:12px;overflow:hidden;cursor:pointer;}
+.recipe-thumb{height:90px;display:flex;align-items:center;justify-content:center;font-size:28px;}
+.recipe-body{padding:10px 12px;}
+.recipe-name{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:hsl(120,14%,14%);line-height:1.2;margin-bottom:4px;}
+.recipe-meta{font-size:11px;color:hsl(120,5%,34%);display:flex;gap:8px;}
+.recipe-tag{font-size:10px;font-weight:600;padding:2px 7px;border-radius:999px;background:hsl(38,42%,91%);color:hsl(38,65%,18%);}
+.recipe-featured{background:rgba(255,255,255,.9);border:1px solid hsl(33,22%,87%);border-radius:14px;padding:16px;display:flex;gap:16px;margin-bottom:14px;align-items:center;}
+.recipe-featured-img{width:120px;height:80px;border-radius:10px;background:hsl(38,55%,85%);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:36px;}
+
+/* Nutrition content */
+.nut-stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.nut-stat{background:rgba(255,255,255,.9);border:1px solid hsl(33,22%,87%);border-radius:12px;padding:14px;text-align:center;}
+.nut-stat-val{font-family:'DM Sans',sans-serif;font-size:24px;font-weight:700;color:hsl(132,16%,18%);}
+.nut-stat-unit{font-size:11px;color:hsl(120,5%,34%);margin-top:1px;}
+.nut-stat-label{font-size:11px;font-weight:500;color:hsl(120,5%,34%);margin-top:4px;}
+.nut-bars{background:rgba(255,255,255,.88);border:1px solid hsl(33,22%,87%);border-radius:12px;padding:16px;margin-bottom:12px;}
+.nut-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
+.nut-bar-label{font-size:12px;font-weight:500;width:70px;color:hsl(120,14%,14%);}
+.nut-bar-track{flex:1;height:8px;background:hsl(33,22%,87%);border-radius:4px;overflow:hidden;}
+.nut-bar-fill{height:100%;border-radius:4px;}
+.nut-bar-val{font-size:12px;font-weight:600;width:55px;text-align:right;color:hsl(132,16%,18%);}
+.week-chart{display:flex;align-items:flex-end;gap:6px;height:70px;margin-bottom:14px;background:rgba(255,255,255,.88);border:1px solid hsl(33,22%,87%);border-radius:12px;padding:12px 14px;}
+
+/* Cards */
+.card{background:rgba(255,255,255,.88);border:1px solid hsl(33,22%,87%);border-radius:12px;padding:16px;}
+.card-sm{background:rgba(255,255,255,.88);border:1px solid hsl(33,22%,87%);border-radius:10px;padding:12px 14px;}
+
+/* Week nav */
+.wnav{display:flex;align-items:center;gap:6px;}
+.wnav-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid rgba(0,0,0,.12);background:rgba(255,255,255,.5);cursor:pointer;color:inherit;}
+.wnav-btn svg{width:14px;height:14px;}
+.wnav-label{font-size:13px;font-weight:600;color:inherit;padding:0 8px;white-space:nowrap;}
+
+/* ── Planner Content ──────────────────────────────────────────── */
+.pgrid{display:grid;grid-template-columns:60px repeat(7,1fr);gap:5px;font-size:11.5px;}
+.pday-h{background:rgba(255,255,255,.65);border:1px solid hsl(33,22%,87%);border-radius:8px;padding:6px 7px;text-align:center;}
+.pday-n{font-size:18px;font-weight:700;line-height:1;color:hsl(172,38%,18%);font-family:'DM Sans',sans-serif;}
+.pday-s{font-size:10px;color:hsl(120,5%,34%);margin-top:2px;}
+.prow-l{display:flex;align-items:center;justify-content:flex-end;padding-right:7px;font-size:10px;font-weight:600;color:hsl(120,5%,34%);text-transform:uppercase;letter-spacing:.04em;}
+.pcell{background:rgba(255,255,255,.78);border:1px solid hsl(33,22%,87%);border-radius:8px;padding:7px;min-height:58px;font-size:11.5px;font-weight:500;color:hsl(120,14%,14%);line-height:1.3;}
+.pcell-tag{font-size:9.5px;font-weight:700;color:hsl(172,35%,38%);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
+.pcell-empty{background:rgba(255,255,255,.35);border-style:dashed;display:flex;align-items:center;justify-content:center;color:hsl(120,5%,60%);font-size:11px;}
+
+/* ── Pantry Content ──────────────────────────────────────────── */
+.pant-row{display:grid;grid-template-columns:1fr 90px 80px 70px;align-items:center;padding:9px 14px;border-bottom:1px solid hsl(33,22%,87%);background:rgba(255,255,255,.75);gap:10px;font-size:12.5px;}
+.pant-row:first-child{border-radius:10px 10px 0 0;}
+.pant-row:last-child{border-radius:0 0 10px 10px;border-bottom:none;}
+.pant-hdr{font-size:10px;font-weight:700;color:hsl(120,5%,34%);text-transform:uppercase;letter-spacing:.05em;padding:8px 14px;display:grid;grid-template-columns:1fr 90px 80px 70px;gap:10px;}
+.pant-name{font-weight:600;}
+.pant-cat{font-size:11px;color:hsl(120,5%,34%);margin-top:1px;}
+.sg{color:hsl(132,40%,38%);font-weight:600;font-size:11px;}
+.sl{color:hsl(38,70%,38%);font-weight:600;font-size:11px;}
+.so{color:hsl(0,60%,42%);font-weight:600;font-size:11px;}
+
+/* ── Dashboard Content ───────────────────────────────────────── */
+.dash-grid{display:grid;grid-template-columns:280px 1fr 240px;gap:14px;}
+.dash-col{display:flex;flex-direction:column;gap:12px;}
+.score-card{background:rgba(255,255,255,.9);border:1px solid hsl(33,22%,87%);border-radius:14px;padding:20px;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.score-ring-wrap{position:relative;width:96px;height:96px;}
+.score-ring-bg{fill:none;stroke:hsl(132,14%,84%);stroke-width:8;}
+.score-ring-fg{fill:none;stroke:hsl(132,14%,44%);stroke-width:8;stroke-linecap:round;stroke-dasharray:251;stroke-dashoffset:66;transform:rotate(-90deg);transform-origin:48px 48px;}
+.score-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;font-size:28px;font-weight:700;color:hsl(132,16%,18%);}
+.score-label{font-size:11px;color:hsl(120,5%,34%);font-weight:500;}
+.stat-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(255,255,255,.88);border:1px solid hsl(33,22%,87%);border-radius:10px;}
+.stat-label{font-size:12.5px;font-weight:500;}
+.stat-val{font-family:'DM Sans',sans-serif;font-size:16px;font-weight:700;color:hsl(132,14%,44%);}
+.prog-bar{height:6px;background:hsl(33,22%,87%);border-radius:3px;overflow:hidden;margin-top:6px;}
+.prog-fill{height:100%;border-radius:3px;background:hsl(132,14%,44%);}
+
+/* ── Shopping Content ────────────────────────────────────────── */
+.shop-cat-h{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:hsl(26,22%,40%);padding:10px 14px 5px;}
+.shop-item{display:flex;align-items:center;gap:11px;padding:9px 14px;background:rgba(255,255,255,.8);border-bottom:1px solid hsl(33,22%,87%);font-size:12.5px;font-weight:500;}
+.shop-item:first-of-type{border-radius:10px 10px 0 0;}
+.shop-item:last-of-type{border-radius:0 0 10px 10px;border-bottom:none;}
+.shop-chk{width:17px;height:17px;border-radius:50%;border:2px solid hsl(26,16%,78%);flex-shrink:0;}
+.shop-chk-done{background:hsl(26,22%,40%);border-color:hsl(26,22%,40%);}
+.shop-qty{margin-left:auto;color:hsl(120,5%,34%);font-size:11.5px;font-weight:400;}
+.shop-block{border-radius:10px;overflow:hidden;background:rgba(255,255,255,.8);border:1px solid hsl(33,22%,87%);margin-bottom:12px;}
+.shop-block-h{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:hsl(26,22%,40%);padding:8px 14px;border-bottom:1px solid hsl(33,22%,87%);background:hsl(26,20%,91%);}
+</style>
+</head>
+<body>
+<div class="g-shell">
+
+<!-- ── Gallery Nav ──────────────────────────────────────────── -->
+<nav class="g-nav">
+  <div class="g-brand">WX9.5 <span>Workspace Header</span></div>
+  <div class="g-tabs" id="concept-tabs">
+    <button class="g-tab active" data-concept="overview">Overview</button>
+    <button class="g-tab" data-concept="a">A · Refined</button>
+    <button class="g-tab" data-concept="b">B · Unified</button>
+    <button class="g-tab" data-concept="c">C · Symmetric</button>
+    <button class="g-tab" data-concept="d">D · Title Hero</button>
+    <button class="g-tab" data-concept="e">E · Horiz Nav</button>
+    <button class="g-tab" data-concept="f">F · Rail</button>
+    <button class="g-tab" data-concept="g">G · Editorial</button>
+    <button class="g-tab" data-concept="h">H · Glass</button>
+    <button class="g-tab" data-concept="i">I · Adaptive</button>
+    <button class="g-tab" data-concept="j">J · Command</button>
+    <button class="g-tab compare-tab" data-concept="compare">⇄ Compare</button>
+  </div>
+  <div style="display:flex;gap:4px;padding:0 8px;flex-shrink:0;align-items:center;">
+    <button id="btn-prev" onclick="prevConcept()" style="width:28px;height:28px;border-radius:6px;border:1px solid #e3d9cd;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#535a54;">&#8249;</button>
+    <button id="btn-next" onclick="nextConcept()" style="width:28px;height:28px;border-radius:6px;border:1px solid #e3d9cd;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#535a54;">&#8250;</button>
+  </div>
+</nav>
+
+<!-- ── Page sub-tabs (hidden on overview/compare) ─────────── -->
+<div class="g-pagenav" id="page-nav" style="display:none">
+  <span class="g-pagenav-label">Page</span>
+  <button class="g-pagetab active" data-page="planner">Planner</button>
+  <button class="g-pagetab" data-page="cookbook">Cookbook</button>
+  <button class="g-pagetab" data-page="nutrition">Nutrition</button>
+  <button class="g-pagetab" data-page="shopping">Shopping</button>
+  <button class="g-pagetab" data-page="pantry">Pantry</button>
+  <button class="g-pagetab" data-page="dashboard">Dashboard</button>
+</div>
+
+<!-- ── Info strip (hidden on overview/compare) ────────────── -->
+<div class="g-info" id="info-strip" style="display:none">
+  <div class="g-info-badge" id="info-badge">—</div>
+  <div class="g-info-desc" id="info-desc">—</div>
+  <div class="g-info-effort" id="info-effort">—</div>
+</div>
+
+<!-- ── Main ─────────────────────────────────────────────────── -->
+<main class="g-main">
+
+  <!-- OVERVIEW -->
+  <div class="g-section active" id="section-overview">
+    <h2 style="font-family:'DM Sans',sans-serif;font-size:20px;font-weight:700;color:#1f2520;margin-bottom:6px;">10 Workspace Header Concepts</h2>
+    <p style="font-size:13px;color:#535a54;margin-bottom:20px;">Click any concept to explore it across all six workspace pages. Today's header consumes 142–178px of vertical chrome on desktop.</p>
+    <div class="overview-grid" id="overview-grid" style="grid-template-columns:repeat(4,1fr);"></div>
+  </div>
+
+  <!-- CONCEPT SECTIONS (a–g) — mock-ups injected by JS -->
+  <div class="g-section" id="section-a">
+    <div class="mockup-outer">
+      <div>
+        <div class="mockup-wrapper"><div class="mockup-scale" id="mock-a-planner"></div></div>
+        <p style="font-size:11px;color:#9aa09a;margin-top:6px;text-align:center;">1440 × 900 · 50% scale</p>
+      </div>
+      <div class="g-panels">
+        <div class="g-panel">
+          <h4>Advantages</h4>
+          <ul>
+            <li>Zero architectural risk</li>
+            <li>Two-line CSS change</li>
+            <li>Branding clearly maintained</li>
+            <li>Reversible in minutes</li>
+            <li>Suits cautious rollout</li>
+          </ul>
+        </div>
+        <div class="g-panel cons">
+          <h4>Disadvantages</h4>
+          <ul>
+            <li>Two sticky bands remain</li>
+            <li>Least space recovered</li>
+            <li>Doesn't solve architecture</li>
+            <li>Still 104px of chrome</li>
+          </ul>
+        </div>
+        <div class="g-panel">
+          <h4>At a glance</h4>
+          <ul>
+            <li>Chrome: 104px</li>
+            <li>Saves: 54–90px vs today</li>
+            <li>Effort: XS (hours)</li>
+            <li>Risk: Very low</li>
+            <li>Mobile: Unchanged</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g-section" id="section-b">
+    <div class="mockup-outer">
+      <div>
+        <div class="mockup-wrapper"><div class="mockup-scale" id="mock-b-planner"></div></div>
+        <p style="font-size:11px;color:#9aa09a;margin-top:6px;text-align:center;">1440 × 900 · 50% scale</p>
+      </div>
+      <div class="g-panels">
+        <div class="g-panel">
+          <h4>Advantages</h4>
+          <ul>
+            <li>59% chrome reduction</li>
+            <li>Single unified sticky band</li>
+            <li>Logo still fully present</li>
+            <li>Realm colour survives</li>
+            <li>Industry-standard pattern</li>
+            <li>Mobile improves too</li>
+          </ul>
+        </div>
+        <div class="g-panel cons">
+          <h4>Disadvantages</h4>
+          <ul>
+            <li>16 page migrations</li>
+            <li>Context subtitle lost</li>
+            <li>Careful right-side ordering</li>
+            <li>2–4 days engineering</li>
+          </ul>
+        </div>
+        <div class="g-panel">
+          <h4>At a glance</h4>
+          <ul>
+            <li>Chrome: 56–96px</li>
+            <li>Saves: 62–102px</li>
+            <li>Effort: M (2–4 days)</li>
+            <li>Risk: Low–medium</li>
+            <li>Mobile: Better</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g-section" id="section-c">
+    <div class="mockup-outer">
+      <div>
+        <div class="mockup-wrapper"><div class="mockup-scale" id="mock-c-planner"></div></div>
+        <p style="font-size:11px;color:#9aa09a;margin-top:6px;text-align:center;">1440 × 900 · 50% scale</p>
+      </div>
+      <div class="g-panels">
+        <div class="g-panel">
+          <h4>Advantages</h4>
+          <ul>
+            <li>Logo stays prominent &amp; centered</li>
+            <li>Very balanced composition</li>
+            <li>Page identity clear in second bar</li>
+            <li>Familiar TopBar structure</li>
+            <li>Graceful on wide displays</li>
+          </ul>
+        </div>
+        <div class="g-panel cons">
+          <h4>Disadvantages</h4>
+          <ul>
+            <li>Still two bands (92px)</li>
+            <li>Logo dominates vs. content</li>
+            <li>Page bar feels secondary</li>
+            <li>Page actions far from title</li>
+          </ul>
+        </div>
+        <div class="g-panel">
+          <h4>At a glance</h4>
+          <ul>
+            <li>Chrome: 92px</li>
+            <li>Saves: 66px vs today</li>
+            <li>Effort: S (1–2 days)</li>
+            <li>Risk: Low</li>
+            <li>Mobile: Minor work</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g-section" id="section-d">
+    <div class="mockup-outer">
+      <div>
+        <div class="mockup-wrapper"><div class="mockup-scale" id="mock-d-planner"></div></div>
+        <p style="font-size:11px;color:#9aa09a;margin-top:6px;text-align:center;">1440 × 900 · 50% scale</p>
+      </div>
+      <div class="g-panels">
+        <div class="g-panel">
+          <h4>Advantages</h4>
+          <ul>
+            <li>Massive space saving (60px)</li>
+            <li>Page feels distinct and owned</li>
+            <li>Title is the hero element</li>
+            <li>Logo still present (left)</li>
+            <li>Single band, clean</li>
+          </ul>
+        </div>
+        <div class="g-panel cons">
+          <h4>Disadvantages</h4>
+          <ul>
+            <li>Logo feels demoted</li>
+            <li>Right side can get crowded</li>
+            <li>Context subtitle lost</li>
+            <li>Realm colour harder to apply</li>
+          </ul>
+        </div>
+        <div class="g-panel">
+          <h4>At a glance</h4>
+          <ul>
+            <li>Chrome: 60px</li>
+            <li>Saves: 98px vs today</li>
+            <li>Effort: M (2–3 days)</li>
+            <li>Risk: Medium</li>
+            <li>Mobile: Needs work</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g-section" id="section-e">
+    <div class="mockup-outer">
+      <div>
+        <div class="mockup-wrapper"><div class="mockup-scale" id="mock-e-planner"></div></div>
+        <p style="font-size:11px;color:#9aa09a;margin-top:6px;text-align:center;">1440 × 900 · 50% scale — no sidebar</p>
+      </div>
+      <div class="g-panels">
+        <div class="g-panel">
+          <h4>Advantages</h4>
+          <ul>
+            <li>Most space-efficient layout</li>
+            <li>Removes sidebar chrome entirely</li>
+            <li>All navigation in one bar</li>
+            <li>Very modern / SaaS-native</li>
+            <li>Content can use full width</li>
+          </ul>
+        </div>
+        <div class="g-panel cons">
+          <h4>Disadvantages</h4>
+          <ul>
+            <li>Removes sidebar (paradigm shift)</li>
+            <li>7 nav items stress the bar</li>
+            <li>Brand wordmark compressed</li>
+            <li>Highest engineering effort</li>
+            <li>Mobile entirely different</li>
+          </ul>
+        </div>
+        <div class="g-panel">
+          <h4>At a glance</h4>
+          <ul>
+            <li>Chrome: 52px</li>
+            <li>Saves: 106px + 220px sidebar</li>
+            <li>Effort: L (1+ week)</li>
+            <li>Risk: High</li>
+            <li>Mobile: Major redesign</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g-section" id="section-f">
+    <div class="mockup-outer">
+      <div>
+        <div class="mockup-wrapper"><div class="mockup-scale" id="mock-f-planner"></div></div>
+        <p style="font-size:11px;color:#9aa09a;margin-top:6px;text-align:center;">1440 × 900 · 50% scale</p>
+      </div>
+      <div class="g-panels">
+        <div class="g-panel">
+          <h4>Advantages</h4>
+          <ul>
+            <li>Ultra-efficient 72px total</li>
+            <li>Brand rail is distinctive</li>
+            <li>Workspace bar clear &amp; functional</li>
+            <li>Realm colour on workspace bar</li>
+            <li>Each layer has one job</li>
+          </ul>
+        </div>
+        <div class="g-panel cons">
+          <h4>Disadvantages</h4>
+          <ul>
+            <li>Logo at 22px feels very small</li>
+            <li>Brand rail may feel odd</li>
+            <li>Two sticky layers to manage</li>
+            <li>32px rail wastes logo potential</li>
+          </ul>
+        </div>
+        <div class="g-panel">
+          <h4>At a glance</h4>
+          <ul>
+            <li>Chrome: 72px</li>
+            <li>Saves: 86–122px vs today</li>
+            <li>Effort: M (2–4 days)</li>
+            <li>Risk: Medium</li>
+            <li>Mobile: Collapse rail</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g-section" id="section-g">
+    <div class="mockup-outer">
+      <div>
+        <div class="mockup-wrapper"><div class="mockup-scale" id="mock-g-planner"></div></div>
+        <p style="font-size:11px;color:#9aa09a;margin-top:6px;text-align:center;">1440 × 900 · 50% scale — title scrolls with content</p>
+      </div>
+      <div class="g-panels">
+        <div class="g-panel">
+          <h4>Advantages</h4>
+          <ul>
+            <li>Most chrome ever visible: 44px</li>
+            <li>Editorial, calm, spacious</li>
+            <li>Content-first approach</li>
+            <li>Premium feel, unlike any app</li>
+            <li>Orchard backdrop breathes</li>
+          </ul>
+        </div>
+        <div class="g-panel cons">
+          <h4>Disadvantages</h4>
+          <ul>
+            <li>Title lost when scrolled down</li>
+            <li>No persistent page context</li>
+            <li>Apple icon only (brand risk)</li>
+            <li>Navigation paradigm shifts</li>
+            <li>Hardest to navigate</li>
+          </ul>
+        </div>
+        <div class="g-panel">
+          <h4>At a glance</h4>
+          <ul>
+            <li>Chrome: 44px (sticky)</li>
+            <li>Saves: 114px vs today</li>
+            <li>Effort: L</li>
+            <li>Risk: High</li>
+            <li>Mobile: Major redesign</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONCEPTS H, I, J -->
+  <div class="g-section" id="section-h">
+    <div class="mockup-outer">
+      <div>
+        <div class="mockup-wrapper"><div class="mockup-scale" id="mock-h-planner"></div></div>
+        <p style="font-size:11px;color:#9aa09a;margin-top:6px;text-align:center;">1440 × 900 · 50% scale · Floating glass header</p>
+      </div>
+      <div class="g-panels">
+        <div class="g-panel"><h4>Advantages</h4><ul><li>Visually striking, premium feel</li><li>Header recedes into backdrop</li><li>macOS / Arc-inspired depth</li><li>Content breathes below it</li><li>Realm colour on the float card</li></ul></div>
+        <div class="g-panel cons"><h4>Disadvantages</h4><ul><li>Complex sticky positioning</li><li>Backdrop must be visible below</li><li>Non-standard pattern</li><li>Scroll behaviour needs care</li></ul></div>
+        <div class="g-panel"><h4>At a glance</h4><ul><li>Chrome: ~68px floating</li><li>Saves: 74–110px</li><li>Effort: M (3–5 days)</li><li>Risk: Medium</li><li>Mobile: Collapses flat</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g-section" id="section-i">
+    <div class="mockup-outer">
+      <div>
+        <div class="mockup-wrapper"><div class="mockup-scale" id="mock-i-planner"></div></div>
+        <p style="font-size:11px;color:#9aa09a;margin-top:6px;text-align:center;">1440 × 900 · 50% scale · Context-adaptive 48px bar</p>
+      </div>
+      <div class="g-panels">
+        <div class="g-panel"><h4>Advantages</h4><ul><li>Most compact with sidebar kept</li><li>Controls adapt per page</li><li>Logo + wordmark visible</li><li>Single unified sticky band</li><li>Linear / Figma feel</li></ul></div>
+        <div class="g-panel cons"><h4>Disadvantages</h4><ul><li>Page title very small (12px)</li><li>Realm colour harder to apply</li><li>Dense at narrow widths</li><li>Contextual logic adds complexity</li></ul></div>
+        <div class="g-panel"><h4>At a glance</h4><ul><li>Chrome: 48px</li><li>Saves: 94–130px</li><li>Effort: M (2–4 days)</li><li>Risk: Low–medium</li><li>Mobile: Great</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g-section" id="section-j">
+    <div class="mockup-outer">
+      <div>
+        <div class="mockup-wrapper"><div class="mockup-scale" id="mock-j-planner"></div></div>
+        <p style="font-size:11px;color:#9aa09a;margin-top:6px;text-align:center;">1440 × 900 · 50% scale · ⌘K command-palette navigation</p>
+      </div>
+      <div class="g-panels">
+        <div class="g-panel"><h4>Advantages</h4><ul><li>Most minimal chrome: 48px</li><li>Command bar is unique, premium</li><li>Linear / Raycast aesthetic</li><li>Power-user friendly</li><li>Every action discoverable</li></ul></div>
+        <div class="g-panel cons"><h4>Disadvantages</h4><ul><li>Learning curve for new users</li><li>No persistent page context</li><li>Realm colour not surfaced</li><li>Requires full ⌘K implementation</li><li>Mobile: entirely different pattern</li></ul></div>
+        <div class="g-panel"><h4>At a glance</h4><ul><li>Chrome: 48px</li><li>Saves: 94–130px</li><li>Effort: XL (1–2 weeks)</li><li>Risk: High</li><li>Mobile: Needs bottom sheet</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPARISON -->
+  <div class="g-section" id="section-compare">
+    <h2 style="font-family:'DM Sans',sans-serif;font-size:18px;font-weight:700;margin-bottom:4px;">Header Comparison — All Concepts · Planner Realm</h2>
+    <p style="font-size:12.5px;color:#535a54;margin-bottom:20px;">All headers shown at actual pixel width (1220px content area after 220px sidebar), scaled to 55%. Annotated with height and space recovered.</p>
+    <div id="compare-board" style="display:flex;flex-direction:column;gap:10px;max-width:900px;"></div>
+  </div>
+
+</main>
+</div>
+
+<script>
+// ── SVG Icon Library ─────────────────────────────────────────────
+const ico = {
+  search:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+  basket:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>`,
+  user:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  dash:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>`,
+  cal:      `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+  chef:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.87A4 4 0 017.41 6a5.11 5.11 0 0111.18 0A4 4 0 0118 13.87V21H6z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>`,
+  pantry:   `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="20" x2="23" y2="20"/><rect x="1.5" y="14" width="5" height="6" rx="1"/><rect x="2.5" y="12.5" width="3" height="2" rx=".5"/><rect x="9.5" y="11" width="5" height="9" rx="1"/><rect x="10.5" y="9.5" width="3" height="2" rx=".5"/><rect x="17" y="13" width="5.5" height="7" rx="1"/><rect x="18" y="11.5" width="3" height="2" rx=".5"/></svg>`,
+  micro:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 100-14h-1"/><line x1="9" y1="8" x2="9" y2="5"/><line x1="9" y1="5" x2="12" y2="5"/><path d="M9 11a2 2 0 100-4 2 2 0 000 4z"/></svg>`,
+  cart:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>`,
+  list:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><line x1="4" y1="6" x2="4.01" y2="6"/><line x1="4" y1="12" x2="4.01" y2="12"/><line x1="4" y1="18" x2="4.01" y2="18"/></svg>`,
+  book:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>`,
+  chevL:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>`,
+  chevR:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>`,
+  plus:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>`,
+  more:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`,
+  home:     `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+};
+
+const LOGO = `<img src="../../../client/public/logo-long.png" alt="The Healthy Apples" style="display:block;width:auto;">`;
+const APPLE = `<img src="../../../client/src/assets/icons/tha-apple.png" alt="" style="display:block;border-radius:6px;">`;
+
+// ── Sidebar ──────────────────────────────────────────────────────
+function sidebar(active) {
+  const items = [
+    { label:'Quick List', icon:'list',   page:'list' },
+    { label:'Cookbook',   icon:'chef',   page:'cookbook' },
+    { label:'Planner',    icon:'cal',    page:'planner' },
+    { label:'Pantry',     icon:'pantry', page:'pantry' },
+    { label:'Analyser',   icon:'micro',  page:'analyser' },
+    { label:'Shop',       icon:'cart',   page:'basket' },
+    { label:'My Diary',   icon:'book',   page:'diary' },
+  ];
+  return `<div class="tha-sidebar">${items.map(i=>`
+    <div class="sbi ${active===i.page?'sbi-active-'+active:''}">${ico[i.icon]}<span>${i.label}</span></div>`).join('')}
+  </div>`;
+}
+
+// ── Global controls (right-side of topbar) ───────────────────────
+function globalRight(size='') {
+  const cls = size==='sm' ? 'tib-sm' : 'tib';
+  return `
+    <div class="${cls}">${ico.search}</div>
+    <div class="${cls}" style="position:relative">${ico.basket}<span class="tbadge">7</span></div>
+    <div class="${cls}">${ico.user}</div>`;
+}
+
+// ── Week navigation ──────────────────────────────────────────────
+function weekNav(cls='') {
+  return `<div class="wnav">
+    <div class="wnav-btn">${ico.chevL}</div>
+    <span class="wnav-label">Week 26 · 29 Jun – 5 Jul</span>
+    <div class="wnav-btn">${ico.chevR}</div>
+  </div>`;
+}
+
+// ── Planner content ──────────────────────────────────────────────
+const DAYS = [
+  {s:'Mon',n:'29',m:'Overnight Oats &amp; Berries',l:'Greek Salad + Pitta',d:'Salmon Pasta'},
+  {s:'Tue',n:'30',m:'Poached Eggs Toast',l:'Chicken &amp; Veg Soup',d:'Lentil Dahl + Rice'},
+  {s:'Wed',n:'1',m:'Berry Smoothie Bowl',l:'Tuna Jacket Potato',d:'Roast Chicken Tray'},
+  {s:'Thu',n:'2',m:'Granola + Yogurt',l:'Quinoa &amp; Halloumi',d:'Veggie Stir-fry'},
+  {s:'Fri',n:'3',m:'Avocado + Eggs',l:'BLT + Crisps',d:'Thai Prawn Noodles'},
+  {s:'Sat',n:'4',m:'Banana Pancakes',l:'Leftovers',d:'Homemade Pizza'},
+  {s:'Sun',n:'5',m:'Full Porridge',l:'Caesar Salad',d:'Lamb Slow Cooker'},
+];
+
+function plannerContent(editorial=false) {
+  const titleBit = editorial ? `<div style="margin-bottom:14px;">
+    <h1 style="font-family:'DM Sans',sans-serif;font-size:28px;font-weight:700;color:hsl(172,38%,18%);letter-spacing:-.02em;display:flex;align-items:center;gap:10px;">${ico.cal} Planner</h1>
+    <p style="font-size:12px;color:hsl(172,35%,38%);margin-top:4px;">Week 26 · 29 June – 5 July 2026</p>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+      ${weekNav()}
+      <div style="margin-left:10px;display:flex;gap:5px;">
+        <button class="rbtn rbtn-planner">Add all to basket</button>
+        <button class="rbtn rbtn-planner">${ico.more}</button>
+      </div>
+    </div>
+  </div>` : '';
+  return `${titleBit}<div class="pgrid">
+    <div></div>
+    ${DAYS.map(d=>`<div class="pday-h"><div class="pday-n">${d.n}</div><div class="pday-s">${d.s}</div></div>`).join('')}
+    <div class="prow-l">B'fast</div>
+    ${DAYS.map(d=>`<div class="pcell"><div class="pcell-tag">Breakfast</div>${d.m}</div>`).join('')}
+    <div class="prow-l">Lunch</div>
+    ${DAYS.map(d=>`<div class="pcell"><div class="pcell-tag">Lunch</div>${d.l}</div>`).join('')}
+    <div class="prow-l">Dinner</div>
+    ${DAYS.map(d=>`<div class="pcell"><div class="pcell-tag">Dinner</div>${d.d}</div>`).join('')}
+    <div class="prow-l">Snack</div>
+    ${DAYS.slice(0,3).map((_,i)=>`<div class="pcell"><div class="pcell-tag">Snack</div>${['Apple &amp; Almond Butter','Hummus + Veg','Greek Yogurt'][i]}</div>`).join('')}
+    ${DAYS.slice(3).map(()=>`<div class="pcell pcell-empty">+ Add</div>`).join('')}
+  </div>`;
+}
+
+// ── Pantry content ────────────────────────────────────────────────
+const PANT_ITEMS = [
+  {n:'Eggs',cat:'Fridge',q:'6 remaining',s:'sg'},
+  {n:'Milk (full fat)',cat:'Fridge',q:'1.8 L',s:'sg'},
+  {n:'Greek Yogurt',cat:'Fridge',q:'500 g × 2',s:'sg'},
+  {n:'Chicken Breast',cat:'Freezer',q:'600 g',s:'sg'},
+  {n:'Salmon Fillet',cat:'Freezer',q:'400 g',s:'sl'},
+  {n:'Cheddar',cat:'Fridge',q:'220 g',s:'sg'},
+  {n:'Baby Spinach',cat:'Fresh',q:'200 g',s:'sl'},
+  {n:'Butter (unsalted)',cat:'Fridge',q:'250 g',s:'sg'},
+  {n:'Tinned Tomatoes',cat:'Cupboard',q:'× 4',s:'sg'},
+  {n:'Brown Rice',cat:'Cupboard',q:'800 g',s:'sg'},
+  {n:'Rolled Oats',cat:'Cupboard',q:'1.2 kg',s:'sg'},
+  {n:'Almonds',cat:'Cupboard',q:'300 g',s:'sl'},
+];
+
+function pantryContent() {
+  return `<div style="margin-bottom:10px;display:flex;gap:5px;">
+    <div class="tstrip" style="background:rgba(255,255,255,.5);border-color:hsl(118,18%,78%);color:hsl(118,32%,18%);">
+      <button class="tsb tsb-on">All 142</button>
+      <button class="tsb">Fresh 28</button>
+      <button class="tsb">Fridge 31</button>
+      <button class="tsb">Freezer 12</button>
+      <button class="tsb">Cupboard 71</button>
+    </div>
+  </div>
+  <div>
+    <div class="pant-hdr"><div>Item</div><div>Category</div><div style="text-align:right">Quantity</div><div style="text-align:right">Status</div></div>
+    ${PANT_ITEMS.map(i=>`<div class="pant-row">
+      <div><div class="pant-name">${i.n}</div></div>
+      <div style="font-size:12px;color:hsl(120,5%,34%)">${i.cat}</div>
+      <div style="text-align:right;font-weight:600;font-size:12.5px">${i.q}</div>
+      <div style="text-align:right"><span class="${i.s}">${i.s==='sg'?'Good':i.s==='sl'?'Low':'Out'}</span></div>
+    </div>`).join('')}
+  </div>`;
+}
+
+// ── Dashboard content ─────────────────────────────────────────────
+function dashContent() {
+  return `<div class="dash-grid">
+    <div class="dash-col">
+      <div class="score-card">
+        <div class="score-ring-wrap">
+          <svg viewBox="0 0 96 96" style="width:96px;height:96px;">
+            <circle cx="48" cy="48" r="40" class="score-ring-bg"/>
+            <circle cx="48" cy="48" r="40" class="score-ring-fg" style="stroke-dasharray:251;stroke-dashoffset:66;"/>
+          </svg>
+          <div class="score-num">7.4</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;color:hsl(132,16%,18%)">Apple Score</div>
+          <div style="font-size:11px;color:hsl(120,5%,34%);margin-top:2px">This week · Excellent</div>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div><div class="stat-label">Plants this week</div><div class="prog-bar"><div class="prog-fill" style="width:73%"></div></div></div>
+        <div class="stat-val">22<span style="font-size:12px;font-weight:400;color:hsl(120,5%,34%)">/30</span></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat-label">Meals logged</div>
+        <div class="stat-val">18</div>
+      </div>
+    </div>
+    <div class="dash-col">
+      <div class="card">
+        <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;margin-bottom:12px">Recent meals</div>
+        ${['Salmon Pasta · Dinner · Yesterday','Overnight Oats · Breakfast · Today','Greek Salad · Lunch · Yesterday'].map(m=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid hsl(33,22%,87%)">
+            <div style="width:32px;height:32px;border-radius:8px;background:hsl(132,18%,91%);flex-shrink:0"></div>
+            <div style="font-size:12px">${m}</div>
+          </div>`).join('')}
+      </div>
+      <div class="card">
+        <div style="font-family:'DM Sans',sans-serif;font-size:14px;font-weight:700;margin-bottom:10px">Today's macros</div>
+        ${[['Calories','1,840 kcal',72],['Protein','88 g',74],['Carbs','210 g',68],['Fat','64 g',80]].map(([l,v,p])=>`
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px">
+            <div style="font-size:12px;width:60px;color:hsl(120,5%,34%)">${l}</div>
+            <div class="prog-bar" style="flex:1"><div class="prog-fill" style="width:${p}%"></div></div>
+            <div style="font-size:12px;font-weight:600;width:60px;text-align:right">${v}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="dash-col">
+      <div class="card-sm">
+        <div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;margin-bottom:8px">Quick actions</div>
+        ${['Log a meal','View this week\'s plan','Check pantry','Start shopping'].map(a=>`
+          <div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid hsl(33,22%,87%);font-size:12.5px;font-weight:500;cursor:pointer;color:hsl(132,14%,44%)">${ico.chevR}<span>${a}</span></div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Shopping content ──────────────────────────────────────────────
+const SHOP_CATS = [
+  {h:'Produce',items:['Bananas × 6','Cherry tomatoes 400 g','Baby spinach 200 g','Avocado × 3','Broccoli 1 head'],qty:['×6','400 g','200 g','×3','1']},
+  {h:'Dairy &amp; Eggs',items:['Eggs × 12','Milk (full fat) 2 L','Greek Yogurt 500 g','Cheddar 300 g'],qty:['×12','2 L','×2','300 g']},
+  {h:'Meat &amp; Fish',items:['Chicken breast 800 g','Salmon fillet 400 g × 2'],qty:['800 g','400 g×2']},
+  {h:'Cupboard',items:['Tinned tomatoes × 4','Brown rice 1 kg','Olive oil 500 ml'],qty:['×4','1 kg','500 ml']},
+];
+
+function shopContent() {
+  return SHOP_CATS.map(c=>`
+    <div class="shop-block">
+      <div class="shop-block-h">${c.h}</div>
+      ${c.items.map((item,i)=>`<div class="shop-item"><div class="shop-chk ${i===0?'shop-chk-done':''}"></div><span>${item}</span><span class="shop-qty">${c.qty[i]}</span></div>`).join('')}
+    </div>`).join('');
+}
+
+// ── Cookbook content ─────────────────────────────────────────────
+const RECIPES = [
+  {name:'Thai Prawn Noodles',time:'22 min',kcal:480,tags:['Dinner','Quick'],emoji:'🍜',bg:'hsl(38,55%,85%)'},
+  {name:'Overnight Oats & Berries',time:'5 min',kcal:320,tags:['Breakfast'],emoji:'🫐',bg:'hsl(210,40%,88%)'},
+  {name:'Greek Salad + Pitta',time:'10 min',kcal:390,tags:['Lunch','Plant'],emoji:'🥗',bg:'hsl(120,30%,85%)'},
+  {name:'Salmon Pasta Lemon',time:'28 min',kcal:560,tags:['Dinner'],emoji:'🐟',bg:'hsl(172,28%,85%)'},
+  {name:'Banana Pancakes',time:'18 min',kcal:410,tags:['Breakfast','Quick'],emoji:'🥞',bg:'hsl(50,60%,88%)'},
+  {name:'Lentil Dahl + Rice',time:'35 min',kcal:490,tags:['Dinner','Plant'],emoji:'🍛',bg:'hsl(26,45%,85%)'},
+];
+
+function cookbookContent() {
+  const featured = RECIPES[0];
+  return `<div style="margin-bottom:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+    <span style="font-size:11px;font-weight:600;color:hsl(120,5%,34%);text-transform:uppercase;letter-spacing:.04em;margin-right:4px;">Filter</span>
+    ${['All recipes','Breakfast','Lunch','Dinner','Quick (&lt;30m)','Plant-based'].map((f,i)=>`
+      <button class="rbtn rbtn-planner" style="background:${i===0?'rgba(255,255,255,.85)':'rgba(255,255,255,.4)'};border-color:hsl(38,36%,78%);color:hsl(38,65%,18%);font-size:11px;">${f}</button>`).join('')}
+  </div>
+  <div class="recipe-featured">
+    <div class="recipe-featured-img">${featured.emoji}</div>
+    <div style="flex:1;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:hsl(38,55%,45%);margin-bottom:4px;">Featured this week</div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:18px;font-weight:700;color:hsl(38,65%,18%);margin-bottom:4px;">${featured.name}</div>
+      <div style="font-size:12px;color:hsl(120,5%,34%);margin-bottom:8px;">${featured.time} · ${featured.kcal} kcal · Serves 2</div>
+      <div style="display:flex;gap:5px;">${featured.tags.map(t=>`<span class="recipe-tag">${t}</span>`).join('')}</div>
+    </div>
+    <button class="rbtn rbtn-planner" style="border-color:hsl(38,36%,78%);color:hsl(38,65%,18%);align-self:center;">Add to planner</button>
+  </div>
+  <div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;color:hsl(120,14%,14%);margin-bottom:8px;">All Recipes · 147 saved</div>
+  <div class="recipe-grid">
+    ${RECIPES.map(r=>`<div class="recipe-card">
+      <div class="recipe-thumb" style="background:${r.bg};">${r.emoji}</div>
+      <div class="recipe-body">
+        <div class="recipe-name">${r.name}</div>
+        <div class="recipe-meta"><span>${r.time}</span><span>${r.kcal} kcal</span></div>
+        <div style="margin-top:5px;display:flex;gap:4px;">${r.tags.map(t=>`<span class="recipe-tag">${t}</span>`).join('')}</div>
+      </div>
+    </div>`).join('')}
+  </div>`;
+}
+
+// ── Nutrition Report content ──────────────────────────────────────
+function nutritionContent() {
+  const macros = [
+    {label:'Calories',val:'1,840',unit:'kcal / day',pct:76,col:'hsl(132,14%,44%)'},
+    {label:'Protein',val:'88 g',unit:'target 110 g',pct:80,col:'hsl(172,35%,38%)'},
+    {label:'Carbs',val:'210 g',unit:'target 240 g',pct:88,col:'hsl(38,55%,45%)'},
+    {label:'Fat',val:'64 g',unit:'target 72 g',pct:89,col:'hsl(26,22%,40%)'},
+  ];
+  const micros = [
+    {label:'Fibre',val:'22 g',pct:88,col:'hsl(132,14%,44%)'},
+    {label:'Iron',val:'11 mg',pct:73,col:'hsl(0,55%,48%)'},
+    {label:'Calcium',val:'920 mg',pct:92,col:'hsl(210,45%,55%)'},
+    {label:'Vit D',val:'14 μg',pct:93,col:'hsl(50,70%,50%)'},
+    {label:'Omega-3',val:'1.8 g',pct:90,col:'hsl(172,35%,38%)'},
+  ];
+  const weekBars = [65,72,80,88,76,82,68];
+  const weekDays = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  return `<div class="nut-stat-row">
+    ${macros.map(m=>`<div class="nut-stat">
+      <div class="nut-stat-val">${m.val}</div>
+      <div class="nut-stat-unit">${m.unit}</div>
+      <div class="nut-stat-label">${m.label}</div>
+      <div style="height:4px;background:hsl(33,22%,87%);border-radius:2px;overflow:hidden;margin-top:6px;"><div style="height:100%;border-radius:2px;background:${m.col};width:${m.pct}%"></div></div>
+    </div>`).join('')}
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 300px;gap:12px;">
+    <div>
+      <div class="nut-bars">
+        <div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;color:hsl(120,14%,14%);margin-bottom:10px;">Micronutrients · This week</div>
+        ${micros.map(n=>`<div class="nut-bar-row">
+          <span class="nut-bar-label">${n.label}</span>
+          <div class="nut-bar-track"><div class="nut-bar-fill" style="width:${n.pct}%;background:${n.col};"></div></div>
+          <span class="nut-bar-val">${n.val}</span>
+        </div>`).join('')}
+      </div>
+      <div class="week-chart">
+        ${weekBars.map((h,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <div style="flex:1;display:flex;align-items:flex-end;width:100%;">
+            <div style="width:100%;height:${h}%;background:hsl(132,14%,44%);border-radius:4px 4px 0 0;opacity:.75;"></div>
+          </div>
+          <span style="font-size:10px;color:hsl(120,5%,34%);">${weekDays[i]}</span>
+        </div>`).join('')}
+      </div>
+    </div>
+    <div class="score-card" style="align-self:start;">
+      <div class="score-ring-wrap">
+        <svg viewBox="0 0 96 96" style="width:96px;height:96px;">
+          <circle cx="48" cy="48" r="40" class="score-ring-bg"/>
+          <circle cx="48" cy="48" r="40" class="score-ring-fg"/>
+        </svg>
+        <div class="score-num">7.4</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;color:hsl(132,16%,18%)">Apple Score</div>
+        <div style="font-size:11px;color:hsl(120,5%,34%);margin-top:2px">This week · Excellent</div>
+      </div>
+      <div class="stat-row" style="width:100%;">
+        <div><div class="stat-label">Plants this week</div><div class="prog-bar"><div class="prog-fill" style="width:73%"></div></div></div>
+        <div class="stat-val">22<span style="font-size:12px;font-weight:400;color:hsl(120,5%,34%)">/30</span></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Orchard backdrop ──────────────────────────────────────────────
+const orchardBg = `<div class="tha-orchard"></div>`;
+
+// ── Concept A: Current Refined ────────────────────────────────────
+function headerA(realm) {
+  const rCls = `tha-ph-${realm}`;
+  const pageInfo = {
+    planner:{title:'Planner',icon:'cal',actions:`<button class="rbtn rbtn-planner">Rename week</button><button class="rbtn rbtn-planner">Add all to basket</button><button class="rbtn rbtn-planner">${ico.more}</button>`,center:weekNav()},
+    pantry:{title:'My Pantry',icon:'pantry',actions:`<button class="rbtn rbtn-pantry">Add item</button><button class="rbtn rbtn-pantry">${ico.more}</button>`,center:`<div class="tstrip" style="color:hsl(118,32%,18%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">Inventory</button><button class="tsb">Explore</button></div>`},
+    dashboard:{title:'Dashboard',icon:'home',actions:`<button class="rbtn rbtn-home">This week</button>`,center:''},
+    shopping:{title:'Shopping',icon:'cart',actions:`<button class="rbtn rbtn-basket">Review basket</button><button class="rbtn rbtn-basket">${ico.more}</button>`,center:`<div class="tstrip" style="color:hsl(26,24%,20%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">By category</button><button class="tsb">A–Z</button><button class="tsb">By aisle</button></div>`},
+  };
+  const p = pageInfo[realm] || pageInfo.planner;
+  return `
+    <div class="tha-topbar-current">
+      <div style="display:flex;gap:4px">${['dash','search'].map(i=>`<div class="tib">${ico[i]}</div>`).join('')}</div>
+      <div style="display:flex;justify-content:center;align-items:center">${LOGO.replace('style="display:block;width:auto;"','style="display:block;max-height:48px;width:auto;"')}</div>
+      <div style="display:flex;justify-content:flex-end;gap:4px">${globalRight()}</div>
+    </div>
+    <div class="tha-ph ${rCls}">
+      <div class="ph-row">
+        <div class="ph-title">${ico[p.icon]}${p.title}</div>
+        <div class="ph-center">${p.center}</div>
+        <div class="ph-actions">${p.actions}</div>
+      </div>
+    </div>`;
+}
+
+// ── Concept B: Unified Workspace Header ───────────────────────────
+function headerB(realm) {
+  const cfg = {
+    planner:{title:'Planner',icon:'cal',phClass:'tha-ph-planner',acClass:'pha-planner',actions:`<button class="rbtn rbtn-planner">Add to basket</button><button class="rbtn rbtn-planner">${ico.more}</button>`,center:weekNav()},
+    pantry:{title:'My Pantry',icon:'pantry',phClass:'tha-ph-pantry',acClass:'pha-pantry',actions:`<button class="rbtn rbtn-pantry">Add item</button>`,center:`<div class="tstrip" style="color:hsl(118,32%,18%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">Inventory</button><button class="tsb">Explore</button></div>`},
+    dashboard:{title:'Dashboard',icon:'home',phClass:'tha-ph-home',acClass:'pha-home',actions:`<button class="rbtn rbtn-home">This week</button>`,center:''},
+    shopping:{title:'Shopping',icon:'cart',phClass:'tha-ph-basket',acClass:'pha-basket',actions:`<button class="rbtn rbtn-basket">Review</button>`,center:`<div class="tstrip" style="color:hsl(26,24%,20%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">By category</button><button class="tsb">A–Z</button></div>`},
+  };
+  const p = cfg[realm] || cfg.planner;
+  return `
+    <div class="${p.phClass}" style="display:flex;align-items:center;height:56px;padding:0 16px;gap:12px;border-bottom:1px solid;flex-shrink:0;backdrop-filter:blur(10px);">
+      ${LOGO.replace('style="display:block;width:auto;"','style="display:block;max-height:36px;width:auto;"')}
+      <div style="width:1px;height:24px;background:currentColor;opacity:.18;"></div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:18px;font-weight:600;display:flex;align-items:center;gap:7px;">${ico[p.icon]}${p.title}</div>
+      <div style="flex:1;display:flex;justify-content:center;">${p.center}</div>
+      <div style="display:flex;align-items:center;gap:6px;">${p.actions}${globalRight()}</div>
+    </div>`;
+}
+
+// ── Concept C: Symmetric Logo, Slim Identity Bar ──────────────────
+function headerC(realm) {
+  const cfg = {
+    planner:{phClass:'tha-ph-planner',title:'Planner',icon:'cal',rbtn:'rbtn-planner',actions:`<button class="rbtn rbtn-planner">Add to basket</button><button class="rbtn rbtn-planner">${ico.more}</button>`,center:weekNav()},
+    pantry:{phClass:'tha-ph-pantry',title:'My Pantry',icon:'pantry',rbtn:'rbtn-pantry',actions:`<button class="rbtn rbtn-pantry">Add item</button>`,center:`<div class="tstrip" style="color:hsl(118,32%,18%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">Inventory</button><button class="tsb">Explore</button></div>`},
+    dashboard:{phClass:'tha-ph-home',title:'Dashboard',icon:'home',rbtn:'rbtn-home',actions:'',center:''},
+    shopping:{phClass:'tha-ph-basket',title:'Shopping',icon:'cart',rbtn:'rbtn-basket',actions:`<button class="rbtn rbtn-basket">Review</button>`,center:`<div class="tstrip" style="color:hsl(26,24%,20%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">By category</button><button class="tsb">A–Z</button></div>`},
+  };
+  const p = cfg[realm]||cfg.planner;
+  return `
+    <div class="tha-topbar-current">
+      <div style="display:flex;gap:4px">${['dash','search'].map(i=>`<div class="tib">${ico[i]}</div>`).join('')}</div>
+      <div style="display:flex;justify-content:center;align-items:center">${LOGO.replace('style="display:block;width:auto;"','style="display:block;max-height:48px;width:auto;"')}</div>
+      <div style="display:flex;justify-content:flex-end;gap:4px">${globalRight()}</div>
+    </div>
+    <div class="${p.phClass}" style="display:flex;align-items:center;height:40px;padding:0 28px;gap:12px;border-bottom:1px solid;flex-shrink:0;">
+      <div style="font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;display:flex;align-items:center;gap:7px;">${ico[p.icon]}${p.title}</div>
+      <div style="flex:1;display:flex;justify-content:center;">${p.center}</div>
+      <div style="display:flex;align-items:center;gap:6px;">${p.actions}</div>
+    </div>`;
+}
+
+// ── Concept D: Logo Left, Title Dominant ──────────────────────────
+function headerD(realm) {
+  const cfg = {
+    planner:{textCol:'hsl(172,38%,18%)',accentCol:'hsl(172,35%,38%)',title:'Planner',icon:'cal',actions:`${weekNav()}<div style="width:1px;height:20px;background:hsl(33,22%,87%);"></div><button class="rbtn rbtn-planner">Add to basket</button><button class="rbtn rbtn-planner">${ico.more}</button>`},
+    pantry:{textCol:'hsl(118,32%,18%)',accentCol:'hsl(118,30%,38%)',title:'My Pantry',icon:'pantry',actions:`<div class="tstrip" style="color:hsl(118,32%,18%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">Inventory</button><button class="tsb">Explore</button></div><button class="rbtn rbtn-pantry">Add item</button>`},
+    dashboard:{textCol:'hsl(132,16%,18%)',accentCol:'hsl(132,14%,44%)',title:'Dashboard',icon:'home',actions:`<button class="rbtn rbtn-home">This week</button>`},
+    shopping:{textCol:'hsl(26,24%,20%)',accentCol:'hsl(26,22%,40%)',title:'Shopping',icon:'cart',actions:`<div class="tstrip" style="color:hsl(26,24%,20%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">By category</button><button class="tsb">A–Z</button></div><button class="rbtn rbtn-basket">Review basket</button>`},
+  };
+  const p = cfg[realm]||cfg.planner;
+  return `
+    <div class="tha-topbar-frosted" style="height:60px;padding:0 20px;gap:16px;">
+      ${LOGO.replace('style="display:block;width:auto;"','style="display:block;max-height:40px;width:auto;flex-shrink:0;"')}
+      <div style="width:1px;height:28px;background:hsl(33,22%,87%);flex-shrink:0;"></div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-family:'DM Sans',sans-serif;font-size:26px;font-weight:700;color:${p.textCol};letter-spacing:-.02em;display:flex;align-items:center;gap:8px;">${ico[p.icon]}${p.title}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">${p.actions}${globalRight()}</div>
+    </div>`;
+}
+
+// ── Concept E: Apple Mark + Horizontal Nav ────────────────────────
+function headerE(realm) {
+  const navItems = [
+    {label:'Quick List',page:'list'},
+    {label:'Cookbook',page:'cookbook'},
+    {label:'Planner',page:'planner'},
+    {label:'Pantry',page:'pantry'},
+    {label:'Analyser',page:'analyser'},
+    {label:'Shop',page:'basket'},
+    {label:'My Diary',page:'diary'},
+  ];
+  return `
+    <div class="tha-topbar-frosted" style="height:52px;padding:0 20px;gap:12px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        ${APPLE.replace('style="display:block;border-radius:6px;"','style="display:block;width:28px;height:28px;border-radius:8px;"')}
+        <span style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:hsl(132,16%,18%);white-space:nowrap;">The Healthy Apples</span>
+      </div>
+      <div style="width:1px;height:20px;background:hsl(33,22%,87%);flex-shrink:0;"></div>
+      <div style="flex:1;display:flex;gap:2px;align-items:center;justify-content:center;overflow:hidden;">
+        ${navItems.map(n=>`<div class="npill ${n.page===realm?'npill-on':''}">${n.label}</div>`).join('')}
+      </div>
+      <div style="width:1px;height:20px;background:hsl(33,22%,87%);flex-shrink:0;"></div>
+      <div style="display:flex;gap:4px;">${globalRight()}</div>
+    </div>`;
+}
+
+// ── Concept F: Brand Rail + Workspace Bar ─────────────────────────
+function headerF(realm) {
+  const cfg = {
+    planner:{phClass:'tha-ph-planner',title:'Planner',icon:'cal',actions:`${weekNav()}<button class="rbtn rbtn-planner">Add to basket</button><button class="rbtn rbtn-planner">${ico.more}</button>`},
+    pantry:{phClass:'tha-ph-pantry',title:'My Pantry',icon:'pantry',actions:`<div class="tstrip" style="color:hsl(118,32%,18%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">Inventory</button><button class="tsb">Explore</button></div><button class="rbtn rbtn-pantry">Add item</button>`},
+    dashboard:{phClass:'tha-ph-home',title:'Dashboard',icon:'home',actions:`<button class="rbtn rbtn-home">This week</button>`},
+    shopping:{phClass:'tha-ph-basket',title:'Shopping',icon:'cart',actions:`<div class="tstrip" style="color:hsl(26,24%,20%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">By category</button><button class="tsb">A–Z</button></div><button class="rbtn rbtn-basket">Review</button>`},
+  };
+  const p = cfg[realm]||cfg.planner;
+  return `
+    <div class="tha-topbar-ultra" style="height:32px;padding:0 16px;gap:8px;">
+      <div style="flex:1;display:flex;justify-content:center;align-items:center;">
+        ${LOGO.replace('style="display:block;width:auto;"','style="display:block;max-height:22px;width:auto;"')}
+      </div>
+      <div style="display:flex;gap:3px;">${globalRight('sm')}</div>
+    </div>
+    <div class="${p.phClass}" style="display:flex;align-items:center;height:40px;padding:0 24px;gap:12px;border-bottom:1px solid;flex-shrink:0;">
+      <div style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px;">${ico[p.icon]}${p.title}</div>
+      <div style="flex:1;display:flex;justify-content:center;">${p.actions}</div>
+    </div>`;
+}
+
+// ── Concept G: Slim Chrome + Editorial Title ──────────────────────
+function headerG(realm) {
+  const crumb = {planner:'Planner',pantry:'My Pantry',dashboard:'Dashboard',shopping:'Shopping'};
+  return `
+    <div class="tha-topbar-frosted" style="height:44px;padding:0 20px;gap:12px;">
+      ${APPLE.replace('style="display:block;border-radius:6px;"','style="display:block;width:26px;height:26px;border-radius:7px;flex-shrink:0;"')}
+      <div style="flex:1;display:flex;align-items:center;gap:6px;font-size:12.5px;color:hsl(120,5%,34%);">
+        <span>Home</span><span style="opacity:.5">›</span><span style="font-weight:500;color:hsl(120,14%,14%)">${crumb[realm]||'Planner'}</span>
+      </div>
+      <div style="display:flex;gap:4px;">${globalRight()}</div>
+    </div>`;
+}
+
+// ── Concept H: Floating Glass Card ───────────────────────────────
+function headerH(realm) {
+  const cfg = {
+    planner:{phClass:'tha-ph-planner',title:'Planner',icon:'cal',center:weekNav(),actions:`<button class="rbtn rbtn-planner">Add to basket</button><button class="rbtn rbtn-planner">${ico.more}</button>`},
+    pantry:{phClass:'tha-ph-pantry',title:'My Pantry',icon:'pantry',center:`<div class="tstrip" style="color:hsl(118,32%,18%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">Inventory</button><button class="tsb">Explore</button></div>`,actions:`<button class="rbtn rbtn-pantry">Add item</button>`},
+    dashboard:{phClass:'tha-ph-home',title:'Dashboard',icon:'home',center:'',actions:`<button class="rbtn rbtn-home">This week</button>`},
+    shopping:{phClass:'tha-ph-basket',title:'Shopping',icon:'cart',center:`<div class="tstrip" style="color:hsl(26,24%,20%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">By category</button><button class="tsb">A–Z</button></div>`,actions:`<button class="rbtn rbtn-basket">Review</button>`},
+    cookbook:{phClass:'',title:'Cookbook',icon:'chef',center:`<div class="tstrip" style="color:hsl(38,65%,18%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">Browse</button><button class="tsb">Saved</button><button class="tsb">Plan</button></div>`,actions:`<button class="rbtn" style="border-color:hsl(38,36%,78%);color:hsl(38,65%,18%);background:rgba(255,255,255,.5);">Add recipe</button>`},
+    nutrition:{phClass:'tha-ph-home',title:'Analyser',icon:'micro',center:'',actions:`<button class="rbtn rbtn-home">This week</button><button class="rbtn rbtn-home">${ico.more}</button>`},
+  };
+  const p = cfg[realm]||cfg.planner;
+  const floatBg = p.phClass ? `background:${p.phClass.includes('planner')?'hsl(172,28%,89%)':p.phClass.includes('pantry')?'hsl(118,22%,90%)':p.phClass.includes('home')?'hsl(132,18%,91%)':p.phClass.includes('basket')?'hsl(26,20%,91%)':'rgba(255,255,255,.85)'};backdrop-filter:blur(20px);border-color:rgba(255,255,255,.5);` : 'background:rgba(255,255,255,.88);backdrop-filter:blur(20px);border-color:rgba(255,255,255,.5);';
+  return `<div class="tha-topbar-float" style="${floatBg}height:56px;z-index:20;">
+    ${LOGO.replace('style="display:block;width:auto;"','style="display:block;max-height:32px;width:auto;flex-shrink:0;"')}
+    <div style="width:1px;height:22px;background:currentColor;opacity:.15;"></div>
+    <div style="font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;display:flex;align-items:center;gap:6px;">${ico[p.icon]}${p.title}</div>
+    <div style="flex:1;display:flex;justify-content:center;">${p.center}</div>
+    <div style="display:flex;align-items:center;gap:6px;">${p.actions}${globalRight()}</div>
+  </div>`;
+}
+
+// ── Concept I: Adaptive Compact ───────────────────────────────────
+function headerI(realm) {
+  const cfg = {
+    planner:{phClass:'tha-ph-planner',title:'Planner',icon:'cal',center:weekNav(),actions:`<button class="rbtn rbtn-planner">Add to basket</button><button class="rbtn rbtn-planner">${ico.more}</button>`},
+    pantry:{phClass:'tha-ph-pantry',title:'My Pantry',icon:'pantry',center:`<div class="tstrip" style="color:hsl(118,32%,18%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">Inventory</button><button class="tsb">Explore</button></div>`,actions:`<button class="rbtn rbtn-pantry">Add item</button>`},
+    dashboard:{phClass:'tha-ph-home',title:'Dashboard',icon:'home',center:'',actions:`<button class="rbtn rbtn-home">This week</button>`},
+    shopping:{phClass:'tha-ph-basket',title:'Shopping',icon:'cart',center:`<div class="tstrip" style="color:hsl(26,24%,20%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">Category</button><button class="tsb">A–Z</button></div>`,actions:`<button class="rbtn rbtn-basket">Review</button>`},
+    cookbook:{phClass:'',title:'Cookbook',icon:'chef',center:`<div class="tstrip" style="color:hsl(38,65%,18%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">Browse</button><button class="tsb">Saved</button></div>`,actions:`<button class="rbtn" style="border-color:hsl(38,36%,78%);color:hsl(38,65%,18%);background:rgba(255,255,255,.5);">Add recipe</button>`},
+    nutrition:{phClass:'',title:'Analyser',icon:'micro',center:'',actions:`<button class="rbtn" style="border-color:hsl(132,14%,78%);color:hsl(132,16%,18%);background:rgba(255,255,255,.5);">Export</button>`},
+  };
+  const p = cfg[realm]||cfg.planner;
+  return `
+    <div class="${p.phClass||'tha-topbar-frosted'}" style="display:flex;align-items:center;height:48px;padding:0 16px;gap:10px;border-bottom:1px solid;flex-shrink:0;backdrop-filter:blur(10px);">
+      ${LOGO.replace('style="display:block;width:auto;"','style="display:block;max-height:28px;width:auto;flex-shrink:0;"')}
+      <div style="width:1px;height:18px;background:currentColor;opacity:.18;flex-shrink:0;"></div>
+      <div style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;flex-shrink:0;opacity:.85;">${ico[p.icon]}${p.title}</div>
+      <div style="flex:1;display:flex;justify-content:center;">${p.center}</div>
+      <div style="display:flex;align-items:center;gap:5px;">${p.actions}${globalRight()}</div>
+    </div>`;
+}
+
+// ── Concept J: Command Palette First ─────────────────────────────
+function headerJ(realm) {
+  return `
+    <div class="tha-topbar-ultra" style="height:48px;padding:0 20px;gap:12px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        ${APPLE.replace('style="display:block;border-radius:6px;"','style="display:block;width:26px;height:26px;border-radius:7px;flex-shrink:0;"')}
+        <span style="font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:hsl(132,16%,18%);white-space:nowrap;opacity:.7;">THA</span>
+      </div>
+      <div style="width:1px;height:20px;background:hsl(33,22%,87%);flex-shrink:0;"></div>
+      <div style="flex:1;display:flex;justify-content:center;">
+        <div class="cmd-bar">
+          ${ico.search}
+          <span>Search or type a command…</span>
+          <span style="margin-left:auto"><span class="cmd-bar-kbd">⌘K</span></span>
+        </div>
+      </div>
+      <div style="width:1px;height:20px;background:hsl(33,22%,87%);flex-shrink:0;"></div>
+      <div style="display:flex;gap:4px;">${globalRight()}</div>
+    </div>`;
+}
+
+// ── Build a complete mock-up ──────────────────────────────────────
+function buildMockup(concept, realm) {
+  const useSidebar = concept !== 'e';
+  const isEditorial = concept === 'g';
+  const isFloat = concept === 'h';
+
+  let header = '';
+  switch(concept) {
+    case 'a': header = headerA(realm); break;
+    case 'b': header = headerB(realm); break;
+    case 'c': header = headerC(realm); break;
+    case 'd': header = headerD(realm); break;
+    case 'e': header = headerE(realm); break;
+    case 'f': header = headerF(realm); break;
+    case 'g': header = headerG(realm); break;
+    case 'h': header = headerH(realm); break;
+    case 'i': header = headerI(realm); break;
+    case 'j': header = headerJ(realm); break;
+  }
+
+  let content = '';
+  switch(realm) {
+    case 'planner':   content = plannerContent(isEditorial); break;
+    case 'pantry':    content = pantryContent(); break;
+    case 'dashboard': content = dashContent(); break;
+    case 'shopping':  content = shopContent(); break;
+    case 'cookbook':  content = cookbookContent(); break;
+    case 'nutrition': content = nutritionContent(); break;
+  }
+
+  const sidebarPageMap = {dashboard:'home',cookbook:'cookbook',nutrition:'analyser'};
+  const sidebarPage = sidebarPageMap[realm] || realm;
+  const sidebarHtml = useSidebar ? sidebar(sidebarPage) : '';
+
+  const editorialTitle = (isEditorial && realm !== 'planner') ? (() => {
+    const titles = {pantry:'My Pantry',dashboard:'Dashboard',shopping:'Shopping'};
+    const icons2 = {pantry:'pantry',dashboard:'home',shopping:'cart'};
+    const cols = {pantry:'hsl(118,32%,18%)',dashboard:'hsl(132,16%,18%)',shopping:'hsl(26,24%,20%)'};
+    const accs = {pantry:'hsl(118,30%,38%)',dashboard:'hsl(132,14%,44%)',shopping:'hsl(26,22%,40%)'};
+    return `<div style="margin-bottom:14px;">
+      <h1 style="font-family:'DM Sans',sans-serif;font-size:28px;font-weight:700;color:${cols[realm]};letter-spacing:-.02em;display:flex;align-items:center;gap:10px;">${ico[icons2[realm]]} ${titles[realm]}</h1>
+      <p style="font-size:12px;color:${accs[realm]};margin-top:4px;">${realm==='pantry'?'142 items tracked':realm==='shopping'?'18 items · Est. £47.20':'Week 26 · June 2026'}</p>
+    </div>`;
+  })() : '';
+
+  return `<div class="tha-app">
+    ${orchardBg}
+    <div class="tha-chrome">
+      ${header}
+      <div class="tha-layout">
+        ${sidebarHtml}
+        <div class="tha-main">
+          <div class="tha-scroll">${editorialTitle}${content}</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Concept overview cards ────────────────────────────────────────
+const CONCEPTS = [
+  {id:'a',label:'A — Current Refined',badge:'−54px saved',desc:'Logo shrinks from 88px to 48px. Two-bar structure preserved. Lowest risk, fastest to ship.'},
+  {id:'b',label:'B — Unified Workspace',badge:'−94px saved ★',desc:'Single 56px bar combining global chrome and page identity. Recommended by WX9.4 investigation.'},
+  {id:'c',label:'C — Symmetric Logo',badge:'−66px saved',desc:'Logo stays centred and prominent. A slim 40px realm identity bar sits below, keeping the brand hierarchy clear.'},
+  {id:'d',label:'D — Title Dominant',badge:'−98px saved',desc:'Logo left at 40px. Page title fills the center at 26px bold in realm colour. Single bar, highly distinctive.'},
+  {id:'e',label:'E — Horizontal Nav',badge:'−106px + sidebar',desc:'Removes the sidebar. All navigation in a single 52px bar with horizontal pills. Radical space efficiency.'},
+  {id:'f',label:'F — Brand Rail',badge:'−86px saved',desc:'Ultra-slim 32px brand rail with minimal wordmark. Below: a 40px realm-coloured workspace bar. Two clear jobs.'},
+  {id:'g',label:'G — Editorial',badge:'−114px sticky',desc:'44px chrome strip with breadcrumb only. Page title lives inside content and scrolls — calm, editorial, premium.'},
+  {id:'h',label:'H — Floating Glass',badge:'−74px saved',desc:'Rounded glass card floats over the orchard backdrop with 8px air gap. macOS / Arc-inspired depth and materiality.'},
+  {id:'i',label:'I — Adaptive Compact',badge:'−94px saved',desc:'48px single band. Contextual controls adapt per page. Linear/Figma feel with THA warmth. Logo stays visible.'},
+  {id:'j',label:'J — Command Palette',badge:'−94px saved',desc:'⌘K command bar replaces navigation. Minimal apple mark + search pill + utilities. Raycast-inspired power-user chrome.'},
+];
+
+function buildOverview() {
+  const grid = document.getElementById('overview-grid');
+  grid.innerHTML = CONCEPTS.map(c=>`
+    <div class="ov-card" onclick="switchConcept('${c.id}')">
+      <div class="ov-card-header">
+        <div class="ov-card-header-scale" id="ov-hdr-${c.id}"></div>
+      </div>
+      <div class="ov-card-body">
+        <div class="ov-card-badge">${c.badge}</div>
+        <div class="ov-card-label">${c.label}</div>
+        <div class="ov-card-desc">${c.desc}</div>
+      </div>
+    </div>`).join('');
+
+  // Render mini header previews
+  CONCEPTS.forEach(c=>{
+    const el = document.getElementById(`ov-hdr-${c.id}`);
+    if(el) {
+      let h='';
+      switch(c.id){
+        case 'a':h=headerA('planner');break;case 'b':h=headerB('planner');break;
+        case 'c':h=headerC('planner');break;case 'd':h=headerD('planner');break;
+        case 'e':h=headerE('planner');break;case 'f':h=headerF('planner');break;
+        case 'g':h=headerG('planner');break;case 'h':h=headerH('planner');break;
+        case 'i':h=headerI('planner');break;case 'j':h=headerJ('planner');break;
+      }
+      el.innerHTML=`<div style="width:1440px;background:rgba(255,255,255,.6);">${h}</div>`;
+    }
+  });
+}
+
+// ── Comparison board ──────────────────────────────────────────────
+const CONCEPT_META = [
+  {id:'a',label:'A · Current Refined',height:'104px',saved:'−54px'},
+  {id:'b',label:'B · Unified Workspace',height:'56px',saved:'−102px ★'},
+  {id:'c',label:'C · Symmetric Logo',height:'92px',saved:'−66px'},
+  {id:'d',label:'D · Title Dominant',height:'60px',saved:'−98px'},
+  {id:'e',label:'E · Horizontal Nav',height:'52px',saved:'−106px'},
+  {id:'f',label:'F · Brand Rail',height:'72px',saved:'−86px'},
+  {id:'g',label:'G · Editorial',height:'44px',saved:'−114px'},
+  {id:'h',label:'H · Floating Glass',height:'68px',saved:'−74px'},
+  {id:'i',label:'I · Adaptive Compact',height:'48px',saved:'−94px'},
+  {id:'j',label:'J · Command Palette',height:'48px',saved:'−94px'},
+];
+
+function buildCompare() {
+  const board = document.getElementById('compare-board');
+  board.innerHTML = CONCEPT_META.map(m=>{
+    let h='';
+    switch(m.id){
+      case 'a':h=headerA('planner');break;case 'b':h=headerB('planner');break;
+      case 'c':h=headerC('planner');break;case 'd':h=headerD('planner');break;
+      case 'e':h=headerE('planner');break;case 'f':h=headerF('planner');break;
+      case 'g':h=headerG('planner');break;case 'h':h=headerH('planner');break;
+      case 'i':h=headerI('planner');break;case 'j':h=headerJ('planner');break;
+    }
+    return `
+      <div style="background:#fff;border:1px solid #e3d9cd;border-radius:10px;overflow:hidden;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:#faf7f3;border-bottom:1px solid #e3d9cd;">
+          <span style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;color:#1f2520">${m.label}</span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="font-size:11px;color:#535a54;font-weight:500">Header height: ${m.height}</span>
+            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:${m.id==='b'?'#d1ebe7':'#f0ebe2'};color:${m.id==='b'?'#1a4a44':'#3a4a3c'}">${m.saved}</span>
+          </div>
+        </div>
+        <div style="overflow:hidden;height:${Math.round(parseInt(m.height)*0.55)}px;">
+          <div style="transform:scale(0.55);transform-origin:top left;width:${Math.round(790/0.55)}px;background:hsl(172,28%,89%);">${h}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Main mock-up injection ────────────────────────────────────────
+const PAGES = ['planner','cookbook','nutrition','shopping','pantry','dashboard'];
+const SECTION_IDS = ['a','b','c','d','e','f','g','h','i','j'];
+let activeConcept = 'overview';
+let activePage = 'planner';
+
+const INFO = {
+  a:{badge:'−54px vs today · 104px total',desc:'Current architecture, logo height reduced from 88px to 48px. Zero code structure changes.',effort:'Effort: XS (hours)'},
+  b:{badge:'−94px vs today · 56–96px total ★ Recommended',desc:'Single unified workspace header. Logo 36px left. Page title + realm colour + controls in one band.',effort:'Effort: M (2–4 days)'},
+  c:{badge:'−66px vs today · 92px total',desc:'Logo centred at 48px, symmetric controls. Below: slim 40px realm identity bar with title and actions.',effort:'Effort: S (1–2 days)'},
+  d:{badge:'−98px vs today · 60px total',desc:'Single bar. Logo 40px left. Page title large (26px bold) in realm colour fills the center.',effort:'Effort: M (2–3 days)'},
+  e:{badge:'−106px + removes 220px sidebar',desc:'Single 52px bar with horizontal navigation pills. No sidebar. Content spans full viewport width.',effort:'Effort: L (1+ week)'},
+  f:{badge:'−86px vs today · 72px total',desc:'32px brand rail with wordmark + global utilities. Below: 40px realm-coloured workspace bar.',effort:'Effort: M (2–4 days)'},
+  g:{badge:'−114px sticky vs today · 44px persistent',desc:'44px slim chrome with breadcrumb only. Page title editorial inside content, scrolls with page.',effort:'Effort: L'},
+  h:{badge:'−74px vs today · 68px floating',desc:'Rounded glass card (border-radius 16px) floats over the orchard with 8px gap. Realm wash on the float.',effort:'Effort: M (3–5 days)'},
+  i:{badge:'−94px vs today · 48px total',desc:'48px adaptive single bar. Logo 28px + contextual page controls that change per workspace section.',effort:'Effort: M (2–4 days)'},
+  j:{badge:'−94px vs today · 48px total',desc:'48px minimal bar. Apple mark left. ⌘K command pill centre. All navigation through the command palette.',effort:'Effort: XL (1–2 weeks)'},
+};
+
+function renderConceptMockups(conceptId) {
+  // Pre-warm the planner view (the default) immediately
+  const sectionEl = document.getElementById(`section-${conceptId}`);
+  if(sectionEl) {
+    const mainScale = sectionEl.querySelector('.mockup-scale');
+    if(mainScale && !mainScale.dataset.built) {
+      mainScale.innerHTML = buildMockup(conceptId, activePage);
+      mainScale.dataset.built = 'true';
+    }
+  }
+}
+
+function switchConcept(id) {
+  activeConcept = id;
+  document.querySelectorAll('.g-tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.concept===id);
+  });
+  document.querySelectorAll('.g-section').forEach(s=>{
+    s.classList.toggle('active', s.id===`section-${id}`);
+  });
+
+  const isSpecial = id==='overview'||id==='compare';
+  document.getElementById('page-nav').style.display = isSpecial?'none':'flex';
+  document.getElementById('info-strip').style.display = isSpecial?'none':'flex';
+
+  if(!isSpecial && INFO[id]) {
+    document.getElementById('info-badge').textContent = INFO[id].badge;
+    document.getElementById('info-desc').textContent = INFO[id].desc;
+    document.getElementById('info-effort').textContent = INFO[id].effort;
+    switchPage(activePage, id);
+  }
+  if(id==='compare') buildCompare();
+}
+
+function switchPage(page, concept) {
+  activePage = page;
+  document.querySelectorAll('.g-pagetab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.page===page);
+  });
+  const sectionEl = document.getElementById(`section-${concept}`);
+  if(!sectionEl) return;
+  // Always build directly into the section's single display container
+  const mainScale = sectionEl.querySelector('.mockup-scale');
+  if(mainScale) mainScale.innerHTML = buildMockup(concept, page);
+}
+
+// ── Prev/Next concept navigation ─────────────────────────────────
+const NAV_CONCEPTS = ['overview',...SECTION_IDS,'compare'];
+function prevConcept() {
+  const idx = NAV_CONCEPTS.indexOf(activeConcept);
+  if(idx > 0) switchConcept(NAV_CONCEPTS[idx-1]);
+}
+function nextConcept() {
+  const idx = NAV_CONCEPTS.indexOf(activeConcept);
+  if(idx < NAV_CONCEPTS.length-1) switchConcept(NAV_CONCEPTS[idx+1]);
+}
+
+// ── Tab event listeners ───────────────────────────────────────────
+document.querySelectorAll('.g-tab').forEach(t=>{
+  t.addEventListener('click',()=>switchConcept(t.dataset.concept));
+});
+document.querySelectorAll('.g-pagetab').forEach(t=>{
+  t.addEventListener('click',()=>switchPage(t.dataset.page, activeConcept));
+});
+
+// ── Init ──────────────────────────────────────────────────────────
+buildOverview();
+
+// Pre-build concept B (recommended) on idle so it renders fast on click
+if('requestIdleCallback' in window) {
+  requestIdleCallback(()=>{ renderConceptMockups('b'); });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>WX9.5 Header Comparison Board · THA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',sans-serif;background:hsl(42,27%,95%);color:hsl(120,14%,14%);padding:32px;}
+
+.board-header{margin-bottom:28px;}
+.board-title{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:hsl(120,14%,14%);}
+.board-sub{font-size:13px;color:hsl(120,5%,34%);margin-top:4px;}
+.board-meta{font-size:11.5px;color:hsl(120,5%,42%);margin-top:6px;}
+
+.stack{display:flex;flex-direction:column;gap:8px;}
+
+.row{background:#fff;border:1px solid hsl(33,22%,87%);border-radius:10px;overflow:hidden;}
+.row-label{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;background:hsl(40,33%,97%);border-bottom:1px solid hsl(33,22%,87%);}
+.row-label-left{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;color:hsl(120,14%,14%);}
+.row-label-right{display:flex;gap:12px;align-items:center;}
+.pill{font-size:10.5px;font-weight:700;padding:2px 9px;border-radius:999px;}
+.pill-saved{background:hsl(172,28%,89%);color:hsl(172,38%,18%);}
+.pill-best{background:hsl(132,14%,44%);color:#fff;}
+.pill-height{background:hsl(40,33%,90%);color:hsl(120,14%,14%);}
+
+.row-preview{overflow:hidden;}
+
+/* ── Mini THA Header CSS (copied inline for self-containment) ── */
+.tha-topbar-current{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;background:rgba(255,255,255,.62);backdrop-filter:blur(12px);border-bottom:1px solid hsl(33,22%,87%);padding:4px 16px;}
+.tha-topbar-frosted{display:flex;align-items:center;background:rgba(255,255,255,.62);backdrop-filter:blur(12px);border-bottom:1px solid hsl(33,22%,87%);padding:0 16px;gap:8px;}
+.tha-topbar-ultra{display:flex;align-items:center;background:rgba(255,255,255,.96);border-bottom:1px solid hsl(33,22%,90%);padding:0 16px;gap:8px;}
+.tib{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;border:none;background:transparent;cursor:pointer;color:hsl(120,5%,34%);flex-shrink:0;position:relative;}
+.tib svg,.tib-sm svg{display:block;}
+.tib svg{width:18px;height:18px;}
+.tib-sm{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;background:transparent;flex-shrink:0;position:relative;}
+.tib-sm svg{width:15px;height:15px;color:hsl(120,5%,34%);}
+.tbadge{position:absolute;top:3px;right:3px;background:hsl(132,14%,44%);color:#fff;font-size:9px;font-weight:700;border-radius:999px;min-width:14px;height:14px;display:flex;align-items:center;justify-content:center;padding:0 2px;}
+.tha-ph-planner{background:hsl(172,28%,89%);border-color:hsl(172,22%,80%);color:hsl(172,38%,18%);}
+.rbtn{display:inline-flex;align-items:center;gap:4px;padding:5px 11px;border-radius:7px;border:1px solid rgba(0,0,0,.08);font-family:'Inter',sans-serif;font-size:12px;font-weight:500;white-space:nowrap;}
+.rbtn-planner{background:rgba(255,255,255,.5);border-color:hsl(172,22%,78%);color:hsl(172,38%,18%);}
+.tstrip{display:flex;gap:2px;background:rgba(255,255,255,.4);border:1px solid rgba(0,0,0,.1);border-radius:8px;padding:2px;}
+.tsb{padding:4px 12px;border-radius:6px;border:none;font-size:12px;font-weight:500;font-family:'Inter',sans-serif;background:transparent;color:inherit;opacity:.7;}
+.tsb.tsb-on{background:rgba(255,255,255,.8);opacity:1;font-weight:600;}
+.npill{padding:5px 13px;border-radius:8px;font-size:13px;font-weight:500;color:hsl(120,5%,34%);}
+.npill-on{background:hsl(172,28%,89%);color:hsl(172,38%,18%);font-weight:600;}
+.wnav{display:flex;align-items:center;gap:6px;}
+.wnav-btn{width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;border:1px solid rgba(0,0,0,.12);background:rgba(255,255,255,.5);}
+.wnav-btn svg{width:14px;height:14px;}
+.wnav-label{font-size:13px;font-weight:600;color:inherit;padding:0 8px;white-space:nowrap;}
+
+.height-bar{position:absolute;right:0;top:0;width:4px;background:hsl(132,14%,44%);opacity:.25;}
+
+@media print {
+  body{padding:16px;}
+  .board-header{page-break-after:avoid;}
+}
+</style>
+</head>
+<body>
+
+<div class="board-header">
+  <div class="board-title">Workspace Header Design Spike — Comparison Board</div>
+  <div class="board-sub">WX9.5 · The Healthy Apples · June 2026</div>
+  <div class="board-meta">All headers shown at full content width · Planner realm · Scale 1:1</div>
+</div>
+
+<div class="stack" id="board"></div>
+
+<script>
+const ico = {
+  search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+  basket:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>`,
+  user:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  dash:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>`,
+  cal:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+  chevL:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>`,
+  chevR:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>`,
+  more:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`,
+};
+
+const LOGO = `<img src="../../../client/public/logo-long.png" alt="The Healthy Apples" style="display:block;width:auto;">`;
+const APPLE = `<img src="../../../client/src/assets/icons/tha-apple.png" alt="" style="display:block;border-radius:6px;">`;
+
+function gRight(sm=false){
+  const cls=sm?'tib-sm':'tib';
+  return `<div class="${cls}">${ico.search}</div><div class="${cls}" style="position:relative">${ico.basket}<span class="tbadge">7</span></div><div class="${cls}">${ico.user}</div>`;
+}
+function wnav(){
+  return `<div class="wnav"><div class="wnav-btn">${ico.chevL}</div><span class="wnav-label">Week 26 · 29 Jun – 5 Jul</span><div class="wnav-btn">${ico.chevR}</div></div>`;
+}
+function plannerActions(){
+  return `<button class="rbtn rbtn-planner">Add all to basket</button><button class="rbtn rbtn-planner">${ico.more}</button>`;
+}
+
+const HEADERS = [
+  {
+    id:'a', label:'A — Current Refined', saved:'−54px', height:'104px', isBest:false,
+    html:`<div class="tha-topbar-current">
+      <div style="display:flex;gap:4px"><div class="tib">${ico.dash}</div><div class="tib">${ico.search}</div></div>
+      <div style="display:flex;justify-content:center;align-items:center;">${LOGO.replace('style="display:block;width:auto;"','style="max-height:48px;width:auto;"')}</div>
+      <div style="display:flex;justify-content:flex-end;gap:4px;">${gRight()}</div>
+    </div>
+    <div class="tha-ph-planner" style="display:flex;align-items:center;padding:10px 28px;border-bottom:1px solid;gap:12px;">
+      <div style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:600;display:flex;align-items:center;gap:8px;">${ico.cal}Planner</div>
+      <div style="flex:1;display:flex;justify-content:center;">${wnav()}</div>
+      <div style="display:flex;gap:6px;">${plannerActions()}</div>
+    </div>`
+  },
+  {
+    id:'b', label:'B — Unified Workspace Header ★ Recommended', saved:'−94px', height:'56px', isBest:true,
+    html:`<div class="tha-ph-planner" style="display:flex;align-items:center;height:56px;padding:0 16px;gap:12px;border-bottom:1px solid;backdrop-filter:blur(10px);">
+      ${LOGO.replace('style="display:block;width:auto;"','style="max-height:36px;width:auto;"')}
+      <div style="width:1px;height:24px;background:currentColor;opacity:.18;"></div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:18px;font-weight:600;display:flex;align-items:center;gap:7px;">${ico.cal}Planner</div>
+      <div style="flex:1;display:flex;justify-content:center;">${wnav()}</div>
+      <div style="display:flex;align-items:center;gap:6px;">${plannerActions()}${gRight()}</div>
+    </div>`
+  },
+  {
+    id:'c', label:'C — Symmetric Logo, Slim Identity Bar', saved:'−66px', height:'92px', isBest:false,
+    html:`<div class="tha-topbar-current">
+      <div style="display:flex;gap:4px"><div class="tib">${ico.dash}</div><div class="tib">${ico.search}</div></div>
+      <div style="display:flex;justify-content:center;align-items:center;">${LOGO.replace('style="display:block;width:auto;"','style="max-height:48px;width:auto;"')}</div>
+      <div style="display:flex;justify-content:flex-end;gap:4px;">${gRight()}</div>
+    </div>
+    <div class="tha-ph-planner" style="display:flex;align-items:center;height:40px;padding:0 28px;gap:12px;border-bottom:1px solid;">
+      <div style="font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;display:flex;align-items:center;gap:7px;">${ico.cal}Planner</div>
+      <div style="flex:1;display:flex;justify-content:center;">${wnav()}</div>
+      <div style="display:flex;gap:6px;">${plannerActions()}</div>
+    </div>`
+  },
+  {
+    id:'d', label:'D — Logo Left, Title Dominant', saved:'−98px', height:'60px', isBest:false,
+    html:`<div class="tha-topbar-frosted" style="height:60px;padding:0 20px;gap:16px;">
+      ${LOGO.replace('style="display:block;width:auto;"','style="max-height:40px;width:auto;flex-shrink:0;"')}
+      <div style="width:1px;height:28px;background:hsl(33,22%,87%);flex-shrink:0;"></div>
+      <div style="font-family:'DM Sans',sans-serif;font-size:26px;font-weight:700;color:hsl(172,38%,18%);letter-spacing:-.02em;display:flex;align-items:center;gap:8px;flex:1;">${ico.cal}Planner</div>
+      <div style="display:flex;align-items:center;gap:6px;">${wnav()}${plannerActions()}${gRight()}</div>
+    </div>`
+  },
+  {
+    id:'e', label:'E — Apple Mark + Horizontal Navigation', saved:'−106px + no sidebar', height:'52px', isBest:false,
+    html:`<div class="tha-topbar-frosted" style="height:52px;padding:0 20px;gap:12px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        ${APPLE.replace('style="display:block;border-radius:6px;"','style="width:28px;height:28px;border-radius:8px;display:block;"')}
+        <span style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:hsl(132,16%,18%);white-space:nowrap;">The Healthy Apples</span>
+      </div>
+      <div style="width:1px;height:20px;background:hsl(33,22%,87%);"></div>
+      <div style="flex:1;display:flex;gap:2px;align-items:center;justify-content:center;">
+        ${['Quick List','Cookbook','Planner','Pantry','Analyser','Shop','My Diary'].map((n,i)=>`<div class="${i===2?'npill-on':'npill'} npill">${n}</div>`).join('')}
+      </div>
+      <div style="width:1px;height:20px;background:hsl(33,22%,87%);"></div>
+      <div style="display:flex;gap:4px;">${gRight()}</div>
+    </div>`
+  },
+  {
+    id:'f', label:'F — Brand Rail + Workspace Bar', saved:'−86px', height:'72px', isBest:false,
+    html:`<div class="tha-topbar-ultra" style="height:32px;padding:0 16px;gap:8px;">
+      <div style="flex:1;display:flex;justify-content:center;align-items:center;">
+        ${LOGO.replace('style="display:block;width:auto;"','style="max-height:22px;width:auto;"')}
+      </div>
+      <div style="display:flex;gap:3px;">${gRight(true)}</div>
+    </div>
+    <div class="tha-ph-planner" style="display:flex;align-items:center;height:40px;padding:0 24px;gap:12px;border-bottom:1px solid;">
+      <div style="font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;display:flex;align-items:center;gap:6px;">${ico.cal}Planner</div>
+      <div style="flex:1;display:flex;justify-content:center;gap:8px;">${wnav()}<div style="display:flex;gap:5px;">${plannerActions()}</div></div>
+    </div>`
+  },
+  {
+    id:'g', label:'G — Editorial Chrome (44px sticky)', saved:'−114px sticky', height:'44px', isBest:false,
+    html:`<div class="tha-topbar-frosted" style="height:44px;padding:0 20px;gap:12px;">
+      ${APPLE.replace('style="display:block;border-radius:6px;"','style="width:26px;height:26px;border-radius:7px;display:block;flex-shrink:0;"')}
+      <div style="flex:1;display:flex;align-items:center;gap:6px;font-size:12.5px;color:hsl(120,5%,34%);">
+        <span>Home</span><span style="opacity:.5;">›</span><span style="font-weight:500;color:hsl(120,14%,14%);">Planner</span>
+      </div>
+      <div style="display:flex;gap:4px;">${gRight()}</div>
+    </div>`
+  },
+];
+
+const board = document.getElementById('board');
+board.innerHTML = HEADERS.map(h=>{
+  const previewH = Math.round(parseInt(h.height)*1);
+  return `<div class="row">
+    <div class="row-label">
+      <span class="row-label-left">${h.label}</span>
+      <div class="row-label-right">
+        <span class="pill pill-height">Height: ${h.height}</span>
+        <span class="pill ${h.isBest?'pill-best':'pill-saved'}">${h.saved}</span>
+      </div>
+    </div>
+    <div class="row-preview" style="background:hsl(172,28%,89%);">${h.html}</div>
+  </div>`;
+}).join('');
+
+// Height scale bar
+const maxH = 104;
+document.querySelectorAll('.row').forEach((row,i)=>{
+  const h = parseInt(HEADERS[i].height);
+  const pct = (h/maxH*100).toFixed(0);
+  const bar = document.createElement('div');
+  bar.style.cssText=`position:absolute;right:0;top:0;width:4px;height:${pct}%;background:hsl(132,14%,44%);opacity:.25;`;
+});
+</script>
+</body>
+</html>

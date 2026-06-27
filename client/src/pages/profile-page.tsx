@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { normalizeIngredientKey } from "@shared/normalize";
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 import { apiRequest, queryClient as qc } from "@/lib/queryClient";
 import { DIET_PATTERNS, DIET_RESTRICTIONS, EATING_SCHEDULES, ONBOARDING_DIET_OPTIONS, ALLERGY_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS, formatDietLabel } from "@/lib/diets";
 import { GOAL_OPTIONS, STORE_OPTIONS, UPF_OPTIONS, BUDGET_OPTIONS, deriveGoalType } from "@/lib/shared-options";
@@ -188,7 +188,7 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const [showHouseholdManagement, setShowHouseholdManagement] = useState(false);
 
-  const { data: profile, isLoading } = useQuery<ProfileData>({
+  const { data: profile, isPending } = useQuery<ProfileData>({
     queryKey: ["/api/profile"],
   });
 
@@ -237,13 +237,13 @@ export default function ProfilePage() {
     }
   };
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <>
-      <PageHeader
+      <WorkspaceHeader
         realm="diary"
         title="Profile"
-        icon={<User className="h-5 w-5" />}
+        wide
         actions={
           <Button variant="ghost" size="sm" onClick={handleBack} data-testid="button-back-profile">
             <ArrowLeft className="h-4 w-4 mr-1" />
@@ -251,7 +251,7 @@ export default function ProfilePage() {
           </Button>
         }
       />
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-4">
+      <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 space-y-4">
         <Skeleton className="h-36 w-full rounded-xl" />
         <Skeleton className="h-32 w-full rounded-xl" />
         <Skeleton className="h-32 w-full rounded-xl" />
@@ -264,10 +264,9 @@ export default function ProfilePage() {
   if (!profile) {
     return (
       <>
-      <PageHeader
+      <WorkspaceHeader
         realm="diary"
         title="Profile"
-        icon={<User className="h-5 w-5" />}
         actions={
           <Button variant="ghost" size="sm" onClick={handleBack} data-testid="button-back-profile">
             <ArrowLeft className="h-4 w-4 mr-1" />
@@ -286,18 +285,43 @@ export default function ProfilePage() {
 
   return (
     <>
-    <PageHeader
+    <WorkspaceHeader
       realm="diary"
       title="Profile"
-      icon={<User className="h-5 w-5" />}
+      wide
       actions={
         <Button variant="ghost" size="sm" onClick={handleBack} data-testid="button-back-profile">
           <ArrowLeft className="h-4 w-4 mr-1" />
           Back
         </Button>
       }
+      contextBar={
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+          <div className="flex items-center gap-0.5 rounded-lg bg-muted/50 p-1 border border-border/40">
+            {(
+              [
+                { id: "section-personal", label: "Personal" },
+                { id: "section-household", label: "Household" },
+                { id: "section-account", label: "Account" },
+              ] as const
+            ).map(({ id, label }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  document.querySelector(`[data-testid="${id}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-background/70 transition-all shrink-0"
+                data-testid={`tab-profile-${id}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      }
     />
-    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-6 main-safe space-y-4 sm:space-y-6" data-testid="page-profile">
+    <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-6 main-safe space-y-4 sm:space-y-6" data-testid="page-profile">
 
       <ProfileHeader
         profile={profile}
@@ -703,7 +727,7 @@ function HouseholdManagementSection({ currentUserId }: { currentUserId: number }
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState("");
 
-  const { data: household, isLoading } = useQuery<HouseholdData>({
+  const { data: household, isPending: isLoading } = useQuery<HouseholdData>({
     queryKey: ["/api/household"],
   });
 
@@ -972,7 +996,7 @@ function HouseholdEatersSection() {
   const [editDiets, setEditDiets] = useState<string[]>([]);
   const [editRestrictions, setEditRestrictions] = useState<string[]>([]);
 
-  const { data: eaters = [], isLoading } = useQuery<HouseholdEater[]>({
+  const { data: eaters = [], isPending: isLoading } = useQuery<HouseholdEater[]>({
     queryKey: ["/api/household/eaters"],
   });
 

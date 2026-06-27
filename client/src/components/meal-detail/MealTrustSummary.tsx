@@ -17,6 +17,13 @@ interface Reason {
   text: string;
 }
 
+function getMealHeading(meal: Meal): string {
+  if (meal.isSystemMeal) return "Why we recommended this";
+  if (meal.mealSourceType === "openfoodfacts") return "About this product";
+  if (meal.sourceUrl) return "About this recipe";
+  return "Nutrition highlights";
+}
+
 export function MealTrustSummary({
   meal,
   mealDiets,
@@ -70,7 +77,7 @@ export function MealTrustSummary({
   return (
     <Card className="border-border/40">
       <CardHeader className={paddingClass}>
-        <CardTitle className={titleSizeClass}>Why THA chose this</CardTitle>
+        <CardTitle className={titleSizeClass}>{getMealHeading(meal)}</CardTitle>
       </CardHeader>
       <CardContent className={`${paddingClass} space-y-${gapClass} pt-0`}>
         <div className={`space-y-${gapClass}`}>

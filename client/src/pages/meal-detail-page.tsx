@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Loader2, ArrowLeft, ChefHat, Pencil, Trash2, ShoppingBasket, AlertTriangle, RefreshCw, Plus, X, Save, Minus, Flame, Beef, Wheat, Droplets, Cookie, Droplet, Users, Leaf, Zap, TrendingDown, Sprout, Clock, AlarmClock, ListPlus, Wand2, Check, ChevronDown } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 import { appendPendingIngredient } from "@/lib/quick-list";
 import { getCategoryIcon, getCategoryColor } from "@/lib/category-utils";
 import { useToast } from "@/hooks/use-toast";
@@ -119,7 +119,7 @@ export default function MealDetailPage() {
   const [componentDurations, setComponentDurations] = useState<Record<string, number>>({});
   const [serveTime, setServeTime] = useState("17:00");
 
-  const { data: meal, isLoading: mealLoading } = useQuery<Meal>({
+  const { data: meal, isPending: mealLoading } = useQuery<Meal>({
     queryKey: [api.meals.list.path, mealId],
     queryFn: async () => {
       const res = await fetch(buildUrl(api.meals.get.path, { id: mealId! }));
@@ -453,7 +453,7 @@ export default function MealDetailPage() {
 
   if (!meal) {
     return (
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-8" data-testid="meal-not-found">
+      <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8" data-testid="meal-not-found">
         <p className="text-muted-foreground text-center">Meal not found.</p>
         <Button variant="outline" className="mx-auto mt-4 block" onClick={() => navigate("/cookbook")} data-testid="button-back-to-meals">
           Back to Meals
@@ -476,19 +476,10 @@ export default function MealDetailPage() {
 
   return (
     <>
-    <PageHeader
+    <WorkspaceHeader
       realm="cookbook"
+      wide
       title={isEditedCopy && isEditing ? editName : meal.name}
-      icon={<ChefHat className="h-5 w-5" />}
-      fullCollapseOnMobile
-      collapseDisabled={adaptOpen}
-      context={[
-        category?.name ?? null,
-        meal.servings != null && meal.servings >= 1 ? `Serves ${meal.servings}` : null,
-        !isPackagedProduct && meal.ingredients.length > 0
-          ? `${meal.ingredients.length} ingredient${meal.ingredients.length !== 1 ? 's' : ''}`
-          : null,
-      ].filter(Boolean).join(' · ') || (isPackagedProduct ? 'Ready meal' : 'Recipe')}
       actions={
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="ghost" size="sm" onClick={() => navigate("/cookbook")} data-testid="button-back">
@@ -618,7 +609,7 @@ export default function MealDetailPage() {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 main-safe"
+      className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4 main-safe"
     >
       {isEditedCopy && isEditing && (
         <div className="mb-4 flex items-center gap-2">
@@ -682,7 +673,7 @@ export default function MealDetailPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4 mb-6">
         <div className="md:col-span-1">
           {meal.imageUrl ? (
             <img
@@ -791,38 +782,36 @@ export default function MealDetailPage() {
           )}
 
           {nutritionData && (nutritionData.calories || nutritionData.protein) && (
-            <Card className="mt-4">
-              <CardContent className="p-4 space-y-3">
-                <p className="text-sm font-semibold" data-testid="text-nutrition-header">Nutrition (per serving)</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { label: 'Calories', value: nutritionData.calories, icon: Flame, color: 'text-orange-500', testId: 'text-nutrition-calories' },
-                    { label: 'Protein', value: nutritionData.protein, icon: Beef, color: 'text-red-500', testId: 'text-nutrition-protein' },
-                    { label: 'Carbs', value: nutritionData.carbs, icon: Wheat, color: 'text-amber-600', testId: 'text-nutrition-carbs' },
-                    { label: 'Fat', value: nutritionData.fat, icon: Droplets, color: 'text-yellow-500', testId: 'text-nutrition-fat' },
-                    { label: 'Sugar', value: nutritionData.sugar, icon: Cookie, color: 'text-pink-500', testId: 'text-nutrition-sugar' },
-                    { label: 'Salt', value: nutritionData.salt, icon: Droplet, color: 'text-blue-500', testId: 'text-nutrition-salt' },
-                  ].map(({ label, value, icon: Icon, color, testId }) => (
-                    <div key={label} className="flex items-center gap-2 p-2 rounded-md bg-muted/50" data-testid={testId}>
-                      <Icon className={`h-4 w-4 ${color} shrink-0`} />
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground">{label}</p>
-                        <p className="text-sm font-medium">{value || 'N/A'}</p>
-                      </div>
+            <div className="mt-3 p-3 rounded-lg bg-muted/40 border border-border/30" data-testid="text-nutrition-header">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">Nutrition per serving</p>
+              <div className="grid grid-cols-3 gap-x-3 gap-y-2">
+                {[
+                  { label: 'Calories', value: nutritionData.calories, icon: Flame, color: 'text-orange-500', testId: 'text-nutrition-calories' },
+                  { label: 'Protein', value: nutritionData.protein, icon: Beef, color: 'text-red-500', testId: 'text-nutrition-protein' },
+                  { label: 'Carbs', value: nutritionData.carbs, icon: Wheat, color: 'text-amber-600', testId: 'text-nutrition-carbs' },
+                  { label: 'Fat', value: nutritionData.fat, icon: Droplets, color: 'text-yellow-500', testId: 'text-nutrition-fat' },
+                  { label: 'Sugar', value: nutritionData.sugar, icon: Cookie, color: 'text-pink-500', testId: 'text-nutrition-sugar' },
+                  { label: 'Salt', value: nutritionData.salt, icon: Droplet, color: 'text-blue-500', testId: 'text-nutrition-salt' },
+                ].map(({ label, value, icon: Icon, color, testId }) => (
+                  <div key={label} className="flex items-center gap-1.5" data-testid={testId}>
+                    <Icon className={`h-3 w-3 ${color} shrink-0`} />
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-muted-foreground leading-none">{label}</p>
+                      <p className="text-xs font-semibold mt-0.5">{value || '—'}</p>
                     </div>
-                  ))}
-                </div>
-                {(nutritionData.source === 'openfoodfacts_estimated' || nutritionData.source === 'openfoodfacts_quantities') && (
-                  <p className="text-[11px] text-muted-foreground/60 leading-snug" data-testid="text-nutrition-estimated-note">
-                    Estimated from available ingredient quantities
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                  </div>
+                ))}
+              </div>
+              {(nutritionData.source === 'openfoodfacts_estimated' || nutritionData.source === 'openfoodfacts_quantities') && (
+                <p className="text-[10px] text-muted-foreground/60 leading-snug mt-2" data-testid="text-nutrition-estimated-note">
+                  Estimated from available ingredient quantities
+                </p>
+              )}
+            </div>
           )}
         </div>
 
-        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2 2xl:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card>
             <CardContent className="p-5">
               <div className="flex items-center justify-between gap-2 mb-4">
@@ -839,6 +828,7 @@ export default function MealDetailPage() {
                   </Button>
                 )}
               </div>
+              <div className="md:max-h-[380px] md:overflow-y-auto">
               {isEditedCopy && isEditing ? (
                 <div className="space-y-2">
                   {editIngredients.map((ing, idx) => (
@@ -925,6 +915,7 @@ export default function MealDetailPage() {
                   })}
                 </ul>
               )}
+              </div>
               {!isGrouped && !isEditing && (
                 <MealDiscoveryRow discovery={discovery} />
               )}
@@ -960,6 +951,7 @@ export default function MealDetailPage() {
                   )}
                 </div>
               </div>
+              <div className="md:max-h-[380px] md:overflow-y-auto">
               {isEditedCopy && isEditing ? (
                 editInstructions.length > 0 ? (
                   <div className="space-y-3">
@@ -1177,6 +1169,7 @@ export default function MealDetailPage() {
                   <p className="text-sm text-muted-foreground" data-testid="text-no-instructions">No instructions available. Use the Import button above to fetch them from the recipe URL.</p>
                 )
               )}
+              </div>
             </CardContent>
           </Card>
         </div>

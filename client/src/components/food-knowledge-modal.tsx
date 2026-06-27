@@ -22,7 +22,7 @@ const SECTION_LABELS: { key: keyof FoodKnowledge; label: string }[] = [
 ];
 
 export default function FoodKnowledgeModal({ slug, onClose }: Props) {
-  const { data, isLoading } = useQuery<FoodKnowledge>({
+  const { data, isPending: isLoading } = useQuery<FoodKnowledge>({
     queryKey: ["/api/food-knowledge", slug],
     queryFn: async () => {
       const res = await fetch(`/api/food-knowledge/${slug}`, { credentials: "include" });

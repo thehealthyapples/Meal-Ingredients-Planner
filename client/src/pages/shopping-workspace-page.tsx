@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearch } from "wouter";
 import { useUser } from "@/hooks/use-user";
@@ -16,8 +16,11 @@ import {
   CheckCircle2, ClipboardList, ShoppingCart, ShoppingBag, Clock,
   RefreshCw, Scale, Search, ScanLine, Maximize2, Minimize2,
   Download, ExternalLink, Trash2, Columns2, Copy, Store, Check, Plus,
+  Loader2, Sparkles, Mic, Camera, ImageUp, RotateCcw, X,
 } from "lucide-react";
 import { api, buildUrl } from "@shared/routes";
+import { apiRequest } from "@/lib/queryClient";
+import { parseIngredient } from "@shared/parse-ingredient";
 import { useToast } from "@/hooks/use-toast";
 import { formatItemDisplay, formatQuantityMetric, formatQuantityImperial, getLiquidDisplayMl } from "@/lib/unit-display";
 import { deriveQuantityConfidence } from "@/lib/quantity-confidence";
@@ -26,7 +29,7 @@ import { canShowScoreForItem } from "@/lib/basket-item-classifier";
 import type { ShoppingListItem, IngredientSource } from "@shared/schema";
 import type { HouseholdEater } from "@shared/household-eater";
 import { WorkspaceAnalyserSheet } from "@/components/WorkspaceAnalyserSheet";
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -84,7 +87,7 @@ const SHOPPING_UNITS: { value: string; label: string }[] = [
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type WorkspaceMode = "review" | "prep" | "shop";
+type WorkspaceMode = "add" | "review" | "prep" | "shop";
 
 type WorkspaceItem = ShoppingListItem & {
   addedByDisplayName?: string | null;
@@ -137,6 +140,19 @@ type ShopSummary = {
   total: number;
 };
 
+// ── Quick Add history type ────────────────────────────────────────────────────
+
+interface QuickListBasket {
+  id: string;
+  rawText: string;
+  parsedItems: string[];
+  createdAt: string;
+}
+
+const QUICK_LIST_KEY = "tha-quick-list-history";
+const MAX_ADD_HISTORY = 4;
+const PENDING_LIST_KEY = "tha-pending-list-ingredients";
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 
@@ -146,9 +162,10 @@ const MODES: Array<{
   Icon: React.ComponentType<{ className?: string }>;
   helper: string;
 }> = [
+  { id: "add",    label: "Add",    Icon: Plus,          helper: "Add items to your shopping list" },
   { id: "review", label: "Review", Icon: ClipboardList, helper: "Check your list before you go" },
-  { id: "prep", label: "Prep", Icon: Home, helper: "Check what you have at home and confirm quantities" },
-  { id: "shop", label: "Shop", Icon: ShoppingCart, helper: "In-store — track what you find, skip, or already have" },
+  { id: "prep",   label: "Prep",   Icon: Home,          helper: "Check what you have at home and confirm quantities" },
+  { id: "shop",   label: "Shop",   Icon: ShoppingCart,  helper: "In-store — track what you find, skip, or already have" },
 ];
 
 // The UI reasons in ShopItemState, but the API only accepts the canonical
@@ -219,6 +236,32 @@ const SHOP_STATE_CONFIG: Record<ShopItemState, {
 };
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+function parseAddList(raw: string): string[] {
+  return raw.split(/[\n,]+/).map((s) => s.trim()).filter((s) => s.length > 0);
+}
+
+function loadAddHistory(): QuickListBasket[] {
+  try { return JSON.parse(localStorage.getItem(QUICK_LIST_KEY) || "[]"); } catch { return []; }
+}
+
+function saveAddToHistory(basket: QuickListBasket) {
+  try {
+    const existing = loadAddHistory();
+    const updated = [basket, ...existing.filter((b) => b.id !== basket.id)].slice(0, MAX_ADD_HISTORY);
+    localStorage.setItem(QUICK_LIST_KEY, JSON.stringify(updated));
+  } catch {}
+}
+
+function formatRelativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
 function capitalizeWords(str: string): string {
   return str.replace(/\b\w/g, (c) => c.toUpperCase());
@@ -1054,22 +1097,26 @@ function ModeSwitcher({
   onChange: (m: WorkspaceMode) => void;
 }) {
   return (
-    <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1" role="tablist">
+    <div
+      className="flex items-center gap-0.5 rounded-lg bg-muted/50 p-1 shrink-0"
+      role="tablist"
+    >
       {MODES.map(({ id, label, Icon }) => (
         <button
           key={id}
           role="tab"
           aria-selected={mode === id}
           onClick={() => onChange(id)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+          aria-label={label}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
             mode === id
               ? "shadow-sm realm-banner-btn"
               : "text-muted-foreground hover:text-foreground"
           }`}
           data-testid={`ws-mode-${id}`}
         >
-          <Icon className="h-3.5 w-3.5" />
-          {label}
+          <Icon className="h-3.5 w-3.5 shrink-0" />
+          <span className="hidden sm:inline">{label}</span>
         </button>
       ))}
     </div>
@@ -1157,11 +1204,22 @@ export default function ShoppingWorkspacePage() {
   const [mode, setMode] = useState<WorkspaceMode>(() => {
     const params = new URLSearchParams(search);
     const stage = params.get("stage");
-    if (stage === "review" || stage === "prep" || stage === "shop") return stage;
-    return "review";
+    if (stage === "add" || stage === "review" || stage === "prep" || stage === "shop") return stage;
+    return "add";
   });
   const [prepStates, setPrepStates] = useState<Map<number, PrepItemState>>(new Map());
   const [analyserItem, setAnalyserItem] = useState<WorkspaceItem | null>(null);
+
+  // ── Add mode state ──────────────────────────────────────────────────────────
+  const [addRawText, setAddRawText] = useState("");
+  const [isAddProcessing, setIsAddProcessing] = useState(false);
+  const [isAddListening, setIsAddListening] = useState(false);
+  const [isAddScanning, setIsAddScanning] = useState(false);
+  const [addHistory, setAddHistory] = useState<QuickListBasket[]>(() => loadAddHistory());
+  const addTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const addFileInputRef = useRef<HTMLInputElement>(null);
+  const addCameraInputRef = useRef<HTMLInputElement>(null);
+  const addRecognitionRef = useRef<any>(null);
 
   // ── Parity features (ported from old Basket page) ──────────────────────────
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -1202,10 +1260,10 @@ export default function ShoppingWorkspacePage() {
   useEffect(() => {
     const params = new URLSearchParams(search);
     const stage = params.get("stage");
-    if (stage === "review" || stage === "prep" || stage === "shop") {
+    if (stage === "add" || stage === "review" || stage === "prep" || stage === "shop") {
       setMode(stage);
     }
-    if (params.get("source") === "quick-list") setSourceFilter("quick_list");
+    if (params.get("source") === "quick-list") { setSourceFilter("quick_list"); setMode("review"); }
     if (params.get("source") === "planned") setSourceFilter("planned");
   }, [search]);
 
@@ -1215,10 +1273,170 @@ export default function ShoppingWorkspacePage() {
     return () => document.removeEventListener("keydown", handler);
   }, [isFullscreen]);
 
+  // Focus textarea when entering add mode
+  useEffect(() => {
+    if (mode === "add") setTimeout(() => addTextareaRef.current?.focus(), 100);
+  }, [mode]);
+
+  // Cleanup speech recognition on unmount
+  useEffect(() => {
+    return () => { addRecognitionRef.current?.stop(); };
+  }, []);
+
+  const resizeAddTextarea = useCallback(() => {
+    const el = addTextareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, []);
+
+  // Pick up ingredients written to localStorage by meals-page / analyser
+  const pickUpPendingIngredients = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(PENDING_LIST_KEY);
+      if (!raw) return;
+      localStorage.removeItem(PENDING_LIST_KEY);
+      const parsed = JSON.parse(raw);
+      let names: string[];
+      if (Array.isArray(parsed)) {
+        names = (parsed as string[]).filter(Boolean);
+      } else if (parsed?.version === 2 && Array.isArray(parsed.items)) {
+        names = parsed.items.map((it: { productName: string }) => it.productName).filter(Boolean);
+      } else {
+        return;
+      }
+      if (!names.length) return;
+      const text = names.join("\n");
+      setAddRawText((prev) => (prev ? `${prev}\n${text}` : text));
+      setMode("add");
+      setTimeout(resizeAddTextarea, 50);
+      toast({ title: `${names.length} ingredient${names.length !== 1 ? "s" : ""} added`, description: "From your Cookbook selection" });
+    } catch {}
+  }, [toast, resizeAddTextarea]);
+
+  useEffect(() => {
+    pickUpPendingIngredients();
+  }, [pickUpPendingIngredients]);
+
+  // ── Add mode callbacks ─────────────────────────────────────────────────────
+
+  const toggleAddSpeech = useCallback(() => {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      toast({ title: "Voice input not supported", description: "Try Chrome or Safari on iOS." });
+      return;
+    }
+    if (isAddListening) { addRecognitionRef.current?.stop(); return; }
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = false;
+    rec.lang = "en-GB";
+    rec.onstart = () => setIsAddListening(true);
+    rec.onend = () => setIsAddListening(false);
+    rec.onerror = () => setIsAddListening(false);
+    rec.onresult = (e: any) => {
+      const spoken = Array.from(e.results as SpeechRecognitionResultList)
+        .slice(e.resultIndex).filter((r) => r.isFinal).map((r) => r[0].transcript.trim()).join("\n");
+      if (spoken) { setAddRawText((prev) => prev ? `${prev}\n${spoken}` : spoken); setTimeout(resizeAddTextarea, 0); }
+    };
+    addRecognitionRef.current = rec;
+    rec.start();
+  }, [isAddListening, toast, resizeAddTextarea]);
+
+  const handleAddImageCapture = useCallback(async (file: File) => {
+    setIsAddScanning(true);
+    try {
+      const form = new FormData();
+      form.append("image", file);
+      const res = await fetch("/api/scan", { method: "POST", credentials: "include", body: form });
+      const data = await res.json();
+      const extracted: string = data.rawText ?? (data.parsed as any)?.rawText ?? "";
+      if (extracted.trim()) {
+        setAddRawText((prev) => prev ? `${prev}\n${extracted.trim()}` : extracted.trim());
+        setTimeout(resizeAddTextarea, 0);
+        toast({ title: "List scanned", description: "Text added — edit freely." });
+      } else {
+        toast({ title: "Nothing readable", description: "Try a clearer photo.", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Scan failed", description: "Please try again.", variant: "destructive" });
+    } finally {
+      setIsAddScanning(false);
+    }
+  }, [toast, resizeAddTextarea]);
+
+  const processAndAddToList = async () => {
+    const parsedItems = parseAddList(addRawText);
+    if (parsedItems.length === 0) return;
+    setIsAddProcessing(true);
+    const basketId = Date.now().toString();
+    const basketLabel = `quick_list_${basketId}`;
+    try {
+      let structuredItems: Array<{ productName: string; normalizedName: string; quantity: string | null; unit: string | null; category?: string; needsReview?: boolean }> | null = null;
+      try {
+        const parseRes = await apiRequest("POST", api.import.parse.path, { source: "speech", rawText: addRawText, hint: "shopping_list" });
+        if (parseRes.ok) {
+          const json = await parseRes.json();
+          structuredItems = Array.isArray(json?.items) ? json.items : null;
+        }
+      } catch {}
+
+      type SI = { productName: string; normalizedName: string; quantity: string | null; unit: string | null; category?: string; needsReview?: boolean };
+      const allItems: SI[] = parsedItems.map((item, i) => {
+        const s = structuredItems?.[i] ?? parseIngredient(item);
+        return { productName: s.productName, normalizedName: s.normalizedName, quantity: s.quantity, unit: s.unit, category: 'category' in s ? (s as any).category : undefined, needsReview: 'needsReview' in s ? (s as any).needsReview : undefined };
+      });
+
+      const merged = new Map<string, SI>();
+      for (const item of allItems) {
+        const existing = merged.get(item.normalizedName);
+        if (!existing) { merged.set(item.normalizedName, { ...item }); continue; }
+        if (existing.quantity !== null && item.quantity !== null && existing.unit === item.unit) {
+          const a = parseFloat(existing.quantity), b = parseFloat(item.quantity);
+          if (!isNaN(a) && !isNaN(b)) { merged.set(item.normalizedName, { ...existing, quantity: String(a + b) }); continue; }
+        }
+      }
+
+      for (const item of Array.from(merged.values())) {
+        const quantityValue = item.quantity ? parseFloat(item.quantity) : undefined;
+        await apiRequest("POST", api.shoppingList.add.path, {
+          productName: item.productName, normalizedName: item.normalizedName,
+          ...(quantityValue && !isNaN(quantityValue) ? { quantityValue } : {}),
+          ...(item.unit ? { unit: item.unit } : {}),
+          category: item.category || "uncategorised",
+          ...(item.needsReview ? { needsReview: true, validationNote: "Item not confidently recognised - please verify" } : {}),
+          basketLabel,
+        });
+      }
+
+      try { await fetch(api.shoppingList.autoSmp.path, { method: "POST", credentials: "include" }); } catch {}
+
+      queryClient.invalidateQueries({ queryKey: [api.shoppingList.list.path] });
+
+      const basket: QuickListBasket = { id: basketId, rawText: addRawText, parsedItems, createdAt: new Date().toISOString() };
+      saveAddToHistory(basket);
+      setAddHistory(loadAddHistory());
+
+      setAddRawText("");
+      setMode("review");
+      setSourceFilter("quick_list");
+
+      const addedCount = merged.size;
+      toast({ title: `${addedCount} item${addedCount !== 1 ? "s" : ""} added`, description: "Switched to review" });
+
+      fetch("/api/events/track", { method: "POST", headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ eventType: "quicklist_sent_to_cyc", metadata: { itemCount: addedCount, source: "shopping_workspace_add" } }) }).catch(() => {});
+    } catch (err: any) {
+      toast({ title: "Failed to process list", description: err?.message ?? "Please try again.", variant: "destructive" });
+    } finally {
+      setIsAddProcessing(false);
+    }
+  };
+
   const measurementPref: "metric" | "imperial" =
     (user?.measurementPreference as "metric" | "imperial") || "metric";
 
-  const { data: items = [], isLoading } = useQuery<WorkspaceItem[]>({
+  const { data: items = [], isPending: isLoading } = useQuery<WorkspaceItem[]>({
     queryKey: [api.shoppingList.list.path],
   });
 
@@ -1681,6 +1899,8 @@ export default function ShoppingWorkspacePage() {
     });
   }
 
+  const parsedAddItems = useMemo(() => parseAddList(addRawText), [addRawText]);
+
   const uncheckedItems = useMemo(() => items.filter((i) => !i.checked), [items]);
   const checkedItems = useMemo(() => items.filter((i) => i.checked), [items]);
 
@@ -1946,7 +2166,9 @@ export default function ShoppingWorkspacePage() {
 
   // ── Compact header status text ─────────────────────────────────────────────
   let headerStatusText: string | null = null;
-  if (items.length > 0 && !isLoading) {
+  if (mode === "add" && items.length > 0 && !isLoading) {
+    headerStatusText = `${items.length} item${items.length !== 1 ? "s" : ""} in list`;
+  } else if (items.length > 0 && !isLoading) {
     if (mode === "shop" && shopSummary) {
       const { needCount, total, foundCount, haveCount } = shopSummary;
       const resolved = foundCount + haveCount;
@@ -1969,8 +2191,8 @@ export default function ShoppingWorkspacePage() {
     }
   }
 
-  // ── Workspace control bar (filters + status + sort) ────────────────────────
-  const workspaceControlBar = items.length > 0 && !isLoading ? (
+  // ── Workspace control bar (filters + status + sort) — hidden in add mode ──
+  const workspaceControlBar = mode !== "add" && items.length > 0 && !isLoading ? (
     <div className="flex items-center gap-2 min-w-0">
       {/* Source filter pills — horizontally scrollable */}
       <div className="flex items-center gap-1 min-w-0 flex-1 overflow-x-auto no-scrollbar">
@@ -2024,22 +2246,26 @@ export default function ShoppingWorkspacePage() {
   return (
     <>
       {!isFullscreen && (
-        <PageHeader
+        <WorkspaceHeader
           title="Shopping"
-          icon={<ShoppingBasket className="h-5 w-5" />}
           realm="basket"
-          center={<ModeSwitcher mode={mode} onChange={(m) => { setMode(m); }} />}
-          controlBar={workspaceControlBar}
-          actions={
-            <div className="flex items-center gap-0.5">
-              {menuDropdown}
+          wide
+          contextBar={
+            <div className="flex items-center gap-2 w-full flex-wrap">
+              <ModeSwitcher mode={mode} onChange={(m) => { setMode(m); }} />
+              {workspaceControlBar && (
+                <div className="flex-1 min-w-0">
+                  {workspaceControlBar}
+                </div>
+              )}
             </div>
           }
+          actions={menuDropdown}
         />
       )}
       <div className={isFullscreen
         ? "fixed inset-0 z-50 bg-background overflow-auto flex flex-col"
-        : "max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-20"}
+        : "max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 pb-20"}
       >
       {isFullscreen && (
         <div className="border-b border-border/50 bg-background shrink-0">
@@ -2062,8 +2288,240 @@ export default function ShoppingWorkspacePage() {
       )}
       <div className={isFullscreen ? "flex-1 overflow-auto px-4 py-4 sm:px-6 sm:py-6" : ""}>
 
+      {/* ── Add mode ──────────────────────────────────────────────────── */}
+      {mode === "add" && (
+        <div className="flex gap-6 items-start">
+
+          {/* Main Add UI — always left/primary column */}
+          <div className="flex-1 min-w-0 space-y-4">
+
+            {/* Writing surface */}
+            <div
+              className="w-full flex flex-col relative overflow-hidden"
+              style={{
+                backgroundImage: "url('/orchard-bg.png')",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                borderRadius: 20,
+                boxShadow: "0 4px 32px rgba(0,0,0,0.09), 0 1px 6px rgba(0,0,0,0.05)",
+              }}
+            >
+              {/* Soft orchard tint overlay */}
+              <div aria-hidden style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.80)", borderRadius: 20, pointerEvents: "none" }} />
+
+              <div className="relative z-10 flex flex-col">
+                {/* Textarea */}
+                <div className="relative px-6 pt-6 pb-3">
+                  <textarea
+                    ref={addTextareaRef}
+                    value={addRawText}
+                    onChange={(e) => { setAddRawText(e.target.value); resizeAddTextarea(); }}
+                    placeholder={"milk, eggs\noven chips\nbananas, yoghurt"}
+                    rows={6}
+                    className="w-full resize-none bg-transparent text-[15px] leading-loose placeholder:text-foreground/25 placeholder:italic focus:outline-none text-foreground font-medium"
+                    style={{ minHeight: 140 }}
+                    data-testid="textarea-add-items"
+                  />
+                  {addRawText.length > 0 && (
+                    <button
+                      onClick={() => { setAddRawText(""); if (addTextareaRef.current) addTextareaRef.current.style.height = "auto"; setTimeout(() => addTextareaRef.current?.focus(), 50); }}
+                      className="absolute top-6 right-6 p-1 rounded-md text-muted-foreground/35 hover:text-muted-foreground transition-colors"
+                      aria-label="Clear"
+                      data-testid="button-add-clear"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Parsed item chips */}
+                {parsedAddItems.length > 0 && (
+                  <div className="px-6 pb-3 flex flex-wrap gap-1.5" data-testid="parsed-add-items">
+                    {parsedAddItems.map((item, i) => (
+                      <span key={i} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium" style={{ background: "rgba(0,0,0,0.055)", color: "hsl(var(--foreground))" }}>
+                        {parseIngredient(item).productName}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Divider */}
+                <div style={{ height: 1, background: "rgba(0,0,0,0.055)", marginInline: 24 }} />
+
+                {/* Toolbar */}
+                <div className="px-5 py-3.5 flex items-center gap-1">
+                  <button
+                    onClick={toggleAddSpeech}
+                    className={`p-2 rounded-full transition-colors ${isAddListening ? "bg-red-50 text-red-500" : "text-muted-foreground/45 hover:text-foreground hover:bg-black/[0.05]"}`}
+                    title={isAddListening ? "Stop listening" : "Speak your list"}
+                    aria-label={isAddListening ? "Stop listening" : "Speak your list"}
+                    data-testid="button-add-speech"
+                  >
+                    <Mic className={`h-4 w-4 ${isAddListening ? "animate-pulse" : ""}`} />
+                  </button>
+                  <button
+                    onClick={() => addCameraInputRef.current?.click()}
+                    disabled={isAddScanning}
+                    className="p-2 rounded-full text-muted-foreground/45 hover:text-foreground hover:bg-black/[0.05] transition-colors disabled:opacity-30"
+                    title="Scan a handwritten list"
+                    aria-label="Scan a handwritten list"
+                    data-testid="button-add-camera"
+                  >
+                    {isAddScanning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                  </button>
+                  <label
+                    className="p-2 rounded-full text-muted-foreground/45 hover:text-foreground hover:bg-black/[0.05] transition-colors cursor-pointer"
+                    title="Upload a photo of your list"
+                    aria-label="Upload a photo of your list"
+                    data-testid="label-add-image-upload"
+                  >
+                    <ImageUp className="h-4 w-4" />
+                    <input
+                      ref={addFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="sr-only"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAddImageCapture(f); e.target.value = ""; }}
+                      data-testid="input-add-image-upload"
+                    />
+                  </label>
+                  <input
+                    ref={addCameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="sr-only"
+                    aria-hidden="true"
+                    tabIndex={-1}
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAddImageCapture(f); e.target.value = ""; }}
+                    data-testid="input-add-camera-capture"
+                  />
+                </div>
+
+                {/* Submit section */}
+                {parsedAddItems.length > 0 && (
+                  <>
+                    <div style={{ height: 1, background: "rgba(0,0,0,0.055)", marginInline: 24 }} />
+                    <div className="px-3 pt-4 pb-3">
+                      <button
+                        onClick={processAndAddToList}
+                        disabled={isAddProcessing}
+                        className="group flex items-center gap-3 w-full rounded-xl border border-primary/30 bg-primary/[0.06] px-4 py-3 text-left hover:bg-primary/[0.12] transition-colors disabled:opacity-60"
+                        data-testid="button-add-to-list"
+                      >
+                        <div className="flex items-center justify-center h-9 w-9 rounded-full bg-primary/15 text-primary shrink-0">
+                          {isAddProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-primary leading-tight">Add to shopping list</p>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {parsedAddItems.length} item{parsedAddItems.length !== 1 ? "s" : ""} — THA will organise and score them
+                          </p>
+                        </div>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Recent Lists — mobile (desktop uses sidebar) */}
+            {addHistory.length > 0 && (
+              <div className="lg:hidden">
+                <div className="flex items-center gap-1.5 mb-2 px-1">
+                  <Clock className="h-3 w-3 text-muted-foreground/40" />
+                  <span className="text-[10px] tracking-widest uppercase font-medium text-muted-foreground/40 select-none">Recent lists</span>
+                </div>
+                <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(253,251,246,0.88)", backdropFilter: "blur(6px)", boxShadow: "0 2px 16px rgba(0,0,0,0.06)" }}>
+                  {addHistory.map((basket, idx) => (
+                    <button
+                      key={basket.id}
+                      onClick={() => { setAddRawText(basket.rawText); setTimeout(resizeAddTextarea, 50); addTextareaRef.current?.focus(); }}
+                      className={`flex items-start justify-between gap-3 w-full px-4 py-3.5 text-left transition-colors hover:bg-black/[0.035] ${idx > 0 ? "border-t border-black/[0.04]" : ""}`}
+                      data-testid={`add-history-mobile-${basket.id}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-medium truncate text-foreground/80">
+                          {basket.parsedItems.slice(0, 4).join(", ")}{basket.parsedItems.length > 4 ? ` +${basket.parsedItems.length - 4} more` : ""}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground/50 mt-0.5">
+                          {basket.parsedItems.length} item{basket.parsedItems.length !== 1 ? "s" : ""} · {formatRelativeTime(basket.createdAt)}
+                        </p>
+                      </div>
+                      <RotateCcw className="h-3.5 w-3.5 shrink-0 text-muted-foreground/30 mt-0.5" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Current list count — mobile (desktop uses sidebar) */}
+            {items.length > 0 && (
+              <div className="lg:hidden">
+                <button
+                  onClick={() => setMode("review")}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg bg-card/60 border border-border/50 hover:bg-accent/30 transition-colors text-left"
+                >
+                  <ClipboardList className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                  <span className="text-xs text-muted-foreground">
+                    {items.length} item{items.length !== 1 ? "s" : ""} in list
+                  </span>
+                  <span className="ml-auto text-[10px] text-primary font-medium">Review →</span>
+                </button>
+              </div>
+            )}
+
+          </div>{/* /main add UI */}
+
+          {/* Right sidebar — Recent Lists + list status (desktop only) */}
+          {(addHistory.length > 0 || items.length > 0) && (
+            <div className="hidden lg:flex flex-col gap-3 w-64 shrink-0">
+              {addHistory.length > 0 && (
+                <div className="rounded-xl overflow-hidden bg-card/60 border border-border/50">
+                  <div className="px-4 py-3 border-b border-border/30 flex items-center gap-2">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />
+                    <span className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wide">Recent Lists</span>
+                  </div>
+                  {addHistory.map((basket, idx) => (
+                    <button
+                      key={basket.id}
+                      onClick={() => { setAddRawText(basket.rawText); setTimeout(resizeAddTextarea, 50); addTextareaRef.current?.focus(); }}
+                      className={`flex items-start justify-between gap-3 w-full px-4 py-3 text-left hover:bg-accent/30 transition-colors ${idx > 0 ? "border-t border-border/30" : ""}`}
+                      data-testid={`add-history-${basket.id}`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground/80 truncate">
+                          {basket.parsedItems.slice(0, 3).join(", ")}{basket.parsedItems.length > 3 ? ` +${basket.parsedItems.length - 3}` : ""}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/50 mt-0.5">
+                          {basket.parsedItems.length} item{basket.parsedItems.length !== 1 ? "s" : ""} · {formatRelativeTime(basket.createdAt)}
+                        </p>
+                      </div>
+                      <RotateCcw className="h-3 w-3 shrink-0 text-muted-foreground/30 mt-0.5" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              {items.length > 0 && (
+                <button
+                  onClick={() => setMode("review")}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg bg-card/60 border border-border/50 hover:bg-accent/30 transition-colors text-left"
+                >
+                  <ClipboardList className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
+                  <span className="text-xs text-muted-foreground">
+                    {items.length} item{items.length !== 1 ? "s" : ""} in list
+                  </span>
+                  <span className="ml-auto text-[10px] text-primary font-medium">Review →</span>
+                </button>
+              )}
+            </div>
+          )}
+
+        </div>
+      )}
+
       {/* ── Shopping rows ─────────────────────────────────────────────── */}
-      {isLoading ? (
+      {mode !== "add" && (isLoading ? (
         <div className="space-y-2">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-14 rounded-lg bg-muted/40 animate-pulse" />
@@ -2074,11 +2532,8 @@ export default function ShoppingWorkspacePage() {
           <ShoppingBasket className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">Your shopping list is empty.</p>
           <p className="text-xs text-muted-foreground/70 mt-1">
-            Generate a list from your{" "}
-            <Link href="/planner" className="text-primary hover:underline">
-              weekly plan
-            </Link>{" "}
-            to get started.
+            <button onClick={() => setMode("add")} className="text-primary hover:underline">Add items</button>
+            {" "}to get started.
           </p>
         </div>
       ) : (
@@ -2278,7 +2733,7 @@ export default function ShoppingWorkspacePage() {
 
         </div>
         </>
-      )}
+      ))}
 
       {/* ── Fallback footer ────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground/50 px-1">

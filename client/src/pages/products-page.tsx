@@ -22,7 +22,6 @@ import {
   Award, Zap, History, Trash2,
   ChefHat, Check, Sparkles, Store, Clock, Microscope,
 } from "lucide-react";
-import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
@@ -39,7 +38,7 @@ import AnalyserDetailV2 from "@/components/analyser/AnalyserDetailV2";
 import { WholeFoodAnalysisCard } from "@/components/analyser/WholeFoodAnalysisCard";
 import { AddToWeekModal } from "@/components/AddToWeekModal";
 import type { HouseholdEater } from "@shared/household-eater";
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 
 interface ParsedIngredient {
@@ -977,15 +976,12 @@ export default function ProductsPage() {
 
   return (
     <>
-    <PageHeader
+    <WorkspaceHeader
       title="Analyser"
-      icon={<Microscope className="h-5 w-5" />}
       realm="analyser"
       wide
       titleTestId="text-products-title"
-      collapseDisabled={searchInputFocused}
-      meta={<span>Search packaged foods, detect ultra-processed ingredients, and find healthier alternatives.</span>}
-      center={
+      centerContent={
         <div className="flex items-center gap-2 w-full max-w-xl">
           <Input
             placeholder="Search packaged foods (e.g. ketchup, cereal...)"
@@ -995,13 +991,13 @@ export default function ProductsPage() {
             onFocus={() => setSearchInputFocused(true)}
             onBlur={() => setSearchInputFocused(false)}
             data-testid="input-product-search"
-            className="h-9"
+            className="h-8"
           />
           {intelligenceSettings?.barcodeScannerEnabled !== false && (
             <Button
               variant="outline"
               size="icon"
-              className="h-9 w-9 shrink-0 realm-banner-btn"
+              className="h-8 w-8 shrink-0 realm-banner-btn"
               onClick={() => setShowBarcodeScanner(true)}
               disabled={barcodeLoading}
               aria-label="Scan barcode"
@@ -1012,7 +1008,7 @@ export default function ProductsPage() {
           )}
           <Button
             size="sm"
-            className="h-9 shrink-0 gap-1.5 realm-banner-btn"
+            className="h-8 shrink-0 gap-1.5 realm-banner-btn"
             onClick={handleSearch}
             disabled={isSearching || !searchQuery.trim()}
             aria-label="Analyse"
@@ -1025,62 +1021,95 @@ export default function ProductsPage() {
       }
       actions={
         <div className="flex items-center gap-2">
-            {compareProducts.length >= 2 && (
-              <Button
-                onClick={() => setShowCompare(true)}
-                className="gap-2"
-                data-testid="button-open-compare"
+          {compareProducts.length >= 2 && (
+            <Button
+              onClick={() => setShowCompare(true)}
+              className="gap-2"
+              data-testid="button-open-compare"
+            >
+              <Scale className="h-4 w-4" />
+              Compare ({compareProducts.length})
+            </Button>
+          )}
+          {/* Desktop-only filter popover — mobile uses the workspace drawer */}
+          <div className="hidden md:block">
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  className="relative flex items-center justify-center h-8 w-8 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Filters"
+                  data-testid="button-filters-menu"
+                >
+                  <Filter className="h-4 w-4" />
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center leading-none">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 p-0" data-testid="panel-filters-menu">
+                <FilterPanelContent
+                  retailerFilter={retailerFilter}
+                  setRetailerFilter={setRetailerFilter}
+                  hideUltraProcessed={hideUltraProcessed} setHideUltraProcessed={setHideUltraProcessed}
+                  hideHighRiskAdditives={hideHighRiskAdditives} setHideHighRiskAdditives={setHideHighRiskAdditives}
+                  hideEmulsifiers={hideEmulsifiers} setHideEmulsifiers={setHideEmulsifiers}
+                  hideAcidityRegulators={hideAcidityRegulators} setHideAcidityRegulators={setHideAcidityRegulators}
+                  hidePreservatives={hidePreservatives} setHidePreservatives={setHidePreservatives}
+                  hideFlavourings={hideFlavourings} setHideFlavourings={setHideFlavourings}
+                  hideStabilisers={hideStabilisers} setHideStabilisers={setHideStabilisers}
+                  hideModifiedStarches={hideModifiedStarches} setHideModifiedStarches={setHideModifiedStarches}
+                  hideSeedOils={hideSeedOils} setHideSeedOils={setHideSeedOils}
+                  hideBovaer={hideBovaer} setHideBovaer={setHideBovaer}
+                  minRating={minRating} setMinRating={setMinRating}
+                  intelligenceSettings={intelligenceSettings}
+                  updateSettingsMutation={updateSettingsMutation}
+                  activeFilterCount={activeFilterCount}
+                  canonicalGroupsLength={canonicalGroups.length}
+                  deduplicatedResultsLength={deduplicatedResults.length}
+                  searchResultsLength={searchResults.length}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+        </div>
+      }
+      contextBar={
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <span className="text-xs font-medium text-muted-foreground shrink-0">Min rating:</span>
+          <div className="flex items-center gap-1 shrink-0">
+            {[1, 2, 3, 4, 5].map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setMinRating(minRating === r ? 0 : r)}
+                className={`flex items-center gap-0.5 px-2 py-0.5 rounded-md text-xs font-medium transition-colors ${
+                  minRating >= r && minRating > 0
+                    ? "realm-banner-btn shadow-sm"
+                    : "text-muted-foreground hover:text-foreground bg-muted/40 hover:bg-muted/70"
+                }`}
+                aria-label={`Minimum ${r} apple${r !== 1 ? "s" : ""}`}
+                data-testid={`button-toolbar-min-rating-${r}`}
               >
-                <Scale className="h-4 w-4" />
-                Compare ({compareProducts.length})
-              </Button>
-            )}
-            {/* Desktop-only filter popover — mobile uses the workspace drawer */}
-            <div className="hidden md:block">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    className="relative flex items-center justify-center p-1 rounded-md hover:bg-accent/40 transition-colors"
-                    aria-label="Filters"
-                    data-testid="button-filters-menu"
-                  >
-                    <img src={thaAppleSrc} alt="Healthy Apples" className="h-9 w-9 object-contain" />
-                    {activeFilterCount > 0 && (
-                      <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-[10px] font-medium text-primary-foreground flex items-center justify-center leading-none">
-                        {activeFilterCount}
-                      </span>
-                    )}
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-80 p-0" data-testid="panel-filters-menu">
-                  <FilterPanelContent
-                    retailerFilter={retailerFilter}
-                    setRetailerFilter={setRetailerFilter}
-                    hideUltraProcessed={hideUltraProcessed} setHideUltraProcessed={setHideUltraProcessed}
-                    hideHighRiskAdditives={hideHighRiskAdditives} setHideHighRiskAdditives={setHideHighRiskAdditives}
-                    hideEmulsifiers={hideEmulsifiers} setHideEmulsifiers={setHideEmulsifiers}
-                    hideAcidityRegulators={hideAcidityRegulators} setHideAcidityRegulators={setHideAcidityRegulators}
-                    hidePreservatives={hidePreservatives} setHidePreservatives={setHidePreservatives}
-                    hideFlavourings={hideFlavourings} setHideFlavourings={setHideFlavourings}
-                    hideStabilisers={hideStabilisers} setHideStabilisers={setHideStabilisers}
-                    hideModifiedStarches={hideModifiedStarches} setHideModifiedStarches={setHideModifiedStarches}
-                    hideSeedOils={hideSeedOils} setHideSeedOils={setHideSeedOils}
-                    hideBovaer={hideBovaer} setHideBovaer={setHideBovaer}
-                    minRating={minRating} setMinRating={setMinRating}
-                    intelligenceSettings={intelligenceSettings}
-                    updateSettingsMutation={updateSettingsMutation}
-                    activeFilterCount={activeFilterCount}
-                    canonicalGroupsLength={canonicalGroups.length}
-                    deduplicatedResultsLength={deduplicatedResults.length}
-                    searchResultsLength={searchResults.length}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+                {r}★
+              </button>
+            ))}
+          </div>
+          {minRating > 0 && (
+            <button
+              type="button"
+              onClick={() => setMinRating(0)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              data-testid="button-toolbar-clear-rating"
+            >
+              Clear
+            </button>
+          )}
         </div>
       }
     />
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6" data-realm="analyser">
+    <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6" data-realm="analyser">
       <div className="space-y-6">
         <FirstVisitHint
           areaKey="analyser"

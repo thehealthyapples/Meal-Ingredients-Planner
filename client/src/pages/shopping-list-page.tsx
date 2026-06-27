@@ -50,7 +50,7 @@ import {
   Download, UtensilsCrossed, Store, Maximize2, Minimize2,
   ChevronDown, ChevronUp, AlertTriangle, Microscope, Filter, SlidersHorizontal,
   Snowflake, Home, Columns2, Clock, ChefHat, Sparkles, ListChecks, NotepadText, ListPlus,
-  ScanLine,
+  ScanLine, MoreHorizontal,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -82,7 +82,7 @@ import ShoppingListView, { resolvePickKey } from "@/components/ShoppingListView"
 import { matchesSourceFilter, sourceLabel, sourcePriority, type SourceFilter } from "@/lib/source-helpers";
 import { CameraModal } from "@/components/camera-modal";
 import { ShoppingListScanReview, type ShoppingListScanData } from "@/components/ShoppingListScanReview";
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 
 type ShoppingListItemExtended = ShoppingListItem & {
   addedByDisplayName?: string | null;
@@ -1591,7 +1591,7 @@ export default function ShoppingListPage() {
     try { return new URLSearchParams(search).get("fromQuickList") === "1"; } catch { return false; }
   }, [search]);
 
-  const { data: savedItems_raw = [], isLoading: loadingSaved } = useQuery<ShoppingListItemExtended[]>({
+  const { data: savedItems_raw = [], isPending: loadingSaved } = useQuery<ShoppingListItemExtended[]>({
     queryKey: [api.shoppingList.list.path],
   });
   // All items (planned + all quick_list_* batches) - unified source of truth.
@@ -2856,13 +2856,12 @@ export default function ShoppingListPage() {
   return (
     <>
     {!isFullscreen && (
-      <PageHeader
+      <WorkspaceHeader
         title="Basket"
-        icon={<ShoppingBasket className="h-5 w-5" />}
         realm="basket"
         wide
-        center={
-          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+        contextBar={
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap overflow-x-auto no-scrollbar w-full">
 
             {/* ── Mode ── */}
             <DropdownMenu>
@@ -2940,27 +2939,12 @@ export default function ShoppingListPage() {
 
           </div>
         }
-        meta={(() => {
-          const unchecked = displayItems.filter(i => !i.checked).length;
-          const unresolved = displayItems.filter(i => i.needsReview && !i.checked).length;
-          return (
-            <>
-              <span>{unchecked > 0 ? `${unchecked} item${unchecked !== 1 ? "s" : ""} to buy` : "Basket is empty"}</span>
-              {unresolved > 0 && (
-                <><span className="opacity-30">·</span><span className="text-amber-600 dark:text-amber-400">{unresolved} to check</span></>
-              )}
-              {householdData && (
-                <><span className="opacity-30">·</span><span>{householdData.name} · Shared</span></>
-              )}
-            </>
-          );
-        })()}
         actions={
-          /* ── Healthy Apples menu ── */
+          /* ── Actions menu ── */
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center justify-center p-1 rounded-md transition-colors hover:bg-accent/60" data-testid="button-more-actions">
-                <img src={thaAppleSrc} alt="Menu" className="h-9 w-9 object-contain" />
+              <button className="flex items-center justify-center h-8 w-8 rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground hover:text-foreground" data-testid="button-more-actions">
+                <MoreHorizontal className="h-4 w-4" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -3041,7 +3025,7 @@ export default function ShoppingListPage() {
       />
     )}
     <div
-      className={`${isFullscreen ? 'fixed inset-0 z-50 overflow-auto flex flex-col' : 'max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4'}`}
+      className={`${isFullscreen ? 'fixed inset-0 z-50 overflow-auto flex flex-col' : 'max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4'}`}
       style={isFullscreen ? { backgroundImage: "url('/orchard-bg.png')", backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
     >
 

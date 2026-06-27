@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concept A — Current Refined · WX9.5 · THA</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#f0ebe2;color:#1f2520;min-height:100vh;}
+.shell{display:flex;flex-direction:column;min-height:100vh;}
+.top{background:#fff;border-bottom:1px solid #e3d9cd;padding:0 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;}
+.top-brand{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;color:#26362a;padding:12px 0;white-space:nowrap;}
+.top-brand span{color:#5e7a62;}
+.back{font-size:12px;color:#5e7a62;text-decoration:none;font-weight:500;padding:6px 0;}
+.page-tabs{display:flex;gap:2px;padding:8px 0;flex:1;}
+.ptab{padding:5px 14px;border-radius:6px;border:none;cursor:pointer;font-size:12px;font-weight:500;background:transparent;color:#535a54;transition:all .15s;}
+.ptab.active{background:#5e7a62;color:#fff;}
+.ptab:hover{background:#f0ebe2;}
+.info{background:#fff;border-bottom:1px solid #e3d9cd;padding:10px 20px;display:flex;gap:16px;align-items:center;}
+.badge{font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px;background:#d1ebe7;color:#1a4a44;}
+.info-desc{font-size:12.5px;color:#535a54;flex:1;}
+.info-nav{display:flex;gap:6px;}
+.nav-btn{padding:4px 12px;border-radius:6px;border:1px solid #e3d9cd;background:#fff;font-size:12px;font-weight:500;cursor:pointer;color:#535a54;text-decoration:none;}
+.main{flex:1;padding:20px;display:flex;justify-content:center;}
+.mockup-frame{width:960px;height:600px;overflow:hidden;border-radius:12px;box-shadow:0 6px 30px rgba(0,0,0,.16);border:1px solid rgba(0,0,0,.08);}
+.mockup-scale{transform:scale(0.667);transform-origin:top left;width:1440px;height:900px;}
+.pros-cons{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:14px;width:960px;}
+.panel{background:#fff;border:1px solid #e3d9cd;border-radius:10px;padding:14px 16px;}
+.panel h4{font-family:'DM Sans',sans-serif;font-size:11px;font-weight:700;color:#9aa09a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;}
+.panel ul{list-style:none;display:flex;flex-direction:column;gap:4px;}
+.panel ul li{font-size:12px;color:#3a4a3c;padding-left:12px;position:relative;line-height:1.4;}
+.panel ul li::before{content:'·';position:absolute;left:0;color:#5e7a62;font-weight:700;}
+.panel.cons ul li::before{color:#c0704a;}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="top">
+  <div class="top-brand">WX9.5 <span>Workspace Header</span></div>
+  <div style="width:1px;height:20px;background:#e3d9cd;"></div>
+  <a class="back" href="../index.html">← Gallery</a>
+  <div style="width:1px;height:20px;background:#e3d9cd;"></div>
+  <div class="page-tabs" id="page-tabs">
+    <button class="ptab active" data-page="planner">Planner</button>
+    <button class="ptab" data-page="cookbook">Cookbook</button>
+    <button class="ptab" data-page="nutrition">Nutrition</button>
+    <button class="ptab" data-page="shopping">Shopping</button>
+  </div>
+</div>
+<div class="info">
+  <span class="badge">A · Current Refined</span>
+  <span class="info-desc">Logo reduced from 88px → 48px. Two-band structure preserved. Zero architectural change. Deployable in hours.</span>
+  <span style="font-size:11px;font-weight:600;color:#9aa09a;">104px · −54px · Effort XS</span>
+  <div class="info-nav">
+    <a class="nav-btn" href="../index.html#b">Next: B · Unified →</a>
+  </div>
+</div>
+<div class="main">
+  <div style="display:flex;flex-direction:column;align-items:flex-start;">
+    <div class="mockup-frame"><div class="mockup-scale" id="mockup"></div></div>
+    <p style="font-size:11px;color:#9aa09a;margin-top:6px;">1440 × 900 · 66.7% scale</p>
+    <div class="pros-cons">
+      <div class="panel"><h4>Advantages</h4><ul>
+        <li>Zero architectural risk</li><li>Two-line CSS change</li><li>Branding fully maintained</li><li>Reversible in minutes</li><li>Suits cautious rollout</li>
+      </ul></div>
+      <div class="panel cons"><h4>Disadvantages</h4><ul>
+        <li>Two sticky bands remain</li><li>Least space recovered</li><li>Doesn't solve architecture</li><li>Still 104px of chrome</li>
+      </ul></div>
+      <div class="panel"><h4>Implementation</h4><ul>
+        <li>Change max-height on logo img</li><li>Update TopBar padding slightly</li><li>Hours, not days</li><li>No component changes</li><li>Safe for instant deploy</li>
+      </ul></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+const ico={
+  search:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+  basket:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>`,
+  user:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`,
+  dash:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>`,
+  cal:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+  chef:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 13.87A4 4 0 017.41 6a5.11 5.11 0 0111.18 0A4 4 0 0118 13.87V21H6z"/><line x1="6" y1="17" x2="18" y2="17"/></svg>`,
+  pantry:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="20" x2="23" y2="20"/><rect x="1.5" y="14" width="5" height="6" rx="1"/><rect x="9.5" y="11" width="5" height="9" rx="1"/><rect x="17" y="13" width="5.5" height="7" rx="1"/></svg>`,
+  micro:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 100-14h-1"/><line x1="9" y1="8" x2="9" y2="5"/><line x1="9" y1="5" x2="12" y2="5"/><path d="M9 11a2 2 0 100-4 2 2 0 000 4z"/></svg>`,
+  cart:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>`,
+  list:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><line x1="4" y1="6" x2="4.01" y2="6"/><line x1="4" y1="12" x2="4.01" y2="12"/><line x1="4" y1="18" x2="4.01" y2="18"/></svg>`,
+  book:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>`,
+  chevL:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>`,
+  chevR:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>`,
+  more:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>`,
+  home:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+};
+const LOGO=`<img src="../../../../client/public/logo-long.png" alt="The Healthy Apples" style="display:block;width:auto;">`;
+function gRight(){return`<div class="tib">${ico.search}</div><div class="tib" style="position:relative">${ico.basket}<span class="tbadge">7</span></div><div class="tib">${ico.user}</div>`;}
+function wnav(){return`<div class="wnav"><div class="wnav-btn">${ico.chevL}</div><span class="wnav-label">Week 26 · 29 Jun – 5 Jul</span><div class="wnav-btn">${ico.chevR}</div></div>`;}
+function sidebar(active){
+  const items=[{l:'Quick List',i:'list',p:'list'},{l:'Cookbook',i:'chef',p:'cookbook'},{l:'Planner',i:'cal',p:'planner'},{l:'Pantry',i:'pantry',p:'pantry'},{l:'Analyser',i:'micro',p:'analyser'},{l:'Shop',i:'cart',p:'basket'},{l:'My Diary',i:'book',p:'diary'}];
+  const cls={planner:'sbi-active-planner',pantry:'sbi-active-pantry',home:'sbi-active-home',basket:'sbi-active-basket',cookbook:'sbi-active-cookbook',analyser:'sbi-active-analyser'};
+  return`<div class="tha-sidebar">${items.map(i=>`<div class="sbi ${active===i.p?(cls[i.p]||''):''}">${ico[i.i]}<span>${i.l}</span></div>`).join('')}</div>`;
+}
+function header(realm){
+  const pi={
+    planner:{title:'Planner',icon:'cal',center:wnav(),actions:`<button class="rbtn rbtn-planner">Add all to basket</button><button class="rbtn rbtn-planner">${ico.more}</button>`,cls:'tha-ph-planner'},
+    cookbook:{title:'Cookbook',icon:'chef',center:`<div class="tstrip" style="color:hsl(38,65%,18%);background:rgba(255,255,255,.4);border-color:hsl(38,36%,78%);"><button class="tsb tsb-on">Browse</button><button class="tsb">Saved</button><button class="tsb">Plan</button></div>`,actions:`<button class="rbtn" style="border-color:hsl(38,36%,78%);color:hsl(38,65%,18%);background:rgba(255,255,255,.5);">Add recipe</button>`,cls:'',style:'background:hsl(38,42%,91%);border-color:hsl(38,36%,82%);color:hsl(38,65%,18%);'},
+    nutrition:{title:'Analyser',icon:'micro',center:'',actions:`<button class="rbtn rbtn-home">Export report</button>`,cls:'tha-ph-home'},
+    shopping:{title:'Shopping',icon:'cart',center:`<div class="tstrip" style="color:hsl(26,24%,20%);background:rgba(255,255,255,.4);"><button class="tsb tsb-on">By category</button><button class="tsb">A–Z</button></div>`,actions:`<button class="rbtn rbtn-basket">Review basket</button><button class="rbtn rbtn-basket">${ico.more}</button>`,cls:'tha-ph-basket'},
+  };
+  const p=pi[realm]||pi.planner;
+  return`
+    <div class="tha-topbar-current">
+      <div style="display:flex;gap:4px"><div class="tib">${ico.dash}</div><div class="tib">${ico.search}</div></div>
+      <div style="display:flex;justify-content:center;">${LOGO.replace('style="display:block;width:auto;"','style="display:block;max-height:48px;width:auto;"')}</div>
+      <div style="display:flex;justify-content:flex-end;gap:4px">${gRight()}</div>
+    </div>
+    <div class="${p.cls} tha-ph" style="${p.style||''}">
+      <div class="ph-row">
+        <div class="ph-title">${ico[p.icon]}${p.title}</div>
+        <div class="ph-center">${p.center}</div>
+        <div class="ph-actions">${p.actions}</div>
+      </div>
+    </div>`;
+}
+const DAYS=[{s:'Mon',n:'29',m:'Overnight Oats',l:'Greek Salad',d:'Salmon Pasta'},{s:'Tue',n:'30',m:'Poached Eggs Toast',l:'Chicken Soup',d:'Lentil Dahl'},{s:'Wed',n:'1',m:'Berry Smoothie',l:'Tuna Jacket',d:'Roast Chicken'},{s:'Thu',n:'2',m:'Granola + Yogurt',l:'Quinoa Halloumi',d:'Veggie Stir-fry'},{s:'Fri',n:'3',m:'Avocado + Eggs',l:'BLT + Crisps',d:'Thai Noodles'},{s:'Sat',n:'4',m:'Banana Pancakes',l:'Leftovers',d:'Homemade Pizza'},{s:'Sun',n:'5',m:'Full Porridge',l:'Caesar Salad',d:'Lamb Slow Cook'}];
+const RECIPES=[{name:'Thai Prawn Noodles',time:'22m',kcal:480,emoji:'🍜',bg:'hsl(38,55%,85%)'},{name:'Overnight Oats',time:'5m',kcal:320,emoji:'🫐',bg:'hsl(210,40%,88%)'},{name:'Greek Salad Pitta',time:'10m',kcal:390,emoji:'🥗',bg:'hsl(120,30%,85%)'},{name:'Salmon Pasta',time:'28m',kcal:560,emoji:'🐟',bg:'hsl(172,28%,85%)'},{name:'Banana Pancakes',time:'18m',kcal:410,emoji:'🥞',bg:'hsl(50,60%,88%)'},{name:'Lentil Dahl Rice',time:'35m',kcal:490,emoji:'🍛',bg:'hsl(26,45%,85%)'}];
+const SHOP=[{h:'Produce',items:['Bananas × 6','Cherry tomatoes 400 g','Baby spinach 200 g','Avocado × 3']},{h:'Dairy & Eggs',items:['Eggs × 12','Milk 2 L','Greek Yogurt 500 g','Cheddar 300 g']},{h:'Meat & Fish',items:['Chicken breast 800 g','Salmon fillet 400 g']},{h:'Cupboard',items:['Tinned tomatoes × 4','Brown rice 1 kg']}];
+function plannerContent(){return`<div class="pgrid"><div></div>${DAYS.map(d=>`<div class="pday-h"><div class="pday-n">${d.n}</div><div class="pday-s">${d.s}</div></div>`).join('')}<div class="prow-l">B'fast</div>${DAYS.map(d=>`<div class="pcell"><div class="pcell-tag">Breakfast</div>${d.m}</div>`).join('')}<div class="prow-l">Lunch</div>${DAYS.map(d=>`<div class="pcell"><div class="pcell-tag">Lunch</div>${d.l}</div>`).join('')}<div class="prow-l">Dinner</div>${DAYS.map(d=>`<div class="pcell"><div class="pcell-tag">Dinner</div>${d.d}</div>`).join('')}<div class="prow-l">Snack</div>${DAYS.slice(0,3).map((_,i)=>`<div class="pcell"><div class="pcell-tag">Snack</div>${['Apple & Almond Butter','Hummus + Veg','Greek Yogurt'][i]}</div>`).join('')}${DAYS.slice(3).map(()=>`<div class="pcell pcell-empty">+ Add</div>`).join('')}</div>`;}
+function cookbookContent(){return`<div style="margin-bottom:12px;display:flex;gap:5px;flex-wrap:wrap;">${['All','Breakfast','Lunch','Dinner','Quick','Plant-based'].map((f,i)=>`<button class="rbtn" style="font-size:11px;background:${i===0?'rgba(255,255,255,.85)':'rgba(255,255,255,.4)'};border-color:hsl(38,36%,78%);color:hsl(38,65%,18%);">${f}</button>`).join('')}</div><div style="background:rgba(255,255,255,.9);border:1px solid hsl(33,22%,87%);border-radius:14px;padding:14px;display:flex;gap:14px;align-items:center;margin-bottom:14px;"><div style="width:100px;height:70px;border-radius:10px;background:hsl(38,55%,85%);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:28px;">🍜</div><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:hsl(38,55%,45%);margin-bottom:3px;">Featured this week</div><div style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:700;color:hsl(38,65%,18%);margin-bottom:3px;">Thai Prawn Noodles</div><div style="font-size:12px;color:hsl(120,5%,34%);">22 min · 480 kcal · Serves 2</div></div><button class="rbtn" style="border-color:hsl(38,36%,78%);color:hsl(38,65%,18%);align-self:center;margin-left:auto;">Add to planner</button></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">${RECIPES.map(r=>`<div style="background:rgba(255,255,255,.9);border:1px solid hsl(33,22%,87%);border-radius:12px;overflow:hidden;"><div style="height:80px;background:${r.bg};display:flex;align-items:center;justify-content:center;font-size:26px;">${r.emoji}</div><div style="padding:9px 11px;"><div style="font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:600;line-height:1.2;margin-bottom:3px;">${r.name}</div><div style="font-size:11px;color:hsl(120,5%,34%);">${r.time} · ${r.kcal} kcal</div></div></div>`).join('')}</div>`;}
+function nutritionContent(){const bars=[{l:'Calories',v:'1,840 kcal',p:76,c:'hsl(132,14%,44%)'},{l:'Protein',v:'88 g / 110 g',p:80,c:'hsl(172,35%,38%)'},{l:'Carbs',v:'210 g / 240 g',p:88,c:'hsl(38,55%,45%)'},{l:'Fat',v:'64 g / 72 g',p:89,c:'hsl(26,22%,40%)'},{l:'Fibre',v:'22 g / 25 g',p:88,c:'hsl(132,14%,44%)'},{l:'Iron',v:'11 mg / 14 mg',p:73,c:'hsl(0,55%,48%)'}];const wkBars=[65,72,80,88,76,82,68];const wkDays=['M','T','W','T','F','S','S'];return`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px;">${[{l:'Avg Calories',v:'1,840',u:'kcal/day'},{l:'Avg Protein',v:'88 g',u:'target 110 g'},{l:'Plants',v:'22',u:'/ 30 target'},{l:'Apple Score',v:'7.4',u:'Excellent'}].map(s=>`<div style="background:rgba(255,255,255,.9);border:1px solid hsl(33,22%,87%);border-radius:12px;padding:12px;text-align:center;"><div style="font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;color:hsl(132,16%,18%);">${s.v}</div><div style="font-size:10px;color:hsl(120,5%,34%);margin-top:2px;">${s.u}</div><div style="font-size:11px;font-weight:500;color:hsl(120,5%,34%);margin-top:4px;">${s.l}</div></div>`).join('')}</div><div style="display:grid;grid-template-columns:1fr 260px;gap:12px;"><div style="background:rgba(255,255,255,.88);border:1px solid hsl(33,22%,87%);border-radius:12px;padding:14px;"><div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;margin-bottom:10px;">Macros & Micronutrients · This week</div>${bars.map(b=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span style="font-size:12px;font-weight:500;width:65px;">${b.l}</span><div style="flex:1;height:7px;background:hsl(33,22%,87%);border-radius:3px;overflow:hidden;"><div style="height:100%;border-radius:3px;background:${b.c};width:${b.p}%;"></div></div><span style="font-size:11px;font-weight:600;width:90px;text-align:right;color:hsl(132,16%,18%);">${b.v}</span></div>`).join('')}</div><div style="background:rgba(255,255,255,.88);border:1px solid hsl(33,22%,87%);border-radius:12px;padding:14px;"><div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;margin-bottom:10px;">Weekly trend</div><div style="display:flex;align-items:flex-end;gap:5px;height:60px;margin-bottom:12px;">${wkBars.map((h,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;"><div style="width:100%;height:${h}%;background:hsl(132,14%,44%);border-radius:3px 3px 0 0;opacity:.75;"></div><span style="font-size:9px;color:hsl(120,5%,34%);">${wkDays[i]}</span></div>`).join('')}</div><div style="background:rgba(255,255,255,.9);border:1px solid hsl(33,22%,87%);border-radius:10px;padding:12px;text-align:center;"><svg viewBox="0 0 96 96" style="width:72px;height:72px;"><circle cx="48" cy="48" r="40" fill="none" stroke="hsl(132,14%,84%)" stroke-width="8"/><circle cx="48" cy="48" r="40" fill="none" stroke="hsl(132,14%,44%)" stroke-width="8" stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="66" transform="rotate(-90 48 48)"/></svg><div style="font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;margin-top:4px;color:hsl(132,16%,18%);">Apple Score 7.4</div></div></div></div>`;}
+function shopContent(){return SHOP.map(c=>`<div style="border-radius:10px;overflow:hidden;background:rgba(255,255,255,.8);border:1px solid hsl(33,22%,87%);margin-bottom:10px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:hsl(26,22%,40%);padding:7px 14px;border-bottom:1px solid hsl(33,22%,87%);background:hsl(26,20%,91%);">${c.h}</div>${c.items.map((item,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 14px;background:rgba(255,255,255,.8);border-bottom:1px solid hsl(33,22%,87%);font-size:12.5px;font-weight:500;"><div style="width:17px;height:17px;border-radius:50%;border:2px solid ${i===0?'transparent':'hsl(26,16%,78%)'};background:${i===0?'hsl(26,22%,40%)':'transparent'};flex-shrink:0;"></div><span>${item}</span></div>`).join('')}</div>`).join('');}
+function buildMockup(realm){
+  const sidebarPageMap={cookbook:'cookbook',nutrition:'analyser'};
+  const sp=sidebarPageMap[realm]||realm;
+  let content='';
+  if(realm==='planner') content=plannerContent();
+  else if(realm==='cookbook') content=cookbookContent();
+  else if(realm==='nutrition') content=nutritionContent();
+  else content=shopContent();
+  return`<div class="tha-app"><div class="tha-orchard"></div><div class="tha-chrome">${header(realm)}<div class="tha-layout">${sidebar(sp)}<div class="tha-main"><div class="tha-scroll">${content}</div></div></div></div></div>`;
+}
+let activePage='planner';
+function render(p){
+  activePage=p;
+  document.getElementById('mockup').innerHTML=buildMockup(p);
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.toggle('active',t.dataset.page===p));
+}
+document.querySelectorAll('.ptab').forEach(t=>t.addEventListener('click',()=>render(t.dataset.page)));
+render('planner');
+</script>
+</body>
+</html>

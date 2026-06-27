@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -33,8 +32,7 @@ import { RecipeScanReview, type RecipeScanData } from "@/components/RecipeScanRe
 import { emitStageProposal } from "@/lib/planner-staging-bus";
 import { computeMealVariety, EMPTY_VARIETY_SCORE } from "@shared/canonical/plant-classifier";
 import { getMealNutrients } from "@/lib/nutrition-insights";
-import { NutritionVarietyDots, PlannerVarietyLegend, WeeklyPlantDiversityCounter } from "@/components/nutrition-variety-chips";
-import PlannerIntelligenceCompanion from "@/components/PlannerIntelligenceCompanion";
+import PlannerIntelligenceStrip from "@/components/PlannerIntelligenceStrip";
 import { CookbookMealIntelligenceStrip } from "@/components/CookbookMealIntelligenceStrip";
 import { getMealBoosts } from "@/lib/nutrition-boosts";
 import { MealNutrientTags } from "@/components/nutrition-insights-panel";
@@ -53,7 +51,7 @@ import type { AdaptationResult, HouseholdSafePreview } from "@shared/meal-adapta
 import { computeRestrictionSafety, type EaterProfile } from "@shared/restrictions/restriction-safety";
 import { shouldExcludeRecipe } from "@shared/dietRules";
 import { ONBOARDING_DIET_OPTIONS, DIET_PATTERN_OPTIONS, ALLERGY_INTOLERANCE_OPTIONS } from "@/lib/diets";
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 import { AdaptationReviewSheet } from "@/components/AdaptationReviewSheet";
 import {
   DndContext,
@@ -531,7 +529,7 @@ export default function WeeklyPlannerPage() {
     },
   });
 
-  const { data: fullPlanner = [], isLoading } = useQuery<FullWeek[]>({
+  const { data: fullPlanner = [], isPending: isLoading } = useQuery<FullWeek[]>({
     queryKey: ["/api/planner/full"],
   });
 
@@ -1709,19 +1707,23 @@ export default function WeeklyPlannerPage() {
   return (
     <PlannerWorkspaceContext.Provider value={workspaceValue}>
     <>
-    <PageHeader
+    <WorkspaceHeader
       title="Planner"
-      icon={<CalendarDays className="h-5 w-5" />}
       realm="planner"
       titleTestId="text-weekly-planner-title"
-      meta={<span data-testid="text-week-progress">{weekStats.filled} meals planned out of {weekStats.total} this week</span>}
-      center={
-        <div className="flex flex-wrap items-center gap-0.5 sm:gap-1">
+      search={{
+        placeholder: "Search meals...",
+        value: "",
+        onChange: () => {},
+        onSubmit: () => { navigate("/cookbook"); },
+      }}
+      contextBar={
+        <div className="flex items-center gap-1 flex-wrap overflow-x-auto no-scrollbar w-full">
           {renameWeekId === activeWeekData?.id ? (
             <input
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
-              className="h-8 text-sm border border-border rounded-md px-2.5 w-32 bg-background outline-none focus:ring-1 focus:ring-primary"
+              className="h-7 text-sm border border-border rounded-md px-2.5 w-32 bg-background outline-none focus:ring-1 focus:ring-primary"
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter" && renameValue.trim()) {
@@ -1740,7 +1742,7 @@ export default function WeeklyPlannerPage() {
             />
           ) : (
             <Select value={activeWeek} onValueChange={setActiveWeek}>
-              <SelectTrigger className="w-24 sm:w-28 h-8 text-sm" data-testid="tabs-weeks">
+              <SelectTrigger className="w-24 sm:w-28 h-7 text-xs" data-testid="tabs-weeks">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1757,7 +1759,7 @@ export default function WeeklyPlannerPage() {
           )}
           {!renameWeekId && activeWeekData && (
             <button
-              className="hidden sm:inline-flex p-1.5 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent/40 transition-colors"
+              className="hidden sm:inline-flex p-1 rounded-md text-muted-foreground/40 hover:text-muted-foreground hover:bg-accent/40 transition-colors"
               onClick={() => { setRenameWeekId(activeWeekData.id); setRenameValue(activeWeekData.weekName); }}
               title="Rename week"
               data-testid={`button-rename-week-${activeWeek}`}
@@ -1765,10 +1767,9 @@ export default function WeeklyPlannerPage() {
               <Pencil className="h-3 w-3" />
             </button>
           )}
-          <div className="hidden md:block h-4 w-px bg-border" />
-          {/* Banner action buttons — Plan + Send week to basket (desktop only; mobile access via workspace drawer) */}
+          <div className="hidden md:block h-4 w-px bg-border mx-0.5" />
+          {/* Plan + Send week to basket (desktop only; mobile access via workspace drawer) */}
           <div className="hidden md:flex items-center gap-1 rounded-md border border-[var(--realm-border)] px-1 py-0.5">
-            {/* Desktop: Smart planner trigger */}
             <Button
               size="sm"
               variant="outline"
@@ -1789,7 +1790,7 @@ export default function WeeklyPlannerPage() {
           {placeholderItems.length > 0 && (
             <button
               onClick={() => setAssistantMode("placeholder-review")}
-              className="flex items-center gap-1 h-8 px-2 text-xs rounded-md border border-amber-400/40 text-amber-600 dark:text-amber-400/80 hover:bg-amber-50/60 dark:hover:bg-amber-950/20 transition-colors shrink-0"
+              className="flex items-center gap-1 h-7 px-2 text-xs rounded-md border border-amber-400/40 text-amber-600 dark:text-amber-400/80 hover:bg-amber-50/60 dark:hover:bg-amber-950/20 transition-colors shrink-0"
               data-testid="button-placeholder-review"
               title="Review unlinked meals"
             >
@@ -1797,18 +1798,20 @@ export default function WeeklyPlannerPage() {
               <span className="font-medium">{placeholderItems.length}</span>
             </button>
           )}
+          <span className="hidden lg:inline text-[11px] text-muted-foreground/70 ml-auto shrink-0" data-testid="text-week-progress">
+            {weekStats.filled}/{weekStats.total} meals planned
+          </span>
         </div>
       }
       actions={
-        <div className="flex items-center gap-0.5">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="inline-flex items-center justify-center p-1 rounded-md hover:bg-accent/40 transition-colors"
+              className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
               title="More options"
               data-testid="button-planner-overflow-menu"
             >
-              <img src={thaAppleSrc} alt="" className="h-9 w-9 object-contain" aria-hidden="true" />
+              <MoreHorizontal className="h-4 w-4" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
@@ -1845,10 +1848,9 @@ export default function WeeklyPlannerPage() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        </div>
       }
     />
-    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4" data-realm="planner">
+    <div className="max-w-screen-xl 2xl:max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-3 sm:pt-4" data-realm="planner">
       <DndContext
         sensors={dndSensors}
         collisionDetection={mobileFriendlyCollision}
@@ -1868,12 +1870,11 @@ export default function WeeklyPlannerPage() {
       <Tabs value={activeWeek} onValueChange={setActiveWeek} className="w-full">
 
 
-        {/* ── Combined row: household diet toggle (left) + variety at a glance (right) ── */}
-        {/* Variety stays visible even when the diets dropdown expands below this row. */}
-        <div className="flex items-center justify-between flex-wrap gap-x-4 gap-y-2 mb-3" data-testid="section-week-diets">
-          {householdEaters.length > 0 && activeWeekId ? (
+        {/* ── Household diet toggle (functional control — stays always-visible) ── */}
+        {householdEaters.length > 0 && activeWeekId && (
+          <div className="mb-2" data-testid="section-week-diets">
             <button
-              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
               onClick={() => setWeekDietsOpen(o => !o)}
               data-testid="button-toggle-week-diets"
             >
@@ -1884,15 +1885,8 @@ export default function WeeklyPlannerPage() {
               )}
               {weekDietsOpen ? <ChevronUp className="h-3 w-3 ml-1" /> : <ChevronDown className="h-3 w-3 ml-1" />}
             </button>
-          ) : <span />}
-          <div className="flex items-center gap-4 flex-wrap">
-            <WeeklyPlantDiversityCounter
-              weekIngredients={weekIngredients}
-              onExplore={() => navigate("/plant-diversity")}
-            />
-            <PlannerVarietyLegend compact />
           </div>
-        </div>
+        )}
 
         {/* Diets dropdown — expands below the combined row; variety stays above */}
         {householdEaters.length > 0 && activeWeekId && weekDietsOpen && (
@@ -1956,10 +1950,14 @@ export default function WeeklyPlannerPage() {
           </Card>
         )}
 
-        {/* WX3 — Planner Intelligence Companion: calm, week-scoped nudges. Owns
-            nothing; reads /api/planner/weeks/:weekId/intelligence. Disappears
-            entirely when no validated intelligence exists. */}
-        <PlannerIntelligenceCompanion weekId={activeWeekId} />
+        {/* WX13 — Intelligence Strip: compact summary, expands to full intelligence.
+            Replaces the WeeklyPlantDiversityCounter row + PlannerIntelligenceCompanion.
+            Uses the same /api/planner/weeks/:weekId/intelligence cache — no extra requests. */}
+        <PlannerIntelligenceStrip
+          weekId={activeWeekId}
+          weekIngredients={weekIngredients}
+          onNavigatePlantDiversity={() => navigate("/plant-diversity")}
+        />
 
         {fullPlanner.map((week) => (
           <TabsContent key={week.id} value={String(week.weekNumber)} className="mt-0">
@@ -2244,7 +2242,7 @@ export default function WeeklyPlannerPage() {
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "100px repeat(7, 1fr)",
+                      gridTemplateColumns: "var(--ws-col-label) repeat(7, 1fr)",
                     }}
                   >
                     {/* ── Header row: corner + day names ── */}

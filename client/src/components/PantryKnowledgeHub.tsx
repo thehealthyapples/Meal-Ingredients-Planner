@@ -167,7 +167,7 @@ function HomeView({ onOpenFood, onPush }: { onOpenFood: (slug: string) => void; 
 
   const searching = query.length > 0;
 
-  const { data: searchData, isLoading: searchLoading } = useQuery<SearchResult>({
+  const { data: searchData, isPending: searchLoading } = useQuery<SearchResult>({
     queryKey: [`/api/knowledge/search?q=${encodeURIComponent(query)}`],
     enabled: searching,
   });
@@ -415,12 +415,12 @@ function BrowseView({
   const foodsUrl = activeCategory
     ? `/api/knowledge/foods?category=${encodeURIComponent(activeCategory)}`
     : "/api/knowledge/foods";
-  const { data: foods = [], isLoading: foodsLoading } = useQuery<FoodCard[]>({
+  const { data: foods = [], isPending: foodsLoading } = useQuery<FoodCard[]>({
     queryKey: [foodsUrl],
     enabled: !searching,
   });
 
-  const { data: results, isLoading: searchLoading } = useQuery<SearchResult>({
+  const { data: results, isPending: searchLoading } = useQuery<SearchResult>({
     queryKey: [`/api/knowledge/search?q=${encodeURIComponent(query)}`],
     enabled: searching,
   });
@@ -614,7 +614,7 @@ function TopicView({ id, onOpenFood, onBack }: { id: string; onOpenFood: (slug: 
 function FoodDetailView({
   slug, onBack, onHome, onPush,
 }: { slug: string; onBack: () => void; onHome: () => void; onPush: (v: View) => void; }) {
-  const { data, isLoading } = useQuery<FoodDetail>({ queryKey: ["/api/knowledge/foods", slug] });
+  const { data, isPending: isLoading } = useQuery<FoodDetail>({ queryKey: ["/api/knowledge/foods", slug] });
   const [openDiet, setOpenDiet] = useState<string | null>(null);
 
   const { data: discoverData } = useQuery<DiscoveryResult>({
@@ -814,7 +814,7 @@ function FoodDetailView({
 
 // ── Nutrient detail ────────────────────────────────────────────────────────────────
 function NutrientDetailView({ slug, onBack, onHome, onPush }: DetailProps) {
-  const { data, isLoading } = useQuery<NutrientDetail>({ queryKey: ["/api/knowledge/nutrients", slug] });
+  const { data, isPending: isLoading } = useQuery<NutrientDetail>({ queryKey: ["/api/knowledge/nutrients", slug] });
   if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title="Loading…"><EmptyState message="" /></DetailShell>;
   if (!data) return <DetailShell onBack={onBack} onHome={onHome} title="Not found"><EmptyState message="This nutrient isn't in the library." /></DetailShell>;
 
@@ -847,7 +847,7 @@ function NutrientDetailView({ slug, onBack, onHome, onPush }: DetailProps) {
 
 // ── Benefit detail ─────────────────────────────────────────────────────────────────
 function BenefitDetailView({ slug, onBack, onHome, onPush }: DetailProps) {
-  const { data, isLoading } = useQuery<BenefitDetail>({ queryKey: ["/api/knowledge/benefits", slug] });
+  const { data, isPending: isLoading } = useQuery<BenefitDetail>({ queryKey: ["/api/knowledge/benefits", slug] });
   if (isLoading) return <DetailShell onBack={onBack} onHome={onHome} title="Loading…"><EmptyState message="" /></DetailShell>;
   if (!data) return <DetailShell onBack={onBack} onHome={onHome} title="Not found"><EmptyState message="This benefit isn't in the library." /></DetailShell>;
 

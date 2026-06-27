@@ -8,7 +8,7 @@ export function useMeals() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: meals, isLoading } = useQuery<Meal[]>({
+  const { data: meals, isPending: isLoading } = useQuery<Meal[]>({
     queryKey: [api.meals.list.path],
   });
 

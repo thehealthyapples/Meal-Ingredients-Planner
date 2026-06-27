@@ -73,7 +73,7 @@ export function CookbookMealIntelligenceStrip({
   active,
   showUplift = true,
 }: Props) {
-  const { data, isLoading } = useCookbookMealIntelligence(mealId, active);
+  const { data, isPending: isLoading } = useCookbookMealIntelligence(mealId, active);
 
   if (!active) return null;
 

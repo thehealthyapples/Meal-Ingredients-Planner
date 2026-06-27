@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
@@ -7,7 +7,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 
-import { TopBar, DesktopSidebar, MobileNav } from "@/components/nav-bar";
+import { DesktopSidebar, MobileNav, AppRealmContext } from "@/components/nav-bar";
+import { WorkspaceHeaderSlotContext } from "@/components/workspace-header";
 import OrchardBackdrop from "@/components/layout/orchard-backdrop";
 import OrchardShell from "@/components/layout/orchard-shell";
 import TrialBanner from "@/components/TrialBanner";
@@ -33,7 +34,6 @@ import PlantDiversityPage from "@/pages/plant-diversity-page";
 import FoodDiaryPage from "@/pages/food-diary-page";
 import PartnersPage from "@/pages/partners-page";
 import QuickMealPage from "@/pages/quick-meal-page";
-import ListPage from "@/pages/list-page";
 import HomePage from "@/pages/home-page";
 import DashboardPage from "@/pages/dashboard";
 import FoodDetailPage from "@/pages/food-detail-page";
@@ -49,7 +49,7 @@ function routeToPath(route: string): string {
   if (route === "planner") return "/planner";
   if (route === "cookbook") return "/cookbook";
   if (route === "analyser") return "/analyser";
-  return "/shopping-list";
+  return "/shopping-workspace";
 }
 
 // Detects when a user navigates away from their routed landing page within 15s
@@ -113,7 +113,7 @@ function HomeRoute() {
       );
     }
 
-    const path = routingData ? routeToPath(routingData.route) : "/shopping-list";
+    const path = routingData ? routeToPath(routingData.route) : "/shopping-workspace";
     _routingLanding = { path, at: Date.now() };
     return <Redirect to={path} />;
   }
@@ -123,6 +123,8 @@ function HomeRoute() {
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { user, isLoading } = useUser();
+  const [activeRealm, setActiveRealm] = useState("home");
+  const [headerSlot, setHeaderSlot] = useState<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!isLoading && user && !_contentRenderMeasured) {
@@ -139,27 +141,32 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
   if (!isLoading && user && !user.onboardingCompleted) return <Redirect to="/onboarding" />;
 
   return (
-    <div className="relative min-h-[100dvh]">
-      <OrchardBackdrop />
-      <div className="relative z-10 flex flex-col h-[100dvh]">
-        {user?.isDemo && <TrialBanner />}
-        <TopBar />
-        <SiteBanner />
-        <div className="flex flex-1 overflow-hidden">
-          <DesktopSidebar />
-          <main className="flex-1 overflow-y-auto overflow-x-hidden main-safe bg-background/25 flex flex-col">
-            {isLoading ? (
-              <div className="flex h-full items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
-              </div>
-            ) : (
-              <Component />
-            )}
-          </main>
+    <AppRealmContext.Provider value={{ realm: activeRealm, setRealm: setActiveRealm }}>
+      <WorkspaceHeaderSlotContext.Provider value={headerSlot}>
+        <div className="relative min-h-[100dvh]">
+          <OrchardBackdrop />
+          <div className="relative z-10 flex flex-col h-[100dvh]">
+            {user?.isDemo && <TrialBanner />}
+            <SiteBanner />
+            {/* Slot target: WorkspaceHeader portals here so the brand banner spans full width above the sidebar */}
+            <div ref={setHeaderSlot} className="shrink-0 w-full" data-testid="ws-header-slot" />
+            <div className="flex flex-1 overflow-hidden">
+              <DesktopSidebar />
+              <main className="flex-1 overflow-y-auto overflow-x-hidden main-safe bg-background/25 flex flex-col">
+                {isLoading ? (
+                  <div className="flex h-full items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary/50" />
+                  </div>
+                ) : (
+                  <Component />
+                )}
+              </main>
+            </div>
+            <MobileNav />
+          </div>
         </div>
-        <MobileNav />
-      </div>
-    </div>
+      </WorkspaceHeaderSlotContext.Provider>
+    </AppRealmContext.Provider>
   );
 }
 
@@ -204,8 +211,8 @@ function Router() {
       <Route path="/shared/:token" component={SharedPlanPage} />
       <Route path="/partners" component={() => <ProtectedRoute component={PartnersPage} />} />
       <Route path="/quick-meal" component={() => <ProtectedRoute component={QuickMealPage} />} />
-      <Route path="/list" component={() => <ProtectedRoute component={ListPage} />} />
-      <Route path="/shopping-list" component={() => <ProtectedRoute component={ListPage} />} />
+      <Route path="/list" component={() => <Redirect to="/shopping-workspace" />} />
+      <Route path="/shopping-list" component={() => <Redirect to="/shopping-workspace" />} />
       <Route path="/shopping-workspace" component={() => <ProtectedRoute component={ShoppingWorkspacePage} />} />
 
       <Route component={NotFound} />

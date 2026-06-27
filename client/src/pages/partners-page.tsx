@@ -20,9 +20,8 @@ import {
   Globe,
   X,
   ChevronRight,
-  Sparkles,
 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
+import { WorkspaceHeader } from "@/components/workspace-header";
 import { useEffect } from "react";
 import { getActivePartners, getFeaturedPartners } from "@/data/partners";
 import { PARTNER_CATEGORIES } from "@/types/partner";
@@ -388,13 +387,95 @@ export default function PartnersPage() {
 
   return (
     <>
-    <PageHeader
+    <WorkspaceHeader
       realm="pantry"
       title="Partners"
-      icon={<Heart className="h-5 w-5" />}
-      context="Trusted wellness partners to support your healthy lifestyle"
+      wide
+      contextBar={
+        <div className="flex items-center gap-2 w-full overflow-x-auto no-scrollbar">
+          {/* Search */}
+          <div className="relative min-w-[130px] max-w-[190px] shrink-0">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search partners..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-7 pl-8 pr-6 rounded-md border border-border/60 bg-background/70 text-xs placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/30"
+              data-testid="input-partner-search"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2"
+              >
+                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+              </button>
+            )}
+          </div>
+
+          {/* Category select */}
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="h-7 px-2 rounded-md border border-border/60 bg-background/70 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 shrink-0"
+            data-testid="category-select"
+          >
+            <option value="All">All categories</option>
+            {PARTNER_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+
+          {/* Service type */}
+          <div className="flex rounded-md border border-border/60 overflow-hidden bg-background/70 shrink-0" data-testid="service-type-filter">
+            {SERVICE_TYPES.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setServiceFilter(value)}
+                className={`px-2.5 py-1 text-xs transition-colors ${
+                  serviceFilter === value
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                }`}
+                data-testid={`service-type-${value}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Clear (when filters active) */}
+          {(selectedCategory !== "All" || searchQuery || serviceFilter !== "all") && (
+            <button
+              type="button"
+              onClick={() => { setSelectedCategory("All"); setSearchQuery(""); setServiceFilter("all"); }}
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground shrink-0 transition-colors"
+            >
+              <X className="h-3 w-3" />
+              Clear
+            </button>
+          )}
+
+          <div className="flex-1" />
+
+          {/* Become a Partner */}
+          <button
+            type="button"
+            onClick={() => setApplyModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 shrink-0 transition-colors"
+            data-testid="button-become-partner-toolbar"
+          >
+            <Heart className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Become a Partner</span>
+            <span className="sm:hidden">Partner</span>
+          </button>
+        </div>
+      }
     />
-    <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe space-y-14">
+    <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 main-safe space-y-10">
 
       {/* Hero */}
       <section className="rounded-3xl bg-gradient-to-br from-primary/8 via-background to-primary/4 border border-border px-6 sm:px-12 py-7 sm:py-10 text-center space-y-3" data-testid="partners-hero">
@@ -408,27 +489,6 @@ export default function PartnersPage() {
         <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
           Discover trusted wellness partners and resources that complement your journey with THA - from yoga teachers and nutritionists to mindfulness coaches and healthy cooking guides.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-1">
-          <Button
-            className="gap-2"
-            onClick={() => {
-              document.getElementById("partners-grid")?.scrollIntoView({ behavior: "smooth" });
-            }}
-            data-testid="button-explore-partners"
-          >
-            <Sparkles className="h-4 w-4" />
-            Explore Partners
-          </Button>
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={() => setApplyModalOpen(true)}
-            data-testid="button-become-partner"
-          >
-            <Heart className="h-4 w-4" />
-            Become a Partner
-          </Button>
-        </div>
       </section>
 
       {/* Featured Partners */}
@@ -446,91 +506,8 @@ export default function PartnersPage() {
         </section>
       )}
 
-      {/* Category Filter + Search */}
+      {/* Partner grid */}
       <section className="space-y-4" id="partners-grid">
-        <div className="flex flex-col gap-4">
-          {/* Category pills */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium text-muted-foreground">Filter by category</p>
-            <div
-              className="flex flex-wrap gap-2"
-              data-testid="category-filter"
-            >
-              <button
-                type="button"
-                onClick={() => setSelectedCategory("All")}
-                className={`text-sm px-3.5 py-1.5 rounded-full border transition-colors ${
-                  selectedCategory === "All"
-                    ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                    : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
-                }`}
-                data-testid="category-pill-all"
-              >
-                All
-              </button>
-              {PARTNER_CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  type="button"
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`text-sm px-3.5 py-1.5 rounded-full border transition-colors ${
-                    selectedCategory === cat
-                      ? "bg-primary/10 text-primary border-primary/30 font-medium"
-                      : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
-                  }`}
-                  data-testid={`category-pill-${cat.toLowerCase().replace(/[\s&/]+/g, "-")}`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Search + service type */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search partners, services, or keywords"
-                className="pl-9"
-                data-testid="input-partner-search"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-            <div
-              className="flex rounded-lg border border-border overflow-hidden bg-background"
-              data-testid="service-type-filter"
-            >
-              {SERVICE_TYPES.map(({ value, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setServiceFilter(value)}
-                  className={`px-4 py-2 text-sm transition-colors ${
-                    serviceFilter === value
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
-                  data-testid={`service-type-${value}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Partner grid */}
         {filteredPartners.length === 0 ? (
           <div className="text-center py-16 space-y-2" data-testid="partners-empty-state">
             <p className="text-muted-foreground font-medium">No partners match your filters</p>
@@ -555,20 +532,6 @@ export default function PartnersPage() {
                 {filteredPartners.length} partner{filteredPartners.length !== 1 ? "s" : ""}
                 {selectedCategory !== "All" && ` in ${selectedCategory}`}
               </p>
-              {(selectedCategory !== "All" || searchQuery || serviceFilter !== "all") && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCategory("All");
-                    setSearchQuery("");
-                    setServiceFilter("all");
-                  }}
-                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
-                >
-                  <X className="h-3 w-3" />
-                  Clear filters
-                </button>
-              )}
             </div>
             <div
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"

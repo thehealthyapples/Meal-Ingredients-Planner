@@ -64,7 +64,7 @@ export default function AdminIngredientProductsPage() {
 
   const queryKey = ["/api/admin/ingredient-products", activeQuery];
 
-  const { data: picks = [], isLoading } = useQuery<IngredientProduct[]>({
+  const { data: picks = [], isPending: isLoading } = useQuery<IngredientProduct[]>({
     queryKey,
     queryFn: () =>
       apiRequest("GET", `/api/admin/ingredient-products?query=${encodeURIComponent(activeQuery)}`).then(r => r.json()),

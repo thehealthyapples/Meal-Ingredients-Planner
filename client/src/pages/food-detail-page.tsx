@@ -85,7 +85,7 @@ export default function FoodDetailPage() {
   const [, params] = useRoute("/foods/:slug");
   const slug = params?.slug ?? null;
 
-  const { data, isLoading, isError } = useQuery<FoodIntelligence>({
+  const { data, isPending: isLoading, isError } = useQuery<FoodIntelligence>({
     queryKey: ["/api/foods", slug, "intelligence"],
     queryFn: async () => {
       const res = await fetch(`/api/foods/${slug}/intelligence`);

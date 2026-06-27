@@ -35,7 +35,7 @@ export function SharePlanDialog({ open, onOpenChange }: SharePlanDialogProps) {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const { data: library, isLoading } = useQuery<LibraryResponse>({
+  const { data: library, isPending: isLoading } = useQuery<LibraryResponse>({
     queryKey: ["/api/plan-templates/library"],
     enabled: open,
   });
