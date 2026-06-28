@@ -434,7 +434,7 @@ export function WorkspaceHeader({
 
             {/* Workspace navigation on mobile */}
             {contextBar && (
-              <div className="min-h-[40px] flex items-center">
+              <div className="flex items-center min-h-[36px] pb-2">
                 {contextBar}
               </div>
             )}

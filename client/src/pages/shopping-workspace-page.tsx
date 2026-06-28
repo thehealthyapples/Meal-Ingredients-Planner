@@ -2251,7 +2251,7 @@ export default function ShoppingWorkspacePage() {
           realm="shopping"
           wide
           contextBar={
-            <div className="flex items-center gap-2 w-full flex-wrap">
+            <div className="flex items-center gap-2 w-full overflow-x-auto no-scrollbar">
               <ModeSwitcher mode={mode} onChange={(m) => { setMode(m); }} />
               {workspaceControlBar && (
                 <div className="flex-1 min-w-0">
