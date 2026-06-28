@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   ShoppingBasket, ListPlus, Layers, Loader2, ChevronDown, ChevronUp,
   Clock, ArrowRight, Info, CalendarDays,
@@ -258,11 +259,19 @@ export default function AnalyserDetailV2({
               </p>
             </div>
             <div className="shrink-0 pt-0.5">
-              <AppleRatingWithTooltip
-                rating={vm.score.rating}
-                sizePx={48}
-                additiveContext={vm.score.additiveContext}
-              />
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex flex-col items-center gap-1 cursor-default select-none">
+                    <img src={thaAppleSrc} alt="" className="h-12 w-12 object-contain" />
+                    <span className="text-sm font-semibold realm-title tabular-nums leading-none">
+                      {vm.score.rating} / 5
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="left">
+                  <p className="text-xs">THA Score: {vm.score.rating}/5 — {vm.score.label}</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
 
