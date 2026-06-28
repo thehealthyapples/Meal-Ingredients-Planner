@@ -344,9 +344,9 @@ export function WorkspaceHeader({
               <div className="flex items-center gap-2 min-w-0">
                 <Link href="/dashboard" aria-label="Dashboard" className="flex-shrink-0">
                   <img
-                    src={thaAppleSrc}
+                    src="/logo-long.png"
                     alt="The Healthy Apples"
-                    className="h-7 w-7 object-contain opacity-90"
+                    className="h-auto max-h-[28px] w-auto max-w-[120px] object-contain opacity-90"
                   />
                 </Link>
                 <h1
