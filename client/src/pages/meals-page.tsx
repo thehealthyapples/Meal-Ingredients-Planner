@@ -3334,8 +3334,7 @@ export default function MealsPage() {
         onSubmit: () => {},
       }}
       contextBar={
-        /* Group tabs: desktop always visible; mobile access via workspace drawer Browse section */
-        <div className="hidden sm:flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40 overflow-x-auto no-scrollbar" role="tablist">
+        <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-1 border border-border/40 overflow-x-auto no-scrollbar" role="tablist">
           {([
             { id: "cookbook", label: "My Cookbook", Icon: ChefHat },
             { id: "recipes", label: "Recipes", Icon: Globe },
