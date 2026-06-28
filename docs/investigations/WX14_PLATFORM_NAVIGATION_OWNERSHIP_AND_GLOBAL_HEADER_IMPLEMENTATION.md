@@ -171,4 +171,23 @@ After implementation:
 
 ---
 
-*Written before code changes, as required.*
+---
+
+## Implementation Result
+
+**Commit:** `ab2c032`
+**Build:** `✓ 3244 modules transformed. built in 14.21s (client) ⚡ Done in 816ms (server)`
+
+### Verification Checklist
+
+- [x] Planner header: THA apple trigger → workspace menu (Send to basket, Save/Load week, Share, Clear)
+- [x] Cookbook header: THA apple + Create Meal CTA coexist; Import Library now in dropdown alongside Scan Recipe
+- [x] Pantry header: THA apple → Inventory / Explore mode switcher with active-state checkmark
+- [x] Analyser header: THA apple → regulatory scoring / sound / barcode scanner settings toggles
+- [x] Nutrition header: THA apple → Foods / Nutrients / Benefits / Suggestions tab shortcuts
+- [x] Diary header: THA apple → Diary Settings / Copy from Planner / Import CSV (mobile AND desktop)
+- [x] Shopping: unchanged ✓
+- [x] Account Apple: Profile / Partners / Admin / Logout only — no workspace items ✓
+- [x] Build passes clean ✓
+
+*Written before code changes, updated after.*
