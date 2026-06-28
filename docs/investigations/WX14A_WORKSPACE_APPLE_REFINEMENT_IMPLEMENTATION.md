@@ -161,5 +161,5 @@ genuine workspace actions.
 3. `docs/investigations/WX14_PLATFORM_NAVIGATION_OWNERSHIP_AND_GLOBAL_HEADER_IMPLEMENTATION.md`
 4. `docs/investigations/WX14A_WORKSPACE_APPLE_REFINEMENT_IMPLEMENTATION.md` (this file)
 
-**Commit:** _(filled in after commit)_
-**Build:** _(filled in after build)_
+**Commit:** `5cf522b`
+**Build:** `✓ built in 14.14s (client) ⚡ Done in 815ms (server)` — passes clean.
