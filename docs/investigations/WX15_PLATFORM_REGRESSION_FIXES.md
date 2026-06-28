@@ -169,7 +169,7 @@ WX14 (c3b9cc5) correctly replaced `ShoppingBasket` with `ShoppingCart` in `works
 
 ## Final Report (to be filled on completion)
 
-**IMPLEMENTATION STATUS:** in-progress
+**IMPLEMENTATION STATUS:** complete — build passes ✓
 
 **ROLLBACK IDENTIFIERS:**
 1. wx15-issue1-before
@@ -180,12 +180,12 @@ WX14 (c3b9cc5) correctly replaced `ShoppingBasket` with `ShoppingCart` in `works
 6. wx15-issue6-before
 
 **COMMITS CREATED:**
-1. (pending)
-2. (pending)
+1. 4a99a03 — feat(wx15-1): Analyser score — single THA apple + N/5 text replaces stacked apples
+2. dd18222 — feat(wx15-2): Header breakpoint sm→md — compact logo on phones in landscape
 3. n/a
-4. (pending)
+4. d7de432 — feat(wx15-4): Cookbook contextBar tabs always visible — remove hidden sm:flex
 5. n/a
-6. (pending)
+6. ba5eac4 — feat(wx15-6): Shopping workspace — teal realm identity matching nav sidebar
 
 **FILES CHANGED BY ISSUE:**
 1. client/src/components/analyser/AnalyserDetailV2.tsx
