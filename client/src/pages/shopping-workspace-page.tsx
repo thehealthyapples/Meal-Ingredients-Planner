@@ -2271,7 +2271,7 @@ export default function ShoppingWorkspacePage() {
         <div className="border-b border-border/50 bg-background shrink-0">
           <div className="flex items-center justify-between px-4 sm:px-6 py-3">
             <div className="flex items-center gap-2">
-              <ShoppingBasket className="h-4 w-4 text-primary" />
+              <ShoppingCart className="h-4 w-4 text-primary" />
               <span className="font-semibold text-sm">Shopping</span>
             </div>
             <div className="flex items-center gap-2">
@@ -2529,7 +2529,7 @@ export default function ShoppingWorkspacePage() {
         </div>
       ) : items.length === 0 ? (
         <div className="rounded-xl border border-border/50 bg-card/60 px-4 py-8 text-center">
-          <ShoppingBasket className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+          <ShoppingCart className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">Your shopping list is empty.</p>
           <p className="text-xs text-muted-foreground/70 mt-1">
             <button onClick={() => setMode("add")} className="text-primary hover:underline">Add items</button>

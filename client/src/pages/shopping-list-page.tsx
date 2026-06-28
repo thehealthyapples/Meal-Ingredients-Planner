@@ -2884,7 +2884,7 @@ export default function ShoppingListPage() {
                   {basketMode === "check-cupboards" && <Check className="h-3.5 w-3.5 text-primary ml-2" />}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleBasketModeChange("shopping-assistant")} className="flex items-center justify-between" data-testid="basket-mode-shopping-assistant">
-                  <span className="flex items-center gap-2"><ShoppingBasket className="h-3.5 w-3.5" />Shopping Assistant</span>
+                  <span className="flex items-center gap-2"><ShoppingCart className="h-3.5 w-3.5" />Shopping Assistant</span>
                   {basketMode === "shopping-assistant" && <Check className="h-3.5 w-3.5 text-primary ml-2" />}
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -3003,7 +3003,7 @@ export default function ShoppingListPage() {
                   className="text-foreground focus:text-foreground"
                   data-testid="button-open-workspace"
                 >
-                  <ShoppingBasket className="h-4 w-4 mr-2 text-primary/70" />
+                  <ShoppingCart className="h-4 w-4 mr-2 text-primary/70" />
                   <span className="flex-1">Shopping</span>
                 </DropdownMenuItem>
               </Link>

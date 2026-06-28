@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ShoppingBasket, Search, Heart, User, ShieldCheck, Star, Sliders, LogOut,
+  ShoppingCart, Search, Heart, User, ShieldCheck, Star, Sliders, LogOut,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -187,12 +187,12 @@ export function WorkspaceHeader({
           className={`relative flex items-center justify-center h-9 w-9 rounded-lg transition-colors ${
             isBasketActive
               ? "bg-[hsl(190,30%,86%)] text-[hsl(190,42%,20%)] dark:bg-[hsl(190,18%,17%)] dark:text-[hsl(190,32%,72%)]"
-              : "text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5 hover:text-foreground"
+              : "text-[hsl(190,38%,44%)] hover:bg-[hsl(190,22%,92%)] hover:text-[hsl(190,42%,28%)] dark:text-[hsl(190,28%,58%)] dark:hover:bg-[hsl(190,12%,18%)] dark:hover:text-[hsl(190,28%,68%)]"
           }`}
           aria-label="Shopping"
           data-testid="button-workspace-basket"
         >
-          <ShoppingBasket className="h-4.5 w-4.5" style={{ width: "18px", height: "18px" }} />
+          <ShoppingCart className="h-4.5 w-4.5" style={{ width: "18px", height: "18px" }} />
           {itemCount > 0 && (
             <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-[9px] font-semibold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5 leading-none pointer-events-none">
               {itemCount > 99 ? "99+" : itemCount}
@@ -384,7 +384,7 @@ export function WorkspaceHeader({
                   aria-label="Shopping"
                   data-testid="button-workspace-basket"
                 >
-                  <ShoppingBasket className="h-4 w-4" />
+                  <ShoppingCart className="h-4 w-4" />
                   {itemCount > 0 && (
                     <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-[9px] font-semibold rounded-full min-w-[14px] h-[14px] flex items-center justify-center px-0.5 leading-none pointer-events-none">
                       {itemCount > 99 ? "99+" : itemCount}

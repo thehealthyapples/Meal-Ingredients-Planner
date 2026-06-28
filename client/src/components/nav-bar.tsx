@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  LayoutDashboard, CalendarDays, ShoppingBasket, ShoppingCart,
+  LayoutDashboard, CalendarDays, ShoppingCart,
   LogOut, ShieldCheck, Star,
   Sliders, Search, ChevronLeft, ChevronRight,
   Microscope, BookOpen, Heart, ChefHat,
@@ -456,11 +456,11 @@ export function TopBar() {
               <TooltipTrigger asChild>
                 <Link
                   href="/shopping-workspace"
-                  className={`relative flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket" ? "bg-[hsl(190,30%,86%)] text-[hsl(190,42%,20%)] dark:bg-[hsl(190,18%,17%)] dark:text-[hsl(190,32%,72%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+                  className={`relative flex items-center justify-center h-10 w-10 rounded-lg transition-colors ${location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket" ? "bg-[hsl(190,30%,86%)] text-[hsl(190,42%,20%)] dark:bg-[hsl(190,18%,17%)] dark:text-[hsl(190,32%,72%)]" : "text-[hsl(190,38%,44%)] hover:bg-[hsl(190,22%,92%)] hover:text-[hsl(190,42%,28%)] dark:text-[hsl(190,28%,58%)] dark:hover:bg-[hsl(190,12%,18%)] dark:hover:text-[hsl(190,28%,68%)]"}`}
                   aria-label="Shopping"
                   data-testid="button-topbar-basket"
                 >
-                  <ShoppingBasket className="h-5 w-5" />
+                  <ShoppingCart className="h-5 w-5" />
                   {itemCount > 0 && (
                     <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-[10px] font-semibold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none pointer-events-none">
                       {itemCount > 99 ? "99+" : itemCount}
@@ -510,11 +510,11 @@ export function TopBar() {
           <div className="flex items-center">
             <Link
               href="/shopping-workspace"
-              className={`relative flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket" ? "text-[hsl(190,42%,20%)] dark:text-[hsl(190,32%,72%)]" : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"}`}
+              className={`relative flex items-center justify-center h-11 w-11 rounded-lg transition-colors ${location === "/shopping-workspace" || location === "/basket" || location === "/analyse-basket" ? "text-[hsl(190,42%,20%)] dark:text-[hsl(190,32%,72%)]" : "text-[hsl(190,38%,44%)] hover:bg-[hsl(190,22%,92%)] dark:text-[hsl(190,28%,58%)] dark:hover:bg-[hsl(190,12%,18%)]"}`}
               aria-label="Shopping"
               data-testid="button-topbar-basket"
             >
-              <ShoppingBasket className="h-5 w-5" />
+              <ShoppingCart className="h-5 w-5" />
               {itemCount > 0 && (
                 <span className="absolute top-1.5 right-1.5 bg-primary text-primary-foreground text-[10px] font-semibold rounded-full min-w-[15px] h-[15px] flex items-center justify-center px-0.5 leading-none pointer-events-none">
                   {itemCount > 99 ? "99+" : itemCount}
