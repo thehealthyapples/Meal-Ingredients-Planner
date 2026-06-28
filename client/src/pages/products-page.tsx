@@ -29,6 +29,7 @@ import { api } from "@shared/routes";
 import { appendPendingIngredient } from "@/lib/quick-list";
 import ScoreBadge from "@/components/ui/score-badge";
 import AppleRatingWithTooltip from "@/components/AppleRating";
+import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { getWholeFoodAlternative, effortLabel, effortColor, formatTime } from "@/lib/whole-food-alternatives";
 import { rankChoices, buildWhyBetter } from "@/lib/analyser-choice";
@@ -1092,7 +1093,9 @@ export default function ProductsPage() {
                 aria-label={`Minimum ${r} apple${r !== 1 ? "s" : ""}`}
                 data-testid={`button-toolbar-min-rating-${r}`}
               >
-                {r}★
+                <span className="flex items-center gap-0.5">
+                  {r}<img src={thaAppleSrc} alt="apple" className="h-3 w-3 object-contain" />
+                </span>
               </button>
             ))}
           </div>
@@ -1872,7 +1875,7 @@ export default function ProductsPage() {
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {[0, 1, 2, 3, 4, 5].map(r => (
                     <Button key={r} size="sm" variant={minRating === r ? 'default' : 'outline'} onClick={() => setMinRating(r)} className="h-8 px-3 text-xs" data-testid={`button-min-rating-${r}`}>
-                      {r === 0 ? 'All' : `${r}★`}
+                      {r === 0 ? 'All' : <span className="flex items-center gap-0.5">{r}<img src={thaAppleSrc} alt="apple" className="h-3 w-3 object-contain" /></span>}
                     </Button>
                   ))}
                 </div>
@@ -2044,7 +2047,7 @@ function FilterPanelContent({
               className="h-8 px-3 text-xs"
               data-testid={`button-min-rating-${r}`}
             >
-              {r === 0 ? 'All' : `${r}★`}
+              {r === 0 ? 'All' : <span className="flex items-center gap-0.5">{r}<img src={thaAppleSrc} alt="apple" className="h-3 w-3 object-contain" /></span>}
             </Button>
           ))}
         </div>
