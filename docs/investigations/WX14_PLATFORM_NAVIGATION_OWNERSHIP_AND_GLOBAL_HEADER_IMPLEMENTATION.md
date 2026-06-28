@@ -191,3 +191,44 @@ After implementation:
 - [x] Build passes clean ✓
 
 *Written before code changes, updated after.*
+
+---
+
+## WX14A Refinement (supersedes Pantry & Nutrition above)
+
+See `WX14A_WORKSPACE_APPLE_REFINEMENT_IMPLEMENTATION.md`.
+
+WX14 placed a Workspace Apple on **every** workspace page. WX14A corrects this: the
+Pantry and Nutrition apples contained **only** navigation that was already present in
+the workspace banner (Pantry: Inventory/Explore; Nutrition: Foods/Nutrients/Benefits/
+Suggestions). Those apples were therefore pure duplication and have been **removed**.
+
+### Permanent Platform Design Rule (canonical)
+
+**Workspace banner (Row 2) owns navigation** — "Where am I going?" (tabs, views,
+filters, sections, modes). These appear *only* in the banner.
+
+**The Workspace Apple owns actions** — "What can I do from here?" (import, export,
+print, share, settings, tools, utilities, advanced options).
+
+**The Workspace Apple is OPTIONAL.** It appears *only* when a workspace contains
+genuine actions that are **not already represented elsewhere in the interface**. A
+page with no such actions shows no apple. The apple must **never** duplicate
+navigation already visible in the workspace banner, and must **never** be padded with
+fabricated or disabled placeholder items to force its presence.
+
+**Shopping remains the reference implementation** because it naturally has many
+genuine workspace actions (Match Products, Export/Download, Scan, Fullscreen,
+Recalculate, Clear, unit toggle, Send to Supermarket).
+
+### Per-page state after WX14A
+
+| Page | Apple? | Contents |
+|------|--------|----------|
+| Shopping | ✓ (reference) | Match Products, Split by shop, Scan, Fullscreen, units, Send to Supermarket, Export, Recalculate, Basket, Clear |
+| Planner | ✓ | Send week to basket, Save/Load Week, Share Plan, Clear Week |
+| Cookbook | ✓ | Scan Recipe, Import Library |
+| Diary | ✓ | Diary Settings, Copy from Planner, Import CSV |
+| Analyser | ✓ | Regulatory scoring, Sound, Barcode scanner |
+| Pantry | ✗ removed | nav-only (Inventory/Explore live in banner) |
+| Nutrition | ✗ removed | nav-only (tabs live in banner) |

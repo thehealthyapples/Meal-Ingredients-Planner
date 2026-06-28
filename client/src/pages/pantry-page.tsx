@@ -26,8 +26,6 @@ const MICRO_INSIGHTS = [
 ];
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { PantryKnowledgeHub } from "@/components/PantryKnowledgeHub";
 import PantryIntelligencePanel from "@/components/PantryIntelligencePanel";
 
@@ -991,37 +989,6 @@ export default function PantryPage() {
         realm="pantry"
         wide
         titleTestId="text-pantry-title"
-        actions={
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                aria-label="Pantry workspace"
-                data-testid="button-pantry-workspace-menu"
-              >
-                <img src={thaAppleSrc} alt="" className="h-[34px] w-[34px] object-contain" aria-hidden="true" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem
-                onClick={() => setMode("inventory")}
-                data-testid="button-pantry-ws-inventory"
-              >
-                <Refrigerator className="h-4 w-4 mr-2" />
-                Inventory
-                {mode === "inventory" && <span className="ml-auto text-primary text-xs">✓</span>}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setMode("explore")}
-                data-testid="button-pantry-ws-explore"
-              >
-                <Search className="h-4 w-4 mr-2" />
-                Explore
-                {mode === "explore" && <span className="ml-auto text-primary text-xs">✓</span>}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        }
         search={{
           placeholder: "Search pantry...",
           value: pantrySearch,
