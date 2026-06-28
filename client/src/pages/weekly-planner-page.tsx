@@ -72,6 +72,7 @@ import {
 import { sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy, arrayMove } from "@dnd-kit/sortable";
 import { DroppablePlannerCell, SortablePlannerEntry, MobileSortableMealEntry, MobileDayDropTarget, DroppableProvisioning, type DragItemData, type DropZoneData } from "@/components/PlannerDragDrop";
 import { PlannerMealCardContent } from "@/components/PlannerMealCard";
+import thaAppleSrc from "@/assets/icons/tha-apple.png";
 
 interface MatrixRow {
   id: string;
@@ -1807,11 +1808,11 @@ export default function WeeklyPlannerPage() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
-              title="More options"
-              data-testid="button-planner-overflow-menu"
+              className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+              aria-label="Planner workspace"
+              data-testid="button-planner-workspace-menu"
             >
-              <MoreHorizontal className="h-4 w-4" />
+              <img src={thaAppleSrc} alt="" className="h-[34px] w-[34px] object-contain" aria-hidden="true" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">

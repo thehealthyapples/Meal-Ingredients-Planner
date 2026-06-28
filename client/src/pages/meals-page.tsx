@@ -3384,23 +3384,40 @@ export default function MealsPage() {
             externalOpen={cookbookAddRecipeOpen}
             onExternalOpenChange={setCookbookAddRecipeOpen}
           />
-          {!importStatusLoading && (!importStatus || importStatus.totalImported === 0) && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="hidden sm:inline-flex px-2 sm:px-3 realm-banner-btn"
-              onClick={() => importLibraryMutation.mutate()}
-              disabled={importLibraryMutation.isPending}
-              data-testid="button-import-library"
-            >
-              {importLibraryMutation.isPending ? (
-                <Loader2 className="h-4 w-4 sm:mr-1.5 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 sm:mr-1.5" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                aria-label="Cookbook workspace"
+                data-testid="button-cookbook-workspace-menu"
+              >
+                <img src={thaAppleLogo} alt="" className="h-[34px] w-[34px] object-contain" aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={() => scanFileRef.current?.click()} data-testid="button-cookbook-ws-scan">
+                <Camera className="h-4 w-4 mr-2" />
+                Scan Recipe
+              </DropdownMenuItem>
+              {!importStatusLoading && (!importStatus || importStatus.totalImported === 0) && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => importLibraryMutation.mutate()}
+                    disabled={importLibraryMutation.isPending}
+                    data-testid="button-import-library"
+                  >
+                    {importLibraryMutation.isPending ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4 mr-2" />
+                    )}
+                    {importLibraryMutation.isPending ? "Importing..." : "Import Library"}
+                  </DropdownMenuItem>
+                </>
               )}
-              <span className="hidden sm:inline">{importLibraryMutation.isPending ? "Importing..." : "Import Library"}</span>
-            </Button>
-          )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       }
     />

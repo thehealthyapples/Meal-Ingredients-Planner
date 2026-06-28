@@ -37,6 +37,7 @@ import ThaAppleIcon from "@/components/icons/ThaAppleIcon";
 import AppleRating from "@/components/AppleRating";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
 import { WorkspaceHeader } from "@/components/workspace-header";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend,
@@ -1549,16 +1550,32 @@ export default function FoodDiaryPage() {
           </div>
         }
         actions={
-          /* Desktop only — mobile access via Diary workspace drawer → Settings */
-          <button
-            type="button"
-            className="hidden md:flex items-center justify-center h-8 w-8 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground hover:text-foreground transition-colors"
-            onClick={() => setDiarySettingsOpen(true)}
-            aria-label="Diary settings"
-            data-testid="button-diary-settings"
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                aria-label="Diary workspace"
+                data-testid="button-diary-workspace-menu"
+              >
+                <img src={thaAppleSrc} alt="" className="h-[34px] w-[34px] object-contain" aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={() => setDiarySettingsOpen(true)} data-testid="button-diary-ws-settings">
+                <SlidersHorizontal className="h-4 w-4 mr-2" />
+                Diary Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setCopyModalOpen(true)} data-testid="button-diary-ws-copy-planner">
+                <FileDown className="h-4 w-4 mr-2" />
+                Copy from Planner
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setImportModalOpen(true)} data-testid="button-diary-ws-import-csv">
+                <Settings className="h-4 w-4 mr-2" />
+                Import CSV
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         }
       />
       <div className="max-w-screen-2xl 3xl:max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6" data-realm="diary">

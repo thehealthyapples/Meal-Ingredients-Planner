@@ -23,6 +23,7 @@ import {
   ChefHat, Check, Sparkles, Store, Clock, Microscope,
 } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@shared/routes";
@@ -1074,6 +1075,44 @@ export default function ProductsPage() {
               </PopoverContent>
             </Popover>
           </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                aria-label="Analyser workspace"
+                data-testid="button-analyser-workspace-menu"
+              >
+                <img src={thaAppleSrc} alt="" className="h-[34px] w-[34px] object-contain" aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem
+                onClick={() => updateSettingsMutation.mutate({ includeRegulatoryAdditivesInScoring: !(intelligenceSettings?.includeRegulatoryAdditivesInScoring ?? true) })}
+                data-testid="button-analyser-ws-regulatory"
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                Regulatory scoring
+                {intelligenceSettings?.includeRegulatoryAdditivesInScoring !== false && <Check className="h-4 w-4 ml-auto text-primary" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => updateSettingsMutation.mutate({ soundEnabled: !(intelligenceSettings?.soundEnabled !== false) })}
+                data-testid="button-analyser-ws-sound"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Sound effects
+                {intelligenceSettings?.soundEnabled !== false && <Check className="h-4 w-4 ml-auto text-primary" />}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => updateSettingsMutation.mutate({ barcodeScannerEnabled: !(intelligenceSettings?.barcodeScannerEnabled !== false) })}
+                data-testid="button-analyser-ws-barcode"
+              >
+                <ScanLine className="h-4 w-4 mr-2" />
+                Barcode scanner
+                {intelligenceSettings?.barcodeScannerEnabled !== false && <Check className="h-4 w-4 ml-auto text-primary" />}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       }
       contextBar={

@@ -6,6 +6,8 @@ import { HouseholdNutritionCentre } from "@/components/HouseholdNutritionCentre"
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { Link } from "wouter";
 import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import thaAppleSrc from "@/assets/icons/tha-apple.png";
 
 type NutritionTab = "foods" | "nutrients" | "benefits" | "suggestions";
 
@@ -38,6 +40,32 @@ export default function PlantDiversityPage() {
         realm="nutrition"
         wide
         titleTestId="text-nutrition-report-title"
+        actions={
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="flex items-center justify-center h-9 w-9 rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                aria-label="Nutrition workspace"
+                data-testid="button-nutrition-workspace-menu"
+              >
+                <img src={thaAppleSrc} alt="" className="h-[34px] w-[34px] object-contain" aria-hidden="true" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              {NUTRITION_TABS.map(({ id, label, icon: Icon }) => (
+                <DropdownMenuItem
+                  key={id}
+                  onClick={() => setActiveTab(id)}
+                  data-testid={`button-nutrition-ws-${id}`}
+                >
+                  <Icon className="h-4 w-4 mr-2" />
+                  {label}
+                  {activeTab === id && <span className="ml-auto text-primary text-xs">✓</span>}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        }
         contextBar={
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-0.5 rounded-lg bg-muted/50 p-1 border border-border/40" role="tablist">
