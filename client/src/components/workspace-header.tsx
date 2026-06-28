@@ -228,7 +228,7 @@ export function WorkspaceHeader({
           {contextBar ? (
             /* ── Desktop: unified two-row banner ── */
             <div
-              className="hidden sm:grid gap-x-3"
+              className="hidden md:grid gap-x-3"
               style={{ gridTemplateColumns: "auto auto 1fr auto", gridTemplateRows: "48px auto" }}
             >
               {/* Logo — spans both rows; divider self-stretches to full banner height */}
@@ -293,7 +293,7 @@ export function WorkspaceHeader({
           ) : (
             /* ── Desktop: single-row header (no workspace navigation) ── */
             <div
-              className="hidden sm:grid items-center h-12 gap-x-3"
+              className="hidden md:grid items-center h-12 gap-x-3"
               style={{ gridTemplateColumns: "auto auto 1fr auto" }}
             >
               {/* Col 1: Brand — logo + divider */}
@@ -337,7 +337,7 @@ export function WorkspaceHeader({
           )}
 
           {/* ── Mobile layout (unchanged for both contextBar variants) ── */}
-          <div className="sm:hidden">
+          <div className="md:hidden">
             {/* Row 1: title | basket + search toggle + profile */}
             <div className="flex items-center justify-between h-14">
               <div className="flex items-center gap-2 min-w-0">
