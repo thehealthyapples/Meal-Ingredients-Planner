@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { Loader2, Leaf, Lightbulb, BarChart3, Salad } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Loader2, Leaf, Lightbulb, BarChart3, Salad, X } from "lucide-react";
 import { useWeekMealEntries } from "@/hooks/use-week-meal-entries";
 import { PlantDiversityReport } from "@/components/PlantDiversityReport";
 import { HouseholdNutritionCentre } from "@/components/HouseholdNutritionCentre";
 import { WorkspaceHeader } from "@/components/workspace-header";
 import { Link } from "wouter";
+import { Drawer, DrawerContent, DrawerTitle } from "@/components/ui/drawer";
 
 type NutritionTab = "foods" | "nutrients" | "benefits" | "suggestions";
 
@@ -18,6 +19,17 @@ const NUTRITION_TABS: Array<{ id: NutritionTab; label: string; icon: React.Compo
 export default function PlantDiversityPage() {
   const { weekMeals, isLoading } = useWeekMealEntries();
   const [activeTab, setActiveTab] = useState<NutritionTab>("foods");
+  const [mobileWorkspaceOpen, setMobileWorkspaceOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if ((e as CustomEvent<{ href: string }>).detail?.href === "/plant-diversity") {
+        setMobileWorkspaceOpen(true);
+      }
+    };
+    window.addEventListener("tha:open-workspace", handler);
+    return () => window.removeEventListener("tha:open-workspace", handler);
+  }, []);
 
   return (
     <>
@@ -166,6 +178,54 @@ export default function PlantDiversityPage() {
         )}
 
       </div>
+
+      {/* ── Mobile Nutrition Workspace Drawer ─────────────────────────────── */}
+      <Drawer open={mobileWorkspaceOpen} onOpenChange={setMobileWorkspaceOpen} shouldScaleBackground={false}>
+        <DrawerContent
+          className="flex flex-col max-h-[60vh]"
+          data-testid="drawer-nutrition-workspace"
+          data-realm="nutrition"
+        >
+          <div className="flex items-center justify-between px-4 pt-1 pb-3 shrink-0 realm-header-bg">
+            <DrawerTitle className="text-sm font-semibold flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" style={{ color: "var(--realm-accent)" }} />
+              Nutrition
+            </DrawerTitle>
+            <button
+              onClick={() => setMobileWorkspaceOpen(false)}
+              className="rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/5 text-muted-foreground transition-colors"
+              aria-label="Close workspace"
+              data-testid="button-nutrition-workspace-close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="w-full h-px shrink-0 bg-[var(--realm-border)]" />
+          <div
+            className="flex-1 overflow-y-auto min-h-0 px-4 pt-3"
+            style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))" }}
+          >
+            <p className="text-[10px] font-semibold text-muted-foreground/60 uppercase tracking-wider py-2">View</p>
+            <div className="grid grid-cols-2 gap-2 pb-3">
+              {NUTRITION_TABS.map(({ id, label, icon: Icon }) => (
+                <button
+                  key={id}
+                  className={`flex flex-col items-center gap-1.5 rounded-md border px-1.5 py-3 transition-colors ${
+                    activeTab === id
+                      ? "border-primary/40 realm-banner-btn"
+                      : "border-border text-muted-foreground hover:text-foreground hover:bg-muted/40"
+                  }`}
+                  onClick={() => { setActiveTab(id); setMobileWorkspaceOpen(false); }}
+                  data-testid={`button-ws-nutrition-${id}`}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="text-[11px] font-medium leading-none">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </DrawerContent>
+      </Drawer>
     </>
   );
 }

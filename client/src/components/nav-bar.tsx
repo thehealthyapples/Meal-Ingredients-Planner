@@ -46,11 +46,11 @@ const NAV_ITEMS_MAIN = [
 // hasWorkspace: true → repeat-tap on active page opens that page's workspace drawer
 const MOBILE_BOTTOM_ITEMS = [
   { href: "/planner", label: "Planner", icon: CalendarDays, hasWorkspace: true },
-  { href: "/plant-diversity", label: "Nutrition", icon: BarChart3, hasWorkspace: false },
+  { href: "/plant-diversity", label: "Nutrition", icon: BarChart3, hasWorkspace: true },
   { href: "/cookbook", label: "Cookbook", icon: ChefHat, hasWorkspace: true },
   { href: "/pantry", label: "Pantry", icon: PantryIcon, hasWorkspace: true },
   { href: "/analyser", label: "Analyser", icon: Microscope, hasWorkspace: true },
-  { href: "/my-diary", label: "Diary", icon: BookOpen },
+  { href: "/my-diary", label: "Diary", icon: BookOpen, hasWorkspace: true },
 ];
 
 const REALM_STYLES: Record<string, { active: string; hover: string; inactive: string; mobileActive: string; mobileInactive: string }> = {
