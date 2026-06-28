@@ -31,7 +31,8 @@ export type PageRealm =
   | "basket"
   | "list"
   | "home"
-  | "nutrition";
+  | "nutrition"
+  | "shopping";
 
 interface WorkspaceSearchConfig {
   placeholder: string;

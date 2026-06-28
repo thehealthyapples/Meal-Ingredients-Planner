@@ -2248,7 +2248,7 @@ export default function ShoppingWorkspacePage() {
       {!isFullscreen && (
         <WorkspaceHeader
           title="Shopping"
-          realm="basket"
+          realm="shopping"
           wide
           contextBar={
             <div className="flex items-center gap-2 w-full flex-wrap">

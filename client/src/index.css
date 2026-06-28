@@ -217,6 +217,12 @@
   --realm-bg:     hsl(145,22%,90%);
   --realm-border: hsl(145,18%,81%);
 }
+[data-realm="shopping"] {
+  --realm-accent: hsl(190,38%,40%);
+  --realm-text:   hsl(190,42%,20%);
+  --realm-bg:     hsl(190,28%,90%);
+  --realm-border: hsl(190,22%,81%);
+}
 
 /* Dark mode */
 .dark [data-realm="cookbook"] {
@@ -272,6 +278,12 @@
   --realm-text:   hsl(145,28%,74%);
   --realm-bg:     hsl(145,14%,13%);
   --realm-border: hsl(145,12%,20%);
+}
+.dark [data-realm="shopping"] {
+  --realm-accent: hsl(190,30%,58%);
+  --realm-text:   hsl(190,30%,76%);
+  --realm-bg:     hsl(190,14%,13%);
+  --realm-border: hsl(190,12%,20%);
 }
 
 /* Realm title colour */
