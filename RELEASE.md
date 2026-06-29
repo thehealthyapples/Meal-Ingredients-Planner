@@ -197,7 +197,7 @@ Migrations run automatically at server startup via `server/migrations/runner.ts`
 After deploy, open Render Logs and confirm:
 
 ```
-[Migrations] Schema at head: 2026-04-19_backfill_shopping_list_null_resolution_state
+[Migrations] Schema at head: 2026-06-18_ws0_knowledge_registry
 ```
 
 If you see `Schema head mismatch` or a migration failure, paste the printed SQL into the Neon SQL Editor and run it manually, then redeploy.
@@ -280,9 +280,9 @@ Run in Neon SQL Editor:
 SELECT id, applied_at FROM schema_migrations ORDER BY applied_at;
 ```
 
-Expected head (as of 2026-04-19):
+Expected head (as of 2026-06-18):
 ```
-2026-04-19_backfill_shopping_list_null_resolution_state
+2026-06-18_ws0_knowledge_registry
 ```
 
 ---

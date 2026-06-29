@@ -428,6 +428,53 @@ SUGGESTION:
 
 ---
 
+## STEP 9 — MANDATORY PROJECT DOCUMENTATION
+
+**Adopted:** 2026-06-29
+
+Every investigation, implementation, review, audit, repair, release, prompt, architecture decision, planning document, or significant engineering task MUST create a corresponding Markdown project document.
+
+### File Requirements
+
+The file must:
+- use the same name as the task or report (SCREAMING_SNAKE_CASE.md)
+- be saved under `docs/investigations/`
+- include relevant sections where applicable: Summary, Findings, Decisions, Architecture Compliance, Changes Made, Validation Performed, Data Impact, Trust Check, Rollback Information, Outcome, and Next Steps
+
+### Completion Gate
+
+Before any task is considered complete, Claude MUST report:
+
+```
+Project File Created:
+docs/investigations/<filename>.md
+```
+
+**No task, prompt, investigation, implementation, review, release, or architecture decision is considered complete until:**
+1. The corresponding project document has been created.
+2. It has been saved under `docs/investigations/`
+3. Claude has reported:
+
+```
+Project File Created:
+docs/investigations/<filename>.md
+```
+
+### Scope
+
+This rule applies to all task types without exception:
+- Architecture investigations and feasibility reviews
+- Feature implementations and workstream tasks
+- Bug fixes and hotfixes
+- Release preparation and production verification
+- Audits and compliance checks
+- Repairs and rollback operations
+- Prompts and architecture decisions
+- Planning documents
+- Any task that spans more than a single file edit
+
+---
+
 ## CHANGE CONTROL (unchanged from `docs/change-control.md`)
 
 All existing change control rules remain in force. This workflow adds architecture compliance governance on top of them. See `docs/change-control.md` for the full decision-gated workflow, risk ratings, and prompt discipline rules.
