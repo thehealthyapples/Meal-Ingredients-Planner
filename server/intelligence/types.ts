@@ -1,0 +1,240 @@
+/**
+ * THA Intelligence Platform — Core Type Contract
+ * ==============================================
+ * The canonical type vocabulary the Intelligence Platform, Capability Registry,
+ * and Intent Engine all bind to.
+ *
+ * GOVERNANCE: This is INT1 foundation — infrastructure only. These types describe
+ * how the platform *routes* to existing business services. They intentionally model
+ * NO business logic, NO business data, and NO conversation/memory state. See
+ *   docs/architecture/THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md  (TIP1)
+ *   docs/architecture/THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md (TIP2)
+ *
+ * The vocabulary here is lifted directly from the governing architecture so that
+ * the runtime registry is a faithful, typed projection of the canonical contract.
+ */
+
+// ---------------------------------------------------------------------------
+// Roles & permission primitives
+// ---------------------------------------------------------------------------
+
+/**
+ * Intelligence roles. Established as architecture from day one (INT1 "Permissions").
+ * `user` and `admin` map 1:1 to the existing `users.role` enum via server/lib/access.ts.
+ * `developer` and `service` are ADDITIVE future roles (TIP1 §6.3) — they require no
+ * schema change to *model*; granting them at runtime is a future, governed workstream.
+ * No role-specific behaviour is implemented in INT1; only the architecture is established.
+ */
+export type IntelligenceRole = "user" | "admin" | "developer" | "service";
+
+/**
+ * Knowledge classification (TIP1 §3, §6). A property of a *source*, assigned at
+ * indexing time and used to permission-filter retrieval BEFORE the model sees
+ * anything. Foundation only in INT1 — no knowledge index is built here.
+ */
+export type KnowledgeClass = "public" | "admin" | "developer";
+
+// ---------------------------------------------------------------------------
+// Intent taxonomy (TIP2 §3.1) — the 20 canonical verbs
+// ---------------------------------------------------------------------------
+
+/**
+ * The closed set of canonical intent verbs. An AI action is always exactly one
+ * `(verb × capability)` pair resolving to exactly one existing service. A verb that
+ * has no mapping to a real owner is an honest GAP, never an improvisation.
+ */
+export type IntentVerb =
+  | "read"
+  | "explain"
+  | "search"
+  | "recommend"
+  | "suggest"
+  | "generate"
+  | "add"
+  | "move"
+  | "replace"
+  | "delete"
+  | "import"
+  | "export"
+  | "analyse"
+  | "compare"
+  | "optimise"
+  | "share"
+  | "order"
+  | "review"
+  | "report"
+  | "approve";
+
+// ---------------------------------------------------------------------------
+// Capability classification & confirmation (TIP2 §4, §5.1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Server-side capability class. NOT an LLM judgement. Drives the confirmation tier.
+ */
+export type CapabilityClass =
+  | "read-only"
+  | "ai-assisted"
+  | "write"
+  | "destructive"
+  | "long-running"
+  | "human-confirmation-required"
+  | "background"
+  | "future";
+
+/** Confirmation tier (TIP2 §5.1). */
+export type ConfirmationTier = "none" | "light" | "required" | "strong";
+
+/**
+ * Future AI access posture (TIP2 §2 legend):
+ *  R = read/answer only · R+A = read + AI-assisted advisory · W = write via confirmed
+ *  intent · W! = write incl. destructive · future = desired but no owner (GAP) ·
+ *  never = must never reach the user-facing plane.
+ */
+export type AiAccessPosture = "R" | "R+A" | "W" | "W!" | "future" | "never";
+
+/**
+ * Availability of a capability *to the Intelligence Platform*.
+ *  - "registered": metadata exists and the owning service exists, but no execution
+ *    handler is wired to the platform yet (the INT1 state for every capability).
+ *  - "available": an execution handler is bound and the platform may invoke it.
+ *  - "gap": desired capability with no owning service endpoint today (honest GAP).
+ *  - "never": must never be exposed to the user-facing plane.
+ */
+export type CapabilityAvailability = "registered" | "available" | "gap" | "never";
+
+// ---------------------------------------------------------------------------
+// Capability metadata (the Capability Registry record)
+// ---------------------------------------------------------------------------
+
+/**
+ * Required-permission descriptor for a capability. Permission is enforced
+ * server-side by the platform against the existing access.ts primitives — never by
+ * prompt wording (TIP1 §6.2 boundary 3).
+ */
+export interface CapabilityPermissions {
+  /** Lowest role permitted to invoke this capability at all. */
+  readonly minimumRole: IntelligenceRole;
+  /** Knowledge class this capability reads/answers from (read-only knowledge gating). */
+  readonly knowledgeClass: KnowledgeClass;
+  /** Whether the caller must own the target rows (delegated to the owning service). */
+  readonly ownershipScoped: boolean;
+  /** Whether privileged invocations must be written to admin_audit_log. */
+  readonly audited: boolean;
+}
+
+/**
+ * A registered capability — a coherent domain of action THA already exposes through
+ * an existing service + API. The registry record is a *descriptor of an existing
+ * owner*; it never re-declares or re-owns anything (TIP2 §2).
+ */
+export interface Capability {
+  /** Unique, stable identifier (e.g. "planner"). */
+  readonly id: string;
+  /** Human-readable name. */
+  readonly displayName: string;
+  /** What the capability does, in one line. */
+  readonly description: string;
+  /** The single canonical owner from the SoT Register (table / module). */
+  readonly owner: string;
+  /** The existing service module(s) that own the business logic. */
+  readonly owningService: string;
+  /** The real existing API surface (route prefix) — descriptive, not invoked here. */
+  readonly apiSurface: string;
+  /** Verbs the platform may express against this capability (closed allow-list). */
+  readonly supportedIntents: readonly IntentVerb[];
+  /** Permission requirements, enforced server-side. */
+  readonly permissions: CapabilityPermissions;
+  /** Server-side class driving confirmation. */
+  readonly capabilityClass: CapabilityClass;
+  /** Future AI access posture. */
+  readonly aiAccess: AiAccessPosture;
+  /** Availability to the platform. */
+  readonly availability: CapabilityAvailability;
+}
+
+// ---------------------------------------------------------------------------
+// Intent (the transient, typed request object — NOT a stored entity)
+// ---------------------------------------------------------------------------
+
+/**
+ * A typed, interpreted intent handed to the platform. The platform does NOT do
+ * natural-language parsing in INT1 — it receives an already-interpreted typed intent
+ * (the "PARSE" stage is a future workstream / external interpreter). The intent is a
+ * transient request object, never persisted (TIP1 Principle 1, "Conversation" = out of scope).
+ */
+export interface Intent {
+  /** The canonical verb. */
+  readonly verb: IntentVerb;
+  /** The target capability id. */
+  readonly capabilityId: string;
+  /** Opaque, typed-by-the-future-handler parameters. The platform does not interpret these. */
+  readonly parameters?: Readonly<Record<string, unknown>>;
+}
+
+/**
+ * The execution context: who is asking, resolved from the existing session/access.ts.
+ * The platform trusts the *server-resolved* role, never anything the LLM produced.
+ */
+export interface IntelligenceContext {
+  readonly role: IntelligenceRole;
+  /** Authenticated user id, when acting on behalf of a user. */
+  readonly userId?: string;
+  /** Whether the caller has premium access (from hasPremiumAccess()). */
+  readonly premium?: boolean;
+}
+
+// ---------------------------------------------------------------------------
+// Execution outcome
+// ---------------------------------------------------------------------------
+
+export type IntentOutcomeStatus =
+  /** Capability id not in the registry. */
+  | "unknown_capability"
+  /** Capability exists but does not support the requested verb (closed allow-list / honest GAP). */
+  | "unsupported_intent"
+  /** Caller's role/permission is insufficient (server-side denial). */
+  | "denied"
+  /** Capability is a GAP — desired but no owning service endpoint exists today. */
+  | "gap"
+  /** Capability requires human confirmation before invoke; engine returns the plan to confirm. */
+  | "confirmation_required"
+  /** No execution handler is bound (the INT1 foundation state). Honest gap, not a fabricated result. */
+  | "not_executable"
+  /** A bound handler executed and returned a result. */
+  | "ok";
+
+/**
+ * The result of routing/executing an intent. Always structured and honest — the
+ * platform never fabricates a success (TIP1 Principle 6, Risk R2).
+ */
+export interface IntentOutcome {
+  readonly status: IntentOutcomeStatus;
+  /** The resolved capability, when one was found. */
+  readonly capabilityId?: string;
+  readonly verb?: IntentVerb;
+  /** Confirmation tier that applied (for confirmation_required / executed writes). */
+  readonly confirmation?: ConfirmationTier;
+  /** Human-readable, honest explanation of the outcome. */
+  readonly message: string;
+  /** Handler result payload, only present when status === "ok". */
+  readonly result?: unknown;
+}
+
+// ---------------------------------------------------------------------------
+// Execution handler (the future binding point — none bound in INT1)
+// ---------------------------------------------------------------------------
+
+/**
+ * The contract a future workstream implements to make a capability executable. The
+ * handler is the ONLY place that calls an existing business service. The platform
+ * provides routing/permission/confirmation; the handler provides the single service
+ * call. INT1 binds zero handlers — capabilities remain "registered" (honest gap on invoke).
+ *
+ * A handler MUST delegate all business validity and mutation to the owning service.
+ * It must never re-implement planner/shopping/nutrition logic (TIP1 §5, Risk R4/R6).
+ */
+export type CapabilityHandler = (
+  intent: Intent,
+  context: IntelligenceContext,
+) => Promise<unknown>;
