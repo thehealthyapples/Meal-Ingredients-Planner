@@ -443,22 +443,27 @@ The file must:
 
 ### Completion Gate
 
-Before any task is considered complete, Claude MUST report:
+**No task, prompt, investigation, implementation, review, release, or architecture decision is considered complete until ALL of the following have occurred:**
+
+1. The project document has been created.
+2. The project document has been saved under `docs/investigations/`
+3. The project document has been staged with git (`git add docs/investigations/<filename>.md`).
+4. The project document has been committed locally with an appropriate commit message.
+5. Claude has reported:
 
 ```
-Project File Created:
-docs/investigations/<filename>.md
+Project File Created:     docs/investigations/<filename>.md
+Git Commit SHA:           <full SHA of the documentation commit>
+Current Branch:           <branch name>
+Rollback Identifier:      <rollback tag name> → <commit SHA>
 ```
 
-**No task, prompt, investigation, implementation, review, release, or architecture decision is considered complete until:**
-1. The corresponding project document has been created.
-2. It has been saved under `docs/investigations/`
-3. Claude has reported:
+### Commit Rule
 
-```
-Project File Created:
-docs/investigations/<filename>.md
-```
+- **Local commit is mandatory.** No task is complete without a committed documentation record.
+- **Pushing to GitHub is NOT automatically required.** Pushing is governed by the release workflow in `docs/change-control.md`.
+- The documentation commit may be included in a later feature or release push.
+- Staging alone (without committing) does not satisfy this requirement.
 
 ### Scope
 
