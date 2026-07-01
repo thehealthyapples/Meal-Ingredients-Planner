@@ -120,6 +120,12 @@ export interface IConversationStore {
    * Returns [] if no such turn exists.
    */
   getLastEntityRefs(threadId: number): Promise<EntityRef[]>;
+
+  /**
+   * List threads for a conversation, most-recently-opened first.
+   * Bounded to `limit` rows (default 20).
+   */
+  listThreads(conversationId: number, limit?: number): Promise<ConversationThread[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -263,6 +269,25 @@ export class DatabaseConversationStore implements IConversationStore {
       client.release();
     }
   }
+
+  async listThreads(
+    conversationId: number,
+    limit = 20,
+  ): Promise<ConversationThread[]> {
+    const client = await pool.connect();
+    try {
+      const { rows } = await client.query<ConversationThread>(
+        `SELECT * FROM conversation_threads
+         WHERE conversation_id = $1
+         ORDER BY opened_at DESC
+         LIMIT $2`,
+        [conversationId, limit],
+      );
+      return rows;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -376,5 +401,17 @@ export class InMemoryConversationStore implements IConversationStore {
       }
     }
     return [];
+  }
+
+  async listThreads(
+    conversationId: number,
+    limit = 20,
+  ): Promise<ConversationThread[]> {
+    return Array.from(this.threads.values())
+      .filter(t => t.conversationId === conversationId)
+      .sort((a, b) =>
+        b.openedAt.getTime() - a.openedAt.getTime() || b.id - a.id,
+      )
+      .slice(0, limit);
   }
 }

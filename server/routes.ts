@@ -61,6 +61,7 @@ import { shoppingFulfilmentMemory } from "@shared/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { SAVINGS_RATES } from "./lib/savings-config";
 import multer from "multer";
+import { intelligencePlatform } from "./intelligence/index.js";
 
 import { extractDestination, type ScanMode, type ExtractionMethod, type ExtractionConfidence } from "./services/recipeParser";
 import { saveMediaFile, deleteMediaFile } from "./lib/media-storage";
@@ -11203,6 +11204,90 @@ Generate a complete recipe using these as the foundation.`;
     } catch (err) {
       console.error("[PlannerIntelligence] error:", err);
       res.status(500).json({ message: "Failed to build planner intelligence" });
+    }
+  });
+
+  // ── INT18 Phase 1 — Conversation Gateway routes ─────────────────────────────
+  // Three read-only routes that drive the grounded AI assistant.
+  // Grounding comes exclusively from intelligencePlatform.handle() — no direct
+  // storage reads inside the gateway. Write intents return honest gaps.
+
+  app.post("/api/intelligence/conversation/turn", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+
+    const { utterance, surface = "floating", surfaceHints = {} } = req.body ?? {};
+    if (typeof utterance !== "string" || utterance.trim().length === 0) {
+      return res.status(400).json({ message: "utterance is required and must be a non-empty string" });
+    }
+    if (utterance.trim().length > 2_000) {
+      return res.status(400).json({ message: "utterance must be 2 000 characters or fewer" });
+    }
+
+    const VALID_SURFACES = [
+      "floating", "planner", "shopping", "nutrition", "household",
+      "pantry", "diary", "meals", "templates", "partners", "analyser", "voice",
+    ];
+    if (!VALID_SURFACES.includes(surface)) {
+      return res.status(400).json({ message: `Unknown surface "${surface}"` });
+    }
+
+    try {
+      const { conversationGateway } = await import("./intelligence/conversation/conversation-gateway.js");
+      const result = await conversationGateway.processUserTurn(
+        user.id,
+        utterance.trim(),
+        surface,
+        {
+          activePlannerWeekId: typeof surfaceHints.activePlannerWeekId === "number" ? surfaceHints.activePlannerWeekId : undefined,
+          selectedMealId:      typeof surfaceHints.selectedMealId      === "number" ? surfaceHints.selectedMealId      : undefined,
+          currentFoodSlug:     typeof surfaceHints.currentFoodSlug     === "string" ? surfaceHints.currentFoodSlug     : undefined,
+        },
+        intelligencePlatform.contextFor(user),
+      );
+      res.json({
+        text:           result.text,
+        entityRefs:     result.entityRefs,
+        userTurnId:     result.userTurn.id,
+        assistantTurnId: result.assistantTurn.id,
+        conversationId: result.conversationId,
+        threadId:       result.threadId,
+        ...(result.outcome ? { outcome: { status: result.outcome.status, message: result.outcome.message } } : {}),
+      });
+    } catch (err) {
+      console.error("[ConversationGateway] POST /turn error:", err);
+      res.status(500).json({ message: "Failed to process conversation turn" });
+    }
+  });
+
+  app.get("/api/intelligence/conversation/turns", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+
+    const rawLimit = Number(req.query.limit);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, 50) : 20;
+
+    try {
+      const { conversationGateway } = await import("./intelligence/conversation/conversation-gateway.js");
+      const { turns, threadId } = await conversationGateway.getRecentTurns(user.id, limit);
+      res.json({ turns, threadId });
+    } catch (err) {
+      console.error("[ConversationGateway] GET /turns error:", err);
+      res.status(500).json({ message: "Failed to fetch conversation turns" });
+    }
+  });
+
+  app.get("/api/intelligence/conversation/threads", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+
+    try {
+      const { conversationGateway } = await import("./intelligence/conversation/conversation-gateway.js");
+      const { conversation, threads } = await conversationGateway.getConversationState(user.id);
+      res.json({ conversation, threads });
+    } catch (err) {
+      console.error("[ConversationGateway] GET /threads error:", err);
+      res.status(500).json({ message: "Failed to fetch conversation threads" });
     }
   });
 
