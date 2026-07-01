@@ -1,0 +1,75 @@
+EWO-INT26 — Nutrition Discovery Capability Activation
+
+Objective:
+Activate Nutrition as the next Intelligence domain so the THA assistant can answer nutrition discovery questions through the existing Intent Engine and Capability Registry.
+
+Scope:
+- Review the governing architecture from docs/architecture/README.md.
+- Confirm the current Intelligence Platform, Intent Engine and AI Capability Registry patterns.
+- Identify the existing Nutrition data/services that should be reused.
+- Define how Nutrition Discovery should support:
+  - food benefit queries
+  - nutrient queries
+  - health benefit queries
+  - food comparisons
+  - related food discovery
+- Define structured response shape:
+  - summary
+  - key nutrients
+  - health benefits
+  - related foods
+  - relevant meals/links where available
+  - quick actions
+- Identify exact files/routes/services likely affected.
+- Recommend the smallest safe implementation path.
+
+Architecture Compliance:
+- Use the canonical Intelligence Platform.
+- Register/extend the AI Capability Registry.
+- Route through the existing Intent Engine.
+- Reuse existing Nutrition/Food/Meal services.
+- Do not create another assistant.
+- Do not duplicate nutrition knowledge ownership.
+- Do not duplicate conversation state.
+- Do not introduce new schema unless a hard gap is proven.
+
+Out of Scope:
+- Multi-intent parsing.
+- Conversation memory.
+- Planner context.
+- Household context.
+- Shopping context.
+- New nutrition dataset import.
+- New AI-generated nutrition claims.
+- UI redesign.
+
+Data Impact:
+- Reads existing nutrition and food intelligence data.
+- Writes no user data.
+- Should not change meaning of existing nutrition data.
+- No backfill unless investigation proves a gap.
+
+Risk:
+🟡 AMBER — behaviour/capability activation.
+
+Output Required:
+Create investigation report:
+
+docs/investigations/EWO_INT26_NUTRITION_DISCOVERY_CAPABILITY_ACTIVATION.md
+
+The report must include:
+- Architecture Compliance
+- AI Architecture Compliance
+- Source of Truth / ownership
+- Existing capability reuse
+- Proposed response contract
+- Files likely affected
+- Implementation recommendation
+- Definition of Done
+- Data Impact
+- Trust Check
+- Rollback Plan
+- Manual verification steps
+
+Do not implement code yet.
+This is an investigation / work order only.
