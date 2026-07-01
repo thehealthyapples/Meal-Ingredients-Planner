@@ -380,6 +380,43 @@ const MEALS_MATCHERS: Matcher[] = [
       confidence: 0.82,
     };
   },
+
+  // "find me a chicken curry recipe" / "show me a pasta recipe" / "give me a fish pie recipe" /
+  // "I want a fish pie recipe"  — noun-last phrasing (INT25B F1: most common natural-English form)
+  (u) => {
+    const m = u.match(/\b(?:(?:find|show|give)\s+me\s+(?:a\s+)?|i\s+want\s+(?:a\s+)?)(.+?)\s+recipe\b/i);
+    if (!m?.[1]) return null;
+    return {
+      capability: "meals",
+      verb: "search",
+      parameters: { query: m[1].trim().toLowerCase() },
+      confidence: 0.83,
+    };
+  },
+
+  // "what can I cook with chickpeas?" / "what can I make with salmon?"  (INT25B F1)
+  (u) => {
+    const m = u.match(/\bwhat\s+can\s+i\s+(?:cook|make|do|prepare)\s+with\s+(.+?)[\?.]?\s*$/i);
+    if (!m?.[1]) return null;
+    return {
+      capability: "meals",
+      verb: "search",
+      parameters: { query: m[1].trim().toLowerCase() },
+      confidence: 0.82,
+    };
+  },
+
+  // "give me something with salmon" / "something with chickpeas"  (INT25B F1)
+  (u) => {
+    const m = u.match(/\b(?:(?:give|show)\s+me\s+)?something\s+(?:made\s+)?with\s+(.+?)[\?.]?\s*$/i);
+    if (!m?.[1]) return null;
+    return {
+      capability: "meals",
+      verb: "search",
+      parameters: { query: m[1].trim().toLowerCase() },
+      confidence: 0.78,
+    };
+  },
 ];
 
 // ---------------------------------------------------------------------------
