@@ -8,6 +8,64 @@
 
 ---
 
+## Permanent Engineering Rules
+
+These rules are permanent and non-negotiable. They apply to every capability binding produced by this factory, and to every cross-capability fix workstream. They cannot be waived by a future prompt, an implementation shortcut, or a scope-reduction agreement.
+
+---
+
+### Rule PER-1 — Capability completion gate
+
+**A capability binding is not complete until both test suites pass:**
+
+1. **Capability tests** — the binding's own test file (`server/tests/test-intelligence-<capability>-binding.ts`), covering all sections in Step 6 of this factory.
+2. **Conversation Gateway integration tests** — the full gateway test suite (`server/tests/test-intelligence-conversation-gateway.ts`).
+
+A binding whose handler works in isolation but whose capability data never reaches the LLM (because `buildCapabilityParams` sends the wrong params, `selectCapabilities` never selects it, or the gateway silently swallows a gap) is **not complete**. Gateway-level integration coverage is mandatory, not optional.
+
+**Checklist addition to every Definition of Done:**
+
+```
+[ ] server/tests/test-intelligence-<capability>-binding.ts — all assertions pass
+[ ] server/tests/test-intelligence-conversation-gateway.ts — all assertions pass
+    (including at least one assertion that the capability's params reach the handler correctly)
+```
+
+**Origin:** INT20 audit found that 5 of 11 bound capabilities (shopping, household, partners,
+templates, analyser) always returned null to the LLM because `buildCapabilityParams` had no
+case for them. All 5 handler test suites passed; the gateway test suite had no assertions for
+them. The gap was not caught until a dedicated investigation.
+
+---
+
+### Rule PER-2 — Convergence workstream for shared-root defects
+
+**When an investigation identifies multiple defects with a shared architectural root cause, they must be resolved through a single named Convergence workstream — not through multiple isolated implementations.**
+
+A Convergence workstream:
+- Is named `<PARENT-INVESTIGATION>-Convergence` (e.g. `INT20-Convergence` → implemented as `INT21`).
+- Addresses all defects that share the root cause in one set of changes.
+- Produces a single implementation report documenting every defect resolved and the shared root cause.
+- Is explicitly linked to its parent investigation report.
+
+**Why a single workstream, not many:** Isolated fixes applied to a shared architectural root
+tend to be incomplete. Each individual fix looks correct in isolation, but the root cause
+re-manifests for the next capability added. A Convergence workstream forces a systemic fix
+(e.g. fixing the gateway parameter-builder for all missing cases at once) rather than a
+series of one-off patches that leave the architecture brittle.
+
+**Scope rule:** A Convergence workstream may only address defects identified in its parent
+investigation. It does not introduce new features, new capabilities, schema changes, or UI
+changes. If additional work is warranted, it is proposed as a follow-up, not absorbed into
+the Convergence scope.
+
+**Origin:** INT20 identified 6 root causes affecting 6 of 11 capabilities. INT21 resolved
+RC-1 through RC-3 (5 missing params cases + 1 scope typo + 4 missing keyword routes) in a
+single convergence pass. The alternative — one workstream per defect — would have produced
+6 separate PRs for what was ultimately three lines of code per fix site.
+
+---
+
 ## Prerequisites
 
 Before using this factory:
@@ -220,6 +278,14 @@ Always use an injected in-memory port (never a live database in unit tests).
 
 Update the previous binding's scope-lock assertion from N to N+1 (same justified edit as INT3 updated INT2, INT4 updated INT3).
 
+**PER-1 gate (mandatory):** After the capability test suite passes, run the Conversation
+Gateway test suite and add at least one assertion confirming that:
+- `selectCapabilities` selects this capability (via its surface primary and/or a keyword).
+- `buildCapabilityParams` produces the correct scope parameter for this capability's default path.
+
+These assertions belong in `server/tests/test-intelligence-conversation-gateway.ts` under
+`§ 2 — selectCapabilities`. A binding that has no gateway assertions does not satisfy PER-1.
+
 Add a test script to `package.json`:
 ```json
 "test:intelligence-<capability>-binding": "npx tsx server/tests/test-intelligence-<capability>-binding.ts"
@@ -398,7 +464,17 @@ Gate result: PASS / FAIL
 
 ## DEFINITION OF DONE
 
-<checklist>
+[ ] Fill-in template completed before any code was written
+[ ] Architecture Compliance gate: all checks pass
+[ ] Port file created — no business logic, no write methods, dynamic import
+[ ] Handler file created — delegates only, honest gaps, ownership gate replicated
+[ ] Binding file created — registered on intelligencePlatform singleton
+[ ] Capability test suite: all assertions pass
+[ ] Conversation Gateway test suite (PER-1): all assertions pass,
+    including selection and params assertions for this capability
+[ ] README.md row added
+[ ] package.json test script added
+[ ] Implementation report saved
 ```
 
 ---
