@@ -8,7 +8,8 @@
  * fully unit-testable. Coverage is intentionally specific to known patterns;
  * low-recall cases fall through to keyword fallbacks at lower confidence.
  *
- * Resolution pipeline per call (INT23 §10 routing table):
+ * Resolution pipeline per call (INT23 §10 routing table / INT33 update):
+ *   0. Compound matchers    — cross-domain questions, 2–3 intents, confidence 0.80–0.88
  *   1. Specific pattern rules  — entity extraction, confidence 0.80–0.92
  *   2. Surface-primary rule    — surface → primary capability, confidence 0.65
  *   3. Keyword fallbacks       — vocabulary scan, confidence 0.55–0.65
@@ -72,6 +73,32 @@ type Matcher = (
   lower: string,
   hints: IntentResolutionHints,
 ) => ResolvedIntent | null;
+
+// ---------------------------------------------------------------------------
+// CompoundMatcher type (INT33)
+// ---------------------------------------------------------------------------
+
+/**
+ * A compound matcher returns 2–3 ResolvedIntents when the utterance spans
+ * two or more capability domains, or null when it does not.
+ * Every intent in the returned array targets a DISTINCT capability.
+ *
+ * The gateway already executes all resolved intents via Promise.all in
+ * buildGroundedResponse() (conversation-gateway.ts). Compound matchers
+ * pre-populate the intent pool with the correct multi-capability list before
+ * deduplication runs. No changes to the gateway, platform, engine, registry,
+ * handlers, or types are required — the execution machinery is already in place.
+ *
+ * HARD BOUNDARIES (same as Matcher):
+ *  • No storage reads, no platform calls, no business logic.
+ *  • Pattern-matching on the utterance string only.
+ *  • Each array member must target a distinct capability (enforced by tests).
+ */
+type CompoundMatcher = (
+  utterance: string,
+  lower: string,
+  hints: IntentResolutionHints,
+) => ResolvedIntent[] | null;
 
 // ---------------------------------------------------------------------------
 // Nutrient / benefit term guards (INT26)
@@ -957,6 +984,131 @@ const PARTNERS_MATCHERS: Matcher[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Compound matchers (INT33) — cross-domain questions
+//
+// Each matcher fires only when the utterance contains clear signals from TWO
+// or more capability domains. The returned intents enter the deduplication
+// pool alongside single-domain matcher results; the highest-confidence intent
+// per capability survives to the final list.
+//
+// Confidence range: 0.80–0.88 — intentionally below the top single-domain
+// matchers (0.88–0.92) so a more-specific single-domain match can override
+// a compound match's intent for a given capability when the question is
+// actually single-domain.
+//
+// ALL_COMPOUND_MATCHERS is processed in resolve() step 0, before step 1.
+// ---------------------------------------------------------------------------
+
+/**
+ * Extract a person name from an utterance: a capitalized word (not the first
+ * word of the sentence, and not a common English word) that appears in the
+ * original-case string. Returns the name in lowercase, or null if not found.
+ */
+const EXCLUDED_CAPITALIZED_WORDS = new Set([
+  "What", "Who", "Where", "When", "How", "Why", "This", "That", "The",
+  "Your", "My", "Our", "Its", "His", "Her", "Their", "Could", "Would",
+  "Should", "Does", "Will", "Can", "Have", "Had", "Has", "Was", "Were",
+  "Are", "Is", "Do", "Did", "Be", "Been", "Being", "Show", "Tell", "Give",
+  "Find", "Search", "List", "Help", "Please", "Just", "Get", "Make", "Take",
+  "Use", "Let", "Keep", "See", "Check", "Look",
+]);
+
+function extractPersonName(u: string): string | null {
+  const words = u.split(/\s+/);
+  for (let i = 1; i < words.length; i++) {
+    const clean = words[i].replace(/[^A-Za-z]/g, "");
+    if (/^[A-Z][a-z]{2,}$/.test(clean) && !EXCLUDED_CAPITALIZED_WORDS.has(clean)) {
+      return clean.toLowerCase();
+    }
+  }
+  return null;
+}
+
+/** Nutrition quality + Planner: "what high-protein meals do I have planned?" */
+const NUTRITION_DISCOVERY_PLANNER_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasNutrition = /\b(?:high[\s-]protein|low[\s-]carb|low[\s-]fat|low[\s-]sugar|low[\s-]calorie|under\s+\d+\s*(?:kcal|cal(?:orie)?s?)|nutritious|healthy\s+(?:meals?|recipes?|dinners?|lunches?|breakfasts?|dishes?))\b/.test(lower);
+  const hasPlanner   = /\b(?:plan(?:ned|ner)?|this\s+week|my\s+(?:meal\s+)?plan|in\s+my\s+plan|scheduled)\b/.test(lower);
+  if (!hasNutrition || !hasPlanner) return null;
+  return [
+    { capability: "nutrition-discovery", verb: "search", parameters: { query: lower }, confidence: 0.87 },
+    { capability: "planner-discovery",   verb: "search", parameters: { query: lower }, confidence: 0.85 },
+  ];
+};
+
+/** Named household member + Planner: "what can Lilly eat tomorrow?" */
+const HOUSEHOLD_MEMBER_PLANNER_COMPOUND: CompoundMatcher = (u, lower, _hints) => {
+  // Find a proper person name (capitalized non-sentence-starting word, not a common word)
+  const name = extractPersonName(u);
+  if (!name) return null;
+  // Require the name appears in a name-introduction context (can/for/safe for/suitable for)
+  const hasIntro = new RegExp(
+    `\\b(?:can|could)\\s+${name}\\b|\\bfor\\s+${name}\\b|\\b${name}\\s+(?:can|eat|have|is|was)\\b`,
+    "i",
+  ).test(lower);
+  if (!hasIntro) return null;
+  const hasMealContext = /\b(?:eat|have|dinner|lunch|breakfast|meal|food|tonight|tomorrow|this\s+week|planned|planner)\b/.test(lower);
+  if (!hasMealContext) return null;
+  return [
+    { capability: "household-discovery", verb: "search", parameters: { query: name }, confidence: 0.86 },
+    { capability: "planner-discovery",   verb: "search", parameters: { query: lower }, confidence: 0.84 },
+  ];
+};
+
+/** Planner + Pantry: "do I have the ingredients for this week's meals?" */
+const PLANNER_PANTRY_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasPlannerSignal      = /\b(?:plan(?:ned|ner)?|this\s+week|my\s+(?:meal\s+)?plan|in\s+my\s+plan|week'?s?\s+meals?|scheduled)\b/.test(lower);
+  const hasIngredientOrPantry = /\b(?:ingredients?|stock|have\s+(?:everything|enough|what\s+i\s+need)|what\s+i\s+need|what\s+i\s+have|can\s+i\s+(?:make|cook)|pantry|fridge|freezer|larder|cupboard|at\s+home|in\s+my\s+(?:kitchen|home|house))\b/.test(lower);
+  if (!hasPlannerSignal || !hasIngredientOrPantry) return null;
+  return [
+    { capability: "planner-discovery", verb: "search", parameters: { query: lower }, confidence: 0.84 },
+    { capability: "pantry-discovery",  verb: "search", parameters: { query: "" },    confidence: 0.83 },
+  ];
+};
+
+/** Nutrition + Pantry + Shopping: "what should I buy for low-carb dinners?" */
+const NUTRITION_SHOPPING_PANTRY_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasBuySignal = /\b(?:buy|shop(?:ping)?|need\s+to\s+get|should\s+i\s+get|what\s+(?:do\s+i\s+need|to\s+buy|to\s+get)|missing|need\s+to\s+stock\s+up)\b/.test(lower);
+  const hasNutrition = /\b(?:high[\s-]protein|low[\s-]carb|low[\s-]fat|low[\s-]sugar|healthy|nutritious|under\s+\d+\s*(?:kcal|cal(?:orie)?s?))\b/.test(lower);
+  if (!hasBuySignal || !hasNutrition) return null;
+  return [
+    { capability: "nutrition-discovery", verb: "search", parameters: { query: lower }, confidence: 0.85 },
+    { capability: "pantry-discovery",    verb: "search", parameters: { query: "" },    confidence: 0.82 },
+    { capability: "shopping-discovery",  verb: "search", parameters: { query: "" },    confidence: 0.80 },
+  ];
+};
+
+/** Pantry + Nutrition: "what high-protein foods do I have in my fridge?" */
+const PANTRY_NUTRITION_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasPantry    = /\b(?:pantry|fridge|freezer|larder|cupboard|in\s+my\s+(?:pantry|fridge|freezer)|what\s+(?:do\s+i\s+have|have\s+i\s+got))\b/.test(lower);
+  const hasNutrition = /\b(?:high[\s-]protein|low[\s-]carb|low[\s-]fat|low[\s-]sugar|healthy|nutritious|protein|carbs?|under\s+\d+\s*(?:kcal|cal(?:orie)?s?))\b/.test(lower);
+  if (!hasPantry || !hasNutrition) return null;
+  return [
+    { capability: "pantry-discovery",    verb: "search", parameters: { query: lower }, confidence: 0.84 },
+    { capability: "nutrition-discovery", verb: "search", parameters: { query: lower }, confidence: 0.82 },
+  ];
+};
+
+/** Diary + Nutrition: "have I eaten enough protein today?" */
+const DIARY_NUTRITION_COMPOUND: CompoundMatcher = (_u, lower, _hints) => {
+  const hasDiary     = /\b(?:diary|(?:have\s+i\s+)?(?:eaten|logged|tracked|had\s+today)|what\s+(?:did|have)\s+i\s+(?:eat|log)|my\s+(?:food\s+)?diary|intake)\b/.test(lower);
+  const hasNutrition = /\b(?:protein|calories?|carbs?|carbohydrates?|fat|fibre|fiber|nutrients?|enough|intake|macros?)\b/.test(lower);
+  if (!hasDiary || !hasNutrition) return null;
+  return [
+    { capability: "diary-discovery",     verb: "search", parameters: { query: "" },    confidence: 0.84 },
+    { capability: "nutrition-discovery", verb: "search", parameters: { query: lower }, confidence: 0.82 },
+  ];
+};
+
+const ALL_COMPOUND_MATCHERS: CompoundMatcher[] = [
+  NUTRITION_DISCOVERY_PLANNER_COMPOUND,
+  HOUSEHOLD_MEMBER_PLANNER_COMPOUND,
+  PLANNER_PANTRY_COMPOUND,
+  NUTRITION_SHOPPING_PANTRY_COMPOUND,
+  PANTRY_NUTRITION_COMPOUND,
+  DIARY_NUTRITION_COMPOUND,
+];
+
+// ---------------------------------------------------------------------------
 // All specific matchers in priority order
 // ---------------------------------------------------------------------------
 
@@ -1131,6 +1283,18 @@ export class PatternIntentResolver implements IIntentResolver {
   ): Promise<ResolvedIntent[]> {
     const lower = utterance.toLowerCase();
     const collected: ResolvedIntent[] = [];
+
+    // 0. Compound matchers (INT33) — cross-domain questions, run before single-domain.
+    //    Each matcher returns 2–3 intents for distinct capabilities; all enter the pool.
+    //    Deduplication (step 5) keeps the highest-confidence intent per capability, so
+    //    a higher-confidence single-domain match below will override a compound match
+    //    for the same capability when the question is genuinely single-domain.
+    for (const matcher of ALL_COMPOUND_MATCHERS) {
+      const results = matcher(utterance, lower, hints);
+      if (results !== null) {
+        for (const r of results) collected.push(r);
+      }
+    }
 
     // 1. Specific pattern matchers (high confidence)
     for (const matcher of ALL_SPECIFIC_MATCHERS) {
