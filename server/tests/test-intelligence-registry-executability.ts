@@ -48,6 +48,8 @@ import {
   ANALYSER_EXECUTABLE_INTENTS,
   MEAL_DISCOVERY_CAPABILITY_ID,
   MEAL_DISCOVERY_BINDING_EXECUTABLE_INTENTS,
+  NUTRITION_DISCOVERY_CAPABILITY_ID,
+  NUTRITION_DISCOVERY_BINDING_EXECUTABLE_INTENTS,
 } from "../intelligence/index.js";
 import type { CapabilityHandler, IntentVerb } from "../intelligence/index.js";
 
@@ -501,12 +503,13 @@ assert(
     execCapIds.includes(MEALS_CAPABILITY_ID) &&
     execCapIds.includes(TEMPLATES_CAPABILITY_ID) &&
     execCapIds.includes(ANALYSER_CAPABILITY_ID) &&
-    execCapIds.includes(MEAL_DISCOVERY_CAPABILITY_ID),
-  "listExecutableCapabilities() includes pantry, diary, profile, household, partners, meals, templates, analyser and meal-discovery",
+    execCapIds.includes(MEAL_DISCOVERY_CAPABILITY_ID) &&
+    execCapIds.includes(NUTRITION_DISCOVERY_CAPABILITY_ID),
+  "listExecutableCapabilities() includes pantry, diary, profile, household, partners, meals, templates, analyser, meal-discovery and nutrition-discovery",
 );
 assert(
-  execCapabilities.length === 12,
-  "listExecutableCapabilities() returns exactly 12 (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery) — scope lock (updated by INT26)",
+  execCapabilities.length === 13,
+  "listExecutableCapabilities() returns exactly 13 (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery) — scope lock (updated by INT27)",
   String(execCapabilities.length),
 );
 assert(

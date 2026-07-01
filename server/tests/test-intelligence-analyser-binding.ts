@@ -90,8 +90,8 @@ async function main(): Promise<void> {
   );
   const live = intelligencePlatform.listCapabilities().filter((c) => c.availability === "available");
   assert(
-    live.length === 12,
-    "exactly TWELVE capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery) — scope lock (updated by INT26)",
+    live.length === 13,
+    "exactly THIRTEEN capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery) — scope lock (updated by INT27)",
     String(live.length),
   );
   assert(
@@ -106,7 +106,7 @@ async function main(): Promise<void> {
       live.some((c) => c.id === "meals") &&
       live.some((c) => c.id === "templates") &&
       live.some((c) => c.id === "analyser"),
-    "the twelve live capabilities are planner, shopping, nutrition-knowledge, pantry, diary, profile, household, partners, meals, templates, analyser and meal-discovery",
+    "the thirteen live capabilities are planner, shopping, nutrition-knowledge, pantry, diary, profile, household, partners, meals, templates, analyser, meal-discovery and nutrition-discovery",
   );
   assert(
     intelligencePlatform.getCapability("analyser")!.executableIntents.includes("read"),

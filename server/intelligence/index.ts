@@ -205,6 +205,26 @@ export {
   type MealDiscoverySearchResult,
 } from "./handlers/meal-discovery-port.js";
 
+// INT27 — thirteenth live capability binding (Nutrition Discovery — macro-filtered meal search).
+export {
+  bindNutritionDiscoveryCapability,
+  NUTRITION_DISCOVERY_CAPABILITY_ID,
+  NUTRITION_DISCOVERY_BINDING_EXECUTABLE_INTENTS,
+} from "./bindings/nutrition-discovery.js";
+export {
+  createNutritionDiscoveryHandler,
+  NUTRITION_DISCOVERY_EXECUTABLE_INTENTS,
+} from "./handlers/nutrition-discovery-handler.js";
+export {
+  createProductionNutritionDiscoveryPort,
+  type NutritionDiscoveryPort,
+  type MealNutritionRow,
+  type NutritionFilter,
+  type NutritionDiscoveryItem,
+  type NutritionDiscoverySearchResult,
+  type ParsedNutrition,
+} from "./handlers/nutrition-discovery-port.js";
+
 // INT17 — eleventh live capability binding (read-only Analyser).
 export { bindAnalyserReadCapability, ANALYSER_CAPABILITY_ID, ANALYSER_EXECUTABLE_INTENTS } from "./bindings/analyser.js";
 export {

@@ -44,6 +44,7 @@ export interface IStorage {
   updateMealInstructions(id: number, instructions: string[], ingredients?: string[]): Promise<Meal | undefined>;
   getNutrition(mealId: number): Promise<Nutrition | undefined>;
   getNutritionBulk(mealIds: number[]): Promise<Nutrition[]>;
+  getMealsByNutritionFilter(userId: number): Promise<Array<{ meal: Meal; nutrition: Nutrition | null; isSystem: boolean }>>;
   createNutrition(data: InsertNutrition): Promise<Nutrition>;
   upsertNutrition(data: InsertNutrition): Promise<Nutrition>;
   deleteNutrition(mealId: number): Promise<void>;
@@ -497,6 +498,24 @@ export class DatabaseStorage implements IStorage {
   async getNutritionBulk(mealIds: number[]): Promise<Nutrition[]> {
     if (mealIds.length === 0) return [];
     return await db.select().from(nutrition).where(inArray(nutrition.mealId, mealIds));
+  }
+
+  async getMealsByNutritionFilter(userId: number): Promise<Array<{ meal: Meal; nutrition: Nutrition | null; isSystem: boolean }>> {
+    const personalMeals = await db.select().from(meals).where(eq(meals.userId, userId));
+    const systemMeals = await db.select().from(meals).where(eq(meals.isSystemMeal, true));
+    const allRows: Array<{ meal: Meal; isSystem: boolean }> = [
+      ...personalMeals.map(m => ({ meal: m, isSystem: false })),
+      ...systemMeals.map(m => ({ meal: m, isSystem: true })),
+    ];
+    if (allRows.length === 0) return [];
+    const mealIds = allRows.map(r => r.meal.id);
+    const nutritionRows = await db.select().from(nutrition).where(inArray(nutrition.mealId, mealIds));
+    const nutritionByMealId = new Map(nutritionRows.map(n => [n.mealId, n]));
+    return allRows.map(({ meal, isSystem }) => ({
+      meal,
+      nutrition: nutritionByMealId.get(meal.id) ?? null,
+      isSystem,
+    }));
   }
 
   async getMealAllergens(mealId: number): Promise<MealAllergen[]> {

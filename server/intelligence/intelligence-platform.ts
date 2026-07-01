@@ -99,6 +99,7 @@ import { bindMealsReadCapability } from "./bindings/meals.js";
 import { bindTemplatesReadCapability } from "./bindings/templates.js";
 import { bindAnalyserReadCapability } from "./bindings/analyser.js";
 import { bindMealDiscoveryCapability } from "./bindings/meal-discovery.js";
+import { bindNutritionDiscoveryCapability } from "./bindings/nutrition-discovery.js";
 import type {
   Capability,
   CapabilityHandler,
@@ -198,9 +199,12 @@ export class IntelligencePlatform {
  * read-only Household binding. INT14 activates the eighth: the read-only Partners
  * binding. INT15 activates the ninth: the read-only Meals binding. INT16 activates the
  * tenth: the read-only Templates binding. INT17 activates the eleventh: the read-only
- * Analyser binding, scoped only to the static additives reference table. All register
- * handlers whose owning-service imports are lazy, so constructing the singleton still
- * opens no database connection.
+ * Analyser binding, scoped only to the static additives reference table. INT26 (second
+ * workstream) activates the twelfth: the read-only Meal Discovery binding. INT27 activates
+ * the thirteenth: the read-only Nutrition Discovery binding, which filters user and system
+ * meals by calorie/macro thresholds via NutritionDiscoveryEngine. All register handlers
+ * whose owning-service imports are lazy, so constructing the singleton still opens no
+ * database connection.
  */
 export const intelligencePlatform = new IntelligencePlatform();
 bindPlannerReadCapability(intelligencePlatform);
@@ -215,3 +219,4 @@ bindMealsReadCapability(intelligencePlatform);
 bindTemplatesReadCapability(intelligencePlatform);
 bindAnalyserReadCapability(intelligencePlatform);
 bindMealDiscoveryCapability(intelligencePlatform);
+bindNutritionDiscoveryCapability(intelligencePlatform);

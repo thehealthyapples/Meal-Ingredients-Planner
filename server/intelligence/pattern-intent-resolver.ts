@@ -74,12 +74,29 @@ type Matcher = (
 ) => ResolvedIntent | null;
 
 // ---------------------------------------------------------------------------
+// Nutrient / benefit term guards (INT26)
+//
+// These two regexes distinguish nutrient names ("vitamin C", "iron", "omega-3")
+// and health-benefit concepts ("immunity", "bone health") from generic food terms
+// ("broccoli", "salmon").  They are used as guards in multiple matcher arrays
+// so that "tell me about vitamin C" routes to nutrientRead rather than foodExplain,
+// and "tell me about bone health" routes to benefitExplain rather than foodExplain.
+// ---------------------------------------------------------------------------
+
+const KNOWN_NUTRIENT_TERMS = /\b(?:vitamin\s+[a-z][0-9]*|vitamins?|minerals?|iron|zinc|calcium|magnesium|potassium|phosphorus|sodium|selenium|iodine|copper|manganese|chromium|molybdenum|omega[-\s]?[369]+|protein|fibre|fiber|carbohydrates?|carbs?|fat|glucose|fructose|sucrose|folate|folic\s+acid|biotin|riboflavin|niacin|thiamine?|choline|pantothenic\s+acid|cobalamin|retinol|tocopherol|antioxidants?|flavonoids?|polyphenols?|carotenoids?|lycopene|beta[\s-]?carotene|lutein|quercetin|resveratrol|curcumin|amino\s+acids?|tryptophan|leucine|isoleucine|valine|lysine|methionine|phenylalanine|threonine|histidine|electrolytes?|probiotics?|prebiotics?|enzymes?|chlorophyll|sulforaphane)\b/i;
+
+const KNOWN_BENEFIT_TERMS = /\b(?:immunity|immune\s+system|bone\s+health|heart\s+health|brain\s+health|eye\s+health|skin\s+health|gut\s+health|digestive\s+health|digestion|sleep|energy|mood|focus|concentration|inflammation|anti[\s-]?inflammatory|weight\s+(?:management|loss)|metabolism|muscle\s+(?:health|recovery|growth)|joint\s+health|liver\s+health|kidney\s+health|blood\s+(?:pressure|sugar)|cholesterol|mental\s+health|stress|anxiety|hormonal\s+balance|fertility|pregnancy|cardiovascular|cognitive|athletic\s+performance|endurance|hydration|circulation|longevity)\b/i;
+
+// ---------------------------------------------------------------------------
 // Nutrition: food-benefit explanation (verb: explain)
 // ---------------------------------------------------------------------------
 
 function foodExplain(entity: string, confidence = 0.90): ResolvedIntent | null {
   const slug = toSlug(entity);
   if (!slug) return null;
+  // Nutrient-named entities (e.g. "vitamin C") fall through to NUTRITION_NUTRIENT_MATCHERS
+  // to avoid routing them to explain { foodSlug } (INT26 misfire fix).
+  if (KNOWN_NUTRIENT_TERMS.test(entity)) return null;
   return {
     capability: "nutrition-knowledge",
     verb: "explain",
@@ -227,6 +244,238 @@ const NUTRITION_FOOD_DETAIL_MATCHERS: Matcher[] = [
   (u) => {
     const m = u.match(/\bwhat'?s?\s+in\s+(.+?)\s+nutritionally\b/i);
     return m?.[1] ? foodRead(m[1], 0.82) : null;
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Nutrition: nutrient-named queries (INT26) — verb: read { scope:"nutrient" } / search
+//
+// Routes queries whose entity is a KNOWN_NUTRIENT_TERMS match to the
+// nutrition-knowledge handler with the correct verb+scope, fixing the INT26
+// misfire where "vitamin C" was incorrectly mapped to explain { foodSlug }.
+// ---------------------------------------------------------------------------
+
+function nutrientRead(entity: string, confidence = 0.84): ResolvedIntent | null {
+  const slug = toSlug(entity);
+  if (!slug || !KNOWN_NUTRIENT_TERMS.test(entity)) return null;
+  return {
+    capability: "nutrition-knowledge",
+    verb: "read",
+    parameters: { scope: "nutrient", slug },
+    confidence,
+  };
+}
+
+function nutrientOrBenefitSearch(entity: string, confidence = 0.80): ResolvedIntent | null {
+  const q = entity.trim().toLowerCase();
+  if (!q) return null;
+  if (!KNOWN_NUTRIENT_TERMS.test(entity) && !KNOWN_BENEFIT_TERMS.test(entity)) return null;
+  return {
+    capability: "nutrition-knowledge",
+    verb: "search",
+    parameters: { query: q },
+    confidence,
+  };
+}
+
+const NUTRITION_NUTRIENT_MATCHERS: Matcher[] = [
+  // "tell me about vitamin C / iron / omega-3"
+  (u) => {
+    const m = u.match(/\btell\s+me\s+about\s+(.+?)[\?.]?\s*$/i);
+    return m?.[1] ? nutrientRead(m[1]) : null;
+  },
+
+  // "what is vitamin C?" / "what are omega-3 fatty acids?" (nutrient guard)
+  (u) => {
+    const m = u.match(/\bwhat\s+(?:is|are)\s+(.+?)[\?.]?\s*$/i);
+    if (!m?.[1]) return null;
+    return nutrientRead(m[1].trim(), 0.82);
+  },
+
+  // "what does vitamin C do?" / "what does iron do for you?"
+  (u) => {
+    const m = u.match(/\bwhat\s+does\s+(.+?)\s+do\b/i);
+    if (!m?.[1]) return null;
+    return nutrientRead(m[1].trim(), 0.82);
+  },
+
+  // "explain vitamin C / omega-3 to me"
+  (u) => {
+    const m = u.match(/\bexplain\s+(.+?)(?:\s+to\s+me)?[\?.]?\s*$/i);
+    return m?.[1] ? nutrientRead(m[1].trim(), 0.82) : null;
+  },
+
+  // "what are good sources of iron?" / "where do I get vitamin C from?"
+  (u) => {
+    const m = u.match(/\b(?:what\s+are\s+(?:good\s+)?sources\s+of|where\s+do\s+I\s+get)\s+(.+?)(?:\s+from)?[\?.]?\s*$/i);
+    return m?.[1] ? nutrientOrBenefitSearch(m[1].trim(), 0.82) : null;
+  },
+
+  // "foods rich in / high in vitamin C" / "foods containing omega-3"
+  (u) => {
+    const m = u.match(/\bfoods?\s+(?:rich\s+in|high\s+in|containing|with\s+high)\s+(.+?)[\?.]?\s*$/i);
+    return m?.[1] ? nutrientOrBenefitSearch(m[1].trim(), 0.80) : null;
+  },
+
+  // "what foods contain vitamin D?" / "what foods have omega-3?"
+  (u) => {
+    const m = u.match(/\bwhat\s+foods?\s+(?:contain|have|provide|are\s+high\s+in)\s+(.+?)[\?.]?\s*$/i);
+    return m?.[1] ? nutrientOrBenefitSearch(m[1].trim(), 0.80) : null;
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Nutrition: benefit queries (INT26) — verb: explain { benefitSlug }
+//
+// Routes queries whose entity is a KNOWN_BENEFIT_TERMS match to the
+// nutrition-knowledge handler's explain { benefitSlug } intent.
+// ---------------------------------------------------------------------------
+
+const NUTRITION_BENEFIT_EXPLAIN_MATCHERS: Matcher[] = [
+  // "tell me about immunity / bone health"
+  (u) => {
+    const m = u.match(/\btell\s+me\s+about\s+(.+?)[\?.]?\s*$/i);
+    if (!m?.[1]) return null;
+    const entity = m[1].trim();
+    if (!KNOWN_BENEFIT_TERMS.test(entity) || KNOWN_NUTRIENT_TERMS.test(entity)) return null;
+    const slug = toSlug(entity);
+    return slug ? { capability: "nutrition-knowledge", verb: "explain", parameters: { benefitSlug: slug }, confidence: 0.84 } : null;
+  },
+
+  // "explain immunity / heart health to me"
+  (u) => {
+    const m = u.match(/\bexplain\s+(.+?)(?:\s+to\s+me)?[\?.]?\s*$/i);
+    if (!m?.[1]) return null;
+    const entity = m[1].trim();
+    if (!KNOWN_BENEFIT_TERMS.test(entity) || KNOWN_NUTRIENT_TERMS.test(entity)) return null;
+    const slug = toSlug(entity);
+    return slug ? { capability: "nutrition-knowledge", verb: "explain", parameters: { benefitSlug: slug }, confidence: 0.82 } : null;
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Nutrition: general food explain (INT26) — verb: explain { foodSlug }
+//
+// Catches "tell me about broccoli / salmon" utterances that did not match the
+// nutrient or benefit guards above. Lower confidence since the entity is not
+// validated against a known vocabulary.
+// ---------------------------------------------------------------------------
+
+const NUTRITION_GENERAL_EXPLAIN_MATCHERS: Matcher[] = [
+  // "tell me about broccoli / quinoa" (fallthrough from nutrient + benefit matchers)
+  (u) => {
+    const m = u.match(/\btell\s+me\s+about\s+(.+?)[\?.]?\s*$/i);
+    if (!m?.[1]) return null;
+    const entity = m[1].trim();
+    if (KNOWN_NUTRIENT_TERMS.test(entity) || KNOWN_BENEFIT_TERMS.test(entity)) return null;
+    const slug = toSlug(entity);
+    return slug ? { capability: "nutrition-knowledge", verb: "explain", parameters: { foodSlug: slug }, confidence: 0.76 } : null;
+  },
+
+  // "I want to know about / I'd like to know about oats"
+  (u) => {
+    const m = u.match(/\bI(?:'d)?(?:\s+would)?\s+(?:like\s+to\s+|want\s+to\s+)?know\s+about\s+(.+?)[\?.]?\s*$/i);
+    if (!m?.[1]) return null;
+    const slug = toSlug(m[1].trim());
+    return slug ? { capability: "nutrition-knowledge", verb: "explain", parameters: { foodSlug: slug }, confidence: 0.74 } : null;
+  },
+
+  // "give me information on / about salmon"
+  (u) => {
+    const m = u.match(/\bgive\s+me\s+(?:information|info)\s+(?:on|about)\s+(.+?)[\?.]?\s*$/i);
+    if (!m?.[1]) return null;
+    const slug = toSlug(m[1].trim());
+    return slug ? { capability: "nutrition-knowledge", verb: "explain", parameters: { foodSlug: slug }, confidence: 0.72 } : null;
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Nutrition: open knowledge search (INT26) — verb: search { query }
+//
+// Routes open-ended nutrient/benefit searches when the entity matches a known
+// vocabulary term but no more specific matcher above applies.
+// ---------------------------------------------------------------------------
+
+const NUTRITION_KNOWLEDGE_SEARCH_MATCHERS: Matcher[] = [
+  // "search for vitamin C / immunity" — requires nutrient or benefit signal
+  (u) => {
+    const m = u.match(/\bsearch\s+(?:(?:nutrition|knowledge|food)\s+(?:knowledge\s+)?)?for\s+(.+?)[\?.]?\s*$/i);
+    if (!m?.[1]) return null;
+    return nutrientOrBenefitSearch(m[1].trim(), 0.75);
+  },
+
+  // "look up vitamin D / omega-3 / immunity"
+  (u) => {
+    const m = u.match(/\blook\s+up\s+(.+?)[\?.]?\s*$/i);
+    if (!m?.[1]) return null;
+    return nutrientOrBenefitSearch(m[1].trim(), 0.74);
+  },
+
+  // "find information about iron / vitamin D"
+  (u) => {
+    const m = u.match(/\bfind\s+(?:information|info)\s+(?:about|on)\s+(.+?)[\?.]?\s*$/i);
+    if (!m?.[1]) return null;
+    return nutrientOrBenefitSearch(m[1].trim(), 0.73);
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Nutrition Discovery (INT27) — macro-filtered meal search
+//
+// Routes queries containing explicit macro thresholds or qualitative nutrition
+// descriptors to the nutrition-discovery capability so the engine can filter
+// user and system meals by calorie ceiling, protein floor, carb limit, etc.
+// Patterns require a numeric quantity OR a known qualitative descriptor to fire,
+// ensuring no false-positive routing on broad food queries.
+// ---------------------------------------------------------------------------
+
+const NUTRITION_DISCOVERY_MATCHERS: Matcher[] = [
+  // "meals under 400 calories" / "recipes under 400 kcal"
+  (u) => {
+    if (!/\b(?:meals?|recipes?|dishes?|something)\s+under\s+\d+\s*(?:kcal|calories?|cals?)\b/i.test(u)) return null;
+    return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.90 };
+  },
+
+  // "what can I have under N calories?" / "what's under 400 calories?"
+  (u) => {
+    if (!/\b(?:what\s+can\s+I\s+(?:eat|have|make)|what'?s?)\s+under\s+\d+\s*(?:kcal|calories?|cals?)\b/i.test(u)) return null;
+    return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.89 };
+  },
+
+  // "high protein meals / recipes / dinner"
+  (u) => {
+    if (!/\bhigh[\s-]protein\b/i.test(u)) return null;
+    return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.88 };
+  },
+
+  // "low carb meals / recipes / dinner"
+  (u) => {
+    if (!/\blow[\s-]carb\b/i.test(u)) return null;
+    return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.88 };
+  },
+
+  // "low fat meals / recipes"
+  (u) => {
+    if (!/\blow[\s-]fat\b/i.test(u)) return null;
+    return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.86 };
+  },
+
+  // "low sugar meals / recipes"
+  (u) => {
+    if (!/\blow[\s-]sugar\b/i.test(u)) return null;
+    return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.86 };
+  },
+
+  // "meals with less than 500 calories" / "recipes with under 30g carbs"
+  (u) => {
+    if (!/\b(?:meals?|recipes?|dishes?)\s+with\s+(?:less\s+than|under|fewer\s+than)\s+\d+\s*(?:g|grams?|kcal|calories?|cals?)\b/i.test(u)) return null;
+    return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.87 };
+  },
+
+  // "at least 30g protein" / "over 25g protein" meals/recipes/dishes
+  (u) => {
+    if (!/\b(?:at\s+least|over|more\s+than)\s+\d+\s*g\s+protein\b/i.test(u)) return null;
+    return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.86 };
   },
 ];
 
@@ -508,9 +757,17 @@ const PARTNERS_MATCHERS: Matcher[] = [
 // ---------------------------------------------------------------------------
 
 const ALL_SPECIFIC_MATCHERS: Matcher[] = [
-  ...NUTRITION_EXPLAIN_MATCHERS,
-  ...NUTRITION_BENEFIT_FOODS_MATCHERS,
-  ...NUTRITION_FOOD_DETAIL_MATCHERS,
+  // Nutrition knowledge — most specific first (nutrient/benefit guards fire before foodExplain)
+  ...NUTRITION_NUTRIENT_MATCHERS,          // INT26: nutrient-named queries (read/search)
+  ...NUTRITION_BENEFIT_EXPLAIN_MATCHERS,   // INT26: benefit concept queries (explain {benefitSlug})
+  ...NUTRITION_EXPLAIN_MATCHERS,           // existing: food-benefit explain (explain {foodSlug})
+  ...NUTRITION_BENEFIT_FOODS_MATCHERS,     // existing: benefit→foods search
+  ...NUTRITION_FOOD_DETAIL_MATCHERS,       // existing: food detail read (scope:food)
+  ...NUTRITION_GENERAL_EXPLAIN_MATCHERS,   // INT26: generic "tell me about food" (lowest confidence)
+  ...NUTRITION_KNOWLEDGE_SEARCH_MATCHERS,  // INT26: open nutrient/benefit search
+  // Nutrition discovery — macro-filtered meal search (INT27)
+  ...NUTRITION_DISCOVERY_MATCHERS,
+  // All other capabilities
   ...PLANNER_MATCHERS,
   ...SHOPPING_MATCHERS,
   ...PANTRY_MATCHERS,
