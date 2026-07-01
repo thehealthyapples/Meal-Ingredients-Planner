@@ -23,13 +23,13 @@
  * items data; this port does not and cannot do it, because the owner exposes no scoped
  * method to delegate to.
  *
- * `lookupMeals(query)` is deliberately NOT exposed here. The Card flags it as an OPEN
+ * `lookupMeals(query)` is NOT exposed here. The INT15 Card flagged it as an OPEN
  * DECISION: it has zero scoping at the storage layer (ILIKE-matches across ALL users'
- * meals, including other users' private, non-system meals) and the existing route only
- * checks `isAuthenticated()`, not ownership. Binding it as-is would let any caller
- * search other users' private meal names — not safe without a governance decision this
- * workstream does not make. `search` therefore has no live code path (INT15 ships
- * read-only: list/summary/detail).
+ * meals, including other users' private, non-system meals). INT25 resolves this without
+ * adding a new storage method: the `search` verb is implemented in the handler by fetching
+ * `getMeals(userId)` (caller-scoped by the owner) + `getSystemMeals()` (public, shared),
+ * merging them, and applying a client-side name / ingredient filter. Both methods are
+ * already in this port and are already ownership-safe — no cross-user data is reachable.
  *
  * GOVERNANCE: the Meals service (storage) remains the authoritative owner of all meal
  * data and business rules (TIP1 Principles 2 & 7). This port only *reads* what the

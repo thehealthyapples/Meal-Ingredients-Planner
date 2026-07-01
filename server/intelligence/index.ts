@@ -153,9 +153,11 @@ export {
   type MealView,
   type MealSummaryView,
   type MealItemView,
+  type MealSearchView,
   type MealsListReadResult,
   type MealsSummaryReadResult,
   type MealsDetailReadResult,
+  type MealsSearchResult,
   type MealsReadResult,
 } from "./handlers/meals-read-handler.js";
 export {

@@ -25,15 +25,16 @@ import { createStorageMealsReadPort, type MealsReadPort } from "../handlers/meal
 export const MEALS_CAPABILITY_ID = "meals";
 
 /**
- * The verbs this read-only binding actually executes. Only "read" has a live code path
- * in the handler (for `scope` in "list" / "summary" / "detail"); "explain", "search",
- * "recommend", and every write verb remain allow-listed on the capability but return an
- * honest gap — the canonical Capability Card found no safe, grounded owner read for
- * "search" (unresolved open decision) or "recommend" (ranking lives at the route layer),
- * and no stored rationale for "explain". Declared here so the registry can surface
- * truthful executableIntents and discovery cannot over-advertise (INT6A).
+ * The verbs this binding actually executes. "read" (scopes: list / summary / detail)
+ * and "search" (name + ingredient filter over caller-scoped meals + system meals —
+ * INT25 resolves the INT15 open decision by using the already-scoped `getMeals` /
+ * `getSystemMeals` port methods rather than the unsafe `lookupMeals`). "explain" (no
+ * stored rationale on a meal), "recommend" (ranking lives inline at the route layer),
+ * and every write verb remain allow-listed on the capability but return an honest gap.
+ * Declared here so the registry can surface truthful executableIntents and discovery
+ * cannot over-advertise (INT6A).
  */
-export const MEALS_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["read"];
+export const MEALS_EXECUTABLE_INTENTS: readonly IntentVerb[] = ["read", "search"];
 
 /**
  * Bind the read-only Meals handler to a platform.

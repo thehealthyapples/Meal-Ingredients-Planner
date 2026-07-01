@@ -62,6 +62,10 @@
  * owns NO meal/recipe logic, no ranking, no nutrition, and replicates (never relaxes)
  * the existing route's ownership check for single-meal detail reads.
  *
+ * INT25: the `search` verb is added to the Meals binding. It resolves the INT15 open
+ * decision (unsafe `lookupMeals`) by filtering the caller's already-scoped `getMeals` +
+ * `getSystemMeals` client-side — no new storage method, no schema change.
+ *
  * INT16: the tenth live capability is bound — the read-only Templates binding (see
  * ./bindings/templates.ts). It reuses the same pattern and routes read intents to the
  * existing Templates owner (storage.ts), scoped to meal-templates (public shell

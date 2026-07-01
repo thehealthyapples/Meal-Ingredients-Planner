@@ -1,21 +1,24 @@
 /**
- * Meals Read Handler (INT15 — ninth live capability binding)
- * ==============================================================
+ * Meals Read Handler (INT15 / INT25 — ninth live capability binding)
+ * ==================================================================
  * The NINTH execution handler bound to the THA Intelligence Platform. It makes the
- * `meals` capability *executable* for READ-ONLY intents only, by delegating every read
+ * `meals` capability *executable* for READ-ONLY intents, by delegating every read
  * to the existing Meals owner (storage) through a {@link MealsReadPort}. It proves the
  * reusable Port → Handler → Binding pattern (first established for the Planner in
  * INT2) against a ninth, independent owner.
  *
  * HARD BOUNDARIES (the reason this binding is safe — per the canonical Capability Card,
  * docs/architecture/capabilities/meals.md):
- *   • READ-ONLY, THREE SCOPES ONLY. Only the "read" verb executes, for `scope` in
- *     "list" / "summary" / "detail". There is NO code path here for `explain` (no
- *     stored rationale on a meal), `search` (the owner's `lookupMeals` has zero
- *     ownership scoping — an OPEN DECISION the Card flags as unsafe to bind as-is),
- *     `recommend` (the live route computes ranking inline at the route layer, not via
- *     a delegate-only owner method — reimplementing that here would be business logic
- *     in the handler), or any write verb.
+ *   • READ-ONLY, FOUR SCOPES / TWO VERBS. "read" (scopes: list / summary / detail) and
+ *     "search" (caller-scoped name + ingredient filter) execute. There is NO code path
+ *     here for `explain` (no stored rationale on a meal), `recommend` (the live route
+ *     computes ranking inline at the route layer, not via a delegate-only owner method
+ *     — reimplementing that here would be business logic in the handler), or any write verb.
+ *   • SEARCH IS OWNERSHIP-SCOPED BY CONSTRUCTION (INT25). INT15 deliberately excluded
+ *     `storage.lookupMeals` (zero scoping — ILIKE across ALL users' meals). INT25
+ *     resolves this by implementing search over `getMeals(userId)` (caller-scoped by the
+ *     owner) + `getSystemMeals()` (public, shared), then filtering client-side. No new
+ *     port method is required: the existing owner-scoped methods are already safe.
  *   • OWNERSHIP CHECK REPLICATED, NOT DELEGATED. `storage.getMeal`/`storage.getMealItems`
  *     have no ownership filter — any id returns its row regardless of caller. This
  *     handler replicates the EXACT existing route check
@@ -102,6 +105,22 @@ export interface MealItemView {
   readonly quantity: string | null;
 }
 
+/**
+ * A meal search result row — lightweight projection for the LLM grounding context.
+ * Contains no nutrition data (out of scope) and no ingredients array (too large for
+ * prompt; the caller can request detail for any matched meal id).
+ */
+export interface MealSearchView {
+  readonly id: number;
+  readonly name: string;
+  readonly imageUrl: string | null;
+  readonly servings: number;
+  readonly isSystemMeal: boolean;
+  readonly dietTypes: readonly string[];
+  readonly mealFormat: string;
+  readonly kind: string;
+}
+
 export interface MealsListReadResult {
   readonly scope: "list";
   readonly mealCount: number;
@@ -123,7 +142,23 @@ export interface MealsDetailReadResult {
   readonly source: "meals";
 }
 
-export type MealsReadResult = MealsListReadResult | MealsSummaryReadResult | MealsDetailReadResult;
+/**
+ * Search result — own meals + system meals filtered by name/ingredient query.
+ * Capped at SEARCH_MAX_RESULTS rows; the caller may request full detail for any id.
+ */
+export interface MealsSearchResult {
+  readonly scope: "search";
+  readonly query: string;
+  readonly mealCount: number;
+  readonly meals: readonly MealSearchView[];
+  readonly source: "meals";
+}
+
+export type MealsReadResult =
+  | MealsListReadResult
+  | MealsSummaryReadResult
+  | MealsDetailReadResult
+  | MealsSearchResult;
 
 // ---------------------------------------------------------------------------
 // Read projections (stored fields only — no fabrication)
@@ -187,8 +222,86 @@ function toMealItemView(i: MealItem): MealItemView {
   };
 }
 
+/** Lightweight projection for search results — no ingredients array, no instructions. */
+function toMealSearchView(m: Meal): MealSearchView {
+  return {
+    id: m.id,
+    name: m.name,
+    imageUrl: m.imageUrl ?? null,
+    servings: m.servings,
+    isSystemMeal: m.isSystemMeal,
+    dietTypes: m.dietTypes,
+    mealFormat: m.mealFormat,
+    kind: m.kind,
+  };
+}
+
 // ---------------------------------------------------------------------------
-// Verb implementations
+// Search (INT25 — ownership-scoped name + ingredient filter)
+// ---------------------------------------------------------------------------
+
+/** Maximum results returned by the search verb (keeps grounding context manageable). */
+const SEARCH_MAX_RESULTS = 20;
+
+/**
+ * Does this meal match the lower-cased query?
+ * Checks the name first (faster), then scans ingredient strings.
+ * Delegation-only: the match logic reads only the owner's stored strings.
+ */
+function matchesMealQuery(meal: Meal, lowerQuery: string): boolean {
+  if (meal.name.toLowerCase().includes(lowerQuery)) return true;
+  return meal.ingredients.some((ing) => ing.toLowerCase().includes(lowerQuery));
+}
+
+/**
+ * Search the caller's own meals + system meals by name/ingredient.
+ *
+ * Safe by construction (INT25):
+ *   - `getMeals(userId)` is already caller-scoped by the owner (no cross-user access).
+ *   - `getSystemMeals()` is publicly shared (all authenticated users may see system meals).
+ *   - Client-side filter never touches another user's private rows.
+ *   - Deduplication by id prevents a system meal that also appears in own from doubling.
+ *   - Capped at SEARCH_MAX_RESULTS (20) to keep the grounding payload manageable.
+ */
+async function handleSearch(
+  intent: Intent,
+  userId: number,
+  port: MealsReadPort,
+): Promise<MealsSearchResult> {
+  const params = intent.parameters ?? {};
+  const rawQuery = typeof params.query === "string" ? params.query.trim() : "";
+  if (!rawQuery) {
+    throw gap("Searching meals needs a non-empty { query } string.");
+  }
+  const lowerQuery = rawQuery.toLowerCase();
+
+  const [own, system] = await Promise.all([port.getMeals(userId), port.getSystemMeals()]);
+
+  // Merge own + system; deduplicate by id in case a system meal also appears in own.
+  const seen = new Set<number>();
+  const merged: Meal[] = [];
+  for (const m of [...own, ...system]) {
+    if (!seen.has(m.id)) {
+      seen.add(m.id);
+      merged.push(m);
+    }
+  }
+
+  const matches = merged
+    .filter((m) => matchesMealQuery(m, lowerQuery))
+    .slice(0, SEARCH_MAX_RESULTS);
+
+  return {
+    scope: "search",
+    query: rawQuery,
+    mealCount: matches.length,
+    meals: matches.map(toMealSearchView),
+    source: "meals",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Verb implementations — read
 // ---------------------------------------------------------------------------
 
 const DENIED_MESSAGE =
@@ -263,22 +376,22 @@ async function handleRead(
 /**
  * Create the meals read-only handler. `resolvePort` provides the owning-service surface
  * (production: real storage; tests: in-memory owner). The returned handler is what the
- * Capability Registry binds to the `meals` capability (INT15).
+ * Capability Registry binds to the `meals` capability (INT15 / INT25).
  */
 export function createMealsReadHandler(
   resolvePort: () => Promise<MealsReadPort>,
 ): CapabilityHandler {
   return async (intent: Intent, context: IntelligenceContext): Promise<unknown> => {
-    // Read-only binding: only "read" executes. "explain" (no stored rationale), "search"
-    // (the owner's lookupMeals has no ownership scoping — an unresolved open decision),
+    // Read-only binding: "read" and "search" execute. "explain" (no stored rationale),
     // "recommend" (ranking lives inline at the route layer, not a delegate-only owner
     // method), and every write verb (generate/add/replace/delete/import/share) are all
     // in the meals allow-list but all out of scope for this read-only binding.
-    readOnlyVerbGuard(intent, ["read"], "Meals");
+    readOnlyVerbGuard(intent, ["read", "search"], "Meals");
 
     const userId = requireUserId(context, "Meals");
     const port = await resolvePort();
 
+    if (intent.verb === "search") return handleSearch(intent, userId, port);
     return handleRead(intent, userId, port);
   };
 }

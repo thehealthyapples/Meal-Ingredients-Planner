@@ -395,11 +395,14 @@ for (const verb of MEALS_EXECUTABLE_INTENTS) {
   );
 }
 assert(
+  singletonMeals.executableIntents.includes("search"),
+  "singleton meals executableIntents includes 'search' (INT25 — scoped via getMeals + getSystemMeals)",
+);
+assert(
   !singletonMeals.executableIntents.includes("explain") &&
-    !singletonMeals.executableIntents.includes("search") &&
     !singletonMeals.executableIntents.includes("recommend") &&
     !singletonMeals.executableIntents.includes("generate"),
-  "singleton meals executableIntents does NOT include 'explain', 'search', 'recommend' or 'generate' (no safe grounded owner / no live code path)",
+  "singleton meals executableIntents does NOT include 'explain', 'recommend' or 'generate' (no stored rationale / ranking at route layer)",
 );
 
 const singletonTemplates = intelligencePlatform.getCapability(TEMPLATES_CAPABILITY_ID)!;
@@ -526,7 +529,7 @@ assert(intelligencePlatform.canExecute(PARTNERS_CAPABILITY_ID, "read"), "platfor
 assert(!intelligencePlatform.canExecute(PARTNERS_CAPABILITY_ID, "compare"), "platform.canExecute partners/compare → false (no safe grounded owner)");
 
 assert(intelligencePlatform.canExecute(MEALS_CAPABILITY_ID, "read"), "platform.canExecute meals/read → true");
-assert(!intelligencePlatform.canExecute(MEALS_CAPABILITY_ID, "search"), "platform.canExecute meals/search → false (no safe grounded owner)");
+assert(intelligencePlatform.canExecute(MEALS_CAPABILITY_ID, "search"), "platform.canExecute meals/search → true (INT25 — scoped client-side filter)");
 
 assert(intelligencePlatform.canExecute(TEMPLATES_CAPABILITY_ID, "read"), "platform.canExecute templates/read → true");
 assert(!intelligencePlatform.canExecute(TEMPLATES_CAPABILITY_ID, "search"), "platform.canExecute templates/search → false (no safe grounded owner)");

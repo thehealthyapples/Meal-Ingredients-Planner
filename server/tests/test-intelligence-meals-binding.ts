@@ -1,11 +1,10 @@
 /**
- * test-intelligence-meals-binding.ts (INT15)
- * ==================================================
- * Verifies the NINTH live capability binding: the read-only Meals capability. It
- * proves the reusable Port → Handler → Binding pattern (shown for the Planner in INT2,
- * Shopping in INT3, Nutrition / Knowledge in INT4, Pantry in INT8, Diary in INT10,
- * Profile in INT12, Household in INT13, Partners in INT14) against a ninth,
- * independent owner, end-to-end —
+ * test-intelligence-meals-binding.ts (INT15 / INT25)
+ * =====================================================
+ * Verifies the NINTH live capability binding: the Meals capability. It proves the
+ * reusable Port → Handler → Binding pattern (shown for the Planner in INT2, Shopping in
+ * INT3, Nutrition / Knowledge in INT4, Pantry in INT8, Diary in INT10, Profile in INT12,
+ * Household in INT13, Partners in INT14) against a ninth, independent owner, end-to-end:
  *
  *   intent → capability registry → permission check → meals (owner) → response
  *
@@ -13,13 +12,14 @@
  * stands in for storage. The same handler in production is injected with the real
  * owner; the contract under test is identical.
  *
- * Covered: capability lookup (nine live capabilities), permission validation
- * (anonymous → denied), read scopes (list/summary/detail), detail ownership
- * enforcement (own meal ok, system meal ok, another user's private meal → denied with
- * the SAME message as a nonexistent id — no existence leak), missing/unsupported
- * scope, missing mealId, unsupported-intent handling, read-only enforcement
- * (explain/search/recommend never execute), and the trust rule that nutrition is never
- * surfaced.
+ * Covered: capability lookup (eleven live capabilities), permission validation
+ * (anonymous → denied), read scopes (list/summary/detail), detail ownership enforcement
+ * (own meal ok, system meal ok, another user's private meal → denied with the SAME
+ * message as a nonexistent id — no existence leak), search (name match / ingredient
+ * match / case-insensitive / system meal included / capped / empty query → gap /
+ * no-match → empty result), missing/unsupported scope, missing mealId, unsupported-intent
+ * handling, read-only enforcement (explain/recommend never execute), and the trust rule
+ * that nutrition is never surfaced.
  *
  * Run with: npx tsx server/tests/test-intelligence-meals-binding.ts
  */
@@ -149,7 +149,7 @@ const anon: IntelligenceContext = { role: "user", userId: undefined, premium: fa
 
 function platformWithFakeMeals(): IntelligencePlatform {
   const p = new IntelligencePlatform(new CapabilityRegistry());
-  p.registerHandler("meals", createMealsReadHandler(async () => makePort()), ["read"]);
+  p.registerHandler("meals", createMealsReadHandler(async () => makePort()), ["read", "search"]);
   return p;
 }
 
@@ -176,10 +176,13 @@ async function main(): Promise<void> {
     "executableIntents declares read (truthful registry — INT6A)",
   );
   assert(
+    intelligencePlatform.getCapability("meals")!.executableIntents.includes("search"),
+    "executableIntents declares search (INT25 — scoped via getMeals + getSystemMeals — INT6A)",
+  );
+  assert(
     !intelligencePlatform.getCapability("meals")!.executableIntents.includes("explain") &&
-      !intelligencePlatform.getCapability("meals")!.executableIntents.includes("search") &&
       !intelligencePlatform.getCapability("meals")!.executableIntents.includes("recommend"),
-    "explain / search / recommend are NOT in executableIntents (no safe grounded owner — INT6A)",
+    "explain / recommend are NOT in executableIntents — no stored rationale / ranking at route layer (INT6A)",
   );
 
   const platform = platformWithFakeMeals();
@@ -316,17 +319,10 @@ async function main(): Promise<void> {
   assert(reviewIntent.status === "unsupported_intent", "review not in meals allow-list → unsupported_intent", reviewIntent.status);
 
   // -------------------------------------------------------------------------
-  section("Read-only enforcement — explain/search/recommend never execute");
+  section("Read-only enforcement — explain/recommend never execute (search now executes)");
   const explain = await platform.handle({ verb: "explain", capabilityId: "meals", parameters: {} }, user1);
   assert(explain.status === "gap", "explain → honest gap: no stored rationale on a meal", explain.status);
   assert(/Meals is bound to the Intelligence Platform read-only/.test(explain.message ?? ""), "gap message states the binding is read-only");
-
-  const search = await platform.handle({ verb: "search", capabilityId: "meals", parameters: { query: "chilli" } }, user1);
-  assert(
-    search.status === "gap",
-    "search → honest gap: lookupMeals has no ownership scoping (unresolved open decision)",
-    search.status,
-  );
 
   const recommend = await platform.handle({ verb: "recommend", capabilityId: "meals", parameters: {} }, user1);
   assert(
@@ -351,6 +347,109 @@ async function main(): Promise<void> {
   );
 
   // -------------------------------------------------------------------------
+  section("Search verb (INT25) — name match, ingredient match, ownership scoping");
+
+  // Name match — user1's own meal "Colin's Chilli"
+  calls.length = 0;
+  const searchChilli = await platform.handle(
+    { verb: "search", capabilityId: "meals", parameters: { query: "chilli" } },
+    user1,
+  );
+  assert(searchChilli.status === "ok", "search 'chilli' → ok", searchChilli.status);
+  const sc = searchChilli.result as any;
+  assert(sc?.scope === "search", "result scope is 'search'");
+  assert(sc?.query === "chilli", "result echo's the original query");
+  assert(sc?.mealCount === 1, "exactly 1 match for 'chilli'", String(sc?.mealCount));
+  assert(sc?.meals?.[0]?.id === 100, "match is Colin's Chilli (id 100)");
+  assert(sc?.meals?.[0]?.name === "Colin's Chilli", "name is surfaced");
+  assert(sc?.source === "meals", "source tag is 'meals'");
+  assert(
+    calls.includes("getMeals(1)") && calls.includes("getSystemMeals()"),
+    "delegated to owner — getMeals + getSystemMeals called",
+  );
+
+  // Case-insensitive — "CHILLI" should match "Colin's Chilli"
+  const searchUpper = await platform.handle(
+    { verb: "search", capabilityId: "meals", parameters: { query: "CHILLI" } },
+    user1,
+  );
+  assert(searchUpper.status === "ok", "search 'CHILLI' (uppercase) → ok", searchUpper.status);
+  assert((searchUpper.result as any)?.mealCount === 1, "case-insensitive: 'CHILLI' matches 'Colin's Chilli'");
+
+  // System meal included — "pasta" matches MEAL_300 "System Pasta"
+  const searchPasta = await platform.handle(
+    { verb: "search", capabilityId: "meals", parameters: { query: "pasta" } },
+    user1,
+  );
+  assert(searchPasta.status === "ok", "search 'pasta' → ok", searchPasta.status);
+  const sp = searchPasta.result as any;
+  assert(sp?.mealCount === 1, "exactly 1 match for 'pasta' (system meal)", String(sp?.mealCount));
+  assert(sp?.meals?.[0]?.id === 300 && sp?.meals?.[0]?.isSystemMeal === true, "system meal 300 included in results");
+
+  // Ingredient match — MEAL_100 has ingredient "flour" (makeMeal default); user searches "flour"
+  const searchIngredient = await platform.handle(
+    { verb: "search", capabilityId: "meals", parameters: { query: "flour" } },
+    user1,
+  );
+  assert(searchIngredient.status === "ok", "search 'flour' (ingredient match) → ok", searchIngredient.status);
+  assert((searchIngredient.result as any)?.mealCount === 2, "ingredient match: 'flour' matches MEAL_100 + MEAL_300 (both use default ingredients)");
+
+  // Ownership: user2 searches "chilli" — sees neither user1's meal nor system-meals named chilli
+  // (system meal is "System Pasta", user1 has "Colin's Chilli", user2 has "Sam's Stew")
+  const searchUser2 = await platform.handle(
+    { verb: "search", capabilityId: "meals", parameters: { query: "chilli" } },
+    user2,
+  );
+  assert(searchUser2.status === "ok", "user2 search → ok (scoped to own meals + system)", searchUser2.status);
+  assert(
+    (searchUser2.result as any)?.mealCount === 0,
+    "user2 sees 0 matches for 'chilli' — user1's meal is not accessible",
+    String((searchUser2.result as any)?.mealCount),
+  );
+
+  // No results — not a gap, just an empty result
+  const searchNoMatch = await platform.handle(
+    { verb: "search", capabilityId: "meals", parameters: { query: "zzznomatch999" } },
+    user1,
+  );
+  assert(searchNoMatch.status === "ok", "search with no matches → ok (not a gap)", searchNoMatch.status);
+  assert((searchNoMatch.result as any)?.mealCount === 0, "no-match returns mealCount 0");
+  assert(Array.isArray((searchNoMatch.result as any)?.meals), "meals array present even when empty");
+
+  // Empty query → honest gap
+  const searchEmpty = await platform.handle(
+    { verb: "search", capabilityId: "meals", parameters: { query: "" } },
+    user1,
+  );
+  assert(searchEmpty.status === "gap", "empty query string → honest gap", searchEmpty.status);
+  assert(/non-empty/.test(searchEmpty.message ?? ""), "gap message says query must be non-empty");
+
+  // Missing query param → honest gap
+  const searchMissingQuery = await platform.handle(
+    { verb: "search", capabilityId: "meals", parameters: {} },
+    user1,
+  );
+  assert(searchMissingQuery.status === "gap", "missing { query } param → honest gap", searchMissingQuery.status);
+
+  // Anonymous search → denied (requireUserId fires before search)
+  const searchAnon = await platform.handle(
+    { verb: "search", capabilityId: "meals", parameters: { query: "chilli" } },
+    anon,
+  );
+  assert(searchAnon.status === "denied", "anonymous search → denied", searchAnon.status);
+
+  // Result shape: search rows carry no ingredients/instructions (lightweight projection)
+  const scMeal = (searchChilli.result as any)?.meals?.[0];
+  assert(
+    !("ingredients" in (scMeal ?? {})) && !("instructions" in (scMeal ?? {})),
+    "search rows carry NO ingredients/instructions — lightweight MealSearchView projection",
+  );
+  assert(
+    "name" in (scMeal ?? {}) && "servings" in (scMeal ?? {}) && "mealFormat" in (scMeal ?? {}),
+    "search rows carry name, servings, mealFormat (lightweight projection fields)",
+  );
+
+  // -------------------------------------------------------------------------
   section("Trust rule — nutrition is never surfaced");
   assert(
     !Object.prototype.hasOwnProperty.call(d1.meal, "calories") &&
@@ -358,10 +457,16 @@ async function main(): Promise<void> {
       !Object.prototype.hasOwnProperty.call(d1, "nutrition"),
     "no result shape carries a nutrition field — nutrition is a separate table and out of this capability's scope",
   );
+  // Trust rule also holds for search results
+  assert(
+    !Object.prototype.hasOwnProperty.call(scMeal ?? {}, "calories") &&
+      !Object.prototype.hasOwnProperty.call(scMeal ?? {}, "nutrition"),
+    "search result rows also carry no nutrition field",
+  );
 
   // -------------------------------------------------------------------------
   console.log(`\n${"=".repeat(56)}`);
-  console.log(`INT15 Meals read-only binding: ${passed} passed, ${failed} failed`);
+  console.log(`INT15/INT25 Meals binding: ${passed} passed, ${failed} failed`);
   if (failed > 0) process.exit(1);
 }
 
