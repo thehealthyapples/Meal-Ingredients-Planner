@@ -195,8 +195,8 @@ async function main(): Promise<void> {
   );
   const live = intelligencePlatform.listCapabilities().filter((c) => c.availability === "available");
   assert(
-    live.length === 11,
-    "exactly ELEVEN capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser) — scope lock (updated by INT17)",
+    live.length === 12,
+    "exactly TWELVE capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery) — scope lock (updated by INT26)",
     String(live.length),
   );
   assert(live.some((c) => c.id === "templates"), "templates is among the live capabilities");

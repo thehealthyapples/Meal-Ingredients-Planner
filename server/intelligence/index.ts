@@ -188,6 +188,23 @@ export {
   type PlanTemplateWithItems,
 } from "./handlers/templates-read-port.js";
 
+// INT26 — twelfth live capability binding (Meal Discovery — cross-source search).
+export {
+  bindMealDiscoveryCapability,
+  MEAL_DISCOVERY_CAPABILITY_ID,
+  MEAL_DISCOVERY_BINDING_EXECUTABLE_INTENTS,
+} from "./bindings/meal-discovery.js";
+export {
+  createMealDiscoveryHandler,
+  MEAL_DISCOVERY_EXECUTABLE_INTENTS,
+} from "./handlers/meal-discovery-handler.js";
+export {
+  createProductionMealDiscoveryPort,
+  type MealDiscoveryPort,
+  type DiscoveryItem,
+  type MealDiscoverySearchResult,
+} from "./handlers/meal-discovery-port.js";
+
 // INT17 — eleventh live capability binding (read-only Analyser).
 export { bindAnalyserReadCapability, ANALYSER_CAPABILITY_ID, ANALYSER_EXECUTABLE_INTENTS } from "./bindings/analyser.js";
 export {

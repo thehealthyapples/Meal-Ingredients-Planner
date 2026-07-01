@@ -98,6 +98,7 @@ import { bindPartnersReadCapability } from "./bindings/partners.js";
 import { bindMealsReadCapability } from "./bindings/meals.js";
 import { bindTemplatesReadCapability } from "./bindings/templates.js";
 import { bindAnalyserReadCapability } from "./bindings/analyser.js";
+import { bindMealDiscoveryCapability } from "./bindings/meal-discovery.js";
 import type {
   Capability,
   CapabilityHandler,
@@ -213,3 +214,4 @@ bindPartnersReadCapability(intelligencePlatform);
 bindMealsReadCapability(intelligencePlatform);
 bindTemplatesReadCapability(intelligencePlatform);
 bindAnalyserReadCapability(intelligencePlatform);
+bindMealDiscoveryCapability(intelligencePlatform);

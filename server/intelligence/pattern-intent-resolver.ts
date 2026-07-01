@@ -353,16 +353,18 @@ const HOUSEHOLD_MATCHERS: Matcher[] = [
 ];
 
 // ---------------------------------------------------------------------------
-// Meals
+// Meal Discovery (INT26) — cross-source recipe discovery
+// Routes to "meal-discovery" so the engine can fan out across personal library,
+// THA system meals, meal templates, and (Phase 2) external sources in one pass.
 // ---------------------------------------------------------------------------
 
-const MEALS_MATCHERS: Matcher[] = [
+const MEAL_DISCOVERY_MATCHERS: Matcher[] = [
   // "find me a recipe for chicken curry"
   (u) => {
     const m = u.match(/\bfind\s+(?:me\s+)?(?:a\s+)?recipe(?:\s+for)?\s+(.+?)[\?.]?\s*$/i);
     if (!m?.[1]) return null;
     return {
-      capability: "meals",
+      capability: "meal-discovery",
       verb: "search",
       parameters: { query: m[1].trim().toLowerCase() },
       confidence: 0.85,
@@ -374,7 +376,7 @@ const MEALS_MATCHERS: Matcher[] = [
     const m = u.match(/\b(?:search\s+for|look\s+up)\s+(?:a\s+)?(.+?)\s+(?:recipe|dish|meal)\b/i);
     if (!m?.[1]) return null;
     return {
-      capability: "meals",
+      capability: "meal-discovery",
       verb: "search",
       parameters: { query: m[1].trim().toLowerCase() },
       confidence: 0.82,
@@ -387,7 +389,7 @@ const MEALS_MATCHERS: Matcher[] = [
     const m = u.match(/\b(?:(?:find|show|give)\s+me\s+(?:a\s+)?|i\s+want\s+(?:a\s+)?)(.+?)\s+recipe\b/i);
     if (!m?.[1]) return null;
     return {
-      capability: "meals",
+      capability: "meal-discovery",
       verb: "search",
       parameters: { query: m[1].trim().toLowerCase() },
       confidence: 0.83,
@@ -399,7 +401,7 @@ const MEALS_MATCHERS: Matcher[] = [
     const m = u.match(/\bwhat\s+can\s+i\s+(?:cook|make|do|prepare)\s+with\s+(.+?)[\?.]?\s*$/i);
     if (!m?.[1]) return null;
     return {
-      capability: "meals",
+      capability: "meal-discovery",
       verb: "search",
       parameters: { query: m[1].trim().toLowerCase() },
       confidence: 0.82,
@@ -411,10 +413,41 @@ const MEALS_MATCHERS: Matcher[] = [
     const m = u.match(/\b(?:(?:give|show)\s+me\s+)?something\s+(?:made\s+)?with\s+(.+?)[\?.]?\s*$/i);
     if (!m?.[1]) return null;
     return {
-      capability: "meals",
+      capability: "meal-discovery",
       verb: "search",
       parameters: { query: m[1].trim().toLowerCase() },
       confidence: 0.78,
+    };
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Meals (personal library queries only — explicit "my meals" / "my cookbook")
+// Discovery queries (no ownership qualifier) go to meal-discovery above.
+// ---------------------------------------------------------------------------
+
+const MEALS_MATCHERS: Matcher[] = [
+  // "search my meals for pasta" / "search my cookbook for chicken" / "search my recipes for X"
+  (u) => {
+    const m = u.match(/\bsearch\s+my\s+(?:meals?|cookbook|recipes?)\s+for\s+(.+?)[\?.]?\s*$/i);
+    if (!m?.[1]) return null;
+    return {
+      capability: "meals",
+      verb: "search",
+      parameters: { query: m[1].trim().toLowerCase() },
+      confidence: 0.88,
+    };
+  },
+
+  // "do I have any pasta meals?" / "have I got any chicken recipes?" / "do I have chicken dishes?"
+  (u) => {
+    const m = u.match(/\b(?:do\s+i\s+have|have\s+i\s+got)\s+(?:any\s+)?(.+?)\s+(?:meals?|recipes?|dishes?)\b/i);
+    if (!m?.[1]) return null;
+    return {
+      capability: "meals",
+      verb: "search",
+      parameters: { query: m[1].trim().toLowerCase() },
+      confidence: 0.87,
     };
   },
 ];
@@ -483,6 +516,7 @@ const ALL_SPECIFIC_MATCHERS: Matcher[] = [
   ...PANTRY_MATCHERS,
   ...DIARY_MATCHERS,
   ...HOUSEHOLD_MATCHERS,
+  ...MEAL_DISCOVERY_MATCHERS,
   ...MEALS_MATCHERS,
   ...TEMPLATES_MATCHERS,
   ...ANALYSER_MATCHERS,
