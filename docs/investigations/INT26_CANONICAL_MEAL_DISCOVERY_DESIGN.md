@@ -1,6 +1,7 @@
 # INT26 — Canonical Meal Discovery Capability: Design Investigation
 
 **Date:** 2026-07-01  
+**Amended:** 2026-07-01 (INT26A — phase restructure; MealDiscoveryService → MealDiscoveryEngine)  
 **Status:** Investigation complete. No implementation performed.  
 **Scope:** Design only — ownership, sources, result contract, capability registration, extensibility.
 
@@ -53,19 +54,19 @@ No single existing service owns the discovery operation. It spans:
 | Future AI meals | (none yet) |
 | Future partner sources | (none yet) |
 
-The canonical owner of the **discovery operation** is a new **`MealDiscoveryService`**
-(`server/intelligence/services/meal-discovery-service.ts`). It does not own any
-data — each data source retains ownership of its own rows. The service owns:
+The canonical owner of the **discovery operation** is a new **`MealDiscoveryEngine`**
+(`server/intelligence/services/meal-discovery-engine.ts`). It does not own any
+data — each data source retains ownership of its own rows. The engine owns:
 
 1. The **source registry** (which sources are enabled and in what order).
 2. The **fan-out coordination** (parallel queries to all enabled sources).
-3. **Deduplication** (a personal meal imported from TheMealDB must appear once, flagged
-   `isAlreadySaved: true`, not twice from two sources).
+3. **Deduplication** (a personal meal imported from an external source must appear once,
+   flagged `isAlreadySaved: true`, not twice from two sources).
 4. **Result capping and ranking** (top N results per source, overall cap).
 5. **Timeout policy** (external sources are given a bounded window; slow APIs degrade
    gracefully to partial results, never blocking the response).
 
-The Intelligence Platform capability handler delegates entirely to this service through
+The Intelligence Platform capability handler delegates entirely to this engine through
 a narrow port. No fan-out, deduplication, or source logic lives in the handler.
 
 ---
@@ -80,8 +81,8 @@ Display name:       Meal Discovery
 Description:        Cross-source recipe and meal discovery. Given a search query,
                     searches personal cookbook, THA library, meal templates, and
                     enabled external recipe sources, returning a unified ranked result.
-Owner:              MealDiscoveryService
-                    (server/intelligence/services/meal-discovery-service.ts)
+Owner:              MealDiscoveryEngine
+                    (server/intelligence/services/meal-discovery-engine.ts)
 Owner scopes:       Personal library  → storage.getMeals(userId)
                     System / THA      → storage.getSystemMeals()
                     Templates         → storage.getMealTemplates()
@@ -91,7 +92,7 @@ API surface:        Platform-internal only. No dedicated HTTP route. Callable on
                     via intelligencePlatform.handle().
 Supported intents:  search, recommend
 Executable intents: search  (recommend is registered but a gap until ranking logic
-                    is owned by a single, delegate-only method in MealDiscoveryService)
+                    is owned by a single, delegate-only method in MealDiscoveryEngine)
 Permissions:        minimumRole: "user"
                     knowledgeClass: "public"
                     ownershipScoped: true  (personal-library results scoped to caller)
@@ -133,20 +134,35 @@ SourceType enum:
   "partner"    — partner-curated recipe banks (future)
 ```
 
-### Source registry (implementation order)
+### Source registry — Phase 1 (internal sources, delivered together)
 
-| # | Source ID | Type | Owner | Status | Notes |
+All three internal sources are always enabled. No external API calls are made in Phase 1.
+
+| # | Source ID | Type | Owner | Notes |
+|---|---|---|---|---|
+| 1 | `personal` | personal | `storage.getMeals(userId)` | Always queried; ownership-scoped to caller |
+| 2 | `system` | system | `storage.getSystemMeals()` | Always queried; shared THA library (requires recipe seeding — INT25A F2a) |
+| 3 | `meal-templates` | template | `storage.getMealTemplates()` | Match on name, cuisine, styleTags; lightweight result |
+
+### Source registry — Phase 2 (external sources, delivered as one provider phase)
+
+All external sources are introduced together in Phase 2. They are treated as a single **external provider tier** inside `MealDiscoveryEngine` — not as individual phases. Each source within the tier is enabled/disabled by the existing `recipe_source_settings` gate or credential availability; that is a runtime config concern, not a phase boundary.
+
+| # | Source ID | Type | Owner | Gate | Notes |
 |---|---|---|---|---|---|
-| 1 | `personal` | personal | `storage.getMeals(userId)` | **Active — Day 1** | Always queried; ownership-scoped |
-| 2 | `system` | system | `storage.getSystemMeals()` | **Active — Day 1** | Always queried; requires recipe seeding (INT25A F2a) |
-| 3 | `meal-templates` | template | `storage.getMealTemplates()` | **Active — Day 1** | Match on name, cuisine, styleTags; lightweight result |
-| 4 | `themealdb` | external | `external-meal-service.ts` | **Active — Day 1** | TheMealDB official API; no key required; fastest external source |
-| 5 | `bbc-good-food` | external | `external-meal-service.ts` | **Active — Day 1** | Scraped; subject to `recipe_source_settings` gate |
-| 6 | `allrecipes` | external | `external-meal-service.ts` | Config-gated | Scraped; same gate |
-| 7 | `jamie-oliver` | external | `external-meal-service.ts` | Config-gated | Scraped; same gate |
-| 8 | `edamam` | external | `external-meal-service.ts` | Credential-gated | `EDAMAM_APP_ID/KEY` required |
-| 9 | `ai-suggestion` | ai | OpenAI / ILlmProvider | **Future** | Generates a meal outline when no other source matches; requires explicit `allowAI: true` parameter |
-| 10 | `partner-*` | partner | Per-partner service | **Future** | Partner-curated recipe banks; per-partner enable flag |
+| 4 | `themealdb` | external | `external-meal-service.ts` | Always enabled | Official API; no credentials required |
+| 5 | `bbc-good-food` | external | `external-meal-service.ts` | `recipe_source_settings` | Scraped |
+| 6 | `allrecipes` | external | `external-meal-service.ts` | `recipe_source_settings` | Scraped |
+| 7 | `jamie-oliver` | external | `external-meal-service.ts` | `recipe_source_settings` | Scraped |
+| 8 | `edamam` | external | `external-meal-service.ts` | `EDAMAM_APP_ID/KEY` credential | Official API |
+| 9 | `*` | external | `external-meal-service.ts` | Per-source setting | Any future configured external source is included here automatically |
+
+### Source registry — Future (post-Phase 2)
+
+| # | Source ID | Type | Owner | Notes |
+|---|---|---|---|---|
+| — | `ai-suggestion` | ai | OpenAI / ILlmProvider | Generates a meal outline when no other source matches; requires admin toggle (default off) |
+| — | `partner-*` | partner | Per-partner service | Partner-curated recipe banks; per-partner enable flag |
 
 ### Source priority and ordering
 
@@ -261,7 +277,7 @@ orchestration are entirely behind this interface — the handler does not see th
  * MealDiscoveryPort — the narrow surface the meal-discovery handler
  * is allowed to call. One method. All source orchestration is behind it.
  *
- * Production: MealDiscoveryService implements this.
+ * Production: MealDiscoveryEngine implements this.
  * Tests: in-memory stub implements this (standard Port→Handler→Binding pattern).
  */
 export interface MealDiscoveryPort {
@@ -296,18 +312,25 @@ imports directly.
 
 ---
 
-## 8. MealDiscoveryService Internal Architecture
+## 8. MealDiscoveryEngine Internal Architecture
 
 ```
-MealDiscoveryService
+MealDiscoveryEngine
 ├── SourceRegistry
-│   ├── PersonalLibrarySource   (always enabled)
-│   ├── SystemMealsSource       (always enabled)
-│   ├── MealTemplatesSource     (always enabled)
-│   ├── TheMealDBSource         (enabled by default)
-│   ├── BbcGoodFoodSource       (gated by recipe_source_settings)
-│   ├── AllRecipesSource        (gated by recipe_source_settings)
-│   └── ... (future sources registered here, nowhere else)
+│   │
+│   │  Phase 1 — internal sources (always registered, always enabled)
+│   ├── PersonalLibrarySource   (storage.getMeals)
+│   ├── SystemMealsSource       (storage.getSystemMeals)
+│   ├── MealTemplatesSource     (storage.getMealTemplates)
+│   │
+│   │  Phase 2 — external provider tier (all registered together;
+│   │             each gated individually by recipe_source_settings / credentials)
+│   ├── TheMealDBSource         (always enabled within tier)
+│   ├── BbcGoodFoodSource       (recipe_source_settings gate)
+│   ├── AllRecipesSource        (recipe_source_settings gate)
+│   ├── JamieOliverSource       (recipe_source_settings gate)
+│   ├── EdamamSource            (EDAMAM_APP_ID/KEY credential gate)
+│   └── ... (any newly configured external source registered here, nowhere else)
 │
 └── discover(query, userId):
     1. Fan out in parallel to all enabled sources (Promise.allSettled — no source
@@ -322,7 +345,7 @@ MealDiscoveryService
     7. Return DiscoveryItem[]
 ```
 
-### Adding a new source
+### Adding a new external source (Phase 2 or beyond)
 
 ```typescript
 // New source: implement DiscoverySource interface
@@ -336,7 +359,7 @@ class PartnerRecipeSource implements DiscoverySource {
   }
 }
 
-// Register in MealDiscoveryService constructor:
+// Register in MealDiscoveryEngine constructor:
 this.registry.register(new PartnerRecipeSource());
 
 // That's it. No changes to:
@@ -392,30 +415,39 @@ conversation layer sees more results in the same shape — nothing else changes.
 ## 10. Implementation Sequence (for future INT26 implementation)
 
 ```
-Phase 1 — Foundation (no external API calls)
+Phase 1 — Internal sources (Personal Meals + THA System Meals + Meal Templates)
   1. Add "meal-discovery" to SEED_CAPABILITIES (capability-registry.ts)
   2. Write MealDiscoveryPort interface (handlers/meal-discovery-port.ts)
   3. Write DiscoveryItem + MealDiscoverySearchResult types
-  4. Write MealDiscoveryService with PersonalLibrarySource + SystemMealsSource +
-     MealTemplatesSource only (no external yet)
-  5. Write createMealsDiscoveryHandler
+  4. Write MealDiscoveryEngine with three internal sources only:
+       PersonalLibrarySource, SystemMealsSource, MealTemplatesSource
+     No external API calls in Phase 1.
+  5. Write createMealDiscoveryHandler
   6. Write bindMealDiscoveryCapability
   7. Register binding in intelligence-platform.ts
   8. Update MEALS_MATCHERS in pattern-intent-resolver.ts: discovery queries → meal-discovery
   9. Write capability card: docs/architecture/capabilities/meal-discovery.md
  10. Write tests: test-intelligence-meal-discovery-binding.ts
 
-Phase 2 — External sources
- 11. Add TheMealDBSource to MealDiscoveryService
- 12. Add BbcGoodFoodSource (gated by recipe_source_settings)
- 13. Update tests to cover external source fan-out and failure degradation
+Phase 2 — External provider tier (all external sources, delivered together)
+  All external sources are registered in MealDiscoveryEngine as a single provider tier.
+  Individual sources within the tier are gated by recipe_source_settings / credentials —
+  that is a runtime concern, not a separate phase.
 
-Phase 3 — Data coverage (INT25A F2a)
- 14. Seed common recipes as system meals (isSystemMeal=true) so
-     SystemMealsSource returns results without external API calls
+ 11. Add ExternalProviderTier to MealDiscoveryEngine, registering all configured sources:
+       TheMealDBSource         (always enabled within tier)
+       BbcGoodFoodSource       (recipe_source_settings gate)
+       AllRecipesSource        (recipe_source_settings gate)
+       JamieOliverSource       (recipe_source_settings gate)
+       EdamamSource            (EDAMAM_APP_ID/KEY credential gate)
+       [any other configured external recipe source]
+ 12. Add timeout policy for external tier (recommended: 2 s per source, partial results
+     on failure — see OD1)
+ 13. Update tests: external fan-out, per-source failure degradation, partial results
 
-Phase 4 — Future sources (per-source INT)
- 15. AI-suggestion source (requires explicit allow flag, not default)
+Future — post-Phase 2 (per-capability INT, not part of INT26)
+ 14. Seed common recipes as system meals (isSystemMeal=true) — INT25A F2a
+ 15. AI-suggestion source (admin toggle, default off)
  16. Partner sources (per-partner enable config)
 ```
 
@@ -439,12 +471,13 @@ Phase 4 — Future sources (per-source INT)
 | Design Question | Answer |
 |---|---|
 | Capability ID | `meal-discovery` (new; separate from `meals`) |
-| Canonical owner | `MealDiscoveryService` (orchestrates; does not own data) |
+| Canonical owner | `MealDiscoveryEngine` (orchestrates; does not own data) |
 | Primary verb | `search` |
 | Port interface | One method: `discover(query, userId): Promise<DiscoveryItem[]>` |
-| Sources (Day 1) | Personal library + System meals + Meal templates + TheMealDB |
-| Sources (future) | BBC Good Food, AllRecipes, AI-generation, Partner banks |
-| Extensibility mechanism | Register new `DiscoverySource` in `MealDiscoveryService`; zero handler/binding/intent/UI changes |
+| Phase 1 sources | Personal library + THA system meals + Meal templates (internal only; no external API calls) |
+| Phase 2 sources | All external recipe sources as one provider tier: TheMealDB, BBC Good Food, AllRecipes, Jamie Oliver, Edamam, any configured source |
+| Future sources | AI-suggestion (admin toggle), Partner banks (per-partner config) |
+| Extensibility mechanism | Register new `DiscoverySource` in `MealDiscoveryEngine`; zero handler/binding/intent/UI changes |
 | Result contract | `MealDiscoverySearchResult` — source-agnostic, 15-item cap, no nutrition, no full ingredients |
 | Deduplication | By composite key; personal beats external; `isAlreadySaved` flag |
 | Conversation layer impact | Nil — same gateway, same `queryCapability`, same LLM prompt shape |
