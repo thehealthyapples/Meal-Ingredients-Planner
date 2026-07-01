@@ -8,6 +8,7 @@ import { useUser } from "@/hooks/use-user";
 import { Loader2 } from "lucide-react";
 
 import { DesktopSidebar, MobileNav, AppRealmContext } from "@/components/nav-bar";
+import FloatingAssistant from "@/components/conversation/FloatingAssistant";
 import { WorkspaceHeaderSlotContext } from "@/components/workspace-header";
 import OrchardBackdrop from "@/components/layout/orchard-backdrop";
 import OrchardShell from "@/components/layout/orchard-shell";
@@ -165,6 +166,7 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
             <MobileNav />
           </div>
         </div>
+        <FloatingAssistant />
       </WorkspaceHeaderSlotContext.Provider>
     </AppRealmContext.Provider>
   );

@@ -1,6 +1,6 @@
 /**
- * conversation-gateway.ts — INT18 Phase 1
- * =========================================
+ * conversation-gateway.ts — INT18 Phase 1 / Phase 2
+ * ===================================================
  * The Conversation Gateway is the SINGLE wiring point between a user utterance
  * and the 11 live read-only capability bindings. It:
  *
@@ -15,8 +15,8 @@
  *      and utterance keywords.
  *   8. Queries those capabilities via intelligencePlatform.handle() (read verb
  *      only) and assembles grounding context.
- *   9. Calls gpt-4o-mini with the grounding context and bounded conversation
- *      history. The model may ONLY answer from the provided context.
+ *   9. Calls the injected ILlmProvider with the grounding context and bounded
+ *      conversation history. The model may ONLY answer from the provided context.
  *  10. Records the assistant turn and returns structured TurnResult.
  *
  * HARD BOUNDARIES:
@@ -28,6 +28,12 @@
  *  - No business logic. No storage mutations. No duplicate planner/shopping logic.
  *  - EFSA / health-claim firewall is enforced in the system prompt (model told
  *    never to make medical claims or fabricate nutrition facts).
+ *
+ * LLM PROVIDER (Phase 2):
+ *  - The gateway depends on ILlmProvider, not on OpenAI directly.
+ *  - The production singleton uses createDefaultLlmProvider() (OpenAI when the
+ *    key is present, NoOpProvider otherwise).
+ *  - Tests inject any ILlmProvider implementation (e.g. a stub).
  *
  * Run tests: npx tsx server/tests/test-intelligence-conversation-gateway.ts
  */
@@ -46,6 +52,10 @@ import {
   type SurfaceHints,
   type ContextFrame,
 } from "./context-frame-assembler.js";
+import {
+  createDefaultLlmProvider,
+  type ILlmProvider,
+} from "./llm-provider.js";
 import type { ConversationTurn, Conversation, ConversationThread } from "../../../shared/schema.js";
 import type { IntentOutcome } from "../types.js";
 
@@ -236,6 +246,7 @@ async function buildGroundedResponse(
   utterance: string,
   frame: ContextFrame,
   recentHistory: ConversationTurn[],
+  llmProvider: ILlmProvider,
 ): Promise<{ text: string; entityRefs: EntityRef[]; outcome?: IntentOutcome }> {
 
   // Write-intent guard (INT18 Risk R4) — honest gap, no LLM call
@@ -250,8 +261,8 @@ async function buildGroundedResponse(
     };
   }
 
-  // No API key → graceful degradation
-  if (!process.env.OPENAI_API_KEY) {
+  // Provider unavailable → graceful degradation (no API key configured)
+  if (!llmProvider.isAvailable) {
     return {
       text: "The AI assistant isn't available right now — it hasn't been configured yet.",
       entityRefs: [],
@@ -306,19 +317,16 @@ entityRefs must ONLY contain items that appear in the context data above with a 
   }
   messages.push({ role: "user", content: utterance });
 
-  // Call gpt-4o-mini (lazy import — mirrors existing codebase pattern)
+  // Delegate to the injected provider (OpenAI in production, NoOp / stub in tests)
   let rawContent = "";
   try {
-    const { default: OpenAI } = await import("openai");
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
+    const response = await llmProvider.complete({
       messages,
       temperature: 0.3,
-      max_tokens: 400,
-      response_format: { type: "json_object" },
+      maxTokens: 400,
+      jsonMode: true,
     });
-    rawContent = completion.choices[0]?.message?.content?.trim() ?? "";
+    rawContent = response.content;
   } catch (err) {
     console.error("[ConversationGateway] LLM call failed:", err);
     return {
@@ -361,7 +369,14 @@ entityRefs must ONLY contain items that appear in the context data above with a 
  * Production code imports and uses the `conversationGateway` singleton.
  */
 export class ConversationGateway {
-  constructor(private readonly store: IConversationStore) {}
+  private readonly llmProvider: ILlmProvider;
+
+  constructor(
+    private readonly store: IConversationStore,
+    llmProvider?: ILlmProvider,
+  ) {
+    this.llmProvider = llmProvider ?? createDefaultLlmProvider();
+  }
 
   /**
    * Process one user utterance end-to-end:
@@ -414,6 +429,7 @@ export class ConversationGateway {
       utterance,
       frame,
       priorTurns,
+      this.llmProvider,
     );
 
     // 6. Record assistant turn

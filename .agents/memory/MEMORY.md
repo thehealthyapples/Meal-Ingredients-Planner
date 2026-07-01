@@ -1,0 +1,1 @@
+- [INT18 LLM Provider pattern](int18-llm-provider.md) — gateway depends on ILlmProvider; inject stubs in tests, OpenAIProvider in prod via factory.
