@@ -42,6 +42,7 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     owningService: "server/lib/meal-service.ts, planner-compliance.ts, meal-resolution-service.ts",
     apiSurface: "/api/planner/*",
     supportedIntents: ["read", "explain", "recommend", "generate", "add", "move", "replace", "delete", "import", "share"],
+    executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "destructive",
     aiAccess: "W!",
@@ -55,6 +56,7 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     owningService: "server/lib/grocery-integration.ts, supermarket-basket-service.ts, price-lookup.ts",
     apiSurface: "/api/shopping-list/*, /api/shopping/*, /api/basket/*",
     supportedIntents: ["read", "explain", "add", "delete", "generate"],
+    executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "write",
     aiAccess: "W",
@@ -68,6 +70,7 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     owningService: "server/services/nutrition-knowledge-registry.ts, nutrition-centre-assembler.ts",
     apiSurface: "/api/knowledge/*, /api/nutrition*, /api/food-knowledge/*",
     supportedIntents: ["read", "explain", "search", "analyse", "compare", "report"],
+    executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: false, audited: false },
     capabilityClass: "read-only",
     aiAccess: "R",
@@ -81,6 +84,7 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     owningService: "server/lib/meal-service.ts, recipe-swap-engine.ts, meal-resolution-service.ts",
     apiSurface: "/api/meals/*, /api/meal-items/*",
     supportedIntents: ["read", "explain", "search", "recommend", "generate", "add", "replace", "delete", "import", "share"],
+    executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "destructive",
     aiAccess: "W!",
@@ -94,6 +98,7 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     owningService: "routes-resident diary logic + meal-resolution-service.ts",
     apiSurface: "/api/food-diary/*",
     supportedIntents: ["read", "explain", "add", "delete", "import"],
+    executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "write",
     aiAccess: "W",
@@ -107,6 +112,7 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     owningService: "server/lib/sanitizeUser.ts, routes-resident profile logic",
     apiSurface: "/api/profile, /api/user/preferences, /api/user/*-settings",
     supportedIntents: ["read", "explain", "add"],
+    executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "write",
     aiAccess: "W",
@@ -120,6 +126,7 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     owningService: "server/lib/retailIntelligence.ts, product-matching-service.ts, price-lookup.ts",
     apiSurface: "/api/basket/supermarkets-enhanced, /api/routing, /api/savings/*",
     supportedIntents: ["read", "explain", "recommend", "compare"],
+    executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: false, audited: false },
     capabilityClass: "ai-assisted",
     aiAccess: "R+A",
@@ -133,6 +140,7 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     owningService: "shared/discovery, shared/alternatives, shared/stories, shared/seasonal, item-resolver.ts",
     apiSurface: "/api/pantry/*, /api/user-items/*, /api/freezer/*",
     supportedIntents: ["read", "explain", "search", "recommend", "add", "delete"],
+    executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "write",
     aiAccess: "W",
@@ -146,6 +154,7 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     owningService: "server/lib/product-analysis.ts, ocr.ts, openfoodfacts-importer.ts",
     apiSurface: "/api/scan, /api/products/barcode/:barcode, /api/additives",
     supportedIntents: ["read", "explain", "analyse", "report"],
+    executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: false, audited: false },
     capabilityClass: "ai-assisted",
     aiAccess: "R+A",
@@ -159,6 +168,7 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     owningService: "server/lib/household.ts, household-meal-matcher.ts",
     apiSurface: "/api/household/*",
     supportedIntents: ["read", "explain", "add", "delete"],
+    executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "destructive",
     aiAccess: "W!",
@@ -172,6 +182,7 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     owningService: "server/template-migration.ts, meal-food-intelligence.ts",
     apiSurface: "/api/plan-templates/*, /api/meal-templates/*",
     supportedIntents: ["read", "explain", "search", "recommend", "generate", "add", "import", "delete", "share"],
+    executableIntents: [],
     permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
     capabilityClass: "write",
     aiAccess: "W",
@@ -185,6 +196,7 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     owningService: "server/storage.ts (admin methods), auto-import-service.ts, backfill-classifier.ts",
     apiSurface: "/api/admin/*",
     supportedIntents: ["read", "explain", "report", "review", "approve", "import", "export", "add", "delete"],
+    executableIntents: [],
     permissions: { minimumRole: "admin", knowledgeClass: "admin", ownershipScoped: false, audited: true },
     capabilityClass: "human-confirmation-required",
     aiAccess: "W!",
@@ -198,6 +210,7 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     owningService: "n/a (read tooling, isolated dev plane)",
     apiSurface: "n/a (no production route)",
     supportedIntents: ["read", "explain", "report"],
+    executableIntents: [],
     permissions: { minimumRole: "developer", knowledgeClass: "developer", ownershipScoped: false, audited: true },
     capabilityClass: "read-only",
     aiAccess: "never",
@@ -245,15 +258,24 @@ export class CapabilityRegistry {
   }
 
   /**
-   * Bind an execution handler to a capability, marking it "available". This is the
-   * FUTURE binding point — INT1 binds none. A handler must delegate all business
-   * logic to the owning service (TIP1 §5).
+   * Bind an execution handler to a capability, marking it "available" and recording
+   * exactly which verbs the handler implements (executableIntents). The binder must
+   * declare the verbs it will actually execute — not every verb in supportedIntents,
+   * only those the handler has a real code path for. This keeps discovery truthful
+   * and prevents over-advertising functionality (INT6A).
+   *
+   * executableIntents must be a subset of the capability's supportedIntents. An empty
+   * list is valid for the INT1 foundation state (handler exists but executes nothing yet).
    */
-  bindHandler(capabilityId: string, handler: CapabilityHandler): void {
+  bindHandler(
+    capabilityId: string,
+    handler: CapabilityHandler,
+    executableIntents: readonly IntentVerb[] = [],
+  ): void {
     const cap = this.capabilities.get(capabilityId);
     if (!cap) throw new Error(`Cannot bind handler: unknown capability "${capabilityId}"`);
     this.handlers.set(capabilityId, handler);
-    this.capabilities.set(capabilityId, { ...cap, availability: "available" });
+    this.capabilities.set(capabilityId, { ...cap, availability: "available", executableIntents });
   }
 
   /** Capability discovery — lookup by id. */
@@ -268,6 +290,22 @@ export class CapabilityRegistry {
   /** Capability discovery — full list (the catalogue future surfaces read). */
   list(): Capability[] {
     return Array.from(this.capabilities.values());
+  }
+
+  /**
+   * Capability discovery — only capabilities that have at least one executable intent
+   * (i.e. a handler is bound and declares verbs it will actually execute). Discovery
+   * surfaces that must not over-advertise functionality should use this, not list().
+   */
+  listExecutable(): Capability[] {
+    return Array.from(this.capabilities.values()).filter(
+      (c) => c.executableIntents.length > 0,
+    );
+  }
+
+  /** True if the given verb is currently executable for this capability. */
+  isExecutable(capabilityId: string, verb: IntentVerb): boolean {
+    return this.capabilities.get(capabilityId)?.executableIntents.includes(verb) ?? false;
   }
 
   getHandler(capabilityId: string): CapabilityHandler | undefined {

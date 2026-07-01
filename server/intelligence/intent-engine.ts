@@ -16,10 +16,11 @@
 
 import type { CapabilityRegistry } from "./capability-registry.js";
 import { canInvokeCapability, confirmationFor } from "./permissions.js";
-import type {
-  Intent,
-  IntelligenceContext,
-  IntentOutcome,
+import {
+  CapabilityExecutionError,
+  type Intent,
+  type IntelligenceContext,
+  type IntentOutcome,
 } from "./types.js";
 
 export interface RouteOptions {
@@ -111,14 +112,31 @@ export class IntentEngine {
     }
 
     // [6] RESPOND — report the handler's (i.e. the owning service's) result honestly.
-    const result = await handler(intent, context);
-    return {
-      status: "ok",
-      capabilityId,
-      verb,
-      confirmation,
-      message: `Invoked "${verb}" on "${capability.displayName}".`,
-      result,
-    };
+    // A handler delegates to the owning service. If that delegation produces an honest
+    // non-result (a gap, an ownership denial), the handler throws a CapabilityExecutionError
+    // and we surface it structurally — the platform never fabricates an "ok" (Risk R2).
+    // Any other throw is a genuine fault and is allowed to propagate unchanged.
+    try {
+      const result = await handler(intent, context);
+      return {
+        status: "ok",
+        capabilityId,
+        verb,
+        confirmation,
+        message: `Invoked "${verb}" on "${capability.displayName}".`,
+        result,
+      };
+    } catch (err) {
+      if (err instanceof CapabilityExecutionError) {
+        return {
+          status: err.failureStatus,
+          capabilityId,
+          verb,
+          confirmation,
+          message: err.message,
+        };
+      }
+      throw err;
+    }
   }
 }

@@ -1,0 +1,65 @@
+# THA Governing Architecture
+
+**This directory is the single canonical home for The Healthy Apples' governing architecture.**
+Established 2026-06-30 (GOV-AI1). Architecture documents no longer live in `docs/investigations/` — investigation files there are point-in-time analysis and history only.
+
+Anything in this directory is **governing**: required reading before significant implementation, and enforced by the Architecture Compliance Checklist in `ENGINEERING_WORKFLOW.md`.
+
+> **Architecture Bootstrap (mandatory entry point).** This README is the first thing to read before any significant investigation, recommendation or implementation. The documents listed below are the governing architecture; every proposal and implementation must comply with them. If a proposed change conflicts with the governing architecture: **STOP, explain why, and do not continue until approved.** This bootstrap is enforced as STEP 2 of `ENGINEERING_WORKFLOW.md` (added GOV-AI2, 2026-06-30).
+
+---
+
+## Platform Governance
+
+| Document | File |
+|---|---|
+| THA Core Architecture Principles | [`ARCHITECTURE_PRINCIPLES.md`](./ARCHITECTURE_PRINCIPLES.md) |
+| THA Source of Truth Register | [`THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md`](./THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md) |
+| THA Engineering Workflow | [`ENGINEERING_WORKFLOW.md`](./ENGINEERING_WORKFLOW.md) |
+| THA Master Evolution Roadmap | [`THA_MASTER_EVOLUTION_ROADMAP.md`](./THA_MASTER_EVOLUTION_ROADMAP.md) |
+
+## Intelligence Governance
+
+| Document | File |
+|---|---|
+| THA Intelligence Platform Architecture | [`THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`](./THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md) |
+| THA AI Capability Registry & Intent Taxonomy | [`THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md`](./THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md) |
+| THA AI Experience & Conversation Architecture | [`THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md`](./THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md) |
+
+## Architecture → Capabilities
+
+| Document | File |
+|---|---|
+| Profile / Preferences | [`capabilities/profile.md`](./capabilities/profile.md) |
+| Household | [`capabilities/household.md`](./capabilities/household.md) |
+| Partners / Supermarkets | [`capabilities/partners.md`](./capabilities/partners.md) |
+| Meals / Cookbook | [`capabilities/meals.md`](./capabilities/meals.md) |
+| Plan Templates | [`capabilities/templates.md`](./capabilities/templates.md) |
+| Analyser (Product / UPF) | [`capabilities/analyser.md`](./capabilities/analyser.md) |
+
+> Each document in `docs/architecture/capabilities/` is the **single canonical Capability Card** for that Intelligence capability — governing architecture, required reading before implementing a binding for it. Promoted from the INT11 Capability Cards specification under EPIC 1.5 (2026-06-30). The Developer Capability Registry below indexes these documents (status, executable intents, owner, link) but does not duplicate their content — the full card exists in exactly one place.
+
+## Implementation Guidance
+
+| Document | File |
+|---|---|
+| Intelligence Capability Factory | [`INTELLIGENCE_CAPABILITY_FACTORY.md`](./INTELLIGENCE_CAPABILITY_FACTORY.md) |
+| Intelligence Developer Capability Registry | [`INTELLIGENCE_DEVELOPER_CAPABILITY_REGISTRY.md`](./INTELLIGENCE_DEVELOPER_CAPABILITY_REGISTRY.md) |
+
+> Implementation guidance translates the governing architecture into reusable step sequences. It is mandatory reading before implementing the pattern it covers, but it is not governing architecture — it cannot override the documents above.
+>
+> The Developer Capability Registry is planning documentation only. It records each capability's owner, files, status, and next actions to reduce codebase discovery time for future bindings. It is **not** the Runtime Capability Registry (`server/intelligence/capability-registry.ts`), which owns runtime metadata. Runtime behaviour must not depend on the Developer Capability Registry. For the six capabilities with a canonical Capability Card, the registry indexes the card; it does not restate it — see [Architecture → Capabilities](#architecture--capabilities) above.
+
+---
+
+## Compliance
+
+Every significant implementation must pass the **Architecture Compliance Checklist** in `ENGINEERING_WORKFLOW.md`.
+
+Every **AI-related** implementation must additionally pass the **AI ARCHITECTURE COMPLIANCE** block in `ENGINEERING_WORKFLOW.md`, which confirms it uses the canonical Intelligence Platform, the Capability Registry, and the Intent Engine; reuses existing business services; creates no second assistant; duplicates no conversation state; uses registered capabilities only with permission-aware access; and produces honest gaps rather than fabricated knowledge. **If any check fails: STOP, explain why, do not continue.**
+
+---
+
+## History
+
+The original investigation documents remain at their former `docs/investigations/` paths as short pointer stubs (link stability only). The promoted Intelligence Governance documents were investigations `TIP1`–`TIP3`; the Master Evolution Roadmap was formerly `THA_LAUNCH_ROADMAP.md`. The source investigation for the Core Architecture Principles (`docs/investigations/THA_CORE_ARCHITECTURE_PRINCIPLES.md`) is unchanged and remains a genuine historical investigation, distinct from the governing principles here.

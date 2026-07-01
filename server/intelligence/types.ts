@@ -141,8 +141,20 @@ export interface Capability {
   readonly owningService: string;
   /** The real existing API surface (route prefix) — descriptive, not invoked here. */
   readonly apiSurface: string;
-  /** Verbs the platform may express against this capability (closed allow-list). */
+  /** Verbs the platform may express against this capability (closed allow-list, architecture-declared). */
   readonly supportedIntents: readonly IntentVerb[];
+  /**
+   * Verbs this capability can actually execute right now via a bound handler.
+   * Empty until a handler is bound. Automatically updated by CapabilityRegistry.bindHandler().
+   * Always a subset of supportedIntents.
+   *
+   * Discovery surfaces MUST use executableIntents (not supportedIntents) to determine
+   * what the platform can currently do. A verb in supportedIntents but absent from
+   * executableIntents has a declared architectural endpoint but no live handler — it is
+   * registered, not executable. Advertising it as executable would be over-advertising
+   * functionality (INT6A).
+   */
+  readonly executableIntents: readonly IntentVerb[];
   /** Permission requirements, enforced server-side. */
   readonly permissions: CapabilityPermissions;
   /** Server-side class driving confirmation. */
@@ -238,3 +250,43 @@ export type CapabilityHandler = (
   intent: Intent,
   context: IntelligenceContext,
 ) => Promise<unknown>;
+
+// ---------------------------------------------------------------------------
+// Honest execution failure (INT2) — a bound handler reporting an honest outcome
+// ---------------------------------------------------------------------------
+
+/**
+ * The honest, non-"ok" statuses a *bound* handler may surface at invoke time. The
+ * INT1 engine could only distinguish failures it detected itself (unknown capability,
+ * unsupported verb, permission). INT2 lets the owning-service binding report a runtime
+ * outcome that is still honest and structured — never a fabricated success (Principle 6,
+ * Risk R2). The engine maps this onto the existing IntentOutcomeStatus vocabulary.
+ *
+ *  - "gap":               the request is well-formed but the planner owns no answer for it
+ *                         (e.g. "today" has no calendar mapping; a verb the read-only
+ *                         binding does not execute). An HONEST GAP, not an error.
+ *  - "denied":            ownership-scoped authorization failed at invoke time
+ *                         (e.g. the target row is not in the caller's household). The
+ *                         platform delegates ownership checks to the owning service.
+ *  - "unsupported_intent": the handler cannot express this request shape at all.
+ */
+export type ExecutionFailureStatus = "gap" | "denied" | "unsupported_intent";
+
+/**
+ * Thrown by a bound CapabilityHandler to report an honest, structured non-success
+ * outcome. The Intent Engine catches this and returns the corresponding IntentOutcome
+ * — so the platform stays honest end-to-end and never reports "ok" for a non-result.
+ *
+ * It carries NO business data and encodes NO business rule; it is purely the honest
+ * shape of a delegated outcome the owning service produced.
+ */
+export class CapabilityExecutionError extends Error {
+  constructor(
+    readonly failureStatus: ExecutionFailureStatus,
+    message: string,
+    readonly verb?: IntentVerb,
+  ) {
+    super(message);
+    this.name = "CapabilityExecutionError";
+  }
+}
