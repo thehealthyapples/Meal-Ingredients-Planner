@@ -1,6 +1,6 @@
 /**
- * conversation-gateway.ts — INT18 Phase 1 / Phase 2
- * ===================================================
+ * conversation-gateway.ts — INT18 Phase 1 / Phase 2 / INT24
+ * ===========================================================
  * The Conversation Gateway is the SINGLE wiring point between a user utterance
  * and the 11 live read-only capability bindings. It:
  *
@@ -11,16 +11,16 @@
  *   4. Assembles a ContextFrame (pointer IDs only, via context-frame-assembler).
  *   5. Records the user turn.
  *   6. Detects write intents → returns an honest gap without calling the LLM.
- *   7. Selects relevant capabilities from the 11 live bindings based on surface
- *      and utterance keywords.
- *   8. Queries those capabilities via intelligencePlatform.handle() (read verb
- *      only) and assembles grounding context.
+ *   7. Resolves typed intents via the injected IIntentResolver (INT24 Canonical
+ *      Intent Engine), replacing the previous inline selectCapabilities routing.
+ *   8. Queries those resolved intents via intelligencePlatform.handle(), using
+ *      the verb and parameters supplied by the resolver (not hardcoded "read").
  *   9. Calls the injected ILlmProvider with the grounding context and bounded
  *      conversation history. The model may ONLY answer from the provided context.
  *  10. Records the assistant turn and returns structured TurnResult.
  *
  * HARD BOUNDARIES:
- *  - Write intents are rejected BEFORE any LLM call (INT18 Risk R4).
+ *  - Write intents are rejected BEFORE any resolver call (INT18 Risk R4 / INT24).
  *  - The LLM receives data only from intelligencePlatform.handle() results —
  *    never raw storage reads and never data from outside the capability layer.
  *  - intelligencePlatform.contextFor() supplies IntelligenceContext; the gateway
@@ -34,6 +34,11 @@
  *  - The production singleton uses createDefaultLlmProvider() (OpenAI when the
  *    key is present, NoOpProvider otherwise).
  *  - Tests inject any ILlmProvider implementation (e.g. a stub).
+ *
+ * INTENT RESOLVER (INT24):
+ *  - The gateway depends on IIntentResolver, not on any pattern set directly.
+ *  - The production singleton uses patternIntentResolver.
+ *  - Tests inject any IIntentResolver implementation (stub or the real resolver).
  *
  * Run tests: npx tsx server/tests/test-intelligence-conversation-gateway.ts
  */
@@ -56,8 +61,14 @@ import {
   createDefaultLlmProvider,
   type ILlmProvider,
 } from "./llm-provider.js";
+import type {
+  IIntentResolver,
+  IntentResolutionHints,
+  ResolvedIntent,
+} from "../intent-resolver.js";
+import { patternIntentResolver } from "../pattern-intent-resolver.js";
 import type { ConversationTurn, Conversation, ConversationThread } from "../../../shared/schema.js";
-import type { IntentOutcome } from "../types.js";
+import type { IntentOutcome, IntentVerb } from "../types.js";
 
 // ---------------------------------------------------------------------------
 // Public result types
@@ -81,7 +92,7 @@ export interface TurnResult {
 }
 
 // ---------------------------------------------------------------------------
-// Write-intent guard — honest gaps, no LLM call for mutations
+// Write-intent guard — honest gaps, no resolver call, no LLM call
 // ---------------------------------------------------------------------------
 
 /**
@@ -93,6 +104,8 @@ export interface TurnResult {
  * routed normally. The LLM system prompt further constrains it to answer from
  * provided context only, so undetected write attempts still receive a grounded
  * read response rather than a fabricated mutation.
+ *
+ * Runs BEFORE the intent resolver — write intents never reach resolution (INT24).
  */
 export function detectWriteIntent(utterance: string): string | null {
   const l = utterance.toLowerCase();
@@ -114,123 +127,34 @@ export function detectWriteIntent(utterance: string): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Capability selection — surface + keyword routing
-// ---------------------------------------------------------------------------
-
-/**
- * The surface-to-capability primary map. Surfaces that have no direct
- * capability (e.g. "floating", "voice") default to profile only.
- */
-const SURFACE_CAP: Partial<Record<ConversationSurface, string>> = {
-  planner:   "planner",
-  shopping:  "shopping",
-  nutrition: "nutrition-knowledge",
-  pantry:    "pantry",
-  diary:     "diary",
-  household: "household",
-  meals:     "meals",
-  templates: "templates",
-  partners:  "partners",
-  analyser:  "analyser",
-};
-
-/**
- * Select up to 4 capability IDs to query for this turn, based on surface and
- * keyword signals in the utterance. Profile is always included as it provides
- * personalisation context (name, diet, goals).
- *
- * Exported for unit-test coverage.
- */
-export function selectCapabilities(
-  utterance: string,
-  surface: ConversationSurface,
-): string[] {
-  const l = utterance.toLowerCase();
-  const caps = new Set<string>(["profile"]);
-
-  const primary = SURFACE_CAP[surface];
-  if (primary) caps.add(primary);
-
-  if (/\b(planner|week|plan|schedule|meal.{0,10}week)\b/.test(l))          caps.add("planner");
-  if (/\b(shop|basket|grocery|groceries|buy|list)\b/.test(l))              caps.add("shopping");
-  if (/\b(pantry|fridge|freezer|larder|cupboard|stock)\b/.test(l))        caps.add("pantry");
-  if (/\b(diary|log|logged|tracked|weight|mood|sleep|energy)\b/.test(l))  caps.add("diary");
-  if (/\b(household|family|member|housemate|everyone)\b/.test(l))         caps.add("household");
-  if (/\b(recipe|meal|cook|dish|ingredient)\b/.test(l))                   caps.add("meals");
-  if (/\b(nutrients?|vitamins?|minerals?|nutrition|nutritional|benefit)\b/.test(l)) caps.add("nutrition-knowledge");
-  if (/\b(template|templates)\b/.test(l))                                 caps.add("templates");
-  if (/\b(additive|additives|e.?number|upf|ultra.processed|nova)\b/.test(l)) caps.add("analyser");
-  if (/\b(retailer|retailers|supermarket|supermarkets)\b/.test(l))        caps.add("partners");
-
-  // Hard cap at 4 to bound per-turn latency
-  return Array.from(caps).slice(0, 4);
-}
-
-// ---------------------------------------------------------------------------
-// Capability parameter builder
-// ---------------------------------------------------------------------------
-
-/**
- * Build the `parameters` object for a `read` intent against a given capability.
- * Handlers vary in what they expect — this maps the ContextFrame's pointers to
- * the handler's expected parameter shapes.
- */
-function buildCapabilityParams(
-  capId: string,
-  frame: ContextFrame,
-): Record<string, unknown> {
-  switch (capId) {
-    case "planner":
-      if (frame.activePlannerWeekId != null) {
-        return { scope: "week", weekId: frame.activePlannerWeekId };
-      }
-      return {};
-    case "pantry":
-      return { scope: "list" };
-    case "diary":
-      return { scope: "day", date: frame.temporalAnchor };
-    case "meals":
-      return { scope: "list" };
-    case "nutrition-knowledge":
-      if (frame.currentFoodSlug) return { scope: "food", slug: frame.currentFoodSlug };
-      return { scope: "foods" };
-    case "shopping":
-      return { scope: "list" };
-    case "household":
-      return { scope: "household" };
-    case "partners":
-      return { scope: "retailers" };
-    case "templates":
-      return { scope: "plan-templates" };
-    case "analyser":
-      return { scope: "additives" };
-    default:
-      return {};
-  }
-}
-
-// ---------------------------------------------------------------------------
 // Capability data querying (via intelligencePlatform only — no direct storage)
 // ---------------------------------------------------------------------------
 
 const CAP_DATA_MAX_CHARS = 1_800;
 
 /**
- * Query a single capability via intelligencePlatform.handle() and return its
- * result as a JSON string, or null if the capability returned a non-ok outcome.
- * Truncated to CAP_DATA_MAX_CHARS to prevent prompt bloat.
+ * Query a single resolved intent via intelligencePlatform.handle().
  *
- * Any thrown error is swallowed: one capability failure must not abort the turn.
+ * INT24 change: verb and parameters come from the ResolvedIntent, not from a
+ * hardcoded "read" verb. This allows "explain" (nutrition-knowledge) and
+ * "search" verbs to reach capability handlers and produce richer grounding data.
+ *
+ * Returns the handler result as a JSON string, or null if non-ok. Truncated to
+ * CAP_DATA_MAX_CHARS to prevent prompt bloat. Any thrown error is swallowed so
+ * one capability failure does not abort the entire turn.
  */
 async function queryCapability(
-  capId: string,
-  frame: ContextFrame,
+  intent: ResolvedIntent,
+  identity: ReturnType<typeof intelligencePlatform.contextFor>,
 ): Promise<string | null> {
   try {
-    const params = buildCapabilityParams(capId, frame);
     const outcome = await intelligencePlatform.handle(
-      { verb: "read", capabilityId: capId, parameters: params },
-      frame.identity,
+      {
+        verb:         intent.verb as IntentVerb,
+        capabilityId: intent.capability,
+        parameters:   { ...intent.parameters },
+      },
+      identity,
     );
     if (outcome.status === "ok" && outcome.result != null) {
       const raw = JSON.stringify(outcome.result);
@@ -250,9 +174,10 @@ async function queryCapability(
 
 /**
  * Build a grounded response for `utterance` using:
- *  - assembled capability data from intelligencePlatform (read-only)
- *  - bounded conversation history (last 5 prior turns)
- *  - gpt-4o-mini constrained to answer from context only
+ *  - Canonical Intent Resolver (INT24) for typed intent → capability routing
+ *  - Capability data assembled via intelligencePlatform.handle() (verb from resolver)
+ *  - Bounded conversation history (last 5 prior turns)
+ *  - The injected ILlmProvider constrained to answer from context only
  *
  * Returns: plain text + entity refs + optional platform outcome.
  */
@@ -261,9 +186,10 @@ async function buildGroundedResponse(
   frame: ContextFrame,
   recentHistory: ConversationTurn[],
   llmProvider: ILlmProvider,
+  intentResolver: IIntentResolver,
 ): Promise<{ text: string; entityRefs: EntityRef[]; outcome?: IntentOutcome }> {
 
-  // Write-intent guard (INT18 Risk R4) — honest gap, no LLM call
+  // Write-intent guard (INT18 Risk R4 / INT24) — honest gap, no resolver, no LLM
   const writeAction = detectWriteIntent(utterance);
   if (writeAction) {
     return {
@@ -283,14 +209,25 @@ async function buildGroundedResponse(
     };
   }
 
-  // Select and query relevant capabilities
-  const capIds = selectCapabilities(utterance, frame.surface);
+  // INT24: resolve typed intents via the Canonical Intent Engine (platform service)
+  const hints: IntentResolutionHints = {
+    surface:             frame.surface,
+    temporalAnchor:      frame.temporalAnchor,
+    currentFoodSlug:     frame.currentFoodSlug,
+    activePlannerWeekId: frame.activePlannerWeekId,
+    selectedMealId:      frame.selectedMealId,
+  };
+  const resolvedIntents = await intentResolver.resolve(utterance, hints);
+
+  // Query each resolved intent through the platform (verb from resolver, not hardcoded)
   const capData: Record<string, string> = {};
   await Promise.all(
-    capIds.map(async (capId) => {
-      const data = await queryCapability(capId, frame);
-      if (data) capData[capId] = data;
-    }),
+    resolvedIntents
+      .filter(ri => !ri.gap)
+      .map(async (ri) => {
+        const data = await queryCapability(ri, frame.identity);
+        if (data) capData[ri.capability] = data;
+      }),
   );
 
   // Assemble context sections for the prompt
@@ -381,20 +318,26 @@ entityRefs must ONLY contain items that appear in the context data above with a 
  * The Conversation Gateway — orchestrates the full per-turn pipeline.
  * Instantiated with an IConversationStore so tests can inject an in-memory store.
  * Production code imports and uses the `conversationGateway` singleton.
+ *
+ * INT24: constructor accepts an optional IIntentResolver. Defaults to the
+ * production patternIntentResolver singleton. Tests may inject a stub.
  */
 export class ConversationGateway {
   private readonly llmProvider: ILlmProvider;
+  private readonly intentResolver: IIntentResolver;
 
   constructor(
     private readonly store: IConversationStore,
     llmProvider?: ILlmProvider,
+    intentResolver?: IIntentResolver,
   ) {
     this.llmProvider = llmProvider ?? createDefaultLlmProvider();
+    this.intentResolver = intentResolver ?? patternIntentResolver;
   }
 
   /**
    * Process one user utterance end-to-end:
-   *   assemble context → record user turn → ground response → record assistant turn.
+   *   assemble context → record user turn → resolve intents → ground response → record assistant turn.
    *
    * Thread policy (Phase 1):
    *   - Reuse the active thread if one exists (no per-navigation fragmentation).
@@ -444,6 +387,7 @@ export class ConversationGateway {
       frame,
       priorTurns,
       this.llmProvider,
+      this.intentResolver,
     );
 
     // 6. Record assistant turn
@@ -500,7 +444,7 @@ export class ConversationGateway {
 /**
  * The production singleton. Routes import this — do not construct a second
  * gateway. Tests instantiate ConversationGateway directly with an
- * InMemoryConversationStore.
+ * InMemoryConversationStore (and optionally a resolver stub).
  */
 export const conversationGateway = new ConversationGateway(
   new DatabaseConversationStore(),

@@ -1,1 +1,2 @@
 - [INT18 LLM Provider pattern](int18-llm-provider.md) — gateway depends on ILlmProvider; inject stubs in tests, OpenAIProvider in prod via factory.
+- [INT24 Canonical Intent Resolver](int24-intent-resolver.md) — PatternIntentResolver is a platform-level singleton; gateway injects it via constructor; write guard fires BEFORE resolver; verb comes from ResolvedIntent not hardcoded.

@@ -4,6 +4,12 @@
  * Unit tests for the Conversation Gateway and Context Frame Assembler.
  * Uses InMemoryConversationStore — no database or OpenAI API required.
  *
+ * INT24 note: capability selection is now owned by the Canonical Intent Engine
+ * (PatternIntentResolver). Those tests live in test-intent-resolver.ts.
+ * This file covers: detectWriteIntent, ContextFrame assembly, ConversationGateway
+ * state management, write-intent guard, contextFrameRef pointer discipline,
+ * and listThreads.
+ *
  * Run: npx tsx server/tests/test-intelligence-conversation-gateway.ts
  */
 
@@ -14,7 +20,6 @@ import {
 import {
   ConversationGateway,
   detectWriteIntent,
-  selectCapabilities,
 } from "../intelligence/conversation/conversation-gateway.js";
 import {
   assembleContextFrame,
@@ -114,98 +119,7 @@ async function main(): Promise<void> {
     "pantry question is not flagged as write",
   );
 
-  // ── § 2 — selectCapabilities ────────────────────────────────────────────
-  section("selectCapabilities");
-
-  {
-    const caps = selectCapabilities("what meals do I have this week?", "planner");
-    assert(caps.includes("profile"), "planner surface: includes profile");
-    assert(caps.includes("planner"), "planner surface: includes planner");
-    assert(caps.length <= 4,         "planner surface: cap at 4");
-  }
-
-  {
-    const caps = selectCapabilities("show me my shopping list", "shopping");
-    assert(caps.includes("shopping"), "shopping surface: includes shopping");
-    assert(caps.includes("profile"),  "shopping surface: includes profile");
-  }
-
-  {
-    const caps = selectCapabilities("what's in my pantry?", "floating");
-    assert(caps.includes("pantry"),  "floating + pantry keyword: includes pantry");
-    assert(caps.includes("profile"), "floating surface: always includes profile");
-  }
-
-  {
-    const caps = selectCapabilities("hi there", "floating");
-    assert(caps.includes("profile"), "neutral utterance: includes profile");
-    assert(caps.length <= 4,         "neutral utterance: cap at 4");
-  }
-
-  {
-    const caps = selectCapabilities(
-      "what meals and shopping and pantry and diary do I have?",
-      "floating",
-    );
-    assert(caps.length <= 4, "many keywords: still capped at 4");
-  }
-
-  // RC-3: keyword routing for previously-unroutable caps
-  {
-    const caps = selectCapabilities("what vitamins are good for energy?", "floating");
-    assert(caps.includes("nutrition-knowledge"), "keyword 'vitamin': routes to nutrition-knowledge");
-    assert(caps.includes("profile"),             "keyword 'vitamin': profile always present");
-    assert(caps.length <= 4,                     "keyword 'vitamin': cap at 4");
-  }
-
-  {
-    const caps = selectCapabilities("tell me about nutrients in spinach", "floating");
-    assert(caps.includes("nutrition-knowledge"), "keyword 'nutrient': routes to nutrition-knowledge");
-  }
-
-  {
-    const caps = selectCapabilities("do I have any plan templates?", "floating");
-    assert(caps.includes("templates"), "keyword 'template': routes to templates");
-    assert(caps.includes("profile"),   "keyword 'template': profile always present");
-  }
-
-  {
-    const caps = selectCapabilities("what additives should I watch out for?", "floating");
-    assert(caps.includes("analyser"), "keyword 'additive': routes to analyser");
-    assert(caps.includes("profile"),  "keyword 'additive': profile always present");
-  }
-
-  {
-    const caps = selectCapabilities("what UPF classification does it have?", "floating");
-    assert(caps.includes("analyser"), "keyword 'upf': routes to analyser");
-  }
-
-  {
-    const caps = selectCapabilities("which supermarkets does THA support?", "floating");
-    assert(caps.includes("partners"), "keyword 'supermarket': routes to partners");
-    assert(caps.includes("profile"),  "keyword 'supermarket': profile always present");
-  }
-
-  {
-    const caps = selectCapabilities("what retailers can I export to?", "floating");
-    assert(caps.includes("partners"), "keyword 'retailer': routes to partners");
-  }
-
-  // RC-3: named surfaces still select their primary despite new keywords
-  {
-    const caps = selectCapabilities("tell me about additives", "analyser");
-    assert(caps.includes("analyser"),  "analyser surface: primary cap always present");
-    assert(caps.includes("profile"),   "analyser surface: profile always present");
-    assert(caps.length <= 4,           "analyser surface: cap at 4");
-  }
-
-  {
-    const caps = selectCapabilities("show me my templates", "templates");
-    assert(caps.includes("templates"), "templates surface: primary cap always present");
-    assert(caps.includes("profile"),   "templates surface: profile always present");
-  }
-
-  // ── § 3 — serializeFrameRef (pointer discipline) ─────────────────────────
+  // ── § 2 — serializeFrameRef (pointer discipline) ─────────────────────────
   section("serializeFrameRef — pointer discipline");
 
   {
@@ -245,7 +159,7 @@ async function main(): Promise<void> {
     assert(ref.currentFoodSlug     === null, "absent currentFoodSlug → null");
   }
 
-  // ── § 4 — assembleContextFrame (surface hint priority) ───────────────────
+  // ── § 3 — assembleContextFrame (surface hint priority) ───────────────────
   section("assembleContextFrame — surface hint priority");
 
   {
@@ -275,7 +189,7 @@ async function main(): Promise<void> {
     );
   }
 
-  // ── § 5 — ConversationGateway state management ───────────────────────────
+  // ── § 4 — ConversationGateway state management ───────────────────────────
   section("ConversationGateway — state management (InMemory, no LLM)");
 
   {
@@ -325,7 +239,7 @@ async function main(): Promise<void> {
     assert(t2[0].surface === "shopping","thread surface matches turn surface");
   }
 
-  // ── § 6 — Write intent guard ─────────────────────────────────────────────
+  // ── § 5 — Write intent guard ─────────────────────────────────────────────
   section("Write intent guard — honest gap response");
 
   {
@@ -352,7 +266,7 @@ async function main(): Promise<void> {
     );
   }
 
-  // ── § 7 — contextFrameRef pointer discipline ─────────────────────────────
+  // ── § 6 — contextFrameRef pointer discipline ─────────────────────────────
   section("contextFrameRef pointer discipline in stored turns");
 
   {
@@ -372,7 +286,7 @@ async function main(): Promise<void> {
     }
   }
 
-  // ── § 8 — listThreads ────────────────────────────────────────────────────
+  // ── § 7 — listThreads ────────────────────────────────────────────────────
   section("listThreads — IConversationStore extension");
 
   {
