@@ -151,12 +151,16 @@ export function selectCapabilities(
   const primary = SURFACE_CAP[surface];
   if (primary) caps.add(primary);
 
-  if (/\b(planner|week|plan|schedule|meal.{0,10}week)\b/.test(l))   caps.add("planner");
-  if (/\b(shop|basket|grocery|groceries|buy|list)\b/.test(l))       caps.add("shopping");
-  if (/\b(pantry|fridge|freezer|larder|cupboard|stock)\b/.test(l))  caps.add("pantry");
-  if (/\b(diary|log|logged|tracked|weight|mood|sleep|energy)\b/.test(l)) caps.add("diary");
-  if (/\b(household|family|member|housemate|everyone)\b/.test(l))   caps.add("household");
-  if (/\b(recipe|meal|cook|dish|ingredient)\b/.test(l))             caps.add("meals");
+  if (/\b(planner|week|plan|schedule|meal.{0,10}week)\b/.test(l))          caps.add("planner");
+  if (/\b(shop|basket|grocery|groceries|buy|list)\b/.test(l))              caps.add("shopping");
+  if (/\b(pantry|fridge|freezer|larder|cupboard|stock)\b/.test(l))        caps.add("pantry");
+  if (/\b(diary|log|logged|tracked|weight|mood|sleep|energy)\b/.test(l))  caps.add("diary");
+  if (/\b(household|family|member|housemate|everyone)\b/.test(l))         caps.add("household");
+  if (/\b(recipe|meal|cook|dish|ingredient)\b/.test(l))                   caps.add("meals");
+  if (/\b(nutrients?|vitamins?|minerals?|nutrition|nutritional|benefit)\b/.test(l)) caps.add("nutrition-knowledge");
+  if (/\b(template|templates)\b/.test(l))                                 caps.add("templates");
+  if (/\b(additive|additives|e.?number|upf|ultra.processed|nova)\b/.test(l)) caps.add("analyser");
+  if (/\b(retailer|retailers|supermarket|supermarkets)\b/.test(l))        caps.add("partners");
 
   // Hard cap at 4 to bound per-turn latency
   return Array.from(caps).slice(0, 4);
@@ -189,7 +193,17 @@ function buildCapabilityParams(
       return { scope: "list" };
     case "nutrition-knowledge":
       if (frame.currentFoodSlug) return { scope: "food", slug: frame.currentFoodSlug };
-      return { scope: "list-foods" };
+      return { scope: "foods" };
+    case "shopping":
+      return { scope: "list" };
+    case "household":
+      return { scope: "household" };
+    case "partners":
+      return { scope: "retailers" };
+    case "templates":
+      return { scope: "plan-templates" };
+    case "analyser":
+      return { scope: "additives" };
     default:
       return {};
   }

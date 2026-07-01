@@ -150,6 +150,61 @@ async function main(): Promise<void> {
     assert(caps.length <= 4, "many keywords: still capped at 4");
   }
 
+  // RC-3: keyword routing for previously-unroutable caps
+  {
+    const caps = selectCapabilities("what vitamins are good for energy?", "floating");
+    assert(caps.includes("nutrition-knowledge"), "keyword 'vitamin': routes to nutrition-knowledge");
+    assert(caps.includes("profile"),             "keyword 'vitamin': profile always present");
+    assert(caps.length <= 4,                     "keyword 'vitamin': cap at 4");
+  }
+
+  {
+    const caps = selectCapabilities("tell me about nutrients in spinach", "floating");
+    assert(caps.includes("nutrition-knowledge"), "keyword 'nutrient': routes to nutrition-knowledge");
+  }
+
+  {
+    const caps = selectCapabilities("do I have any plan templates?", "floating");
+    assert(caps.includes("templates"), "keyword 'template': routes to templates");
+    assert(caps.includes("profile"),   "keyword 'template': profile always present");
+  }
+
+  {
+    const caps = selectCapabilities("what additives should I watch out for?", "floating");
+    assert(caps.includes("analyser"), "keyword 'additive': routes to analyser");
+    assert(caps.includes("profile"),  "keyword 'additive': profile always present");
+  }
+
+  {
+    const caps = selectCapabilities("what UPF classification does it have?", "floating");
+    assert(caps.includes("analyser"), "keyword 'upf': routes to analyser");
+  }
+
+  {
+    const caps = selectCapabilities("which supermarkets does THA support?", "floating");
+    assert(caps.includes("partners"), "keyword 'supermarket': routes to partners");
+    assert(caps.includes("profile"),  "keyword 'supermarket': profile always present");
+  }
+
+  {
+    const caps = selectCapabilities("what retailers can I export to?", "floating");
+    assert(caps.includes("partners"), "keyword 'retailer': routes to partners");
+  }
+
+  // RC-3: named surfaces still select their primary despite new keywords
+  {
+    const caps = selectCapabilities("tell me about additives", "analyser");
+    assert(caps.includes("analyser"),  "analyser surface: primary cap always present");
+    assert(caps.includes("profile"),   "analyser surface: profile always present");
+    assert(caps.length <= 4,           "analyser surface: cap at 4");
+  }
+
+  {
+    const caps = selectCapabilities("show me my templates", "templates");
+    assert(caps.includes("templates"), "templates surface: primary cap always present");
+    assert(caps.includes("profile"),   "templates surface: profile always present");
+  }
+
   // ── § 3 — serializeFrameRef (pointer discipline) ─────────────────────────
   section("serializeFrameRef — pointer discipline");
 
