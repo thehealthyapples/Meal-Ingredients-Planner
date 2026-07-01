@@ -480,6 +480,210 @@ const NUTRITION_DISCOVERY_MATCHERS: Matcher[] = [
 ];
 
 // ---------------------------------------------------------------------------
+// Planner Discovery (INT28) — search for meals within the user's planner
+// ---------------------------------------------------------------------------
+
+const PLANNER_DISCOVERY_MATCHERS: Matcher[] = [
+  // "search my plan for chicken" / "search my meal plan for pasta"
+  (u) => {
+    if (!/\bsearch\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?\s+for\s+\S/i.test(u)) return null;
+    return { capability: "planner-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.90 };
+  },
+
+  // "find chicken in my plan" / "find pasta in my meal planner"
+  (u) => {
+    if (!/\bfind\s+.+\s+in\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?\b/i.test(u)) return null;
+    return { capability: "planner-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.88 };
+  },
+
+  // "is pasta in my plan?" / "is chicken planned this week?"
+  (u) => {
+    if (!/\bis\s+\S.+\s+(?:in\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?|planned(?:\s+this\s+week)?)\b/i.test(u)) return null;
+    return { capability: "planner-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.86 };
+  },
+
+  // "look for X in my planner"
+  (u) => {
+    if (!/\blook\s+for\s+.+\s+in\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?\b/i.test(u)) return null;
+    return { capability: "planner-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.85 };
+  },
+
+  // "do I have chicken planned?" / "do I have pasta in my plan?"
+  (u) => {
+    if (!/\bdo\s+I\s+have\s+\S.+\s+(?:planned|in\s+(?:my\s+)?(?:meal\s+)?plan(?:ner)?)\b/i.test(u)) return null;
+    return { capability: "planner-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.85 };
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Pantry Discovery (INT31) — search the user's pantry
+// ---------------------------------------------------------------------------
+
+const PANTRY_DISCOVERY_MATCHERS: Matcher[] = [
+  // "what's in my pantry?" / "what is in my pantry?"
+  (u) => {
+    if (!/\bwhat(?:'s|\s+is)\s+in\s+(?:my\s+)?pantry\b/i.test(u)) return null;
+    return { capability: "pantry-discovery", verb: "search", parameters: { query: "" }, confidence: 0.93 };
+  },
+
+  // "search my pantry for flour" / "find flour in my pantry"
+  (u) => {
+    if (!/\b(?:search|find)\s+(?:my\s+)?pantry\s+for\s+\S/i.test(u)) return null;
+    return { capability: "pantry-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.91 };
+  },
+
+  // "find flour in my pantry"
+  (u) => {
+    if (!/\bfind\s+.+\s+in\s+(?:my\s+)?pantry\b/i.test(u)) return null;
+    return { capability: "pantry-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.89 };
+  },
+
+  // "do I have flour in my pantry?" / "do I have oil?"
+  (u) => {
+    if (!/\bdo\s+I\s+have\s+\S.+\s+in\s+(?:my\s+)?pantry\b/i.test(u)) return null;
+    return { capability: "pantry-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.88 };
+  },
+
+  // "is flour in my pantry?"
+  (u) => {
+    if (!/\bis\s+\S.+\s+in\s+(?:my\s+)?pantry\b/i.test(u)) return null;
+    return { capability: "pantry-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.86 };
+  },
+
+  // "show me my pantry" / "list my pantry items"
+  (u) => {
+    if (!/\b(?:show\s+(?:me\s+)?(?:my\s+)?pantry|list\s+(?:my\s+)?pantry\s+items?)\b/i.test(u)) return null;
+    return { capability: "pantry-discovery", verb: "search", parameters: { query: "" }, confidence: 0.87 };
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Diary Discovery (INT32) — search the user's food diary
+// ---------------------------------------------------------------------------
+
+const DIARY_DISCOVERY_MATCHERS: Matcher[] = [
+  // "search my diary for chicken" / "find chicken in my diary"
+  (u) => {
+    if (!/\b(?:search|find)\s+(?:my\s+)?(?:food\s+)?diary\s+for\s+\S/i.test(u)) return null;
+    return { capability: "diary-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.91 };
+  },
+
+  // "find chicken in my food diary"
+  (u) => {
+    if (!/\bfind\s+.+\s+in\s+(?:my\s+)?(?:food\s+)?diary\b/i.test(u)) return null;
+    return { capability: "diary-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.89 };
+  },
+
+  // "what have I eaten?" / "what have I logged?"
+  (u) => {
+    if (!/\bwhat\s+have\s+I\s+(?:eaten|logged|recorded|tracked)\b/i.test(u)) return null;
+    return { capability: "diary-discovery", verb: "search", parameters: { query: "" }, confidence: 0.88 };
+  },
+
+  // "show me my diary" / "show my food diary" / "list my diary entries"
+  (u) => {
+    if (!/\b(?:show\s+(?:me\s+)?(?:my\s+)?(?:food\s+)?diary|list\s+(?:my\s+)?diary\s+entries?)\b/i.test(u)) return null;
+    return { capability: "diary-discovery", verb: "search", parameters: { query: "" }, confidence: 0.87 };
+  },
+
+  // "have I eaten chicken?" / "have I logged pasta?"
+  (u) => {
+    if (!/\bhave\s+I\s+(?:eaten|logged|had|eaten\s+any)\s+\S/i.test(u)) return null;
+    return { capability: "diary-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.86 };
+  },
+
+  // "did I eat chicken yesterday?" / "did I have pasta last week?"
+  (u) => {
+    if (!/\bdid\s+I\s+(?:eat|have|log)\s+\S/i.test(u)) return null;
+    return { capability: "diary-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.85 };
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Shopping Discovery (INT30) — search the user's shopping list
+// ---------------------------------------------------------------------------
+
+const SHOPPING_DISCOVERY_MATCHERS: Matcher[] = [
+  // "what's on my shopping list?" / "what is on my shopping list?"
+  (u) => {
+    if (!/\bwhat(?:'s|\s+is)\s+on\s+(?:my\s+)?shopping\s+list\b/i.test(u)) return null;
+    return { capability: "shopping-discovery", verb: "search", parameters: { query: "" }, confidence: 0.92 };
+  },
+
+  // "search my shopping list for chicken" / "find chicken on my shopping list"
+  (u) => {
+    if (!/\b(?:search|find)\s+(?:my\s+)?shopping\s+list\s+(?:for|for\s+\S)/i.test(u)) return null;
+    return { capability: "shopping-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.91 };
+  },
+
+  // "find chicken on my shopping list"
+  (u) => {
+    if (!/\bfind\s+.+\s+on\s+(?:my\s+)?shopping\s+list\b/i.test(u)) return null;
+    return { capability: "shopping-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.89 };
+  },
+
+  // "is chicken on my shopping list?" / "is pasta on my list?"
+  (u) => {
+    if (!/\bis\s+\S.+\s+on\s+(?:my\s+)?(?:shopping\s+)?list\b/i.test(u)) return null;
+    return { capability: "shopping-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.87 };
+  },
+
+  // "show me my shopping list" / "list my shopping items"
+  (u) => {
+    if (!/\b(?:show\s+(?:me\s+)?(?:my\s+)?shopping\s+list|list\s+(?:my\s+)?shopping\s+items?)\b/i.test(u)) return null;
+    return { capability: "shopping-discovery", verb: "search", parameters: { query: "" }, confidence: 0.88 };
+  },
+
+  // "do I have chicken on my shopping list?"
+  (u) => {
+    if (!/\bdo\s+I\s+have\s+\S.+\s+on\s+(?:my\s+)?(?:shopping\s+)?list\b/i.test(u)) return null;
+    return { capability: "shopping-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.86 };
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Household Discovery (INT29) — search members of the user's household
+// ---------------------------------------------------------------------------
+
+const HOUSEHOLD_DISCOVERY_MATCHERS: Matcher[] = [
+  // "who is in my household?" / "who's in my household?"
+  (u) => {
+    if (!/\bwho(?:'s|\s+is)\s+in\s+(?:my\s+)?household\b/i.test(u)) return null;
+    return { capability: "household-discovery", verb: "search", parameters: { query: "" }, confidence: 0.92 };
+  },
+
+  // "list my household members" / "show me my household members"
+  (u) => {
+    if (!/\b(?:list|show)\s+(?:me\s+)?(?:my\s+)?household\s+members\b/i.test(u)) return null;
+    return { capability: "household-discovery", verb: "search", parameters: { query: "" }, confidence: 0.90 };
+  },
+
+  // "search my household for dairy allergy" / "find vegan members in my household"
+  (u) => {
+    if (!/\b(?:search|find)\s+(?:my\s+)?household\s+(?:for|members?\s+with)\b/i.test(u)) return null;
+    return { capability: "household-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.90 };
+  },
+
+  // "find members with gluten allergy in my household"
+  (u) => {
+    if (!/\bfind\s+members?\s+with\s+.+\s+in\s+(?:my\s+)?household\b/i.test(u)) return null;
+    return { capability: "household-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.88 };
+  },
+
+  // "what dietary restrictions does my household have?"
+  (u) => {
+    if (!/\bwhat\s+(?:dietary|diet|food)\s+(?:restrictions?|requirements?|preferences?)\s+does\s+(?:my\s+)?household\s+have\b/i.test(u)) return null;
+    return { capability: "household-discovery", verb: "search", parameters: { query: "" }, confidence: 0.88 };
+  },
+
+  // "does anyone in my household have a nut allergy?"
+  (u) => {
+    if (!/\bdoes\s+anyone\s+in\s+(?:my\s+)?household\b/i.test(u)) return null;
+    return { capability: "household-discovery", verb: "search", parameters: { query: u.trim() }, confidence: 0.86 };
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Planner
 // ---------------------------------------------------------------------------
 
@@ -767,6 +971,16 @@ const ALL_SPECIFIC_MATCHERS: Matcher[] = [
   ...NUTRITION_KNOWLEDGE_SEARCH_MATCHERS,  // INT26: open nutrient/benefit search
   // Nutrition discovery — macro-filtered meal search (INT27)
   ...NUTRITION_DISCOVERY_MATCHERS,
+  // Planner discovery — search for meals within the planner (INT28)
+  ...PLANNER_DISCOVERY_MATCHERS,
+  // Household discovery — search members, dietary preferences, allergens (INT29)
+  ...HOUSEHOLD_DISCOVERY_MATCHERS,
+  // Shopping discovery — search shopping list items by name or category (INT30)
+  ...SHOPPING_DISCOVERY_MATCHERS,
+  // Pantry discovery — search pantry items by name or ingredient key (INT31)
+  ...PANTRY_DISCOVERY_MATCHERS,
+  // Diary discovery — search food diary entries by food name (INT32)
+  ...DIARY_DISCOVERY_MATCHERS,
   // All other capabilities
   ...PLANNER_MATCHERS,
   ...SHOPPING_MATCHERS,

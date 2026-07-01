@@ -50,6 +50,11 @@ import {
   MEAL_DISCOVERY_BINDING_EXECUTABLE_INTENTS,
   NUTRITION_DISCOVERY_CAPABILITY_ID,
   NUTRITION_DISCOVERY_BINDING_EXECUTABLE_INTENTS,
+  PLANNER_DISCOVERY_CAPABILITY_ID,
+  HOUSEHOLD_DISCOVERY_CAPABILITY_ID,
+  SHOPPING_DISCOVERY_CAPABILITY_ID,
+  PANTRY_DISCOVERY_CAPABILITY_ID,
+  DIARY_DISCOVERY_CAPABILITY_ID,
 } from "../intelligence/index.js";
 import type { CapabilityHandler, IntentVerb } from "../intelligence/index.js";
 
@@ -504,12 +509,17 @@ assert(
     execCapIds.includes(TEMPLATES_CAPABILITY_ID) &&
     execCapIds.includes(ANALYSER_CAPABILITY_ID) &&
     execCapIds.includes(MEAL_DISCOVERY_CAPABILITY_ID) &&
-    execCapIds.includes(NUTRITION_DISCOVERY_CAPABILITY_ID),
-  "listExecutableCapabilities() includes pantry, diary, profile, household, partners, meals, templates, analyser, meal-discovery and nutrition-discovery",
+    execCapIds.includes(NUTRITION_DISCOVERY_CAPABILITY_ID) &&
+    execCapIds.includes(PLANNER_DISCOVERY_CAPABILITY_ID) &&
+    execCapIds.includes(HOUSEHOLD_DISCOVERY_CAPABILITY_ID) &&
+    execCapIds.includes(SHOPPING_DISCOVERY_CAPABILITY_ID) &&
+    execCapIds.includes(PANTRY_DISCOVERY_CAPABILITY_ID) &&
+    execCapIds.includes(DIARY_DISCOVERY_CAPABILITY_ID),
+  "listExecutableCapabilities() includes pantry, diary, profile, household, partners, meals, templates, analyser, meal-discovery, nutrition-discovery, planner-discovery, household-discovery, shopping-discovery, pantry-discovery and diary-discovery",
 );
 assert(
-  execCapabilities.length === 13,
-  "listExecutableCapabilities() returns exactly 13 (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery) — scope lock (updated by INT27)",
+  execCapabilities.length === 18,
+  "listExecutableCapabilities() returns exactly 14 (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery) — scope lock (updated by INT32)",
   String(execCapabilities.length),
 );
 assert(

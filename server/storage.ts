@@ -1,7 +1,7 @@
 import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent, pantryIngredientKnowledge, PantryIngredientKnowledge, mealUpliftApplications, MealUpliftApplication, InsertMealUpliftApplication, weekProvisioningItems, WeekProvisioningItem } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { db } from "./db";
-import { eq, and, ilike, or, sql, inArray, isNull, isNotNull } from "drizzle-orm";
+import { eq, and, ilike, or, sql, inArray, isNull, isNotNull, desc } from "drizzle-orm";
 import { getHouseholdForUser } from "./lib/household";
 import { resolvePlannerComplianceContext, isComplianceActive, isMealCompliantForUser } from "./lib/planner-compliance";
 import session from "express-session";
@@ -285,6 +285,7 @@ export interface IStorage {
   getFoodDiaryMetrics(userId: number, date: string): Promise<FoodDiaryMetrics | null>;
   upsertFoodDiaryMetrics(userId: number, date: string, data: Partial<InsertFoodDiaryMetrics>): Promise<FoodDiaryMetrics>;
   getFoodDiaryMetricsTrends(userId: number, days?: number): Promise<FoodDiaryMetrics[]>;
+  getDiaryEntriesForDiscovery(userId: number): Promise<Array<{ id: number; userId: number; mealSlot: string; name: string; date: string }>>;
 
   // ── Savings Events ────────────────────────────────────────────────────────────
   createSavingsEvent(userId: number, data: InsertSavingsEvent): Promise<SavingsEvent>;
@@ -3003,6 +3004,23 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(foodDiaryMetrics)
       .where(and(eq(foodDiaryMetrics.userId, userId), sql`${foodDiaryMetrics.date} >= ${cutoffStr}`))
       .orderBy(foodDiaryMetrics.date);
+  }
+
+  async getDiaryEntriesForDiscovery(userId: number): Promise<Array<{ id: number; userId: number; mealSlot: string; name: string; date: string }>> {
+    const rows = await db
+      .select({
+        id: foodDiaryEntries.id,
+        userId: foodDiaryEntries.userId,
+        mealSlot: foodDiaryEntries.mealSlot,
+        name: foodDiaryEntries.name,
+        date: foodDiaryDays.date,
+      })
+      .from(foodDiaryEntries)
+      .innerJoin(foodDiaryDays, eq(foodDiaryEntries.dayId, foodDiaryDays.id))
+      .where(eq(foodDiaryEntries.userId, userId))
+      .orderBy(desc(foodDiaryDays.date))
+      .limit(500);
+    return rows;
   }
 
   async bulkUpsertFoodDiaryMetrics(

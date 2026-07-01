@@ -225,6 +225,91 @@ export {
   type ParsedNutrition,
 } from "./handlers/nutrition-discovery-port.js";
 
+// INT28 — fourteenth live capability binding (Planner Discovery — search across all planner weeks).
+export {
+  bindPlannerDiscoveryCapability,
+  PLANNER_DISCOVERY_CAPABILITY_ID,
+  PLANNER_DISCOVERY_BINDING_EXECUTABLE_INTENTS,
+} from "./bindings/planner-discovery.js";
+export {
+  createPlannerDiscoveryHandler,
+  PLANNER_DISCOVERY_EXECUTABLE_INTENTS,
+} from "./handlers/planner-discovery-handler.js";
+export {
+  createProductionPlannerDiscoveryPort,
+  type PlannerDiscoveryPort,
+  type PlannerDiscoveryItem,
+  type PlannerDiscoverySearchResult,
+} from "./handlers/planner-discovery-port.js";
+
+// INT32 — eighteenth live capability binding (Diary Discovery — search food diary entries).
+export {
+  bindDiaryDiscoveryCapability,
+  DIARY_DISCOVERY_CAPABILITY_ID,
+  DIARY_DISCOVERY_BINDING_EXECUTABLE_INTENTS,
+} from "./bindings/diary-discovery.js";
+export {
+  createDiaryDiscoveryHandler,
+  DIARY_DISCOVERY_EXECUTABLE_INTENTS,
+} from "./handlers/diary-discovery-handler.js";
+export {
+  createProductionDiaryDiscoveryPort,
+  type DiaryDiscoveryPort,
+  type DiaryDiscoveryItem,
+  type DiaryDiscoverySearchResult,
+} from "./handlers/diary-discovery-port.js";
+
+// INT31 — seventeenth live capability binding (Pantry Discovery — search pantry items).
+export {
+  bindPantryDiscoveryCapability,
+  PANTRY_DISCOVERY_CAPABILITY_ID,
+  PANTRY_DISCOVERY_BINDING_EXECUTABLE_INTENTS,
+} from "./bindings/pantry-discovery.js";
+export {
+  createPantryDiscoveryHandler,
+  PANTRY_DISCOVERY_EXECUTABLE_INTENTS,
+} from "./handlers/pantry-discovery-handler.js";
+export {
+  createProductionPantryDiscoveryPort,
+  type PantryDiscoveryPort,
+  type PantryDiscoveryItem,
+  type PantryDiscoverySearchResult,
+} from "./handlers/pantry-discovery-port.js";
+
+// INT30 — sixteenth live capability binding (Shopping Discovery — search shopping list items).
+export {
+  bindShoppingDiscoveryCapability,
+  SHOPPING_DISCOVERY_CAPABILITY_ID,
+  SHOPPING_DISCOVERY_BINDING_EXECUTABLE_INTENTS,
+} from "./bindings/shopping-discovery.js";
+export {
+  createShoppingDiscoveryHandler,
+  SHOPPING_DISCOVERY_EXECUTABLE_INTENTS,
+} from "./handlers/shopping-discovery-handler.js";
+export {
+  createProductionShoppingDiscoveryPort,
+  type ShoppingDiscoveryPort,
+  type ShoppingDiscoveryItem,
+  type ShoppingDiscoverySearchResult,
+} from "./handlers/shopping-discovery-port.js";
+
+// INT29 — fifteenth live capability binding (Household Discovery — search members, diet types, and allergens).
+export {
+  bindHouseholdDiscoveryCapability,
+  HOUSEHOLD_DISCOVERY_CAPABILITY_ID,
+  HOUSEHOLD_DISCOVERY_BINDING_EXECUTABLE_INTENTS,
+} from "./bindings/household-discovery.js";
+export {
+  createHouseholdDiscoveryHandler,
+  HOUSEHOLD_DISCOVERY_EXECUTABLE_INTENTS,
+} from "./handlers/household-discovery-handler.js";
+export {
+  createProductionHouseholdDiscoveryPort,
+  type HouseholdDiscoveryPort,
+  type HouseholdDiscoveryItem,
+  type HouseholdDiscoverySearchResult,
+} from "./handlers/household-discovery-port.js";
+
 // INT17 — eleventh live capability binding (read-only Analyser).
 export { bindAnalyserReadCapability, ANALYSER_CAPABILITY_ID, ANALYSER_EXECUTABLE_INTENTS } from "./bindings/analyser.js";
 export {

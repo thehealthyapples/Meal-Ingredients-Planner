@@ -100,6 +100,11 @@ import { bindTemplatesReadCapability } from "./bindings/templates.js";
 import { bindAnalyserReadCapability } from "./bindings/analyser.js";
 import { bindMealDiscoveryCapability } from "./bindings/meal-discovery.js";
 import { bindNutritionDiscoveryCapability } from "./bindings/nutrition-discovery.js";
+import { bindPlannerDiscoveryCapability } from "./bindings/planner-discovery.js";
+import { bindHouseholdDiscoveryCapability } from "./bindings/household-discovery.js";
+import { bindShoppingDiscoveryCapability } from "./bindings/shopping-discovery.js";
+import { bindPantryDiscoveryCapability } from "./bindings/pantry-discovery.js";
+import { bindDiaryDiscoveryCapability } from "./bindings/diary-discovery.js";
 import type {
   Capability,
   CapabilityHandler,
@@ -202,7 +207,9 @@ export class IntelligencePlatform {
  * Analyser binding, scoped only to the static additives reference table. INT26 (second
  * workstream) activates the twelfth: the read-only Meal Discovery binding. INT27 activates
  * the thirteenth: the read-only Nutrition Discovery binding, which filters user and system
- * meals by calorie/macro thresholds via NutritionDiscoveryEngine. All register handlers
+ * meals by calorie/macro thresholds via NutritionDiscoveryEngine. INT28 activates the
+ * fourteenth: the read-only Planner Discovery binding, which fans out across all planner
+ * weeks and resolves meal names to find planned meals matching a search query. All register handlers
  * whose owning-service imports are lazy, so constructing the singleton still opens no
  * database connection.
  */
@@ -220,3 +227,8 @@ bindTemplatesReadCapability(intelligencePlatform);
 bindAnalyserReadCapability(intelligencePlatform);
 bindMealDiscoveryCapability(intelligencePlatform);
 bindNutritionDiscoveryCapability(intelligencePlatform);
+bindPlannerDiscoveryCapability(intelligencePlatform);
+bindHouseholdDiscoveryCapability(intelligencePlatform);
+bindShoppingDiscoveryCapability(intelligencePlatform);
+bindPantryDiscoveryCapability(intelligencePlatform);
+bindDiaryDiscoveryCapability(intelligencePlatform);

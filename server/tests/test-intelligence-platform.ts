@@ -48,7 +48,7 @@ async function main(): Promise<void> {
 
   section("Capability discovery (one canonical registry)");
   const caps = platform.listCapabilities();
-  assert(caps.length === 15, "all 15 canonical capabilities registered (INT27 adds nutrition-discovery)", `got ${caps.length}`);
+  assert(caps.length === 20, "all 20 canonical capabilities registered (INT32 adds pantry-discovery + diary-discovery)", `got ${caps.length}`);
   assert(platform.getCapability("planner") !== undefined, "planner capability discoverable");
   assert(platform.getCapability("nutrition-knowledge") !== undefined, "nutrition-knowledge capability discoverable");
   assert(platform.getCapability("does-not-exist") === undefined, "unknown capability is absent");
