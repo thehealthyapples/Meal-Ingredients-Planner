@@ -1707,3 +1707,60 @@ export type FoodVariety = typeof foodVarieties.$inferSelect;
 export type InsertFoodVariety = z.infer<typeof insertFoodVarietySchema>;
 export type CanonicalFoodAlias = typeof canonicalFoodAliases.$inferSelect;
 export type InsertCanonicalFoodAlias = z.infer<typeof insertCanonicalFoodAliasSchema>;
+
+// ── Conversation Platform (INT18 Phase 0) ────────────────────────────────────
+// Three tables owned exclusively by ConversationStore.
+// One conversation per user; threads are context-coherent stretches within it;
+// turns are the atomic record.
+//
+// POINTER DISCIPLINE (TIP3 Risk R1): all JSONB columns store IDs/pointers only
+// — never business data rows. entity_refs = [{type,id}]; context_frame_ref =
+// {activePlannerWeekId, householdId, ...} (IDs only). Stale IDs surface as
+// honest gaps on re-render; the store never holds a second copy of truth.
+
+export const conversations = pgTable("conversations", {
+  id:        serial("id").primaryKey(),
+  userId:    integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }).unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const conversationThreads = pgTable("conversation_threads", {
+  id:             serial("id").primaryKey(),
+  conversationId: integer("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+  // 'floating' | 'planner' | 'shopping' | 'nutrition' | 'household' |
+  // 'pantry' | 'diary' | 'meals' | 'templates' | 'partners' | 'analyser' | 'voice'
+  surface:  text("surface").notNull(),
+  openedAt: timestamp("opened_at").notNull().defaultNow(),
+  closedAt: timestamp("closed_at"),  // null = still active
+});
+
+export const conversationTurns = pgTable("conversation_turns", {
+  id:       serial("id").primaryKey(),
+  threadId: integer("thread_id").notNull().references(() => conversationThreads.id, { onDelete: "cascade" }),
+  // 'user' | 'assistant' | 'system'
+  role:     text("role").notNull(),
+  surface:  text("surface").notNull(),
+  utterance: text("utterance").notNull(),
+  // Null for pure Q&A turns. {verb, capabilityId} for actioned intents.
+  resolvedIntent:  jsonb("resolved_intent"),
+  // Snapshot of POINTER IDs used this turn (not the data). Re-render re-reads
+  // the live entity by ID — this is the immutable record of "what was in scope".
+  contextFrameRef: jsonb("context_frame_ref"),
+  // [{type, id}] — powers pronoun resolution in follow-up turns.
+  entityRefs:  jsonb("entity_refs").notNull().default(sql`'[]'::jsonb`),
+  // {status, message} from IntentOutcome only — never the mutated row.
+  outcomeRef:  jsonb("outcome_ref"),
+  createdAt:   timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertConversationSchema = createInsertSchema(conversations).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertConversationThreadSchema = createInsertSchema(conversationThreads).omit({ id: true, openedAt: true });
+export const insertConversationTurnSchema = createInsertSchema(conversationTurns).omit({ id: true, createdAt: true });
+
+export type Conversation = typeof conversations.$inferSelect;
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type ConversationThread = typeof conversationThreads.$inferSelect;
+export type InsertConversationThread = z.infer<typeof insertConversationThreadSchema>;
+export type ConversationTurn = typeof conversationTurns.$inferSelect;
+export type InsertConversationTurn = z.infer<typeof insertConversationTurnSchema>;

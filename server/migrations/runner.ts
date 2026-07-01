@@ -1449,6 +1449,47 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // INT18 Phase 0 — Conversation Store.
+    // Adds three tables for the TIP3 Conversation Platform. All additive —
+    // no existing table, column or row is touched. Idempotent (IF NOT EXISTS).
+    //
+    // POINTER DISCIPLINE (TIP3 Risk R1): entity_refs, context_frame_ref, and
+    // outcome_ref store IDs/pointers only — never business data rows.
+    // ConversationStore is the sole owner of these tables; no other module writes.
+    id: "2026-07-01_int18_conversation_store",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS conversations (
+        id         SERIAL PRIMARY KEY,
+        user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        UNIQUE (user_id)
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS conversation_threads (
+        id              SERIAL PRIMARY KEY,
+        conversation_id INTEGER NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+        surface         TEXT NOT NULL,
+        opened_at       TIMESTAMP NOT NULL DEFAULT NOW(),
+        closed_at       TIMESTAMP
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS conversation_turns (
+        id                SERIAL PRIMARY KEY,
+        thread_id         INTEGER NOT NULL REFERENCES conversation_threads(id) ON DELETE CASCADE,
+        role              TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
+        surface           TEXT NOT NULL,
+        utterance         TEXT NOT NULL,
+        resolved_intent   JSONB,
+        context_frame_ref JSONB,
+        entity_refs       JSONB NOT NULL DEFAULT '[]',
+        outcome_ref       JSONB,
+        created_at        TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 
