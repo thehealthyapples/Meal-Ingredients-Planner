@@ -1490,6 +1490,91 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // OD1 — Opportunity Delivery Framework. Adds the single new store this
+    // framework owns: the delivery lifecycle of a Domain Intelligence
+    // opportunity (delivered/acknowledged/dismissed/accepted), keyed by
+    // (user_id, opportunity_id) — not conversation-turn-scoped, since these
+    // opportunities are ambient (generated from existing activity), not
+    // conversational. Additive only; no existing table or column touched.
+    id: "2026-07-03_opportunity_deliveries",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS opportunity_deliveries (
+        id            SERIAL PRIMARY KEY,
+        user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        opportunity_id TEXT NOT NULL,
+        capability_id TEXT NOT NULL,
+        domain        TEXT NOT NULL,
+        type          TEXT NOT NULL,
+        priority      TEXT NOT NULL,
+        surface       TEXT NOT NULL,
+        status        TEXT NOT NULL DEFAULT 'delivered',
+        delivered_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        resolved_at   TIMESTAMPTZ,
+        CONSTRAINT opportunity_deliveries_user_opportunity_unique UNIQUE (user_id, opportunity_id)
+      )`,
+      `CREATE INDEX IF NOT EXISTS opportunity_deliveries_user_status_idx ON opportunity_deliveries (user_id, status)`,
+    ],
+  },
+
+  {
+    // OD1 — Opportunity Delivery Framework: the one new user preference this
+    // framework respects. Empty array means no muting (honest default, never
+    // a fabricated preference).
+    id: "2026-07-03_user_preferences_muted_opportunity_types",
+    statements: [
+      "ALTER TABLE user_preferences ADD COLUMN IF NOT EXISTS muted_opportunity_types TEXT[] NOT NULL DEFAULT '{}'",
+    ],
+  },
+
+  {
+    // EL1 — Evidence & Learning Platform. Two new stores: the append-only
+    // capture of structured household outcomes, and the derived, confirmation-
+    // gated patterns detected over an accumulation of those outcomes. Additive
+    // only; no existing table or column touched. See
+    // server/intelligence/evidence-learning/evidence-learning-store.ts (sole owner).
+    id: "2026-07-03_evidence_and_learning_platform",
+    statements: [
+      `CREATE TABLE IF NOT EXISTS household_evidence_events (
+        id            SERIAL PRIMARY KEY,
+        household_id  INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+        domain        TEXT NOT NULL,
+        subject_type  TEXT NOT NULL,
+        subject_id    TEXT NOT NULL,
+        subject_key   TEXT NOT NULL,
+        outcome_type  TEXT NOT NULL,
+        direction     TEXT NOT NULL,
+        context       JSONB,
+        source_capability_id TEXT NOT NULL,
+        occurred_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        recorded_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )`,
+      `CREATE INDEX IF NOT EXISTS household_evidence_events_household_subject_idx ON household_evidence_events (household_id, domain, subject_type, subject_key)`,
+      `CREATE INDEX IF NOT EXISTS household_evidence_events_household_occurred_idx ON household_evidence_events (household_id, occurred_at)`,
+      `CREATE TABLE IF NOT EXISTS household_learning_signals (
+        id                SERIAL PRIMARY KEY,
+        household_id      INTEGER NOT NULL REFERENCES households(id) ON DELETE CASCADE,
+        domain            TEXT NOT NULL,
+        subject_type      TEXT NOT NULL,
+        subject_key       TEXT NOT NULL,
+        direction         TEXT NOT NULL,
+        evidence_count    INTEGER NOT NULL,
+        consistency       REAL NOT NULL,
+        confidence        TEXT NOT NULL,
+        supporting_event_ids JSONB NOT NULL,
+        rationale         TEXT NOT NULL,
+        status            TEXT NOT NULL DEFAULT 'pending_confirmation',
+        detected_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_evaluated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        confirmed_by_user_id INTEGER REFERENCES users(id),
+        confirmed_at      TIMESTAMPTZ,
+        confirmation_notes TEXT,
+        CONSTRAINT household_learning_signals_dimension_unique UNIQUE (household_id, domain, subject_type, subject_key, direction)
+      )`,
+      `CREATE INDEX IF NOT EXISTS household_learning_signals_household_status_idx ON household_learning_signals (household_id, status)`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

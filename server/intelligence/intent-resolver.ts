@@ -64,6 +64,14 @@ export interface ResolvedIntent {
    * should surface the clarificationPrompt rather than calling the platform.
    */
   readonly gap?: ResolverGap;
+  /**
+   * True for context-only intents the resolver appends regardless of the
+   * utterance (e.g. the always-on profile personalisation read). Baseline
+   * intents are still queried for grounding context, but they never count as
+   * "understanding the question" — a turn whose only intents are baseline is
+   * classified "no-route" by the gateway (INT35), not answered generically.
+   */
+  readonly baseline?: boolean;
 }
 
 /**

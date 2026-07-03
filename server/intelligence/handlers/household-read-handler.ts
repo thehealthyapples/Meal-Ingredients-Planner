@@ -129,7 +129,7 @@ function toMemberView(row: { member: { userId: number; role: string; status: str
  * point in time, never written back. Child rows (userId == null) are returned unchanged.
  * This is a direct mirror of server/routes.ts:8526–8541, not new business logic.
  */
-async function enrichEater(row: HouseholdEaterRow, port: HouseholdReadPort): Promise<HouseholdEaterView> {
+export async function enrichEater(row: HouseholdEaterRow, port: HouseholdReadPort): Promise<HouseholdEaterView> {
   const base = dbEaterToHouseholdEater(row);
   const eaterUserId = base.userId;
 

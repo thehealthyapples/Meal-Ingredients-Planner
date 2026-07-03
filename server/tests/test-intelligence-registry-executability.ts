@@ -55,6 +55,9 @@ import {
   SHOPPING_DISCOVERY_CAPABILITY_ID,
   PANTRY_DISCOVERY_CAPABILITY_ID,
   DIARY_DISCOVERY_CAPABILITY_ID,
+  FOOD_INTELLIGENCE_CAPABILITY_ID,
+  OPPORTUNITY_DELIVERY_CAPABILITY_ID,
+  EVIDENCE_LEARNING_CAPABILITY_ID,
 } from "../intelligence/index.js";
 import type { CapabilityHandler, IntentVerb } from "../intelligence/index.js";
 
@@ -514,12 +517,15 @@ assert(
     execCapIds.includes(HOUSEHOLD_DISCOVERY_CAPABILITY_ID) &&
     execCapIds.includes(SHOPPING_DISCOVERY_CAPABILITY_ID) &&
     execCapIds.includes(PANTRY_DISCOVERY_CAPABILITY_ID) &&
-    execCapIds.includes(DIARY_DISCOVERY_CAPABILITY_ID),
-  "listExecutableCapabilities() includes pantry, diary, profile, household, partners, meals, templates, analyser, meal-discovery, nutrition-discovery, planner-discovery, household-discovery, shopping-discovery, pantry-discovery and diary-discovery",
+    execCapIds.includes(DIARY_DISCOVERY_CAPABILITY_ID) &&
+    execCapIds.includes(FOOD_INTELLIGENCE_CAPABILITY_ID) &&
+    execCapIds.includes(OPPORTUNITY_DELIVERY_CAPABILITY_ID) &&
+    execCapIds.includes(EVIDENCE_LEARNING_CAPABILITY_ID),
+  "listExecutableCapabilities() includes pantry, diary, profile, household, partners, meals, templates, analyser, meal-discovery, nutrition-discovery, planner-discovery, household-discovery, shopping-discovery, pantry-discovery, diary-discovery, food-intelligence, opportunity-delivery and evidence-learning",
 );
 assert(
-  execCapabilities.length === 18,
-  "listExecutableCapabilities() returns exactly 14 (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery) — scope lock (updated by INT32)",
+  execCapabilities.length === 21,
+  "listExecutableCapabilities() returns exactly 21 (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning) — scope lock (updated by EL1)",
   String(execCapabilities.length),
 );
 assert(

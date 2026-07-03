@@ -166,6 +166,11 @@ async function main(): Promise<void> {
   // invariant that holds: planner and shopping both remain live; all eleven platform
   // bindings are read-only by construction (no write code path in any handler) even
   // when the capability class is "write"/"destructive"/"ai-assisted".
+  //
+  // OD1 bound the twentieth live capability — `opportunity-delivery` — which is a
+  // deliberate, declared exception to the INT3 invariant above: it genuinely writes
+  // (persists/updates rows in its own `opportunity_deliveries` table), so it is
+  // whitelisted by id here rather than satisfying the read-only/aiAccess="R" check.
   const live = intelligencePlatform.listCapabilities().filter((c) => c.availability === "available");
   assert(
     live.some((c) => c.id === "planner") && live.some((c) => c.id === "shopping"),
@@ -184,9 +189,11 @@ async function main(): Promise<void> {
       c.id === "partners" ||
       c.id === "meals" ||
       c.id === "templates" ||
-      c.id === "analyser",
+      c.id === "analyser" ||
+      c.id === "opportunity-delivery" ||
+      c.id === "evidence-learning",
     ),
-    "every live capability is a read-only binding — scope lock holds",
+    "every live capability is either a read-only binding, or one of the whitelisted genuinely-write exceptions (OD1, EL1)",
   );
 
   const platform = platformWithFakeShopping();

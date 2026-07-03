@@ -42,6 +42,16 @@ export interface SurfaceHints {
   selectedMealId?: number;
   /** The food slug on the nutrition / analyser page, if any. */
   currentFoodSlug?: string;
+  /**
+   * INT40 — the specific planner day currently in view, if any (e.g. the user is
+   * looking at Saturday of week 5 in the Planner UI). Client-supplied only, same
+   * trust model as the other hints (INT18 OQ5) — the platform NEVER resolves "today"
+   * or a day name to a dayId itself; a Companion Action that needs a day is only
+   * proposed when this hint is present (honest gap otherwise, see companion-actions.ts).
+   */
+  selectedPlannerDayId?: number;
+  /** INT40 — the meal slot in view alongside selectedPlannerDayId, if any ("breakfast" | "lunch" | "dinner" | "snacks"). */
+  selectedMealSlot?: string;
 }
 
 /**
@@ -56,16 +66,19 @@ export interface SurfaceHints {
  * - `selectedMealId`      — pointer to a meal currently in focus, if any.
  * - `currentFoodSlug`     — food slug for nutrition/analyser contexts, if any.
  * - `temporalAnchor`      — ISO date (YYYY-MM-DD) of now; grounds the LLM to today.
+ * - `selectedPlannerDayId`/`selectedMealSlot` — INT40, client-supplied only (see SurfaceHints).
  */
 export interface ContextFrame {
-  readonly identity:             IntelligenceContext;
-  readonly surface:              ConversationSurface;
-  readonly userId:               number;
-  readonly activePlannerWeekId?: number;
-  readonly householdId?:         number;
-  readonly selectedMealId?:      number;
-  readonly currentFoodSlug?:     string;
-  readonly temporalAnchor:       string;
+  readonly identity:              IntelligenceContext;
+  readonly surface:               ConversationSurface;
+  readonly userId:                number;
+  readonly activePlannerWeekId?:  number;
+  readonly householdId?:          number;
+  readonly selectedMealId?:       number;
+  readonly currentFoodSlug?:      string;
+  readonly temporalAnchor:        string;
+  readonly selectedPlannerDayId?: number;
+  readonly selectedMealSlot?:     string;
 }
 
 // ---------------------------------------------------------------------------
@@ -142,6 +155,9 @@ export async function assembleContextFrame(
     selectedMealId,
     currentFoodSlug,
     temporalAnchor,
+    // INT40 — pass-through client hints only, never resolved/guessed here.
+    selectedPlannerDayId: surfaceHints.selectedPlannerDayId,
+    selectedMealSlot: surfaceHints.selectedMealSlot,
   };
 }
 
@@ -159,5 +175,7 @@ export function serializeFrameRef(
     selectedMealId:      frame.selectedMealId       ?? null,
     currentFoodSlug:     frame.currentFoodSlug      ?? null,
     temporalAnchor:      frame.temporalAnchor,
+    selectedPlannerDayId: frame.selectedPlannerDayId ?? null,
+    selectedMealSlot:     frame.selectedMealSlot     ?? null,
   };
 }

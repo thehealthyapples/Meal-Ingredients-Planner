@@ -81,6 +81,36 @@
  * UPF classification, health score, or NOVA group — those are pure computation over
  * caller-supplied text or a live, unstored OpenFoodFacts recompute, neither of which is
  * a safe stored read.
+ *
+ * INT40: the platform's FIRST executable WRITE verbs. The Planner and Shopping
+ * bindings (./bindings/planner.js, ./bindings/shopping.js) now each bind a COMPOSED
+ * handler — the original read handler plus a new write handler — so "add" becomes
+ * executable (planner: one meal into a known day+slot; shopping: one household
+ * staple/extra) alongside the existing read verbs. This activates the Intent Engine's
+ * CONFIRM step (./intent-engine.js) for the first time: every write still routes
+ * through LOCATE → VALIDATE → PERMISSION → CONFIRM → INVOKE → RESPOND, and still
+ * requires `options.confirmed === true` before invoking. Both write handlers delegate
+ * 100% to existing storage methods and replicate (never relax) the exact ownership
+ * checks their equivalent HTTP routes already perform. The platform still owns NO
+ * planner/shopping business logic — see ./conversation/companion-actions.js for how
+ * proposals are built and confirmed from the Companion conversation layer.
+ *
+ * INT41: the Capability Registry gains a second capability-owned extension —
+ * enrichment (contextual insights, explanations, recommendations and educational
+ * content), alongside INT39's guidance ("where to next"). getEnrichment() below is
+ * the read-only accessor; capability-registry.ts's ENRICHMENT table is the single
+ * place a capability declares its own content. No new capability, no business logic,
+ * no live computation — see ./conversation/companion-enrichment.js for how the
+ * Companion consumes it.
+ *
+ * OD1: the twentieth live capability is bound — `opportunity-delivery` (see
+ * ./bindings/opportunity-delivery.js). This is the platform's own governance layer
+ * over Domain Intelligence opportunity producers (today: food-intelligence's `report`
+ * verb, FI4) — it prioritises and groups opportunities across producers, prevents
+ * duplicate delivery, selects a delivery surface, and supports acknowledge (`review`)
+ * / dismiss (`delete`) / accept (`approve`). It owns zero business-domain data and
+ * zero producer reasoning (Rule FI1) — see
+ * ./opportunity-delivery/framework.js and ./opportunity-delivery/delivery-store.js.
  */
 
 import type { User } from "@shared/schema";
@@ -105,6 +135,9 @@ import { bindHouseholdDiscoveryCapability } from "./bindings/household-discovery
 import { bindShoppingDiscoveryCapability } from "./bindings/shopping-discovery.js";
 import { bindPantryDiscoveryCapability } from "./bindings/pantry-discovery.js";
 import { bindDiaryDiscoveryCapability } from "./bindings/diary-discovery.js";
+import { bindFoodIntelligenceReadCapability } from "./bindings/food-intelligence.js";
+import { bindOpportunityDeliveryCapability } from "./bindings/opportunity-delivery.js";
+import { bindEvidenceLearningCapability } from "./bindings/evidence-learning.js";
 import type {
   Capability,
   CapabilityHandler,
@@ -160,6 +193,16 @@ export class IntelligencePlatform {
     return this.registry.isExecutable(capabilityId, verb);
   }
 
+  /** INT39 — the capability-owned "where to next" guidance, if any (Capability Guidance Registry). */
+  getGuidance(capabilityId: string) {
+    return this.registry.getGuidance(capabilityId);
+  }
+
+  /** INT41 — the capability-owned contextual enrichment, if any (Capability Enrichment Registry). */
+  getEnrichment(capabilityId: string) {
+    return this.registry.getEnrichment(capabilityId);
+  }
+
   // --- Future extension point ---------------------------------------------
 
   /**
@@ -209,9 +252,16 @@ export class IntelligencePlatform {
  * the thirteenth: the read-only Nutrition Discovery binding, which filters user and system
  * meals by calorie/macro thresholds via NutritionDiscoveryEngine. INT28 activates the
  * fourteenth: the read-only Planner Discovery binding, which fans out across all planner
- * weeks and resolves meal names to find planned meals matching a search query. All register handlers
- * whose owning-service imports are lazy, so constructing the singleton still opens no
- * database connection.
+ * weeks and resolves meal names to find planned meals matching a search query. INT29–INT32
+ * activate the fifteenth through eighteenth: the read-only Household, Shopping, Pantry and
+ * Diary Discovery bindings. FI3 activates the nineteenth: the read-only Food Intelligence
+ * binding — the first Domain Intelligence capability (deterministic join+rank+explain over
+ * the Food Knowledge Registry and, when available, the caller's own household). OD1 activates
+ * the twentieth: the Opportunity Delivery Framework. EL1 activates the twenty-first: the
+ * Evidence & Learning Platform — captures structured household outcomes, accumulates them,
+ * and deterministically detects explainable patterns, never inferring a preference from a
+ * single observation. All register handlers whose owning-service imports are lazy, so
+ * constructing the singleton still opens no database connection.
  */
 export const intelligencePlatform = new IntelligencePlatform();
 bindPlannerReadCapability(intelligencePlatform);
@@ -232,3 +282,6 @@ bindHouseholdDiscoveryCapability(intelligencePlatform);
 bindShoppingDiscoveryCapability(intelligencePlatform);
 bindPantryDiscoveryCapability(intelligencePlatform);
 bindDiaryDiscoveryCapability(intelligencePlatform);
+bindFoodIntelligenceReadCapability(intelligencePlatform);
+bindOpportunityDeliveryCapability(intelligencePlatform);
+bindEvidenceLearningCapability(intelligencePlatform);

@@ -1,5 +1,7 @@
 import * as cheerio from "cheerio";
 import { scrapeRecipeFromUrl } from "./recipe-scraper";
+import { getPolicyForSourceLabel, mayFetchSourceContent } from "@shared/recipe-acquisition";
+import { isSourceCallable } from "./recipe-source-gate";
 
 export interface ExternalMealCandidate {
   externalId: string;
@@ -751,18 +753,30 @@ export async function fetchExternalCandidates(filters: {
   category?: string;
   dietaryPrefix?: string;
 }): Promise<ExternalMealCandidate[]> {
-  const [mealDbResults, bbcResults, allRecipesResults, jamieOliverResults, seriousEatsResults] = await Promise.all([
-    searchMealDB(filters),
-    searchBBCGoodFoodEnhanced(filters),
-    searchAllRecipes(filters),
-    searchJamieOliver(filters),
-    searchSeriousEats(filters),
-  ]);
+  // FS3: every automated acquisition source passes through the source gate
+  // (acquisition policy + admin toggle + credentials) — closes FS2 C1-a. The
+  // four scraped sources are unlicensed (storagePolicy: forbidden) and are
+  // never callable; their search functions remain only for the day a source
+  // gains a licence register entry.
+  const searchers: Array<{ key: string; run: (f: typeof filters) => Promise<ExternalMealCandidate[]> }> = [
+    { key: "themealdb",   run: searchMealDB },
+    { key: "bbcgoodfood", run: searchBBCGoodFoodEnhanced },
+    { key: "allrecipes",  run: searchAllRecipes },
+    { key: "jamieoliver", run: searchJamieOliver },
+    { key: "seriouseats", run: searchSeriousEats },
+  ];
+
+  const runGated = async (f: typeof filters): Promise<ExternalMealCandidate[][]> =>
+    Promise.all(
+      searchers.map(async ({ key, run }) => ((await isSourceCallable(key)) ? run(f) : [])),
+    );
+
+  const resultsBySource = await runGated(filters);
 
   const seen = new Set<string>();
   const combined: ExternalMealCandidate[] = [];
 
-  for (const result of [...mealDbResults, ...bbcResults, ...allRecipesResults, ...jamieOliverResults, ...seriousEatsResults]) {
+  for (const result of resultsBySource.flat()) {
     const key = result.name.toLowerCase().replace(/[^a-z0-9]/g, "");
     if (seen.has(key)) continue;
     seen.add(key);
@@ -772,15 +786,8 @@ export async function fetchExternalCandidates(filters: {
   // Fallback: if dietary search returned too few candidates, also run generic search and merge
   if (filters.dietaryPrefix && combined.length < 10) {
     console.log(`[ExternalSearch] Dietary prefix "${filters.dietaryPrefix}" returned ${combined.length} candidates — running generic fallback search`);
-    const genericFilters = { ...filters, dietaryPrefix: undefined };
-    const [gmdb, gbbc, gar, gjo, gse] = await Promise.all([
-      searchMealDB(genericFilters),
-      searchBBCGoodFoodEnhanced(genericFilters),
-      searchAllRecipes(genericFilters),
-      searchJamieOliver(genericFilters),
-      searchSeriousEats(genericFilters),
-    ]);
-    for (const result of [...gmdb, ...gbbc, ...gar, ...gjo, ...gse]) {
+    const genericResults = await runGated({ ...filters, dietaryPrefix: undefined });
+    for (const result of genericResults.flat()) {
       const key = result.name.toLowerCase().replace(/[^a-z0-9]/g, "");
       if (seen.has(key)) continue;
       seen.add(key);
@@ -797,8 +804,11 @@ export async function fetchExternalCandidates(filters: {
  * Fetches and extracts ingredients for a single external candidate.
  *
  * - Candidates that already have ingredients (TheMealDB, Edamam) return immediately.
- * - Candidates with a sourceUrl have their detail page fetched and parsed for
- *   JSON-LD schema.org/Recipe data first, with a DOM fallback.
+ * - Candidates missing ingredients may have their detail page fetched ONLY when
+ *   the source's acquisition policy permits content fetch (`allowContentFetch`,
+ *   shared/recipe-acquisition.ts). No current source permits it — this encodes
+ *   the FS3 no-THA-initiated-scraping rule and the Edamam never-fetch rule
+ *   (FS2 R7) in the function itself rather than in its callers.
  * - Returns null when ingredients cannot be obtained — the caller must exclude
  *   the candidate from Smart Planner recommendation.
  *
@@ -809,6 +819,14 @@ export async function enrichCandidateIngredients(
 ): Promise<ExternalMealCandidate | null> {
   if (candidate.ingredients.length > 0) return candidate;
   if (!candidate.sourceUrl) return null;
+
+  const policy = getPolicyForSourceLabel(candidate.source);
+  if (!mayFetchSourceContent(policy)) {
+    console.debug(
+      `[ExternalSearch] Enrichment refused for "${candidate.name}" — source "${candidate.source}" does not permit content fetch`,
+    );
+    return null;
+  }
 
   const scraped = await scrapeRecipeFromUrl(candidate.sourceUrl, 8000);
   if (!scraped || scraped.ingredients.length === 0) return null;

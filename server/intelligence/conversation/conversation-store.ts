@@ -71,6 +71,28 @@ export interface NewConversationTurn {
   entityRefs?:      EntityRef[];
   /** {status, message} only — never the mutated business row. */
   outcomeRef?:      Record<string, unknown> | null;
+  /**
+   * INT39 — the honest unsuccessful-turn state (no-route / no-knowledge /
+   * no-results / internal-error), set on assistant turns only. Null/omitted
+   * for a successful/grounded turn.
+   */
+  fallbackState?:   string | null;
+}
+
+/**
+ * INT39 — the minimal per-turn shape Goal Completion analytics read: enough
+ * to derive "intent recognised" / "capability executed" (from resolvedIntent
+ * + fallbackState) and "recovery after a failed conversation" (by walking
+ * turns within the same thread in order). No utterance, no entity data, no
+ * user/household id — the same privacy discipline as every other companion
+ * analytics read.
+ */
+export interface GoalSignalTurn {
+  readonly id: number;
+  readonly threadId: number;
+  readonly createdAt: Date;
+  readonly fallbackState: string | null;
+  readonly resolvedIntent: { capabilities?: { capabilityId: string; verb: string; status: string }[] } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -126,6 +148,31 @@ export interface IConversationStore {
    * Bounded to `limit` rows (default 20).
    */
   listThreads(conversationId: number, limit?: number): Promise<ConversationThread[]>;
+
+  /**
+   * Count turns created at or after `since`, optionally filtered by role.
+   * A pure aggregate (COUNT only) — no utterance content, no user/household id
+   * is ever returned. INT35C reads this as the denominator for Companion
+   * "understanding rate" / "successful conversation rate" metrics, since the
+   * INT35 miss log records only failures and has no volume of its own.
+   */
+  countTurnsSince(since: Date, role?: ConversationRole): Promise<number>;
+
+  /**
+   * Resolve the owning user (and role) of a turn — the ownership check INT38
+   * feedback/guidance-click routes use before accepting a write scoped to that
+   * turn. Returns null when the turn does not exist. Read-only, no business
+   * data returned.
+   */
+  getTurnOwner(turnId: number): Promise<{ userId: number; role: ConversationRole } | null>;
+
+  /**
+   * INT39 — the assistant-turn Goal Completion signal rows, optionally bounded
+   * to turns created at/after `since`, ordered by thread then time so callers
+   * can walk each thread's turn sequence (recovery-after-failure analytics).
+   * Read-only, no business data returned.
+   */
+  listAssistantTurnGoalSignals(since?: Date): Promise<GoalSignalTurn[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -209,8 +256,8 @@ export class DatabaseConversationStore implements IConversationStore {
       const { rows } = await client.query<ConversationTurn>(
         `INSERT INTO conversation_turns
            (thread_id, role, surface, utterance,
-            resolved_intent, context_frame_ref, entity_refs, outcome_ref, created_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+            resolved_intent, context_frame_ref, entity_refs, outcome_ref, fallback_state, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
          RETURNING *`,
         [
           threadId,
@@ -221,6 +268,7 @@ export class DatabaseConversationStore implements IConversationStore {
           turn.contextFrameRef != null ? JSON.stringify(turn.contextFrameRef) : null,
           JSON.stringify(turn.entityRefs ?? []),
           turn.outcomeRef != null ? JSON.stringify(turn.outcomeRef) : null,
+          turn.fallbackState ?? null,
         ],
       );
       return rows[0];
@@ -284,6 +332,72 @@ export class DatabaseConversationStore implements IConversationStore {
         [conversationId, limit],
       );
       return rows;
+    } finally {
+      client.release();
+    }
+  }
+
+  async countTurnsSince(since: Date, role?: ConversationRole): Promise<number> {
+    const client = await pool.connect();
+    try {
+      const { rows } = await client.query<{ count: string }>(
+        role
+          ? `SELECT COUNT(*) FROM conversation_turns WHERE created_at >= $1 AND role = $2`
+          : `SELECT COUNT(*) FROM conversation_turns WHERE created_at >= $1`,
+        role ? [since, role] : [since],
+      );
+      return Number(rows[0]?.count ?? 0);
+    } finally {
+      client.release();
+    }
+  }
+
+  async getTurnOwner(turnId: number): Promise<{ userId: number; role: ConversationRole } | null> {
+    const client = await pool.connect();
+    try {
+      const { rows } = await client.query<{ user_id: number; role: ConversationRole }>(
+        `SELECT c.user_id AS user_id, t.role AS role
+         FROM conversation_turns t
+         JOIN conversation_threads th ON th.id = t.thread_id
+         JOIN conversations c ON c.id = th.conversation_id
+         WHERE t.id = $1`,
+        [turnId],
+      );
+      if (!rows[0]) return null;
+      return { userId: rows[0].user_id, role: rows[0].role };
+    } finally {
+      client.release();
+    }
+  }
+
+  async listAssistantTurnGoalSignals(since?: Date): Promise<GoalSignalTurn[]> {
+    const client = await pool.connect();
+    try {
+      const { rows } = await client.query<{
+        id: number;
+        thread_id: number;
+        created_at: Date;
+        fallback_state: string | null;
+        resolved_intent: unknown;
+      }>(
+        since
+          ? `SELECT id, thread_id, created_at, fallback_state, resolved_intent
+             FROM conversation_turns
+             WHERE role = 'assistant' AND created_at >= $1
+             ORDER BY thread_id ASC, created_at ASC`
+          : `SELECT id, thread_id, created_at, fallback_state, resolved_intent
+             FROM conversation_turns
+             WHERE role = 'assistant'
+             ORDER BY thread_id ASC, created_at ASC`,
+        since ? [since] : [],
+      );
+      return rows.map((r) => ({
+        id: r.id,
+        threadId: r.thread_id,
+        createdAt: r.created_at,
+        fallbackState: r.fallback_state,
+        resolvedIntent: (r.resolved_intent as GoalSignalTurn["resolvedIntent"]) ?? null,
+      }));
     } finally {
       client.release();
     }
@@ -378,6 +492,7 @@ export class InMemoryConversationStore implements IConversationStore {
       contextFrameRef: turn.contextFrameRef ?? null,
       entityRefs:      turn.entityRefs ?? [],
       outcomeRef:      turn.outcomeRef  ?? null,
+      fallbackState:   turn.fallbackState ?? null,
       createdAt: new Date(),
     };
     this.turns.set(persisted.id, persisted);
@@ -413,5 +528,34 @@ export class InMemoryConversationStore implements IConversationStore {
         b.openedAt.getTime() - a.openedAt.getTime() || b.id - a.id,
       )
       .slice(0, limit);
+  }
+
+  async countTurnsSince(since: Date, role?: ConversationRole): Promise<number> {
+    return Array.from(this.turns.values()).filter(
+      t => t.createdAt.getTime() >= since.getTime() && (!role || t.role === role),
+    ).length;
+  }
+
+  async getTurnOwner(turnId: number): Promise<{ userId: number; role: ConversationRole } | null> {
+    const turn = this.turns.get(turnId);
+    if (!turn) return null;
+    const thread = this.threads.get(turn.threadId);
+    if (!thread) return null;
+    const conversation = this.conversations.get(thread.conversationId);
+    if (!conversation) return null;
+    return { userId: conversation.userId, role: turn.role as ConversationRole };
+  }
+
+  async listAssistantTurnGoalSignals(since?: Date): Promise<GoalSignalTurn[]> {
+    return Array.from(this.turns.values())
+      .filter((t) => t.role === "assistant" && (!since || t.createdAt.getTime() >= since.getTime()))
+      .sort((a, b) => a.threadId - b.threadId || a.createdAt.getTime() - b.createdAt.getTime())
+      .map((t) => ({
+        id: t.id,
+        threadId: t.threadId,
+        createdAt: t.createdAt,
+        fallbackState: t.fallbackState,
+        resolvedIntent: t.resolvedIntent as GoalSignalTurn["resolvedIntent"],
+      }));
   }
 }

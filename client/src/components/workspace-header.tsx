@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ShoppingCart, Search, Heart, User, ShieldCheck, Star, Sliders, LogOut,
+  ShoppingCart, Search, Heart, User, ShieldCheck, Star, Sliders, LogOut, Sparkles,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -113,6 +113,12 @@ function ProfileMenu({
               <Link href="/admin/recipe-sources" className="flex items-center gap-2 cursor-pointer" data-testid="workspace-menu-admin-sources">
                 <Sliders className="h-4 w-4" />
                 Recipe Sources
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/admin/companion-intelligence" className="flex items-center gap-2 cursor-pointer" data-testid="workspace-menu-admin-companion-intelligence">
+                <Sparkles className="h-4 w-4" />
+                Companion Intelligence
               </Link>
             </DropdownMenuItem>
           </>

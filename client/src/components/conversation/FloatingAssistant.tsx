@@ -17,9 +17,32 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MessageSquare, X, Send, Leaf, Loader2 } from "lucide-react";
+import {
+  MessageSquare, X, Send, Leaf, Loader2,
+  BookOpen, CalendarPlus, ShoppingBasket, ArrowRight, Star, Users, Clock, UtensilsCrossed,
+  Sparkles, ThumbsUp, ThumbsDown, CheckCircle2, XCircle, Wand2, Lightbulb,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  buildCompanionCardView,
+  buildGuidanceActions,
+  sanitizeSummary,
+  type NativeDiscoveryResponse,
+  type CompanionCardView,
+  type CompanionCardAction,
+  type CompanionCardFact,
+  type GuidanceSuggestion,
+  type CompanionGuidanceAction,
+  type CompanionEnrichmentItem,
+} from "./companion-card";
+import {
+  buildCompanionActionWorkflowViews,
+  buildWorkflowOutcomeSummary,
+  type CompanionActionProposal,
+  type CompanionActionView,
+  type ActionProposalStatus,
+} from "./companion-action";
 
 // ── Surface detection ──────────────────────────────────────────────────────
 
@@ -150,7 +173,36 @@ interface TurnApiResponse {
   assistantTurnId: number;
   conversationId: number;
   threadId: number;
+  // INT36 native THA discovery responses — rendered as Companion Cards (INT37).
+  discoveries?: NativeDiscoveryResponse[];
+  // INT38/INT39: cross-domain guidance suggestions — "next-step" on a
+  // successful turn, "recovery" (alternative actions) on an unsuccessful one.
+  // Turn-level (not entity-scoped) — rendered independently of whether the
+  // turn also carries Companion Cards.
+  guidance?: GuidanceSuggestion[];
+  guidanceKind?: "next-step" | "recovery";
+  // INT41: capability-owned contextual enrichment — insights, explanations,
+  // recommendations, educational content. Turn-level, purely informational
+  // (no navigation, no mutation). Present only when a source capability
+  // declared something to add.
+  enrichment?: CompanionEnrichmentItem[];
+  // INT40: Companion Action proposals — structured, executable operations
+  // distinct from discoveries/guidance above. Present only when the turn had
+  // something executable to propose.
+  actions?: CompanionActionProposal[];
+  // INT35B: the unsuccessful-turn state, present only when the turn did not
+  // succeed (no-route / no-knowledge / no-results / internal-error). The honest
+  // state-specific copy is already in `text`; this field lets the Companion treat
+  // fallback turns consistently.
+  fallbackState?: "no-route" | "no-knowledge" | "no-results" | "internal-error";
 }
+
+// INT35B: honest fallback shown when the request itself fails to reach the
+// server (network / 500) — the one unsuccessful path INT35's server-side states
+// cannot reach. Mirrors the gateway's internal-error copy so the live Companion
+// always answers honestly rather than silently dropping the turn.
+const TRANSPORT_ERROR_TEXT =
+  "Something went wrong on my side while answering that — it's not you. Please try again in a moment.";
 
 interface TurnsApiResponse {
   turns: TurnRecord[];
@@ -177,14 +229,661 @@ function PersonaLabel({ surface }: PersonaLabelProps) {
   );
 }
 
+// ── Companion Cards (INT37) ───────────────────────────────────────────────
+//
+// A discovery turn is rendered as the canonical Companion Card experience:
+//
+//     Summary  →  Companion Cards  →  Next Steps
+//
+// Cards summarise canonical THA entities and every action NAVIGATES to a
+// canonical THA page — the conversation never renders raw markdown, an external
+// URL, a provenance link, or edits an entity in place. The presentation view
+// model is built by the pure `companion-card` module (shared, client-agnostic).
+
+/** Icon for each action kind (per-card actions + result-level Next Steps). */
+function actionIcon(kind: CompanionCardAction["kind"]) {
+  switch (kind) {
+    case "open":            return <BookOpen className="h-3.5 w-3.5" />;
+    case "add-to-planner":  return <CalendarPlus className="h-3.5 w-3.5" />;
+    case "add-to-shopping": return <ShoppingBasket className="h-3.5 w-3.5" />;
+    case "view-all":        return <ArrowRight className="h-3.5 w-3.5" />;
+  }
+}
+
+/** Icon for a compact canonical fact chip on a meal card. */
+function factIcon(key: CompanionCardFact["key"]) {
+  switch (key) {
+    case "servings":   return <Users className="h-3 w-3" />;
+    case "appleScore": return <Star className="h-3 w-3" />;
+    case "lastCooked": return <Clock className="h-3 w-3" />;
+  }
+}
+
+interface CompanionCardProps {
+  card: CompanionCardView;
+  onNavigate: (href: string) => void;
+}
+
+/** A single, compact, touch-friendly Companion Card. */
+function CompanionCard({ card, onNavigate }: CompanionCardProps) {
+  const isMeal = card.kind === "meal";
+  return (
+    <div
+      className={cn(
+        "rounded-xl border border-border/40 bg-background/80 overflow-hidden",
+        "shadow-sm",
+      )}
+      data-testid="companion-card"
+    >
+      <div className="flex gap-3 p-2.5">
+        {/* Canonical THA image (meal cards only) or a domain glyph */}
+        <div className="flex-shrink-0">
+          {isMeal && card.imageUrl ? (
+            <img
+              src={card.imageUrl}
+              alt={card.title}
+              loading="lazy"
+              className="w-16 h-16 rounded-lg object-cover bg-muted"
+              data-testid="companion-card-image"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
+              <UtensilsCrossed className="h-6 w-6 text-primary/60" />
+            </div>
+          )}
+        </div>
+
+        {/* Title, subtitle, canonical facts */}
+        <div className="min-w-0 flex-1">
+          <p
+            className="text-sm font-semibold text-foreground leading-snug truncate"
+            data-testid="companion-card-title"
+          >
+            {card.title}
+          </p>
+          {card.subtitle && (
+            <p className="text-[11px] text-muted-foreground truncate mt-0.5">
+              {card.subtitle}
+            </p>
+          )}
+          {card.facts.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {card.facts.map((fact) => (
+                <span
+                  key={fact.key}
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md
+                             bg-muted text-[10px] font-medium text-foreground/70"
+                  data-testid={`companion-card-fact-${fact.key}`}
+                >
+                  {factIcon(fact.key)}
+                  {fact.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Canonical THA actions — navigate, never edit in place */}
+      {card.actions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-2.5 pb-2.5">
+          {card.actions.map((action, i) => (
+            <button
+              key={`${action.kind}-${i}`}
+              onClick={() => onNavigate(action.href)}
+              className={cn(
+                "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg",
+                "text-[11px] font-medium",
+                i === 0
+                  ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "bg-accent/60 text-foreground/80 hover:bg-accent hover:text-foreground border border-border/40",
+                "active:scale-95 transition-all duration-150",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              )}
+              data-testid={`companion-card-action-${action.kind}`}
+            >
+              {actionIcon(action.kind)}
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface DiscoveryBlockProps {
+  discovery: NativeDiscoveryResponse;
+  onNavigate: (href: string) => void;
+}
+
+/** One discovery response rendered as Companion Cards + Next Steps. */
+function DiscoveryBlock({ discovery, onNavigate }: DiscoveryBlockProps) {
+  const view = buildCompanionCardView(discovery);
+  if (!view) return null;
+  return (
+    <div className="mt-2 space-y-2" data-testid="companion-card-block">
+      {/* Companion Cards */}
+      <div className="space-y-2">
+        {view.cards.map((card, i) => (
+          <CompanionCard key={i} card={card} onNavigate={onNavigate} />
+        ))}
+      </div>
+
+      {/* Next Steps (result-level actions, e.g. View All) */}
+      {view.nextSteps.length > 0 && (
+        <div data-testid="companion-card-next-steps">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1">
+            Next steps
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {view.nextSteps.map((step, i) => (
+              <button
+                key={`${step.kind}-${i}`}
+                onClick={() => onNavigate(step.href)}
+                className={cn(
+                  "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg",
+                  "text-[11px] font-medium",
+                  "bg-accent/60 text-foreground/80 hover:bg-accent hover:text-foreground",
+                  "border border-border/40 active:scale-95 transition-all duration-150",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                )}
+                data-testid={`companion-card-next-step-${step.kind}`}
+              >
+                {actionIcon(step.kind)}
+                {step.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Enrichment (INT41) ────────────────────────────────────────────────────
+//
+// Capability-owned contextual insights, explanations, recommendations and
+// educational content — attached alongside a turn's primary answer. Purely
+// informational: no navigation target, no mutation, rendered in its own
+// block distinct from Companion Cards (navigate-only) and Companion Actions
+// (execute-only). This is the "surface key insights" allowance the Companion
+// Card Experience Principle grants, applied turn-level rather than per-card.
+
+const ENRICHMENT_KIND_LABEL: Record<CompanionEnrichmentItem["kind"], string> = {
+  insight: "Insight",
+  explanation: "Good to know",
+  recommendation: "Suggestion",
+  educational: "Learn",
+};
+
+interface EnrichmentBlockProps {
+  enrichment: CompanionEnrichmentItem[];
+}
+
+function EnrichmentBlock({ enrichment }: EnrichmentBlockProps) {
+  if (enrichment.length === 0) return null;
+  return (
+    <div className="mt-2 space-y-1.5" data-testid="companion-enrichment-block">
+      {enrichment.map((item, i) => (
+        <div
+          key={`${item.sourceCapabilityId}-${i}`}
+          className="flex items-start gap-1.5 rounded-lg border border-border/30 bg-accent/30 px-2.5 py-2"
+          data-testid={`companion-enrichment-item-${item.sourceCapabilityId}-${i}`}
+        >
+          <Lightbulb className="h-3.5 w-3.5 text-primary/70 flex-shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+              {ENRICHMENT_KIND_LABEL[item.kind]}
+            </p>
+            <p className="text-[12px] text-foreground/90 leading-snug">
+              <span className="font-medium">{item.title}</span> — {item.body}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Guidance (INT38) ──────────────────────────────────────────────────────
+//
+// Turn-level cross-domain "Next Step" suggestions — rendered independently of
+// whether the turn also carries Companion Cards, so even a plain Q&A answer
+// can nudge the user towards the next domain worth exploring. A click both
+// navigates (same canonical, in-app-path-only discipline as every other
+// Companion Card action) and fires a best-effort click-through event.
+
+interface GuidanceBlockProps {
+  guidance: GuidanceSuggestion[];
+  /** INT39 — "recovery" relabels the block for an unsuccessful turn's alternative actions. */
+  guidanceKind?: "next-step" | "recovery";
+  assistantTurnId: number;
+  onNavigate: (href: string) => void;
+}
+
+function GuidanceBlock({ guidance, guidanceKind, assistantTurnId, onNavigate }: GuidanceBlockProps) {
+  const actions = buildGuidanceActions(guidance);
+  if (actions.length === 0) return null;
+
+  const handleClick = (action: CompanionGuidanceAction) => {
+    onNavigate(action.href);
+    // Fire-and-forget click-through event — advisory observability only,
+    // never blocks navigation and never affects Companion behaviour.
+    apiRequest("POST", `/api/intelligence/conversation/turns/${assistantTurnId}/guidance-click`, {
+      domain: action.domain,
+      sourceDomain: action.sourceDomain,
+      sourceCapabilityId: action.sourceCapabilityId,
+      targetCapabilityId: action.targetCapabilityId,
+      verb: action.verb,
+    }).catch(() => {});
+  };
+
+  return (
+    <div className="mt-2 space-y-1.5" data-testid="companion-guidance-block">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+        {guidanceKind === "recovery" ? "You could also try" : "Where to next?"}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {actions.map((action, i) => (
+          <button
+            key={`${action.domain}-${i}`}
+            onClick={() => handleClick(action)}
+            className={cn(
+              "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg",
+              "text-[11px] font-medium",
+              "bg-primary/10 text-primary hover:bg-primary/20",
+              "border border-primary/20 active:scale-95 transition-all duration-150",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            )}
+            data-testid={`companion-guidance-action-${action.domain}`}
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {action.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Companion Actions (INT40) ─────────────────────────────────────────────
+//
+// Structured, EXECUTABLE operations the Companion performs on the user's
+// behalf, always behind explicit confirmation — rendered in their own block,
+// never inside or attached to a Companion Card (see companion-action.ts header
+// for the architectural rationale). Confirmation UI is proportional to the
+// server-computed `confirmationTier`: "light" is a single inline confirm
+// button; "required"/"strong" (not reachable via the two bound capabilities
+// today, but built for capabilities bound in future workstreams) show an
+// explicit echo + Confirm/Cancel dialog before the confirm call is made.
+
+interface CompanionActionRowProps {
+  action: CompanionActionView;
+  isRunning: boolean;
+  disabled: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function CompanionActionRow({ action, isRunning, disabled, onConfirm, onCancel }: CompanionActionRowProps) {
+  if (action.status === "succeeded") {
+    return (
+      <div className="flex items-center gap-1.5 text-[12px] text-primary" data-testid={`companion-action-row-${action.id}`}>
+        <CheckCircle2 className="h-3.5 w-3.5 flex-shrink-0" />
+        <span>{action.resultSummary ?? action.label}</span>
+      </div>
+    );
+  }
+  if (action.status === "failed") {
+    return (
+      <div className="flex items-start gap-1.5 text-[12px] text-destructive" data-testid={`companion-action-row-${action.id}`}>
+        <XCircle className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+        <span>
+          Couldn't {action.label.toLowerCase()}
+          {action.errorMessage ? ` — ${action.errorMessage}` : " — please try again from the relevant page."}
+        </span>
+      </div>
+    );
+  }
+  if (action.status === "cancelled") {
+    return (
+      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground/60" data-testid={`companion-action-row-${action.id}`}>
+        <span>Skipped — {action.label.toLowerCase()}</span>
+      </div>
+    );
+  }
+  if (isRunning) {
+    return (
+      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground" data-testid={`companion-action-row-${action.id}`}>
+        <Loader2 className="h-3.5 w-3.5 animate-spin flex-shrink-0" />
+        <span>{action.label}…</span>
+      </div>
+    );
+  }
+
+  // "proposed" — awaiting confirmation, presented per its confirmation tier.
+  if (action.confirmationPresentation === "dialog") {
+    return (
+      <div
+        className="rounded-lg border border-border/40 bg-background/60 p-2 space-y-1.5"
+        data-testid={`companion-action-row-${action.id}`}
+      >
+        <p className="text-[12px] text-foreground">{action.label}?</p>
+        <div className="flex gap-1.5">
+          <button
+            onClick={onConfirm}
+            disabled={disabled}
+            className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 active:scale-95 transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            data-testid={`button-confirm-action-${action.id}`}
+          >
+            Confirm
+          </button>
+          <button
+            onClick={onCancel}
+            disabled={disabled}
+            className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-accent/60 text-foreground/70 hover:bg-accent disabled:opacity-40 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            data-testid={`button-cancel-action-${action.id}`}
+          >
+            Not now
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-1.5" data-testid={`companion-action-row-${action.id}`}>
+      <button
+        onClick={onConfirm}
+        disabled={disabled}
+        className={cn(
+          "inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg",
+          "text-[11px] font-medium",
+          "bg-primary text-primary-foreground hover:bg-primary/90",
+          "active:scale-95 transition-all duration-150 disabled:opacity-40",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        )}
+        data-testid={`button-confirm-action-${action.id}`}
+      >
+        <Wand2 className="h-3.5 w-3.5" />
+        {action.label}
+      </button>
+      <button
+        onClick={onCancel}
+        disabled={disabled}
+        aria-label="Not now"
+        className="text-[11px] text-muted-foreground/50 hover:text-foreground px-1 disabled:opacity-40 transition-colors duration-150"
+        data-testid={`button-cancel-action-${action.id}`}
+      >
+        Not now
+      </button>
+    </div>
+  );
+}
+
+interface CompanionActionBlockProps {
+  actions: CompanionActionProposal[];
+}
+
+/**
+ * One turn's Companion Action proposals, grouped into workflows (a single
+ * proposal is a length-1 workflow). Confirming/cancelling updates LOCAL state
+ * only — this block owns the live status of its own proposals for the rest of
+ * the session; it never re-fetches the turn to pick up server state.
+ */
+function CompanionActionBlock({ actions: initialActions }: CompanionActionBlockProps) {
+  const [liveActions, setLiveActions] = useState<CompanionActionProposal[]>(initialActions);
+  const [runningId, setRunningId] = useState<number | null>(null);
+
+  const applyUpdate = (id: number, patch: Partial<CompanionActionProposal>) => {
+    setLiveActions((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+  };
+
+  const { mutateAsync: confirmAction } = useMutation({
+    mutationFn: async (actionId: number) => {
+      const res = await apiRequest("POST", `/api/intelligence/conversation/actions/${actionId}/confirm`, {});
+      return res.json() as Promise<{
+        id: number;
+        status: ActionProposalStatus;
+        resultSummary: string | null;
+        errorCode: string | null;
+        errorMessage: string | null;
+      }>;
+    },
+  });
+  const { mutateAsync: cancelAction } = useMutation({
+    mutationFn: async (actionId: number) => {
+      const res = await apiRequest("POST", `/api/intelligence/conversation/actions/${actionId}/cancel`, {});
+      return res.json() as Promise<{ id: number; status: ActionProposalStatus }>;
+    },
+  });
+
+  // Runs one action's confirmation and waits for its outcome before returning —
+  // this IS the progress-reporting mechanism for a multi-action workflow: each
+  // step is awaited in order so the UI can show "Step X of N" as it advances,
+  // and a failure on one step never blocks the next (partial completion).
+  const runOne = async (actionId: number) => {
+    setRunningId(actionId);
+    try {
+      const result = await confirmAction(actionId);
+      applyUpdate(actionId, {
+        status: result.status,
+        resultSummary: result.resultSummary,
+        errorCode: result.errorCode,
+        errorMessage: result.errorMessage,
+      });
+    } catch {
+      applyUpdate(actionId, {
+        status: "failed",
+        errorCode: "transport_error",
+        errorMessage: "Something went wrong confirming this — please try again.",
+      });
+    } finally {
+      setRunningId(null);
+    }
+  };
+
+  const handleCancel = async (actionId: number) => {
+    try {
+      const result = await cancelAction(actionId);
+      applyUpdate(actionId, { status: result.status });
+    } catch {
+      /* leave as proposed — the user can retry the confirm or cancel */
+    }
+  };
+
+  const runWorkflow = async (actionIds: number[]) => {
+    for (const id of actionIds) {
+      await runOne(id);
+    }
+  };
+
+  const workflows = buildCompanionActionWorkflowViews(liveActions);
+  if (workflows.length === 0) return null;
+
+  return (
+    <div className="mt-2 space-y-2.5" data-testid="companion-action-block">
+      {workflows.map((workflow) => {
+        const outcome = buildWorkflowOutcomeSummary(workflow);
+        const pendingIds = workflow.actions.filter((a) => a.status === "proposed").map((a) => a.id);
+        return (
+          <div
+            key={workflow.workflowId}
+            className="rounded-xl border border-primary/20 bg-primary/5 p-2.5 space-y-2"
+            data-testid="companion-action-workflow"
+          >
+            {workflow.totalCount > 1 && (
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                  Guided workflow · Step {Math.min(workflow.resolvedCount + 1, workflow.totalCount)} of {workflow.totalCount}
+                </p>
+                {pendingIds.length > 1 && (
+                  <button
+                    onClick={() => runWorkflow(pendingIds)}
+                    disabled={runningId != null}
+                    className="text-[11px] font-medium text-primary hover:underline disabled:opacity-40 flex-shrink-0"
+                    data-testid="button-confirm-workflow"
+                  >
+                    Confirm all
+                  </button>
+                )}
+              </div>
+            )}
+            <div className="space-y-1.5">
+              {workflow.actions.map((action) => (
+                <CompanionActionRow
+                  key={action.id}
+                  action={action}
+                  isRunning={runningId === action.id}
+                  disabled={runningId != null}
+                  onConfirm={() => runOne(action.id)}
+                  onCancel={() => handleCancel(action.id)}
+                />
+              ))}
+            </div>
+            {outcome && (
+              <p
+                className={cn(
+                  "text-[11px] font-medium",
+                  workflow.isPartialCompletion
+                    ? "text-amber-600"
+                    : workflow.failedCount > 0
+                      ? "text-destructive"
+                      : "text-primary",
+                )}
+                data-testid="companion-action-outcome"
+              >
+                {outcome}
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Feedback (INT38) ──────────────────────────────────────────────────────
+//
+// A simple 👍/👎 on every real assistant turn. Anonymous, advisory-only —
+// submitting feedback never changes what the Companion says or how it routes.
+// A 👎 reveals an optional, closed set of reason chips.
+
+const FEEDBACK_REASONS: { code: string; label: string }[] = [
+  { code: "not_relevant", label: "Didn't answer my question" },
+  { code: "inaccurate", label: "Information seemed wrong" },
+  { code: "already_knew", label: "I already knew this" },
+  { code: "too_generic", label: "Too generic" },
+  { code: "other", label: "Other" },
+];
+
+interface FeedbackControlsProps {
+  turnId: number;
+}
+
+function FeedbackControls({ turnId }: FeedbackControlsProps) {
+  const [submitted, setSubmitted] = useState<"up" | "down" | null>(null);
+  const [showReasons, setShowReasons] = useState(false);
+
+  const { mutate: sendFeedback } = useMutation({
+    mutationFn: async (body: { rating: "up" | "down"; reasonCode?: string }) => {
+      await apiRequest("POST", `/api/intelligence/conversation/turns/${turnId}/feedback`, body);
+    },
+  });
+
+  if (submitted) {
+    return (
+      <p className="mt-1.5 text-[10px] text-muted-foreground/50" data-testid="text-feedback-thanks">
+        Thanks for the feedback.
+      </p>
+    );
+  }
+
+  const buttonClass = (active: boolean) =>
+    cn(
+      "inline-flex items-center justify-center w-6 h-6 rounded-md",
+      "text-muted-foreground/50 hover:text-foreground hover:bg-accent",
+      "transition-colors duration-150",
+      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+      active && "text-foreground bg-accent",
+    );
+
+  return (
+    <div className="mt-1.5" data-testid="feedback-controls">
+      {!showReasons ? (
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => {
+              setSubmitted("up");
+              sendFeedback({ rating: "up" });
+            }}
+            aria-label="Helpful"
+            className={buttonClass(false)}
+            data-testid="button-feedback-up"
+          >
+            <ThumbsUp className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={() => setShowReasons(true)}
+            aria-label="Not helpful"
+            className={buttonClass(false)}
+            data-testid="button-feedback-down"
+          >
+            <ThumbsDown className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex flex-wrap gap-1" data-testid="feedback-reasons">
+          {FEEDBACK_REASONS.map((r) => (
+            <button
+              key={r.code}
+              onClick={() => {
+                setSubmitted("down");
+                sendFeedback({ rating: "down", reasonCode: r.code });
+              }}
+              className={cn(
+                "px-2 py-1 rounded-md text-[10px] font-medium",
+                "bg-accent/60 text-foreground/70 hover:bg-accent hover:text-foreground",
+                "border border-border/30 transition-colors duration-150",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              )}
+              data-testid={`button-feedback-reason-${r.code}`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── TurnBubble ────────────────────────────────────────────────────────────
 
 interface TurnBubbleProps {
   turn: TurnRecord;
+  /** Discovery responses for this assistant turn → rendered as Companion Cards. */
+  discoveries?: NativeDiscoveryResponse[];
+  /** INT38/INT39 cross-domain guidance suggestions for this assistant turn. */
+  guidance?: GuidanceSuggestion[];
+  guidanceKind?: "next-step" | "recovery";
+  /** INT41 capability-owned contextual enrichment for this assistant turn. */
+  enrichment?: CompanionEnrichmentItem[];
+  /** INT40 Companion Action proposals for this assistant turn. */
+  actions?: CompanionActionProposal[];
+  onNavigate: (href: string) => void;
 }
 
-function TurnBubble({ turn }: TurnBubbleProps) {
+function TurnBubble({ turn, discoveries, guidance, guidanceKind, enrichment, actions, onNavigate }: TurnBubbleProps) {
   const isUser = turn.role === "user";
+  const hasDiscoveries = !isUser && Array.isArray(discoveries) && discoveries.length > 0;
+  const hasGuidance = !isUser && Array.isArray(guidance) && guidance.length > 0;
+  const hasEnrichment = !isUser && Array.isArray(enrichment) && enrichment.length > 0;
+  const hasActions = !isUser && Array.isArray(actions) && actions.length > 0;
+  // Only a real, server-persisted assistant turn (positive id) can carry
+  // feedback — optimistic transport-error bubbles use negative placeholder ids.
+  const isRealAssistantTurn = !isUser && turn.id > 0;
 
   return (
     <div
@@ -196,39 +895,64 @@ function TurnBubble({ turn }: TurnBubbleProps) {
     >
       {/* Avatar */}
       {!isUser && (
-        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center">
+        <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center self-start mt-0.5">
           <Leaf className="h-3.5 w-3.5 text-primary" />
         </div>
       )}
 
-      {/* Bubble */}
-      <div
-        className={cn(
-          "max-w-[82%] px-3.5 py-2.5 text-sm leading-relaxed",
-          isUser
-            ? "bg-primary/10 text-foreground rounded-2xl rounded-tr-sm"
-            : "bg-muted text-foreground rounded-2xl rounded-tl-sm border border-border/30",
-        )}
-      >
-        {turn.utterance}
-
-        {/* Entity pills — shown only on assistant turns with refs */}
-        {!isUser &&
-          Array.isArray(turn.entityRefs) &&
-          turn.entityRefs.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {(turn.entityRefs as EntityRef[]).map((ref, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
-                             bg-secondary/20 text-secondary-foreground text-[10px] font-medium"
-                  data-testid={`entity-pill-${ref.type}-${ref.id}`}
-                >
-                  {ref.type} #{ref.id}
-                </span>
-              ))}
-            </div>
+      {/* Bubble + (assistant) companion cards */}
+      <div className={cn(isUser ? "max-w-[82%]" : "flex-1 min-w-0")}>
+        {/* Summary text — markdown/URLs suppressed on discovery turns */}
+        <div
+          className={cn(
+            "px-3.5 py-2.5 text-sm leading-relaxed",
+            isUser
+              ? "bg-primary/10 text-foreground rounded-2xl rounded-tr-sm"
+              : "bg-muted text-foreground rounded-2xl rounded-tl-sm border border-border/30",
+            !isUser && "inline-block max-w-full",
           )}
+        >
+          {isUser ? turn.utterance : sanitizeSummary(turn.utterance)}
+
+          {/* Entity pills — assistant turns WITHOUT companion cards (legacy shape) */}
+          {!isUser &&
+            !hasDiscoveries &&
+            Array.isArray(turn.entityRefs) &&
+            turn.entityRefs.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {(turn.entityRefs as EntityRef[]).map((ref, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                               bg-secondary/20 text-secondary-foreground text-[10px] font-medium"
+                    data-testid={`entity-pill-${ref.type}-${ref.id}`}
+                  >
+                    {ref.type} #{ref.id}
+                  </span>
+                ))}
+              </div>
+            )}
+        </div>
+
+        {/* Companion Cards + Next Steps */}
+        {hasDiscoveries &&
+          discoveries!.map((discovery, i) => (
+            <DiscoveryBlock key={i} discovery={discovery} onNavigate={onNavigate} />
+          ))}
+
+        {/* INT41 — capability-owned contextual enrichment: informational only */}
+        {hasEnrichment && <EnrichmentBlock enrichment={enrichment!} />}
+
+        {/* INT40 — Companion Actions: distinct from Companion Cards, always confirmed */}
+        {hasActions && <CompanionActionBlock actions={actions!} />}
+
+        {/* INT38/INT39 — cross-domain guidance, independent of Companion Cards */}
+        {hasGuidance && (
+          <GuidanceBlock guidance={guidance!} guidanceKind={guidanceKind} assistantTurnId={turn.id} onNavigate={onNavigate} />
+        )}
+
+        {/* INT38 — 👍/👎 feedback on every real assistant turn */}
+        {isRealAssistantTurn && <FeedbackControls turnId={turn.id} />}
       </div>
     </div>
   );
@@ -262,9 +986,30 @@ interface ConversationThreadProps {
   turns: TurnRecord[];
   isLoading: boolean;
   isPending: boolean;
+  /** Companion Card discoveries keyed by assistant turn id (ephemeral, this session). */
+  discoveriesByTurn: Record<number, NativeDiscoveryResponse[]>;
+  /** INT38 guidance suggestions keyed by assistant turn id (ephemeral, this session). */
+  guidanceByTurn: Record<number, GuidanceSuggestion[]>;
+  /** INT39 guidance kind ("next-step" | "recovery") keyed by assistant turn id. */
+  guidanceKindByTurn: Record<number, "next-step" | "recovery">;
+  /** INT41 capability-owned contextual enrichment keyed by assistant turn id. */
+  enrichmentByTurn: Record<number, CompanionEnrichmentItem[]>;
+  /** INT40 Companion Action proposals keyed by assistant turn id. */
+  actionsByTurn: Record<number, CompanionActionProposal[]>;
+  onNavigate: (href: string) => void;
 }
 
-function ConversationThread({ turns, isLoading, isPending }: ConversationThreadProps) {
+function ConversationThread({
+  turns,
+  isLoading,
+  isPending,
+  discoveriesByTurn,
+  guidanceByTurn,
+  guidanceKindByTurn,
+  enrichmentByTurn,
+  actionsByTurn,
+  onNavigate,
+}: ConversationThreadProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -285,7 +1030,16 @@ function ConversationThread({ turns, isLoading, isPending }: ConversationThreadP
       data-testid="conversation-thread"
     >
       {turns.map((turn) => (
-        <TurnBubble key={turn.id} turn={turn} />
+        <TurnBubble
+          key={turn.id}
+          turn={turn}
+          discoveries={discoveriesByTurn[turn.id]}
+          guidance={guidanceByTurn[turn.id]}
+          guidanceKind={guidanceKindByTurn[turn.id]}
+          enrichment={enrichmentByTurn[turn.id]}
+          actions={actionsByTurn[turn.id]}
+          onNavigate={onNavigate}
+        />
       ))}
       {isPending && <LoadingBubble />}
       <div ref={bottomRef} />
@@ -401,7 +1155,7 @@ function AssistantInput({ value, onChange, onSubmit, isPending }: AssistantInput
         </button>
       </div>
       <p className="mt-1.5 text-[10px] text-muted-foreground/40 text-center">
-        Apple reads your data — can't make changes yet.
+        Apple can suggest a few actions — nothing changes until you confirm.
       </p>
     </div>
   );
@@ -412,12 +1166,49 @@ function AssistantInput({ value, onChange, onSubmit, isPending }: AssistantInput
 export default function FloatingAssistant() {
   const surface = useSurface();
   const queryClient = useQueryClient();
+  const [, navigate] = useLocation();
 
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   // Optimistic turns added before the server responds
   const [optimisticTurns, setOptimisticTurns] = useState<TurnRecord[]>([]);
   const nextOptimisticId = useRef(-1);
+  // INT37: native discovery responses, keyed by assistant turn id, rendered as
+  // Companion Cards. Derived-not-stored (INT36/TIP3) — held in session memory
+  // only, never persisted; canonical THA pages own the durable presentation.
+  const [discoveriesByTurn, setDiscoveriesByTurn] = useState<
+    Record<number, NativeDiscoveryResponse[]>
+  >({});
+  // INT38: cross-domain guidance suggestions, keyed by assistant turn id, same
+  // ephemeral session-memory discipline as discoveriesByTurn above.
+  const [guidanceByTurn, setGuidanceByTurn] = useState<
+    Record<number, GuidanceSuggestion[]>
+  >({});
+  // INT39: which guidance mode ("next-step" | "recovery") each turn's suggestions were built in.
+  const [guidanceKindByTurn, setGuidanceKindByTurn] = useState<
+    Record<number, "next-step" | "recovery">
+  >({});
+  // INT41: capability-owned contextual enrichment, keyed by assistant turn id,
+  // same ephemeral session-memory discipline as discoveriesByTurn/guidanceByTurn.
+  const [enrichmentByTurn, setEnrichmentByTurn] = useState<
+    Record<number, CompanionEnrichmentItem[]>
+  >({});
+  // INT40: Companion Action proposals, keyed by assistant turn id, same ephemeral
+  // session-memory discipline as discoveriesByTurn/guidanceByTurn above. Live
+  // status updates (confirm/cancel) are owned by CompanionActionBlock's own local
+  // state, not re-synced back here.
+  const [actionsByTurn, setActionsByTurn] = useState<
+    Record<number, CompanionActionProposal[]>
+  >({});
+
+  // Navigate to a canonical THA page and close the assistant panel.
+  const handleNavigate = useCallback(
+    (href: string) => {
+      setIsOpen(false);
+      navigate(href);
+    },
+    [navigate],
+  );
 
   // Fetch existing turns when the panel opens
   const { data: turnsData, isLoading: isTurnsLoading } = useQuery<TurnsApiResponse>({
@@ -455,7 +1246,43 @@ export default function FloatingAssistant() {
       };
       setOptimisticTurns((prev) => [...prev, userTurn]);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // INT37: capture this turn's discovery responses, keyed by the real
+      // assistant turn id, so they survive the /turns refetch and render as
+      // Companion Cards against the server turn of the same id.
+      if (data.assistantTurnId != null && Array.isArray(data.discoveries) && data.discoveries.length > 0) {
+        setDiscoveriesByTurn((prev) => ({
+          ...prev,
+          [data.assistantTurnId]: data.discoveries!,
+        }));
+      }
+      // INT38/INT39: capture this turn's guidance suggestions + kind the same way.
+      if (data.assistantTurnId != null && Array.isArray(data.guidance) && data.guidance.length > 0) {
+        setGuidanceByTurn((prev) => ({
+          ...prev,
+          [data.assistantTurnId]: data.guidance!,
+        }));
+        if (data.guidanceKind) {
+          setGuidanceKindByTurn((prev) => ({
+            ...prev,
+            [data.assistantTurnId]: data.guidanceKind!,
+          }));
+        }
+      }
+      // INT41: capture this turn's contextual enrichment the same way.
+      if (data.assistantTurnId != null && Array.isArray(data.enrichment) && data.enrichment.length > 0) {
+        setEnrichmentByTurn((prev) => ({
+          ...prev,
+          [data.assistantTurnId]: data.enrichment!,
+        }));
+      }
+      // INT40: capture this turn's Companion Action proposals the same way.
+      if (data.assistantTurnId != null && Array.isArray(data.actions) && data.actions.length > 0) {
+        setActionsByTurn((prev) => ({
+          ...prev,
+          [data.assistantTurnId]: data.actions!,
+        }));
+      }
       // Refresh from server — clears optimistic turns cleanly
       queryClient.invalidateQueries({
         queryKey: ["/api/intelligence/conversation/turns"],
@@ -463,8 +1290,17 @@ export default function FloatingAssistant() {
       setOptimisticTurns([]);
     },
     onError: () => {
-      // Remove last optimistic turn on error
-      setOptimisticTurns((prev) => prev.slice(0, -1));
+      // INT35B: keep the user's turn and append an honest assistant error bubble
+      // (rather than silently dropping the question), so a transport failure is
+      // handled consistently with the INT35 internal-error fallback.
+      const id = nextOptimisticId.current--;
+      const errorTurn: TurnRecord = {
+        id,
+        role: "assistant",
+        utterance: TRANSPORT_ERROR_TEXT,
+        createdAt: new Date().toISOString(),
+      };
+      setOptimisticTurns((prev) => [...prev, errorTurn]);
     },
   });
 
@@ -605,6 +1441,12 @@ export default function FloatingAssistant() {
                   turns={allTurns}
                   isLoading={isTurnsLoading}
                   isPending={isPending}
+                  discoveriesByTurn={discoveriesByTurn}
+                  guidanceByTurn={guidanceByTurn}
+                  guidanceKindByTurn={guidanceKindByTurn}
+                  enrichmentByTurn={enrichmentByTurn}
+                  actionsByTurn={actionsByTurn}
+                  onNavigate={handleNavigate}
                 />
               ) : (
                 <div className="flex-1 overflow-y-auto flex flex-col justify-end">

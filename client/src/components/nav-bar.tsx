@@ -13,7 +13,7 @@ import {
   LogOut, ShieldCheck, Star,
   Sliders, Search, ChevronLeft, ChevronRight,
   Microscope, BookOpen, Heart, ChefHat,
-  User, BarChart3,
+  User, BarChart3, Sparkles,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -371,6 +371,12 @@ function AppleMenu({ location, isAdmin }: { location: string; isAdmin: boolean }
               <Link href="/admin/recipe-sources" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-admin-sources">
                 <Sliders className="h-4 w-4" />
                 Recipe Sources
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/admin/companion-intelligence" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-admin-companion-intelligence">
+                <Sparkles className="h-4 w-4" />
+                Companion Intelligence
               </Link>
             </DropdownMenuItem>
           </>

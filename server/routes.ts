@@ -11242,6 +11242,10 @@ Generate a complete recipe using these as the foundation.`;
           activePlannerWeekId: typeof surfaceHints.activePlannerWeekId === "number" ? surfaceHints.activePlannerWeekId : undefined,
           selectedMealId:      typeof surfaceHints.selectedMealId      === "number" ? surfaceHints.selectedMealId      : undefined,
           currentFoodSlug:     typeof surfaceHints.currentFoodSlug     === "string" ? surfaceHints.currentFoodSlug     : undefined,
+          // INT40 — explicit, client-supplied only (never resolved server-side); see
+          // context-frame-assembler.ts SurfaceHints doc comment.
+          selectedPlannerDayId: typeof surfaceHints.selectedPlannerDayId === "number" ? surfaceHints.selectedPlannerDayId : undefined,
+          selectedMealSlot:     typeof surfaceHints.selectedMealSlot     === "string" ? surfaceHints.selectedMealSlot     : undefined,
         },
         intelligencePlatform.contextFor(user),
       );
@@ -11252,6 +11256,29 @@ Generate a complete recipe using these as the foundation.`;
         assistantTurnId: result.assistantTurn.id,
         conversationId: result.conversationId,
         threadId:       result.threadId,
+        // INT36: native THA discovery responses (canonical entities + actions).
+        // Structured & client-agnostic; omitted when the turn had no discovery.
+        ...(result.discoveries.length > 0 ? { discoveries: result.discoveries } : {}),
+        // INT38/INT39: cross-domain guidance suggestions — "next-step" on a
+        // successful turn, "recovery" (alternative actions) on an
+        // unsuccessful one, where the platform has something to offer.
+        // Omitted entirely when the turn had none.
+        ...(result.guidance.length > 0
+          ? { guidance: result.guidance, guidanceKind: result.guidanceKind }
+          : {}),
+        // INT41: capability-owned contextual enrichment (insights, explanations,
+        // recommendations, educational content) — turn-level, distinct from
+        // discoveries/guidance above. Omitted entirely when the turn had none.
+        ...(result.enrichment.length > 0 ? { enrichment: result.enrichment } : {}),
+        // INT40: Companion Action proposals — structured, executable operations
+        // distinct from the navigate-only discoveries/guidance above. Omitted when
+        // the turn had nothing executable to propose (honest gap, not a fabricated
+        // action). Each shares a `workflowId` when they form a guided workflow.
+        ...(result.actions.length > 0 ? { actions: result.actions } : {}),
+        // INT35B: the unsuccessful-turn state (no-route / no-knowledge / no-results /
+        // internal-error), present only when the turn did not succeed. Lets the live
+        // Companion identify fallback turns consistently. Derived, never persisted.
+        ...(result.fallbackState ? { fallbackState: result.fallbackState } : {}),
         ...(result.outcome ? { outcome: { status: result.outcome.status, message: result.outcome.message } } : {}),
       });
     } catch (err) {
@@ -11288,6 +11315,414 @@ Generate a complete recipe using these as the foundation.`;
     } catch (err) {
       console.error("[ConversationGateway] GET /threads error:", err);
       res.status(500).json({ message: "Failed to fetch conversation threads" });
+    }
+  });
+
+  // ── INT38 — Companion Guidance & Feedback (session-authenticated, ownership-checked) ──
+  // End-user actions on the user's own turns. Feedback and guidance-click events are
+  // stored ANONYMOUSLY (no user id column on either table) — the ownership check here
+  // only gates WHO may submit against a given turn; nothing about the submitter is
+  // persisted alongside the feedback/event row itself.
+
+  const FEEDBACK_REASON_CODES = new Set([
+    "not_relevant", "inaccurate", "already_knew", "too_generic", "other",
+  ]);
+  const FEEDBACK_NOTE_MAX_CHARS = 500;
+
+  app.post("/api/intelligence/conversation/turns/:turnId/feedback", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+
+    const turnId = parseInt(String(req.params.turnId), 10);
+    if (!Number.isFinite(turnId)) return res.status(400).json({ message: "Invalid turn id" });
+
+    const { rating, reasonCode, note } = req.body ?? {};
+    if (rating !== "up" && rating !== "down") {
+      return res.status(400).json({ message: "rating must be 'up' or 'down'" });
+    }
+    if (reasonCode !== undefined && (typeof reasonCode !== "string" || !FEEDBACK_REASON_CODES.has(reasonCode))) {
+      return res.status(400).json({ message: "Invalid reasonCode" });
+    }
+    if (note !== undefined && (typeof note !== "string" || note.length > FEEDBACK_NOTE_MAX_CHARS)) {
+      return res.status(400).json({ message: `note must be a string of ${FEEDBACK_NOTE_MAX_CHARS} characters or fewer` });
+    }
+
+    try {
+      const { DatabaseConversationStore } = await import("./intelligence/conversation/conversation-store.js");
+      const owner = await new DatabaseConversationStore().getTurnOwner(turnId);
+      if (!owner) return res.status(404).json({ message: "Turn not found" });
+      if (owner.userId !== user.id) return res.sendStatus(403);
+      if (owner.role !== "assistant") {
+        return res.status(400).json({ message: "Feedback can only be given on an assistant turn" });
+      }
+
+      const { companionFeedbackStore } = await import("./intelligence/conversation/companion-feedback-store.js");
+      const saved = await companionFeedbackStore.submitFeedback({
+        conversationTurnId: turnId,
+        rating,
+        reasonCode: rating === "down" ? reasonCode : undefined,
+        note,
+      });
+      res.json({ rating: saved.rating, reasonCode: saved.reasonCode, note: saved.note });
+    } catch (err) {
+      console.error("[CompanionFeedback] POST feedback error:", err);
+      res.status(500).json({ message: "Failed to submit feedback" });
+    }
+  });
+
+  // POST — record a click-through on a shown INT38 guidance suggestion. Advisory
+  // observability signal only; never changes routing or the suggestion itself.
+  app.post("/api/intelligence/conversation/turns/:turnId/guidance-click", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+
+    const turnId = parseInt(String(req.params.turnId), 10);
+    if (!Number.isFinite(turnId)) return res.status(400).json({ message: "Invalid turn id" });
+
+    const { domain, sourceDomain, sourceCapabilityId, targetCapabilityId, verb } = req.body ?? {};
+    if (typeof domain !== "string" || !domain.trim() || typeof sourceDomain !== "string" || !sourceDomain.trim()) {
+      return res.status(400).json({ message: "domain and sourceDomain are required strings" });
+    }
+    // INT39 — optional capability identity, carried through when the client sends it
+    // (every INT39 guidance suggestion does). Absent/invalid values are dropped, never
+    // guessed — a click without capability identity simply cannot be classified as a
+    // completed goal by the analytics layer, which is the honest outcome.
+    const capabilityFields = {
+      ...(typeof sourceCapabilityId === "string" && sourceCapabilityId.trim() ? { sourceCapabilityId } : {}),
+      ...(typeof targetCapabilityId === "string" && targetCapabilityId.trim() ? { targetCapabilityId } : {}),
+      ...(typeof verb === "string" && verb.trim() ? { targetVerb: verb } : {}),
+    };
+
+    try {
+      const { DatabaseConversationStore } = await import("./intelligence/conversation/conversation-store.js");
+      const owner = await new DatabaseConversationStore().getTurnOwner(turnId);
+      if (!owner) return res.status(404).json({ message: "Turn not found" });
+      if (owner.userId !== user.id) return res.sendStatus(403);
+
+      const { companionFeedbackStore } = await import("./intelligence/conversation/companion-feedback-store.js");
+      await companionFeedbackStore.recordGuidanceEvent({
+        conversationTurnId: turnId,
+        eventKind: "clicked",
+        sourceDomain,
+        domain,
+        ...capabilityFields,
+      });
+      res.sendStatus(204);
+    } catch (err) {
+      console.error("[CompanionFeedback] POST guidance-click error:", err);
+      res.status(500).json({ message: "Failed to record guidance click" });
+    }
+  });
+
+  // ── INT40 — Companion Task Delegation & Assisted Actions (session-authenticated,
+  // ownership-checked) ─────────────────────────────────────────────────────────
+  // Confirm/cancel a proposed Companion Action. Confirmation is the ONLY path that
+  // ever executes an action — routes.ts calls intelligencePlatform.handle() directly
+  // with { confirmed: true } (the SAME Intent Engine every other capability call
+  // goes through: LOCATE → VALIDATE → PERMISSION → CONFIRM → INVOKE → RESPOND), so
+  // permission and confirmation are re-checked server-side at confirm time, never
+  // trusted from the proposal alone. Ownership of the action is resolved by joining
+  // through the SAME DatabaseConversationStore.getTurnOwner() the feedback/guidance-
+  // click routes above already use — no duplicate ownership-check logic.
+
+  app.post("/api/intelligence/conversation/actions/:actionId/confirm", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+
+    const actionId = parseInt(String(req.params.actionId), 10);
+    if (!Number.isFinite(actionId)) return res.status(400).json({ message: "Invalid action id" });
+
+    try {
+      const { companionActionStore } = await import("./intelligence/conversation/companion-action-store.js");
+      const proposal = await companionActionStore.getProposal(actionId);
+      if (!proposal) return res.status(404).json({ message: "Action not found" });
+
+      const { DatabaseConversationStore } = await import("./intelligence/conversation/conversation-store.js");
+      const owner = await new DatabaseConversationStore().getTurnOwner(proposal.conversationTurnId);
+      if (!owner) return res.status(404).json({ message: "Action not found" });
+      if (owner.userId !== user.id) return res.sendStatus(403);
+
+      // Idempotent: an already-resolved proposal is reported back as-is, never
+      // re-executed — a repeat confirm click can never double-mutate.
+      if (proposal.status !== "proposed") {
+        return res.json({
+          id: proposal.id,
+          status: proposal.status,
+          resultSummary: proposal.resultSummary,
+          errorCode: proposal.errorCode,
+          errorMessage: proposal.errorMessage,
+        });
+      }
+
+      const intent = {
+        capabilityId: proposal.capabilityId,
+        verb: proposal.verb as import("./intelligence/types.js").IntentVerb,
+        parameters: proposal.parameters as Record<string, unknown>,
+      };
+      const context = intelligencePlatform.contextFor(user);
+      const outcome = await intelligencePlatform.handle(intent, context, { confirmed: true });
+
+      const updated = outcome.status === "ok"
+        ? await companionActionStore.updateProposalStatus(actionId, "succeeded", { resultSummary: outcome.message })
+        : await companionActionStore.updateProposalStatus(actionId, "failed", {
+            errorCode: outcome.status,
+            errorMessage: outcome.message,
+          });
+
+      res.json({
+        id: updated.id,
+        status: updated.status,
+        resultSummary: updated.resultSummary,
+        errorCode: updated.errorCode,
+        errorMessage: updated.errorMessage,
+      });
+    } catch (err) {
+      console.error("[CompanionActions] POST confirm error:", err);
+      res.status(500).json({ message: "Failed to confirm Companion Action" });
+    }
+  });
+
+  app.post("/api/intelligence/conversation/actions/:actionId/cancel", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const user = req.user as import("@shared/schema").User;
+
+    const actionId = parseInt(String(req.params.actionId), 10);
+    if (!Number.isFinite(actionId)) return res.status(400).json({ message: "Invalid action id" });
+
+    try {
+      const { companionActionStore } = await import("./intelligence/conversation/companion-action-store.js");
+      const proposal = await companionActionStore.getProposal(actionId);
+      if (!proposal) return res.status(404).json({ message: "Action not found" });
+
+      const { DatabaseConversationStore } = await import("./intelligence/conversation/conversation-store.js");
+      const owner = await new DatabaseConversationStore().getTurnOwner(proposal.conversationTurnId);
+      if (!owner) return res.status(404).json({ message: "Action not found" });
+      if (owner.userId !== user.id) return res.sendStatus(403);
+
+      const updated = await companionActionStore.updateProposalStatus(actionId, "cancelled");
+      res.json({ id: updated.id, status: updated.status });
+    } catch (err) {
+      console.error("[CompanionActions] POST cancel error:", err);
+      res.status(500).json({ message: "Failed to cancel Companion Action" });
+    }
+  });
+
+  // ── INT35B — Companion Learning & Observability (admin-only) ────────────────
+  // Two READ-ONLY diagnostics over the privacy-safe unsuccessful-query log INT35
+  // already records. They never modify production routing (scope items 3–5). The
+  // log carries no user id, no parameters, and no capability results, so these
+  // routes cannot leak user data — but they are still admin-gated as operator
+  // tooling that surfaces aggregate assistant behaviour.
+
+  // GET — the diagnostic summary: miss counts by state/surface, the resolver's
+  // unmatched-utterance backlog, and capability-side routing failures.
+  app.get("/api/intelligence/observability/companion", assertAdmin, async (_req, res) => {
+    try {
+      const { summarizeCompanionHealth } = await import("./intelligence/conversation/companion-observability.js");
+      res.json(summarizeCompanionHealth());
+    } catch (err) {
+      console.error("[CompanionObservability] GET summary error:", err);
+      res.status(500).json({ message: "Failed to build Companion observability summary" });
+    }
+  });
+
+  // POST — AI-assisted, ADVISORY-ONLY matcher suggestions over the unmatched
+  // backlog. Suggests only; never applies. Production routing changes remain a
+  // human, code-reviewed edit to the PatternIntentResolver.
+  app.post("/api/intelligence/observability/suggest-matchers", assertAdmin, async (_req, res) => {
+    try {
+      const { unmatchedUtteranceBacklog } = await import("./intelligence/conversation/companion-observability.js");
+      const { suggestMatcherImprovements } = await import("./intelligence/conversation/matcher-suggester.js");
+      const { createDefaultLlmProvider } = await import("./intelligence/conversation/llm-provider.js");
+      const report = await suggestMatcherImprovements(
+        unmatchedUtteranceBacklog(),
+        createDefaultLlmProvider(),
+      );
+      res.json(report);
+    } catch (err) {
+      console.error("[MatcherSuggester] POST suggest error:", err);
+      res.status(500).json({ message: "Failed to generate matcher suggestions" });
+    }
+  });
+
+  // ── INT35C — Governed Companion Learning & Intelligence Dashboard (admin-only) ──
+  // Turns the INT35B observability summary into a persisted learning loop: a
+  // gap classification (resolver / clarification / capability / knowledge /
+  // platform-failure), a snapshot history for trend, and an admin review
+  // queue of ADVISORY recommendations. No route here can change production
+  // routing — reviewing a recommendation only changes its status in the
+  // queue (companion-learning-store.reviewRecommendation's hard rule).
+
+  // GET — the full dashboard payload: rates, distributions, gap analyses,
+  // top lists, trend (when ≥2 snapshots exist), and recommendation counts.
+  app.get("/api/intelligence/learning/dashboard", assertAdmin, async (_req, res) => {
+    try {
+      const { summarizeCompanionHealth } = await import("./intelligence/conversation/companion-observability.js");
+      const { classifyGaps, computeRateMetrics } = await import("./intelligence/conversation/companion-gap-classifier.js");
+      const { getUnsuccessfulQueryLog } = await import("./intelligence/conversation/turn-fallback.js");
+      const { companionLearningStore, computeTrend } = await import("./intelligence/conversation/companion-learning-store.js");
+      const { DatabaseConversationStore } = await import("./intelligence/conversation/conversation-store.js");
+      const { companionFeedbackStore } = await import("./intelligence/conversation/companion-feedback-store.js");
+      const {
+        computeHelpfulness,
+        computeFeedbackTrend,
+        computeTopNegativeReasons,
+        computeTaskCompletion,
+        computeSuccessfulJourneys,
+        computePoorFeedbackRecommendations,
+        computeAbandonmentOpportunities,
+      } = await import("./intelligence/conversation/companion-guidance-analytics.js");
+      const {
+        computeGoalFunnel,
+        computeRecoveryAfterFailure,
+        computeHighestConvertingGuidanceActions,
+        computeIgnoredGuidanceActions,
+      } = await import("./intelligence/conversation/companion-goal-analytics.js");
+      const { companionActionStore } = await import("./intelligence/conversation/companion-action-store.js");
+      const { computeDelegationDashboardStats } = await import("./intelligence/conversation/companion-delegation-analytics.js");
+
+      const log = getUnsuccessfulQueryLog();
+      const summary = summarizeCompanionHealth(log);
+      const classification = classifyGaps(log, summary);
+
+      const since = summary.windowStart ? new Date(summary.windowStart) : new Date(0);
+      const conversationStore = new DatabaseConversationStore();
+      const totalTurns = await conversationStore.countTurnsSince(since, "assistant");
+      const rates = computeRateMetrics(classification, totalTurns);
+
+      const snapshots = await companionLearningStore.listHealthSnapshots(30);
+      const trend = computeTrend(snapshots);
+      const recommendationCounts = await companionLearningStore.countRecommendationsByStatus();
+
+      // INT38 — feedback + guidance analytics, read via the dedicated store.
+      // INT39 — the same guidance events (now carrying capability identity) plus
+      // the persisted per-turn Goal Completion signal, feed the goal funnel.
+      // INT40 — delegated Companion Action proposals, read via the dedicated store.
+      const [feedbackRows, guidanceEvents, goalSignalTurns, actionProposals] = await Promise.all([
+        companionFeedbackStore.listFeedback(),
+        companionFeedbackStore.listGuidanceEvents(),
+        conversationStore.listAssistantTurnGoalSignals(since),
+        companionActionStore.listProposals(),
+      ]);
+
+      res.json({
+        summary,
+        classification,
+        rates,
+        trend,
+        recommendationCounts,
+        history: snapshots.map(s => ({
+          id: s.id,
+          createdAt: s.createdAt,
+          totalEvents: s.totalEvents,
+          totalTurns: s.totalTurns,
+          gapCounts: s.gapCounts,
+        })),
+        feedback: {
+          helpfulness: computeHelpfulness(feedbackRows),
+          trend: computeFeedbackTrend(feedbackRows),
+          topNegativeReasons: computeTopNegativeReasons(feedbackRows),
+        },
+        guidance: {
+          taskCompletion: computeTaskCompletion(guidanceEvents),
+          successfulJourneys: computeSuccessfulJourneys(guidanceEvents),
+          poorFeedbackRecommendations: computePoorFeedbackRecommendations(feedbackRows, guidanceEvents),
+          abandonmentOpportunities: computeAbandonmentOpportunities(guidanceEvents),
+        },
+        // INT39 — Capability Guidance Registry & Goal Completion analytics.
+        goalCompletion: {
+          funnel: computeGoalFunnel(goalSignalTurns, guidanceEvents),
+          recoveryAfterFailure: computeRecoveryAfterFailure(goalSignalTurns),
+          highestConvertingActions: computeHighestConvertingGuidanceActions(guidanceEvents),
+          ignoredActions: computeIgnoredGuidanceActions(guidanceEvents),
+        },
+        // INT40 — Companion Task Delegation & Assisted Actions analytics.
+        delegation: computeDelegationDashboardStats(actionProposals),
+      });
+    } catch (err) {
+      console.error("[CompanionLearning] GET dashboard error:", err);
+      res.status(500).json({ message: "Failed to build Companion learning dashboard" });
+    }
+  });
+
+  // POST — admin-triggered: record a new health snapshot and generate a fresh
+  // batch of advisory recommendations (matcher / capability / regression-test),
+  // queued as `pending`. No scheduler — this is the only way a snapshot is taken.
+  app.post("/api/intelligence/learning/snapshot", assertAdmin, async (req, res) => {
+    try {
+      const { generateAndQueueRecommendations } = await import("./intelligence/conversation/companion-learning-recommender.js");
+      const { createDefaultLlmProvider } = await import("./intelligence/conversation/llm-provider.js");
+      const { DatabaseConversationStore } = await import("./intelligence/conversation/conversation-store.js");
+      const { companionLearningStore } = await import("./intelligence/conversation/companion-learning-store.js");
+      const result = await generateAndQueueRecommendations(createDefaultLlmProvider(), new DatabaseConversationStore(), companionLearningStore);
+      await storage.createAuditLog({
+        adminUserId: req.user!.id,
+        action: "COMPANION_LEARNING_SNAPSHOT_GENERATED",
+        metadata: { snapshotId: result.snapshot.id, recommendationCount: result.recommendations.length },
+      });
+      res.json(result);
+    } catch (err) {
+      console.error("[CompanionLearning] POST snapshot error:", err);
+      res.status(500).json({ message: "Failed to generate Companion learning recommendations" });
+    }
+  });
+
+  // GET — list/filter the recommendation review queue.
+  app.get("/api/intelligence/learning/recommendations", assertAdmin, async (req, res) => {
+    try {
+      const { companionLearningStore } = await import("./intelligence/conversation/companion-learning-store.js");
+      const status = typeof req.query.status === "string" ? req.query.status : undefined;
+      const validStatuses = new Set(["pending", "approved", "rejected", "completed"]);
+      const recommendations = await companionLearningStore.listRecommendations({
+        status: status && validStatuses.has(status) ? (status as any) : undefined,
+      });
+      res.json({ recommendations });
+    } catch (err) {
+      console.error("[CompanionLearning] GET recommendations error:", err);
+      res.status(500).json({ message: "Failed to list Companion learning recommendations" });
+    }
+  });
+
+  // GET — drill-down detail for one recommendation.
+  app.get("/api/intelligence/learning/recommendations/:id", assertAdmin, async (req, res) => {
+    try {
+      const { companionLearningStore } = await import("./intelligence/conversation/companion-learning-store.js");
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid recommendation id" });
+      const recommendation = await companionLearningStore.getRecommendation(id);
+      if (!recommendation) return res.status(404).json({ message: "Recommendation not found" });
+      res.json(recommendation);
+    } catch (err) {
+      console.error("[CompanionLearning] GET recommendation detail error:", err);
+      res.status(500).json({ message: "Failed to load recommendation" });
+    }
+  });
+
+  // POST — review a recommendation. Writes ONLY status/reviewedBy/reviewedAt/
+  // reviewNotes (companion-learning-store's hard rule) — this can NEVER change
+  // production routing. Acting on an approved recommendation remains a
+  // separate, human, code-reviewed implementation via the normal governed
+  // engineering workflow.
+  app.post("/api/intelligence/learning/recommendations/:id/review", assertAdmin, async (req, res) => {
+    try {
+      const id = parseInt(String(req.params.id), 10);
+      if (!Number.isFinite(id)) return res.status(400).json({ message: "Invalid recommendation id" });
+      const { status, notes } = req.body ?? {};
+      if (status !== "approved" && status !== "rejected" && status !== "completed") {
+        return res.status(400).json({ message: "status must be one of approved | rejected | completed" });
+      }
+      const { companionLearningStore } = await import("./intelligence/conversation/companion-learning-store.js");
+      const updated = await companionLearningStore.reviewRecommendation(id, status, req.user!.id, typeof notes === "string" ? notes : undefined);
+      if (!updated) return res.status(404).json({ message: "Recommendation not found" });
+      await storage.createAuditLog({
+        adminUserId: req.user!.id,
+        action: `COMPANION_LEARNING_RECOMMENDATION_${status.toUpperCase()}`,
+        metadata: { recommendationId: id, kind: updated.kind },
+      });
+      res.json(updated);
+    } catch (err) {
+      console.error("[CompanionLearning] POST review error:", err);
+      res.status(500).json({ message: "Failed to review recommendation" });
     }
   });
 

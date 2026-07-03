@@ -29,6 +29,7 @@ import ProfilePage from "@/pages/profile-page";
 import AdminUsersPage from "@/pages/admin-users-page";
 import AdminIngredientProductsPage from "@/pages/admin-ingredient-products-page";
 import AdminRecipeSourcesPage from "@/pages/admin-recipe-sources-page";
+import AdminCompanionIntelligencePage from "@/pages/admin-companion-intelligence-page";
 import SharedPlanPage from "@/pages/shared-plan-page";
 import PantryPage from "@/pages/pantry-page";
 import PlantDiversityPage from "@/pages/plant-diversity-page";
@@ -206,6 +207,7 @@ function Router() {
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersPage} />} />
       <Route path="/admin/ingredient-products" component={() => <ProtectedRoute component={AdminIngredientProductsPage} />} />
       <Route path="/admin/recipe-sources" component={() => <ProtectedRoute component={AdminRecipeSourcesPage} />} />
+      <Route path="/admin/companion-intelligence" component={() => <ProtectedRoute component={AdminCompanionIntelligencePage} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
       <Route path="/plant-diversity" component={() => <ProtectedRoute component={PlantDiversityPage} />} />
       <Route path="/diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />

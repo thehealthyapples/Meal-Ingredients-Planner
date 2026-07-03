@@ -123,6 +123,7 @@ const PREFS_1: UserPreferences = {
   maxTotalCookTime: 45,
   preferLessProcessed: true,
   includeRegulatoryAdditivesInScoring: true,
+  mutedOpportunityTypes: [],
 };
 
 const calls: string[] = [];
@@ -164,8 +165,8 @@ async function main(): Promise<void> {
   );
   const live = intelligencePlatform.listCapabilities().filter((c) => c.availability === "available");
   assert(
-    live.length === 18,
-    "exactly EIGHTEEN capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery) — scope lock (updated by INT32)",
+    live.length === 21,
+    "exactly TWENTY-ONE capabilities are live (planner + shopping + nutrition-knowledge + pantry + diary + profile + household + partners + meals + templates + analyser + meal-discovery + nutrition-discovery + planner-discovery + household-discovery + shopping-discovery + pantry-discovery + diary-discovery + food-intelligence + opportunity-delivery + evidence-learning) — scope lock (updated by EL1)",
     String(live.length),
   );
   assert(

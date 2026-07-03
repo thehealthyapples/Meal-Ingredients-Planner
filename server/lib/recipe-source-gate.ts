@@ -1,6 +1,11 @@
 import { db } from "../db";
 import { recipeSourceSettings, recipeSourceAuditLog } from "@shared/schema";
 import { isNull } from "drizzle-orm";
+import {
+  getAcquisitionSourcePolicy,
+  isSourceAcquirable,
+  type AcquisitionSourcePolicy,
+} from "@shared/recipe-acquisition";
 
 
 export type SourceKey =
@@ -14,16 +19,21 @@ export interface SourceMeta {
   defaultEnabled: boolean;
 }
 
+// defaultEnabled reflects the admin *preference* layer only. The acquisition
+// policy layer (shared/recipe-acquisition.ts) sits above it: a source whose
+// licence state is unlicensed/pending_review is never callable regardless of
+// this flag or the admin toggle. The four scraped sources default off (FS3 —
+// no lawful lane exists for them; FS2 R1).
 export const ALL_SOURCES: SourceMeta[] = [
   { sourceKey: "themealdb",    label: "TheMealDB",          sourceType: "official_api", defaultEnabled: true },
   { sourceKey: "edamam",       label: "Edamam",             sourceType: "official_api", defaultEnabled: false },
   { sourceKey: "apininjas",    label: "API-Ninjas Recipes", sourceType: "official_api", defaultEnabled: false },
   { sourceKey: "bigoven",      label: "BigOven",            sourceType: "official_api", defaultEnabled: false },
   { sourceKey: "fatsecret",    label: "FatSecret",          sourceType: "official_api", defaultEnabled: false },
-  { sourceKey: "bbcgoodfood",  label: "BBC Good Food",      sourceType: "scraped",      defaultEnabled: true },
-  { sourceKey: "allrecipes",   label: "AllRecipes",         sourceType: "scraped",      defaultEnabled: true },
-  { sourceKey: "jamieoliver",  label: "Jamie Oliver",       sourceType: "scraped",      defaultEnabled: true },
-  { sourceKey: "seriouseats",  label: "Serious Eats",       sourceType: "scraped",      defaultEnabled: true },
+  { sourceKey: "bbcgoodfood",  label: "BBC Good Food",      sourceType: "scraped",      defaultEnabled: false },
+  { sourceKey: "allrecipes",   label: "AllRecipes",         sourceType: "scraped",      defaultEnabled: false },
+  { sourceKey: "jamieoliver",  label: "Jamie Oliver",       sourceType: "scraped",      defaultEnabled: false },
+  { sourceKey: "seriouseats",  label: "Serious Eats",       sourceType: "scraped",      defaultEnabled: false },
 ];
 
 const DOMAIN_TO_SOURCE: Record<string, SourceKey> = {
@@ -80,9 +90,19 @@ export function getCredentialStatus(key: string): "configured" | "missing" {
 }
 
 export async function isSourceCallable(key: string): Promise<boolean> {
+  // Acquisition policy layer first (FS3): a source with no register entry, or
+  // whose licence state is unlicensed/pending_review, is unfetchable by
+  // construction — the admin enable toggle cannot override licensing.
+  const policy = getAcquisitionSourcePolicy(key);
+  if (!isSourceAcquirable(policy)) return false;
   const enabled = await isSourceEnabled(key);
   if (!enabled) return false;
   return getCredentialStatus(key) === "configured";
+}
+
+/** Acquisition policy for a source, for admin/display surfaces. */
+export function getSourceAcquisitionPolicy(key: string): AcquisitionSourcePolicy | null {
+  return getAcquisitionSourcePolicy(key);
 }
 
 export function getSourceKeyForUrl(url: string): SourceKey | null {
@@ -136,11 +156,21 @@ export async function seedSourceSettings(): Promise<void> {
   }
 }
 
-export async function getAllSourceSettings(): Promise<Array<RecipeSourceSettings & { credentialStatus: "configured" | "missing" }>> {
+export interface SourceSettingsView extends RecipeSourceSettings {
+  credentialStatus: "configured" | "missing";
+  acquisitionLane: string | null;
+  storagePolicy: string;
+  licenceState: string;
+  acquirable: boolean;
+  licenceNote: string | null;
+}
+
+export async function getAllSourceSettings(): Promise<SourceSettingsView[]> {
   const rows = await db.select().from(recipeSourceSettings);
   const rowMap = new Map(rows.map(r => [r.sourceKey, r]));
   return ALL_SOURCES.map(meta => {
     const row = rowMap.get(meta.sourceKey);
+    const policy = getAcquisitionSourcePolicy(meta.sourceKey);
     return {
       id: row?.id ?? 0,
       sourceKey: meta.sourceKey,
@@ -149,6 +179,13 @@ export async function getAllSourceSettings(): Promise<Array<RecipeSourceSettings
       updatedAt: row?.updatedAt ?? new Date(),
       adminUpdatedAt: row?.adminUpdatedAt ?? null,
       credentialStatus: getCredentialStatus(meta.sourceKey),
+      // FS3 acquisition policy (additive; read-only in admin UI). `acquirable`
+      // false means the enabled toggle has no effect — licensing forbids calls.
+      acquisitionLane: policy?.lane ?? null,
+      storagePolicy: policy?.storagePolicy ?? "forbidden",
+      licenceState: policy?.licenceState ?? "pending_review",
+      acquirable: isSourceAcquirable(policy),
+      licenceNote: policy?.licenceNote ?? null,
     };
   });
 }

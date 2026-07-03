@@ -1,6 +1,11 @@
 import { storage as defaultStorage } from "../storage";
 import type { ExternalMealCandidate } from "./external-meal-service";
 import { scrapeRecipeFromUrl } from "./recipe-scraper";
+import {
+  getPolicyForSourceLabel,
+  mayPersistFromSource,
+  mayFetchSourceContent,
+} from "@shared/recipe-acquisition";
 
 export interface AutoImportResult {
   mealId: number;
@@ -49,10 +54,23 @@ export async function autoImportExternalMeal(
       };
     }
 
+    // FS3 acquisition policy gate: only candidates from a registered source
+    // whose storage policy is "import" may be persisted. Unregistered sources
+    // (including client-supplied "Unknown") and link-only/forbidden sources are
+    // refused — closes FS2 C2. Internal THA sources ("Meal Shell") are owned
+    // and always persistable.
+    const policy = getPolicyForSourceLabel(candidate.source);
+    if (!mayPersistFromSource(policy)) {
+      console.warn(
+        `[AutoImport] Refused to persist "${candidate.name}" — source "${candidate.source}" has no import right (policy: ${policy ? `${policy.licenceState}/${policy.storagePolicy}` : "unregistered"})`,
+      );
+      return null;
+    }
+
     let ingredients = candidate.ingredients;
     let instructions = candidate.instructions;
 
-    if (candidate.sourceUrl && ingredients.length === 0) {
+    if (candidate.sourceUrl && ingredients.length === 0 && mayFetchSourceContent(policy)) {
       const scraped = await scrapeRecipeFromUrl(candidate.sourceUrl);
       if (scraped) {
         ingredients = scraped.ingredients;
@@ -64,13 +82,22 @@ export async function autoImportExternalMeal(
       ingredients = [`${candidate.name} (ingredients to be added)`];
     }
 
+    // Honest provenance (fixes FS2 C2-a): externally acquired content is never
+    // labelled "scratch". THA-owned internal sources keep the legacy "scratch"
+    // value for compatibility; the acquisition columns carry the truth either way.
+    const isOwned = policy!.licenceState === "owned";
     const meal = await storage.createMeal(userId, {
       name: candidate.name,
       ingredients,
       instructions: instructions.length > 0 ? instructions : [],
       imageUrl: candidate.image || undefined,
       sourceUrl: candidate.sourceUrl || undefined,
-      mealSourceType: "scratch",
+      mealSourceType: isOwned ? "scratch" : "smart_import",
+      acquisitionLane: policy!.lane,
+      acquisitionType: isOwned ? "authored" : "licensed_import",
+      acquisitionSourceKey: policy!.sourceKey,
+      licenceRef: policy!.licenceRef,
+      attributionText: policy!.attributionText,
     });
 
     let template = await storage.getMealTemplateByName(candidate.name);

@@ -441,7 +441,7 @@ Sequenced fast-follows, each behind its own rollback point and approval.
 | 1 | **Benefits 6–8** (Muscle, Brain, Sleep[emerging]) | Health Benefits V1 §2.2 | Content drop; nutritionist sign-off. |
 | 2 | **WNR gated sections go live** (Protein & Whole Foods; UPF-risk wording) | WNR §4 | Needs curated protein/dairy/fish data + `sources` on `additives`. |
 | 3 | **Choose Better — caution classifier** (occasional foods) | WNR §8 + Intelligence §7 | Highest claim/tone risk; needs copy-safety sign-off + caution-food→alternatives table. |
-| 4 | **Recommendation Engine — Stages 1–2** (static → household-aware) | Personalised Intelligence §11 | Goals/SBC/Choose Better as one pipeline; needs Profile goals/likes fields; no AI; Rule T0 safety gate. |
+| 4 | **Food Intelligence Engine — Stages 1–2** (static → household-aware) | `THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` §8 (Phase 1) | Goals/SBC/Choose Better as one pipeline; needs Profile goals/likes fields; no AI; Rule T0 safety gate. |
 | 5 | **Pantry Explore — personalisation** ("already in your meals ✓ / easy additions ○") | Pantry V2 §8 Phase 2 | Reuses planner data + boosts + shopping loop. |
 | 6 | **KMS — P0→P2** (schema → curator tooling → seed-from-static) | KMS §9 | Additive-only migration; static stays fallback; parity tests before any read-path swap. |
 | 7 | **Tier-4 component-shell planner recovery** | current_dev_status Stream A/B | Wire `matchMealsForHousehold()` as Tier-4 fallback; closes the restricted-household empty-slot gap. |
@@ -454,13 +454,15 @@ Sequenced fast-follows, each behind its own rollback point and approval.
 | Horizon | Capability | Source design | Hard constraints |
 |---|---|---|---|
 | **KMS automation** | Source ingestion (P3) → staleness monitoring (P4) → editorial rules (E0) → pattern blessing → Phase-3 auto-publish (E5 composition, E6 outcome) → exceptions-only (E7) | KMS §9, Editorial/Automation §10 | Automate only the **THA-owned layer** (wording/presentation), never the science. Revocation-before-autonomy. First instance of any nutrient↔benefit relationship is always human. EFSA firewall + nutrition/legal sign-off before outcome auto-publish. |
-| **Predictive guidance** | Recommendation Engine Stage 4 — "you usually plan curry on Fridays — here's a plant boost"; seasonal, gap-aware | Intelligence §11 | LLM may *phrase*, never *decide*. Offers, never assumes (Rule LT2). Frequency caps + easy opt-out. |
+| **Predictive guidance** | Food Intelligence Engine Stage 4 — "you usually plan curry on Fridays — here's a plant boost"; seasonal, gap-aware | `THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` §8 (Phase 3) | LLM may *phrase*, never *decide*. Offers, never assumes (Rule LT2). Frequency caps + easy opt-out. |
 | **Autonomous curation** | Self-maintaining, self-growing knowledge base; humans only on genuine novelty/conflict | Editorial/Automation §10 | Worst case stays "slightly stale, once-human-approved" — never unreviewed or fabricated. |
-| **Nutrition Companion** | Recommendation Engine Stage 5 — conversational, goal-tracking-over-time, multi-eater reconciliation | Intelligence §11 | The decision-brain stays deterministic, cited, explainable at every stage (Rule LT3). Companion verbs only — never diagnose/dose/predict/prescribe. |
+| **Food Intelligence Companion** | Food Intelligence Engine Stage 5 — conversational, goal-tracking-over-time, multi-eater reconciliation | `THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md` §8 (Phase 4) | The decision-brain stays deterministic, cited, explainable at every stage (Rule LT3). Companion verbs only — never diagnose/dose/predict/prescribe. Food Intelligence enriches Business Domains but never owns their data (Rule FI1). |
 
 **The invariant across all horizons:** the trust guarantees and explainability are **constant**; only
 personalisation depth and automation maturity grow. The two structural walls — the KMS *discovered↔
 published* wall and the Intelligence *generic↔personalised* (G1) wall — never move.
+
+**Nutrition → Food Intelligence:** the long-term Nutrition/Recommendation-Engine vision referenced in this section (formerly citing `docs/investigations/THA_PERSONALISED_NUTRITION_INTELLIGENCE_ARCHITECTURE.md` and `NUT2_FUTURE_STATE_NUTRITION_VISION.md`) was promoted to governing architecture as **`docs/architecture/THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`** under EWO-FI1 (2026-07-03). Future Food Intelligence workstreams cite that document; the two investigations above remain historical evidence only.
 
 ---
 

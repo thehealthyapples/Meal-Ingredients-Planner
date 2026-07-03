@@ -104,6 +104,98 @@ export type AiAccessPosture = "R" | "R+A" | "W" | "W!" | "future" | "never";
 export type CapabilityAvailability = "registered" | "available" | "gap" | "never";
 
 // ---------------------------------------------------------------------------
+// Capability Guidance (INT39 — extends the Capability Registry, never the
+// Companion) — how a user should naturally continue after a SUCCESSFUL
+// interaction with this capability, declared by the capability itself.
+// ---------------------------------------------------------------------------
+
+/**
+ * One guidance action: a pointer at another (or the same) registered
+ * capability + verb, with a human-readable label. This IS the executability
+ * gate — resolving a suggestion always re-checks `(capabilityId, verb)`
+ * against the live registry (CapabilityRegistry.isExecutable), so a
+ * suggestion can never point at an unregistered or not-yet-executable
+ * capability (TIP1 Principle 6 — honest gaps).
+ */
+export interface GuidanceAction {
+  readonly capabilityId: string;
+  readonly verb: IntentVerb;
+  readonly label: string;
+}
+
+/**
+ * A deterministic, honest definition of "done" for this capability's goal.
+ * `satisfiedByAction` names the guidance action whose click-through is the
+ * observable signal that the user actually continued the journey this
+ * capability pointed them towards — the same click-through proxy pattern
+ * INT38 already uses for task completion, applied per-capability instead of
+ * per-domain. No new business-data ownership is introduced: completion is
+ * never inferred from a write to another capability's own tables.
+ */
+export interface CompletionCriterion {
+  readonly id: string;
+  readonly description: string;
+  readonly satisfiedByAction: GuidanceAction;
+}
+
+/**
+ * Structured "where to next" guidance owned by a single capability. Optional
+ * on every capability — absence means the capability has nothing to suggest,
+ * never a fabricated default. The Companion consumes this via the registry;
+ * it must never hold an equivalent table of its own (INT39 architecture rule
+ * — guidance belongs to capabilities, not the Companion).
+ */
+export interface CapabilityGuidance {
+  /** The single most natural next step after a successful interaction. */
+  readonly primaryAction?: GuidanceAction;
+  /** Lateral alternatives to the primary action — same "level", different capability. */
+  readonly relatedActions?: readonly GuidanceAction[];
+  /** Deeper next steps that make sense once the primary/related action is taken. */
+  readonly followUpActions?: readonly GuidanceAction[];
+  /** A named, ordered multi-step path across capabilities (e.g. Nutrition → Meal → Plan → Shop). */
+  readonly recommendedJourneys?: readonly GuidanceAction[];
+  /** What "goal completed" honestly means for this capability's own journey. */
+  readonly completionCriteria?: readonly CompletionCriterion[];
+}
+
+// ---------------------------------------------------------------------------
+// Capability Enrichment (INT41 — extends the Capability Registry, never the
+// Companion) — contextual insights, explanations, recommendations and
+// educational content a capability offers ALONGSIDE its primary response,
+// as distinct from CapabilityGuidance's "where to next" navigation above.
+// ---------------------------------------------------------------------------
+
+/** The kind of enrichment content a capability may declare. */
+export type EnrichmentKind = "insight" | "explanation" | "recommendation" | "educational";
+
+/**
+ * One piece of enrichment content, owned by the capability that declares it.
+ * Static, deterministic prose the capability author writes once — never a
+ * live computation, never personalised, never fabricated per-turn (Core
+ * Principle 6). `appliesToVerbs` scopes an item to the verbs it is relevant
+ * for; omitted means it applies whenever the capability produced grounding
+ * data, regardless of verb.
+ */
+export interface CapabilityEnrichmentItem {
+  readonly kind: EnrichmentKind;
+  readonly title: string;
+  readonly body: string;
+  readonly appliesToVerbs?: readonly IntentVerb[];
+}
+
+/**
+ * Structured enrichment owned by a single capability. Optional on every
+ * capability — absence means the capability has nothing to add, never a
+ * fabricated default. Consumed by the Companion (and any future Intelligence
+ * surface) via the registry; no consumer may hold an equivalent table of its
+ * own (mirrors the INT39 Capability Guidance Registry discipline — content
+ * belongs to capabilities, not to any one presentation surface).
+ */
+export interface CapabilityEnrichment {
+  readonly items: readonly CapabilityEnrichmentItem[];
+}
+
+// ---------------------------------------------------------------------------
 // Capability metadata (the Capability Registry record)
 // ---------------------------------------------------------------------------
 
@@ -163,6 +255,10 @@ export interface Capability {
   readonly aiAccess: AiAccessPosture;
   /** Availability to the platform. */
   readonly availability: CapabilityAvailability;
+  /** INT39 — structured, capability-owned "where to next" guidance. Optional. */
+  readonly guidance?: CapabilityGuidance;
+  /** INT41 — structured, capability-owned contextual enrichment. Optional. */
+  readonly enrichment?: CapabilityEnrichment;
 }
 
 // ---------------------------------------------------------------------------

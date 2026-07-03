@@ -130,6 +130,17 @@ export const meals = pgTable("meals", {
   suitableSlots: text("suitable_slots").array().notNull().default([]),
   energyBand: text("energy_band"),
   styleTags: text("style_tags").array().notNull().default([]),
+  // ── FS3 Recipe Acquisition provenance (canonical; shared/recipe-acquisition.ts owns the vocabulary) ──
+  /** Which of the four acquisition lanes this row entered through: tha_library | licensed_discovery | personal_cookbook | community_cookbook. Null only on rows not yet backfilled. */
+  acquisitionLane: text("acquisition_lane"),
+  /** The acquisition act: authored | licensed_import | user_import | user_transcription | product | derived | community_share. */
+  acquisitionType: text("acquisition_type"),
+  /** Register key of the source this row was acquired from (shared/recipe-acquisition.ts). Null for authored content. */
+  acquisitionSourceKey: text("acquisition_source_key"),
+  /** Licence under which THA holds this row (register licenceRef). Null = owned or user-held content. */
+  licenceRef: text("licence_ref"),
+  /** Attribution line to render wherever this recipe is displayed. Null = no attribution duty. */
+  attributionText: text("attribution_text"),
 });
 
 export const nutrition = pgTable("nutrition", {
@@ -272,6 +283,11 @@ export const insertMealSchema = createInsertSchema(meals).pick({
   householdSafeFor: true,
   variantKind: true,
   showInCookbook: true,
+  acquisitionLane: true,
+  acquisitionType: true,
+  acquisitionSourceKey: true,
+  licenceRef: true,
+  attributionText: true,
 }).extend({
   householdSafeFor: z.custom<HouseholdSafeForSnapshot>().nullish(),
 });
@@ -673,6 +689,10 @@ export const userPreferences = pgTable("user_preferences", {
   maxTotalCookTime: integer("max_total_cook_time"),
   preferLessProcessed: boolean("prefer_less_processed").notNull().default(false),
   includeRegulatoryAdditivesInScoring: boolean("include_regulatory_additives_in_scoring").notNull().default(true),
+  // OD1 — Opportunity Delivery Framework: opportunity `type` values (e.g.
+  // "planner-empty-day") the user has muted. Filtered out before delivery;
+  // empty means no muting, never a fabricated default preference.
+  mutedOpportunityTypes: text("muted_opportunity_types").array().notNull().default([]),
 });
 
 export const insertUserPreferencesSchema = createInsertSchema(userPreferences).pick({
@@ -707,6 +727,7 @@ export const insertUserPreferencesSchema = createInsertSchema(userPreferences).p
   maxTotalCookTime: true,
   preferLessProcessed: true,
   includeRegulatoryAdditivesInScoring: true,
+  mutedOpportunityTypes: true,
 });
 
 export type UserPreferences = typeof userPreferences.$inferSelect;
@@ -934,6 +955,67 @@ export const insertAdminAuditLogSchema = createInsertSchema(adminAuditLog).omit(
 
 export type AdminAuditLog = typeof adminAuditLog.$inferSelect;
 export type InsertAdminAuditLog = z.infer<typeof insertAdminAuditLogSchema>;
+
+// ─── Companion Learning (INT35C) ───────────────────────────────────────────────
+// Single canonical owner: server/intelligence/conversation/companion-learning-store.ts
+// (see docs/architecture/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md).
+//
+// companion_health_snapshots: a point-in-time capture of the aggregate Companion
+// observability summary (INT35B) + gap classification (INT35C) + turn-count
+// denominator. Same privacy class as the INT35 miss log it is built from: no
+// user id, no household id, no intent parameters, no capability result payloads
+// — only aggregate counts and already-anonymised/truncated utterance text.
+//
+// companion_learning_recommendations: the admin review queue. Every row is an
+// ADVISORY proposal (matcher / capability / regression-test). `status` is a
+// human triage signal only — there is no `applied` column and no code path from
+// this table to production routing. Acting on an "approved" row remains a
+// separate, human, code-reviewed edit (e.g. to PatternIntentResolver), per the
+// INT35B hard rule this workstream inherits unchanged.
+
+export const companionHealthSnapshots = pgTable("companion_health_snapshots", {
+  id: serial("id").primaryKey(),
+  totalEvents: integer("total_events").notNull(),
+  totalTurns: integer("total_turns").notNull(),
+  byStage: jsonb("by_stage").notNull(),
+  byState: jsonb("by_state").notNull(),
+  bySurface: jsonb("by_surface").notNull(),
+  gapCounts: jsonb("gap_counts").notNull(),
+  topUnmatchedUtterances: jsonb("top_unmatched_utterances").notNull(),
+  routingFailures: jsonb("routing_failures").notNull(),
+  capabilityGapClusters: jsonb("capability_gap_clusters").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertCompanionHealthSnapshotSchema = createInsertSchema(companionHealthSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CompanionHealthSnapshot = typeof companionHealthSnapshots.$inferSelect;
+export type InsertCompanionHealthSnapshot = z.infer<typeof insertCompanionHealthSnapshotSchema>;
+
+export const companionLearningRecommendations = pgTable("companion_learning_recommendations", {
+  id: serial("id").primaryKey(),
+  snapshotId: integer("snapshot_id").notNull().references(() => companionHealthSnapshots.id),
+  kind: text("kind").notNull(), // "matcher" | "capability" | "regression-test"
+  status: text("status").notNull().default("pending"), // "pending" | "approved" | "rejected" | "completed"
+  payload: jsonb("payload").notNull(),
+  rationale: text("rationale").notNull(),
+  confidence: text("confidence").notNull().default("low"), // "low" | "medium" | "high"
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewNotes: text("review_notes"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertCompanionLearningRecommendationSchema = createInsertSchema(companionLearningRecommendations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CompanionLearningRecommendation = typeof companionLearningRecommendations.$inferSelect;
+export type InsertCompanionLearningRecommendation = z.infer<typeof insertCompanionLearningRecommendationSchema>;
 
 export const userPantryItems = pgTable("user_pantry_items", {
   id: serial("id").primaryKey(),
@@ -1742,7 +1824,10 @@ export const conversationTurns = pgTable("conversation_turns", {
   role:     text("role").notNull(),
   surface:  text("surface").notNull(),
   utterance: text("utterance").notNull(),
-  // Null for pure Q&A turns. {verb, capabilityId} for actioned intents.
+  // Null when the resolver produced no routed (non-baseline) intent this turn.
+  // Otherwise { capabilities: [{capabilityId, verb, status}] } — the routed
+  // capabilities this turn and their per-capability outcome status (INT39:
+  // the "intent recognised" / "capability executed" Goal Completion signal).
   resolvedIntent:  jsonb("resolved_intent"),
   // Snapshot of POINTER IDs used this turn (not the data). Re-render re-reads
   // the live entity by ID — this is the immutable record of "what was in scope".
@@ -1751,6 +1836,14 @@ export const conversationTurns = pgTable("conversation_turns", {
   entityRefs:  jsonb("entity_refs").notNull().default(sql`'[]'::jsonb`),
   // {status, message} from IntentOutcome only — never the mutated row.
   outcomeRef:  jsonb("outcome_ref"),
+  // INT39 — the honest unsuccessful-turn state (INT35 vocabulary: "no-route" |
+  // "no-knowledge" | "no-results" | "internal-error"), persisted on assistant
+  // turns only. Null = a successful/grounded turn (or a non-actioned system
+  // turn). Previously this state was computed per-request and never stored;
+  // persisting it is what makes "recovery after a failed conversation" and
+  // "capability executed" Goal Completion signals derivable from this table
+  // alone, with no new table and no new business-data ownership.
+  fallbackState: text("fallback_state"),
   createdAt:   timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -1764,3 +1857,284 @@ export type ConversationThread = typeof conversationThreads.$inferSelect;
 export type InsertConversationThread = z.infer<typeof insertConversationThreadSchema>;
 export type ConversationTurn = typeof conversationTurns.$inferSelect;
 export type InsertConversationTurn = z.infer<typeof insertConversationTurnSchema>;
+
+// ─── Companion Guidance & Feedback (INT38) ─────────────────────────────────────
+// Single canonical owner: server/intelligence/conversation/companion-feedback-store.ts
+// (see docs/architecture/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md).
+//
+// Same privacy class as the INT35C companion tables: no user id, no household
+// id, no utterance text, no capability result payload. The only linkage either
+// table carries is `conversationTurnId` — an opaque integer pointer into
+// conversation_turns, cascade-deleted with the user's own conversation data.
+// Feedback and guidance events are ADVISORY signals only: there is no
+// `applied` column and no code path from either table back into
+// PatternIntentResolver or the Capability Registry.
+//
+// companion_response_feedback: one 👍/👎 rating per assistant turn (unique on
+// conversationTurnId — resubmitting overwrites, an upsert-by-turn). reasonCode
+// is only ever set alongside a "down" rating.
+//
+// companion_guidance_events: "shown" (recorded server-side the moment a
+// cross-domain Next Step suggestion is attached to a turn) and "clicked"
+// (recorded when the user follows it) — the raw material for task-completion
+// rate, successful-journey, and abandonment analytics.
+
+export const companionResponseFeedback = pgTable("companion_response_feedback", {
+  id: serial("id").primaryKey(),
+  conversationTurnId: integer("conversation_turn_id").notNull().references(() => conversationTurns.id, { onDelete: "cascade" }).unique(),
+  rating: text("rating").notNull(), // "up" | "down"
+  reasonCode: text("reason_code"), // set only when rating = "down"
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertCompanionResponseFeedbackSchema = createInsertSchema(companionResponseFeedback).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type CompanionResponseFeedback = typeof companionResponseFeedback.$inferSelect;
+export type InsertCompanionResponseFeedback = z.infer<typeof insertCompanionResponseFeedbackSchema>;
+
+export const companionGuidanceEvents = pgTable("companion_guidance_events", {
+  id: serial("id").primaryKey(),
+  conversationTurnId: integer("conversation_turn_id").notNull().references(() => conversationTurns.id, { onDelete: "cascade" }),
+  eventKind: text("event_kind").notNull(), // "shown" | "clicked"
+  sourceDomain: text("source_domain").notNull(),
+  domain: text("domain").notNull(),
+  // INT39 — the underlying Capability Guidance Registry action this event
+  // resolved from/to. Nullable (domain-only rows predate INT39): the Goal
+  // Completion analytics only classify a "clicked" event as a completed goal
+  // when these are present and match a completion criterion the SOURCE
+  // capability declared for itself — never inferred from domain strings alone.
+  sourceCapabilityId: text("source_capability_id"),
+  targetCapabilityId: text("target_capability_id"),
+  targetVerb: text("target_verb"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const insertCompanionGuidanceEventSchema = createInsertSchema(companionGuidanceEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type CompanionGuidanceEvent = typeof companionGuidanceEvents.$inferSelect;
+export type InsertCompanionGuidanceEvent = z.infer<typeof insertCompanionGuidanceEventSchema>;
+
+// ─── Companion Task Delegation & Assisted Actions (INT40) ──────────────────────
+// Single canonical owner: server/intelligence/conversation/companion-action-store.ts
+// (see docs/architecture/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md).
+//
+// Same privacy class as the INT38 companion tables: no user id, no household id,
+// no raw utterance text. The only linkage is `conversationTurnId` — an opaque
+// integer pointer into conversation_turns, cascade-deleted with the user's own
+// conversation data. `parameters` holds the RESOLVED, structured intent
+// parameters the proposal was built from (e.g. {mealId, dayId, mealSlot} or
+// {name, category}) — pointer/structured data only, mirroring the existing
+// `resolvedIntent`/`entityRefs` discipline on conversation_turns, never a copy
+// of business data owned elsewhere.
+//
+// A "Companion Action" is a proposed, then confirmed-or-cancelled, execution of
+// exactly one registered (capabilityId, verb) pair via the Intent Engine — see
+// server/intelligence/conversation/companion-actions.ts. This table is the ONLY
+// store of a proposal's lifecycle; there is no second table for "workflows" —
+// `workflowId` is a grouping key on this same table (always set, even for a
+// single-action bundle), so multi-action guided workflows are queried, never
+// separately owned.
+export const companionActionProposals = pgTable("companion_action_proposals", {
+  id: serial("id").primaryKey(),
+  conversationTurnId: integer("conversation_turn_id").notNull().references(() => conversationTurns.id, { onDelete: "cascade" }),
+  // Groups a bundle of actions proposed together in the same turn (a "guided
+  // workflow"). Always set, including for a single proposed action, so
+  // workflow-level analytics need no special-casing between "one action" and
+  // "a workflow" — a length-1 workflow is a valid workflow.
+  workflowId: text("workflow_id").notNull(),
+  capabilityId: text("capability_id").notNull(),
+  verb: text("verb").notNull(), // IntentVerb, e.g. "add"
+  label: text("label").notNull(), // human-readable action label shown on the button
+  // Resolved, structured intent parameters — never free text, never fabricated.
+  parameters: jsonb("parameters").notNull().default(sql`'{}'::jsonb`),
+  confirmationTier: text("confirmation_tier").notNull(), // "none" | "light" | "required" | "strong"
+  status: text("status").notNull().default("proposed"), // "proposed" | "confirmed" | "in_progress" | "succeeded" | "failed" | "cancelled"
+  resultSummary: text("result_summary"), // set on "succeeded" — honest, human-readable outcome
+  errorCode: text("error_code"), // set on "failed" — the IntentOutcomeStatus (e.g. "denied", "gap")
+  errorMessage: text("error_message"), // set on "failed" — the honest platform message
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }), // set on any terminal status
+});
+
+export const insertCompanionActionProposalSchema = createInsertSchema(companionActionProposals).omit({
+  id: true,
+  createdAt: true,
+  resolvedAt: true,
+});
+
+export type CompanionActionProposal = typeof companionActionProposals.$inferSelect;
+export type InsertCompanionActionProposal = z.infer<typeof insertCompanionActionProposalSchema>;
+
+// ─── Opportunity Delivery Framework (OD1) ──────────────────────────────────────
+// Single canonical owner: server/intelligence/opportunity-delivery/framework.ts
+// (see docs/architecture/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md).
+//
+// Unlike the INT38/39/40 companion tables, this table is NOT scoped to a
+// conversation turn — a Domain Intelligence opportunity (e.g. FI4's Food
+// Opportunities) is ambient: generated from a household's own existing
+// activity, not from an assistant conversation, so there is no turn to key
+// on. It is scoped directly to `userId` instead — the same identity every
+// other household-aware verb on this platform resolves from
+// (`context.userId`, never a client-supplied household id).
+//
+// This is the ONLY store of an opportunity's delivery lifecycle. It owns NO
+// business-domain fact (Rule FI1) — `opportunityId`/`capabilityId`/`domain`/
+// `type`/`priority` are a snapshot of identifying metadata from the producing
+// capability's own report at the moment of first delivery, used only to
+// dedupe and to resolve acknowledge/dismiss/accept requests; the underlying
+// planner/pantry/shopping facts remain owned exactly where they always were.
+//
+// status lifecycle: "delivered" (default, on first report) -> "acknowledged"
+// (seen, non-terminal — still eligible for future reports) -> "dismissed" or
+// "accepted" (terminal — suppressed from all future reports for this user).
+// UNIQUE(userId, opportunityId) is what makes delivery idempotent: a second
+// `report` for an opportunity that already has a row never inserts a
+// duplicate — this IS "preventing duplicate delivery".
+export const opportunityDeliveries = pgTable("opportunity_deliveries", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  // Globally-unique key across producers: `${capabilityId}:${producer's own opportunity id}`.
+  opportunityId: text("opportunity_id").notNull(),
+  capabilityId: text("capability_id").notNull(),
+  domain: text("domain").notNull(),
+  type: text("type").notNull(),
+  priority: text("priority").notNull(), // "high" | "medium" | "low"
+  surface: text("surface").notNull(), // ConversationSurface this opportunity was delivered to
+  status: text("status").notNull().default("delivered"), // "delivered" | "acknowledged" | "dismissed" | "accepted"
+  deliveredAt: timestamp("delivered_at", { withTimezone: true }).notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at", { withTimezone: true }), // set on "dismissed" or "accepted"
+}, (table) => ({
+  userOpportunityUnique: unique("opportunity_deliveries_user_opportunity_unique").on(table.userId, table.opportunityId),
+  userStatusIdx: index("opportunity_deliveries_user_status_idx").on(table.userId, table.status),
+}));
+
+export const insertOpportunityDeliverySchema = createInsertSchema(opportunityDeliveries).omit({
+  id: true,
+  deliveredAt: true,
+  resolvedAt: true,
+});
+
+export type OpportunityDelivery = typeof opportunityDeliveries.$inferSelect;
+export type InsertOpportunityDelivery = z.infer<typeof insertOpportunityDeliverySchema>;
+
+// ─── Evidence & Learning Platform (EL1) ────────────────────────────────────────
+// Single canonical owner: server/intelligence/evidence-learning/evidence-learning-store.ts
+// (see docs/architecture/THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md). This is
+// the "Personalisation Event Log" component named (but not built) at
+// THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md §4.2/§7.2 — built here as a
+// reusable, domain-agnostic platform capability rather than a Food-Intelligence-
+// owned store, so any future Domain Intelligence layer can be a consumer.
+//
+// Two tables, two different scopes (Principle 2 scope test):
+//   - household_evidence_events: the raw, append-only capture of a single
+//     structured household outcome. Never edited after insert.
+//   - household_learning_signals: a DERIVED, re-evaluated-in-place pattern over
+//     an accumulation of evidence events for one (domain, subjectType,
+//     subjectKey, direction) dimension. Never created or advanced to
+//     "confirmed" from a single evidence event — the detector enforces a
+//     minimum evidence count (see evidence-learning/framework.ts).
+//
+// EL1 owns zero business-domain/preference data (mirrors Rule FI1): it never
+// writes a household's actual dietary/preference state itself. A signal only
+// reaches "confirmed" through an explicit household confirmation action
+// (the `approve` verb); adapting an actual preference store on the strength of
+// a confirmed signal remains a separate, human-triggered write through that
+// preference store's own owning capability — never a private write path from
+// here.
+export const householdEvidenceEvents = pgTable("household_evidence_events", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id, { onDelete: "cascade" }),
+  /** The reporting Domain Intelligence / business domain, e.g. "food-intelligence". */
+  domain: text("domain").notNull(),
+  /** The kind of thing this outcome is about, e.g. "meal", "swap", "ingredient". */
+  subjectType: text("subject_type").notNull(),
+  /** The specific instance, namespaced by the reporting domain, e.g. "meal:412" — for citation/explainability only, never a second identity for that entity. */
+  subjectId: text("subject_id").notNull(),
+  /** The stable dimension pattern-detection groups on, e.g. "cuisine:italian" or a food/tag slug — coarser than subjectId by design. */
+  subjectKey: text("subject_key").notNull(),
+  /** The specific thing that happened, e.g. "accepted", "rejected", "completed", "skipped" — closed vocabulary owned by the reporting domain, not interpreted here. */
+  outcomeType: text("outcome_type").notNull(),
+  /** Normalised direction of this single outcome, decided by the reporting domain — EL1 only counts/accumulates it, never infers it. */
+  direction: text("direction").notNull(), // "positive" | "negative" | "neutral"
+  /** Optional additional detail (e.g. tags) the reporting domain wants preserved for explainability. Never a second copy of business-domain facts — free-form context only. */
+  context: jsonb("context"),
+  /** Which capability reported this event (Capability Registry id). */
+  sourceCapabilityId: text("source_capability_id").notNull(),
+  /** When the outcome actually happened. */
+  occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  /** When THA captured it — kept distinct from occurredAt for honest backfill support. */
+  recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  householdSubjectIdx: index("household_evidence_events_household_subject_idx").on(
+    table.householdId, table.domain, table.subjectType, table.subjectKey,
+  ),
+  householdOccurredIdx: index("household_evidence_events_household_occurred_idx").on(table.householdId, table.occurredAt),
+}));
+
+export const insertHouseholdEvidenceEventSchema = createInsertSchema(householdEvidenceEvents).omit({
+  id: true,
+  recordedAt: true,
+});
+
+export type HouseholdEvidenceEvent = typeof householdEvidenceEvents.$inferSelect;
+export type InsertHouseholdEvidenceEvent = z.infer<typeof insertHouseholdEvidenceEventSchema>;
+
+/**
+ * A DERIVED pattern over accumulated evidence events for one dimension. Never
+ * user-visible or preference-adapting until `status` reaches "confirmed"
+ * through an explicit household confirmation (`approve` verb) — see
+ * evidence-learning-handler.ts. One row per (household, domain, subjectType,
+ * subjectKey, direction); re-detection UPDATES this row rather than inserting
+ * a new one (see upsertSignal in evidence-learning-store.ts), except once a
+ * household has confirmed or declined it — after that, only the evidence
+ * fields refresh; status is never silently reset back to pending (no nagging,
+ * mirrors the OD1 delivery framework's terminal-status discipline).
+ */
+export const householdLearningSignals = pgTable("household_learning_signals", {
+  id: serial("id").primaryKey(),
+  householdId: integer("household_id").notNull().references(() => households.id, { onDelete: "cascade" }),
+  domain: text("domain").notNull(),
+  subjectType: text("subject_type").notNull(),
+  subjectKey: text("subject_key").notNull(),
+  direction: text("direction").notNull(), // "positive" | "negative"
+  evidenceCount: integer("evidence_count").notNull(),
+  /** Ratio (0..1) of considered events that agreed with `direction`. */
+  consistency: real("consistency").notNull(),
+  /** Deterministic bucket from evidenceCount + consistency — never an ML confidence score. */
+  confidence: text("confidence").notNull(), // "low" | "medium" | "high"
+  /** household_evidence_events.id values this pattern is built from — the explainability trail. */
+  supportingEventIds: jsonb("supporting_event_ids").notNull(),
+  /** Deterministic, human-readable explanation, e.g. "5 of 6 recent outcomes for X were positive". */
+  rationale: text("rationale").notNull(),
+  status: text("status").notNull().default("pending_confirmation"), // "pending_confirmation" | "confirmed" | "declined"
+  detectedAt: timestamp("detected_at", { withTimezone: true }).notNull().defaultNow(),
+  lastEvaluatedAt: timestamp("last_evaluated_at", { withTimezone: true }).notNull().defaultNow(),
+  confirmedByUserId: integer("confirmed_by_user_id").references(() => users.id),
+  confirmedAt: timestamp("confirmed_at", { withTimezone: true }),
+  confirmationNotes: text("confirmation_notes"),
+}, (table) => ({
+  householdDimensionUnique: unique("household_learning_signals_dimension_unique").on(
+    table.householdId, table.domain, table.subjectType, table.subjectKey, table.direction,
+  ),
+  householdStatusIdx: index("household_learning_signals_household_status_idx").on(table.householdId, table.status),
+}));
+
+export const insertHouseholdLearningSignalSchema = createInsertSchema(householdLearningSignals).omit({
+  id: true,
+  detectedAt: true,
+  lastEvaluatedAt: true,
+  confirmedByUserId: true,
+  confirmedAt: true,
+});
+
+export type HouseholdLearningSignal = typeof householdLearningSignals.$inferSelect;
+export type InsertHouseholdLearningSignal = z.infer<typeof insertHouseholdLearningSignalSchema>;

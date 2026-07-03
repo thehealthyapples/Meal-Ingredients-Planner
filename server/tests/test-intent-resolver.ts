@@ -314,71 +314,74 @@ async function main(): Promise<void> {
     assert(hasCapability(r, "partners"), "partners: 'retailers' → partners");
   }
 
-  // 9. meals
+  // 9. meal discovery
+  // INT35 note: these recipe-discovery phrasings routed to "meals" when this file
+  // was written (INT24/INT25B); INT26 moved them to the cross-source
+  // "meal-discovery" capability. Expectations updated to the live routing.
   {
     const r = await resolve("find me a recipe for chicken curry", "floating");
-    assert(hasCapability(r, "meals"),    "meals: 'find recipe' → meals");
-    const m = firstWith(r, "meals")!;
-    assert(m.verb === "search",          "meals: find-recipe verb is search");
+    assert(hasCapability(r, "meal-discovery"), "meal-discovery: 'find recipe' → meal-discovery");
+    const m = firstWith(r, "meal-discovery")!;
+    assert(m.verb === "search",                "meal-discovery: find-recipe verb is search");
     assert(
       (m.parameters.query as string) === "chicken curry",
-      "meals: query is 'chicken curry'",
+      "meal-discovery: query is 'chicken curry'",
     );
   }
 
   // INT25B F1 — noun-last phrasing
   {
     const r = await resolve("Find me a chicken curry recipe", "floating");
-    assert(hasCapability(r, "meals"), "meals (INT25B): 'find me a X recipe' → meals");
-    const m = firstWith(r, "meals")!;
-    assert(m.verb === "search", "meals (INT25B): noun-last verb is search");
+    assert(hasCapability(r, "meal-discovery"), "meal-discovery (INT25B): 'find me a X recipe' → meal-discovery");
+    const m = firstWith(r, "meal-discovery")!;
+    assert(m.verb === "search", "meal-discovery (INT25B): noun-last verb is search");
     assert(
       (m.parameters.query as string) === "chicken curry",
-      "meals (INT25B): noun-last query is 'chicken curry'",
+      "meal-discovery (INT25B): noun-last query is 'chicken curry'",
     );
   }
 
   {
     const r = await resolve("Show me a pasta recipe", "floating");
-    assert(hasCapability(r, "meals"), "meals (INT25B): 'show me a X recipe' → meals");
-    const m = firstWith(r, "meals")!;
-    assert(m.verb === "search", "meals (INT25B): show-me-recipe verb is search");
+    assert(hasCapability(r, "meal-discovery"), "meal-discovery (INT25B): 'show me a X recipe' → meal-discovery");
+    const m = firstWith(r, "meal-discovery")!;
+    assert(m.verb === "search", "meal-discovery (INT25B): show-me-recipe verb is search");
     assert(
       (m.parameters.query as string) === "pasta",
-      "meals (INT25B): show-me-recipe query is 'pasta'",
+      "meal-discovery (INT25B): show-me-recipe query is 'pasta'",
     );
   }
 
   {
     const r = await resolve("I want a fish pie recipe", "floating");
-    assert(hasCapability(r, "meals"), "meals (INT25B): 'I want a X recipe' → meals");
-    const m = firstWith(r, "meals")!;
-    assert(m.verb === "search", "meals (INT25B): i-want-recipe verb is search");
+    assert(hasCapability(r, "meal-discovery"), "meal-discovery (INT25B): 'I want a X recipe' → meal-discovery");
+    const m = firstWith(r, "meal-discovery")!;
+    assert(m.verb === "search", "meal-discovery (INT25B): i-want-recipe verb is search");
     assert(
       (m.parameters.query as string) === "fish pie",
-      "meals (INT25B): i-want-recipe query is 'fish pie'",
+      "meal-discovery (INT25B): i-want-recipe query is 'fish pie'",
     );
   }
 
   {
     const r = await resolve("What can I cook with chickpeas?", "floating");
-    assert(hasCapability(r, "meals"), "meals (INT25B): 'cook with X' → meals");
-    const m = firstWith(r, "meals")!;
-    assert(m.verb === "search", "meals (INT25B): cook-with verb is search");
+    assert(hasCapability(r, "meal-discovery"), "meal-discovery (INT25B): 'cook with X' → meal-discovery");
+    const m = firstWith(r, "meal-discovery")!;
+    assert(m.verb === "search", "meal-discovery (INT25B): cook-with verb is search");
     assert(
       (m.parameters.query as string) === "chickpeas",
-      "meals (INT25B): cook-with query is 'chickpeas'",
+      "meal-discovery (INT25B): cook-with query is 'chickpeas'",
     );
   }
 
   {
     const r = await resolve("Give me something with salmon", "floating");
-    assert(hasCapability(r, "meals"), "meals (INT25B): 'something with X' → meals");
-    const m = firstWith(r, "meals")!;
-    assert(m.verb === "search", "meals (INT25B): something-with verb is search");
+    assert(hasCapability(r, "meal-discovery"), "meal-discovery (INT25B): 'something with X' → meal-discovery");
+    const m = firstWith(r, "meal-discovery")!;
+    assert(m.verb === "search", "meal-discovery (INT25B): something-with verb is search");
     assert(
       (m.parameters.query as string) === "salmon",
-      "meals (INT25B): something-with query is 'salmon'",
+      "meal-discovery (INT25B): something-with query is 'salmon'",
     );
   }
 

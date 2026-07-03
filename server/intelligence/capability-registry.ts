@@ -18,9 +18,341 @@
 
 import type {
   Capability,
+  CapabilityEnrichment,
+  CapabilityGuidance,
   CapabilityHandler,
+  CompletionCriterion,
   IntentVerb,
 } from "./types.js";
+
+// ---------------------------------------------------------------------------
+// Capability Guidance seed (INT39) — extends the capability seed below with
+// structured "where to next" guidance, keyed by capability id. Declared
+// separately from SEED_CAPABILITIES purely for readability; it is merged
+// into each capability record before registration, so guidance remains a
+// first-class part of the capability's own descriptor (TIP2 discipline: a
+// capability record is a complete descriptor of an existing owner).
+//
+// Mirrors the exact journeys INT38 proved out as a static Companion-owned
+// JOURNEY_MAP (nutrition→meal→planner, meal→planner→shopping, etc.) — INT39
+// moves that same knowledge onto the capabilities it describes, and adds
+// lateral `relatedActions`, named `recommendedJourneys`, and honest
+// `completionCriteria`. Every action here is a real (capabilityId, verb)
+// pair; resolution always re-checks executability against the live registry,
+// so a guidance action can never point at a gapped or unbound capability.
+// ---------------------------------------------------------------------------
+
+const GUIDANCE: Readonly<Record<string, CapabilityGuidance>> = {
+  "nutrition-knowledge": {
+    primaryAction: { capabilityId: "meals", verb: "read", label: "Find Matching Meals" },
+    relatedActions: [
+      { capabilityId: "meal-discovery", verb: "search", label: "Search Meals by Nutrition" },
+    ],
+    followUpActions: [
+      { capabilityId: "planner", verb: "read", label: "Plan This Week" },
+    ],
+    recommendedJourneys: [
+      { capabilityId: "nutrition-knowledge", verb: "read", label: "Understand the Nutrition" },
+      { capabilityId: "meals", verb: "read", label: "Find Matching Meals" },
+      { capabilityId: "planner", verb: "read", label: "Plan This Week" },
+    ],
+    completionCriteria: [
+      {
+        id: "planned-after-nutrition",
+        description: "The user moved from a nutrition answer into planning their week.",
+        satisfiedByAction: { capabilityId: "planner", verb: "read", label: "Plan This Week" },
+      },
+    ],
+  },
+  meals: {
+    primaryAction: { capabilityId: "planner", verb: "read", label: "Plan Your Week" },
+    relatedActions: [
+      { capabilityId: "nutrition-knowledge", verb: "read", label: "Check Nutrition Info" },
+    ],
+    followUpActions: [
+      { capabilityId: "shopping", verb: "read", label: "Build Shopping List" },
+    ],
+    recommendedJourneys: [
+      { capabilityId: "meals", verb: "read", label: "Find a Meal" },
+      { capabilityId: "planner", verb: "read", label: "Plan Your Week" },
+      { capabilityId: "shopping", verb: "read", label: "Build Shopping List" },
+    ],
+    completionCriteria: [
+      {
+        id: "planned-after-meal",
+        description: "The user moved from a meal answer into planning their week.",
+        satisfiedByAction: { capabilityId: "planner", verb: "read", label: "Plan Your Week" },
+      },
+    ],
+  },
+  shopping: {
+    primaryAction: { capabilityId: "pantry", verb: "read", label: "Compare with Pantry" },
+    relatedActions: [
+      { capabilityId: "partners", verb: "read", label: "Compare Supermarkets" },
+    ],
+    followUpActions: [
+      { capabilityId: "planner", verb: "read", label: "Review Your Plan" },
+    ],
+    recommendedJourneys: [
+      { capabilityId: "shopping", verb: "read", label: "Check Your Shopping List" },
+      { capabilityId: "pantry", verb: "read", label: "Compare with Pantry" },
+      { capabilityId: "planner", verb: "read", label: "Review Your Plan" },
+    ],
+    completionCriteria: [
+      {
+        id: "pantry-checked-after-shopping",
+        description: "The user compared their shopping list against their pantry.",
+        satisfiedByAction: { capabilityId: "pantry", verb: "read", label: "Compare with Pantry" },
+      },
+    ],
+  },
+  planner: {
+    primaryAction: { capabilityId: "nutrition-knowledge", verb: "read", label: "Check Nutrition Balance" },
+    relatedActions: [
+      { capabilityId: "household", verb: "read", label: "Check Household Preferences" },
+    ],
+    followUpActions: [
+      { capabilityId: "shopping", verb: "read", label: "Build Shopping List" },
+    ],
+    recommendedJourneys: [
+      { capabilityId: "planner", verb: "read", label: "Review Your Plan" },
+      { capabilityId: "nutrition-knowledge", verb: "read", label: "Check Nutrition Balance" },
+      { capabilityId: "shopping", verb: "read", label: "Build Shopping List" },
+    ],
+    completionCriteria: [
+      {
+        id: "shopping-built-after-planning",
+        description: "The user moved from a plan answer into building a shopping list.",
+        satisfiedByAction: { capabilityId: "shopping", verb: "read", label: "Build Shopping List" },
+      },
+    ],
+  },
+  pantry: {
+    primaryAction: { capabilityId: "meals", verb: "read", label: "Find Meals I Can Cook" },
+    relatedActions: [
+      { capabilityId: "pantry-discovery", verb: "search", label: "Search What I Have" },
+    ],
+    followUpActions: [
+      { capabilityId: "planner", verb: "read", label: "Plan With What I Have" },
+    ],
+    recommendedJourneys: [
+      { capabilityId: "pantry", verb: "read", label: "Check What's In My Pantry" },
+      { capabilityId: "meals", verb: "read", label: "Find Meals I Can Cook" },
+      { capabilityId: "planner", verb: "read", label: "Plan With What I Have" },
+    ],
+    completionCriteria: [
+      {
+        id: "planned-after-pantry",
+        description: "The user moved from a pantry answer into planning around what they have.",
+        satisfiedByAction: { capabilityId: "planner", verb: "read", label: "Plan With What I Have" },
+      },
+    ],
+  },
+  diary: {
+    primaryAction: { capabilityId: "nutrition-knowledge", verb: "read", label: "See Nutrition Insights" },
+    followUpActions: [
+      { capabilityId: "planner", verb: "read", label: "Adjust This Week's Plan" },
+    ],
+    recommendedJourneys: [
+      { capabilityId: "diary", verb: "read", label: "Review What Was Eaten" },
+      { capabilityId: "nutrition-knowledge", verb: "read", label: "See Nutrition Insights" },
+      { capabilityId: "planner", verb: "read", label: "Adjust This Week's Plan" },
+    ],
+    completionCriteria: [
+      {
+        id: "adjusted-after-diary",
+        description: "The user moved from a diary answer into adjusting their plan.",
+        satisfiedByAction: { capabilityId: "planner", verb: "read", label: "Adjust This Week's Plan" },
+      },
+    ],
+  },
+  household: {
+    primaryAction: { capabilityId: "planner", verb: "read", label: "Plan Around Preferences" },
+    recommendedJourneys: [
+      { capabilityId: "household", verb: "read", label: "Check Household Preferences" },
+      { capabilityId: "planner", verb: "read", label: "Plan Around Preferences" },
+    ],
+    completionCriteria: [
+      {
+        id: "planned-after-household",
+        description: "The user moved from a household answer into planning around preferences.",
+        satisfiedByAction: { capabilityId: "planner", verb: "read", label: "Plan Around Preferences" },
+      },
+    ],
+  },
+  "food-intelligence": {
+    primaryAction: { capabilityId: "meals", verb: "read", label: "Find Matching Meals" },
+    followUpActions: [
+      { capabilityId: "planner", verb: "read", label: "Plan This Week" },
+    ],
+    recommendedJourneys: [
+      { capabilityId: "food-intelligence", verb: "recommend", label: "Get Food Recommendations" },
+      { capabilityId: "meals", verb: "read", label: "Find Matching Meals" },
+      { capabilityId: "planner", verb: "read", label: "Plan This Week" },
+    ],
+    completionCriteria: [
+      {
+        id: "planned-after-food-intelligence",
+        description: "The user moved from a Food Intelligence recommendation into planning their week.",
+        satisfiedByAction: { capabilityId: "planner", verb: "read", label: "Plan This Week" },
+      },
+    ],
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Capability Enrichment seed (INT41) — extends the capability seed below with
+// structured contextual insights, explanations, recommendations and
+// educational content, keyed by capability id. Declared separately for
+// readability and merged into each capability record before registration,
+// the same way GUIDANCE above is merged (TIP2 discipline: a capability
+// record is a complete descriptor of an existing owner).
+//
+// Content here is static, evergreen and capability-owned — never a live
+// computation, never personalised, never a health/medical claim (the
+// EFSA/health-claim firewall enforced in the LLM system prompt applies
+// equally to this static content). It is presented alongside a turn's
+// primary answer as additional context, never as a replacement for it.
+// ---------------------------------------------------------------------------
+
+const ENRICHMENT: Readonly<Record<string, CapabilityEnrichment>> = {
+  "nutrition-knowledge": {
+    items: [
+      {
+        kind: "explanation",
+        title: "Where these figures come from",
+        body: "Nutrition figures are recorded per serving from the food's own source — not adjusted for how much of it ends up in a specific meal.",
+      },
+      {
+        kind: "educational",
+        title: "Balance over any single food",
+        body: "How a day's meals balance together generally matters more than any one food eaten in isolation.",
+      },
+      {
+        // NUT1 — richer, evidence-based framing for "explain" turns, where the
+        // owner is surfacing a specific food↔benefit link. Educational only:
+        // explains HOW a link was established, never a disease/treatment claim.
+        kind: "educational",
+        title: "How a food↔benefit link is established",
+        body: "Each benefit shown for a food is one the Nutrition / Knowledge owner has explicitly linked and reviewed — never inferred from a nutrient amount alone.",
+        appliesToVerbs: ["explain"],
+      },
+      {
+        // NUT1 — richer guidance for "search" turns, pointing at the two other
+        // ways to browse the same source-gated registry (by nutrient, by
+        // benefit) rather than only by food name.
+        kind: "recommendation",
+        title: "Search by nutrient or benefit, too",
+        body: "The same registry can be browsed by a nutrient (e.g. \"iron\") or a health benefit (e.g. \"gut health\"), not just by a food's name.",
+        appliesToVerbs: ["search"],
+      },
+    ],
+  },
+  meals: {
+    items: [
+      {
+        kind: "recommendation",
+        title: "Build your own cookbook",
+        body: "Saving meals you cook often makes them easy to find again and to reuse when planning future weeks.",
+        appliesToVerbs: ["read", "search"],
+      },
+    ],
+  },
+  planner: {
+    items: [
+      {
+        kind: "educational",
+        title: "Plan ahead, decide less",
+        body: "Filling in a few days of your planner in advance means fewer last-minute decisions about what to cook.",
+      },
+    ],
+  },
+  shopping: {
+    items: [
+      {
+        kind: "insight",
+        title: "Group by category",
+        body: "Shopping list items grouped by category are typically faster to work through in-store than an unsorted list.",
+      },
+    ],
+  },
+  pantry: {
+    items: [
+      {
+        kind: "recommendation",
+        title: "Check before you shop",
+        body: "Comparing your shopping list against your pantry first helps avoid buying something you already have.",
+      },
+    ],
+  },
+  diary: {
+    items: [
+      {
+        kind: "explanation",
+        title: "Log as you go",
+        body: "A diary entry logged soon after eating tends to be more complete than one reconstructed from memory later.",
+      },
+    ],
+  },
+  household: {
+    items: [
+      {
+        kind: "educational",
+        title: "Preferences are per member",
+        body: "Dietary preferences and allergen restrictions are set per household member, so meal matching can account for everyone individually.",
+      },
+    ],
+  },
+  "food-intelligence": {
+    items: [
+      {
+        kind: "explanation",
+        title: "No citation, no card",
+        body: "Every recommendation is shown only because the Food Knowledge Registry already links that food to the requested benefit or nutrient — nothing here is inferred or ranked by an AI model.",
+      },
+      {
+        kind: "educational",
+        title: "Household-aware, never household-fabricated",
+        body: "When you're signed in, recommendations may reflect meals your own household has already planned and exclude anything conflicting with a stored hard restriction — nothing is guessed about a household THA has no data for.",
+      },
+      {
+        // FI4 — explains the ambient Opportunity Engine's `report` verb: suggestions
+        // only, never an autonomous action taken on the household's behalf.
+        kind: "explanation",
+        title: "Opportunities are suggestions, not actions",
+        body: "Food Opportunities are generated from your own existing planner, pantry and shopping activity and are always suggestions for you to act on — nothing is added, changed or removed on your behalf.",
+        appliesToVerbs: ["report"],
+      },
+    ],
+  },
+  "opportunity-delivery": {
+    items: [
+      {
+        // OD1 — mirrors food-intelligence's own "suggestions, not actions" framing,
+        // applied to the delivery/resolution layer above it.
+        kind: "explanation",
+        title: "Opportunities are suggestions, not actions",
+        body: "Dismissing, acknowledging or accepting an opportunity only updates its own delivery record — it never adds, changes or removes anything in your planner, pantry or shopping list.",
+      },
+    ],
+  },
+  "evidence-learning": {
+    items: [
+      {
+        // EL1 — the non-negotiable this whole platform exists to enforce.
+        kind: "explanation",
+        title: "Patterns, never a single event",
+        body: "A pattern only appears once enough consistent outcomes have accumulated for the same thing — one accepted or rejected meal never becomes a learned pattern on its own.",
+      },
+      {
+        kind: "explanation",
+        title: "Nothing changes until you say so",
+        body: "Confirming or declining a pattern only updates that pattern's own record — it never changes a dietary preference, restriction or setting by itself. Any actual change to your household's preferences always happens as its own separate, visible step.",
+        appliesToVerbs: ["approve", "delete"],
+      },
+    ],
+  },
+};
 
 /** An honest gap: a desired (verb × capability) with no owning endpoint today (TIP2 §2.4). */
 export interface CapabilityGap {
@@ -33,7 +365,7 @@ export interface CapabilityGap {
 // Canonical capability seed (TIP2 §2.1 — C1..C13). Real owners / services / APIs.
 // ---------------------------------------------------------------------------
 
-const SEED_CAPABILITIES: readonly Capability[] = [
+const SEED_CAPABILITIES_BASE: readonly Capability[] = [
   {
     id: "planner",
     displayName: "Planner",
@@ -287,6 +619,48 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     availability: "registered",
   },
   {
+    id: "food-intelligence",
+    displayName: "Food Intelligence",
+    description: "Deterministic join + rank + explain recommendations composed from the Food Knowledge Registry and (when a caller's own household resolves) household planner history and hard restrictions — plus (FI4) an ambient Opportunity Engine that identifies and prioritises actionable Food Opportunities from the caller's own existing planner, pantry and shopping activity. The foundation Domain Intelligence engine consumed by Companion today, and by Planner/Shopping/Cookbook/Pantry in future workstreams (FI3, extended FI4).",
+    owner: "server/intelligence/food-intelligence/engine.ts + opportunity-engine.ts (FI3/FI4 — Domain Intelligence owner per THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md §2, §7.1; composes WS0 knowledge_* (SoT D1), household_eaters (SoT D16), planner history (SoT D14), pantry items (SoT D8-11) and shopping list (SoT D15); owns zero business-domain data, Rule FI1)",
+    owningService: "server/intelligence/food-intelligence/engine.ts, opportunity-engine.ts",
+    apiSurface: "(platform-internal only — no dedicated HTTP route; consumed via the registered capability, not a private route)",
+    supportedIntents: ["recommend", "explain", "report"],
+    executableIntents: [],
+    permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: false, audited: false },
+    capabilityClass: "read-only",
+    aiAccess: "R",
+    availability: "registered",
+  },
+  {
+    id: "opportunity-delivery",
+    displayName: "Opportunity Delivery Framework",
+    description: "The canonical, cross-cutting framework governing how Domain Intelligence opportunities (today: FI4's ambient Food Opportunities) are prioritised, grouped, deduplicated and surfaced across the platform, and how a caller acknowledges (review), dismisses (delete) or accepts (approve) one. Owns zero business-domain data and zero producer reasoning — every opportunity's content is a verbatim projection of what a registered producer capability already returned (OD1).",
+    owner: "server/intelligence/opportunity-delivery/framework.ts + delivery-store.ts (OD1 — the platform's own governance layer per THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md; delivery-store.ts is the sole owner of the new opportunity_deliveries table, SoT-registered under OD1)",
+    owningService: "server/intelligence/opportunity-delivery/framework.ts, delivery-store.ts",
+    apiSurface: "(platform-internal only — no dedicated HTTP route; consumed via the registered capability, not a private route)",
+    supportedIntents: ["report", "review", "approve", "delete"],
+    executableIntents: [],
+    permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
+    capabilityClass: "write",
+    aiAccess: "W",
+    availability: "registered",
+  },
+  {
+    id: "evidence-learning",
+    displayName: "Evidence & Learning Platform",
+    description: "The canonical, cross-cutting platform that captures structured household outcomes (report), accumulates them into an append-only evidence log, and deterministically detects patterns over accumulated evidence — never from a single observation. A detected pattern is a pending, explainable signal (its supporting evidence and rationale are always shown) until a household explicitly confirms (approve) or declines (delete) it. Owns zero business-domain/preference data — confirming a signal only changes its own status; adapting an actual household preference on the strength of a confirmed signal remains a separate, human-triggered write through that preference store's own owning capability (EL1).",
+    owner: "server/intelligence/evidence-learning/framework.ts + evidence-learning-store.ts (EL1 — a reusable platform capability per THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md §4.2/§7.2's forward-named \"Personalisation Event Log\", generalised beyond Food Intelligence so any future Domain Intelligence layer can be a consumer; evidence-learning-store.ts is the sole owner of the new household_evidence_events and household_learning_signals tables, SoT-registered under EL1)",
+    owningService: "server/intelligence/evidence-learning/framework.ts, evidence-learning-store.ts",
+    apiSurface: "(platform-internal only — no dedicated HTTP route; consumed via the registered capability, not a private route)",
+    supportedIntents: ["report", "search", "approve", "delete"],
+    executableIntents: [],
+    permissions: { minimumRole: "user", knowledgeClass: "public", ownershipScoped: true, audited: false },
+    capabilityClass: "write",
+    aiAccess: "W",
+    availability: "registered",
+  },
+  {
     id: "administration",
     displayName: "Administration",
     description: "Admin operations — users, sources, classifications. Admin role only.",
@@ -319,6 +693,22 @@ const SEED_CAPABILITIES: readonly Capability[] = [
     availability: "never",
   },
 ];
+
+/**
+ * INT39 — the Capability Guidance Registry seed, merged onto the base
+ * capability descriptors. `guidance` is attached ONLY when the GUIDANCE table
+ * above declares it for that id — every other capability is left exactly as
+ * it was (no fabricated default guidance). This is the extension point: a
+ * future capability declares its own guidance the same way, in GUIDANCE
+ * above, with zero change to CapabilityRegistry itself.
+ *
+ * INT41 — the Capability Enrichment Registry seed is merged the same way,
+ * from ENRICHMENT above, attached ONLY when declared for that id.
+ */
+const SEED_CAPABILITIES: readonly Capability[] = SEED_CAPABILITIES_BASE.map((cap) => {
+  const withGuidance = GUIDANCE[cap.id] ? { ...cap, guidance: GUIDANCE[cap.id] } : cap;
+  return ENRICHMENT[cap.id] ? { ...withGuidance, enrichment: ENRICHMENT[cap.id] } : withGuidance;
+});
 
 /** Honest GAPs (TIP2 §2.4) — desired intents THA does not own an endpoint for yet. */
 const SEED_GAPS: readonly CapabilityGap[] = [
@@ -422,5 +812,28 @@ export class CapabilityRegistry {
   /** Whether a capability supports a verb (closed allow-list). */
   supports(capabilityId: string, verb: IntentVerb): boolean {
     return this.capabilities.get(capabilityId)?.supportedIntents.includes(verb) ?? false;
+  }
+
+  // ---------------------------------------------------------------------------
+  // INT39 — Capability Guidance Registry (extension, not a second registry)
+  // ---------------------------------------------------------------------------
+
+  /** The structured guidance a capability declares for itself, if any (honest — no fabricated default). */
+  getGuidance(capabilityId: string): CapabilityGuidance | undefined {
+    return this.capabilities.get(capabilityId)?.guidance;
+  }
+
+  /** All completion criteria declared by a capability (empty array when it declares none). */
+  getCompletionCriteria(capabilityId: string): readonly CompletionCriterion[] {
+    return this.capabilities.get(capabilityId)?.guidance?.completionCriteria ?? [];
+  }
+
+  // ---------------------------------------------------------------------------
+  // INT41 — Capability Enrichment Registry (extension, not a second registry)
+  // ---------------------------------------------------------------------------
+
+  /** The structured enrichment a capability declares for itself, if any (honest — no fabricated default). */
+  getEnrichment(capabilityId: string): CapabilityEnrichment | undefined {
+    return this.capabilities.get(capabilityId)?.enrichment;
   }
 }

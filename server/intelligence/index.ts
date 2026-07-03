@@ -35,6 +35,9 @@ export {
   type PlannerReadPort,
   type PlannerMealRef,
 } from "./handlers/planner-read-port.js";
+// INT40 — Planner write (the "add" verb, composed into the same binding above).
+export { createPlannerWriteHandler, type PlannerAddResult } from "./handlers/planner-write-handler.js";
+export { createStoragePlannerWritePort, type PlannerWritePort } from "./handlers/planner-write-port.js";
 
 // INT3 — second live capability binding (read-only Shopping).
 export { bindShoppingReadCapability, SHOPPING_CAPABILITY_ID, SHOPPING_EXECUTABLE_INTENTS } from "./bindings/shopping.js";
@@ -53,6 +56,9 @@ export {
   createStorageShoppingReadPort,
   type ShoppingReadPort,
 } from "./handlers/shopping-read-port.js";
+// INT40 — Shopping write (the "add" verb, composed into the same binding above).
+export { createShoppingWriteHandler, type ShoppingAddResult } from "./handlers/shopping-write-handler.js";
+export { createStorageShoppingWritePort, type ShoppingWritePort } from "./handlers/shopping-write-port.js";
 
 // INT4 — third live capability binding (read-only Nutrition / Knowledge).
 export {
@@ -322,6 +328,164 @@ export {
   type AnalyserReadPort,
   type AdditiveRef,
 } from "./handlers/analyser-read-port.js";
+
+// FI3 — nineteenth live capability binding (read-only Food Intelligence Engine —
+// the first Domain Intelligence capability: join+rank+explain over the Food
+// Knowledge Registry plus, when a caller's own household resolves, household
+// planner history and hard restrictions). Extended FI4 with a `report` verb
+// (the ambient Food Opportunity Engine) on the SAME capability.
+export {
+  bindFoodIntelligenceReadCapability,
+  FOOD_INTELLIGENCE_CAPABILITY_ID,
+  FOOD_INTELLIGENCE_EXECUTABLE_INTENTS,
+} from "./bindings/food-intelligence.js";
+export {
+  createFoodIntelligenceReadHandler,
+  type FoodIntelligenceRecommendResult,
+  type FoodIntelligenceExplainResult,
+  type FoodOpportunityReportResult,
+} from "./handlers/food-intelligence-read-handler.js";
+export {
+  createEngineFoodIntelligenceReadPort,
+  type FoodIntelligenceReadPort,
+} from "./handlers/food-intelligence-read-port.js";
+export {
+  assembleFoodIntelligence,
+  resolveHouseholdSignal,
+  NO_HOUSEHOLD_SIGNAL,
+  type FoodIntelligenceRequest,
+  type FoodIntelligenceBundle,
+  type FoodIntelligenceRecommendation,
+  type FoodIntelligenceCitation,
+  type FoodIntelligenceHouseholdContext,
+  type FoodIntelligenceTrust,
+  type HouseholdSignal,
+} from "./food-intelligence/engine.js";
+
+// FI4 — the Food Opportunity Engine (ambient, sibling to the Food Intelligence
+// Engine above): identifies and prioritises deterministic Food Opportunities
+// from the caller's own existing planner, pantry and shopping activity.
+export {
+  identifyOpportunities,
+  identifyPlannerGapOpportunities,
+  identifyPantryUnusedOpportunities,
+  identifyShoppingRestrictionOpportunities,
+  prioritizeOpportunities,
+  type FoodOpportunity,
+  type FoodOpportunityType,
+  type FoodOpportunityPriority,
+  type FoodOpportunityDomain,
+  type FoodOpportunityEvidence,
+  type FoodOpportunityTrust,
+  type FoodOpportunityBundle,
+  type FoodOpportunityRequest,
+} from "./food-intelligence/opportunity-engine.js";
+
+// OD1 — twentieth live capability binding (Opportunity Delivery Framework): the
+// platform's own governance layer over Domain Intelligence opportunity producers
+// (today: food-intelligence's `report` verb, FI4). Prioritises and groups
+// opportunities across producers, prevents duplicate delivery, selects a delivery
+// surface, and supports acknowledge (`review`) / dismiss (`delete`) / accept
+// (`approve`).
+export {
+  bindOpportunityDeliveryCapability,
+  OPPORTUNITY_DELIVERY_CAPABILITY_ID,
+  OPPORTUNITY_DELIVERY_EXECUTABLE_INTENTS,
+} from "./bindings/opportunity-delivery.js";
+export {
+  createOpportunityDeliveryHandler,
+  type OpportunityDeliveryReportResult,
+  type OpportunityResolutionResult,
+} from "./handlers/opportunity-delivery-handler.js";
+export {
+  createEngineOpportunityDeliveryReadPort,
+  type OpportunityDeliveryReadPort,
+} from "./handlers/opportunity-delivery-read-port.js";
+export {
+  collectOpportunities,
+  resolveOpportunity,
+  prioritiseAndGroup,
+  selectSurface,
+  filterMutedTypes,
+  partitionForDelivery,
+  type DeliverableOpportunity,
+  type OpportunityPriority,
+  type OpportunityEvidence,
+  type OpportunityDeliveryTrust,
+  type OpportunityDeliveryBundle,
+  type OpportunityDeliveryRequest,
+  type OpportunityResolution,
+  type PrioritisedOpportunities,
+  type DeliveryPartition,
+  type ExistingDeliveryRecord,
+  type ProducerFetch,
+  type CollectOpportunitiesDeps,
+} from "./opportunity-delivery/framework.js";
+export {
+  opportunityDeliveryStore,
+  DatabaseOpportunityDeliveryStore,
+  InMemoryOpportunityDeliveryStore,
+  isTerminalDeliveryStatus,
+  type IOpportunityDeliveryStore,
+  type OpportunityDeliveryStatus,
+  type NewOpportunityDelivery,
+} from "./opportunity-delivery/delivery-store.js";
+
+// EL1 — twenty-first live capability binding (Evidence & Learning Platform): captures
+// structured household outcomes (`report`), accumulates them into an append-only
+// evidence log, and deterministically detects explainable patterns over accumulated
+// evidence (never a single observation). A detected pattern stays `pending_confirmation`
+// - only an explicit household `approve`/`delete` ever changes that, and even then it
+// only changes the signal's own record, never a business-domain preference itself.
+export {
+  bindEvidenceLearningCapability,
+  EVIDENCE_LEARNING_CAPABILITY_ID,
+  EVIDENCE_LEARNING_EXECUTABLE_INTENTS,
+} from "./bindings/evidence-learning.js";
+export {
+  createEvidenceLearningHandler,
+  type RecordOutcomeParams,
+  type ListSignalsQuery,
+  type DecideSignalInput,
+  type EvidenceOutcomeResult,
+  type LearningSignalsResult,
+  type SignalDecisionResult,
+} from "./handlers/evidence-learning-handler.js";
+export {
+  createStoreEvidenceLearningReadPort,
+  type EvidenceLearningReadPort,
+} from "./handlers/evidence-learning-read-port.js";
+export {
+  detectPatterns,
+  groupEvents,
+  bucketConfidence,
+  recordOutcomeAndDetect,
+  listHouseholdSignals,
+  decideSignal,
+  MIN_EVIDENCE_COUNT,
+  MIN_CONSISTENCY,
+  EVIDENCE_WINDOW_DAYS,
+  type EvidenceEventInput,
+  type DetectedPattern,
+  type RecordOutcomeRequest,
+  type RecordOutcomeResult,
+} from "./evidence-learning/framework.js";
+export {
+  evidenceLearningStore,
+  DatabaseEvidenceLearningStore,
+  InMemoryEvidenceLearningStore,
+  isDecidedSignalStatus,
+  type IEvidenceLearningStore,
+  type EvidenceDirection,
+  type SignalDirection,
+  type SignalConfidence,
+  type SignalStatus,
+  type NewEvidenceEvent,
+  type EvidenceQuery,
+  type DerivedSignalInput,
+  type SignalQuery,
+  type ConfirmSignalInput,
+} from "./evidence-learning/evidence-learning-store.js";
 
 export {
   resolveContext,

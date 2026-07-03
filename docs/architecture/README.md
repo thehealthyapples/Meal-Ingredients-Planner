@@ -17,6 +17,7 @@ Anything in this directory is **governing**: required reading before significant
 | THA Source of Truth Register | [`THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md`](./THA_SOURCE_OF_TRUTH_ARCHITECTURE_REGISTER.md) |
 | THA Engineering Workflow | [`ENGINEERING_WORKFLOW.md`](./ENGINEERING_WORKFLOW.md) |
 | THA Master Evolution Roadmap | [`THA_MASTER_EVOLUTION_ROADMAP.md`](./THA_MASTER_EVOLUTION_ROADMAP.md) |
+| THA Recipe Acquisition Architecture | [`THA_RECIPE_ACQUISITION_ARCHITECTURE.md`](./THA_RECIPE_ACQUISITION_ARCHITECTURE.md) |
 
 ## Intelligence Governance
 
@@ -25,6 +26,16 @@ Anything in this directory is **governing**: required reading before significant
 | THA Intelligence Platform Architecture | [`THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`](./THA_INTELLIGENCE_PLATFORM_ARCHITECTURE.md) |
 | THA AI Capability Registry & Intent Taxonomy | [`THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md`](./THA_AI_CAPABILITY_REGISTRY_AND_INTENT_TAXONOMY.md) |
 | THA AI Experience & Conversation Architecture | [`THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md`](./THA_AI_EXPERIENCE_AND_CONVERSATION_ARCHITECTURE.md) |
+| THA Intelligence Discovery & Presentation Principle | [`INTELLIGENCE_DISCOVERY_PRESENTATION_PRINCIPLE.md`](./INTELLIGENCE_DISCOVERY_PRESENTATION_PRINCIPLE.md) |
+| THA Companion Card Experience Principle | [`THA_COMPANION_CARD_EXPERIENCE_PRINCIPLE.md`](./THA_COMPANION_CARD_EXPERIENCE_PRINCIPLE.md) |
+
+## Domain Intelligence
+
+| Document | File |
+|---|---|
+| THA Food Intelligence Platform Architecture | [`THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md`](./THA_FOOD_INTELLIGENCE_PLATFORM_ARCHITECTURE.md) |
+
+> Domain Intelligence sits between the domain-agnostic Intelligence Platform above and the Business Domains below: a deterministic, cited reasoning layer that enriches Business Domain data over the Intelligence Platform's Capability Registry, and never owns it. Food Intelligence is the first fully specified Domain Intelligence; promoted from investigation `NUT2` under EWO-FI1 (2026-07-03). Future domain-specific reasoning layers belong in this section, not in Intelligence Governance (platform-generic) or Architecture → Capabilities (per-capability cards).
 
 ## Architecture → Capabilities
 
@@ -62,4 +73,4 @@ Every **AI-related** implementation must additionally pass the **AI ARCHITECTURE
 
 ## History
 
-The original investigation documents remain at their former `docs/investigations/` paths as short pointer stubs (link stability only). The promoted Intelligence Governance documents were investigations `TIP1`–`TIP3`; the Master Evolution Roadmap was formerly `THA_LAUNCH_ROADMAP.md`. The source investigation for the Core Architecture Principles (`docs/investigations/THA_CORE_ARCHITECTURE_PRINCIPLES.md`) is unchanged and remains a genuine historical investigation, distinct from the governing principles here.
+The original investigation documents remain at their former `docs/investigations/` paths as short pointer stubs (link stability only). The promoted Intelligence Governance documents were investigations `TIP1`–`TIP3`; the Master Evolution Roadmap was formerly `THA_LAUNCH_ROADMAP.md`. The Domain Intelligence document above was promoted from investigation `NUT2` (`NUT2_FUTURE_STATE_NUTRITION_VISION.md`) under EWO-FI1 (2026-07-03); the architectural domain was renamed Nutrition → Food Intelligence at promotion — the underlying Food Knowledge stores it consumes keep their existing names and owners, unchanged. The source investigation for the Core Architecture Principles (`docs/investigations/THA_CORE_ARCHITECTURE_PRINCIPLES.md`) is unchanged and remains a genuine historical investigation, distinct from the governing principles here.

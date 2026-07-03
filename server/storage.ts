@@ -1,5 +1,6 @@
 import { User, InsertUser, Meal, MealSummary, InsertMeal, Nutrition, InsertNutrition, ShoppingListItem, InsertShoppingListItem, MealAllergen, IngredientSwap, MealPlan, InsertMealPlan, MealPlanEntry, InsertMealPlanEntry, Diet, MealDiet, MealCategory, SupermarketLink, ProductMatch, InsertProductMatch, IngredientSource, InsertIngredientSource, NormalizedIngredient, InsertNormalizedIngredient, GroceryProduct, InsertGroceryProduct, UserPreferences, InsertUserPreferences, Additive, InsertAdditive, ProductAdditive, InsertProductAdditive, BasketItem, InsertBasketItem, MealTemplate, InsertMealTemplate, MealTemplateProduct, InsertMealTemplateProduct, PlannerWeek, PlannerDay, PlannerEntry, InsertPlannerEntry, UserStreak, UserHealthTrend, ProductHistory, InsertProductHistory, FreezerMeal, InsertFreezerMeal, MealPlanTemplate, InsertMealPlanTemplate, MealPlanTemplateItem, InsertMealPlanTemplateItem, AdminAuditLog, UserPantryItem, ShoppingListExtra, MealPairing, InsertMealPairing, IngredientProduct, InsertIngredientProduct, Household, HouseholdMember, HouseholdEaterRow, WeekEaterOverride, FoodDiaryDay, FoodDiaryEntry, FoodDiaryMetrics, InsertFoodDiaryEntry, InsertFoodDiaryMetrics, users, meals, nutrition, shoppingList, mealAllergens, ingredientSwaps, mealPlans, mealPlanEntries, diets, mealDiets, mealCategories, supermarketLinks, productMatches, ingredientSources, normalizedIngredients, groceryProducts, userPreferences, additives, productAdditives, basketItems, mealTemplates, mealTemplateProducts, plannerWeeks, plannerDays, plannerEntries, userStreaks, userHealthTrends, productHistory, freezerMeals, mealPlanTemplates, mealPlanTemplateItems, adminAuditLog, userPantryItems, shoppingListExtras, mealPairings, ingredientProducts, households, householdMembers, householdEaters, plannerEntryEaters, plannerWeekEaterOverrides, foodDiaryDays, foodDiaryEntries, foodDiaryMetrics, foodKnowledge, FoodKnowledge, siteSettings, mealItems, MealItem, InsertMealItem, userItemUsage, savingsEvents, SavingsEvent, InsertSavingsEvent, pantryIngredientKnowledge, PantryIngredientKnowledge, mealUpliftApplications, MealUpliftApplication, InsertMealUpliftApplication, weekProvisioningItems, WeekProvisioningItem } from "@shared/schema";
 import { normalizeIngredientKey } from "@shared/normalize";
+import { deriveAcquisitionFromLegacy } from "@shared/recipe-acquisition";
 import { db } from "./db";
 import { eq, and, ilike, or, sql, inArray, isNull, isNotNull, desc } from "drizzle-orm";
 import { getHouseholdForUser } from "./lib/household";
@@ -442,9 +443,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMeal(userId: number, insertMeal: InsertMeal): Promise<Meal> {
+    // FS3: every new meal row carries acquisition provenance. Call sites that
+    // don't set it explicitly get the canonical derivation from their legacy
+    // mealSourceType (shared/recipe-acquisition.ts), so no row lands with
+    // unknown provenance.
+    const derived = deriveAcquisitionFromLegacy(insertMeal);
     const [meal] = await db
       .insert(meals)
-      .values({ ...insertMeal, userId })
+      .values({
+        ...insertMeal,
+        acquisitionLane: insertMeal.acquisitionLane ?? derived.acquisitionLane,
+        acquisitionType: insertMeal.acquisitionType ?? derived.acquisitionType,
+        userId,
+      })
       .returning();
     return meal;
   }
@@ -1053,6 +1064,11 @@ export class DatabaseStorage implements IStorage {
       suitableSlots: meals.suitableSlots,
       energyBand: meals.energyBand,
       styleTags: meals.styleTags,
+      acquisitionLane: meals.acquisitionLane,
+      acquisitionType: meals.acquisitionType,
+      acquisitionSourceKey: meals.acquisitionSourceKey,
+      licenceRef: meals.licenceRef,
+      attributionText: meals.attributionText,
       ingredientCount: sql<number>`coalesce(array_length(${meals.ingredients}, 1), 0)`.mapWith(Number),
     };
   }

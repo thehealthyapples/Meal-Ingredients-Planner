@@ -13,9 +13,14 @@
  *   1. Specific pattern rules  — entity extraction, confidence 0.80–0.92
  *   2. Surface-primary rule    — surface → primary capability, confidence 0.65
  *   3. Keyword fallbacks       — vocabulary scan, confidence 0.55–0.65
- *   4. Profile always-on       — confidence 0.50 (personalisation context)
+ *   4. Profile always-on       — confidence 0.50 (personalisation context; baseline)
  *   5. Deduplicate by capability (keep highest confidence per capability)
  *   6. Sort descending, cap at MAX_INTENTS = 4
+ *
+ * INT35: when NO utterance-derived signal fires (steps 0, 1 and 3 all empty),
+ * the always-on profile intent carries gap { kind: "unknown" } so the gateway
+ * can answer "I did not understand" (with rephrase suggestions) instead of a
+ * generic non-answer. Surface-primary (step 2) is context, not understanding.
  *
  * HARD BOUNDARIES (inherited from IIntentResolver):
  *  • No storage reads, no platform calls, no business logic.
@@ -493,6 +498,26 @@ const NUTRITION_DISCOVERY_MATCHERS: Matcher[] = [
     return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.86 };
   },
 
+  // INT35B: "high fibre meals" / "high-fiber recipes" — uncovered by INT35 (only
+  // high-protein fired for a "high-*" descriptor).
+  (u) => {
+    if (!/\bhigh[\s-](?:fibre|fiber)\b/i.test(u)) return null;
+    return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.86 };
+  },
+
+  // INT35B: "low calorie meals" / "low-calorie dinners" — the qualitative form
+  // ("under N calories" was covered; the descriptor phrasing was not).
+  (u) => {
+    if (!/\blow[\s-]cal(?:orie)?s?\b/i.test(u)) return null;
+    return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.86 };
+  },
+
+  // INT35B: "low sodium" / "low salt" meals — uncovered by INT35.
+  (u) => {
+    if (!/\blow[\s-](?:sodium|salt)\b/i.test(u)) return null;
+    return { capability: "nutrition-discovery", verb: "search", parameters: { query: u.trim().toLowerCase() }, confidence: 0.84 };
+  },
+
   // "meals with less than 500 calories" / "recipes with under 30g carbs"
   (u) => {
     if (!/\b(?:meals?|recipes?|dishes?)\s+with\s+(?:less\s+than|under|fewer\s+than)\s+\d+\s*(?:g|grams?|kcal|calories?|cals?)\b/i.test(u)) return null;
@@ -838,6 +863,13 @@ const HOUSEHOLD_MATCHERS: Matcher[] = [
 // THA system meals, meal templates, and (Phase 2) external sources in one pass.
 // ---------------------------------------------------------------------------
 
+/**
+ * INT35 (INT34 G1): temporal qualifiers that mean "something I already ate" —
+ * these route meal-noun queries to diary-discovery (history) instead of
+ * meal-discovery (recipes to cook).
+ */
+const PAST_MEAL_QUALIFIER = /\b(?:past|previous|recent|last|earlier|old)\b/i;
+
 const MEAL_DISCOVERY_MATCHERS: Matcher[] = [
   // "find me a recipe for chicken curry"
   (u) => {
@@ -863,16 +895,65 @@ const MEAL_DISCOVERY_MATCHERS: Matcher[] = [
     };
   },
 
-  // "find me a chicken curry recipe" / "show me a pasta recipe" / "give me a fish pie recipe" /
+  // "find me a chicken curry recipe" / "show me a pasta recipe" / "show me pasta recipes" /
   // "I want a fish pie recipe"  — noun-last phrasing (INT25B F1: most common natural-English form)
+  // INT35: plural "recipes" now matches too — "show me pasta recipes" previously fell through.
   (u) => {
-    const m = u.match(/\b(?:(?:find|show|give)\s+me\s+(?:a\s+)?|i\s+want\s+(?:a\s+)?)(.+?)\s+recipe\b/i);
+    const m = u.match(/\b(?:(?:find|show|give)\s+me\s+(?:a\s+|some\s+)?|i\s+want\s+(?:a\s+)?)(.+?)\s+recipes?\b/i);
     if (!m?.[1]) return null;
     return {
       capability: "meal-discovery",
       verb: "search",
       parameters: { query: m[1].trim().toLowerCase() },
       confidence: 0.83,
+    };
+  },
+
+  // INT35: "show me a past meal" / "show me my recent meals" → diary-discovery (already
+  // eaten — INT34 G1: "past" implies diary history, not a recipe to discover);
+  // "show me a chicken meal" → meal-discovery (terminal noun "meal" without "recipe").
+  (u) => {
+    const m = u.match(/\b(?:(?:find|show|give)\s+me\s+|i\s+want\s+)(?:a\s+|an\s+|some\s+|my\s+)?(.+?)\s+meals?\b/i);
+    if (!m?.[1]) return null;
+    const qualifier = m[1].trim();
+    if (/^(?:a|an|my|the|some|any|me)$/i.test(qualifier)) return null;
+    if (PAST_MEAL_QUALIFIER.test(qualifier)) {
+      return {
+        capability: "diary-discovery",
+        verb: "search",
+        parameters: { query: "" },
+        confidence: 0.84,
+      };
+    }
+    return {
+      capability: "meal-discovery",
+      verb: "search",
+      parameters: { query: qualifier.toLowerCase() },
+      confidence: 0.80,
+    };
+  },
+
+  // INT35: bare noun-phrase queries — "pasta meals" / "chicken dishes" / "veggie recipes".
+  // Whole-utterance anchor so longer sentences stay with their specific matchers; the
+  // qualifier guard rejects articles/pronouns/question words so "my meals" etc. fall through.
+  (u) => {
+    const m = u.match(/^\s*(?:some\s+|any\s+)?([a-z][a-z\s-]{1,40}?)\s+(?:meals?|recipes?|dishes?)\s*[?.!]?\s*$/i);
+    if (!m?.[1]) return null;
+    const qualifier = m[1].trim();
+    if (/\b(?:my|the|a|an|some|any|what|which|show|find|give|search|look|me)\b/i.test(qualifier)) return null;
+    if (PAST_MEAL_QUALIFIER.test(qualifier)) {
+      return {
+        capability: "diary-discovery",
+        verb: "search",
+        parameters: { query: "" },
+        confidence: 0.76,
+      };
+    }
+    return {
+      capability: "meal-discovery",
+      verb: "search",
+      parameters: { query: qualifier.toLowerCase() },
+      confidence: 0.72,
     };
   },
 
@@ -897,6 +978,50 @@ const MEAL_DISCOVERY_MATCHERS: Matcher[] = [
       verb: "search",
       parameters: { query: m[1].trim().toLowerCase() },
       confidence: 0.78,
+    };
+  },
+
+  // INT35B: "meal ideas" / "dinner ideas" / "recipe ideas" / "healthy dinner ideas".
+  // A very common phrasing INT35 left uncovered — "ideas" was in no matcher, so
+  // these collapsed to no-route. Captures an optional leading descriptor
+  // ("healthy", "vegetarian") as the search query.
+  (u) => {
+    if (!/\b(?:meal|dinner|lunch|breakfast|recipe|food|cooking)\s+ideas?\b/i.test(u)) return null;
+    const d = u.match(/\b([a-z][a-z-]{2,30})\s+(?:meal|dinner|lunch|breakfast|recipe|food)\s+ideas?\b/i);
+    const desc = d?.[1] && !/^(?:some|any|give|show|me|for|my|the|a|an|more|new|good)$/i.test(d[1]) ? d[1].toLowerCase() : "";
+    return {
+      capability: "meal-discovery",
+      verb: "search",
+      parameters: { query: desc },
+      confidence: 0.80,
+    };
+  },
+
+  // INT35B: "ideas for dinner" / "any ideas for lunch tonight" — the inverted form.
+  (u) => {
+    if (!/\bideas?\s+for\s+(?:dinner|lunch|breakfast|tea|supper|tonight|a\s+meal|meals?)\b/i.test(u)) return null;
+    return {
+      capability: "meal-discovery",
+      verb: "search",
+      parameters: { query: "" },
+      confidence: 0.78,
+    };
+  },
+
+  // INT35B: "what should I cook tonight?" / "what should I make for dinner?" /
+  // "what can I eat?" — open recipe suggestion with no ingredient. Guarded so the
+  // ingredient form ("what can I cook WITH chickpeas") and the calorie-bounded
+  // form ("what can I have UNDER 400 calories", owned by nutrition-discovery) are
+  // left to their existing matchers.
+  (u) => {
+    if (!/\bwhat\s+(?:should|can|could)\s+i\s+(?:cook|make|eat|prepare)\b/i.test(u)) return null;
+    if (/\bwith\b/i.test(u)) return null;
+    if (/\bunder\s+\d/i.test(u)) return null;
+    return {
+      capability: "meal-discovery",
+      verb: "search",
+      parameters: { query: "" },
+      confidence: 0.79,
     };
   },
 ];
@@ -928,6 +1053,39 @@ const MEALS_MATCHERS: Matcher[] = [
       verb: "search",
       parameters: { query: m[1].trim().toLowerCase() },
       confidence: 0.87,
+    };
+  },
+
+  // INT35 (INT34 G2): inverted OVS word order — "what pasta meals have I got" /
+  // "which chicken recipes do I have" / "pasta meals have I got". Natural British
+  // English puts the verb phrase LAST; the matcher above only covered SVO.
+  // Week-scoped/planned phrasings ("what meals do I have planned this week") stay
+  // with the planner matchers.
+  (u) => {
+    if (/\b(?:this|next|last)\s+week\b|\bplanned\b/i.test(u)) return null;
+    const m = u.match(/\b(?:what|which)?\s*(.+?)\s+(?:meals?|recipes?|dishes?)\s+(?:have\s+i\s+got|do\s+i\s+have)\b/i);
+    if (!m?.[1]) return null;
+    const q = m[1].replace(/^(?:what|which)\s+/i, "").trim().toLowerCase();
+    if (!q || /^(?:what|which|any|some|the|my)$/.test(q)) return null;
+    return {
+      capability: "meals",
+      verb: "search",
+      parameters: { query: q },
+      confidence: 0.87,
+    };
+  },
+
+  // INT35: unqualified "what meals have I got" / "which recipes do I have" — the whole
+  // library, via the owner's lighter summary projection. Week-scoped phrasings stay
+  // with the planner matcher ("what meals do I have this week").
+  (u) => {
+    if (!/\b(?:what|which)\s+(?:meals?|recipes?|dishes?)\s+(?:have\s+i\s+got|do\s+i\s+have)\b/i.test(u)) return null;
+    if (/\b(?:this|next|last)\s+week\b|\bplanned\b/i.test(u)) return null;
+    return {
+      capability: "meals",
+      verb: "read",
+      parameters: { scope: "summary" },
+      confidence: 0.86,
     };
   },
 ];
@@ -1213,10 +1371,15 @@ const KEYWORD_FALLBACKS: KeywordFallback[] = [
     confidence: 0.62,
   },
   {
-    pattern: /\b(?:recipe|cook|dish|ingredient)\b/i,
+    // INT35 (INT34 G1/G2): "meal(s)" added — it was absent from every fallback, so
+    // any meal-noun query without a specific pattern match had zero capability coverage.
+    // Confidence sits BELOW the profile always-on (0.50): this entry is a coverage
+    // floor for otherwise-unmatched meal queries, and must never displace the
+    // personalisation baseline from the MAX_INTENTS cap when specific matchers fired.
+    pattern: /\b(?:recipes?|meals?|cook|dish(?:es)?|ingredients?)\b/i,
     capability: "meals",
-    parameters: { scope: "list" },
-    confidence: 0.55,
+    parameters: { scope: "summary" },
+    confidence: 0.48,
   },
 ];
 
@@ -1284,6 +1447,13 @@ export class PatternIntentResolver implements IIntentResolver {
     const lower = utterance.toLowerCase();
     const collected: ResolvedIntent[] = [];
 
+    // INT35: true once any UTTERANCE-DERIVED signal fires (steps 0, 1, 3). The
+    // surface-primary (step 2) and profile always-on (step 4) are context, not
+    // understanding — when nothing utterance-derived fires, the resolution is
+    // marked unrecognised so the gateway can respond "did not understand"
+    // instead of a generic non-answer.
+    let understood = false;
+
     // 0. Compound matchers (INT33) — cross-domain questions, run before single-domain.
     //    Each matcher returns 2–3 intents for distinct capabilities; all enter the pool.
     //    Deduplication (step 5) keeps the highest-confidence intent per capability, so
@@ -1292,6 +1462,7 @@ export class PatternIntentResolver implements IIntentResolver {
     for (const matcher of ALL_COMPOUND_MATCHERS) {
       const results = matcher(utterance, lower, hints);
       if (results !== null) {
+        understood = true;
         for (const r of results) collected.push(r);
       }
     }
@@ -1299,7 +1470,10 @@ export class PatternIntentResolver implements IIntentResolver {
     // 1. Specific pattern matchers (high confidence)
     for (const matcher of ALL_SPECIFIC_MATCHERS) {
       const result = matcher(utterance, lower, hints);
-      if (result !== null) collected.push(result);
+      if (result !== null) {
+        understood = true;
+        collected.push(result);
+      }
     }
 
     // 2. Surface-based primary capability (medium confidence)
@@ -1311,6 +1485,7 @@ export class PatternIntentResolver implements IIntentResolver {
     // 3. Keyword fallbacks (lower confidence)
     for (const fb of KEYWORD_FALLBACKS) {
       if (fb.pattern.test(lower)) {
+        understood = true;
         collected.push({
           capability: fb.capability,
           verb: "read",
@@ -1320,12 +1495,17 @@ export class PatternIntentResolver implements IIntentResolver {
       }
     }
 
-    // 4. Profile — always included for personalisation context
+    // 4. Profile — always included for personalisation context. Marked baseline
+    //    (INT35): it never counts as understanding the question. When NO
+    //    utterance-derived matcher fired, it also carries the "unknown" gap so
+    //    the gateway knows the utterance itself was not understood.
     collected.push({
       capability: "profile",
       verb: "read",
       parameters: {},
       confidence: 0.50,
+      baseline: true,
+      ...(understood ? {} : { gap: { kind: "unknown" as const } }),
     });
 
     // 5. Deduplicate (keep highest confidence per capability), sort, cap
