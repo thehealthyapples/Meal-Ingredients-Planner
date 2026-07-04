@@ -84,9 +84,13 @@ async function run() {
     set: { evidenceStrength: sqlExcluded("evidence_strength"), ranking: sqlExcluded("ranking"), source: sqlExcluded("source"), isActive: sqlExcluded("is_active") },
   });
 
+  // PKC Phase 0: source_refs is seeded (citations are editorial data);
+  // reviewed_at is deliberately NOT in the SET list — sign-off is a human
+  // decision recorded in the DB only (npm run knowledge:signoff), and
+  // re-seeding must never grant or revoke it (Rule KC9).
   await db.insert(schema.knowledgeNutrientBenefits).values(NUTRIENT_BENEFIT_SEED).onConflictDoUpdate({
     target: [schema.knowledgeNutrientBenefits.nutrientSlug, schema.knowledgeNutrientBenefits.benefitSlug],
-    set: { evidenceStrength: sqlExcluded("evidence_strength"), ranking: sqlExcluded("ranking"), source: sqlExcluded("source"), isActive: sqlExcluded("is_active") },
+    set: { evidenceStrength: sqlExcluded("evidence_strength"), ranking: sqlExcluded("ranking"), source: sqlExcluded("source"), sourceRefs: sqlExcluded("source_refs"), isActive: sqlExcluded("is_active") },
   });
 
   // ── Report ────────────────────────────────────────────────────────────────────

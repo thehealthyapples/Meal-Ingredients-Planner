@@ -1575,6 +1575,24 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 
+  {
+    // PKC Phase 0 — Layer-2 claim trust (Rule KC8, PLATFORM_KNOWLEDGE_COMPLETION
+    // _ARCHITECTURE.md §4.1/§7). Additive columns only: source_refs holds the
+    // citation list (KnowledgeSourceRef[]) for a benefit claim; reviewed_at is
+    // the explicit human sign-off timestamp. Seeds never write reviewed_at —
+    // only the sign-off gate (npm run knowledge:signoff) may set it (Rule KC9).
+    // Idempotent — safe to re-run. No existing row's meaning changes: both
+    // columns default to "unsourced / not signed off", which is the honest
+    // description of every pre-existing row.
+    id: "2026-07-03_pkc0_claim_trust_columns",
+    statements: [
+      `ALTER TABLE knowledge_food_benefits ADD COLUMN IF NOT EXISTS source_refs JSONB NOT NULL DEFAULT '[]'::jsonb`,
+      `ALTER TABLE knowledge_food_benefits ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ`,
+      `ALTER TABLE knowledge_nutrient_benefits ADD COLUMN IF NOT EXISTS source_refs JSONB NOT NULL DEFAULT '[]'::jsonb`,
+      `ALTER TABLE knowledge_nutrient_benefits ADD COLUMN IF NOT EXISTS reviewed_at TIMESTAMPTZ`,
+    ],
+  },
+
   // ← Add new migrations here, appended to the end
 ];
 

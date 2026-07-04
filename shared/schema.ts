@@ -1,5 +1,6 @@
 import { pgTable, text, serial, integer, real, boolean, unique, timestamp, varchar, index, jsonb } from "drizzle-orm/pg-core";
 import type { AdaptationResult, HouseholdSafeForSnapshot } from "./meal-adaptation";
+import type { KnowledgeSourceRef } from "./knowledge/evidence";
 import type { GuestEater } from "./household-eater";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
@@ -1601,6 +1602,9 @@ export const knowledgeFoodNutrients = pgTable("knowledge_food_nutrients", {
 
 // ── Food ↔ Health Benefit ────────────────────────────────────────────────────
 // evidenceStrength is STORED ONLY — it must not be surfaced to users yet.
+// PKC Phase 0 (Rule KC8): sourceRefs + reviewedAt are the Layer-2 claim-trust
+// fields. A claim renders only when both pass shared/knowledge/evidence.ts.
+// reviewedAt is set exclusively by the human sign-off gate, never by seeds.
 export const knowledgeFoodBenefits = pgTable("knowledge_food_benefits", {
   id: serial("id").primaryKey(),
   foodSlug: text("food_slug").notNull().references(() => knowledgeFoods.slug, { onDelete: "cascade" }),
@@ -1609,6 +1613,8 @@ export const knowledgeFoodBenefits = pgTable("knowledge_food_benefits", {
   evidenceStrength: text("evidence_strength").notNull().default("emerging"),
   ranking: integer("ranking").notNull().default(0),
   source: text("source").notNull().default("THA editorial"),
+  sourceRefs: jsonb("source_refs").$type<KnowledgeSourceRef[]>().notNull().default(sql`'[]'::jsonb`),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
@@ -1623,6 +1629,8 @@ export const knowledgeNutrientBenefits = pgTable("knowledge_nutrient_benefits", 
   evidenceStrength: text("evidence_strength").notNull().default("emerging"),
   ranking: integer("ranking").notNull().default(0),
   source: text("source").notNull().default("THA editorial"),
+  sourceRefs: jsonb("source_refs").$type<KnowledgeSourceRef[]>().notNull().default(sql`'[]'::jsonb`),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => ({
@@ -1633,8 +1641,14 @@ export const insertKnowledgeFoodSchema = createInsertSchema(knowledgeFoods).omit
 export const insertKnowledgeNutrientSchema = createInsertSchema(knowledgeNutrients).omit({ id: true, createdAt: true });
 export const insertKnowledgeHealthBenefitSchema = createInsertSchema(knowledgeHealthBenefits).omit({ id: true, createdAt: true });
 export const insertKnowledgeFoodNutrientSchema = createInsertSchema(knowledgeFoodNutrients).omit({ id: true, createdAt: true });
-export const insertKnowledgeFoodBenefitSchema = createInsertSchema(knowledgeFoodBenefits).omit({ id: true, createdAt: true });
-export const insertKnowledgeNutrientBenefitSchema = createInsertSchema(knowledgeNutrientBenefits).omit({ id: true, createdAt: true });
+// sourceRefs overridden: drizzle-zod cannot derive a jsonb column's $type<T>()
+// generic, so the default-inferred schema type doesn't match KnowledgeSourceRef[].
+export const insertKnowledgeFoodBenefitSchema = createInsertSchema(knowledgeFoodBenefits, {
+  sourceRefs: z.custom<KnowledgeSourceRef[]>().optional(),
+}).omit({ id: true, createdAt: true });
+export const insertKnowledgeNutrientBenefitSchema = createInsertSchema(knowledgeNutrientBenefits, {
+  sourceRefs: z.custom<KnowledgeSourceRef[]>().optional(),
+}).omit({ id: true, createdAt: true });
 
 export type KnowledgeFood = typeof knowledgeFoods.$inferSelect;
 export type InsertKnowledgeFood = z.infer<typeof insertKnowledgeFoodSchema>;

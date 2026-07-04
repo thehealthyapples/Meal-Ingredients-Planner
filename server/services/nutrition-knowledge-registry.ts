@@ -13,6 +13,13 @@
 //     for storage/internal use but MUST NOT be surfaced to users yet. Prefer
 //     getFoodBenefitsForDisplay() / getNutrientBenefitsForDisplay(), which strip
 //     the evidence signal before it can reach the UI.
+//   • PKC Phase 0 (Rule KC8) — the Layer-2 claim-trust gate: a benefit claim
+//     reaches a user ONLY if it is evidence-backed (≥1 valid SourceRef + human
+//     reviewedAt sign-off, shared/knowledge/evidence.ts). Food-level benefit
+//     chips render only when corroborated through the nutrient bridge: the
+//     food contributes a nutrient whose link to that benefit is evidence-
+//     backed. Unsourced claims are honest gaps — absent, never rendered.
+import { isEvidenceBackedClaim, type KnowledgeSourceRef } from "@shared/knowledge/evidence";
 import { normalizeIngredientKey } from "@shared/normalize";
 import { resolveIngredientAlias } from "@shared/ingredient-aliases";
 import { db } from "../db";
@@ -101,6 +108,9 @@ export interface BenefitLink {
   source: string;
   /** Internal editorial signal — DO NOT show to users yet. */
   evidenceStrength: string;
+  /** Layer-2 claim-trust fields (PKC Phase 0). */
+  sourceRefs: KnowledgeSourceRef[];
+  reviewedAt: Date | null;
 }
 
 /** Health benefits a food supports. Includes evidenceStrength (storage only). */
@@ -110,7 +120,7 @@ export async function getBenefitsForFood(foodSlug: string): Promise<BenefitLink[
     .from(knowledgeFoodBenefits)
     .where(and(eq(knowledgeFoodBenefits.foodSlug, foodSlug), eq(knowledgeFoodBenefits.isActive, true)))
     .orderBy(asc(knowledgeFoodBenefits.ranking));
-  return joinBenefits(links.map((l) => ({ benefitSlug: l.benefitSlug, ranking: l.ranking, source: l.source, evidenceStrength: l.evidenceStrength })));
+  return joinBenefits(links.map((l) => ({ benefitSlug: l.benefitSlug, ranking: l.ranking, source: l.source, evidenceStrength: l.evidenceStrength, sourceRefs: l.sourceRefs, reviewedAt: l.reviewedAt })));
 }
 
 /** Health benefits a nutrient supports. Includes evidenceStrength (storage only). */
@@ -120,7 +130,7 @@ export async function getBenefitsForNutrient(nutrientSlug: string): Promise<Bene
     .from(knowledgeNutrientBenefits)
     .where(and(eq(knowledgeNutrientBenefits.nutrientSlug, nutrientSlug), eq(knowledgeNutrientBenefits.isActive, true)))
     .orderBy(asc(knowledgeNutrientBenefits.ranking));
-  return joinBenefits(links.map((l) => ({ benefitSlug: l.benefitSlug, ranking: l.ranking, source: l.source, evidenceStrength: l.evidenceStrength })));
+  return joinBenefits(links.map((l) => ({ benefitSlug: l.benefitSlug, ranking: l.ranking, source: l.source, evidenceStrength: l.evidenceStrength, sourceRefs: l.sourceRefs, reviewedAt: l.reviewedAt })));
 }
 
 /** Reverse lookup: foods that notably contribute a nutrient, most prominent first. */
@@ -133,41 +143,113 @@ export async function getFoodsForNutrient(nutrientSlug: string): Promise<Knowled
   return foodsBySlugs(links.map((l) => l.foodSlug));
 }
 
-/** Reverse lookup: foods that support a health benefit. */
+/** Reverse lookup: foods that support a health benefit.
+ *  PKC Phase 0: user-facing — only foods whose chip for this benefit would
+ *  render, i.e. the food carries the benefit editorially AND contributes a
+ *  nutrient whose link to this benefit is evidence-backed (nutrient bridge). */
 export async function getFoodsForBenefit(benefitSlug: string): Promise<KnowledgeFood[]> {
   const links = await db
     .select()
     .from(knowledgeFoodBenefits)
     .where(and(eq(knowledgeFoodBenefits.benefitSlug, benefitSlug), eq(knowledgeFoodBenefits.isActive, true)))
     .orderBy(asc(knowledgeFoodBenefits.ranking));
-  return foodsBySlugs(links.map((l) => l.foodSlug));
+  if (links.length === 0) return [];
+
+  const nbLinks = await db
+    .select()
+    .from(knowledgeNutrientBenefits)
+    .where(and(eq(knowledgeNutrientBenefits.benefitSlug, benefitSlug), eq(knowledgeNutrientBenefits.isActive, true)));
+  const backedNutrients = nbLinks.filter((l) => isEvidenceBackedClaim(l)).map((l) => l.nutrientSlug);
+  if (backedNutrients.length === 0) return [];
+
+  const fnLinks = await db
+    .select()
+    .from(knowledgeFoodNutrients)
+    .where(and(
+      inArray(knowledgeFoodNutrients.foodSlug, links.map((l) => l.foodSlug)),
+      inArray(knowledgeFoodNutrients.nutrientSlug, backedNutrients),
+      eq(knowledgeFoodNutrients.isActive, true),
+    ));
+  const corroborated = new Set(fnLinks.map((l) => l.foodSlug));
+  return foodsBySlugs(links.map((l) => l.foodSlug).filter((s) => corroborated.has(s)));
 }
 
-// ── Display-safe helpers (evidence strength stripped) ──────────────────────────
+// ── Display-safe helpers (evidence-gated, evidence strength stripped) ─────────
+//
+// PKC Phase 0 (Rule KC8): these are the ONLY benefit readers a user-facing
+// surface may call. They enforce the Layer-2 claim-trust gate: nothing renders
+// without ≥1 valid SourceRef and a human reviewedAt sign-off. Unsourced rows
+// are absent from the result — an honest gap, never a hidden fabrication.
 
 export interface DisplayBenefit {
   benefit: KnowledgeHealthBenefit;
   ranking: number;
   source: string;
+  /** The citations that earned this claim the right to render. */
+  sourceRefs: KnowledgeSourceRef[];
 }
 
-const stripEvidence = (links: BenefitLink[]): DisplayBenefit[] =>
-  links.map(({ benefit, ranking, source }) => ({ benefit, ranking, source }));
-
-/** Food → benefits with evidence strength removed. Safe to pass to the UI. */
+/** Food → benefits, via the nutrient bridge: a food's benefit chip renders only
+ *  when the food editorially carries the benefit AND contributes a nutrient
+ *  whose link to that benefit is evidence-backed. The chip inherits the
+ *  corroborating claim's citations. */
 export async function getFoodBenefitsForDisplay(foodSlug: string): Promise<DisplayBenefit[]> {
-  return stripEvidence(await getBenefitsForFood(foodSlug));
+  const direct = await getBenefitsForFood(foodSlug);
+  if (direct.length === 0) return [];
+  const backed = await backedBenefitsViaNutrientBridge(foodSlug);
+  return direct
+    .filter((l) => backed.has(l.benefit.slug))
+    .map((l) => {
+      const b = backed.get(l.benefit.slug)!;
+      return { benefit: l.benefit, ranking: l.ranking, source: b.source, sourceRefs: b.sourceRefs };
+    });
 }
 
-/** Nutrient → benefits with evidence strength removed. Safe to pass to the UI. */
+/** Nutrient → benefits: only evidence-backed claims (valid SourceRef + sign-off). */
 export async function getNutrientBenefitsForDisplay(nutrientSlug: string): Promise<DisplayBenefit[]> {
-  return stripEvidence(await getBenefitsForNutrient(nutrientSlug));
+  const links = await getBenefitsForNutrient(nutrientSlug);
+  return links
+    .filter((l) => isEvidenceBackedClaim(l))
+    .map(({ benefit, ranking, source, sourceRefs }) => ({ benefit, ranking, source, sourceRefs }));
+}
+
+/** Evidence-backed benefits reachable from a food's nutrients, with the
+ *  citations that back them (deduplicated by URL). */
+async function backedBenefitsViaNutrientBridge(
+  foodSlug: string,
+): Promise<Map<string, { source: string; sourceRefs: KnowledgeSourceRef[] }>> {
+  const fnLinks = await db
+    .select()
+    .from(knowledgeFoodNutrients)
+    .where(and(eq(knowledgeFoodNutrients.foodSlug, foodSlug), eq(knowledgeFoodNutrients.isActive, true)));
+  if (fnLinks.length === 0) return new Map();
+
+  const nbLinks = await db
+    .select()
+    .from(knowledgeNutrientBenefits)
+    .where(and(
+      inArray(knowledgeNutrientBenefits.nutrientSlug, fnLinks.map((l) => l.nutrientSlug)),
+      eq(knowledgeNutrientBenefits.isActive, true),
+    ));
+
+  const backed = new Map<string, { source: string; sourceRefs: KnowledgeSourceRef[] }>();
+  for (const link of nbLinks) {
+    if (!isEvidenceBackedClaim(link)) continue;
+    const existing = backed.get(link.benefitSlug);
+    if (!existing) {
+      backed.set(link.benefitSlug, { source: link.source, sourceRefs: [...link.sourceRefs] });
+    } else {
+      const seen = new Set(existing.sourceRefs.map((r) => r.url));
+      for (const ref of link.sourceRefs) if (!seen.has(ref.url)) existing.sourceRefs.push(ref);
+    }
+  }
+  return backed;
 }
 
 // ── Internal join helpers ──────────────────────────────────────────────────────
 
 async function joinBenefits(
-  rows: Array<{ benefitSlug: string; ranking: number; source: string; evidenceStrength: string }>,
+  rows: Array<{ benefitSlug: string; ranking: number; source: string; evidenceStrength: string; sourceRefs: KnowledgeSourceRef[]; reviewedAt: Date | null }>,
 ): Promise<BenefitLink[]> {
   if (rows.length === 0) return [];
   const benefits = await listHealthBenefits();
@@ -175,7 +257,7 @@ async function joinBenefits(
   return rows
     .map((r) => {
       const benefit = bySlug.get(r.benefitSlug);
-      return benefit ? { benefit, ranking: r.ranking, source: r.source, evidenceStrength: r.evidenceStrength } : null;
+      return benefit ? { benefit, ranking: r.ranking, source: r.source, evidenceStrength: r.evidenceStrength, sourceRefs: r.sourceRefs, reviewedAt: r.reviewedAt } : null;
     })
     .filter((x): x is BenefitLink => x !== null);
 }

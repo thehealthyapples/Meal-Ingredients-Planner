@@ -99,7 +99,7 @@ function makePort(): NutritionKnowledgeReadPort {
     getFoodBenefitsForDisplay: async (foodSlug) => {
       calls.push(`getFoodBenefitsForDisplay(${foodSlug})`);
       if (foodSlug !== "broccoli") return [];
-      return [{ benefit: benefitObj("heart-health", "Heart health", "Supports cardiovascular health."), ranking: 1, source: "EFSA" }];
+      return [{ benefit: benefitObj("heart-health", "Heart health", "Supports cardiovascular health."), ranking: 1, source: "EFSA", sourceRefs: [] }];
     },
     searchKnowledgeRegistry: async (query) => {
       calls.push(`searchKnowledgeRegistry(${query})`);
