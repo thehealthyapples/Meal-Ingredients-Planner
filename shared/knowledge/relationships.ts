@@ -36,7 +36,6 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
   "kimchi": ["live-cultures", "fibre", "vitamin-c"],
   "sauerkraut": ["live-cultures", "fibre", "vitamin-c"],
   "kefir": ["live-cultures", "calcium", "plant-protein", "vitamin-b12"],
-  "live-yogurt": ["live-cultures", "calcium", "vitamin-b12"],
   "miso": ["live-cultures", "plant-protein"],
   "tempeh": ["plant-protein", "live-cultures", "magnesium"],
   // Herbs
@@ -60,7 +59,7 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
   "red-pepper": ["vitamin-c", "beta-carotene", "vitamin-a"],
   "carrots": ["beta-carotene", "vitamin-a", "fibre"],
   "beetroot": ["nitrates", "folate", "anthocyanins"],
-  "garlic": ["allicin", "manganese"],
+  "garlic": ["allicin", "manganese", "vitamin-b6", "vitamin-c"], // FI1: added well-established B6/vitamin-C links (allicin stays the signature, rank 0)
   "onion": ["flavonoids", "fibre", "vitamin-c"],
   // Fruit
   "blueberries": ["anthocyanins", "polyphenols", "fibre", "vitamin-c"],
@@ -172,7 +171,7 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
   "macadamia": ["unsaturated-fats", "manganese", "copper", "magnesium"],
   // ── WS0.8 — Wave 7: Dairy and Alternatives ─────────────────────────────────
   "milk": ["calcium", "vitamin-d", "vitamin-b12", "iodine"],
-  "yoghurt": ["calcium", "vitamin-b12", "vitamin-d"],
+  "yoghurt": ["calcium", "vitamin-b12", "vitamin-d", "live-cultures"],
   "greek-yoghurt": ["calcium", "vitamin-b12", "vitamin-d", "selenium"],
   "cheddar": ["calcium", "vitamin-b12", "iodine", "selenium"],
   "mozzarella": ["calcium", "vitamin-b12", "selenium"],
@@ -316,18 +315,18 @@ export const FOOD_NUTRIENTS: Record<string, string[]> = {
 export const FOOD_BENEFITS: Record<string, string[]> = {
   "extra-virgin-olive-oil": ["heart-health", "anti-inflammatory-support", "brain-health"],
   "avocado": ["heart-health", "skin-health", "digestive-comfort"],
-  "walnuts": ["brain-health", "heart-health", "mood-support"],
-  "almonds": ["heart-health", "bone-health", "skin-health"],
-  "salmon": ["heart-health", "brain-health", "mood-support"],
-  "sardines": ["heart-health", "bone-health", "brain-health"],
-  "pumpkin-seeds": ["sleep-quality", "heart-health", "immune-support"],
+  "walnuts": ["brain-health", "heart-health", "mood-support", "muscle-recovery"], // FI2: plant-protein+magnesium→muscle-recovery
+  "almonds": ["heart-health", "bone-health", "skin-health", "muscle-recovery"], // FI2: plant-protein+magnesium→muscle-recovery
+  "salmon": ["heart-health", "brain-health", "mood-support", "energy-support"], // FI2: vitamin-b12+selenium→energy-support
+  "sardines": ["heart-health", "bone-health", "brain-health", "energy-support"], // FI2: vitamin-b12→energy-support
+  "pumpkin-seeds": ["sleep-quality", "heart-health", "immune-support", "mood-support"], // FI2: magnesium→mood-support
   "sunflower-seeds": ["skin-health", "immune-support", "heart-health"],
   "chia-seeds": ["gut-health", "heart-health", "blood-sugar-balance"],
   "flaxseed": ["gut-health", "heart-health", "digestive-comfort"],
   "sesame-seeds": ["bone-health", "heart-health"],
-  "hemp-seeds": ["muscle-recovery", "heart-health"],
+  "hemp-seeds": ["muscle-recovery", "heart-health", "mood-support"], // FI2: magnesium→mood-support
   "butter-beans": ["gut-health", "blood-sugar-balance", "heart-health"],
-  "chickpeas": ["gut-health", "blood-sugar-balance", "muscle-recovery"],
+  "chickpeas": ["gut-health", "blood-sugar-balance", "muscle-recovery", "energy-support"], // FI2: iron+folate→energy-support
   "red-lentils": ["gut-health", "energy-support", "muscle-recovery"],
   "black-beans": ["gut-health", "heart-health", "blood-sugar-balance"],
   "kidney-beans": ["gut-health", "blood-sugar-balance", "energy-support"],
@@ -336,7 +335,6 @@ export const FOOD_BENEFITS: Record<string, string[]> = {
   "kimchi": ["gut-health", "digestive-comfort", "immune-support"],
   "sauerkraut": ["gut-health", "digestive-comfort", "immune-support"],
   "kefir": ["gut-health", "bone-health", "digestive-comfort"],
-  "live-yogurt": ["gut-health", "bone-health", "digestive-comfort"],
   "miso": ["gut-health", "digestive-comfort"],
   "tempeh": ["gut-health", "muscle-recovery", "heart-health"],
   "parsley": ["bone-health", "immune-support"],
@@ -349,9 +347,9 @@ export const FOOD_BENEFITS: Record<string, string[]> = {
   "chestnut-mushrooms": ["immune-support", "heart-health"],
   "shiitake-mushrooms": ["immune-support", "heart-health"],
   "oyster-mushrooms": ["immune-support", "heart-health"],
-  "kale": ["bone-health", "eye-health", "anti-inflammatory-support", "healthy-ageing"],
-  "spinach": ["eye-health", "energy-support", "bone-health"],
-  "broccoli": ["immune-support", "anti-inflammatory-support", "healthy-ageing"],
+  "kale": ["bone-health", "eye-health", "anti-inflammatory-support", "healthy-ageing", "immune-support"], // FI2: vitamin-c→immune-support
+  "spinach": ["eye-health", "energy-support", "bone-health", "muscle-recovery"], // FI2: iron+plant-protein awareness→muscle-recovery
+  "broccoli": ["immune-support", "anti-inflammatory-support", "healthy-ageing", "eye-health"], // FI2: beta-carotene→eye-health
   "tomatoes": ["heart-health", "skin-health", "healthy-ageing"],
   "sweet-potato": ["eye-health", "immune-support", "gut-health"],
   "red-pepper": ["immune-support", "skin-health", "eye-health"],
@@ -366,8 +364,8 @@ export const FOOD_BENEFITS: Record<string, string[]> = {
   "oranges": ["immune-support", "skin-health", "heart-health"],
   "kiwi": ["immune-support", "digestive-comfort", "skin-health"],
   // Mediterranean Vegetables (WS0.6)
-  "watercress": ["immune-support", "bone-health", "eye-health", "anti-inflammatory-support"],
-  "rocket": ["bone-health", "anti-inflammatory-support", "immune-support"],
+  "watercress": ["immune-support", "bone-health", "eye-health", "anti-inflammatory-support", "energy-support"], // FI2: iron+folate→energy-support
+  "rocket": ["bone-health", "anti-inflammatory-support", "immune-support", "energy-support", "eye-health"], // FI2: folate+vitamin-c→energy-support; beta-carotene→eye-health
   "parsnip": ["gut-health", "heart-health", "energy-support"],
   "turnip": ["immune-support", "gut-health"],
   "swede": ["immune-support", "gut-health", "heart-health"],
