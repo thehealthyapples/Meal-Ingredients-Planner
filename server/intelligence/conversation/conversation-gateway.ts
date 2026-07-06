@@ -668,9 +668,23 @@ async function buildGroundedResponse(
     successOutcomes.find((o) => o.capabilityId != null && !o.capabilityId.endsWith("-discovery")) ??
     successOutcomes[0];
 
-  // Assemble context sections for the prompt
+  // COMP6: Assemble context sections including enrichments from Knowledge Assembly.
+  // Enrichments are supplementary context (Tiers 2–3 of GOV1 knowledge search),
+  // distinct from direct capability data (Tier 1). The LLM should synthesize them
+  // naturally into the answer rather than listing them separately.
   const contextSections = Object.entries(capData)
     .map(([cap, data]) => `### ${cap}\n${data}`)
+    .join("\n\n");
+
+  // Add enrichments as supplementary context when available
+  const enrichmentSection = enrichment.length > 0
+    ? `### Related Context (enrichment)\n${enrichment
+        .map(e => `• ${e.title}: ${e.body}`)
+        .join("\n")}`
+    : null;
+
+  const fullContextSections = [contextSections, enrichmentSection]
+    .filter(Boolean)
     .join("\n\n");
 
   // Bounded conversation history (last 5 prior turns, oldest-first)
@@ -695,9 +709,10 @@ HARD RULES — you must never break these:
 5. Only reference specific entities (meals, weeks, products) if they appear in the context data with real IDs — and DO include every such entity in entityRefs.
 
 USING THE CONTEXT WELL (apply within the HARD RULES above — never to override them):
-- SYNTHESISE: when more than one CONTEXT DATA section is present, combine them into ONE coherent answer that connects the facts, rather than reciting each section separately.
+- SYNTHESISE: when more than one CONTEXT DATA section is present, combine them into ONE coherent answer that connects the facts, rather than reciting each section separately. Include "Related Context" naturally in the main answer rather than as a separate list.
 - BE EVIDENCE-FORWARD: ground each specific claim in the concrete values you were given (names, counts, dates, quantities) — surface the actual data the platform retrieved instead of a vague summary.
 - BE COMPLETE: prefer a substantive, self-contained sentence over a one-word or fragment reply, so the answer stands on its own.
+- WEAVE ENRICHMENTS: when "Related Context" is present, weave it into your answer naturally so the user sees a single coherent narrative, not separate ideas.
 
 FOR FOOD CONVERSATIONS:
 When answering about a specific food, follow these principles:
@@ -712,7 +727,7 @@ PERSONALITY (voice only — never overrides rules 1–5 above): ${systemPromptFr
 TODAY: ${frame.temporalAnchor}
 
 CONTEXT DATA:
-${contextSections.trim() || "(No specific data was retrieved for this query.)"}
+${fullContextSections.trim() || "(No specific data was retrieved for this query.)"}
 
 RESPONSE FORMAT — return valid JSON only, no markdown wrapper:
 {"text": "<your response>", "entityRefs": [{"type": "meal|planner_week|shopping_item|food", "id": 123}]}
