@@ -73,14 +73,22 @@ import type {
 } from "../intent-resolver.js";
 import { patternIntentResolver } from "../pattern-intent-resolver.js";
 import {
-  buildFallbackText,
   classifyTurn,
+  describeQueried,
+  formatSuggestions,
   isEmptySearchResult,
   logUnsuccessfulQuery,
   type QueriedIntentOutcome,
   type QueriedIntentStatus,
   type UnsuccessfulTurnState,
 } from "./turn-fallback.js";
+import {
+  systemPromptFragment,
+  voiceFallback,
+  voiceGuidanceSuggestions,
+} from "./behaviour-engine.js";
+import { normalizePersonalityId, type PersonalityId } from "./personality-registry.js";
+import { storage } from "../../storage.js";
 import {
   buildNativeDiscoveryResponse,
   type NativeDiscoveryResponse,
@@ -96,6 +104,10 @@ import {
   type CompanionEnrichmentItem,
 } from "./companion-enrichment.js";
 import { buildNutritionEnrichment } from "./nutrition-enrichment.js";
+import { assembleKnowledge, type KnowledgePackage } from "./knowledge-assembly.js";
+import { deriveFoodIntelligenceExplainFromUplift } from "./capability-composition.js";
+import type { UpliftMatchResult } from "../../lib/uplift-types.js";
+import { buildHouseholdNutritionEnrichment } from "./household-nutrition-enrichment.js";
 import {
   companionFeedbackStore,
   type ICompanionFeedbackStore,
@@ -195,6 +207,27 @@ export interface TurnResult {
  */
 export function detectWriteIntent(utterance: string): string | null {
   const l = utterance.toLowerCase();
+
+  // INTQ8 P2 — advisory / exploratory guard. A genuine write intent is an
+  // IMPERATIVE command ("add chicken to my list", "swap the salmon for cod").
+  // Questions that merely ASK the Companion to reason about a possible change —
+  // "which items could I swap for cheaper alternatives?", "what should I add to
+  // the pantry?", "suggest a less processed swap for this product" — are READS:
+  // they want advice, not a mutation, and must be routed to a capability and
+  // answered, never refused as if they were commands (the pre-INTQ8 false
+  // positive that gated three benchmark questions on G3). The guard fires only
+  // when BOTH an interrogative/advisory frame AND a mutation verb are present,
+  // so it never suppresses a plain imperative command (which carries no
+  // advisory frame). Preserving the existing trust model: this only ever moves
+  // an utterance from "write" to "read"; an undetected write still reaches the
+  // read-only capability layer and the context-only LLM, which cannot fabricate
+  // a mutation (see the conservative-by-design note above).
+  const hasAdvisoryFrame =
+    /\b(?:which|what|whats|what's|should\s+i|could\s+i|can\s+i|would\s+it|do\s+you\s+recommend|any\s+(?:ideas|suggestions)|is\s+there|are\s+there|suggest|recommend|ideas?\s+for)\b/.test(l);
+  const hasMutationVerb =
+    /\b(?:swap|substitute|replace|add|include|buy|get|use|stock|pick)\b/.test(l);
+  if (hasAdvisoryFrame && hasMutationVerb) return null;
+
   if (/\b(add|put)\b.{0,40}\b(to|into)\b.{0,40}\b(planner|plan|week|shopping|basket|list|pantry)\b/.test(l))
     return "add items to the planner or shopping list";
   if (/\b(remove|delete|clear|wipe|drop)\b.{0,40}\b(meal|entry|item|plan|week|dinner|lunch|breakfast|recipe|ingredient)\b/.test(l))
@@ -307,6 +340,14 @@ async function buildGroundedResponse(
   llmProvider: ILlmProvider,
   intentResolver: IIntentResolver,
   handleIntent: HandleIntentFn,
+  // EWO2 — Companion Personality Platform: the user's stored voice choice,
+  // read once per turn by the caller (never cached beyond this request, per
+  // EWO1 §6). Changes WORDING at the seams below only — see behaviour-engine.ts.
+  personalityId: PersonalityId,
+  // FI5 — the caller's own authenticated user id (already resolved by
+  // processUserTurn), used ONLY to resolve their own household for the
+  // household-nutrition enrichment below — never a client-suppliable id.
+  userId: number,
 ): Promise<{
   text: string;
   entityRefs: EntityRef[];
@@ -326,12 +367,26 @@ async function buildGroundedResponse(
   // Write-intent guard (INT18 Risk R4 / INT24) — honest gap, no resolver, no LLM
   const writeAction = detectWriteIntent(utterance);
   if (writeAction) {
+    const text =
+      `I can read and explain your data, but I can't ${writeAction} yet — ` +
+      `that's coming in a future update. For now, make the change directly in ` +
+      `the app and I can help you understand or review it afterwards.`;
     return {
-      text:
-        `I can read and explain your data, but I can't ${writeAction} yet — ` +
-        `that's coming in a future update. For now, make the change directly in ` +
-        `the app and I can help you understand or review it afterwards.`,
+      text,
       entityRefs: [],
+      // INTQ8 P1: the write-intent refusal is a first-class HONEST GAP — the
+      // Companion understood a mutation was requested and honestly declined
+      // because the platform is read-only today. Surface it as a structured
+      // `not_executable` IntentOutcome (an honest-gap status the scorer and the
+      // observability layer already recognise) rather than an untagged turn that
+      // downstream code cannot distinguish from a successful answer. This is the
+      // correct layer for the signal: the refusal short-circuits BEFORE the
+      // resolver runs, so there is no resolver-pipeline `fallbackState` to set —
+      // the honest gap lives in the platform outcome vocabulary instead.
+      outcome: {
+        status: "not_executable",
+        message: `Write intent ("${writeAction}") declined — the Companion is read-only today and proposes or refuses writes, never claims to have executed one.`,
+      },
       discoveries: [],
       guidance: [],
       enrichment: [],
@@ -368,7 +423,7 @@ async function buildGroundedResponse(
   // classified into the four canonical unsuccessful states when no data comes back.
   const capData: Record<string, string> = {};
   const queryResults = new Map<string, CapabilityQueryResult>();
-  const queryable = resolvedIntents.filter(ri => !ri.gap);
+  let queryable = resolvedIntents.filter(ri => !ri.gap);
   await Promise.all(
     queryable.map(async (ri) => {
       const result = await queryCapability(ri, frame.identity, handleIntent);
@@ -376,6 +431,36 @@ async function buildGroundedResponse(
       if (result.data) capData[ri.capability] = result.data;
     }),
   );
+
+  // INT42 — sequential composition: "help make this meal healthier" resolves
+  // Meals + Uplift in parallel (the MEAL_HEALTHIER_COMPOUND matcher, step 0).
+  // Uplift's own top suggestion, once computed, names a follow-up Food
+  // Intelligence question ("why is <ingredient> grounded for <nutrient/
+  // benefit>?") that could not be parameterised until Uplift's result
+  // existed — capability-composition.ts decides whether that question is
+  // worth asking (only when a grounded mapping exists; never a guess).
+  // Skipped when this turn already resolved food-intelligence independently
+  // (never overwrite a genuine, utterance-driven match with a derived one).
+  const upliftResult = queryable.some(ri => ri.capability === "uplift") ? queryResults.get("uplift") : undefined;
+  const alreadyQueriedFoodIntelligence = queryable.some(ri => ri.capability === "food-intelligence");
+  if (upliftResult?.status === "ok-data" && !alreadyQueriedFoodIntelligence) {
+    const upliftPayload = upliftResult.outcome?.result as { matches?: UpliftMatchResult[] } | undefined;
+    const derived = upliftPayload?.matches
+      ? deriveFoodIntelligenceExplainFromUplift(upliftPayload.matches)
+      : null;
+    if (derived) {
+      const derivedIntent: ResolvedIntent = {
+        capability: derived.capability,
+        verb: derived.verb,
+        parameters: derived.parameters,
+        confidence: 0.75,
+      };
+      const result = await queryCapability(derivedIntent, frame.identity, handleIntent);
+      queryResults.set(derivedIntent.capability, result);
+      if (result.data) capData[derivedIntent.capability] = result.data;
+      queryable = [...queryable, derivedIntent];
+    }
+  }
 
   // INT35: describe every queried intent for classification + logging (deduplicated
   // per capability by the resolver, so the capability key is unique).
@@ -414,19 +499,64 @@ async function buildGroundedResponse(
     });
   }
 
+  // INT38/INT39: cross-domain "Next Step" guidance — build early so it's available
+  // for both success and failure paths (guidance is used on recovery path too).
+  const successCapabilityIds: string[] = [];
+  for (const ri of queryable) {
+    if (ri.baseline === true) continue;
+    if (queryResults.get(ri.capability)?.status !== "ok-data") continue;
+    successCapabilityIds.push(ri.capability);
+  }
+  const baseGuidance = buildGuidanceSuggestions(successCapabilityIds);
+
+  // INT36: extract discoveries early for Knowledge Assembly
+  const discoveries: NativeDiscoveryResponse[] = [];
+  for (const ri of queryable) {
+    if (ri.baseline === true) continue;
+    const outcome = queryResults.get(ri.capability)?.outcome;
+    const native = buildNativeDiscoveryResponse(outcome?.result);
+    if (native) discoveries.push(native);
+  }
+
+  // COMP5: Assemble complete knowledge context for this turn.
+  // This stage orchestrates all available platform knowledge (Tiers 1–3)
+  // and determines gap state AFTER searching, not before.
+  const knowledgePackage = await assembleKnowledge({
+    queryResults,
+    queried,
+    contextFrame: frame,
+    guidance: baseGuidance,
+    discoveries,
+    utterance,
+    userId,
+  });
+
   // INT35: classify the turn. A non-null state means NO routed capability produced
   // grounding data — respond with the honest state-specific message instead of
   // sending an empty context to the LLM (which produced the generic
   // "I don't have that information right now").
-  const fallbackState = classifyTurn(queried);
+  const fallbackState = knowledgePackage.gapState;
   if (fallbackState !== null) {
     const clarificationPrompt = resolvedIntents
       .map(ri => ri.gap?.clarificationPrompt)
       .find(p => p && p.trim());
     const gapKind = resolvedIntents.map(ri => ri.gap?.kind).find((k): k is NonNullable<typeof k> => k != null);
-    const text = buildFallbackText(fallbackState, {
-      surface: frame.surface,
-      queried,
+    // EWO2: personality voices the SAME disclosure turn-fallback.ts classified —
+    // describeQueried/formatSuggestions are turn-fallback.ts's own dynamic-fact
+    // helpers, re-used verbatim so no personality template can invent what was
+    // checked (EWO1 §5 invariant 5). COMP1 — Graceful Honest Gaps: the status
+    // set is keyed to WHICH state fired, so "no-knowledge" names the area(s)
+    // routed with an honest platform gap (not just "no-results" search areas)
+    // — every fallback state can honestly say WHAT was checked, never just "no".
+    const areaStatus: QueriedIntentStatus | null =
+      fallbackState === "no-results" ? "ok-empty" : fallbackState === "no-knowledge" ? "no-knowledge" : null;
+    const { areas: searchedAreas, query: searchedQuery } = areaStatus
+      ? describeQueried(queried, [areaStatus])
+      : { areas: undefined, query: undefined };
+    const text = voiceFallback(fallbackState, personalityId, {
+      suggestionExamples: formatSuggestions(frame.surface),
+      searchedAreas,
+      searchedQuery,
       clarificationPrompt,
     });
     logUnsuccessfulQuery({
@@ -447,7 +577,9 @@ async function buildGroundedResponse(
     // data. Reuses the same Capability Guidance Registry as the success path — an
     // honest "you could also try" when the platform has one, [] when it doesn't.
     const attemptedCapabilityIds = Array.from(new Set(routedQueried.map(q => q.capability)));
-    const recoverySuggestions = buildRecoverySuggestions(attemptedCapabilityIds);
+    // EWO2 Stage 3/4: personality reorders + relabels the SAME eligible
+    // suggestions companion-guidance.ts already resolved — never a different set.
+    const recoverySuggestions = voiceGuidanceSuggestions(buildRecoverySuggestions(attemptedCapabilityIds), personalityId);
     return {
       text,
       entityRefs: [],
@@ -462,34 +594,10 @@ async function buildGroundedResponse(
     };
   }
 
-  // INT36: build native THA discovery responses from every discovery capability
-  // that returned canonical THA entities. This runs on the SUCCESSFUL path only
-  // (a non-null fallbackState above means no data came back). The LLM still
-  // writes the natural-language summary and any coordinated multi-capability
-  // answer (INT33); these structured cards + actions are attached ALONGSIDE it so
-  // the turn as a whole follows the THA pattern — summary (text) + canonical
-  // entities (discoveries[].entities) + actions (discoveries[].actions) — and
-  // renders natively on Web, Mobile and future clients. Ordered to match the
-  // resolver's intent order for deterministic output.
-  const discoveries: NativeDiscoveryResponse[] = [];
-  for (const ri of queryable) {
-    if (ri.baseline === true) continue;
-    const outcome = queryResults.get(ri.capability)?.outcome;
-    const native = buildNativeDiscoveryResponse(outcome?.result);
-    if (native) discoveries.push(native);
-  }
-
-  // INT38/INT39: cross-domain "Next Step" guidance, derived from the capabilities
-  // that actually produced grounding data this turn (deterministic — no LLM
-  // call), read from each capability's own declared guidance via the Capability
-  // Guidance Registry. Runs on the SUCCESSFUL path only, matching discoveries above.
-  const successCapabilityIds: string[] = [];
-  for (const ri of queryable) {
-    if (ri.baseline === true) continue;
-    if (queryResults.get(ri.capability)?.status !== "ok-data") continue;
-    successCapabilityIds.push(ri.capability);
-  }
-  const guidance = buildGuidanceSuggestions(successCapabilityIds);
+  // EWO2 Stage 3/4: personality reorders (by its own priority emphasis) and
+  // relabels (cosmetic prefix only) the SAME eligible suggestions — never a
+  // different target, domain, or capability than companion-guidance.ts resolved.
+  const guidance = voiceGuidanceSuggestions(baseGuidance, personalityId);
   const guidanceKind: "next-step" | undefined = guidance.length > 0 ? "next-step" : undefined;
 
   // INT41: capability-owned contextual enrichment — the SAME success signal as
@@ -514,7 +622,20 @@ async function buildGroundedResponse(
     queryResults.get("nutrition-knowledge"),
     queryResults.get("profile"),
   );
-  const enrichment = [...staticEnrichment, ...nutritionEnrichment].slice(0, MAX_ENRICHMENT_ITEMS);
+
+  // FI5: household-nutrition enrichment — a third, narrowly-scoped source,
+  // composed the same way as NUT1 above but against the caller's HOUSEHOLD
+  // (planner familiarity + household hard restrictions) rather than their own
+  // profile. Reuses resolveHouseholdSignal (FI3/FI4's own shared service) —
+  // no new read path. See household-nutrition-enrichment.ts.
+  const householdNutritionEnrichment = await buildHouseholdNutritionEnrichment(
+    queryResults.get("nutrition-knowledge"),
+    userId,
+  );
+  const enrichment = [...staticEnrichment, ...nutritionEnrichment, ...householdNutritionEnrichment].slice(
+    0,
+    MAX_ENRICHMENT_ITEMS,
+  );
 
   // INT40: Companion Action proposals — built from the SAME discoveries just
   // assembled above, gated by executability, honest-gap on missing planner-day
@@ -525,6 +646,27 @@ async function buildGroundedResponse(
     selectedPlannerDayId: frame.selectedPlannerDayId,
     selectedMealSlot: frame.selectedMealSlot,
   });
+
+  // INTQ8 P1: surface the turn's PRIMARY platform outcome on the success path.
+  // Before this, buildGroundedResponse only ever returned an `outcome` on the
+  // unsuccessful (fallback) branch, so every genuinely successful, well-grounded
+  // answer carried outcome=null — indistinguishable, to the scorer and to any
+  // observability/guidance code keyed off TurnResult.outcome, from an un-routed
+  // turn. The evidence needed to build it (`queryResults`) is already in scope.
+  //
+  // Selection rule: among the routed (non-baseline) capabilities that produced
+  // grounding data this turn, prefer a domain-OWNING capability over its
+  // discovery/search sibling (`*-discovery`) — the owning capability is the
+  // Source-of-Truth owner of the data and the more useful signal to surface —
+  // otherwise fall back to the highest-confidence match (queryable is already
+  // ordered by the resolver's descending confidence).
+  const successOutcomes = queryable
+    .filter((ri) => ri.baseline !== true && queryResults.get(ri.capability)?.status === "ok-data")
+    .map((ri) => queryResults.get(ri.capability)?.outcome)
+    .filter((o): o is IntentOutcome => o != null);
+  const primaryOutcome =
+    successOutcomes.find((o) => o.capabilityId != null && !o.capabilityId.endsWith("-discovery")) ??
+    successOutcomes[0];
 
   // Assemble context sections for the prompt
   const contextSections = Object.entries(capData)
@@ -537,15 +679,35 @@ async function buildGroundedResponse(
     .map(t => `${t.role === "user" ? "User" : "Apple"}: ${t.utterance}`)
     .join("\n");
 
+  // EWO2 Stage 4/Risk P1: the personality voice fragment is appended AFTER
+  // every hard rule below, as its own clearly-labelled paragraph — never
+  // interleaved with, prepended before, or allowed to replace rules 1–5.
+  // It may only add tone words; the grounding/firewall/format rules are
+  // identical for every personality (EWO1 §5 hard invariant).
   const systemPrompt =
-`You are Apple, the friendly health assistant inside The Healthy Apples (THA) meal-planning app.
+`You are Apple, the health assistant inside The Healthy Apples (THA) meal-planning app.
 
 HARD RULES — you must never break these:
 1. Answer ONLY from the CONTEXT DATA provided below. Never invent, hallucinate, or assume facts not present in the context.
 2. Nutrition and health: only state what is explicitly in the context. Never claim a food "helps with" or "is good for" any medical condition without a source. Never make medical diagnoses, treatment recommendations, or prescriptions.
-3. If the context does not contain the answer, say "I don't have that information right now" — never guess.
-4. Be warm, encouraging, practical, and concise (1–4 sentences). Never judgemental about food choices.
-5. Only reference specific entities (meals, weeks, products) if they appear in the context data with real IDs.
+3. If the specific detail asked for is not in the context, do NOT guess or invent it. Instead answer honestly in a full sentence: say what you DO have that is relevant, or state plainly that it isn't recorded yet (e.g. "You don't have a diet pattern recorded in your profile yet.") — never the bare phrase "I don't have that information right now" on its own, and never a fabricated fact to fill the gap.
+4. Be practical and concise (1–4 sentences). Never judgemental about food choices.
+5. Only reference specific entities (meals, weeks, products) if they appear in the context data with real IDs — and DO include every such entity in entityRefs.
+
+USING THE CONTEXT WELL (apply within the HARD RULES above — never to override them):
+- SYNTHESISE: when more than one CONTEXT DATA section is present, combine them into ONE coherent answer that connects the facts, rather than reciting each section separately.
+- BE EVIDENCE-FORWARD: ground each specific claim in the concrete values you were given (names, counts, dates, quantities) — surface the actual data the platform retrieved instead of a vague summary.
+- BE COMPLETE: prefer a substantive, self-contained sentence over a one-word or fragment reply, so the answer stands on its own.
+
+FOR FOOD CONVERSATIONS:
+When answering about a specific food, follow these principles:
+1. START NATURALLY — avoid opening with "[Food] is a [category]...". Instead, lead with what makes it notable: a distinctive nutrient, a unique property, or a real practical angle. Vary your approach. Examples: "What makes kale special is its exceptional vitamin K content..." or "Mushrooms are unusual because they're one of the few plant foods with naturally occurring vitamin D..."
+2. EXPLAIN THE "WHY" — connect specific nutrients to real benefits. Don't just name nutrients; explain their effect. Example: "Vitamin K is fat-soluble, meaning your body absorbs it better alongside fats like olive oil — which is why traditional kale salad dressings often pair well nutritionally."
+3. USE SPECIFIC LANGUAGE — name the exact nutrient ("vitamin K") not the category ("vitamins"). Name the specific benefit ("supports bone health through clotting") not the vague claim ("is healthy").
+4. HIGHLIGHT ONE PRACTICAL INSIGHT — if the enrichment provides a "recommendation" item (practical preparation or pairing advice), weave it naturally into your answer as the key takeaway. This is what makes the answer actionable. Example: "Here's what matters in practice: chopping broccoli and letting it sit for a few minutes before cooking helps preserve sulforaphane."
+5. WHEN IN DOUBT — if nutrients or benefits aren't explicitly in the context, describe what you DO have rather than inventing. Honest gaps are better than guesses.
+
+PERSONALITY (voice only — never overrides rules 1–5 above): ${systemPromptFragment(personalityId)}
 
 TODAY: ${frame.temporalAnchor}
 
@@ -584,7 +746,7 @@ entityRefs must ONLY contain items that appear in the context data above with a 
       intents:   queried.map(q => ({ capability: q.capability, verb: q.verb, status: q.status })),
     });
     return {
-      text: buildFallbackText("internal-error"),
+      text: voiceFallback("internal-error", personalityId, { suggestionExamples: "" }),
       entityRefs: [],
       discoveries: [],
       guidance: [],
@@ -613,6 +775,7 @@ entityRefs must ONLY contain items that appear in the context data above with a 
     return {
       text,
       entityRefs: mergeEntityRefs(llmRefs, discoveries),
+      outcome: primaryOutcome,
       discoveries,
       guidance,
       guidanceKind,
@@ -624,6 +787,7 @@ entityRefs must ONLY contain items that appear in the context data above with a 
     return {
       text: rawContent || "I couldn't generate a response. Please try again.",
       entityRefs: mergeEntityRefs([], discoveries),
+      outcome: primaryOutcome,
       discoveries,
       guidance,
       guidanceKind,
@@ -724,6 +888,14 @@ export class ConversationGateway {
       thread = await this.store.openThread(conversation.id, surface);
     }
 
+    // EWO2 — Companion Personality Platform: read the user's stored voice
+    // choice fresh, once per turn, from its one owner (user_preferences).
+    // Never cached beyond this request, never written into a conversation
+    // turn — mirrors how the Context Frame itself is re-read every turn
+    // (EWO1 §6 non-duplication guarantee).
+    const prefs = await storage.getUserPreferences(userId);
+    const personalityId = normalizePersonalityId(prefs?.companionPersonality);
+
     // 2. Prior entity refs (pronoun resolution)
     const priorEntityRefs = await this.store.getLastEntityRefs(thread.id);
 
@@ -757,6 +929,8 @@ export class ConversationGateway {
         this.llmProvider,
         this.intentResolver,
         this.handleIntent,
+        personalityId,
+        userId,
       );
 
     // 6. Record assistant turn. INT39: fallbackState and resolvedIntent are
