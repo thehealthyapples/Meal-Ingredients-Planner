@@ -1,0 +1,222 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: NK6_CANONICAL_FOOD_FOUNDATION_BATCH_V2
+  status: draft_for_claude_import_validation
+  canonical_slug: greek-yoghurt
+  display_name: Greek Yoghurt
+  scientific_or_source_name: Plain strained yoghurt, usually cow milk unless otherwise specified
+  canonical_owner: Canonical Food Library
+  fact_owner_boundary:
+    identity_and_editorial_knowledge: Canonical Food Library
+    quantitative_nutrition_values: Approved nutrition database integration only
+    planner_behaviour: Planner and Intelligence Platform services
+    shopping_product_matches: Shopping/product intelligence services
+nk_controls:
+  intended_import_stage: NK6 canonical food pilot expansion
+  governing_patterns:
+  - one canonical identity per food
+  - one owner per nutrition fact
+  - progressive enrichment over fabricated certainty
+  - draft content only until import validation passes
+  - honest gaps where quantitative values are not validated
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  numeric_nutrition_policy: do_not_import_numeric_values_until validated against the project-approved nutrition
+    database
+  ai_usage_policy: AI may assist wording and relationship suggestions; AI must not own canonical facts or invent
+    evidence.
+identity:
+  food_category: dairy_fermented_food
+  plant_count_policy:
+    counts_towards_plant_diversity: false
+    counting_note: Do not count yoghurt towards plant diversity; track separately as dairy/fermented food where
+      appropriate.
+  aliases:
+  - Greek yogurt
+  - plain Greek yoghurt
+  - strained yoghurt
+  - natural Greek yoghurt
+  - 0% Greek yoghurt
+  - full-fat Greek yoghurt
+  not_same_as:
+  - Greek-style yoghurt if governance separates it
+  - flavoured yoghurt
+  - plant-based yoghurt
+  - fromage frais
+  - skyr unless handled separately
+  canonical_identity_rule: Use greek-yoghurt for the food itself; do not merge recipes, branded products, or derivative
+    dishes into this record.
+classification:
+  whole_food_status: whole_or_minimally_processed
+  upf_default: not_upf_when_plain_single_ingredient
+  processing_watchouts:
+  - flavoured yoghurt
+  - dessert yoghurts
+  - yoghurt drinks with added sugar
+varieties_and_forms:
+  varieties:
+  - full-fat plain
+  - low-fat plain
+  - 0% fat plain
+  forms:
+  - plain tub yoghurt
+  - single-serve plain pot
+  preparation_states:
+  - ready-to-eat
+  - used as sauce
+  - used in marinade
+  - used in breakfast bowl
+  - used in dip
+  form_policy: Prefer keeping forms under this canonical food unless processing changes the food meaning, ingredient
+    list, or use case.
+nutrition_profile:
+  quantitative_values_status: pending_database_validation
+  do_not_display_numeric_values_yet: true
+  notable_nutrients:
+  - nutrient: protein
+    role: higher-protein dairy option compared with many standard yoghurts
+    confidence: well_established_with_product_variation
+  - nutrient: calcium
+    role: supports dairy calcium intake context
+    confidence: well_established
+  - nutrient: iodine
+    role: contributes iodine depending on milk source and production
+    confidence: moderate
+  - nutrient: vitamin_B12
+    role: animal-source micronutrient coverage
+    confidence: well_established
+  - nutrient: live_cultures_when_labelled
+    role: fermented-food context only if product states live cultures
+    confidence: conditional
+  editorial_summary: Greek Yoghurt is useful in THA as a recognised, household-friendly food that can improve meal
+    quality when used in an appropriate context.
+benefit_language:
+- area: protein
+  approved_wording: Useful for adding protein to breakfasts, snacks and sauces.
+  evidence_tone: food_composition
+- area: calcium
+  approved_wording: Can contribute to calcium intake when dairy is suitable for the household member.
+  evidence_tone: food_composition
+- area: fermented_food_context
+  approved_wording: Can support fermented-food variety when it contains live cultures.
+  evidence_tone: conditional_label_based
+planner_metadata:
+  meal_slots:
+  - breakfast
+  - lunch
+  - snack
+  - dinner_sauce
+  meal_shell_roles:
+  - breakfast_protein
+  - sauce_base
+  - dip_base
+  - snack_base
+  - cooling_topping
+  good_uses:
+  - oats with blueberries
+  - smoothie bowl
+  - yoghurt sauce for salmon
+  - chickpea bowl topping
+  - lentil dhal topping
+  nutrition_boost_tags:
+  - protein
+  - calcium
+  - fermented_when_live
+  - breakfast_quality
+  household_adaptation_notes:
+  - Must be optional or replaced for dairy-free or vegan members.
+shopping_intelligence:
+  uk_common_locations:
+  - chilled dairy aisle
+  buying_notes:
+  - Choose plain yoghurt for canonical record.
+  - Flavoured yoghurts may contain added sugar and should not inherit plain yoghurt assumptions.
+  quality_signals:
+  - plain ingredient profile
+  - within date
+  - live cultures if needed for fermented-food feature
+  budget_notes:
+  - Large tubs are often better value if used across breakfasts and sauces.
+  substitution_notes:
+  - Skyr, natural yoghurt or fortified plant yoghurt may fill some roles but are separate canonical foods unless
+    governance merges them.
+cooking_and_storage:
+  storage:
+  - Keep refrigerated.
+  - Use clean spoon to avoid contamination.
+  prep_tips:
+  - Use as a sauce with herbs, lemon or garlic.
+  - Pair with oats and blueberries for a higher-protein breakfast.
+  texture_notes:
+  - Can split if boiled; add gently off heat for sauces.
+relationships:
+  pairs_well_with:
+  - oats
+  - blueberries
+  - chickpeas
+  - lentils
+  - salmon
+  - spinach
+  nutrient_complements:
+  - with: oats
+    reason: adds protein and calcium to whole-grain breakfast base
+  - with: blueberries
+    reason: simple breakfast/snack with fruit and dairy protein context
+  - with: chickpeas
+    reason: plain yoghurt can create a cooling sauce for legume dishes
+  category_neighbours:
+  - eggs
+  - salmon
+  do_not_auto_replace_with:
+  - flavoured yoghurt
+  - skyr
+  - plant yoghurt
+safety_and_limitations:
+- 'Major allergen: milk. Exclude for milk allergy and dairy-free profiles.'
+- Contains lactose to varying degrees; lactose tolerance is individual.
+- Live-culture benefit should only be shown when product labelling confirms live cultures.
+companion_behaviour:
+  plain_answer: Plain Greek yoghurt is useful for protein, calcium and simple sauces. THA should only call it a
+    fermented-food boost when the product has live cultures and must respect dairy-free profiles.
+  suggested_user_facing_phrases:
+  - Add Greek yoghurt for protein
+  - Plain yoghurt sauce
+  - Breakfast protein boost
+  avoid_phrases:
+  - fixes gut health
+  - safe for dairy-free users
+  - all Greek yoghurt contains live cultures
+claim_boundaries:
+- Do not describe the food as treating, curing, preventing, or reversing disease.
+- Use "supports" language rather than guaranteed outcomes.
+- Surface limitations and allergy/safety notes where relevant.
+- Prefer household-friendly explanation over clinical wording.
+consumers:
+- Companion food answers
+- Planner nutrition boosts
+- Nutrition Report / plant diversity view
+- Shopping intelligence
+- Meal card enrichment
+- Pantry explore
+progressive_enrichment:
+  ready_now:
+  - canonical identity
+  - aliases and non-merge rules
+  - qualitative nutrient profile
+  - planner and shopping roles
+  - relationship graph within first canonical food batch
+  - safe companion wording
+  requires_later_validation:
+  - exact per-100g nutrition values
+  - serving-specific nutrient quantities
+  - source-linked evidence references inside production UI
+  - UK supermarket product mapping
+import_notes_for_claude:
+  expected_path: knowledge/canonical-foods/drafts/greek-yoghurt.yaml
+  validation_required:
+  - YAML parses successfully
+  - slug is unique
+  - aliases do not create duplicate canonical foods
+  - relationships reference existing or planned canonical slugs
+  - no medical claims are imported as guaranteed outcomes
+  - numeric nutrition remains pending unless backed by approved source data

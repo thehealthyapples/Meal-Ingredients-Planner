@@ -1,0 +1,224 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: NK6_CANONICAL_FOOD_FOUNDATION_BATCH_V2
+  status: draft_for_claude_import_validation
+  canonical_slug: oats
+  display_name: Oats
+  scientific_or_source_name: Avena sativa
+  canonical_owner: Canonical Food Library
+  fact_owner_boundary:
+    identity_and_editorial_knowledge: Canonical Food Library
+    quantitative_nutrition_values: Approved nutrition database integration only
+    planner_behaviour: Planner and Intelligence Platform services
+    shopping_product_matches: Shopping/product intelligence services
+nk_controls:
+  intended_import_stage: NK6 canonical food pilot expansion
+  governing_patterns:
+  - one canonical identity per food
+  - one owner per nutrition fact
+  - progressive enrichment over fabricated certainty
+  - draft content only until import validation passes
+  - honest gaps where quantitative values are not validated
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  numeric_nutrition_policy: do_not_import_numeric_values_until validated against the project-approved nutrition
+    database
+  ai_usage_policy: AI may assist wording and relationship suggestions; AI must not own canonical facts or invent
+    evidence.
+identity:
+  food_category: whole_grain_cereal
+  plant_count_policy:
+    counts_towards_plant_diversity: true
+    plant_family: Poaceae
+    plant_part: grain
+    counting_note: Count oats once as a whole grain; gluten-free labelled oats remain oats.
+  aliases:
+  - rolled oats
+  - porridge oats
+  - jumbo oats
+  - steel-cut oats
+  - oatmeal
+  - gluten-free oats
+  not_same_as:
+  - oat milk
+  - oat bars
+  - granola with added sugar
+  - instant flavoured porridge sachets
+  - oat flour if handled separately
+  canonical_identity_rule: Use oats for the food itself; do not merge recipes, branded products, or derivative dishes
+    into this record.
+classification:
+  whole_food_status: whole_or_minimally_processed
+  upf_default: not_upf_when_plain_single_ingredient
+  processing_watchouts:
+  - flavoured sachets
+  - granola with added sugar
+  - oat bars
+varieties_and_forms:
+  varieties:
+  - rolled oats
+  - jumbo oats
+  - steel-cut oats
+  - oat bran if governance includes as related form
+  forms:
+  - dry oats
+  - porridge
+  - overnight oats
+  - blended into flour-like ingredient
+  preparation_states:
+  - soaked
+  - boiled
+  - baked
+  - toasted
+  form_policy: Prefer keeping forms under this canonical food unless processing changes the food meaning, ingredient
+    list, or use case.
+nutrition_profile:
+  quantitative_values_status: pending_database_validation
+  do_not_display_numeric_values_yet: true
+  notable_nutrients:
+  - nutrient: beta_glucan_soluble_fibre
+    role: supports cholesterol-lowering context when intake thresholds are met; keep dosage claims out until validated
+    confidence: strong
+  - nutrient: whole_grain_carbohydrate
+    role: slow-release breakfast base context
+    confidence: well_established
+  - nutrient: fibre
+    role: supports gut-health-oriented meal composition
+    confidence: well_established
+  - nutrient: magnesium_and_manganese
+    role: adds mineral diversity; exact values pending validation
+    confidence: moderate
+  - nutrient: plant_protein
+    role: modest contribution to breakfast protein when paired with yoghurt, milk, seeds or eggs
+    confidence: well_established
+  editorial_summary: Oats is useful in THA as a recognised, household-friendly food that can improve meal quality
+    when used in an appropriate context.
+benefit_language:
+- area: whole_grain
+  approved_wording: Adds a whole-grain base to breakfast or baking.
+  evidence_tone: high_level_consensus
+- area: fibre
+  approved_wording: Useful for soluble fibre, especially beta-glucan.
+  evidence_tone: strong_for_beta_glucan
+- area: household_practicality
+  approved_wording: Cheap, store-cupboard friendly and easy to adapt with toppings.
+  evidence_tone: culinary_practical
+planner_metadata:
+  meal_slots:
+  - breakfast
+  - snack
+  - dessert
+  meal_shell_roles:
+  - breakfast_base
+  - whole_grain_slot
+  - binder
+  - overnight_oats_base
+  good_uses:
+  - porridge bar
+  - overnight oats
+  - smoothie bowl topping
+  - pancakes
+  - crumble topping
+  nutrition_boost_tags:
+  - whole_grain
+  - beta_glucan
+  - fibre
+  - breakfast_base
+  - low_upf_when_plain
+  household_adaptation_notes:
+  - Works well as a shared base with member-specific toppings such as blueberries, Greek yoghurt, seeds or nut-free
+    options.
+shopping_intelligence:
+  uk_common_locations:
+  - cereal aisle
+  - baking aisle
+  - free-from aisle for certified gluten-free oats
+  buying_notes:
+  - Plain oats are preferred over flavoured sachets.
+  - Choose certified gluten-free oats for coeliac/gluten-free households where needed.
+  quality_signals:
+  - single-ingredient oats
+  - no added sugar or flavourings for canonical plain oats
+  budget_notes:
+  - Large bags of plain oats are usually very economical.
+  substitution_notes:
+  - Barley, quinoa flakes or other grains may fill a breakfast-grain role but remain separate foods.
+cooking_and_storage:
+  storage:
+  - Store dry and airtight.
+  - Refrigerate prepared overnight oats.
+  prep_tips:
+  - Pair with Greek yoghurt or milk for more protein.
+  - Add blueberries or seeds for plant diversity.
+  texture_notes:
+  - Jumbo oats give more texture; instant oats become softer.
+relationships:
+  pairs_well_with:
+  - blueberries
+  - greek-yoghurt
+  - eggs
+  - extra-virgin-olive-oil
+  nutrient_complements:
+  - with: blueberries
+    reason: whole grain plus berry plant diversity breakfast context
+  - with: greek-yoghurt
+    reason: adds protein and calcium to an oat-based breakfast
+  - with: eggs
+    reason: egg can increase protein in oat pancakes or baked oats
+  category_neighbours:
+  - lentils
+  - chickpeas
+  do_not_auto_replace_with:
+  - granola
+  - oat milk
+  - flavoured porridge sachets
+safety_and_limitations:
+- Oats are naturally gluten-free but are commonly cross-contaminated; use certified gluten-free oats where required.
+- Some people with coeliac disease may also react to avenin; do not override clinical guidance.
+- Flavoured instant oat products may contain added sugar, milk powder or additives and should not inherit this plain-oats
+  record automatically.
+companion_behaviour:
+  plain_answer: 'Oats are a strong breakfast foundation: cheap, plain, whole-grain and useful for fibre, especially
+    beta-glucan. THA should distinguish plain oats from sweetened oat products.'
+  suggested_user_facing_phrases:
+  - Whole-grain breakfast base
+  - Add oats for fibre
+  - Good base for blueberries and yoghurt
+  avoid_phrases:
+  - instantly lowers cholesterol
+  - guarantees weight loss
+  - safe for every gluten-free user without checking certification
+claim_boundaries:
+- Do not describe the food as treating, curing, preventing, or reversing disease.
+- Use "supports" language rather than guaranteed outcomes.
+- Surface limitations and allergy/safety notes where relevant.
+- Prefer household-friendly explanation over clinical wording.
+consumers:
+- Companion food answers
+- Planner nutrition boosts
+- Nutrition Report / plant diversity view
+- Shopping intelligence
+- Meal card enrichment
+- Pantry explore
+progressive_enrichment:
+  ready_now:
+  - canonical identity
+  - aliases and non-merge rules
+  - qualitative nutrient profile
+  - planner and shopping roles
+  - relationship graph within first canonical food batch
+  - safe companion wording
+  requires_later_validation:
+  - exact per-100g nutrition values
+  - serving-specific nutrient quantities
+  - source-linked evidence references inside production UI
+  - UK supermarket product mapping
+import_notes_for_claude:
+  expected_path: knowledge/canonical-foods/drafts/oats.yaml
+  validation_required:
+  - YAML parses successfully
+  - slug is unique
+  - aliases do not create duplicate canonical foods
+  - relationships reference existing or planned canonical slugs
+  - no medical claims are imported as guaranteed outcomes
+  - numeric nutrition remains pending unless backed by approved source data

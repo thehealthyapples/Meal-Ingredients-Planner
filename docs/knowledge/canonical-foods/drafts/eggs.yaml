@@ -1,0 +1,227 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: NK6_CANONICAL_FOOD_FOUNDATION_BATCH_V2
+  status: draft_for_claude_import_validation
+  canonical_slug: eggs
+  display_name: Eggs
+  scientific_or_source_name: Hen eggs unless otherwise specified
+  canonical_owner: Canonical Food Library
+  fact_owner_boundary:
+    identity_and_editorial_knowledge: Canonical Food Library
+    quantitative_nutrition_values: Approved nutrition database integration only
+    planner_behaviour: Planner and Intelligence Platform services
+    shopping_product_matches: Shopping/product intelligence services
+nk_controls:
+  intended_import_stage: NK6 canonical food pilot expansion
+  governing_patterns:
+  - one canonical identity per food
+  - one owner per nutrition fact
+  - progressive enrichment over fabricated certainty
+  - draft content only until import validation passes
+  - honest gaps where quantitative values are not validated
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  numeric_nutrition_policy: do_not_import_numeric_values_until validated against the project-approved nutrition
+    database
+  ai_usage_policy: AI may assist wording and relationship suggestions; AI must not own canonical facts or invent
+    evidence.
+identity:
+  food_category: animal_protein_egg
+  plant_count_policy:
+    counts_towards_plant_diversity: false
+    counting_note: Do not count eggs towards plant diversity or 30-plants reporting.
+  aliases:
+  - egg
+  - hen egg
+  - free-range eggs
+  - boiled eggs
+  - scrambled eggs
+  - poached eggs
+  not_same_as:
+  - duck eggs
+  - quail eggs
+  - egg noodles
+  - mayonnaise
+  - liquid egg product
+  - vegan egg substitute
+  canonical_identity_rule: Use eggs for the food itself; do not merge recipes, branded products, or derivative dishes
+    into this record.
+classification:
+  whole_food_status: whole_or_minimally_processed
+  upf_default: not_upf_when_plain_single_ingredient
+  processing_watchouts:
+  - mayonnaise
+  - egg noodles
+  - processed breakfast sandwiches
+varieties_and_forms:
+  varieties:
+  - hen egg by default
+  - omega-3 enriched egg as branded/enriched product only if needed later
+  forms:
+  - shell eggs
+  - boiled egg
+  - scrambled egg
+  - poached egg
+  - fried egg
+  - omelette
+  preparation_states:
+  - boiled
+  - poached
+  - scrambled
+  - fried
+  - baked
+  - used as binder
+  form_policy: Prefer keeping forms under this canonical food unless processing changes the food meaning, ingredient
+    list, or use case.
+nutrition_profile:
+  quantitative_values_status: pending_database_validation
+  do_not_display_numeric_values_yet: true
+  notable_nutrients:
+  - nutrient: high_quality_protein
+    role: supports protein coverage across meals
+    confidence: well_established
+  - nutrient: choline
+    role: important nutrient context; avoid medical claims
+    confidence: well_established
+  - nutrient: vitamin_B12
+    role: animal-source micronutrient coverage
+    confidence: well_established
+  - nutrient: iodine_and_selenium
+    role: contributes to mineral coverage depending on production/feed
+    confidence: moderate
+  - nutrient: lutein_and_zeaxanthin
+    role: egg-yolk carotenoid context
+    confidence: moderate
+  editorial_summary: Eggs is useful in THA as a recognised, household-friendly food that can improve meal quality
+    when used in an appropriate context.
+benefit_language:
+- area: protein
+  approved_wording: Adds a compact, versatile protein source.
+  evidence_tone: food_composition
+- area: breakfast_quality
+  approved_wording: Can improve protein content of breakfasts that are otherwise mostly carbohydrate.
+  evidence_tone: meal_composition
+- area: household_adaptability
+  approved_wording: Useful as an optional protein slot, but must be excluded for egg-free members.
+  evidence_tone: platform_logic
+planner_metadata:
+  meal_slots:
+  - breakfast
+  - lunch
+  - dinner
+  - snack
+  meal_shell_roles:
+  - protein_slot
+  - binder
+  - breakfast_protein
+  - salad_topping
+  good_uses:
+  - omelettes
+  - egg wraps
+  - breakfast plate
+  - fried rice
+  - salad bowl
+  - oat pancakes
+  nutrition_boost_tags:
+  - protein
+  - choline
+  - breakfast_protein
+  - low_upf_when_plain
+  household_adaptation_notes:
+  - Should be a member-specific protein option where any eater is egg-free or vegan.
+shopping_intelligence:
+  uk_common_locations:
+  - eggs aisle
+  - chilled aisle depending on store
+  buying_notes:
+  - Plain shell eggs should remain separate from processed egg-containing products.
+  - Check pack date and size.
+  quality_signals:
+  - uncracked shells
+  - within date
+  - clean packaging
+  budget_notes:
+  - Larger packs may reduce cost per egg if used regularly.
+  substitution_notes:
+  - Tofu scramble, chickpea flour batter or beans can fill some roles but are not equivalent nutritionally or culinarily.
+cooking_and_storage:
+  storage:
+  - Store according to UK pack guidance; keep away from strong odours.
+  - Refrigerate cooked eggs and use promptly.
+  prep_tips:
+  - Combine with spinach, broccoli or mushrooms to improve vegetable exposure.
+  - Use gentle cooking for better texture.
+  texture_notes:
+  - Overcooked eggs become rubbery and sulphurous.
+relationships:
+  pairs_well_with:
+  - spinach
+  - broccoli
+  - oats
+  - salmon
+  - extra-virgin-olive-oil
+  - greek-yoghurt
+  nutrient_complements:
+  - with: spinach
+    reason: protein plus leafy-green breakfast/lunch context
+  - with: oats
+    reason: increases protein in oat pancakes or baked oats
+  - with: extra-virgin-olive-oil
+    reason: used as cooking fat or salad dressing context rather than egg-specific claim
+  category_neighbours:
+  - salmon
+  - greek-yoghurt
+  do_not_auto_replace_with:
+  - tofu
+  - egg substitute
+  - mayonnaise
+safety_and_limitations:
+- 'Major allergen: egg. Must be excluded for egg-allergic or egg-free household members.'
+- Not suitable for vegan diets.
+- Follow food safety guidance for vulnerable groups regarding raw or lightly cooked eggs and approved production
+  standards.
+companion_behaviour:
+  plain_answer: Eggs are a useful compact protein and choline source, especially at breakfast, but THA must treat
+    egg-free and vegan profiles as hard constraints.
+  suggested_user_facing_phrases:
+  - Add egg for protein
+  - Breakfast protein option
+  - Egg-based protein slot
+  avoid_phrases:
+  - perfect food for everyone
+  - safe for egg-free users
+  - cholesterol is irrelevant for everyone
+claim_boundaries:
+- Do not describe the food as treating, curing, preventing, or reversing disease.
+- Use "supports" language rather than guaranteed outcomes.
+- Surface limitations and allergy/safety notes where relevant.
+- Prefer household-friendly explanation over clinical wording.
+consumers:
+- Companion food answers
+- Planner nutrition boosts
+- Nutrition Report / plant diversity view
+- Shopping intelligence
+- Meal card enrichment
+- Pantry explore
+progressive_enrichment:
+  ready_now:
+  - canonical identity
+  - aliases and non-merge rules
+  - qualitative nutrient profile
+  - planner and shopping roles
+  - relationship graph within first canonical food batch
+  - safe companion wording
+  requires_later_validation:
+  - exact per-100g nutrition values
+  - serving-specific nutrient quantities
+  - source-linked evidence references inside production UI
+  - UK supermarket product mapping
+import_notes_for_claude:
+  expected_path: knowledge/canonical-foods/drafts/eggs.yaml
+  validation_required:
+  - YAML parses successfully
+  - slug is unique
+  - aliases do not create duplicate canonical foods
+  - relationships reference existing or planned canonical slugs
+  - no medical claims are imported as guaranteed outcomes
+  - numeric nutrition remains pending unless backed by approved source data

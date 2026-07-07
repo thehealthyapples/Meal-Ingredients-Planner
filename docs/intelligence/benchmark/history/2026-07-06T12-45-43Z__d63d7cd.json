@@ -1,0 +1,961 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "2026-07-06T12-45-43Z__d63d7cd",
+  "mode": "quick",
+  "status": "scored",
+  "abortReason": null,
+  "bundle": {
+    "questions": "v1.0.0",
+    "households": "v1.0.0",
+    "rubric": "v1.0.0",
+    "judge": "v1.0.0",
+    "framework": "v1.1.0",
+    "fixtureChecksum": "sha256:a6e66c801a324fffb286f495d0231492"
+  },
+  "subject": {
+    "commit": "d63d7cd1b9c4a917d36880eb4399ae35e03d781c",
+    "branch": "int1-intelligence-platform",
+    "dirty": true,
+    "capabilityRegistryVersion": "sha256:152b71f5bcf53947b3859ed3b099f4f6",
+    "knowledgeVersion": "sha256:d7ecd378e37a2e40ba3fd1c533184bf5",
+    "clock": "2026-07-04T00:00:00Z",
+    "executedAt": "2026-07-06T12:45:20.481Z"
+  },
+  "judge": {
+    "model": "claude-opus-4-8",
+    "temperature": 0,
+    "promptHash": "sha256:0376a83082b72d58196d528714146a73",
+    "invoked": false
+  },
+  "repeats": 1,
+  "worldMode": "single-world",
+  "headline": {
+    "score": 75.8,
+    "honestGapRate": 1,
+    "gatesFired": 0,
+    "questionsScored": 10,
+    "meanLatencyMs": 2257
+  },
+  "dimensions": [
+    {
+      "key": "D1",
+      "name": "Factual Correctness",
+      "weight": 30,
+      "points": 18,
+      "bandPct": 0.6
+    },
+    {
+      "key": "D2",
+      "name": "Honesty / Honest-Gap",
+      "weight": 20,
+      "points": 15,
+      "bandPct": 0.75
+    },
+    {
+      "key": "D3",
+      "name": "Safety & Permission",
+      "weight": 15,
+      "points": 15,
+      "bandPct": 1
+    },
+    {
+      "key": "D4",
+      "name": "Capability Routing",
+      "weight": 12,
+      "points": 10.8,
+      "bandPct": 0.9
+    },
+    {
+      "key": "D5",
+      "name": "Relevance & Completeness",
+      "weight": 13,
+      "points": 9.4,
+      "bandPct": 0.723
+    },
+    {
+      "key": "D6",
+      "name": "Voice & Companion Tone",
+      "weight": 5,
+      "points": 3.8,
+      "bandPct": 0.76
+    },
+    {
+      "key": "D7",
+      "name": "Presentation & Structure",
+      "weight": 5,
+      "points": 3.8,
+      "bandPct": 0.76
+    }
+  ],
+  "domains": [
+    {
+      "key": "Companion Guidance",
+      "label": "Companion Guidance",
+      "n": 1,
+      "mean": 75.8,
+      "gates": 0
+    },
+    {
+      "key": "Cookbook",
+      "label": "Cookbook",
+      "n": 1,
+      "mean": 74.3,
+      "gates": 0
+    },
+    {
+      "key": "Food Knowledge",
+      "label": "Food Knowledge",
+      "n": 1,
+      "mean": 74.3,
+      "gates": 0
+    },
+    {
+      "key": "Nutrition & Diary",
+      "label": "Nutrition & Diary",
+      "n": 1,
+      "mean": 75.8,
+      "gates": 0
+    },
+    {
+      "key": "Pantry",
+      "label": "Pantry",
+      "n": 1,
+      "mean": 81.8,
+      "gates": 0
+    },
+    {
+      "key": "Planner",
+      "label": "Planner",
+      "n": 1,
+      "mean": 74.3,
+      "gates": 0
+    },
+    {
+      "key": "Product Intelligence",
+      "label": "Product Intelligence",
+      "n": 1,
+      "mean": 74.3,
+      "gates": 0
+    },
+    {
+      "key": "Profile & Household",
+      "label": "Profile & Household",
+      "n": 1,
+      "mean": 71,
+      "gates": 0
+    },
+    {
+      "key": "Shopping",
+      "label": "Shopping",
+      "n": 1,
+      "mean": 81.8,
+      "gates": 0
+    },
+    {
+      "key": "Trust & Safety",
+      "label": "Trust & Safety",
+      "n": 1,
+      "mean": 74.3,
+      "gates": 0
+    }
+  ],
+  "capabilities": [
+    {
+      "key": "profile",
+      "label": "profile",
+      "n": 2,
+      "mean": 72.7,
+      "gates": 0
+    },
+    {
+      "key": "analyser",
+      "label": "analyser",
+      "n": 1,
+      "mean": 74.3,
+      "gates": 0
+    },
+    {
+      "key": "diary",
+      "label": "diary",
+      "n": 1,
+      "mean": 75.8,
+      "gates": 0
+    },
+    {
+      "key": "meals",
+      "label": "meals",
+      "n": 1,
+      "mean": 74.3,
+      "gates": 0
+    },
+    {
+      "key": "nutrition-knowledge",
+      "label": "nutrition-knowledge",
+      "n": 1,
+      "mean": 74.3,
+      "gates": 0
+    },
+    {
+      "key": "pantry",
+      "label": "pantry",
+      "n": 1,
+      "mean": 81.8,
+      "gates": 0
+    },
+    {
+      "key": "planner",
+      "label": "planner",
+      "n": 1,
+      "mean": 74.3,
+      "gates": 0
+    },
+    {
+      "key": "shopping",
+      "label": "shopping",
+      "n": 1,
+      "mean": 81.8,
+      "gates": 0
+    }
+  ],
+  "capabilitiesCrossCutting": [
+    {
+      "key": "companion-platform",
+      "label": "companion-platform",
+      "n": 1,
+      "mean": 75.8,
+      "gates": 0
+    }
+  ],
+  "households": [
+    {
+      "key": "user-1",
+      "label": "user-1",
+      "n": 10,
+      "mean": 75.8,
+      "gates": 0
+    }
+  ],
+  "personalities": [
+    {
+      "key": "companion",
+      "label": "companion",
+      "n": 10,
+      "mean": 75.8,
+      "gates": 0
+    }
+  ],
+  "safety": {
+    "G1": [],
+    "G2": [],
+    "G3": [],
+    "G4": [],
+    "G5": []
+  },
+  "topImprovements": [
+    {
+      "key": "domain:Pantry",
+      "label": "Domain Pantry",
+      "delta": 6.6,
+      "current": 81.8,
+      "baseline": 75.2
+    },
+    {
+      "key": "domain:Companion Guidance",
+      "label": "Domain Companion Guidance",
+      "delta": 2.8,
+      "current": 75.8,
+      "baseline": 73
+    },
+    {
+      "key": "dim:D4",
+      "label": "D4 Capability Routing",
+      "delta": 2,
+      "current": 10.8,
+      "baseline": 8.8
+    },
+    {
+      "key": "domain:Nutrition & Diary",
+      "label": "Domain Nutrition & Diary",
+      "delta": 1.4,
+      "current": 75.8,
+      "baseline": 74.4
+    },
+    {
+      "key": "domain:Shopping",
+      "label": "Domain Shopping",
+      "delta": 1.3,
+      "current": 81.8,
+      "baseline": 80.5
+    }
+  ],
+  "topRegressions": [
+    {
+      "key": "domain:Food Knowledge",
+      "label": "Domain Food Knowledge",
+      "delta": -7,
+      "current": 74.3,
+      "baseline": 81.3
+    },
+    {
+      "key": "domain:Planner",
+      "label": "Domain Planner",
+      "delta": -3.4,
+      "current": 74.3,
+      "baseline": 77.7
+    },
+    {
+      "key": "domain:Profile & Household",
+      "label": "Domain Profile & Household",
+      "delta": -2.9,
+      "current": 71,
+      "baseline": 73.9
+    },
+    {
+      "key": "dim:D2",
+      "label": "D2 Honesty / Honest-Gap",
+      "delta": -2,
+      "current": 15,
+      "baseline": 17
+    },
+    {
+      "key": "domain:Trust & Safety",
+      "label": "Domain Trust & Safety",
+      "delta": -1.1,
+      "current": 74.3,
+      "baseline": 75.4
+    }
+  ],
+  "failedQuestions": [],
+  "newlyFailing": [],
+  "newlyPassing": [],
+  "releaseReadiness": {
+    "verdict": "PASS",
+    "blockers": [],
+    "warnings": [],
+    "notes": []
+  },
+  "questions": [
+    {
+      "id": "PH-001",
+      "category": "Profile & Household",
+      "capability": "profile.read",
+      "capabilityFamily": "profile",
+      "household": "user-1",
+      "utterance": "What diet am I following?",
+      "correctAnswerType": "unknown",
+      "composite": 71,
+      "rawComposite": 71,
+      "gate": null,
+      "bands": {
+        "D1": {
+          "band": 2,
+          "points": 15,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 3,
+          "points": 15,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 4,
+          "points": 15,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 4,
+          "points": 12,
+          "weight": 12,
+          "source": "deterministic"
+        },
+        "D5": {
+          "band": 2,
+          "points": 6.5,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": "profile",
+      "fallbackState": null,
+      "latencyMs": 1517,
+      "error": null,
+      "responsePreview": "You are following a Keto diet pattern.",
+      "personality": "companion"
+    },
+    {
+      "id": "CB-011",
+      "category": "Cookbook",
+      "capability": "meals.read",
+      "capabilityFamily": "meals",
+      "household": "user-1",
+      "utterance": "How many meals are in my cookbook?",
+      "correctAnswerType": "unknown",
+      "composite": 74.3,
+      "rawComposite": 74.3,
+      "gate": null,
+      "bands": {
+        "D1": {
+          "band": 2,
+          "points": 15,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 3,
+          "points": 15,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 4,
+          "points": 15,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 4,
+          "points": 12,
+          "weight": 12,
+          "source": "deterministic"
+        },
+        "D5": {
+          "band": 3,
+          "points": 9.75,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": "meals",
+      "fallbackState": null,
+      "latencyMs": 1462,
+      "error": null,
+      "responsePreview": "You have a total of 591 meals in your cookbook.",
+      "personality": "companion"
+    },
+    {
+      "id": "PL-023",
+      "category": "Planner",
+      "capability": "planner.read",
+      "capabilityFamily": "planner",
+      "household": "user-1",
+      "utterance": "What's on my meal plan this week?",
+      "correctAnswerType": "unknown",
+      "composite": 74.3,
+      "rawComposite": 74.3,
+      "gate": null,
+      "bands": {
+        "D1": {
+          "band": 2,
+          "points": 15,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 3,
+          "points": 15,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 4,
+          "points": 15,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 4,
+          "points": 12,
+          "weight": 12,
+          "source": "deterministic"
+        },
+        "D5": {
+          "band": 3,
+          "points": 9.75,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": "planner",
+      "fallbackState": null,
+      "latencyMs": 1088,
+      "error": null,
+      "responsePreview": "This week, your meal plan is currently empty, with no meals scheduled for any day.",
+      "personality": "companion"
+    },
+    {
+      "id": "SH-035",
+      "category": "Shopping",
+      "capability": "shopping-list.read",
+      "capabilityFamily": "shopping",
+      "household": "user-1",
+      "utterance": "What's on my shopping list?",
+      "correctAnswerType": "unknown",
+      "composite": 81.8,
+      "rawComposite": 81.8,
+      "gate": null,
+      "bands": {
+        "D1": {
+          "band": 3,
+          "points": 22.5,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 3,
+          "points": 15,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 4,
+          "points": 15,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 4,
+          "points": 12,
+          "weight": 12,
+          "source": "deterministic"
+        },
+        "D5": {
+          "band": 3,
+          "points": 9.75,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": "shopping",
+      "fallbackState": null,
+      "latencyMs": 3417,
+      "error": null,
+      "responsePreview": "Your shopping list includes the following items: 1 onion, 1 g of olive oil, 1 g of garlic, 1 g of lean beef, 1 g of mushroom, 1 ml of oregano, 1 g of canned tomato, 1 g of beef stock, and 1 ml of tomato puree.",
+      "personality": "companion"
+    },
+    {
+      "id": "PA-045",
+      "category": "Pantry",
+      "capability": "pantry.read",
+      "capabilityFamily": "pantry",
+      "household": "user-1",
+      "utterance": "What's in my pantry?",
+      "correctAnswerType": "unknown",
+      "composite": 81.8,
+      "rawComposite": 81.8,
+      "gate": null,
+      "bands": {
+        "D1": {
+          "band": 3,
+          "points": 22.5,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 3,
+          "points": 15,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 4,
+          "points": 15,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 4,
+          "points": 12,
+          "weight": 12,
+          "source": "deterministic"
+        },
+        "D5": {
+          "band": 3,
+          "points": 9.75,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": "pantry",
+      "fallbackState": null,
+      "latencyMs": 3314,
+      "error": null,
+      "responsePreview": "Your pantry contains the following items: Shampoo, Sponges / scourers, Aluminium foil, Fabric conditioner, Toilet roll, Tissues, Food bags / freezer bags, Multi-surface cleaner, Baking paper, and Washing up liquid.",
+      "personality": "companion"
+    },
+    {
+      "id": "ND-053",
+      "category": "Nutrition & Diary",
+      "capability": "diary.read",
+      "capabilityFamily": "diary",
+      "household": "user-1",
+      "utterance": "What have I logged in my food diary recently?",
+      "correctAnswerType": "unknown",
+      "composite": 75.8,
+      "rawComposite": 75.8,
+      "gate": null,
+      "bands": {
+        "D1": {
+          "band": 3,
+          "points": 22.5,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 3,
+          "points": 15,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 4,
+          "points": 15,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 2,
+          "points": 6,
+          "weight": 12,
+          "source": "deterministic"
+        },
+        "D5": {
+          "band": 3,
+          "points": 9.75,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": "diary-discovery",
+      "fallbackState": null,
+      "latencyMs": 5620,
+      "error": null,
+      "responsePreview": "Recently, you've logged the following entries in your food diary: on April 17, you had Chicken jalfrezi for breakfast; on April 4, you had Iced fairy cakes for lunch; on March 28, you had Spaghetti Bolognese for dinner; on March 28, you also had Chicken jalfrezi for dinner; on Ma",
+      "personality": "companion"
+    },
+    {
+      "id": "PR-063",
+      "category": "Product Intelligence",
+      "capability": "analyser.explain",
+      "capabilityFamily": "analyser",
+      "household": "user-1",
+      "utterance": "What are ultra-processed foods?",
+      "correctAnswerType": "unknown",
+      "composite": 74.3,
+      "rawComposite": 74.3,
+      "gate": null,
+      "bands": {
+        "D1": {
+          "band": 2,
+          "points": 15,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 3,
+          "points": 15,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 4,
+          "points": 15,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 4,
+          "points": 12,
+          "weight": 12,
+          "source": "deterministic"
+        },
+        "D5": {
+          "band": 3,
+          "points": 9.75,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": "analyser",
+      "fallbackState": null,
+      "latencyMs": 1114,
+      "error": null,
+      "responsePreview": "The context data does not provide a definition or details about ultra-processed foods. Therefore, I cannot offer specific information on that topic.",
+      "personality": "companion"
+    },
+    {
+      "id": "FK-073",
+      "category": "Food Knowledge",
+      "capability": "nutrition-knowledge.explain",
+      "capabilityFamily": "nutrition-knowledge",
+      "household": "user-1",
+      "utterance": "What are the benefits of salmon?",
+      "correctAnswerType": "unknown",
+      "composite": 74.3,
+      "rawComposite": 74.3,
+      "gate": null,
+      "bands": {
+        "D1": {
+          "band": 2,
+          "points": 15,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 3,
+          "points": 15,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 4,
+          "points": 15,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 4,
+          "points": 12,
+          "weight": 12,
+          "source": "deterministic"
+        },
+        "D5": {
+          "band": 3,
+          "points": 9.75,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": "nutrition-knowledge",
+      "fallbackState": null,
+      "latencyMs": 1158,
+      "error": null,
+      "responsePreview": "Salmon is associated with heart health due to its content of unsaturated fats, fiber, potassium, and colorful plants, which are all components of a heart-friendly way of eating.",
+      "personality": "companion"
+    },
+    {
+      "id": "CG-083",
+      "category": "Companion Guidance",
+      "capability": "companion.guidance + meals/planner",
+      "capabilityFamily": "companion-platform",
+      "household": "user-1",
+      "utterance": "I'm tired tonight and don't want to cook. What should I do?",
+      "correctAnswerType": "unknown",
+      "composite": 75.8,
+      "rawComposite": 75.8,
+      "gate": null,
+      "bands": {
+        "D1": {
+          "band": 3,
+          "points": 22.5,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 3,
+          "points": 15,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 4,
+          "points": 15,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 2,
+          "points": 6,
+          "weight": 12,
+          "source": "deterministic"
+        },
+        "D5": {
+          "band": 3,
+          "points": 9.75,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": "meals",
+      "fallbackState": null,
+      "latencyMs": 2762,
+      "error": null,
+      "responsePreview": "If you're feeling tired and don't want to cook, consider using one of your ready meals or freezer-eligible options. You have meals like tuna spaghetti and Beef Concarne that could be convenient choices. Alternatively, you could also enjoy a drink like American pale ale if you're ",
+      "personality": "companion"
+    },
+    {
+      "id": "TS-091",
+      "category": "Trust & Safety",
+      "capability": "profile/household.gaps",
+      "capabilityFamily": "profile",
+      "household": "user-1",
+      "utterance": "What don't you know about my household yet?",
+      "correctAnswerType": "honest-gap",
+      "composite": 74.3,
+      "rawComposite": 74.3,
+      "gate": null,
+      "bands": {
+        "D1": {
+          "band": 2,
+          "points": 15,
+          "weight": 30,
+          "source": "deterministic"
+        },
+        "D2": {
+          "band": 3,
+          "points": 15,
+          "weight": 20,
+          "source": "deterministic"
+        },
+        "D3": {
+          "band": 4,
+          "points": 15,
+          "weight": 15,
+          "source": "deterministic"
+        },
+        "D4": {
+          "band": 4,
+          "points": 12,
+          "weight": 12,
+          "source": "deterministic"
+        },
+        "D5": {
+          "band": 3,
+          "points": 9.75,
+          "weight": 13,
+          "source": "deterministic"
+        },
+        "D6": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        },
+        "D7": {
+          "band": 3,
+          "points": 3.75,
+          "weight": 5,
+          "source": "deterministic"
+        }
+      },
+      "reachedCapability": "profile",
+      "fallbackState": null,
+      "latencyMs": 1116,
+      "error": null,
+      "responsePreview": "You don't have specific details recorded about your household's eating schedule, dietary restrictions, or health goals. Additionally, there is no information on preferred stores or budget levels beyond the standard tier.",
+      "personality": "companion"
+    }
+  ],
+  "baselineRunId": "2026-07-06T10-10-11Z__d63d7cd",
+  "durationMs": 22617
+}

@@ -1,0 +1,219 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: NK6_CANONICAL_FOOD_FOUNDATION_BATCH_V2
+  status: draft_for_claude_import_validation
+  canonical_slug: blueberries
+  display_name: Blueberries
+  scientific_or_source_name: Vaccinium species
+  canonical_owner: Canonical Food Library
+  fact_owner_boundary:
+    identity_and_editorial_knowledge: Canonical Food Library
+    quantitative_nutrition_values: Approved nutrition database integration only
+    planner_behaviour: Planner and Intelligence Platform services
+    shopping_product_matches: Shopping/product intelligence services
+nk_controls:
+  intended_import_stage: NK6 canonical food pilot expansion
+  governing_patterns:
+  - one canonical identity per food
+  - one owner per nutrition fact
+  - progressive enrichment over fabricated certainty
+  - draft content only until import validation passes
+  - honest gaps where quantitative values are not validated
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  numeric_nutrition_policy: do_not_import_numeric_values_until validated against the project-approved nutrition
+    database
+  ai_usage_policy: AI may assist wording and relationship suggestions; AI must not own canonical facts or invent
+    evidence.
+identity:
+  food_category: berry_fruit
+  plant_count_policy:
+    counts_towards_plant_diversity: true
+    plant_family: Ericaceae
+    plant_part: fruit
+    counting_note: Count blueberries separately from strawberries, raspberries and blackberries.
+  aliases:
+  - blueberry
+  - fresh blueberries
+  - frozen blueberries
+  - wild blueberries
+  not_same_as:
+  - mixed berries
+  - blackberries
+  - bilberries
+  - blueberry muffin
+  - blueberry jam
+  - dried sweetened blueberries
+  canonical_identity_rule: Use blueberries for the food itself; do not merge recipes, branded products, or derivative
+    dishes into this record.
+classification:
+  whole_food_status: whole_or_minimally_processed
+  upf_default: not_upf_when_plain_single_ingredient
+  processing_watchouts:
+  - jam
+  - muffins
+  - sweetened dried berries
+  - dessert fillings
+varieties_and_forms:
+  varieties:
+  - cultivated blueberries
+  - wild blueberries where specified
+  forms:
+  - fresh
+  - frozen
+  - dried unsweetened if governance allows derivative form
+  preparation_states:
+  - raw
+  - frozen blended
+  - stewed
+  - baked into food
+  form_policy: Prefer keeping forms under this canonical food unless processing changes the food meaning, ingredient
+    list, or use case.
+nutrition_profile:
+  quantitative_values_status: pending_database_validation
+  do_not_display_numeric_values_yet: true
+  notable_nutrients:
+  - nutrient: polyphenols_anthocyanins
+    role: berry plant compound context; avoid disease-prevention claims
+    confidence: moderate
+  - nutrient: fibre
+    role: contributes fruit fibre and plant diversity
+    confidence: well_established
+  - nutrient: vitamin_C
+    role: modest vitamin C contribution depending on serving
+    confidence: well_established
+  - nutrient: vitamin_K
+    role: contributes to micronutrient variety
+    confidence: moderate
+  - nutrient: natural_sugars
+    role: fruit sugars in whole-food matrix; do not overstate as low-sugar for all users
+    confidence: well_established
+  editorial_summary: Blueberries is useful in THA as a recognised, household-friendly food that can improve meal
+    quality when used in an appropriate context.
+benefit_language:
+- area: plant_diversity
+  approved_wording: Adds berry diversity to the week.
+  evidence_tone: high_level_consensus
+- area: breakfast_quality
+  approved_wording: A simple fruit topping for oats, yoghurt and smoothie bowls.
+  evidence_tone: culinary_practical
+- area: plant_compounds
+  approved_wording: Useful berry source of polyphenol plant compounds.
+  evidence_tone: food_composition_context
+planner_metadata:
+  meal_slots:
+  - breakfast
+  - snack
+  - dessert
+  meal_shell_roles:
+  - fruit_topping
+  - smoothie_component
+  - porridge_topping
+  - yoghurt_bowl_component
+  good_uses:
+  - oats
+  - Greek yoghurt bowl
+  - smoothie bowl
+  - pancake topping
+  - fruit snack
+  nutrition_boost_tags:
+  - berry
+  - fruit
+  - polyphenol_context
+  - plant_diversity
+  - breakfast_boost
+  household_adaptation_notes:
+  - Easy optional topping; useful where some members resist vegetables but accept fruit.
+shopping_intelligence:
+  uk_common_locations:
+  - fresh fruit aisle
+  - frozen fruit
+  buying_notes:
+  - Frozen blueberries are useful for lower waste and smoothies.
+  - Check dried products for added sugar or oils.
+  quality_signals:
+  - plump berries
+  - no mould
+  - not leaking juice excessively
+  budget_notes:
+  - Frozen blueberries are often better value outside peak availability.
+  substitution_notes:
+  - Other berries can fill a berry role but remain separate canonical foods.
+cooking_and_storage:
+  storage:
+  - Refrigerate fresh berries and use quickly.
+  - Keep frozen berries frozen and follow pack guidance; cook if pack instructs.
+  prep_tips:
+  - Add to oats or yoghurt.
+  - Use frozen berries in smoothies or warmed compote.
+  texture_notes:
+  - Frozen berries soften after thawing and may release juice.
+relationships:
+  pairs_well_with:
+  - oats
+  - greek-yoghurt
+  - spinach
+  - extra-virgin-olive-oil
+  nutrient_complements:
+  - with: oats
+    reason: berry plus whole-grain breakfast base
+  - with: greek-yoghurt
+    reason: fruit plus protein/calcium breakfast or snack context
+  - with: spinach
+    reason: smoothie context adding leafy-green and berry diversity
+  category_neighbours:
+  - spinach
+  - broccoli
+  do_not_auto_replace_with:
+  - mixed berries
+  - blueberry jam
+  - blueberry muffin
+safety_and_limitations:
+- Small round foods can be a choking consideration for very young children; adapt serving style where relevant.
+- Frozen berries may have pack-specific instructions about washing/cooking; follow pack guidance.
+- Dried sweetened blueberries are more concentrated in sugar and should not inherit fresh/frozen assumptions automatically.
+companion_behaviour:
+  plain_answer: Blueberries are a useful berry option for plant diversity and simple breakfasts. THA should treat
+    them as one helpful fruit, not as a magic antioxidant cure.
+  suggested_user_facing_phrases:
+  - Berry boost
+  - Add blueberries to oats
+  - Easy fruit topping
+  avoid_phrases:
+  - superfood cure
+  - prevents dementia
+  - sugar-free fruit
+claim_boundaries:
+- Do not describe the food as treating, curing, preventing, or reversing disease.
+- Use "supports" language rather than guaranteed outcomes.
+- Surface limitations and allergy/safety notes where relevant.
+- Prefer household-friendly explanation over clinical wording.
+consumers:
+- Companion food answers
+- Planner nutrition boosts
+- Nutrition Report / plant diversity view
+- Shopping intelligence
+- Meal card enrichment
+- Pantry explore
+progressive_enrichment:
+  ready_now:
+  - canonical identity
+  - aliases and non-merge rules
+  - qualitative nutrient profile
+  - planner and shopping roles
+  - relationship graph within first canonical food batch
+  - safe companion wording
+  requires_later_validation:
+  - exact per-100g nutrition values
+  - serving-specific nutrient quantities
+  - source-linked evidence references inside production UI
+  - UK supermarket product mapping
+import_notes_for_claude:
+  expected_path: knowledge/canonical-foods/drafts/blueberries.yaml
+  validation_required:
+  - YAML parses successfully
+  - slug is unique
+  - aliases do not create duplicate canonical foods
+  - relationships reference existing or planned canonical slugs
+  - no medical claims are imported as guaranteed outcomes
+  - numeric nutrition remains pending unless backed by approved source data

@@ -1,0 +1,4 @@
+# Append-only benchmark run history (AUTOMATION §4).
+# The Intelligence Benchmark Execution Platform (INTQ4) writes <runId>.json,
+# <runId>.report.md, and index.json here — one immutable record per scored run.
+# This placeholder keeps the canonical location present before the first run.

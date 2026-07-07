@@ -1,0 +1,227 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: NK6_CANONICAL_FOOD_FOUNDATION_BATCH_V2
+  status: draft_for_claude_import_validation
+  canonical_slug: spinach
+  display_name: Spinach
+  scientific_or_source_name: Spinacia oleracea
+  canonical_owner: Canonical Food Library
+  fact_owner_boundary:
+    identity_and_editorial_knowledge: Canonical Food Library
+    quantitative_nutrition_values: Approved nutrition database integration only
+    planner_behaviour: Planner and Intelligence Platform services
+    shopping_product_matches: Shopping/product intelligence services
+nk_controls:
+  intended_import_stage: NK6 canonical food pilot expansion
+  governing_patterns:
+  - one canonical identity per food
+  - one owner per nutrition fact
+  - progressive enrichment over fabricated certainty
+  - draft content only until import validation passes
+  - honest gaps where quantitative values are not validated
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  numeric_nutrition_policy: do_not_import_numeric_values_until validated against the project-approved nutrition
+    database
+  ai_usage_policy: AI may assist wording and relationship suggestions; AI must not own canonical facts or invent
+    evidence.
+identity:
+  food_category: leafy_green_vegetable
+  plant_count_policy:
+    counts_towards_plant_diversity: true
+    plant_family: Amaranthaceae
+    plant_part: leaf
+    counting_note: Count once per week as spinach, regardless of baby/mature/frozen form.
+  aliases:
+  - baby spinach
+  - mature spinach
+  - fresh spinach
+  - frozen spinach
+  - spinach leaves
+  not_same_as:
+  - watercress
+  - rocket
+  - kale
+  - chard
+  - spinach pasta
+  - spinach tortilla
+  - creamed spinach ready meal
+  canonical_identity_rule: Use spinach for the food itself; do not merge recipes, branded products, or derivative
+    dishes into this record.
+classification:
+  whole_food_status: whole_or_minimally_processed
+  upf_default: not_upf_when_plain_single_ingredient
+  processing_watchouts:
+  - creamed spinach
+  - spinach pasta or wraps
+  - ready meals with spinach as ingredient
+varieties_and_forms:
+  varieties:
+  - baby spinach
+  - mature spinach
+  forms:
+  - fresh leaves
+  - frozen leaf spinach
+  - frozen chopped spinach
+  preparation_states:
+  - raw
+  - wilted
+  - steamed
+  - sautéed
+  - blended into sauce or smoothie
+  form_policy: Prefer keeping forms under this canonical food unless processing changes the food meaning, ingredient
+    list, or use case.
+nutrition_profile:
+  quantitative_values_status: pending_database_validation
+  do_not_display_numeric_values_yet: true
+  notable_nutrients:
+  - nutrient: vitamin K
+    role: supports normal blood clotting and bone-related nutrition context
+    confidence: well_established
+  - nutrient: folate
+    role: supports normal cell function and contributes to varied micronutrient intake
+    confidence: well_established
+  - nutrient: lutein_and_zeaxanthin
+    role: plant carotenoids associated with eye-health nutrition context
+    confidence: moderate
+  - nutrient: plant_iron
+    role: contributes iron, with absorption improved by vitamin-C-rich foods
+    confidence: well_established_with_absorption_context
+  - nutrient: magnesium
+    role: contributes to mineral diversity across the week
+    confidence: well_established
+  editorial_summary: Spinach is useful in THA as a recognised, household-friendly food that can improve meal quality
+    when used in an appropriate context.
+benefit_language:
+- area: plant_diversity
+  approved_wording: Adds leafy-green diversity to the week.
+  evidence_tone: high_level_consensus
+- area: micronutrient_density
+  approved_wording: Useful for folate, vitamin K, magnesium and plant carotenoids.
+  evidence_tone: food_composition
+- area: meal_enrichment
+  approved_wording: Easy to add without changing the identity of many meals.
+  evidence_tone: culinary_practical
+planner_metadata:
+  meal_slots:
+  - breakfast
+  - lunch
+  - dinner
+  - snack_or_smoothie
+  meal_shell_roles:
+  - shared_base_component
+  - vegetable_slot
+  - nutrition_boost
+  - sauce_or_smoothie_enrichment
+  good_uses:
+  - omelettes
+  - egg wraps
+  - lentil dhal
+  - chickpea curry
+  - salmon bowls
+  - pasta sauce
+  - smoothies
+  nutrition_boost_tags:
+  - leafy_green
+  - folate
+  - vitamin_k
+  - plant_diversity
+  - micronutrient_boost
+  household_adaptation_notes:
+  - Usually easy to include as an optional add-in for members who like greens.
+shopping_intelligence:
+  uk_common_locations:
+  - fresh produce aisle
+  - frozen vegetables
+  buying_notes:
+  - Fresh baby spinach is convenient but short-life.
+  - Frozen spinach is useful for sauces, curries and batch cooking.
+  quality_signals:
+  - deep green leaves
+  - no slimy patches
+  - minimal yellowing
+  budget_notes:
+  - Frozen spinach is often the most economical low-waste option.
+  substitution_notes:
+  - Use kale, chard, watercress or rocket depending on meal style, but do not silently merge them.
+cooking_and_storage:
+  storage:
+  - 'Fresh: refrigerate and use quickly.'
+  - 'Frozen: keep frozen and cook from frozen according to pack guidance.'
+  prep_tips:
+  - Wilt into hot dishes at the end.
+  - Pair with lemon, peppers or tomatoes to support plant-iron absorption context.
+  texture_notes:
+  - Cooks down heavily; use more raw volume than expected for cooked dishes.
+relationships:
+  pairs_well_with:
+  - eggs
+  - salmon
+  - chickpeas
+  - lentils
+  - extra-virgin-olive-oil
+  - greek-yoghurt
+  nutrient_complements:
+  - with: eggs
+    reason: leafy greens plus protein and choline context
+  - with: extra-virgin-olive-oil
+    reason: fat helps carry fat-soluble compounds in a meal context
+  - with: chickpeas
+    reason: leafy greens plus legumes increases plant diversity and fibre context
+  category_neighbours:
+  - broccoli
+  - blueberries
+  do_not_auto_replace_with:
+  - kale
+  - rocket
+  - watercress
+safety_and_limitations:
+- High vitamin K content may matter for people on warfarin or similar anticoagulants; advise consistent intake and
+  clinician guidance rather than avoidance.
+- Can be higher in oxalates; avoid making kidney-stone claims without clinical context.
+- Wash fresh leaves according to pack guidance.
+companion_behaviour:
+  plain_answer: Spinach is an easy leafy-green boost. It is useful for folate, vitamin K, magnesium and plant compounds,
+    but THA should present it as one helpful food, not a cure-all.
+  suggested_user_facing_phrases:
+  - Add a handful of spinach
+  - Leafy-green boost
+  - Easy plant-diversity win
+  avoid_phrases:
+  - detoxes the body
+  - cures anaemia
+  - guarantees better eyesight
+claim_boundaries:
+- Do not describe the food as treating, curing, preventing, or reversing disease.
+- Use "supports" language rather than guaranteed outcomes.
+- Surface limitations and allergy/safety notes where relevant.
+- Prefer household-friendly explanation over clinical wording.
+consumers:
+- Companion food answers
+- Planner nutrition boosts
+- Nutrition Report / plant diversity view
+- Shopping intelligence
+- Meal card enrichment
+- Pantry explore
+progressive_enrichment:
+  ready_now:
+  - canonical identity
+  - aliases and non-merge rules
+  - qualitative nutrient profile
+  - planner and shopping roles
+  - relationship graph within first canonical food batch
+  - safe companion wording
+  requires_later_validation:
+  - exact per-100g nutrition values
+  - serving-specific nutrient quantities
+  - source-linked evidence references inside production UI
+  - UK supermarket product mapping
+import_notes_for_claude:
+  expected_path: knowledge/canonical-foods/drafts/spinach.yaml
+  validation_required:
+  - YAML parses successfully
+  - slug is unique
+  - aliases do not create duplicate canonical foods
+  - relationships reference existing or planned canonical slugs
+  - no medical claims are imported as guaranteed outcomes
+  - numeric nutrition remains pending unless backed by approved source data

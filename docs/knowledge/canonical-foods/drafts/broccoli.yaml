@@ -1,0 +1,221 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: NK6_CANONICAL_FOOD_FOUNDATION_BATCH_V2
+  status: draft_for_claude_import_validation
+  canonical_slug: broccoli
+  display_name: Broccoli
+  scientific_or_source_name: Brassica oleracea var. italica
+  canonical_owner: Canonical Food Library
+  fact_owner_boundary:
+    identity_and_editorial_knowledge: Canonical Food Library
+    quantitative_nutrition_values: Approved nutrition database integration only
+    planner_behaviour: Planner and Intelligence Platform services
+    shopping_product_matches: Shopping/product intelligence services
+nk_controls:
+  intended_import_stage: NK6 canonical food pilot expansion
+  governing_patterns:
+  - one canonical identity per food
+  - one owner per nutrition fact
+  - progressive enrichment over fabricated certainty
+  - draft content only until import validation passes
+  - honest gaps where quantitative values are not validated
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  numeric_nutrition_policy: do_not_import_numeric_values_until validated against the project-approved nutrition
+    database
+  ai_usage_policy: AI may assist wording and relationship suggestions; AI must not own canonical facts or invent
+    evidence.
+identity:
+  food_category: cruciferous_vegetable
+  plant_count_policy:
+    counts_towards_plant_diversity: true
+    plant_family: Brassicaceae
+    plant_part: flowering_head_and_stem
+    counting_note: Count once per week as broccoli, including tenderstem or frozen broccoli if governance accepts
+      same canonical food.
+  aliases:
+  - broccoli florets
+  - tenderstem broccoli
+  - broccoli stems
+  - frozen broccoli
+  not_same_as:
+  - cauliflower
+  - broccoli sprouts
+  - broccolini if handled separately
+  - broccoli soup ready meal
+  canonical_identity_rule: Use broccoli for the food itself; do not merge recipes, branded products, or derivative
+    dishes into this record.
+classification:
+  whole_food_status: whole_or_minimally_processed
+  upf_default: not_upf_when_plain_single_ingredient
+  processing_watchouts:
+  - broccoli cheese bake
+  - breaded broccoli products
+  - ready soups with additives/salt
+varieties_and_forms:
+  varieties:
+  - standard calabrese broccoli
+  - tenderstem-style broccoli
+  forms:
+  - fresh head
+  - fresh florets
+  - frozen florets
+  preparation_states:
+  - raw
+  - steamed
+  - boiled
+  - roasted
+  - stir-fried
+  - blanched
+  form_policy: Prefer keeping forms under this canonical food unless processing changes the food meaning, ingredient
+    list, or use case.
+nutrition_profile:
+  quantitative_values_status: pending_database_validation
+  do_not_display_numeric_values_yet: true
+  notable_nutrients:
+  - nutrient: vitamin C
+    role: supports micronutrient density and helps with plant-iron absorption in meals
+    confidence: well_established
+  - nutrient: vitamin K
+    role: contributes to leafy/cruciferous micronutrient coverage
+    confidence: well_established
+  - nutrient: folate
+    role: supports varied vegetable micronutrient intake
+    confidence: well_established
+  - nutrient: fibre
+    role: supports gut-health-oriented meal composition
+    confidence: well_established
+  - nutrient: glucosinolates
+    role: cruciferous plant compounds; discuss cautiously without disease-prevention claims
+    confidence: moderate
+  editorial_summary: Broccoli is useful in THA as a recognised, household-friendly food that can improve meal quality
+    when used in an appropriate context.
+benefit_language:
+- area: plant_diversity
+  approved_wording: Adds cruciferous vegetable diversity to the week.
+  evidence_tone: high_level_consensus
+- area: fibre
+  approved_wording: Contributes fibre and volume to meals.
+  evidence_tone: food_composition
+- area: micronutrient_density
+  approved_wording: Useful for vitamin C, vitamin K and folate context.
+  evidence_tone: food_composition
+planner_metadata:
+  meal_slots:
+  - lunch
+  - dinner
+  meal_shell_roles:
+  - shared_base_component
+  - vegetable_slot
+  - side_vegetable
+  - nutrition_boost
+  good_uses:
+  - salmon traybake
+  - stir-fry bar
+  - grain bowl
+  - omelette side
+  - chickpea curry side
+  - pasta primavera
+  nutrition_boost_tags:
+  - cruciferous
+  - fibre
+  - vitamin_c
+  - plant_diversity
+  - low_upf
+  household_adaptation_notes:
+  - Can be a shared side even when protein/carb choices differ by household member.
+shopping_intelligence:
+  uk_common_locations:
+  - fresh produce aisle
+  - frozen vegetables
+  buying_notes:
+  - Frozen florets are useful for low-waste family cooking.
+  - Stems are edible and can be sliced into stir-fries.
+  quality_signals:
+  - firm green florets
+  - no strong sulphur smell
+  - minimal yellowing
+  budget_notes:
+  - Whole heads can be better value than prepared florets.
+  substitution_notes:
+  - Cauliflower, green beans or cabbage can fill a side-vegetable role but should remain separate canonical foods.
+cooking_and_storage:
+  storage:
+  - Refrigerate fresh broccoli.
+  - Use frozen from frozen unless pack says otherwise.
+  prep_tips:
+  - Steam or roast rather than overboil for better texture.
+  - Use stems to reduce waste.
+  texture_notes:
+  - Overcooking can make flavour stronger and texture soft.
+relationships:
+  pairs_well_with:
+  - salmon
+  - eggs
+  - chickpeas
+  - lentils
+  - extra-virgin-olive-oil
+  - greek-yoghurt
+  nutrient_complements:
+  - with: salmon
+    reason: oily fish plus cruciferous vegetable creates protein, omega-3 and plant diversity context
+  - with: extra-virgin-olive-oil
+    reason: roasted vegetable plus healthy-fat dressing context
+  - with: lentils
+    reason: vegetable plus legume increases fibre and plant diversity context
+  category_neighbours:
+  - spinach
+  - blueberries
+  do_not_auto_replace_with:
+  - cauliflower
+  - kale
+  - green beans
+safety_and_limitations:
+- Can cause bloating for some people because of fibre and fermentable carbohydrates.
+- High vitamin K content may matter for anticoagulant medication consistency.
+- Avoid claiming cancer-prevention effects from cruciferous compounds in consumer wording.
+companion_behaviour:
+  plain_answer: Broccoli is a strong everyday vegetable for fibre, vitamin C and cruciferous plant diversity. It
+    is best framed as a useful weekly vegetable, not a miracle food.
+  suggested_user_facing_phrases:
+  - Cruciferous veg boost
+  - Add broccoli on the side
+  - Good fibre-and-vitamin-C vegetable
+  avoid_phrases:
+  - cancer fighting
+  - detox vegetable
+  - burns fat
+claim_boundaries:
+- Do not describe the food as treating, curing, preventing, or reversing disease.
+- Use "supports" language rather than guaranteed outcomes.
+- Surface limitations and allergy/safety notes where relevant.
+- Prefer household-friendly explanation over clinical wording.
+consumers:
+- Companion food answers
+- Planner nutrition boosts
+- Nutrition Report / plant diversity view
+- Shopping intelligence
+- Meal card enrichment
+- Pantry explore
+progressive_enrichment:
+  ready_now:
+  - canonical identity
+  - aliases and non-merge rules
+  - qualitative nutrient profile
+  - planner and shopping roles
+  - relationship graph within first canonical food batch
+  - safe companion wording
+  requires_later_validation:
+  - exact per-100g nutrition values
+  - serving-specific nutrient quantities
+  - source-linked evidence references inside production UI
+  - UK supermarket product mapping
+import_notes_for_claude:
+  expected_path: knowledge/canonical-foods/drafts/broccoli.yaml
+  validation_required:
+  - YAML parses successfully
+  - slug is unique
+  - aliases do not create duplicate canonical foods
+  - relationships reference existing or planned canonical slugs
+  - no medical claims are imported as guaranteed outcomes
+  - numeric nutrition remains pending unless backed by approved source data

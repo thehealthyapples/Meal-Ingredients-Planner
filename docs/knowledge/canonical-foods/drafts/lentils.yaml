@@ -1,0 +1,225 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: NK6_CANONICAL_FOOD_FOUNDATION_BATCH_V2
+  status: draft_for_claude_import_validation
+  canonical_slug: lentils
+  display_name: Lentils
+  scientific_or_source_name: Lens culinaris
+  canonical_owner: Canonical Food Library
+  fact_owner_boundary:
+    identity_and_editorial_knowledge: Canonical Food Library
+    quantitative_nutrition_values: Approved nutrition database integration only
+    planner_behaviour: Planner and Intelligence Platform services
+    shopping_product_matches: Shopping/product intelligence services
+nk_controls:
+  intended_import_stage: NK6 canonical food pilot expansion
+  governing_patterns:
+  - one canonical identity per food
+  - one owner per nutrition fact
+  - progressive enrichment over fabricated certainty
+  - draft content only until import validation passes
+  - honest gaps where quantitative values are not validated
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  numeric_nutrition_policy: do_not_import_numeric_values_until validated against the project-approved nutrition
+    database
+  ai_usage_policy: AI may assist wording and relationship suggestions; AI must not own canonical facts or invent
+    evidence.
+identity:
+  food_category: legume_pulse
+  plant_count_policy:
+    counts_towards_plant_diversity: true
+    plant_family: Fabaceae
+    plant_part: seed
+    counting_note: Count lentils separately from chickpeas and beans.
+  aliases:
+  - red lentils
+  - green lentils
+  - brown lentils
+  - puy lentils
+  - tinned lentils
+  - cooked lentils
+  - split red lentils
+  not_same_as:
+  - chickpeas
+  - beans
+  - lentil crisps
+  - lentil pasta unless handled as processed derivative
+  - dhal ready meal
+  canonical_identity_rule: Use lentils for the food itself; do not merge recipes, branded products, or derivative
+    dishes into this record.
+classification:
+  whole_food_status: whole_or_minimally_processed
+  upf_default: not_upf_when_plain_single_ingredient
+  processing_watchouts:
+  - lentil crisps
+  - ready-made dhal with high salt
+  - lentil pasta with different nutrition profile
+varieties_and_forms:
+  varieties:
+  - red lentils
+  - green lentils
+  - brown lentils
+  - puy-style lentils
+  forms:
+  - dried
+  - tinned
+  - cooked pouch
+  preparation_states:
+  - boiled
+  - simmered into soup
+  - dhal
+  - salad lentils
+  - stewed
+  form_policy: Prefer keeping forms under this canonical food unless processing changes the food meaning, ingredient
+    list, or use case.
+nutrition_profile:
+  quantitative_values_status: pending_database_validation
+  do_not_display_numeric_values_yet: true
+  notable_nutrients:
+  - nutrient: plant_protein
+    role: supports meat-free protein coverage
+    confidence: well_established
+  - nutrient: fibre
+    role: supports gut-health and satiety-oriented meal composition
+    confidence: well_established
+  - nutrient: folate
+    role: contributes to micronutrient density in legume meals
+    confidence: well_established
+  - nutrient: plant_iron
+    role: contributes iron; pair with vitamin-C-rich foods for absorption context
+    confidence: well_established_with_absorption_context
+  - nutrient: slow_release_carbohydrate
+    role: useful for steady-energy meal framing without making blood-glucose promises
+    confidence: moderate
+  editorial_summary: Lentils is useful in THA as a recognised, household-friendly food that can improve meal quality
+    when used in an appropriate context.
+benefit_language:
+- area: legume_exposure
+  approved_wording: Adds a legume serving to the week.
+  evidence_tone: high_level_consensus
+- area: meat_free_protein
+  approved_wording: Useful plant protein for vegetarian and flexitarian meals.
+  evidence_tone: food_composition
+- area: gut_health_pattern
+  approved_wording: Contributes fibre and plant diversity that fits THA gut-health goals.
+  evidence_tone: dietary_pattern
+planner_metadata:
+  meal_slots:
+  - lunch
+  - dinner
+  meal_shell_roles:
+  - protein_slot
+  - legume_boost
+  - shared_base_component
+  - soup_or_stew_base
+  good_uses:
+  - lentil dhal
+  - lentil bolognese
+  - soup
+  - grain bowls
+  - curry night
+  - pasta sauce enrichment
+  nutrition_boost_tags:
+  - legume
+  - fibre
+  - plant_protein
+  - iron_context
+  - low_upf
+  household_adaptation_notes:
+  - Useful as a vegetarian protein slot while other members use fish, chicken or eggs.
+shopping_intelligence:
+  uk_common_locations:
+  - pulses and grains aisle
+  - world foods
+  - tinned vegetables and pulses
+  buying_notes:
+  - Red lentils cook quickly and break down into sauces.
+  - Tinned lentils are convenient for salads and quick meals.
+  quality_signals:
+  - dry lentils without stones or debris
+  - tins without added sauces where possible
+  budget_notes:
+  - Dried lentils are usually one of the lowest-cost protein and fibre additions.
+  substitution_notes:
+  - Chickpeas, beans or split peas can substitute in some meals but should remain separate canonical foods.
+cooking_and_storage:
+  storage:
+  - Store dried lentils in an airtight container.
+  - Refrigerate cooked lentils and use promptly.
+  prep_tips:
+  - Rinse before cooking.
+  - Red lentils are good for thickening sauces; green/puy lentils hold shape better.
+  texture_notes:
+  - Choose variety based on whether the dish needs creamy or distinct texture.
+relationships:
+  pairs_well_with:
+  - spinach
+  - broccoli
+  - chickpeas
+  - extra-virgin-olive-oil
+  - greek-yoghurt
+  - eggs
+  nutrient_complements:
+  - with: spinach
+    reason: legume plus leafy greens increases plant diversity and folate context
+  - with: broccoli
+    reason: vitamin-C-rich vegetable helps frame plant-iron absorption context
+  - with: greek-yoghurt
+    reason: yoghurt can provide a cooling high-protein topping for spiced lentil dishes
+  category_neighbours:
+  - chickpeas
+  - oats
+  do_not_auto_replace_with:
+  - chickpeas
+  - beans
+  - split peas
+safety_and_limitations:
+- Can cause bloating for some people; introduce gradually where relevant.
+- Dried lentils should be cooked properly; follow pack instructions.
+- Plant iron is less readily absorbed than haem iron; use absorption context rather than overclaiming.
+companion_behaviour:
+  plain_answer: Lentils are a strong THA food because they add legumes, fibre and plant protein cheaply. They work
+    especially well in curries, soups and sauces.
+  suggested_user_facing_phrases:
+  - Add lentils for fibre and protein
+  - Legume boost
+  - Budget-friendly plant protein
+  avoid_phrases:
+  - complete protein on its own for every need
+  - cures cholesterol
+  - guarantees weight loss
+claim_boundaries:
+- Do not describe the food as treating, curing, preventing, or reversing disease.
+- Use "supports" language rather than guaranteed outcomes.
+- Surface limitations and allergy/safety notes where relevant.
+- Prefer household-friendly explanation over clinical wording.
+consumers:
+- Companion food answers
+- Planner nutrition boosts
+- Nutrition Report / plant diversity view
+- Shopping intelligence
+- Meal card enrichment
+- Pantry explore
+progressive_enrichment:
+  ready_now:
+  - canonical identity
+  - aliases and non-merge rules
+  - qualitative nutrient profile
+  - planner and shopping roles
+  - relationship graph within first canonical food batch
+  - safe companion wording
+  requires_later_validation:
+  - exact per-100g nutrition values
+  - serving-specific nutrient quantities
+  - source-linked evidence references inside production UI
+  - UK supermarket product mapping
+import_notes_for_claude:
+  expected_path: knowledge/canonical-foods/drafts/lentils.yaml
+  validation_required:
+  - YAML parses successfully
+  - slug is unique
+  - aliases do not create duplicate canonical foods
+  - relationships reference existing or planned canonical slugs
+  - no medical claims are imported as guaranteed outcomes
+  - numeric nutrition remains pending unless backed by approved source data

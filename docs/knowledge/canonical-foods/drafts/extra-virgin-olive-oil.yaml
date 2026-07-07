@@ -1,0 +1,222 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: NK6_CANONICAL_FOOD_FOUNDATION_BATCH_V2
+  status: draft_for_claude_import_validation
+  canonical_slug: extra-virgin-olive-oil
+  display_name: Extra Virgin Olive Oil
+  scientific_or_source_name: Oil mechanically extracted from olives; extra virgin grade
+  canonical_owner: Canonical Food Library
+  fact_owner_boundary:
+    identity_and_editorial_knowledge: Canonical Food Library
+    quantitative_nutrition_values: Approved nutrition database integration only
+    planner_behaviour: Planner and Intelligence Platform services
+    shopping_product_matches: Shopping/product intelligence services
+nk_controls:
+  intended_import_stage: NK6 canonical food pilot expansion
+  governing_patterns:
+  - one canonical identity per food
+  - one owner per nutrition fact
+  - progressive enrichment over fabricated certainty
+  - draft content only until import validation passes
+  - honest gaps where quantitative values are not validated
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  numeric_nutrition_policy: do_not_import_numeric_values_until validated against the project-approved nutrition
+    database
+  ai_usage_policy: AI may assist wording and relationship suggestions; AI must not own canonical facts or invent
+    evidence.
+identity:
+  food_category: culinary_oil_healthy_fat
+  plant_count_policy:
+    counts_towards_plant_diversity: conditional_governance_required
+    plant_family: Oleaceae
+    plant_part: fruit_oil
+    counting_note: Plant-derived from olives, but do not automatically inflate 30-plants count unless THA policy
+      explicitly counts culinary oils.
+  aliases:
+  - EVOO
+  - extra virgin olive oil
+  - olive oil extra virgin
+  - cold pressed olive oil
+  not_same_as:
+  - refined olive oil
+  - light olive oil
+  - olive pomace oil
+  - olive spread
+  - olives as whole food
+  canonical_identity_rule: Use extra-virgin-olive-oil for the food itself; do not merge recipes, branded products,
+    or derivative dishes into this record.
+classification:
+  whole_food_status: minimally_processed_culinary_ingredient
+  upf_default: not_upf_when_plain_single_ingredient
+  processing_watchouts:
+  - flavoured oil with allergens/additives
+  - olive spread
+  - spray oils with propellants
+varieties_and_forms:
+  varieties:
+  - single-origin EVOO
+  - blended EVOO
+  - filtered EVOO
+  - unfiltered EVOO
+  forms:
+  - bottled oil
+  - spray only if 100% EVOO and no propellant/additives governance permits
+  preparation_states:
+  - used raw as dressing
+  - used for roasting
+  - used for sautéing
+  - used in marinade
+  form_policy: Prefer keeping forms under this canonical food unless processing changes the food meaning, ingredient
+    list, or use case.
+nutrition_profile:
+  quantitative_values_status: pending_database_validation
+  do_not_display_numeric_values_yet: true
+  notable_nutrients:
+  - nutrient: monounsaturated_fat
+    role: healthy-fat culinary context in Mediterranean-style meals
+    confidence: well_established
+  - nutrient: polyphenols
+    role: plant compound context; levels vary substantially by product, freshness and processing
+    confidence: moderate_with_variation
+  - nutrient: vitamin_E
+    role: minor contribution depending on oil and serving
+    confidence: moderate
+  - nutrient: energy_density
+    role: useful fat source but portion-aware due to calorie density
+    confidence: well_established
+  editorial_summary: Extra Virgin Olive Oil is useful in THA as a recognised, household-friendly food that can improve
+    meal quality when used in an appropriate context.
+benefit_language:
+- area: healthy_fat
+  approved_wording: A useful unsaturated-fat choice for dressings and cooking.
+  evidence_tone: dietary_pattern
+- area: meal_enrichment
+  approved_wording: Helps turn vegetables and legumes into more satisfying meals.
+  evidence_tone: culinary_practical
+- area: absorption_context
+  approved_wording: Can help carry fat-soluble compounds in meals containing vegetables.
+  evidence_tone: nutrition_context
+planner_metadata:
+  meal_slots:
+  - breakfast
+  - lunch
+  - dinner
+  meal_shell_roles:
+  - healthy_fat_boost
+  - dressing_base
+  - cooking_fat
+  - marinade_component
+  good_uses:
+  - broccoli roasting
+  - salmon traybake
+  - chickpea salad
+  - lentil bowl
+  - spinach sauté
+  - Greek-style yoghurt dressing emulsions
+  nutrition_boost_tags:
+  - healthy_fat
+  - mediterranean_pattern
+  - vegetable_carrier
+  - low_upf_when_single_ingredient
+  household_adaptation_notes:
+  - Usually broadly compatible unless fat restriction or preference exists; portion guidance should remain sensible.
+shopping_intelligence:
+  uk_common_locations:
+  - oil and vinegar aisle
+  - world foods
+  - premium oils section
+  buying_notes:
+  - Prefer dark bottle or tin where possible.
+  - Check it says extra virgin, not just olive oil.
+  - Avoid flavoured oils inheriting this record without ingredient check.
+  quality_signals:
+  - extra virgin label
+  - harvest/date where available
+  - dark packaging
+  - fresh aroma
+  budget_notes:
+  - Use everyday EVOO for cooking and better bottles for finishing if budget allows.
+  substitution_notes:
+  - Rapeseed oil or refined olive oil may fill cooking-fat roles but are separate canonical foods.
+cooking_and_storage:
+  storage:
+  - Store cool, dark and tightly closed.
+  - Use within reasonable time after opening for best flavour.
+  prep_tips:
+  - Use as dressing with lemon or vinegar.
+  - Roast vegetables with a small amount rather than dry-roasting if satiety/flavour needs improving.
+  texture_notes:
+  - Adds richness and mouthfeel; easy to over-pour.
+relationships:
+  pairs_well_with:
+  - spinach
+  - broccoli
+  - lentils
+  - chickpeas
+  - salmon
+  - eggs
+  - blueberries
+  nutrient_complements:
+  - with: broccoli
+    reason: healthy-fat dressing/roasting context for vegetables
+  - with: chickpeas
+    reason: classic legume salad dressing context
+  - with: salmon
+    reason: Mediterranean-style fish and vegetable meal context
+  category_neighbours:
+  - spinach
+  - broccoli
+  do_not_auto_replace_with:
+  - refined olive oil
+  - vegetable oil
+  - olive spread
+safety_and_limitations:
+- Energy dense; use portion-aware language rather than unlimited-add language.
+- Not a treatment for heart disease; frame within whole dietary pattern.
+- Flavoured oils may contain allergens or additives and need separate product analysis.
+companion_behaviour:
+  plain_answer: Extra virgin olive oil is a useful healthy-fat ingredient, especially for vegetables, legumes and
+    Mediterranean-style meals. THA should keep it portion-aware and not treat it as a cure.
+  suggested_user_facing_phrases:
+  - Add olive oil dressing
+  - Healthy-fat boost
+  - Helps make vegetables more satisfying
+  avoid_phrases:
+  - drink olive oil
+  - cures inflammation
+  - unlimited because it is healthy
+claim_boundaries:
+- Do not describe the food as treating, curing, preventing, or reversing disease.
+- Use "supports" language rather than guaranteed outcomes.
+- Surface limitations and allergy/safety notes where relevant.
+- Prefer household-friendly explanation over clinical wording.
+consumers:
+- Companion food answers
+- Planner nutrition boosts
+- Nutrition Report / plant diversity view
+- Shopping intelligence
+- Meal card enrichment
+- Pantry explore
+progressive_enrichment:
+  ready_now:
+  - canonical identity
+  - aliases and non-merge rules
+  - qualitative nutrient profile
+  - planner and shopping roles
+  - relationship graph within first canonical food batch
+  - safe companion wording
+  requires_later_validation:
+  - exact per-100g nutrition values
+  - serving-specific nutrient quantities
+  - source-linked evidence references inside production UI
+  - UK supermarket product mapping
+import_notes_for_claude:
+  expected_path: knowledge/canonical-foods/drafts/extra-virgin-olive-oil.yaml
+  validation_required:
+  - YAML parses successfully
+  - slug is unique
+  - aliases do not create duplicate canonical foods
+  - relationships reference existing or planned canonical slugs
+  - no medical claims are imported as guaranteed outcomes
+  - numeric nutrition remains pending unless backed by approved source data

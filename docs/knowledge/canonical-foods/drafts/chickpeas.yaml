@@ -1,0 +1,224 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: NK6_CANONICAL_FOOD_FOUNDATION_BATCH_V2
+  status: draft_for_claude_import_validation
+  canonical_slug: chickpeas
+  display_name: Chickpeas
+  scientific_or_source_name: Cicer arietinum
+  canonical_owner: Canonical Food Library
+  fact_owner_boundary:
+    identity_and_editorial_knowledge: Canonical Food Library
+    quantitative_nutrition_values: Approved nutrition database integration only
+    planner_behaviour: Planner and Intelligence Platform services
+    shopping_product_matches: Shopping/product intelligence services
+nk_controls:
+  intended_import_stage: NK6 canonical food pilot expansion
+  governing_patterns:
+  - one canonical identity per food
+  - one owner per nutrition fact
+  - progressive enrichment over fabricated certainty
+  - draft content only until import validation passes
+  - honest gaps where quantitative values are not validated
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  numeric_nutrition_policy: do_not_import_numeric_values_until validated against the project-approved nutrition
+    database
+  ai_usage_policy: AI may assist wording and relationship suggestions; AI must not own canonical facts or invent
+    evidence.
+identity:
+  food_category: legume_pulse
+  plant_count_policy:
+    counts_towards_plant_diversity: true
+    plant_family: Fabaceae
+    plant_part: seed
+    counting_note: Count chickpeas separately from lentils and beans.
+  aliases:
+  - garbanzo beans
+  - tinned chickpeas
+  - canned chickpeas
+  - dried chickpeas
+  - cooked chickpeas
+  not_same_as:
+  - lentils
+  - houmous/hummus as prepared dip
+  - gram flour/besan unless handled as ingredient derivative
+  - falafel ready meal
+  canonical_identity_rule: Use chickpeas for the food itself; do not merge recipes, branded products, or derivative
+    dishes into this record.
+classification:
+  whole_food_status: whole_or_minimally_processed
+  upf_default: not_upf_when_plain_single_ingredient
+  processing_watchouts:
+  - hummus with added oils/salt
+  - falafel ready meals
+  - roasted flavoured snacks
+varieties_and_forms:
+  varieties:
+  - kabuli chickpeas
+  - desi chickpeas where known
+  forms:
+  - dried
+  - tinned in water
+  - cooked pouch
+  - roasted chickpeas
+  preparation_states:
+  - boiled
+  - roasted
+  - mashed
+  - added to curry
+  - added to salad
+  form_policy: Prefer keeping forms under this canonical food unless processing changes the food meaning, ingredient
+    list, or use case.
+nutrition_profile:
+  quantitative_values_status: pending_database_validation
+  do_not_display_numeric_values_yet: true
+  notable_nutrients:
+  - nutrient: plant_protein
+    role: supports meat-free protein coverage
+    confidence: well_established
+  - nutrient: fibre
+    role: supports gut-health and satiety-oriented meal composition
+    confidence: well_established
+  - nutrient: folate
+    role: contributes to legume micronutrient coverage
+    confidence: well_established
+  - nutrient: manganese_and_minerals
+    role: adds mineral variety; avoid over-specific claims until numeric values validated
+    confidence: moderate
+  - nutrient: slow_release_carbohydrate
+    role: useful meal-balance context without blood-glucose promises
+    confidence: moderate
+  editorial_summary: Chickpeas is useful in THA as a recognised, household-friendly food that can improve meal quality
+    when used in an appropriate context.
+benefit_language:
+- area: legume_exposure
+  approved_wording: Adds a legume serving and plant diversity to the week.
+  evidence_tone: high_level_consensus
+- area: meat_free_protein
+  approved_wording: A useful vegetarian protein slot for bowls, curries and jacket potatoes.
+  evidence_tone: food_composition
+- area: meal_enrichment
+  approved_wording: Can be added to many meals to increase fibre and make them more filling.
+  evidence_tone: culinary_practical
+planner_metadata:
+  meal_slots:
+  - lunch
+  - dinner
+  - snack
+  meal_shell_roles:
+  - protein_slot
+  - legume_boost
+  - salad_topping
+  - jacket_potato_topping
+  - curry_component
+  good_uses:
+  - jacket potato bar
+  - taco bowl
+  - curry night
+  - loaded salad
+  - grain bowl
+  - roasted snack
+  nutrition_boost_tags:
+  - legume
+  - fibre
+  - plant_protein
+  - plant_diversity
+  - low_upf
+  household_adaptation_notes:
+  - Useful where one person needs vegetarian protein while others choose fish, eggs or meat.
+shopping_intelligence:
+  uk_common_locations:
+  - tinned vegetables and pulses
+  - world foods
+  - pulses and grains aisle
+  buying_notes:
+  - Choose tinned chickpeas in water for convenience.
+  - Dried chickpeas are cheaper but need soaking and longer cooking.
+  quality_signals:
+  - plain chickpeas rather than added-sauce products
+  - no damaged tins
+  budget_notes:
+  - Tinned chickpeas are still low-cost and reduce prep time.
+  substitution_notes:
+  - Lentils, beans or butter beans may fill the legume role but are separate canonical foods.
+cooking_and_storage:
+  storage:
+  - Store dried chickpeas airtight.
+  - Once opened/cooked, refrigerate and use promptly.
+  prep_tips:
+  - Rinse tinned chickpeas to reduce brine/salt.
+  - Roast for texture or mash into patties.
+  texture_notes:
+  - Hold shape better than red lentils; useful for bowls and salads.
+relationships:
+  pairs_well_with:
+  - spinach
+  - broccoli
+  - lentils
+  - extra-virgin-olive-oil
+  - greek-yoghurt
+  - eggs
+  nutrient_complements:
+  - with: extra-virgin-olive-oil
+    reason: classic legume plus olive-oil dressing context
+  - with: greek-yoghurt
+    reason: yoghurt sauce can balance spiced chickpea dishes
+  - with: spinach
+    reason: leafy greens plus legumes increase plant diversity and fibre context
+  category_neighbours:
+  - lentils
+  - oats
+  do_not_auto_replace_with:
+  - lentils
+  - beans
+  - hummus
+safety_and_limitations:
+- Can cause bloating for some people; introduce gradually where relevant.
+- Dried chickpeas require proper soaking/cooking according to pack instructions.
+- Prepared chickpea products such as hummus or falafel may contain sesame, gluten, dairy or high salt depending
+  on recipe/brand.
+companion_behaviour:
+  plain_answer: 'Chickpeas are a practical THA food: cheap, filling, high in fibre, and useful as a vegetarian protein
+    slot in shared household meals.'
+  suggested_user_facing_phrases:
+  - Add chickpeas for fibre
+  - Legume protein option
+  - Good vegetarian topping
+  avoid_phrases:
+  - fat-burning food
+  - detox food
+  - complete replacement for all proteins
+claim_boundaries:
+- Do not describe the food as treating, curing, preventing, or reversing disease.
+- Use "supports" language rather than guaranteed outcomes.
+- Surface limitations and allergy/safety notes where relevant.
+- Prefer household-friendly explanation over clinical wording.
+consumers:
+- Companion food answers
+- Planner nutrition boosts
+- Nutrition Report / plant diversity view
+- Shopping intelligence
+- Meal card enrichment
+- Pantry explore
+progressive_enrichment:
+  ready_now:
+  - canonical identity
+  - aliases and non-merge rules
+  - qualitative nutrient profile
+  - planner and shopping roles
+  - relationship graph within first canonical food batch
+  - safe companion wording
+  requires_later_validation:
+  - exact per-100g nutrition values
+  - serving-specific nutrient quantities
+  - source-linked evidence references inside production UI
+  - UK supermarket product mapping
+import_notes_for_claude:
+  expected_path: knowledge/canonical-foods/drafts/chickpeas.yaml
+  validation_required:
+  - YAML parses successfully
+  - slug is unique
+  - aliases do not create duplicate canonical foods
+  - relationships reference existing or planned canonical slugs
+  - no medical claims are imported as guaranteed outcomes
+  - numeric nutrition remains pending unless backed by approved source data

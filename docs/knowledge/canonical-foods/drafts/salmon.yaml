@@ -1,0 +1,233 @@
+record:
+  schema: tha_canonical_food_draft
+  schema_version: 2.0-draft
+  batch_id: NK6_CANONICAL_FOOD_FOUNDATION_BATCH_V2
+  status: draft_for_claude_import_validation
+  canonical_slug: salmon
+  display_name: Salmon
+  scientific_or_source_name: Salmo salar / Oncorhynchus species depending on product
+  canonical_owner: Canonical Food Library
+  fact_owner_boundary:
+    identity_and_editorial_knowledge: Canonical Food Library
+    quantitative_nutrition_values: Approved nutrition database integration only
+    planner_behaviour: Planner and Intelligence Platform services
+    shopping_product_matches: Shopping/product intelligence services
+nk_controls:
+  intended_import_stage: NK6 canonical food pilot expansion
+  governing_patterns:
+  - one canonical identity per food
+  - one owner per nutrition fact
+  - progressive enrichment over fabricated certainty
+  - draft content only until import validation passes
+  - honest gaps where quantitative values are not validated
+  duplicate_policy: stop_on_slug_conflict_or_merge_only_with_explicit_approval
+  numeric_nutrition_policy: do_not_import_numeric_values_until validated against the project-approved nutrition
+    database
+  ai_usage_policy: AI may assist wording and relationship suggestions; AI must not own canonical facts or invent
+    evidence.
+identity:
+  food_category: oily_fish
+  plant_count_policy:
+    counts_towards_plant_diversity: false
+    counting_note: Do not count salmon towards plant diversity; track separately as oily fish exposure if feature
+      exists.
+  aliases:
+  - salmon fillet
+  - fresh salmon
+  - frozen salmon
+  - tinned salmon
+  - canned salmon
+  - smoked salmon
+  not_same_as:
+  - trout
+  - tuna
+  - white fish
+  - fish fingers
+  - salmon fishcakes
+  - salmon pâté
+  canonical_identity_rule: Use salmon for the food itself; do not merge recipes, branded products, or derivative
+    dishes into this record.
+classification:
+  whole_food_status: whole_or_minimally_processed
+  upf_default: not_upf_when_plain_single_ingredient
+  processing_watchouts:
+  - fish fingers
+  - salmon fishcakes
+  - smoked salmon high salt
+  - sauced ready meals
+varieties_and_forms:
+  varieties:
+  - Atlantic salmon
+  - Pacific salmon where specified
+  - wild salmon where specified
+  - farmed salmon where specified
+  forms:
+  - fresh fillet
+  - frozen fillet
+  - tinned/canned
+  - smoked slices
+  preparation_states:
+  - baked
+  - grilled
+  - pan-fried
+  - poached
+  - tinned ready-to-eat
+  - smoked ready-to-eat
+  form_policy: Prefer keeping forms under this canonical food unless processing changes the food meaning, ingredient
+    list, or use case.
+nutrition_profile:
+  quantitative_values_status: pending_database_validation
+  do_not_display_numeric_values_yet: true
+  notable_nutrients:
+  - nutrient: long_chain_omega_3_EPA_DHA
+    role: oily-fish heart-health context; use public-health wording
+    confidence: strong
+  - nutrient: high_quality_protein
+    role: supports protein coverage
+    confidence: well_established
+  - nutrient: vitamin_D
+    role: contributes to vitamin D intake; levels vary by product
+    confidence: well_established_with_variation
+  - nutrient: vitamin_B12
+    role: animal-source micronutrient coverage
+    confidence: well_established
+  - nutrient: selenium
+    role: mineral coverage; exact values pending validation
+    confidence: moderate
+  editorial_summary: Salmon is useful in THA as a recognised, household-friendly food that can improve meal quality
+    when used in an appropriate context.
+benefit_language:
+- area: oily_fish_exposure
+  approved_wording: Helps include oily fish in the week.
+  evidence_tone: public_health_guidance
+- area: protein
+  approved_wording: Provides a high-quality protein option for meals.
+  evidence_tone: food_composition
+- area: meal_balance
+  approved_wording: Pairs well with vegetables, whole grains and healthy fats in balanced meals.
+  evidence_tone: dietary_pattern
+planner_metadata:
+  meal_slots:
+  - lunch
+  - dinner
+  - breakfast_or_brunch_for_smoked_salmon
+  meal_shell_roles:
+  - protein_slot
+  - oily_fish_slot
+  - salad_or_bowl_protein
+  - traybake_protein
+  good_uses:
+  - salmon traybake
+  - salmon and broccoli bowl
+  - salmon salad
+  - salmon with lentils
+  - smoked salmon eggs brunch
+  nutrition_boost_tags:
+  - oily_fish
+  - omega_3
+  - protein
+  - vitamin_d_context
+  - low_upf_when_plain
+  household_adaptation_notes:
+  - Use as optional protein slot where fish-free, vegetarian or vegan members need chickpeas, lentils, eggs or tofu
+    alternatives.
+shopping_intelligence:
+  uk_common_locations:
+  - fish counter
+  - chilled fish aisle
+  - frozen fish
+  - tinned fish aisle
+  buying_notes:
+  - Plain fresh/frozen/tinned salmon should stay separate from breaded or sauced products.
+  - Smoked salmon is useful but higher-salt and a different use case.
+  quality_signals:
+  - fresh smell
+  - firm flesh
+  - within date
+  - no excessive liquid in pack
+  budget_notes:
+  - Tinned or frozen salmon can be more economical than fresh fillets.
+  substitution_notes:
+  - Trout, sardines or mackerel may fill oily-fish role; white fish does not provide the same oily-fish context.
+cooking_and_storage:
+  storage:
+  - Keep chilled or frozen according to pack.
+  - Cook and consume within food-safety guidance.
+  prep_tips:
+  - Bake with broccoli and olive oil for a simple balanced meal.
+  - Use tinned salmon in salads or fishcakes with clear processing checks.
+  texture_notes:
+  - Avoid overcooking to keep texture moist.
+relationships:
+  pairs_well_with:
+  - broccoli
+  - spinach
+  - eggs
+  - extra-virgin-olive-oil
+  - greek-yoghurt
+  - lentils
+  nutrient_complements:
+  - with: broccoli
+    reason: oily fish plus cruciferous vegetable meal-balance context
+  - with: lentils
+    reason: salmon and lentils combine protein, fibre and plant diversity context
+  - with: greek-yoghurt
+    reason: plain yoghurt can support a lighter sauce with herbs
+  category_neighbours:
+  - eggs
+  - greek-yoghurt
+  do_not_auto_replace_with:
+  - white fish
+  - fish fingers
+  - salmon fishcake
+safety_and_limitations:
+- 'Major allergen: fish. Must be excluded for fish allergy or fish-free diets.'
+- Not suitable for vegetarian or vegan diets.
+- Smoked salmon can be high in salt and has specific food-safety considerations for vulnerable groups.
+- Follow local pregnancy and oily-fish guidance; do not personalise medical advice without user-specific clinical
+  guidance.
+companion_behaviour:
+  plain_answer: Salmon is useful because it is an oily fish with protein and long-chain omega-3 fats. THA should
+    encourage variety and respect fish-free or vegetarian profiles.
+  suggested_user_facing_phrases:
+  - Oily fish option
+  - Add salmon for omega-3 context
+  - Good traybake protein
+  avoid_phrases:
+  - prevents heart disease by itself
+  - safe for fish allergy
+  - eat every day
+claim_boundaries:
+- Do not describe the food as treating, curing, preventing, or reversing disease.
+- Use "supports" language rather than guaranteed outcomes.
+- Surface limitations and allergy/safety notes where relevant.
+- Prefer household-friendly explanation over clinical wording.
+consumers:
+- Companion food answers
+- Planner nutrition boosts
+- Nutrition Report / plant diversity view
+- Shopping intelligence
+- Meal card enrichment
+- Pantry explore
+progressive_enrichment:
+  ready_now:
+  - canonical identity
+  - aliases and non-merge rules
+  - qualitative nutrient profile
+  - planner and shopping roles
+  - relationship graph within first canonical food batch
+  - safe companion wording
+  requires_later_validation:
+  - exact per-100g nutrition values
+  - serving-specific nutrient quantities
+  - source-linked evidence references inside production UI
+  - UK supermarket product mapping
+import_notes_for_claude:
+  expected_path: knowledge/canonical-foods/drafts/salmon.yaml
+  validation_required:
+  - YAML parses successfully
+  - slug is unique
+  - aliases do not create duplicate canonical foods
+  - relationships reference existing or planned canonical slugs
+  - no medical claims are imported as guaranteed outcomes
+  - numeric nutrition remains pending unless backed by approved source data
