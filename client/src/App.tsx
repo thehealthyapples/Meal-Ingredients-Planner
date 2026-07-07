@@ -26,10 +26,13 @@ import MealDetailPage from "@/pages/meal-detail-page";
 import WeeklyPlannerPage from "@/pages/weekly-planner-page";
 import { PlannerProvider } from "@/contexts/PlannerContext";
 import ProfilePage from "@/pages/profile-page";
+import AdminPage from "@/pages/admin-page";
 import AdminUsersPage from "@/pages/admin-users-page";
 import AdminIngredientProductsPage from "@/pages/admin-ingredient-products-page";
 import AdminRecipeSourcesPage from "@/pages/admin-recipe-sources-page";
 import AdminCompanionIntelligencePage from "@/pages/admin-companion-intelligence-page";
+import AdminIntelligencePage from "@/pages/admin-intelligence-page";
+import AdminBenchmarkHouseholdsPage from "@/pages/admin-benchmark-households-page";
 import SharedPlanPage from "@/pages/shared-plan-page";
 import PantryPage from "@/pages/pantry-page";
 import PlantDiversityPage from "@/pages/plant-diversity-page";
@@ -204,10 +207,13 @@ function Router() {
       <Route path="/planner" component={() => <ProtectedRoute component={PlannerPageWrapper} />} />
       <Route path="/supermarkets" component={() => <ProtectedRoute component={SupermarketsPage} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={ProfilePage} />} />
+      <Route path="/admin" component={() => <ProtectedRoute component={AdminPage} />} />
       <Route path="/admin/users" component={() => <ProtectedRoute component={AdminUsersPage} />} />
       <Route path="/admin/ingredient-products" component={() => <ProtectedRoute component={AdminIngredientProductsPage} />} />
       <Route path="/admin/recipe-sources" component={() => <ProtectedRoute component={AdminRecipeSourcesPage} />} />
       <Route path="/admin/companion-intelligence" component={() => <ProtectedRoute component={AdminCompanionIntelligencePage} />} />
+      <Route path="/admin/intelligence" component={() => <ProtectedRoute component={AdminIntelligencePage} />} />
+      <Route path="/admin/benchmark-households" component={() => <ProtectedRoute component={AdminBenchmarkHouseholdsPage} />} />
       <Route path="/pantry" component={() => <ProtectedRoute component={PantryPage} />} />
       <Route path="/plant-diversity" component={() => <ProtectedRoute component={PlantDiversityPage} />} />
       <Route path="/diary" component={() => <ProtectedRoute component={FoodDiaryPage} />} />

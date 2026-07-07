@@ -10,10 +10,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   LayoutDashboard, CalendarDays, ShoppingCart,
-  LogOut, ShieldCheck, Star,
-  Sliders, Search, ChevronLeft, ChevronRight,
+  LogOut, ShieldCheck,
+  Search, ChevronLeft, ChevronRight,
   Microscope, BookOpen, Heart, ChefHat,
-  User, BarChart3, Sparkles,
+  User, BarChart3,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -356,27 +356,9 @@ function AppleMenu({ location, isAdmin }: { location: string; isAdmin: boolean }
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/admin/users" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-admin-users">
+              <Link href="/admin" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-admin">
                 <ShieldCheck className="h-4 w-4" />
-                Users
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/admin/ingredient-products" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-admin-picks">
-                <Star className="h-4 w-4" />
-                Picks
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/admin/recipe-sources" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-admin-sources">
-                <Sliders className="h-4 w-4" />
-                Recipe Sources
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/admin/companion-intelligence" className="flex items-center gap-2 cursor-pointer" data-testid="apple-menu-admin-companion-intelligence">
-                <Sparkles className="h-4 w-4" />
-                Companion Intelligence
+                Admin
               </Link>
             </DropdownMenuItem>
           </>

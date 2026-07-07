@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ShoppingCart, Search, Heart, User, ShieldCheck, Star, Sliders, LogOut, Sparkles,
+  ShoppingCart, Search, Heart, User, ShieldCheck, LogOut,
 } from "lucide-react";
 import { api } from "@shared/routes";
 import thaAppleSrc from "@/assets/icons/tha-apple.png";
@@ -98,27 +98,9 @@ function ProfileMenu({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/admin/users" className="flex items-center gap-2 cursor-pointer" data-testid="workspace-menu-admin-users">
+              <Link href="/admin" className="flex items-center gap-2 cursor-pointer" data-testid="workspace-menu-admin">
                 <ShieldCheck className="h-4 w-4" />
-                Users
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/admin/ingredient-products" className="flex items-center gap-2 cursor-pointer" data-testid="workspace-menu-admin-picks">
-                <Star className="h-4 w-4" />
-                Picks
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/admin/recipe-sources" className="flex items-center gap-2 cursor-pointer" data-testid="workspace-menu-admin-sources">
-                <Sliders className="h-4 w-4" />
-                Recipe Sources
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link href="/admin/companion-intelligence" className="flex items-center gap-2 cursor-pointer" data-testid="workspace-menu-admin-companion-intelligence">
-                <Sparkles className="h-4 w-4" />
-                Companion Intelligence
+                Admin
               </Link>
             </DropdownMenuItem>
           </>
