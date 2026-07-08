@@ -115,7 +115,9 @@ type CompoundMatcher = (
 // and "tell me about bone health" routes to benefitExplain rather than foodExplain.
 // ---------------------------------------------------------------------------
 
-const KNOWN_NUTRIENT_TERMS = /\b(?:vitamin\s+[a-z][0-9]*|vitamins?|minerals?|iron|zinc|calcium|magnesium|potassium|phosphorus|sodium|selenium|iodine|copper|manganese|chromium|molybdenum|omega[-\s]?[369]+|protein|fibre|fiber|carbohydrates?|carbs?|fat|glucose|fructose|sucrose|folate|folic\s+acid|biotin|riboflavin|niacin|thiamine?|choline|pantothenic\s+acid|cobalamin|retinol|tocopherol|antioxidants?|flavonoids?|polyphenols?|carotenoids?|lycopene|beta[\s-]?carotene|lutein|quercetin|resveratrol|curcumin|amino\s+acids?|tryptophan|leucine|isoleucine|valine|lysine|methionine|phenylalanine|threonine|histidine|electrolytes?|probiotics?|prebiotics?|enzymes?|chlorophyll|sulforaphane)\b/i;
+// BENCH3: `fat` → `fats?`. "What are healthy fats?" (FK-079) carried a nutrient term the
+// guard could not see, so every nutrient matcher declined it and the utterance no-routed.
+const KNOWN_NUTRIENT_TERMS = /\b(?:vitamin\s+[a-z][0-9]*|vitamins?|minerals?|iron|zinc|calcium|magnesium|potassium|phosphorus|sodium|selenium|iodine|copper|manganese|chromium|molybdenum|omega[-\s]?[369]+|protein|fibre|fiber|carbohydrates?|carbs?|fats?|glucose|fructose|sucrose|folate|folic\s+acid|biotin|riboflavin|niacin|thiamine?|choline|pantothenic\s+acid|cobalamin|retinol|tocopherol|antioxidants?|flavonoids?|polyphenols?|carotenoids?|lycopene|beta[\s-]?carotene|lutein|quercetin|resveratrol|curcumin|amino\s+acids?|tryptophan|leucine|isoleucine|valine|lysine|methionine|phenylalanine|threonine|histidine|electrolytes?|probiotics?|prebiotics?|enzymes?|chlorophyll|sulforaphane)\b/i;
 
 const KNOWN_BENEFIT_TERMS = /\b(?:immunity|immune\s+system|bone\s+health|heart\s+health|brain\s+health|eye\s+health|skin\s+health|gut\s+health|digestive\s+health|digestion|sleep|energy|mood|focus|concentration|inflammation|anti[\s-]?inflammatory|weight\s+(?:management|loss)|metabolism|muscle\s+(?:health|recovery|growth)|joint\s+health|liver\s+health|kidney\s+health|blood\s+(?:pressure|sugar)|cholesterol|mental\s+health|stress|anxiety|hormonal\s+balance|fertility|pregnancy|cardiovascular|cognitive|athletic\s+performance|endurance|hydration|circulation|longevity)\b/i;
 
@@ -175,6 +177,18 @@ const NUTRITION_EXPLAIN_MATCHERS: Matcher[] = [
   (u) => {
     const m = u.match(/\bwhat\s+does\s+(.+?)\s+do\s+for\b/i);
     return m?.[1] ? foodExplain(m[1], 0.84) : null;
+  },
+
+  // BENCH3 (FK-080): "is white bread always bad?" — the nuanced-food-guidance form.
+  // Adverb-gated ("always"/"really"/…) on purpose: without it, the lazy capture would
+  // swallow "is this cereal a good choice…" (PR-065–071's product questions, owned by
+  // the analyser) and route a product utterance to food knowledge.
+  (u) => {
+    const m = u.match(/\bis\s+(.+?)\s+(?:always|really|actually|inherently|automatically)\s+(?:bad|unhealthy|good|healthy|fine|ok(?:ay)?)\b/i);
+    if (!m?.[1]) return null;
+    const entity = m[1].trim();
+    if (/^(?:it|that|this|which|the|there)$/i.test(entity)) return null;
+    return foodExplain(entity, 0.84);
   },
 ];
 
@@ -350,9 +364,29 @@ const NUTRITION_NUTRIENT_MATCHERS: Matcher[] = [
   },
 
   // "what foods contain vitamin D?" / "what foods have omega-3?"
+  // BENCH3: "which" accepted alongside "what" — natural English uses both, and the
+  // resolver only knew one (FK-082).
   (u) => {
-    const m = u.match(/\bwhat\s+foods?\s+(?:contain|have|provide|are\s+high\s+in)\s+(.+?)[\?.]?\s*$/i);
+    const m = u.match(/\b(?:what|which)\s+foods?\s+(?:contain|have|provide|are\s+high\s+in)\s+(.+?)[\?.]?\s*$/i);
     return m?.[1] ? nutrientOrBenefitSearch(m[1].trim(), 0.80) : null;
+  },
+
+  // BENCH3 (FK-082): "which foods help increase iron, B12, calcium, or omega-3?" —
+  // a nutrient-raising query. The nutrient guard inside nutrientOrBenefitSearch keeps
+  // this from firing on non-nutrient tails ("which foods help me sleep" is owned by
+  // NUTRITION_BENEFIT_FOODS_MATCHERS below, at its own confidence).
+  (u) => {
+    const m = u.match(/\b(?:what|which)\s+foods?\s+(?:help|helps|boost|increase|raise)\s+(?:to\s+)?(?:increase|boost|raise|improve|support|with)?\s*(.+?)[\?.]?\s*$/i);
+    return m?.[1] ? nutrientOrBenefitSearch(m[1].trim(), 0.84) : null;
+  },
+
+  // BENCH3 (ND-056): "am I getting enough protein?" — an adequacy question about a
+  // named nutrient. nutrition-knowledge owns what the nutrient IS and its reference
+  // intake; the diary/planner compounds already own the "what have I eaten" half when
+  // the utterance also carries a diary signal.
+  (u) => {
+    const m = u.match(/\bam\s+i\s+(?:getting|eating|having|consuming)\s+enough\s+(.+?)[\?.]?\s*$/i);
+    return m?.[1] ? nutrientRead(m[1].trim(), 0.84) : null;
   },
 ];
 
@@ -448,6 +482,77 @@ const NUTRITION_KNOWLEDGE_SEARCH_MATCHERS: Matcher[] = [
     const m = u.match(/\bfind\s+(?:information|info)\s+(?:about|on)\s+(.+?)[\?.]?\s*$/i);
     if (!m?.[1]) return null;
     return nutrientOrBenefitSearch(m[1].trim(), 0.73);
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Nutrition: concept & category questions (BENCH3) — verb: search { query }
+//
+// Nutrition-education utterances whose subject is a food CATEGORY or a compound
+// nutrition CONCEPT rather than a single catalogue food or a single nutrient slug
+// ("healthy fats", "fermented foods", "a keto-friendly whole-food snack"). Every
+// nutrient/food matcher above declines them — a slug lookup for "healthy-fats" has
+// nothing to resolve against — so before BENCH3 they reached no capability at all.
+//
+// `search` is one of the three verbs nutrition-knowledge actually executes, and a
+// term search is the honest operation for a concept: the handler returns matches or
+// an empty result, never a fabricated definition.
+//
+// Confidence sits ABOVE the nutrient-slug matchers (0.82–0.84) so that where both
+// fire ("what are healthy fats?"), the search wins deduplication over a slug read
+// that could only ever produce an honest gap.
+// ---------------------------------------------------------------------------
+
+/** A term search over the nutrition knowledge store. No vocabulary guard — the handler
+ *  validates and returns an honest empty result when the term has no entry. */
+function knowledgeSearch(term: string, confidence: number): ResolvedIntent | null {
+  const q = term.trim().toLowerCase();
+  if (!q) return null;
+  return {
+    capability: "nutrition-knowledge",
+    verb: "search",
+    parameters: { query: q },
+    confidence,
+    termQuery: q,
+  };
+}
+
+/** Terminal nouns that mark a food-category / concept question rather than a command. */
+const CONCEPT_NOUN = /\b(?:snacks?|foods?|options?|choices?|meals?|fats?|carbs?|carbohydrates?|sugars?|grains?|proteins?|oils?)\b/i;
+
+const NUTRITION_CONCEPT_MATCHERS: Matcher[] = [
+  // FK-079: "what are healthy fats?" / "what is refined sugar?" — a qualified nutrient
+  // category. Anchored to the end of the utterance so "what are healthy fats good for"
+  // stays with NUTRITION_EXPLAIN_MATCHERS.
+  (u) => {
+    const m = u.match(/\bwhat\s+(?:is|are)\s+(?:the\s+)?((?:healthy|unhealthy|good|bad|saturated|unsaturated|trans|refined|complex|simple|whole|added|processed)\s+[a-z-]+?s?)\s*[\?.!]?\s*$/i);
+    return m?.[1] ? knowledgeSearch(m[1], 0.85) : null;
+  },
+
+  // FK-076: "what fermented foods should I try?" / "which high-fibre foods should I eat?"
+  (u) => {
+    const m = u.match(/\b(?:what|which)\s+([a-z][a-z\s-]{2,30}?)\s+(foods?|snacks?|oils?|grains?)\s+should\s+i\s+(?:try|eat|have|include|add|choose|pick)\b/i);
+    if (!m?.[1]) return null;
+    const descriptor = m[1].trim();
+    if (/^(?:kind|kinds|sort|sorts|type|types|other|more)$/i.test(descriptor)) return null;
+    return knowledgeSearch(`${descriptor} ${m[2].toLowerCase()}`, 0.85);
+  },
+
+  // FK-081: "what is a good keto-friendly whole-food snack?" — diet-pattern → food.
+  // Requires a terminal food/concept noun so open "what is a good idea" cannot fire.
+  (u) => {
+    const m = u.match(/\bwhat\s+(?:is|are)\s+(?:a\s+|an\s+|some\s+)?good\s+(.+?)[\?.!]?\s*$/i);
+    if (!m?.[1]) return null;
+    const tail = m[1].trim();
+    if (!CONCEPT_NOUN.test(tail)) return null;
+    return knowledgeSearch(tail, 0.84);
+  },
+
+  // ND-057: "where am I low on fibre, legumes, oily fish, or fermented foods?" — the
+  // nutrient guard keeps this to utterances naming a real nutrient or benefit term.
+  (u) => {
+    const m = u.match(/\bwhere\s+am\s+i\s+(?:low|lacking|deficient|short)\s+(?:on|in)\s+(.+?)[\?.!]?\s*$/i);
+    return m?.[1] ? nutrientOrBenefitSearch(m[1].trim(), 0.85) : null;
   },
 ];
 
@@ -765,6 +870,27 @@ const PLANNER_MATCHERS: Matcher[] = [
       confidence: 0.75,
     };
   },
+
+  // BENCH3 (PL-024): "what am I having for dinner tonight?" / "what's for dinner tonight?"
+  // A planned-meal READ, not a recipe discovery — "what should I cook tonight?" (no plan
+  // implied) stays with MEAL_DISCOVERY_MATCHERS, which requires cook/make/eat/prepare.
+  // Parameters mirror the two matchers above exactly: the active week when the surface
+  // supplied one, otherwise {} — the planner handler then names the identifier it needs
+  // rather than the resolver inventing a week.
+  (u, _l, hints) => {
+    const asks =
+      /\bwhat\s+(?:am\s+i|are\s+we)\s+having\s+for\s+(?:dinner|lunch|breakfast|tea|supper)\b/i.test(u) ||
+      /\bwhat'?s\s+for\s+(?:dinner|lunch|breakfast|tea|supper)\b/i.test(u);
+    if (!asks) return null;
+    return {
+      capability: "planner",
+      verb: "read",
+      parameters: hints.activePlannerWeekId != null
+        ? { scope: "week", weekId: hints.activePlannerWeekId }
+        : {},
+      confidence: 0.86,
+    };
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -780,6 +906,62 @@ const SHOPPING_MATCHERS: Matcher[] = [
       verb: "read",
       parameters: { scope: "list" },
       confidence: 0.85,
+    };
+  },
+
+  // BENCH3 (SH-036): "which shopping items are unresolved or need review?" — the
+  // shopping handler's own `unresolved` scope, which is exactly what is being asked for.
+  (u) => {
+    if (!/\b(?:unresolved|need(?:s)?\s+(?:review|reviewing|checking)|flagged\s+for\s+review|require\s+review)\b/i.test(u)) return null;
+    if (!/\bitems?\b|\bshopping\b|\blist\b|\bbasket\b/i.test(u)) return null;
+    return {
+      capability: "shopping",
+      verb: "read",
+      parameters: { scope: "unresolved" },
+      confidence: 0.89,
+    };
+  },
+
+  // BENCH3 (SH-037): "do any items have missing or suspicious product matches or prices?"
+  // Low-confidence / absent product matches are precisely what `unresolved` reports.
+  (u) => {
+    if (!/\b(?:missing|suspicious|dodgy|wrong|low[-\s]confidence|unmatched)\b/i.test(u)) return null;
+    if (!/\b(?:product\s+match(?:es)?|matches|prices?|pricing)\b/i.test(u)) return null;
+    return {
+      capability: "shopping",
+      verb: "read",
+      parameters: { scope: "unresolved" },
+      confidence: 0.88,
+    };
+  },
+
+  // BENCH3 (SH-040): "which items are whole foods and which are more processed?"
+  // Needs the item list to classify against; the classification itself is the
+  // Companion's, grounded on the list the Shopping owner returns.
+  (u) => {
+    if (!/\b(?:which|what)\s+(?:of\s+my\s+)?items?\b/i.test(u)) return null;
+    if (!/\b(?:whole\s+foods?|processed|unprocessed|refined)\b/i.test(u)) return null;
+    return {
+      capability: "shopping",
+      verb: "read",
+      parameters: { scope: "list" },
+      confidence: 0.86,
+    };
+  },
+
+  // BENCH3 (SH-041): "which items could I swap for cheaper alternatives?"
+  // A price question → the handler's `basket` scope, the only view carrying the
+  // owner's stored prices. When nothing is priced the handler returns an honest gap
+  // rather than a fabricated total (shopping-read-handler.ts readBasketSummary) —
+  // that gap is the correct answer, and reaching it is the point.
+  (u) => {
+    if (!/\b(?:cheaper|cheapest|less\s+expensive|better\s+value|save\s+money|budget)\b/i.test(u)) return null;
+    if (!/\b(?:swap|alternatives?|substitutes?|items?|shopping|basket|list)\b/i.test(u)) return null;
+    return {
+      capability: "shopping",
+      verb: "read",
+      parameters: { scope: "basket" },
+      confidence: 0.86,
     };
   },
 ];
@@ -808,6 +990,31 @@ const PANTRY_MATCHERS: Matcher[] = [
       verb: "read",
       parameters: { scope: "list" },
       confidence: 0.78,
+    };
+  },
+
+  // BENCH3 (PA-049): "what should I use up first?" — a waste-reduction read over the
+  // pantry's own expiry/freshness fields. The pantry owner supplies the items and their
+  // dates; it never invents a date, so an item with no expiry is reported as such.
+  (u) => {
+    if (!/\b(?:use\s+up|going\s+off|go\s+off|expiring|expires?|use[-\s]?by|going\s+bad)\b/i.test(u)) return null;
+    return {
+      capability: "pantry",
+      verb: "read",
+      parameters: { scope: "list" },
+      confidence: 0.86,
+    };
+  },
+
+  // BENCH3 (PA-051): "are any non-food items being mixed into food suggestions?" —
+  // a data-hygiene read of the pantry's item categories.
+  (u) => {
+    if (!/\bnon[-\s]?food\s+items?\b/i.test(u)) return null;
+    return {
+      capability: "pantry",
+      verb: "read",
+      parameters: { scope: "list" },
+      confidence: 0.85,
     };
   },
 ];
@@ -855,6 +1062,63 @@ const HOUSEHOLD_MATCHERS: Matcher[] = [
       confidence: 0.85,
     };
   },
+];
+
+// ---------------------------------------------------------------------------
+// Profile (BENCH3) — verb: read { scope: "profile" }
+//
+// Profile is registered, bound and executable ("read"), and before BENCH3 NO user
+// utterance in the benchmark could reach it: the resolver's only profile intent was
+// the always-on personalisation baseline (step 4), which carries `baseline: true` and
+// is stripped by the gateway's `routedQueried` filter (conversation-gateway.ts:483).
+// The capability therefore answered questions about itself with "I'm not sure I
+// understood that" — INTA1 §6.2's worked example, and BENCH2's R1 gate exists to
+// catch exactly this.
+//
+// These matchers emit a NON-baseline profile intent, so the same handler that was
+// always bound now actually receives the turn. The always-on baseline still fires and
+// is deduplicated away by the higher confidence here (dedupe keeps the max per
+// capability), so no intent-slot is consumed that profile did not already hold.
+//
+// FIRST-PERSON ONLY, deliberately: "do I have any allergies recorded" is a profile
+// read; "does anyone in my household have a nut allergy" is owned by
+// household-discovery and must stay there.
+// ---------------------------------------------------------------------------
+
+function profileRead(confidence: number): ResolvedIntent {
+  return {
+    capability: "profile",
+    verb: "read",
+    parameters: { scope: "profile" },
+    confidence,
+  };
+}
+
+const PROFILE_MATCHERS: Matcher[] = [
+  // PH-001: "what diet am I following?" / "what diet am I on?"
+  (u) => (/\bwhat\s+diet\s+am\s+i\s+(?:following|on|eating)\b/i.test(u) ? profileRead(0.88) : null),
+
+  // PH-002: "do I have any dietary restrictions or allergies recorded?"
+  (u) => (/\bdo\s+i\s+have\s+any\s+(?:dietary\s+)?(?:restrictions?|allergies|allergens?|intolerances?)\b/i.test(u)
+    ? profileRead(0.88)
+    : null),
+
+  // PH-007: "what are my health goals?" / "what are my goals?"
+  // Interrogative-anchored, or a qualified "health/nutrition goals". A bare "my goals"
+  // is NOT enough: CB-021 ("recommend one meal that fits my goals") is a meal-discovery
+  // question that merely mentions goals, and must not acquire a profile route from it.
+  (u) => (/\bwhat\s+(?:are\s+)?my\s+(?:health\s+|nutrition\s+|dietary\s+)?goals\b/i.test(u)
+    || /\bmy\s+(?:health|nutrition)\s+goals\b/i.test(u)
+    ? profileRead(0.87)
+    : null),
+
+  // PH-008: "what does THA know about my family's food preferences?"
+  // Scoped to "know about my/our" — TS-097's "how do you know that?" (trust-meta,
+  // an explanation of provenance) carries no possessive and must not fire here.
+  (u) => (/\bwhat\s+(?:do\s+you|does\s+tha)\s+know\s+about\s+(?:my|our)\b/i.test(u) ? profileRead(0.86) : null),
+
+  // PH-009: "what gaps do you still have in my profile?" / "what's missing from my profile?"
+  (u) => (/\b(?:in|from|about)\s+my\s+profile\b/i.test(u) ? profileRead(0.86) : null),
 ];
 
 // ---------------------------------------------------------------------------
@@ -1111,6 +1375,58 @@ const TEMPLATES_MATCHERS: Matcher[] = [
 // Analyser
 // ---------------------------------------------------------------------------
 
+// The analyser is the platform's sharpest example of the distinction BENCH2's R1 gate
+// was built to expose. It is registered and executable — but for exactly ONE operation:
+// `read { scope: "additives" }`, the static additives reference table. Its registry entry
+// additionally ALLOW-LISTS `explain`, `analyse` and `report`; none of the three has a live
+// code path (analyser-read-handler.ts), and `compare` / `recommend` it does not claim at all.
+//
+// The matchers below therefore emit the verb the USER actually asked for, not the verb that
+// happens to run:
+//
+//   PR-064 "what is E621?"                   → read     — executable; returns real data
+//   PR-065 "why did this get 2 apples?"      → explain  — allow-listed, not executable
+//   PR-066 "is this cereal a good choice?"   → analyse  — allow-listed, not executable
+//   PR-067 "compare these two products"      → compare  — not in supportedIntents
+//   PR-071 "suggest a less processed swap"   → recommend — not in supportedIntents
+//
+// The last four reach the analyser and receive a structured `not_executable` /
+// `unsupported_intent` outcome (intent-engine.ts:76,106), which the gateway voices as an
+// honest gap. That is deliberate, and it is the honest outcome in both directions: the user
+// is told the analyser cannot do this yet, and the benchmark records "capability reached,
+// verb missing" instead of the strictly less true "no matcher understood the question".
+// Forcing these onto `read { scope: "additives" }` would clear the same R1 gate while
+// handing the answer generator an additives table for a question about apple scores —
+// a fabrication risk, and a false claim that the capability answered.
+//
+// Naming the gap is the fix INTA1 §5 (M8/M9) asks for; closing it is analyser work, not
+// resolver work, and is explicitly NOT done here.
+
+/**
+ * The vocabulary the analyser's ONE executable operation — `read { scope: "additives" }` —
+ * can actually answer with real data.
+ */
+const ANALYSER_EXECUTABLE_VOCAB = /\b(?:additives?|e[-. ]?numbers?|upf|ultra[-. ]?processed|nova|processing\s+level)\b/i;
+
+/**
+ * Emit an analyser intent for a verb with no live code path.
+ *
+ * INVARIANT: a non-executable verb must NEVER displace the executable read in
+ * deduplication (which keeps the highest confidence per capability). Where the utterance
+ * carries additives/UPF/NOVA vocabulary, the read can answer it with grounded data, and a
+ * higher-confidence `explain` would silently downgrade a real answer to an honest gap.
+ * PR-072 ("what's the difference between NOVA and the THA apple score?") is exactly that
+ * turn: it names an apple score AND names NOVA, and the additives read owns it.
+ */
+function analyserUnexecutable(
+  utterance: string,
+  verb: ResolvedIntent["verb"],
+  confidence: number,
+): ResolvedIntent | null {
+  if (ANALYSER_EXECUTABLE_VOCAB.test(utterance)) return null;
+  return { capability: "analyser", verb, parameters: {}, confidence };
+}
+
 const ANALYSER_MATCHERS: Matcher[] = [
   // "what additives should I watch out for?" / "what UPF classification does it have?"
   (u) => {
@@ -1121,6 +1437,56 @@ const ANALYSER_MATCHERS: Matcher[] = [
       parameters: { scope: "additives" },
       confidence: 0.78,
     };
+  },
+
+  // BENCH3 (PR-064): "what is E621?" — a bare E-number code. Matched CASE-SENSITIVELY on
+  // the original utterance so a lowercase "e" in prose ("vitamin e 400") cannot fire it.
+  // This is the additives table's own subject: executable, and it answers with real data.
+  (u) => {
+    if (!/\bE[-. ]?\d{3,4}[a-z]?\b/.test(u)) return null;
+    return {
+      capability: "analyser",
+      verb: "read",
+      parameters: { scope: "additives" },
+      confidence: 0.90,
+    };
+  },
+
+  // BENCH3 (PR-065): "why did this product get 2 apples?" — score explainability.
+  (u) => {
+    const asks =
+      /\bwhy\s+(?:did|does|has)\s+(?:this|that|the)\s+(?:product|item|cereal|food)\b/i.test(u) ||
+      /\b\d+\s+apples?\b/i.test(u);
+    if (!asks) return null;
+    return analyserUnexecutable(u, "explain", 0.86);
+  },
+
+  // BENCH3 (PR-066): "is this cereal a good choice for my family?" — product assessment.
+  // Demonstrative-anchored ("this"/"that"/"the") so general food-knowledge questions
+  // ("is white bread always bad?") stay with nutrition-knowledge.
+  (u) => {
+    if (!/\bis\s+(?:this|that|the)\s+[a-z-]+\s+(?:a\s+)?(?:good|bad|healthy|safe|sensible)\s+(?:choice|option|pick|buy)\b/i.test(u)) return null;
+    return analyserUnexecutable(u, "analyse", 0.85);
+  },
+
+  // BENCH3 (PR-067): "compare these two products and tell me which is better."
+  // Verb is `analyse`, not `compare`: `compare` is absent from the analyser's
+  // supportedIntents allow-list, so the engine would reject it at VALIDATE with
+  // "No freeform execution is permitted" (intent-engine.ts:75) instead of routing to
+  // the handler's honest gap. `analyse` is on the allow-list, reaches the handler's
+  // readOnlyVerbGuard, and gaps with a reason. Same R1 outcome, truthful message.
+  (u) => {
+    if (!/\bcompare\s+(?:these|those|the|two|both)\b.*\bproducts?\b/i.test(u)
+      && !/\bwhich\s+(?:of\s+these\s+)?products?\s+is\s+(?:better|healthier)\b/i.test(u)) return null;
+    return analyserUnexecutable(u, "analyse", 0.86);
+  },
+
+  // BENCH3 (PR-071): "suggest a less processed swap for this product."
+  // `recommend` is likewise off the analyser allow-list — see PR-067 above.
+  (u) => {
+    if (!/\b(?:suggest|recommend|find)\b/i.test(u)) return null;
+    if (!/\b(?:less\s+processed|healthier|better|cleaner)\s+(?:swap|alternative|substitute|option|version)\b/i.test(u)) return null;
+    return analyserUnexecutable(u, "analyse", 0.86);
   },
 ];
 
@@ -1279,6 +1645,7 @@ const ALL_SPECIFIC_MATCHERS: Matcher[] = [
   ...NUTRITION_FOOD_DETAIL_MATCHERS,       // existing: food detail read (scope:food)
   ...NUTRITION_GENERAL_EXPLAIN_MATCHERS,   // INT26: generic "tell me about food" (lowest confidence)
   ...NUTRITION_KNOWLEDGE_SEARCH_MATCHERS,  // INT26: open nutrient/benefit search
+  ...NUTRITION_CONCEPT_MATCHERS,           // BENCH3: food-category / concept search ("healthy fats")
   // Nutrition discovery — macro-filtered meal search (INT27)
   ...NUTRITION_DISCOVERY_MATCHERS,
   // Planner discovery — search for meals within the planner (INT28)
@@ -1297,6 +1664,7 @@ const ALL_SPECIFIC_MATCHERS: Matcher[] = [
   ...PANTRY_MATCHERS,
   ...DIARY_MATCHERS,
   ...HOUSEHOLD_MATCHERS,
+  ...PROFILE_MATCHERS,                     // BENCH3: first utterance-derived route to profile
   ...MEAL_DISCOVERY_MATCHERS,
   ...MEALS_MATCHERS,
   ...TEMPLATES_MATCHERS,
